@@ -2323,9 +2323,7 @@ mod tests {
     #[test]
     fn feature_gated_test_harness_sources_are_test_hygiene() {
         assert_eq!(
-            hygiene_surface_for_path(
-                "/repo/libs/dataflow/weir/src/test_harness/fake_backend.rs"
-            ),
+            hygiene_surface_for_path("/repo/libs/dataflow/weir/src/test_harness/fake_backend.rs"),
             "test"
         );
     }
@@ -2614,5 +2612,84 @@ pub fn undocumented() {
             flagged[0].ends_with("docs/AUDIT_SCAN_RECALL.md"),
             "Fix: the stray prose report outside `audits/` is the finding; got {flagged:?}"
         );
+    }
+
+    mod threshold_policy_contracts {
+        use super::*;
+
+        fn valid_row() -> ThresholdPolicyTomlRow {
+            ThresholdPolicyTomlRow {
+                id: "fixture".to_string(),
+                path: "src/fixture.rs".to_string(),
+                name: "FIXTURE_THRESHOLD".to_string(),
+                unit: "items".to_string(),
+                provenance: "measured fixture".to_string(),
+                config_tier: "tier_a".to_string(),
+                override_path: "compiled default -> tool.toml -> CLI override".to_string(),
+                evidence_link: THRESHOLD_POLICY_ARTIFACT.to_string(),
+                release_rule: "VX-475".to_string(),
+            }
+        }
+
+        /// A blank required field must remain a release blocker so malformed policy data cannot pass through the rules-as-data gate.
+        #[test]
+        fn malformed_threshold_policy_rows_are_rejected() {
+            let mut row = valid_row();
+            row.unit.clear();
+            let mut blockers = Vec::new();
+
+            validate_threshold_policy_row(&row, &mut blockers);
+
+            assert_eq!(
+                blockers,
+                vec![
+                    "docs/optimization/THRESHOLD_POLICY.toml row `fixture` has blank unit. Fix: every threshold policy row must carry unit, provenance, tier, override, evidence, and VX ownership."
+                ]
+            );
+        }
+
+        /// A valid Tier A row must stay accepted so the malformed-fixture proof does not reject correctly governed operator thresholds.
+        #[test]
+        fn valid_threshold_policy_rows_are_accepted() {
+            let mut blockers = Vec::new();
+
+            validate_threshold_policy_row(&valid_row(), &mut blockers);
+
+            assert_eq!(blockers, Vec::<String>::new());
+        }
+
+        /// An unknown tier must fail even when every descriptive field is present, because an unclassified threshold has no override contract.
+        #[test]
+        fn unknown_threshold_policy_tiers_are_rejected() {
+            let mut row = valid_row();
+            row.config_tier = "runtime".to_string();
+            let mut blockers = Vec::new();
+
+            validate_threshold_policy_row(&row, &mut blockers);
+
+            assert_eq!(
+                blockers,
+                vec![
+                    "docs/optimization/THRESHOLD_POLICY.toml row `fixture` uses config_tier `runtime`. Fix: use `tier_a`, `tier_b`, or `structural`."
+                ]
+            );
+        }
+
+        /// A structural threshold must reject operator overrides because changing a wire or ABI bound requires compatibility review.
+        #[test]
+        fn structural_threshold_policy_rejects_operator_overrides() {
+            let mut row = valid_row();
+            row.config_tier = "structural".to_string();
+            let mut blockers = Vec::new();
+
+            validate_threshold_policy_row(&row, &mut blockers);
+
+            assert_eq!(
+                blockers,
+                vec![
+                    "docs/optimization/THRESHOLD_POLICY.toml row `fixture` is structural but override_path does not say `not operator configurable`. Fix: separate wire/ABI bounds from runtime knobs."
+                ]
+            );
+        }
     }
 }

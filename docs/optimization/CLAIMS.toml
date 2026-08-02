@@ -4236,7 +4236,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-3 (attribution): add a TimedDispatchResult twin to the hot literal region-presence scan (scan_presence_by_region_timed), previously timed only on the resident + borrowed paths.",
@@ -4259,7 +4259,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-3 (attribution, cont.): scan_into_timed adds the TimedDispatchResult twin to the position-scan path (the (pid,start,end) triple decode), matching the resident scan_into_timed shape.",
@@ -4343,7 +4343,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-3 (attribution, cont.): scan_presence_timed adds the TimedDispatchResult twin to the GLOBAL-presence path (whole-haystack presence bitmap), via a new owned build_presence_dispatch helper -- the global-presence sibling of build_presence_by_region_dispatch.",
@@ -4365,7 +4365,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-3 (attribution, cont.): scan_presence_and_positions_by_region_timed adds the TimedDispatchResult twin to the FUSED one-dispatch path (presence bitmap + (pid,start,end) triples together), via a new owned build_presence_and_positions_by_region_dispatch helper.",
@@ -4411,7 +4411,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-2 (async execution model): scan_presence_async adds the PendingDispatch async twin to the global-presence path -- the global-presence sibling of the pre-existing scan_presence_by_region_async.",
@@ -4433,7 +4433,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-2 (async execution model, cont.): scan_into_async adds the PendingDispatch async twin to the POSITION path -- returning a PendingMatches handle whose await_into/await_matches decode the (pid,start,end) triples.",
@@ -4476,7 +4476,7 @@ notes = [
 [[claim]]
 owner = "main"
 date = "2026-07-03"
-status = "in_progress"
+status = "done"
 lanes = ["scan_static"]
 scope = [
   "Master plan W3-2 (async execution model, cont.): scan_presence_and_positions_by_region_async adds the PendingDispatch async twin to the FUSED path -- one submitted dispatch, both outputs (presence bitmap + (pid,start,end) triples) decoded at await via PendingFusedRegion. Completes async coverage for every single-dispatch entry point.",

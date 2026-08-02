@@ -3508,218 +3508,290 @@ artifact_url = "https://hwloc.readthedocs.io/"
 vx_rows = ["VX-1501", "VX-1505", "VX-1507", "VX-1514"]
 digest_material = "HWLOC_TOPOLOGY_API|https://hwloc.readthedocs.io/|official-hwloc-hardware-locality-documentation|hardware-topology-CPU-bitmap-NUMA-node-cache-PCI-device-I-O-locality-and-process-thread-binding-semantics|official-doc|source-available|release_floor_eligible=true|https://hwloc.readthedocs.io/"
 
-[sources.LINUX_IO_URING_SETUP]
-title = "io_uring_setup(2) - Linux manual page"
+[[sources]]
+key = "LINUX_IO_URING_SETUP"
 url = "https://man7.org/linux/man-pages/man2/io_uring_setup.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines io_uring queue creation, submission/completion ring sizing, feature flags, and kernel-visible queue semantics used for async ingress capacity planning."
-used_by = ["FILE_INGRESS_ASYNC_IO_PIPELINE", "IO_PIPELINE_BACKPRESSURE_EVIDENCE", "END_TO_END_FILE_INGRESS_ASYNC_IO_TRANCHE_COVERAGE"]
+source_class = "primary-api-reference"
+baseline_type = "io_uring_setup(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/io_uring_setup.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_IO_URING_SETUP|https://man7.org/linux/man-pages/man2/io_uring_setup.2.html|primary-api-reference|io_uring_setup(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/io_uring_setup.2.html"
 
-[sources.LINUX_IO_URING_ENTER]
-title = "io_uring_enter(2) - Linux manual page"
+[[sources]]
+key = "LINUX_IO_URING_ENTER"
 url = "https://man7.org/linux/man-pages/man2/io_uring_enter.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines submission, completion wait, and wakeup behavior for io_uring operations, grounding queue-drain, timeout, and cancellation evidence."
-used_by = ["FILE_INGRESS_ASYNC_IO_PIPELINE", "IO_PIPELINE_BACKPRESSURE_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "io_uring_enter(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/io_uring_enter.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_IO_URING_ENTER|https://man7.org/linux/man-pages/man2/io_uring_enter.2.html|primary-api-reference|io_uring_enter(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/io_uring_enter.2.html"
 
-[sources.LINUX_IO_URING_REGISTER]
-title = "io_uring_register(2) - Linux manual page"
+[[sources]]
+key = "LINUX_IO_URING_REGISTER"
 url = "https://man7.org/linux/man-pages/man2/io_uring_register.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines registration of buffers, files, rings, personalities, and restrictions used to make file-ingress fixed-resource behavior auditable."
-used_by = ["FILE_INGRESS_ASYNC_IO_PIPELINE", "SAFE_OPEN_HANDLE_READ_POLICY", "IO_PIPELINE_BACKPRESSURE_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "io_uring_register(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/io_uring_register.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_IO_URING_REGISTER|https://man7.org/linux/man-pages/man2/io_uring_register.2.html|primary-api-reference|io_uring_register(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/io_uring_register.2.html"
 
-[sources.LINUX_OPENAT2]
-title = "openat2(2) - Linux manual page"
+[[sources]]
+key = "LINUX_OPENAT2"
 url = "https://man7.org/linux/man-pages/man2/openat2.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines dirfd-relative open semantics and resolve constraints used to keep file handles bound to an audited root before async reads start."
-used_by = ["SAFE_OPEN_HANDLE_READ_POLICY", "DIRECTORY_ENUMERATION_METADATA_POLICY", "END_TO_END_FILE_INGRESS_ASYNC_IO_TRANCHE_COVERAGE"]
+source_class = "primary-api-reference"
+baseline_type = "openat2(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/openat2.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_OPENAT2|https://man7.org/linux/man-pages/man2/openat2.2.html|primary-api-reference|openat2(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/openat2.2.html"
 
-[sources.LINUX_STATX]
-title = "statx(2) - Linux manual page"
+[[sources]]
+key = "LINUX_STATX"
 url = "https://man7.org/linux/man-pages/man2/statx.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines metadata fields and synchronization flags used for scan admission, cache freshness, and stat policy around high-volume corpus ingress."
-used_by = ["DIRECTORY_ENUMERATION_METADATA_POLICY", "FILE_INGRESS_ASYNC_IO_PIPELINE"]
+source_class = "primary-api-reference"
+baseline_type = "statx(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/statx.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_STATX|https://man7.org/linux/man-pages/man2/statx.2.html|primary-api-reference|statx(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/statx.2.html"
 
-[sources.LINUX_GETDENTS64]
-title = "getdents(2) - Linux manual page"
+[[sources]]
+key = "LINUX_GETDENTS64"
 url = "https://man7.org/linux/man-pages/man2/getdents.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines directory-entry batch enumeration semantics used to avoid per-entry syscall overhead and preserve explicit traversal budget accounting."
-used_by = ["DIRECTORY_ENUMERATION_METADATA_POLICY", "IO_PIPELINE_BACKPRESSURE_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "getdents(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/getdents.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_GETDENTS64|https://man7.org/linux/man-pages/man2/getdents.2.html|primary-api-reference|getdents(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/getdents.2.html"
 
-[sources.LINUX_READV_PREADV2]
-title = "readv(2), preadv(2), preadv2(2) - Linux manual page"
+[[sources]]
+key = "LINUX_READV_PREADV2"
 url = "https://man7.org/linux/man-pages/man2/readv.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines vectored and positioned reads used for chunk scheduling, offset-stable ingestion, retry accounting, and read amplification evidence."
-used_by = ["FILE_INGRESS_ASYNC_IO_PIPELINE", "SAFE_OPEN_HANDLE_READ_POLICY", "IO_PIPELINE_BACKPRESSURE_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "readv(2),-preadv(2),-preadv2(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/readv.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_READV_PREADV2|https://man7.org/linux/man-pages/man2/readv.2.html|primary-api-reference|readv(2),-preadv(2),-preadv2(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/readv.2.html"
 
-[sources.LINUX_OPEN_DIRECT_IO]
-title = "open(2) - Linux manual page"
+[[sources]]
+key = "LINUX_OPEN_DIRECT_IO"
 url = "https://man7.org/linux/man-pages/man2/open.2.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines open flags, including direct-I/O caveats and alignment constraints, grounding the direct-read admission and buffered-read downgrade policy."
-used_by = ["SAFE_OPEN_HANDLE_READ_POLICY", "FILE_INGRESS_ASYNC_IO_PIPELINE", "IO_PIPELINE_BACKPRESSURE_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "open(2)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man2/open.2.html"
+vx_rows = ["VX-1521"]
+digest_material = "LINUX_OPEN_DIRECT_IO|https://man7.org/linux/man-pages/man2/open.2.html|primary-api-reference|open(2)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man2/open.2.html"
 
-[sources.LINUX_INOTIFY]
-title = "inotify(7) - Linux manual page"
+[[sources]]
+key = "LINUX_INOTIFY"
 url = "https://man7.org/linux/man-pages/man7/inotify.7.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines Linux inotify file and directory event monitoring, watch descriptors, rename cookies, queue overflow, and cache-consistency cautions used by incremental corpus invalidation."
-used_by = ["FILESYSTEM_WATCHER_EVENT_POLICY", "INCREMENTAL_CORPUS_CHANGE_JOURNAL", "END_TO_END_INCREMENTAL_CORPUS_INDEX_TRANCHE_COVERAGE"]
+source_class = "primary-api-reference"
+baseline_type = "inotify(7)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man7/inotify.7.html"
+vx_rows = ["VX-1541"]
+digest_material = "LINUX_INOTIFY|https://man7.org/linux/man-pages/man7/inotify.7.html|primary-api-reference|inotify(7)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man7/inotify.7.html"
 
-[sources.LINUX_FANOTIFY]
-title = "fanotify(7) - Linux manual page"
+[[sources]]
+key = "LINUX_FANOTIFY"
 url = "https://man7.org/linux/man-pages/man7/fanotify.7.html"
-publisher = "Linux man-pages project"
-source_type = "primary_api_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines Linux fanotify filesystem notification semantics used for mount-level watch strategies, permission-event boundaries, and event metadata limitations."
-used_by = ["FILESYSTEM_WATCHER_EVENT_POLICY", "INCREMENTAL_RESCAN_INVALIDATION_EVIDENCE"]
+source_class = "primary-api-reference"
+baseline_type = "fanotify(7)---linux-manual-page"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://man7.org/linux/man-pages/man7/fanotify.7.html"
+vx_rows = ["VX-1541"]
+digest_material = "LINUX_FANOTIFY|https://man7.org/linux/man-pages/man7/fanotify.7.html|primary-api-reference|fanotify(7)---linux-manual-page|official-doc|documentation-only|release_floor_eligible=true|https://man7.org/linux/man-pages/man7/fanotify.7.html"
 
-[sources.SQLITE_WAL]
-title = "SQLite Write-Ahead Logging"
+[[sources]]
+key = "SQLITE_WAL"
 url = "https://sqlite.org/wal.html"
-publisher = "SQLite project"
-source_type = "official_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents write-ahead logging behavior, readers coexisting with writers, checkpoints, and recovery semantics used to ground persistent corpus journal contracts."
-used_by = ["INCREMENTAL_CORPUS_CHANGE_JOURNAL", "CORPUS_CONTENT_IDENTITY_INDEX", "END_TO_END_INCREMENTAL_CORPUS_INDEX_TRANCHE_COVERAGE"]
+source_class = "official-documentation"
+baseline_type = "sqlite-write-ahead-logging"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://sqlite.org/wal.html"
+vx_rows = ["VX-1541"]
+digest_material = "SQLITE_WAL|https://sqlite.org/wal.html|official-documentation|sqlite-write-ahead-logging|official-doc|documentation-only|release_floor_eligible=true|https://sqlite.org/wal.html"
 
-[sources.BLAKE3_SPEC]
-title = "The BLAKE3 Cryptographic Hash and MAC"
+[[sources]]
+key = "BLAKE3_SPEC"
 url = "https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf"
-publisher = "BLAKE3 team"
-source_type = "primary_specification"
-retrieved_on = "2026-06-10"
-summary = "Specifies BLAKE3 hashing behavior used for content identity, chunk digests, and cross-process cache keys while keeping secret-independent hashes separate from security authentication claims."
-used_by = ["CORPUS_CONTENT_IDENTITY_INDEX", "INCREMENTAL_CORPUS_CHANGE_JOURNAL"]
+source_class = "primary-specification"
+baseline_type = "the-blake3-cryptographic-hash-and-mac"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf"
+vx_rows = ["VX-1541"]
+digest_material = "BLAKE3_SPEC|https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf|primary-specification|the-blake3-cryptographic-hash-and-mac|official-spec|documentation-only|release_floor_eligible=true|https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf"
 
-[sources.GCC_PREPROCESSOR_DEPENDENCIES]
-title = "Options Controlling the Preprocessor"
+[[sources]]
+key = "GCC_PREPROCESSOR_DEPENDENCIES"
 url = "https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html"
-publisher = "GNU Compiler Collection project"
-source_type = "official_toolchain_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents GCC dependency-generation flags such as -M, -MM, -MD, -MMD, -MF, -MT, -MQ, -MG, -MP, include search behavior, and maximum include depth used to ground C/C++ include-edge extraction."
-used_by = ["LANGUAGE_DEPENDENCY_EDGE_MATRIX", "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY", "END_TO_END_LANGUAGE_DEPENDENCY_GRAPH_TRANCHE_COVERAGE"]
+source_class = "official-toolchain-documentation"
+baseline_type = "options-controlling-the-preprocessor"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html"
+vx_rows = ["VX-1561"]
+digest_material = "GCC_PREPROCESSOR_DEPENDENCIES|https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html|official-toolchain-documentation|options-controlling-the-preprocessor|official-doc|documentation-only|release_floor_eligible=true|https://gcc.gnu.org/onlinedocs/gcc/Preprocessor-Options.html"
 
-[sources.CLANG_DEPENDENCY_SCANNING]
-title = "clang::dependencies dependency scanning documentation"
+[[sources]]
+key = "CLANG_DEPENDENCY_SCANNING"
 url = "https://clang.llvm.org/doxygen/DependencyScanningService_8h_source.html"
-publisher = "LLVM/Clang project"
-source_type = "official_toolchain_api_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents Clang dependency scanning service options, dependency-directives scan mode, module cache entries, worker VFS behavior, and module dependency graph concepts used to ground fast C/C++ dependency discovery."
-used_by = ["LANGUAGE_DEPENDENCY_EDGE_MATRIX", "MODULE_IMPORT_RESOLUTION_CONTRACTS", "DEPENDENCY_GRAPH_REUSE_EVIDENCE"]
+source_class = "official-toolchain-api-documentation"
+baseline_type = "clang::dependencies-dependency-scanning-documentation"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://clang.llvm.org/doxygen/DependencyScanningService_8h_source.html"
+vx_rows = ["VX-1561"]
+digest_material = "CLANG_DEPENDENCY_SCANNING|https://clang.llvm.org/doxygen/DependencyScanningService_8h_source.html|official-toolchain-api-documentation|clang::dependencies-dependency-scanning-documentation|official-doc|documentation-only|release_floor_eligible=true|https://clang.llvm.org/doxygen/DependencyScanningService_8h_source.html"
 
-[sources.PYTHON_IMPORT_SYSTEM]
-title = "The import system"
+[[sources]]
+key = "PYTHON_IMPORT_SYSTEM"
 url = "https://docs.python.org/3/reference/import.html"
-publisher = "Python Software Foundation"
-source_type = "official_language_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines Python import search, module specs, packages, submodules, caches, loaders, and sys.modules behavior used to ground Python dependency edge resolution and invalidation."
-used_by = ["LANGUAGE_DEPENDENCY_EDGE_MATRIX", "MODULE_IMPORT_RESOLUTION_CONTRACTS", "CROSS_FILE_INVALIDATION_PROPAGATION_POLICY"]
+source_class = "official-language-reference"
+baseline_type = "the-import-system"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.python.org/3/reference/import.html"
+vx_rows = ["VX-1561"]
+digest_material = "PYTHON_IMPORT_SYSTEM|https://docs.python.org/3/reference/import.html|official-language-reference|the-import-system|official-spec|documentation-only|release_floor_eligible=true|https://docs.python.org/3/reference/import.html"
 
-[sources.RUST_MODULES_REFERENCE]
-title = "Modules - The Rust Reference"
+[[sources]]
+key = "RUST_MODULES_REFERENCE"
 url = "https://doc.rust-lang.org/reference/items/modules.html"
-publisher = "Rust project"
-source_type = "official_language_reference"
-retrieved_on = "2026-06-10"
-summary = "Defines Rust module declarations, inline modules, module file paths, visibility, and path-based module loading used to ground Rust dependency edge resolution."
-used_by = ["LANGUAGE_DEPENDENCY_EDGE_MATRIX", "MODULE_IMPORT_RESOLUTION_CONTRACTS", "DEPENDENCY_GRAPH_REUSE_EVIDENCE"]
+source_class = "official-language-reference"
+baseline_type = "modules---the-rust-reference"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://doc.rust-lang.org/reference/items/modules.html"
+vx_rows = ["VX-1561"]
+digest_material = "RUST_MODULES_REFERENCE|https://doc.rust-lang.org/reference/items/modules.html|official-language-reference|modules---the-rust-reference|official-spec|documentation-only|release_floor_eligible=true|https://doc.rust-lang.org/reference/items/modules.html"
 
-[sources.SCIP_CODE_INTELLIGENCE_PROTOCOL]
-title = "SCIP Code Intelligence Protocol"
+[[sources]]
+key = "SCIP_CODE_INTELLIGENCE_PROTOCOL"
 url = "https://scip-code.org/"
-publisher = "SCIP project"
-source_type = "primary_protocol_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents a language-agnostic code indexing protocol for definitions, references, implementations, and symbol metadata used to ground stable semantic fact identity."
-used_by = ["SEMANTIC_FACT_INDEX_SCHEMA", "SYMBOL_REFERENCE_STABILITY_POLICY", "END_TO_END_SEMANTIC_FACT_INDEX_TRANCHE_COVERAGE"]
+source_class = "primary-protocol-documentation"
+baseline_type = "scip-code-intelligence-protocol"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://scip-code.org/"
+vx_rows = ["VX-1581"]
+digest_material = "SCIP_CODE_INTELLIGENCE_PROTOCOL|https://scip-code.org/|primary-protocol-documentation|scip-code-intelligence-protocol|official-doc|documentation-only|release_floor_eligible=true|https://scip-code.org/"
 
-[sources.LSP_SEMANTIC_TOKENS_3_17]
-title = "Language Server Protocol Specification 3.17 - Semantic Tokens"
+[[sources]]
+key = "LSP_SEMANTIC_TOKENS_3_17"
 url = "https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/"
-publisher = "Microsoft Language Server Protocol project"
-source_type = "primary_protocol_specification"
-retrieved_on = "2026-06-10"
-summary = "Defines semantic token requests, token typing, large-result encoding, and delta support used to ground symbol occurrence stability and incremental semantic updates."
-used_by = ["SYMBOL_REFERENCE_STABILITY_POLICY", "SEMANTIC_FACT_INDEX_EVIDENCE"]
+source_class = "primary-protocol-specification"
+baseline_type = "language-server-protocol-specification-3.17---semantic-tokens"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/"
+vx_rows = ["VX-1581"]
+digest_material = "LSP_SEMANTIC_TOKENS_3_17|https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/|primary-protocol-specification|language-server-protocol-specification-3.17---semantic-tokens|official-spec|documentation-only|release_floor_eligible=true|https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/"
 
-[sources.SOUFFLE_RELATIONS]
-title = "Relations - Souffle Datalog"
+[[sources]]
+key = "SOUFFLE_RELATIONS"
 url = "https://souffle-lang.github.io/relations"
-publisher = "Souffle project"
-source_type = "official_language_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents Datalog relations, attributes, constraints, and relation representations used to ground typed semantic fact tables and derived analysis relations."
-used_by = ["SEMANTIC_FACT_INDEX_SCHEMA", "INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY", "SEMANTIC_FACT_INDEX_EVIDENCE"]
+source_class = "official-language-documentation"
+baseline_type = "relations---souffle-datalog"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://souffle-lang.github.io/relations"
+vx_rows = ["VX-1581"]
+digest_material = "SOUFFLE_RELATIONS|https://souffle-lang.github.io/relations|official-language-documentation|relations---souffle-datalog|official-doc|documentation-only|release_floor_eligible=true|https://souffle-lang.github.io/relations"
 
-[sources.CODEQL_DATA_FLOW_ANALYSIS]
-title = "About data flow analysis - CodeQL"
+[[sources]]
+key = "CODEQL_DATA_FLOW_ANALYSIS"
 url = "https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/"
-publisher = "GitHub CodeQL documentation"
-source_type = "official_static_analysis_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents local and global data flow analysis concepts, value propagation, sources, sinks, and analysis boundaries used to ground semantic flow fact reuse policy."
-used_by = ["INCREMENTAL_DATAFLOW_FACT_REUSE_POLICY", "SEMANTIC_FACT_INDEX_EVIDENCE", "END_TO_END_SEMANTIC_FACT_INDEX_TRANCHE_COVERAGE"]
+source_class = "official-static-analysis-documentation"
+baseline_type = "about-data-flow-analysis---codeql"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/"
+vx_rows = ["VX-1581"]
+digest_material = "CODEQL_DATA_FLOW_ANALYSIS|https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/|official-static-analysis-documentation|about-data-flow-analysis---codeql|official-doc|documentation-only|release_floor_eligible=true|https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/"
 
-[sources.APACHE_ARROW_COLUMNAR_FORMAT]
-title = "Arrow Columnar Format"
+[[sources]]
+key = "APACHE_ARROW_COLUMNAR_FORMAT"
 url = "https://arrow.apache.org/docs/format/Columnar.html"
-publisher = "Apache Arrow project"
-source_type = "primary_format_specification"
-retrieved_on = "2026-06-10"
-summary = "Specifies Arrow's in-memory columnar representation, buffers, validity bitmaps, alignment, nested layouts, and analytical locality tradeoffs used to ground physical semantic fact storage."
-used_by = ["COLUMNAR_FACT_STORE_LAYOUT", "VECTORIZED_RULE_EXECUTION_PLAN", "END_TO_END_COLUMNAR_FACT_RULE_EXECUTION_TRANCHE_COVERAGE"]
+source_class = "primary-format-specification"
+baseline_type = "arrow-columnar-format"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://arrow.apache.org/docs/format/Columnar.html"
+vx_rows = ["VX-1601"]
+digest_material = "APACHE_ARROW_COLUMNAR_FORMAT|https://arrow.apache.org/docs/format/Columnar.html|primary-format-specification|arrow-columnar-format|official-spec|documentation-only|release_floor_eligible=true|https://arrow.apache.org/docs/format/Columnar.html"
 
-[sources.APACHE_DATAFUSION_QUERY_OPTIMIZER]
-title = "Query Optimizer - Apache DataFusion documentation"
+[[sources]]
+key = "APACHE_DATAFUSION_QUERY_OPTIMIZER"
 url = "https://datafusion.apache.org/library-user-guide/query-optimizer.html"
-publisher = "Apache DataFusion project"
-source_type = "official_query_engine_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents logical and physical optimizer rules that rewrite plans and expressions to compute the same result faster, grounding Vyre fact-rule optimizer governance."
-used_by = ["FACT_QUERY_COST_MODEL_POLICY", "VECTORIZED_RULE_EXECUTION_PLAN", "FACT_STORE_REUSE_EVIDENCE"]
+source_class = "official-query-engine-documentation"
+baseline_type = "query-optimizer---apache-datafusion-documentation"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://datafusion.apache.org/library-user-guide/query-optimizer.html"
+vx_rows = ["VX-1601"]
+digest_material = "APACHE_DATAFUSION_QUERY_OPTIMIZER|https://datafusion.apache.org/library-user-guide/query-optimizer.html|official-query-engine-documentation|query-optimizer---apache-datafusion-documentation|official-doc|documentation-only|release_floor_eligible=true|https://datafusion.apache.org/library-user-guide/query-optimizer.html"
 
-[sources.DUCKDB_VECTOR_EXECUTION_FORMAT]
-title = "Execution Format - DuckDB"
+[[sources]]
+key = "DUCKDB_VECTOR_EXECUTION_FORMAT"
 url = "https://duckdb.org/docs/current/internals/vector.html"
-publisher = "DuckDB project"
-source_type = "official_query_engine_documentation"
-retrieved_on = "2026-06-10"
-summary = "Documents DuckDB's vectorized execution format, vectors, data chunks, and fixed-size batch model used to ground batch rule-evaluation contracts."
-used_by = ["VECTORIZED_RULE_EXECUTION_PLAN", "FACT_STORE_REUSE_EVIDENCE", "END_TO_END_COLUMNAR_FACT_RULE_EXECUTION_TRANCHE_COVERAGE"]
+source_class = "official-query-engine-documentation"
+baseline_type = "execution-format---duckdb"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://duckdb.org/docs/current/internals/vector.html"
+vx_rows = ["VX-1601"]
+digest_material = "DUCKDB_VECTOR_EXECUTION_FORMAT|https://duckdb.org/docs/current/internals/vector.html|official-query-engine-documentation|execution-format---duckdb|official-doc|documentation-only|release_floor_eligible=true|https://duckdb.org/docs/current/internals/vector.html"
 
-[sources.SUBSTRAIT_SPECIFICATION]
-title = "Substrait Specification"
+[[sources]]
+key = "SUBSTRAIT_SPECIFICATION"
 url = "https://substrait.io/spec/specification/"
-publisher = "Substrait project"
-source_type = "primary_plan_specification"
-retrieved_on = "2026-06-10"
-summary = "Specifies cross-system relational algebra plans, types, expressions, functions, and extension anchors used to ground portable rule-plan serialization boundaries."
-used_by = ["FACT_QUERY_COST_MODEL_POLICY", "VECTORIZED_RULE_EXECUTION_PLAN", "END_TO_END_COLUMNAR_FACT_RULE_EXECUTION_TRANCHE_COVERAGE"]
+source_class = "primary-plan-specification"
+baseline_type = "substrait-specification"
+reproducibility_class = "official-spec"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://substrait.io/spec/specification/"
+vx_rows = ["VX-1601"]
+digest_material = "SUBSTRAIT_SPECIFICATION|https://substrait.io/spec/specification/|primary-plan-specification|substrait-specification|official-spec|documentation-only|release_floor_eligible=true|https://substrait.io/spec/specification/"

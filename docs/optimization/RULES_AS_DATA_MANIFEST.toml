@@ -39,7 +39,7 @@ path = "docs/optimization/THRESHOLD_POLICY.toml"
 owner_lane = "evidence_truth"
 schema_token = "release/evidence/hygiene/threshold-policy.json"
 command_matrix_source = true
-malformed_fixture = "xtask/src/hygiene_matrix.rs:threshold_policy.rows"
+malformed_fixture = "xtask/src/hygiene_matrix.rs:malformed_threshold_policy_rows_are_rejected"
 
 [[data]]
 id = "benchmark-targets"
