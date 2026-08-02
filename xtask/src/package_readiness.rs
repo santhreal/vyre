@@ -535,6 +535,9 @@ fn package_path_is_forbidden(path: &str) -> bool {
     ];
 
     let path = Path::new(path);
+    if path.starts_with("benches/baselines") || path.starts_with("tests/corpus") {
+        return true;
+    }
     if path.is_absolute()
         || path
             .components()

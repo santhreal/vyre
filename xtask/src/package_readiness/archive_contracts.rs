@@ -51,6 +51,8 @@ fn internal_and_unsafe_package_paths_are_rejected() {
         ".env.production",
         "credentials/token",
         "target/release/lib.rlib",
+        "benches/baselines/scan/report/index.html",
+        "tests/corpus/generated/hostile.bin",
         "../outside",
         "/absolute/path",
     ] {
@@ -64,6 +66,8 @@ fn internal_and_unsafe_package_paths_are_rejected() {
         "tests/behavior.rs",
         "src/targeting.rs",
         "examples/release_surface.rs",
+        "benches/baselines.rs",
+        "tests/corpus_contract.rs",
     ] {
         assert!(
             !package_path_is_forbidden(path),
