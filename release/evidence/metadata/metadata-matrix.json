@@ -15,14 +15,12 @@
     "vyrec",
     "vyre-frontend-c"
   ],
-  "missing_required_release_surfaces": [
-    "weirflow@0.1.1:dataflow-analysis"
-  ],
+  "missing_required_release_surfaces": [],
   "packages": [
     {
       "name": "vyre",
       "manifest": "vyre-core/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "GPU compute intermediate representation with a standard operation library",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -38,14 +36,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-engine",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-aot",
       "manifest": "vyre-aot/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Ahead-of-time compilation for vyre Programs: emits target-native bytes plus a self-contained launcher bundle suitable for embedded and competition-style code-budget-constrained submissions.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -61,14 +59,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-bench",
       "manifest": "vyre-bench/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Internal vyre benchmark + parity harness across the CUDA, wgpu, SPIR-V, and reference substrates. Not published to crates.io.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -110,7 +108,7 @@
     {
       "name": "vyre-conform-enforce",
       "manifest": "conform/vyre-conform-enforce/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Algebraic-law prover for vyre ops over witness pairs.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -131,7 +129,7 @@
     {
       "name": "vyre-conform-generate",
       "manifest": "conform/vyre-conform-generate/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Counterexample shrinking + witness generation for vyre conformance testing.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -152,7 +150,7 @@
     {
       "name": "vyre-conform-runner",
       "manifest": "conform/vyre-conform-runner/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Conformance test runner for the vyre execution engine.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -175,7 +173,7 @@
     {
       "name": "vyre-conform-spec",
       "manifest": "conform/vyre-conform-spec/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Witness sets and composition laws for vyre conformance testing.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -196,7 +194,7 @@
     {
       "name": "vyre-debug",
       "manifest": "vyre-debug/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Debugging CLI and inspection helpers for Vyre programs, lowering, and emitted shaders.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -212,14 +210,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver",
       "manifest": "vyre-driver/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Driver layer: registry, runtime, pipeline, routing, diagnostics. Substrate-agnostic backend machinery. Part of the vyre GPU compiler.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -235,14 +233,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-cuda",
       "manifest": "vyre-driver-cuda/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "CUDA/PTX backend for vyre through the CUDA driver API.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -258,14 +256,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "cuda-backend",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-metal",
       "manifest": "vyre-driver-metal/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Native Metal backend for vyre IR through Metal.framework.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -281,14 +279,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-reference",
       "manifest": "vyre-driver-reference/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "cpu-ref VyreBackend adapter over the pure Rust vyre-reference interpreter.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -304,14 +302,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-spirv",
       "manifest": "vyre-driver-spirv/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "SPIR-V backend for vyre through naga's SPIR-V writer.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -327,14 +325,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "wgpu backend for vyre IR  -  implements VyreBackend, owns GPU runtime, buffer pool, pipeline cache",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -350,14 +348,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "wgpu-backend",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-metal",
       "manifest": "vyre-emit-metal/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Metal Shading Language artifact emitter for vyre KernelDescriptor. Routes through naga::Module to share substrate-neutral lowering.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -373,14 +371,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-naga",
       "manifest": "vyre-emit-naga/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Naga IR emitter for vyre KernelDescriptor. Produces wgpu-compatible compute shaders.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -396,14 +394,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-ptx",
       "manifest": "vyre-emit-ptx/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "PTX text emitter for vyre KernelDescriptor. Produces NVRTC-compatible CUDA assembly.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -419,14 +417,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-emit-spirv",
       "manifest": "vyre-emit-spirv/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "SPIR-V binary emitter for vyre KernelDescriptor. Routes through naga::Module → naga::back::spv to share substrate-neutral lowering with vyre-emit-naga.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -442,14 +440,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-foundation",
       "manifest": "vyre-foundation/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Foundation layer: IR, type system, memory model, wire format. Zero application semantics. Part of the vyre GPU compiler.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -465,7 +463,7 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
@@ -493,7 +491,7 @@
     {
       "name": "vyre-frontend-c",
       "manifest": "vyre-frontend-c/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "GPU-first C parser and compile-evidence driver built on vyre and vyre-libs: bounded TU preparation, lex, digraph rewrite, AST evidence, and supported IR composition.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -507,14 +505,14 @@
       "release_kind": "non-publishable-release-surface",
       "release_group": "vyre",
       "release_surface": "c-frontend",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publish=false allowed for release-surface crates intentionally kept out of crates.io",
       "blockers": []
     },
     {
       "name": "vyre-frontend-rust",
       "manifest": "vyre-frontend-rust/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "GPU-first Rust parser and compile-evidence driver for Vyre.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -556,7 +554,7 @@
     {
       "name": "vyre-grammar-gen",
       "manifest": "vyre-grammar-gen/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Host-side C11 grammar table generator for the vyre GPU C parser. Emits DFA lexer + LR(1) action/goto tables as binary blobs that vyre-libs::parsing loads as ReadOnly buffers.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -573,14 +571,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-harness",
       "manifest": "vyre-harness/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Universal Cat-A op harness registry: OpEntry, ConvergenceContract, FixpointContract, UniversalDiffExemption  -  the registry types every vyre-built library publishes through.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -596,14 +594,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-intrinsics",
       "manifest": "vyre-intrinsics/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Cat-C hardware intrinsics for vyre  -  ops that require a dedicated Naga emitter arm and dedicated vyre-reference eval arm. Pure fn(...) -> Program builders over vyre::ir::* live in vyre-libs or user crates, not here.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -619,14 +617,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "vyre Category A library ecosystem  -  pure-IR compositions over vyre-ops hardware primitives",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -644,14 +642,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-lints",
       "manifest": "vyre-lints/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Lego-block enforcement lints for vyre. Forbids raw IR construction in dialect crates.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -667,14 +665,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-lower",
       "manifest": "vyre-lower/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Substrate-neutral lowering: vyre Program → KernelDescriptor consumed by vyre-emit-* crates.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -690,14 +688,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-macros",
       "manifest": "vyre-macros/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Procedural macros for vyre compiler passes  -  #[vyre_pass], #[vyre_ast_registry]",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -713,14 +711,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-primitives",
       "manifest": "vyre-primitives/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Compositional primitives for vyre  -  marker types (always on) + Tier 2.5 LEGO substrate (feature-gated per domain).",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -738,14 +736,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-reference",
       "manifest": "vyre-reference/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Pure-Rust CPU reference interpreter for vyre IR; byte-identical oracle for backend conformance",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -761,14 +759,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Persistent megakernel + io_uring zero-copy streaming runtime for vyre  -  GPU as VIR0 bytecode interpreter",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -784,14 +782,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-self-substrate",
       "manifest": "vyre-self-substrate/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Vyre self-substrate: vyre using its own primitives on its own scheduler problems. The recursion-thesis layer between vyre-primitives and vyre-driver.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -807,14 +805,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-spec",
       "manifest": "vyre-spec/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Frozen data contracts for vyre  -  OpDef, AlgebraicLaw, Category, IntrinsicTable",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -830,14 +828,14 @@
       "release_kind": "publishable-crate",
       "release_group": "vyre",
       "release_surface": "vyre-crate",
-      "expected_version": "0.7.0",
+      "expected_version": "0.7.1",
       "publish_policy": "publishable release crate",
       "blockers": []
     },
     {
       "name": "vyre-test-harness",
       "manifest": "conform/vyre-test-harness/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Test harness for the vyre execution engine.",
       "license": "MIT OR Apache-2.0",
       "readme": null,
@@ -860,7 +858,7 @@
     {
       "name": "vyre-test-support",
       "manifest": "vyre-test-support/Cargo.toml",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "description": "Shared test-only harness helpers for the vyre workspace: the ONE canonical registry/coverage CLOSURE gate (source-enumerates `pub fn -> Program` builders and asserts each is registered, tested, or explicitly waived). Dev-dependency only; never a runtime dependency.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
@@ -943,11 +941,9 @@
       "release_kind": "publishable-crate",
       "release_group": "weir",
       "release_surface": "dataflow-analysis",
-      "expected_version": "0.1.1",
+      "expected_version": "0.1.2",
       "publish_policy": "publishable release crate",
-      "blockers": [
-        "package.version must be `0.1.1` for weir release"
-      ]
+      "blockers": []
     },
     {
       "name": "xtask",
@@ -971,8 +967,5 @@
       "blockers": []
     }
   ],
-  "blockers": [
-    "weirflow: package.version must be `0.1.1` for weir release",
-    "missing required release surface `weirflow@0.1.1:dataflow-analysis`"
-  ]
+  "blockers": []
 }

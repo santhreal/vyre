@@ -4,7 +4,7 @@
   "exists": true,
   "source_bytes": 12418,
   "required_tokens": [
-    "0.1.1",
+    "0.1.2",
     "dataflow",
     "vyre",
     "ssa",

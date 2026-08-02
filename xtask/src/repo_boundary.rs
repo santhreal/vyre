@@ -285,12 +285,19 @@ mod tests {
     /// Public evidence may cite every repository that owns a package in the
     /// release train, while launch-state ownership remains singular.
     #[test]
-    fn public_artifact_boundary_accepts_weir_release_repository() {
-        let blockers = public_artifact_boundary_blockers(
-            "release/evidence/metadata/metadata-matrix.json",
-            br#"{"repository":"https://github.com/santhreal/weir"}"#,
-        );
+    fn public_artifact_boundary_accepts_release_package_repositories() {
+        for repository in ["santhreal/weir", "santhreal/weirflow"] {
+            let artifact = format!(r#"{{"repository":"https://github.com/{repository}"}}"#);
+            let blockers = public_artifact_boundary_blockers(
+                "release/evidence/metadata/metadata-matrix.json",
+                artifact.as_bytes(),
+            );
 
-        assert_eq!(blockers, Vec::<String>::new());
+            assert_eq!(
+                blockers,
+                Vec::<String>::new(),
+                "Fix: release package repository `{repository}` must remain inside the public evidence boundary."
+            );
+        }
     }
 }

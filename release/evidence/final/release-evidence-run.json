@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "total_commands": 17,
-  "successful_commands": 15,
-  "command_failures": 2,
-  "artifact_failures": 1,
+  "successful_commands": 17,
+  "command_failures": 0,
+  "artifact_failures": 0,
   "command_count": 17,
   "required_command_count": 17,
   "report_only_command_count": 0,
@@ -60,9 +60,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "dcc2a80fe44802240e81394b15539b566493610fc69c79515661f3544f062383",
-          "source_fingerprint": "release-evidence-source:v1:3e795d00f5eddfceb06a683cebd0cbac62f0f6100025e42c0060059025bb8793",
-          "freshness_fingerprint": "release-evidence-freshness:v1:5592be961e0d60b33fee430a15d8859e86b17d7b7548f172bf7517cc19ed72e1",
+          "content_sha256": "56fe394144b1d5c148f7c5e0af77284b4c60f1f638dad06396a13e37895529fe",
+          "source_fingerprint": "release-evidence-source:v1:e374b1451c8cd0d1270e31ef6016e0b368adaeeb37570134d8c6cb8a2207eb61",
+          "freshness_fingerprint": "release-evidence-freshness:v1:883aba95b239a1e820c6ecacf5103f5035911a8a01164c2fcf5f39293563c67c",
           "blockers": []
         },
         {
@@ -73,9 +73,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "ed943a838fbbe725aaaf82f47b15178acbfd3572eac5cbcbcab371f4e372f451",
-          "source_fingerprint": "release-evidence-source:v1:3dc54b2de1d1b196d5ec7f5326d0ef3abb3834f95a2b0cc89de9363840392d1a",
-          "freshness_fingerprint": "release-evidence-freshness:v1:3b35ca581426c25f9ed29d08b727e7f22fe3ad25c4cceddde7f254453dba71e9",
+          "content_sha256": "73a0a523c65d36d916bb9aedbc0b49f8cdb19374a44b55477819774d8f882bc6",
+          "source_fingerprint": "release-evidence-source:v1:f6b987b386912edb12ad395b7d069fb03cadd64245977fe8c1e25bdcf6786307",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c6d401f78c96b9f49f8f15a8ae5a1bd2b89cc8bc9f5df46f6c817bea0c71fcdc",
           "blockers": []
         },
         {
@@ -177,9 +177,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "7da928cf38927cf346dd34ab9cd83d8b488086bf53f23cc1a0fcf9c0fd0e9406",
-          "source_fingerprint": "release-evidence-source:v1:bed95467224f1f7c90db1bba654c23afcfa26373306eafb2fcb9e6b81cff4cf9",
-          "freshness_fingerprint": "release-evidence-freshness:v1:b488b0b22e1a0d5109f8ec402d5f1e73471951aa138678e956db46ccc2d592ce",
+          "content_sha256": "3ebf9914598d85b85efd1b2697f3152140cb88fe6b1eeb2b16582367a753f948",
+          "source_fingerprint": "release-evidence-source:v1:863cf549e0ca6163198361dcfc2cba31761fbc12f37537af447553223b6aff0c",
+          "freshness_fingerprint": "release-evidence-freshness:v1:b172315bff4d9ce2c9515df9555b295a99e884fdd80349c00e282a8cd378157c",
           "blockers": []
         },
         {
@@ -216,9 +216,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "8f2aeaf067033b0237cc3e5dd7c3633a5176632d47d7ba58d4678a870c202bd2",
-          "source_fingerprint": "release-evidence-source:v1:60119013e8a4519162ac81086944c7da783d33461bf7355dbbae8e8a4345cfc9",
-          "freshness_fingerprint": "release-evidence-freshness:v1:c942ebe0a0bdfa8638d1a4b620d99876ef1f64fb9ee90b6fb7f50e61e95b8867",
+          "content_sha256": "6b59fd60b174ad64bb7ad9c00187504c5067f5627afdd98f059bb0f1a97b3ccc",
+          "source_fingerprint": "release-evidence-source:v1:45cd28070292852a18b7f9edf56d472f12d95fcff088b1c296e27fa9b1e03b43",
+          "freshness_fingerprint": "release-evidence-freshness:v1:e48e90937cd45c927d3c8850ea3a824b9c5f0ac561ed2e26c14453033b73dc08",
           "blockers": []
         },
         {
@@ -268,9 +268,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "cafc4f83ff40c01e0df6e4b469baf18231fd25e181631077858464195a93aa2b",
-          "source_fingerprint": "release-evidence-source:v1:050464998400ad6d41d611ebe6c376d56419ace134601df73203d790a170ad4e",
-          "freshness_fingerprint": "release-evidence-freshness:v1:e15c27e02f94240e4d300e7184f84e01b9160d8a30dfffc1b62c05e2c576df11",
+          "content_sha256": "5ba43ab832b67734ff18b1366cdd99d7ecd3dbb065b3e6e28a1a276e28d6c22d",
+          "source_fingerprint": "release-evidence-source:v1:9a37018c8857480aa80c9714031f8fecfb24364d728890cb1c2ba063acefa145",
+          "freshness_fingerprint": "release-evidence-freshness:v1:b35357046bdfc83e37dc46770ad647d00601d14e0125f3c66f8ca3ced5d4e666",
           "blockers": []
         },
         {
@@ -281,9 +281,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask docs-matrix",
           "command_mode": "spawned",
-          "content_sha256": "964b12a21c4b0a341cfc4f4966ff51d84a1d939e7b39c73295ae2f7f2fc946cb",
-          "source_fingerprint": "release-evidence-source:v1:b7b941040fa3a0a0f418cbc1384199f581dc45864da595d8c1c4705768b8ab6a",
-          "freshness_fingerprint": "release-evidence-freshness:v1:830ca80f6c00ffd201773a205fa9a1248aef8eea4a6331697e62154dc9a86636",
+          "content_sha256": "bd9801fa0e511750b6d65da384b29f7fa949f2822de34e75a725c37a8e33afe0",
+          "source_fingerprint": "release-evidence-source:v1:4d556f414a2ed152b472880d2f46522d37c219b3d5d67c0934e53e3d0ea929da",
+          "freshness_fingerprint": "release-evidence-freshness:v1:ebc89e9ffd45dc2ae20cd7e437b88b9b0d5681c2e088cc6429759ae6aab33f38",
           "blockers": []
         },
         {
@@ -323,33 +323,33 @@
         "release/evidence/version/version-matrix.json",
         "release/evidence/version/release-tag-plan.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "status": "success",
+      "exit_code": 0,
       "artifact_statuses": [
         {
           "path": "release/evidence/version/version-matrix.json",
           "exists": true,
-          "bytes": 19655,
+          "bytes": 19496,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "66835b34fc6a0f6b494b5cbbd061e2bd7f9581dc919eb11b9f8fdd55184336b7",
-          "source_fingerprint": "release-evidence-source:v1:4722dd77d74b81db4009366d2c8a68782d31b8a65704e94cbdcf6bb50a0520ca",
-          "freshness_fingerprint": "release-evidence-freshness:v1:9b42166c0002f63b6d391a70abe60731acf5c49d9426c3b481ca2b12cc2272c0",
+          "content_sha256": "33306d34a7db572f8b643763cfd672bf5297fc51edb0d341a23ece412ff1b49b",
+          "source_fingerprint": "release-evidence-source:v1:f3909231a750b78bbf52f2fd5f7947a5df32d748eb9677fcb6cc33c2216d22f6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:d93e1ac8e8e44890696c7fb01b6e2778d640804efb686c577ef1d47e63eefa95",
           "blockers": []
         },
         {
           "path": "release/evidence/version/release-tag-plan.json",
           "exists": true,
-          "bytes": 1323,
+          "bytes": 1193,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "4aaeb96a532fd700c9506cba6fec3225b3d8a2b442d7f7d47afcd05ee60cf3b7",
-          "source_fingerprint": "release-evidence-source:v1:2790bed1314916e04debced28ae998a7ad944b55b0eb6f300446a026a6be3968",
-          "freshness_fingerprint": "release-evidence-freshness:v1:2b0c74f01e08a5827aa236fca491be9ccc2af0f4c1528a2c75057224937a8828",
+          "content_sha256": "0f92d46b19beed295b65a039cb00ffdc00aed5676bafe8603648f8439a56b719",
+          "source_fingerprint": "release-evidence-source:v1:598f19f63986ebe122535af49d36b8f0b0ce3738a477cd0dfccb23dc2cb33d7a",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a7029df97299eae887e2c9a2e90d1d83578b152ebc5a4cc8d1974c55ece657d4",
           "blockers": []
         }
       ]
@@ -793,9 +793,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "9616b6fd7553c705c2b0e714ed0c5dd745def7d499cf1d54c74546df7a9b3452",
-          "source_fingerprint": "release-evidence-source:v1:cd6d9f77bc5f8bb41db9d18f50c46af15d7272f5192db0fc117f27aee4d93efb",
-          "freshness_fingerprint": "release-evidence-freshness:v1:c3ea8df2ffe2d68fd466269cd69a36c8533ab915bc8fb4038d151d1787a8b5f2",
+          "content_sha256": "71908d1fbc2812b31cc5256f3ff2033782ece980641a1d64e3b7f33dc29967bb",
+          "source_fingerprint": "release-evidence-source:v1:e54e0aa2f304db84f827dd2aa447d9d71e3081bf30218aa1fee90f4da9268be3",
+          "freshness_fingerprint": "release-evidence-freshness:v1:880bb1e6af9fbdb6d2fe1688ce2c2dea64a3f56347e735bd93ac2cd84ec6de34",
           "blockers": []
         },
         {
@@ -858,9 +858,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "40205e2941dd5807158fad66170c7a21da8b35cbeba8b908afbf6710f6cb38c1",
-          "source_fingerprint": "release-evidence-source:v1:49dd2cd45d4b27f18ec2816b4b219edf824532639610b94b9366bcf39c8e2cb8",
-          "freshness_fingerprint": "release-evidence-freshness:v1:79e8272b508b449ec040482d3a76f2950b73169a3377ee6c6632e0341c8a35cb",
+          "content_sha256": "5e1f9dba3118fd0bc08831b1c4b947805b52f283876c6f3c0d0d52a7f2fe2474",
+          "source_fingerprint": "release-evidence-source:v1:28e7871e4f14c46f976d5abee138f51bcc1f7c415dee068273508f0a8d2cc263",
+          "freshness_fingerprint": "release-evidence-freshness:v1:de66ef20a5ee0e43a2934610417cc80994a4d3ab64fa60af8a3a1a947a153a1c",
           "blockers": []
         },
         {
@@ -871,9 +871,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "0b56117d44a45a97ab653cca832ccebc75da729fa1743805f411fd1a9ef9dc9e",
-          "source_fingerprint": "release-evidence-source:v1:c9f0b28927a3f205af679f611645da311b81a1107e5942270af68a9033f12573",
-          "freshness_fingerprint": "release-evidence-freshness:v1:f9aa258548abad0ce585a6e5630572c9693600c55eec9bc1a1594c82af89a877",
+          "content_sha256": "31711eb1caed99cb33786e30a1d869f97f743a4a441d9db223d2d151659797c1",
+          "source_fingerprint": "release-evidence-source:v1:c6996931fabc4ceebf8031844354b8a6767074cf04f55212a42921349f116ccc",
+          "freshness_fingerprint": "release-evidence-freshness:v1:dc1b52eb16168ee6cfe919bfc5f3662af428c288f0a672a880f6ca481a4db33e",
           "blockers": []
         },
         {
@@ -899,23 +899,21 @@
       "expected_artifacts": [
         "release/evidence/metadata/metadata-matrix.json"
       ],
-      "status": "failed: exit status: 1",
-      "exit_code": 1,
+      "status": "success",
+      "exit_code": 0,
       "artifact_statuses": [
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 36582,
+          "bytes": 36331,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask metadata-matrix",
           "command_mode": "spawned",
-          "content_sha256": "a79e47b14f75806b4842458775ddf1037773786a7c1d5c960b1ee283dc2ae2c5",
-          "source_fingerprint": "release-evidence-source:v1:2841e11886a99aaa0d2714d9fb75b1cde8e17978074aca868ff192d79dc55ee1",
-          "freshness_fingerprint": "release-evidence-freshness:v1:39a98b573c3cf24ff1e1e25b73eaa655240f8fbc7d687e55dc9fb77338178bca",
-          "blockers": [
-            "release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
-          ]
+          "content_sha256": "0c5da4370e550695910be96738cc3656a3f3aa36dff49a25bf304093625b9eb6",
+          "source_fingerprint": "release-evidence-source:v1:ed36ba174b322cc540bc83b8816056cbe53e1eb9e2c6425e8b2ab7b0cfd48e93",
+          "freshness_fingerprint": "release-evidence-freshness:v1:ff2275df2981c7b8755426e135162369eec176e0ba537dfae4e9f084b0dcd51b",
+          "blockers": []
         }
       ]
     },
@@ -1276,14 +1274,14 @@
         {
           "path": "release/evidence/weir/weir-readme-contracts.json",
           "exists": true,
-          "bytes": 780,
+          "bytes": 850,
           "read_error": null,
           "owner_lane": "flow_weir",
           "generator_command": "xtask weir-matrix",
           "command_mode": "spawned",
-          "content_sha256": "12736df76a70f374da77dd067a9b884a8d4a23f6fdc626bd40146ff0c5a98c66",
-          "source_fingerprint": "release-evidence-source:v1:b9b1a98b526c8c08e94aff9ee85ae7b9b1460df4ea4385b9850b3cfefac94cbc",
-          "freshness_fingerprint": "release-evidence-freshness:v1:c041faa506216ff1795d91012a15f9db7ae3fa46422b607ef88a6c79b39d6c26",
+          "content_sha256": "eea0d1f10d7b2a3fa2fa905c37614a8169fee1ed5ee103c8b5a8997753c43760",
+          "source_fingerprint": "release-evidence-source:v1:64aee089b3bcc49bb1425f94902c9085d1fcbc18b56cb06cda517b37d596494d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:9c212c4537dc1db89ed468a13ee3cd9a708546232b2eec4f83a8f5305d8dff7d",
           "blockers": []
         },
         {
@@ -1375,14 +1373,14 @@
         {
           "path": "release/evidence/dedup/lego-audit-duplicates.json",
           "exists": true,
-          "bytes": 35124,
+          "bytes": 35112,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
           "command_mode": "spawned",
-          "content_sha256": "28c6d3a1f85e4851a628216661bde698ebd83b59231199b61c82d9862af76ca9",
-          "source_fingerprint": "release-evidence-source:v1:716e43791c085a57ced62638c481e7120e28e6b3274035acb0de1319ed3fbc6d",
-          "freshness_fingerprint": "release-evidence-freshness:v1:e53de3880426fc91a34793365143825958f744ce88794c9ff64acc1c57f075b5",
+          "content_sha256": "3d4c197554b203f59d550c91b910089da12fc2bc3bc4a5a9a38f628d209eb3e4",
+          "source_fingerprint": "release-evidence-source:v1:bbc543ddf06a7254b95ae49ec8bfd9cf061cf948ed651b018f3290fd768fa645",
+          "freshness_fingerprint": "release-evidence-freshness:v1:e570de4100573ebd2f82b584f0b11c1056a4d54f62b098a855699724a6149d93",
           "blockers": []
         }
       ]
@@ -1489,10 +1487,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask lego-audit --report-only --duplicate-report-json release/evidence/dedup/lego-audit-duplicates.json",
         "command_mode": "spawned",
-        "bytes": 35124,
-        "content_sha256": "28c6d3a1f85e4851a628216661bde698ebd83b59231199b61c82d9862af76ca9",
-        "source_fingerprint": "release-evidence-source:v1:716e43791c085a57ced62638c481e7120e28e6b3274035acb0de1319ed3fbc6d",
-        "freshness_fingerprint": "release-evidence-freshness:v1:e53de3880426fc91a34793365143825958f744ce88794c9ff64acc1c57f075b5",
+        "bytes": 35112,
+        "content_sha256": "3d4c197554b203f59d550c91b910089da12fc2bc3bc4a5a9a38f628d209eb3e4",
+        "source_fingerprint": "release-evidence-source:v1:bbc543ddf06a7254b95ae49ec8bfd9cf061cf948ed651b018f3290fd768fa645",
+        "freshness_fingerprint": "release-evidence-freshness:v1:e570de4100573ebd2f82b584f0b11c1056a4d54f62b098a855699724a6149d93",
         "blockers": []
       },
       {
@@ -1567,9 +1565,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 2401,
-        "content_sha256": "964b12a21c4b0a341cfc4f4966ff51d84a1d939e7b39c73295ae2f7f2fc946cb",
-        "source_fingerprint": "release-evidence-source:v1:b7b941040fa3a0a0f418cbc1384199f581dc45864da595d8c1c4705768b8ab6a",
-        "freshness_fingerprint": "release-evidence-freshness:v1:830ca80f6c00ffd201773a205fa9a1248aef8eea4a6331697e62154dc9a86636",
+        "content_sha256": "bd9801fa0e511750b6d65da384b29f7fa949f2822de34e75a725c37a8e33afe0",
+        "source_fingerprint": "release-evidence-source:v1:4d556f414a2ed152b472880d2f46522d37c219b3d5d67c0934e53e3d0ea929da",
+        "freshness_fingerprint": "release-evidence-freshness:v1:ebc89e9ffd45dc2ae20cd7e437b88b9b0d5681c2e088cc6429759ae6aab33f38",
         "blockers": []
       },
       {
@@ -1666,9 +1664,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 2427,
-        "content_sha256": "ed943a838fbbe725aaaf82f47b15178acbfd3572eac5cbcbcab371f4e372f451",
-        "source_fingerprint": "release-evidence-source:v1:3dc54b2de1d1b196d5ec7f5326d0ef3abb3834f95a2b0cc89de9363840392d1a",
-        "freshness_fingerprint": "release-evidence-freshness:v1:3b35ca581426c25f9ed29d08b727e7f22fe3ad25c4cceddde7f254453dba71e9",
+        "content_sha256": "73a0a523c65d36d916bb9aedbc0b49f8cdb19374a44b55477819774d8f882bc6",
+        "source_fingerprint": "release-evidence-source:v1:f6b987b386912edb12ad395b7d069fb03cadd64245977fe8c1e25bdcf6786307",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c6d401f78c96b9f49f8f15a8ae5a1bd2b89cc8bc9f5df46f6c817bea0c71fcdc",
         "blockers": []
       },
       {
@@ -1677,9 +1675,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 1340,
-        "content_sha256": "cafc4f83ff40c01e0df6e4b469baf18231fd25e181631077858464195a93aa2b",
-        "source_fingerprint": "release-evidence-source:v1:050464998400ad6d41d611ebe6c376d56419ace134601df73203d790a170ad4e",
-        "freshness_fingerprint": "release-evidence-freshness:v1:e15c27e02f94240e4d300e7184f84e01b9160d8a30dfffc1b62c05e2c576df11",
+        "content_sha256": "5ba43ab832b67734ff18b1366cdd99d7ecd3dbb065b3e6e28a1a276e28d6c22d",
+        "source_fingerprint": "release-evidence-source:v1:9a37018c8857480aa80c9714031f8fecfb24364d728890cb1c2ba063acefa145",
+        "freshness_fingerprint": "release-evidence-freshness:v1:b35357046bdfc83e37dc46770ad647d00601d14e0125f3c66f8ca3ced5d4e666",
         "blockers": []
       },
       {
@@ -1699,9 +1697,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 361,
-        "content_sha256": "dcc2a80fe44802240e81394b15539b566493610fc69c79515661f3544f062383",
-        "source_fingerprint": "release-evidence-source:v1:3e795d00f5eddfceb06a683cebd0cbac62f0f6100025e42c0060059025bb8793",
-        "freshness_fingerprint": "release-evidence-freshness:v1:5592be961e0d60b33fee430a15d8859e86b17d7b7548f172bf7517cc19ed72e1",
+        "content_sha256": "56fe394144b1d5c148f7c5e0af77284b4c60f1f638dad06396a13e37895529fe",
+        "source_fingerprint": "release-evidence-source:v1:e374b1451c8cd0d1270e31ef6016e0b368adaeeb37570134d8c6cb8a2207eb61",
+        "freshness_fingerprint": "release-evidence-freshness:v1:883aba95b239a1e820c6ecacf5103f5035911a8a01164c2fcf5f39293563c67c",
         "blockers": []
       },
       {
@@ -1721,9 +1719,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 1980,
-        "content_sha256": "7da928cf38927cf346dd34ab9cd83d8b488086bf53f23cc1a0fcf9c0fd0e9406",
-        "source_fingerprint": "release-evidence-source:v1:bed95467224f1f7c90db1bba654c23afcfa26373306eafb2fcb9e6b81cff4cf9",
-        "freshness_fingerprint": "release-evidence-freshness:v1:b488b0b22e1a0d5109f8ec402d5f1e73471951aa138678e956db46ccc2d592ce",
+        "content_sha256": "3ebf9914598d85b85efd1b2697f3152140cb88fe6b1eeb2b16582367a753f948",
+        "source_fingerprint": "release-evidence-source:v1:863cf549e0ca6163198361dcfc2cba31761fbc12f37537af447553223b6aff0c",
+        "freshness_fingerprint": "release-evidence-freshness:v1:b172315bff4d9ce2c9515df9555b295a99e884fdd80349c00e282a8cd378157c",
         "blockers": []
       },
       {
@@ -1732,9 +1730,9 @@
         "generator_command": "xtask docs-matrix",
         "command_mode": "spawned",
         "bytes": 724,
-        "content_sha256": "8f2aeaf067033b0237cc3e5dd7c3633a5176632d47d7ba58d4678a870c202bd2",
-        "source_fingerprint": "release-evidence-source:v1:60119013e8a4519162ac81086944c7da783d33461bf7355dbbae8e8a4345cfc9",
-        "freshness_fingerprint": "release-evidence-freshness:v1:c942ebe0a0bdfa8638d1a4b620d99876ef1f64fb9ee90b6fb7f50e61e95b8867",
+        "content_sha256": "6b59fd60b174ad64bb7ad9c00187504c5067f5627afdd98f059bb0f1a97b3ccc",
+        "source_fingerprint": "release-evidence-source:v1:45cd28070292852a18b7f9edf56d472f12d95fcff088b1c296e27fa9b1e03b43",
+        "freshness_fingerprint": "release-evidence-freshness:v1:e48e90937cd45c927d3c8850ea3a824b9c5f0ac561ed2e26c14453033b73dc08",
         "blockers": []
       },
       {
@@ -1896,13 +1894,11 @@
         "owner_lane": "coordination",
         "generator_command": "xtask metadata-matrix",
         "command_mode": "spawned",
-        "bytes": 36582,
-        "content_sha256": "a79e47b14f75806b4842458775ddf1037773786a7c1d5c960b1ee283dc2ae2c5",
-        "source_fingerprint": "release-evidence-source:v1:2841e11886a99aaa0d2714d9fb75b1cde8e17978074aca868ff192d79dc55ee1",
-        "freshness_fingerprint": "release-evidence-freshness:v1:39a98b573c3cf24ff1e1e25b73eaa655240f8fbc7d687e55dc9fb77338178bca",
-        "blockers": [
-          "release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
-        ]
+        "bytes": 36331,
+        "content_sha256": "0c5da4370e550695910be96738cc3656a3f3aa36dff49a25bf304093625b9eb6",
+        "source_fingerprint": "release-evidence-source:v1:ed36ba174b322cc540bc83b8816056cbe53e1eb9e2c6425e8b2ab7b0cfd48e93",
+        "freshness_fingerprint": "release-evidence-freshness:v1:ff2275df2981c7b8755426e135162369eec176e0ba537dfae4e9f084b0dcd51b",
+        "blockers": []
       },
       {
         "path": "release/evidence/optimization/alias-aware-dse.json",
@@ -2130,9 +2126,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 3448433,
-        "content_sha256": "40205e2941dd5807158fad66170c7a21da8b35cbeba8b908afbf6710f6cb38c1",
-        "source_fingerprint": "release-evidence-source:v1:49dd2cd45d4b27f18ec2816b4b219edf824532639610b94b9366bcf39c8e2cb8",
-        "freshness_fingerprint": "release-evidence-freshness:v1:79e8272b508b449ec040482d3a76f2950b73169a3377ee6c6632e0341c8a35cb",
+        "content_sha256": "5e1f9dba3118fd0bc08831b1c4b947805b52f283876c6f3c0d0d52a7f2fe2474",
+        "source_fingerprint": "release-evidence-source:v1:28e7871e4f14c46f976d5abee138f51bcc1f7c415dee068273508f0a8d2cc263",
+        "freshness_fingerprint": "release-evidence-freshness:v1:de66ef20a5ee0e43a2934610417cc80994a4d3ab64fa60af8a3a1a947a153a1c",
         "blockers": []
       },
       {
@@ -2174,9 +2170,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 308811,
-        "content_sha256": "0b56117d44a45a97ab653cca832ccebc75da729fa1743805f411fd1a9ef9dc9e",
-        "source_fingerprint": "release-evidence-source:v1:c9f0b28927a3f205af679f611645da311b81a1107e5942270af68a9033f12573",
-        "freshness_fingerprint": "release-evidence-freshness:v1:f9aa258548abad0ce585a6e5630572c9693600c55eec9bc1a1594c82af89a877",
+        "content_sha256": "31711eb1caed99cb33786e30a1d869f97f743a4a441d9db223d2d151659797c1",
+        "source_fingerprint": "release-evidence-source:v1:c6996931fabc4ceebf8031844354b8a6767074cf04f55212a42921349f116ccc",
+        "freshness_fingerprint": "release-evidence-freshness:v1:dc1b52eb16168ee6cfe919bfc5f3662af428c288f0a672a880f6ca481a4db33e",
         "blockers": []
       },
       {
@@ -2262,9 +2258,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 3790113,
-        "content_sha256": "9616b6fd7553c705c2b0e714ed0c5dd745def7d499cf1d54c74546df7a9b3452",
-        "source_fingerprint": "release-evidence-source:v1:cd6d9f77bc5f8bb41db9d18f50c46af15d7272f5192db0fc117f27aee4d93efb",
-        "freshness_fingerprint": "release-evidence-freshness:v1:c3ea8df2ffe2d68fd466269cd69a36c8533ab915bc8fb4038d151d1787a8b5f2",
+        "content_sha256": "71908d1fbc2812b31cc5256f3ff2033782ece980641a1d64e3b7f33dc29967bb",
+        "source_fingerprint": "release-evidence-source:v1:e54e0aa2f304db84f827dd2aa447d9d71e3081bf30218aa1fee90f4da9268be3",
+        "freshness_fingerprint": "release-evidence-freshness:v1:880bb1e6af9fbdb6d2fe1688ce2c2dea64a3f56347e735bd93ac2cd84ec6de34",
         "blockers": []
       },
       {
@@ -2272,10 +2268,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 1323,
-        "content_sha256": "4aaeb96a532fd700c9506cba6fec3225b3d8a2b442d7f7d47afcd05ee60cf3b7",
-        "source_fingerprint": "release-evidence-source:v1:2790bed1314916e04debced28ae998a7ad944b55b0eb6f300446a026a6be3968",
-        "freshness_fingerprint": "release-evidence-freshness:v1:2b0c74f01e08a5827aa236fca491be9ccc2af0f4c1528a2c75057224937a8828",
+        "bytes": 1193,
+        "content_sha256": "0f92d46b19beed295b65a039cb00ffdc00aed5676bafe8603648f8439a56b719",
+        "source_fingerprint": "release-evidence-source:v1:598f19f63986ebe122535af49d36b8f0b0ce3738a477cd0dfccb23dc2cb33d7a",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a7029df97299eae887e2c9a2e90d1d83578b152ebc5a4cc8d1974c55ece657d4",
         "blockers": []
       },
       {
@@ -2283,10 +2279,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 19655,
-        "content_sha256": "66835b34fc6a0f6b494b5cbbd061e2bd7f9581dc919eb11b9f8fdd55184336b7",
-        "source_fingerprint": "release-evidence-source:v1:4722dd77d74b81db4009366d2c8a68782d31b8a65704e94cbdcf6bb50a0520ca",
-        "freshness_fingerprint": "release-evidence-freshness:v1:9b42166c0002f63b6d391a70abe60731acf5c49d9426c3b481ca2b12cc2272c0",
+        "bytes": 19496,
+        "content_sha256": "33306d34a7db572f8b643763cfd672bf5297fc51edb0d341a23ece412ff1b49b",
+        "source_fingerprint": "release-evidence-source:v1:f3909231a750b78bbf52f2fd5f7947a5df32d748eb9677fcb6cc33c2216d22f6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:d93e1ac8e8e44890696c7fb01b6e2778d640804efb686c577ef1d47e63eefa95",
         "blockers": []
       },
       {
@@ -2316,10 +2312,10 @@
         "owner_lane": "flow_weir",
         "generator_command": "xtask weir-matrix",
         "command_mode": "spawned",
-        "bytes": 780,
-        "content_sha256": "12736df76a70f374da77dd067a9b884a8d4a23f6fdc626bd40146ff0c5a98c66",
-        "source_fingerprint": "release-evidence-source:v1:b9b1a98b526c8c08e94aff9ee85ae7b9b1460df4ea4385b9850b3cfefac94cbc",
-        "freshness_fingerprint": "release-evidence-freshness:v1:c041faa506216ff1795d91012a15f9db7ae3fa46422b607ef88a6c79b39d6c26",
+        "bytes": 850,
+        "content_sha256": "eea0d1f10d7b2a3fa2fa905c37614a8169fee1ed5ee103c8b5a8997753c43760",
+        "source_fingerprint": "release-evidence-source:v1:64aee089b3bcc49bb1425f94902c9085d1fcbc18b56cb06cda517b37d596494d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:9c212c4537dc1db89ed468a13ee3cd9a708546232b2eec4f83a8f5305d8dff7d",
         "blockers": []
       },
       {
@@ -2334,9 +2330,7 @@
         "blockers": []
       }
     ],
-    "blockers": [
-      "`release/evidence/metadata/metadata-matrix.json` generated by `xtask metadata-matrix`: release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
-    ]
+    "blockers": []
   },
   "expected_artifact_registry": {
     "schema_version": 2,
@@ -2599,11 +2593,7 @@
       }
     ]
   },
-  "blockers": [
-    "`xtask version-matrix` failed with exit status: 1",
-    "`xtask metadata-matrix` expected `release/evidence/metadata/metadata-matrix.json` but it was missing, empty, unreadable, or missing provenance: release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`",
-    "`xtask metadata-matrix` failed with exit status: 1"
-  ],
+  "blockers": [],
   "reports": [
     "`xtask release-benchmarks --backend cuda` was not run by release-evidence; existing explicit artifacts were inspected"
   ]

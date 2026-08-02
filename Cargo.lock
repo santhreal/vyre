@@ -3384,7 +3384,7 @@ checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 
 [[package]]
 name = "vyre"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "proptest",
@@ -3399,7 +3399,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-aot"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "brotli",
@@ -3418,7 +3418,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-bench"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3471,7 +3471,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-conform-enforce"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "inventory",
  "toml",
@@ -3488,14 +3488,14 @@ dependencies = [
 
 [[package]]
 name = "vyre-conform-generate"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "vyre-conform-spec",
 ]
 
 [[package]]
 name = "vyre-conform-runner"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "ed25519-dalek",
@@ -3523,7 +3523,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-conform-spec"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "vyre",
@@ -3531,7 +3531,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-debug"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "assert_cmd",
  "bincode",
@@ -3552,7 +3552,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -3581,7 +3581,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-cuda"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3611,7 +3611,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-metal"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "inventory",
  "metal",
@@ -3626,7 +3626,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-reference"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "inventory",
  "vyre-driver",
@@ -3636,7 +3636,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-spirv"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "ash",
  "inventory",
@@ -3653,7 +3653,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-driver-wgpu"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "arc-swap",
  "bincode",
@@ -3705,7 +3705,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-metal"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bincode",
  "blake3",
@@ -3721,7 +3721,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-naga"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "inventory",
@@ -3742,7 +3742,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-ptx"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "cudarc",
  "proptest",
@@ -3758,7 +3758,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-spirv"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "naga",
  "proptest",
@@ -3774,7 +3774,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-foundation"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "arrayvec",
  "blake3",
@@ -3807,7 +3807,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-frontend-c"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3837,7 +3837,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-frontend-rust"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "proptest",
  "rustc_lexer",
@@ -3859,7 +3859,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-grammar-gen"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "clap",
@@ -3872,7 +3872,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-harness"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "inventory",
  "proptest",
@@ -3884,7 +3884,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-intrinsics"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "criterion",
  "inventory",
@@ -3904,7 +3904,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-libs"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -3945,7 +3945,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-lints"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -3962,7 +3962,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-lower"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "im",
  "rustc-hash 2.1.3",
@@ -3980,7 +3980,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-macros"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "inventory",
  "proc-macro2",
@@ -3992,7 +3992,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-primitives"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -4009,7 +4009,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-reference"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -4032,7 +4032,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-runtime"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -4056,7 +4056,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-self-substrate"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "rustc-hash 2.1.3",
  "tracing",
@@ -4068,7 +4068,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-spec"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "proptest",
  "serde",
@@ -4081,7 +4081,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-test-harness"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "vyre-driver",
  "vyre-foundation",
@@ -4093,7 +4093,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-test-support"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "tempfile",
 ]

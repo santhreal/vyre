@@ -15,7 +15,7 @@ PTX emitter, conformance system, and shared primitives are active. Some
 frontends remain beta. That status split is deliberately explicit, so you can
 decide what to depend on today.
 
-For `0.7.0`, the unit of release is `vyre::Program`. A program is built as IR,
+For `0.7.1`, the unit of release is `vyre::Program`. A program is built as IR,
 validated against frozen specs, checked against the CPU reference interpreter,
 and then compared against GPU backends for agreement. CUDA is the release path
 on NVIDIA systems. WGPU is the portable GPU path. Metal is the native Apple
@@ -151,7 +151,7 @@ and planned surfaces.
 
 Legend:
 
-- `active`: release-gated surface for the `0.7.0` train.
+- `active`: release-gated surface for the `0.7.1` train.
 - `beta`: implemented and usable but currently excluded from release gate status.
 - `planned`: target architecture work planned in repo docs and roadmap.
 - `external`: separately released integrations and documentation-only references.
@@ -243,23 +243,23 @@ DXIL and DirectX backends and WebGPU packaging are roadmap targets. No backend
 code, parity evidence, or CI gate for them exists in this repository, so treat
 them as intentions rather than support claims.
 
-## `0.7.0` Release Execution Contract
+## `0.7.1` Release Execution Contract
 
-The release route is explicit: `0.7.0` is a Vyre platform release, not a
+The release route is explicit: `0.7.1` is a Vyre platform release, not a
 production C compiler release.
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `vyre@0.7.0` | `0.7.0` | Public IR, lowering, optimizer, and backend trait surface |
-| `vyre-driver-cuda@0.7.0` | `0.7.0` | NVIDIA/CUDA fast path for release workloads |
-| `vyre-driver-wgpu@0.7.0` | `0.7.0` | Portable GPU fallback path for non-CUDA systems |
-| `dataflow-integration@0.0.1` | `0.0.1` | Dataflow and witness primitives over Vyre IR |
+| `vyre@0.7.1` | `0.7.1` | Public IR, lowering, optimizer, and backend trait surface |
+| `vyre-driver-cuda@0.7.1` | `0.7.1` | NVIDIA/CUDA fast path for release workloads |
+| `vyre-driver-wgpu@0.7.1` | `0.7.1` | Portable GPU fallback path for non-CUDA systems |
+| `weirflow@0.1.2` | `0.1.2` | Standalone dataflow, witness, and soundness primitives integrated with Vyre |
 
 External integrations exercise the public Vyre surface and provide end-to-end
 feedback for contribution direction. `vyre-frontend-c` and `vyre-frontend-rust` are
 beta/active-development consumers of Vyre.
 They are included to show the intended compiler-front-end direction, but they
-are not the release gate for `0.7.0`, are not advertised as clang-parity, and
+are not the release gate for `0.7.1`, are not advertised as clang-parity, and
 must not be treated as production-ready C compiler components until their own
 corpus, parity, and performance gates are green.
 
@@ -586,7 +586,7 @@ operation may instead appear in the audit's reviewed pure-IR leaf set when no
 lower registered composition unit exists. A leaf still uses only
 backend-neutral IR. It does not gain Category C lowering or host evaluation.
 
-**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.7.0` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
+**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.7.1` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
 
 CI enforces this with tripwire gates that scan for forbidden patterns: `typetag`, `#[ctor]`, `Any::downcast`, dynamic async futures, pub-use globs, fake functions with `todo!()`, and frozen trait signature edits. These patterns break the black-box invariant, so their absence is load-bearing. `inventory::submit!` is the sanctioned link-time registration mechanism; it is not a runtime dispatch path. GPU programs are expected to run on GPU backends. If a backend lacks a Category C hardware intrinsic, it returns `UnsupportedByBackend`; it never substitutes slow host execution. `vyre-reference` is a test oracle, not a runtime path.
 
