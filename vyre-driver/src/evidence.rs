@@ -171,13 +171,16 @@ pub fn source_fingerprint(git: &BTreeMap<String, String>) -> String {
     )
 }
 
-/// Capture a source-tree fingerprint for the current working directory.
+/// Capture the runtime source-tree fingerprint for the current working directory.
 #[must_use]
 pub fn source_tree_fingerprint() -> String {
     source_tree_fingerprint_at(Path::new("."))
 }
 
-/// Capture a source-tree fingerprint for `workspace_root`.
+/// Capture the runtime source-tree fingerprint for `workspace_root`.
+///
+/// Generated evidence, release tooling, tests, and operator-internal files are
+/// excluded because they do not change the benchmarked runtime.
 #[must_use]
 pub fn source_tree_fingerprint_at(workspace_root: &Path) -> String {
     match shell_bytes(
@@ -233,7 +236,25 @@ fn source_tree_path_is_benchmark_provenance_ignored(path: &[u8]) -> bool {
         || path.starts_with(b"release/evidence/")
         || path.starts_with(b"scripts/")
         || path.starts_with(b"xtask/")
+        || source_tree_path_is_operator_internal(path)
         || source_tree_path_is_test_evidence(path)
+}
+
+fn source_tree_path_is_operator_internal(path: &[u8]) -> bool {
+    const FILE_NAMES: &[&[u8]] = &[
+        b"AGENTS.md",
+        b"BACKLOG.md",
+        b"CLAUDE.md",
+        b"GEMINI.md",
+        b"SKILL.md",
+    ];
+
+    FILE_NAMES.iter().any(|file_name| {
+        path == *file_name
+            || path
+                .strip_suffix(*file_name)
+                .is_some_and(|prefix| prefix.ends_with(b"/"))
+    })
 }
 
 fn source_tree_path_is_test_evidence(path: &[u8]) -> bool {

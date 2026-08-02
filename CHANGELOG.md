@@ -2,6 +2,14 @@
 
 All notable changes to vyre are documented here. Follows Keep a Changelog.
 
+## [Unreleased]
+
+### Fixed
+
+- Release benchmark source fingerprints now exclude operator-internal files such
+  as `AGENTS.md`, `CLAUDE.md`, and `SKILL.md`. A public checkout therefore
+  reproduces the same runtime source identity as the private release workspace.
+
 ## [0.7.0]  -  2026-07-30
 
 One release. The work that had been staged as 0.6.6 is folded in here: it could not

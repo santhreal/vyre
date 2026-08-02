@@ -81,9 +81,12 @@ deliberately changed to publishable.
     repository verification, and pushes remain approval-gated:
     `./cargo_full run --bin xtask -- vyre-release-gate --prepublish`.
 
-Benchmark evidence is keyed to a source-tree fingerprint, so any source change
-after a benchmark run invalidates that run. Run the benchmarks last, after the
-code is final, and re-run them if anything changes.
+Benchmark evidence is keyed to a runtime source-tree fingerprint. Production
+source changes invalidate a run. Generated evidence, release tooling, tests,
+and operator-internal files such as `AGENTS.md` do not affect the fingerprint.
+This keeps a public checkout identical to the private release workspace for
+benchmark provenance. Run the benchmarks last, after the runtime code is final,
+and re-run them if that code changes.
 
 ## Publish
 
