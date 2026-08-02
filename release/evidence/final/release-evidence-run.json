@@ -1,9 +1,9 @@
 {
   "schema_version": 4,
   "total_commands": 17,
-  "successful_commands": 17,
-  "command_failures": 0,
-  "artifact_failures": 0,
+  "successful_commands": 15,
+  "command_failures": 2,
+  "artifact_failures": 1,
   "command_count": 17,
   "required_command_count": 17,
   "report_only_command_count": 0,
@@ -323,33 +323,33 @@
         "release/evidence/version/version-matrix.json",
         "release/evidence/version/release-tag-plan.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/version/version-matrix.json",
           "exists": true,
-          "bytes": 19496,
+          "bytes": 19655,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "4de87616d059184253372549cc9649a0ca7b604dfea70233d6f25a9c25371595",
-          "source_fingerprint": "release-evidence-source:v1:6cc956dbb4dd16e0a3c1ffe64afc771192c1472640a3f8304b01b31a5c269f5b",
-          "freshness_fingerprint": "release-evidence-freshness:v1:487ae48ad89f066b2873bc71f7d8498c583de7b98040f463a3b2b234eda4e421",
+          "content_sha256": "66835b34fc6a0f6b494b5cbbd061e2bd7f9581dc919eb11b9f8fdd55184336b7",
+          "source_fingerprint": "release-evidence-source:v1:4722dd77d74b81db4009366d2c8a68782d31b8a65704e94cbdcf6bb50a0520ca",
+          "freshness_fingerprint": "release-evidence-freshness:v1:9b42166c0002f63b6d391a70abe60731acf5c49d9426c3b481ca2b12cc2272c0",
           "blockers": []
         },
         {
           "path": "release/evidence/version/release-tag-plan.json",
           "exists": true,
-          "bytes": 1193,
+          "bytes": 1323,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask version-matrix",
           "command_mode": "spawned",
-          "content_sha256": "f3e408cefcb7ac0101a5a9402cc04550b48b3e34a973fa4b80d8791ab10257b0",
-          "source_fingerprint": "release-evidence-source:v1:6b102f0cb8f2ac09cf4c9fd0d4fa327d0e2961a1cade22509c048b15d70e4380",
-          "freshness_fingerprint": "release-evidence-freshness:v1:2257e42d68b917873236a000b6cfbbb1b7693aad47b59f8d4de5de404306c606",
+          "content_sha256": "4aaeb96a532fd700c9506cba6fec3225b3d8a2b442d7f7d47afcd05ee60cf3b7",
+          "source_fingerprint": "release-evidence-source:v1:2790bed1314916e04debced28ae998a7ad944b55b0eb6f300446a026a6be3968",
+          "freshness_fingerprint": "release-evidence-freshness:v1:2b0c74f01e08a5827aa236fca491be9ccc2af0f4c1528a2c75057224937a8828",
           "blockers": []
         }
       ]
@@ -453,40 +453,40 @@
         {
           "path": "release/evidence/benchmarks/cuda-release-suite.json",
           "exists": true,
-          "bytes": 33013,
+          "bytes": 33023,
           "read_error": null,
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-benchmarks --backend cuda",
           "command_mode": "external-artifacts-only",
-          "content_sha256": "37fcd22ee78e8cae117cdb8f7f966902a952c44e162270dfd1ef501d5bd24321",
-          "source_fingerprint": "release-evidence-source:v1:7ad54e89605c960caf48d25a78f8220058102cccada1c95fa67f17c6cbd800f1",
-          "freshness_fingerprint": "release-evidence-freshness:v1:51042fd2fc01aec441a7d26f578b031d2a3b8436d4764f0d2901e97879b33e52",
+          "content_sha256": "5ba85b30b50b2c1f4dfed52f6af5d7f59c645e77668af478e74eb38dfabcf990",
+          "source_fingerprint": "release-evidence-source:v1:68a58f3c0fb1bbee232a58e9641ccb2cefac69f87247f1493285a4ca43e83bf5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:6cf6906ba9a9d9ad17b2a879bd444bd8659130b04ad05de62614c03cf71a18b3",
           "blockers": []
         },
         {
           "path": "release/evidence/benchmarks/bench-release-axes.json",
           "exists": true,
-          "bytes": 1373,
+          "bytes": 1372,
           "read_error": null,
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-benchmarks --backend cuda",
           "command_mode": "external-artifacts-only",
-          "content_sha256": "6bdf84ac885e7344ffa0debffc527d3aeb53ae54a690d43e48987395994ba842",
-          "source_fingerprint": "release-evidence-source:v1:094155286283f8304f24322f3a5ee78f6629b92c751dc5cad24dfb9f9d5deeea",
-          "freshness_fingerprint": "release-evidence-freshness:v1:8d4f2f09310ad940b45c5014d64a739f648687e3c058a65422111e36076bf22a",
+          "content_sha256": "cdabb822a97513320115247fcf31ccebd1dceace70eeb5d24308f4546ffbc699",
+          "source_fingerprint": "release-evidence-source:v1:36881ed0e420ba8cf8f1eb0e76b226948b53d23e90f74a9a98831f17096ed9cc",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c49688b0195013137b79e09efb98c734e4ce07da6c7bebc1b59eb43abad31d5e",
           "blockers": []
         },
         {
           "path": "release/evidence/benchmarks/cpu-only-100x-proof.json",
           "exists": true,
-          "bytes": 316645,
+          "bytes": 316867,
           "read_error": null,
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-benchmarks --backend cuda",
           "command_mode": "external-artifacts-only",
-          "content_sha256": "f1f33f1ca210bf4a608ffe476a6bfdbdff29a1bf3602071212b941c2aab19ba3",
-          "source_fingerprint": "release-evidence-source:v1:e068aced5fc61cf2d686023535b30b332f2dca2f141a826fa8b8af8a65f9b1cb",
-          "freshness_fingerprint": "release-evidence-freshness:v1:08d11b3350b2ba39a69d81e3adc0bf5997ba43e4c2aa8c9afa11914f528e730d",
+          "content_sha256": "37069c69d2d37031b4984307b6c828f8aac857645b36d0a9980622e7b6183de8",
+          "source_fingerprint": "release-evidence-source:v1:49144904ef43db3c4fd68611bd0cc526888474e29688919cb4f3027a864fed94",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bc3f06f92f5bb250d1d148d5bf862f5272f6a27f2066b513e99396e23dd378b1",
           "blockers": []
         },
         {
@@ -497,22 +497,22 @@
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-benchmarks --backend cuda",
           "command_mode": "external-artifacts-only",
-          "content_sha256": "08f654ff6eb6f2ce016e22a0303b4a1b6e1b9cafc42dafe5fa6fd753b9786fe1",
-          "source_fingerprint": "release-evidence-source:v1:f07590fbf0f923a71181b8e25ab9210792088e46bf932de538ca124349c5b98a",
-          "freshness_fingerprint": "release-evidence-freshness:v1:1419329cece62590c1257ce8ae10fba6e81217a73a8b3558d301f9662bc5da99",
+          "content_sha256": "9779d2bc89c8e681cbd02f2f74bfc0845c198a33db017475dde6cfcd7a007e5c",
+          "source_fingerprint": "release-evidence-source:v1:d3999112aac4579185dd27c594a69e5dceaafeca6ec97ada6dc1b8758bf8bfaf",
+          "freshness_fingerprint": "release-evidence-freshness:v1:20494f44acc7f508c8a00a8f77ee82f9c5ed23d17ad8d0c5726ef285853d3cb0",
           "blockers": []
         },
         {
           "path": "release/evidence/optimization/pass-family-benchmark-manifest.json",
           "exists": true,
-          "bytes": 8131,
+          "bytes": 8132,
           "read_error": null,
           "owner_lane": "bench_harness",
           "generator_command": "xtask release-benchmarks --backend cuda",
           "command_mode": "external-artifacts-only",
-          "content_sha256": "cce16cbcef5dfcc16d8407a725db8d647e91df43b31c54342c22ee8fe82d5cb7",
-          "source_fingerprint": "release-evidence-source:v1:76285b655cd187c6f75846e0f7ddaac0e7c5938d77f06aa489640295767c0258",
-          "freshness_fingerprint": "release-evidence-freshness:v1:cb8609c0dc13cc0518de906a52c5005f814e6ed082b843a6ec13bf3e1f2163e9",
+          "content_sha256": "20f08d386693f0f715108b5eb1d0651b50560773f646482659e59a41cc35ae2f",
+          "source_fingerprint": "release-evidence-source:v1:bc11d7195866413fb4d675f4d338f70e934e4c5ac38ae8afa7b51821e15a25e6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a6c943f21b293fb502fc5c11c3a263362b7c53e7715842c10faab88a00f71fcc",
           "blockers": []
         }
       ]
@@ -546,9 +546,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask hygiene-matrix",
           "command_mode": "spawned",
-          "content_sha256": "d785801fd9c27789e920c270dcb59b7bb3874a9113dae50b9c0488a59004efcd",
-          "source_fingerprint": "release-evidence-source:v1:8d2cc1da72172bc0eb7a3bf4e2ffdd42980ee0401bf16173cc37a3fce9cc2a64",
-          "freshness_fingerprint": "release-evidence-freshness:v1:cf0eb6e3822788c88feaef15dadc3032e96b8a0a7c42cc79d4febc8736e202de",
+          "content_sha256": "a88218e93bc571f68d0de9601933086edf65637baba130ec1cb4df575d0768a4",
+          "source_fingerprint": "release-evidence-source:v1:69b8d725e40bf56ad9aca25a9563fae44640801eba0f70c240c7bba0b98cddcb",
+          "freshness_fingerprint": "release-evidence-freshness:v1:a9ab3b94d0369b13970b65612791b57a4181209a566d3d8c252ac68d8ea1bf44",
           "blockers": []
         },
         {
@@ -715,9 +715,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "7c60563c6c729f0bca3f07b8f086711a012950e7dc5d8f9fee8122598c37720f",
-          "source_fingerprint": "release-evidence-source:v1:2bce955d13762c72a78f5a76403d714e8eda6f66cb0165b29e04cb72cccc89af",
-          "freshness_fingerprint": "release-evidence-freshness:v1:504a881fd2c3d7fce3cbeb47686811b980c95d601b5b6da2e79d9629baac4c9f",
+          "content_sha256": "d30d414ecc7a6a394e00c9c767124fdb54bf021ef600020cf19080d373d2e145",
+          "source_fingerprint": "release-evidence-source:v1:34b566a91a52697243d6e84ff734c39ae7726c5c2ff168ea459a078dddc0ba29",
+          "freshness_fingerprint": "release-evidence-freshness:v1:29d48abd33b3536664991c1ca5d33ab4372116bef5248b5e4ca5544d246880b1",
           "blockers": []
         },
         {
@@ -767,9 +767,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "eb25484f902fd80a9abb1ca0d176731277188cfdeb2a2f85cc00a4db862771ee",
-          "source_fingerprint": "release-evidence-source:v1:51cd5e31bd83cc8a40411ff88cc46ed258018335a887f2c32756cb59925b805f",
-          "freshness_fingerprint": "release-evidence-freshness:v1:69ffd10d6420c75919a94b454b7097dd161d5903a195132c2cce61de1a814e95",
+          "content_sha256": "eb14db09a22bb0efa89cac963c4e5bc262e812f4cef5f90cb0eba5f5a01f6a86",
+          "source_fingerprint": "release-evidence-source:v1:32aab6884f7dd8174462012f7546d2dcc411e79beda69642e9819cb49eb760e8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:929a23897624fc01f7c9dc5985bf11f038044036efa4d6a453f9c01d878c1da1",
           "blockers": []
         },
         {
@@ -780,22 +780,22 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "c42b789577f8a93d1a6f47ac453b92b10ad4f58581447ccb192815ea210f4653",
-          "source_fingerprint": "release-evidence-source:v1:58af42f586f059ee8289ba436048986a9dcc4d0b0e501a75986c7bbe15a3eee8",
-          "freshness_fingerprint": "release-evidence-freshness:v1:1243c5d1b47edc3380e1e53194ffe29ba5ab0db89fe928b884cb946e3fbc1023",
+          "content_sha256": "24927229d4f01e000d9b4f64049545f08ce7f04009f244d5f435012fdca0273c",
+          "source_fingerprint": "release-evidence-source:v1:871a970f5b7231fd4858d04069413696d0f1fc5cd3359eb0eab6c12cba6383df",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c4ffe70da662a40f8b599a7893f6ca9f801e3f440ad2e48fa9609f269123520c",
           "blockers": []
         },
         {
           "path": "release/evidence/tests/unit-suite.json",
           "exists": true,
-          "bytes": 3789130,
+          "bytes": 3790113,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "3a0179abd8c3277098ec48be84896134af01ef91a9247f75063dfc6e2dc90f77",
-          "source_fingerprint": "release-evidence-source:v1:b5deee2f11f66b9b8a294177ee11a37a03e92a2cfca4fcf93aa209c56e27e494",
-          "freshness_fingerprint": "release-evidence-freshness:v1:87503332816e5b23f7c82aa8eeb4b959dd0860af259f8d2a2bfef53c5391f14a",
+          "content_sha256": "9616b6fd7553c705c2b0e714ed0c5dd745def7d499cf1d54c74546df7a9b3452",
+          "source_fingerprint": "release-evidence-source:v1:cd6d9f77bc5f8bb41db9d18f50c46af15d7272f5192db0fc117f27aee4d93efb",
+          "freshness_fingerprint": "release-evidence-freshness:v1:c3ea8df2ffe2d68fd466269cd69a36c8533ab915bc8fb4038d151d1787a8b5f2",
           "blockers": []
         },
         {
@@ -806,9 +806,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "a102d2aea8eda7c626cc0936de76aba6781610ce6343a9bd42935647dfa85c4e",
-          "source_fingerprint": "release-evidence-source:v1:a30c0895d6c60447055a5a36977e9888273a91c35764e1c0f5bdd4becbac3fbb",
-          "freshness_fingerprint": "release-evidence-freshness:v1:adbc399424240106b54dfaf609d57957382d86b51e58259e3659cae0804edc93",
+          "content_sha256": "78e2318438b4db7d5412899ee4df299839aa397ebaa72ff8970912c8c12a051d",
+          "source_fingerprint": "release-evidence-source:v1:77b0552d5d4ec76a028bd5fbc54031093d23fffa9dad2ac4ed1cd5c9450e76a6",
+          "freshness_fingerprint": "release-evidence-freshness:v1:727010c8da9c4cb1d8235676b6ab2b90d1e1acda491fc0c3290d0128f8f59c3c",
           "blockers": []
         },
         {
@@ -832,9 +832,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "4dc4f93c73f07c3c4d3d92c80d69ee9ae33923b0d6fb59832f828709577a15b3",
-          "source_fingerprint": "release-evidence-source:v1:e757f93f226c6e33a0409ad17091a886cf937ecdbce6d98e3a9d5fd26f7f72f4",
-          "freshness_fingerprint": "release-evidence-freshness:v1:f55e0591900ae921b60b0d79718968ee27075d433fb1353323fe3ccad5876dde",
+          "content_sha256": "39f8990f188145d601b0c0cb2fa88b864b8a9a4da5ab0c594e583e41086c350f",
+          "source_fingerprint": "release-evidence-source:v1:3860c9e8df571edd1e8864a433b06a36a37f4890de2497960d6c4f94bb911253",
+          "freshness_fingerprint": "release-evidence-freshness:v1:71f73e57f97a8fe9ba2064cca5c51f3c136aefbc877267f0bffaa59200f49aa8",
           "blockers": []
         },
         {
@@ -853,14 +853,14 @@
         {
           "path": "release/evidence/tests/benchmark-suite.json",
           "exists": true,
-          "bytes": 3447450,
+          "bytes": 3448433,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "3fc12d97340317dd36cf41e911dd5cc7786101f6b2fb514af5e77c604c41f166",
-          "source_fingerprint": "release-evidence-source:v1:ad6e48493db2f4953bc45c8c7131036557f10341513c2c0cd03300d6d22bf216",
-          "freshness_fingerprint": "release-evidence-freshness:v1:0a5f3efaebaed87bb41d5ede6cbc24774d9923e2371d453025a3b37460a53a35",
+          "content_sha256": "40205e2941dd5807158fad66170c7a21da8b35cbeba8b908afbf6710f6cb38c1",
+          "source_fingerprint": "release-evidence-source:v1:49dd2cd45d4b27f18ec2816b4b219edf824532639610b94b9366bcf39c8e2cb8",
+          "freshness_fingerprint": "release-evidence-freshness:v1:79e8272b508b449ec040482d3a76f2950b73169a3377ee6c6632e0341c8a35cb",
           "blockers": []
         },
         {
@@ -871,9 +871,9 @@
           "owner_lane": "testing_evidence",
           "generator_command": "xtask test-matrix",
           "command_mode": "spawned",
-          "content_sha256": "1fc506f3a32036fb3aecccadd7b3eed30525efacd68bbcd714c20c6d7a9bfc65",
-          "source_fingerprint": "release-evidence-source:v1:62a3c754afda1e1cfc9b3d7375f2b8ea0a09756294a573ce7d85f4060734df07",
-          "freshness_fingerprint": "release-evidence-freshness:v1:8ce58f186f52b0af218d9c1be6b5852b4e21c3bf182632bdb7659ec33d76593b",
+          "content_sha256": "0b56117d44a45a97ab653cca832ccebc75da729fa1743805f411fd1a9ef9dc9e",
+          "source_fingerprint": "release-evidence-source:v1:c9f0b28927a3f205af679f611645da311b81a1107e5942270af68a9033f12573",
+          "freshness_fingerprint": "release-evidence-freshness:v1:f9aa258548abad0ce585a6e5630572c9693600c55eec9bc1a1594c82af89a877",
           "blockers": []
         },
         {
@@ -899,21 +899,23 @@
       "expected_artifacts": [
         "release/evidence/metadata/metadata-matrix.json"
       ],
-      "status": "success",
-      "exit_code": 0,
+      "status": "failed: exit status: 1",
+      "exit_code": 1,
       "artifact_statuses": [
         {
           "path": "release/evidence/metadata/metadata-matrix.json",
           "exists": true,
-          "bytes": 36327,
+          "bytes": 36582,
           "read_error": null,
           "owner_lane": "coordination",
           "generator_command": "xtask metadata-matrix",
           "command_mode": "spawned",
-          "content_sha256": "3e5e8dacf7390a3aa2dcf1b9c088afc8592d25e5c7b42b5a04160503cd8569e4",
-          "source_fingerprint": "release-evidence-source:v1:d2f2c83ef5218a76e87bf0001d81fff3e4100ea90219e09a2eebf15cc1d273b0",
-          "freshness_fingerprint": "release-evidence-freshness:v1:c3a5c845f84184150a3c55ec4550ad587bb2dbce4ab4b43552742a90772a4cbd",
-          "blockers": []
+          "content_sha256": "a79e47b14f75806b4842458775ddf1037773786a7c1d5c960b1ee283dc2ae2c5",
+          "source_fingerprint": "release-evidence-source:v1:2841e11886a99aaa0d2714d9fb75b1cde8e17978074aca868ff192d79dc55ee1",
+          "freshness_fingerprint": "release-evidence-freshness:v1:39a98b573c3cf24ff1e1e25b73eaa655240f8fbc7d687e55dc9fb77338178bca",
+          "blockers": [
+            "release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
+          ]
         }
       ]
     },
@@ -1172,9 +1174,9 @@
           "owner_lane": "parser_frontend",
           "generator_command": "xtask parser-coherence",
           "command_mode": "spawned",
-          "content_sha256": "4b30cab4fa4e8c1e9692fb3d18f0c57dbc3cc755ad649f282a2556dd33e593f2",
-          "source_fingerprint": "release-evidence-source:v1:eb144217d0b0114236588aa8d8596f3be16188ae6cfc790da3bcd1e6a787cea4",
-          "freshness_fingerprint": "release-evidence-freshness:v1:b899389b7ced4ea6ef18a3948189b2043ea0d21b507a8aab5ff834b005ad5e51",
+          "content_sha256": "072dfc5cd9ece8ff68fea126573c03ac11b8be882be1d758a5fedf026c046a63",
+          "source_fingerprint": "release-evidence-source:v1:dac86df5a8303e9ee127a4e3302207ecc36f6d607be9030f4d1912dd173fa0e5",
+          "freshness_fingerprint": "release-evidence-freshness:v1:bc5809df3ee63c9939cac1d3ba3c05f4128cc4f63e3f422e71edddd0b9e1ee99",
           "blockers": []
         },
         {
@@ -1211,9 +1213,9 @@
           "owner_lane": "parser_frontend",
           "generator_command": "xtask parser-coherence",
           "command_mode": "spawned",
-          "content_sha256": "34f7e17df6bb5f95c814ce74af91fd8b135286356b404a7b9431a1c361ea2da1",
-          "source_fingerprint": "release-evidence-source:v1:1dc1d29e575c9caa63120797380e37cfa78b6478d37336d84fee64f70d4f82dc",
-          "freshness_fingerprint": "release-evidence-freshness:v1:bf42b0c7f5e9bf70148f02e40ea078f032116cb65931e1d214afdde16a3ba9aa",
+          "content_sha256": "ed401b401a9f8fe0acee3a5f3d94951899240f8e6f3b171e828249cf08956e2d",
+          "source_fingerprint": "release-evidence-source:v1:77a49ba77c9a1c8944397f09d6b213c59dbdc41b9d8ef12390aed46fe84b1809",
+          "freshness_fingerprint": "release-evidence-freshness:v1:3801f502f21c5cd1dc96ecc0c80d50d9f669338d07a4d76a2fb599f5449d1a14",
           "blockers": []
         },
         {
@@ -1253,9 +1255,9 @@
           "owner_lane": "flow_weir",
           "generator_command": "xtask weir-matrix",
           "command_mode": "spawned",
-          "content_sha256": "fa1419b5f708772cdf5c0854c9026dbba851d5dc904ed979387063333c34d004",
-          "source_fingerprint": "release-evidence-source:v1:12966a4180186ba687099bca236081e4044ecdda76ec46d70b1a10a0fb376b15",
-          "freshness_fingerprint": "release-evidence-freshness:v1:a74fc016f5d6313260afc4458660a9bc8578cde74b5b5286b2ce2f58718fdee2",
+          "content_sha256": "c8b7b5b4235f3958562aab467d8e426da890ad3419d6f60e6305b4b25619c066",
+          "source_fingerprint": "release-evidence-source:v1:0567cafac3be6f3bb9df0e94509f6c14ea1af7de7667bfd815e4447d1cad4583",
+          "freshness_fingerprint": "release-evidence-freshness:v1:7b8b39042e215acab71d3d891df63dd7a388bb259c73c22f9159f1e4f599639e",
           "blockers": []
         },
         {
@@ -1292,9 +1294,9 @@
           "owner_lane": "flow_weir",
           "generator_command": "xtask weir-matrix",
           "command_mode": "spawned",
-          "content_sha256": "21a3ea64827550ccb2de58181a0ca3a15227e78d7a27236c9c05e730ea49fb12",
-          "source_fingerprint": "release-evidence-source:v1:963c51f086e5d8f0dff08755845eebc64320fc238ef7cea52218b6d62b5a09de",
-          "freshness_fingerprint": "release-evidence-freshness:v1:56770fa9a3e00d1737f38559202f2696617239e13aa5840be83af1dbe80f3010",
+          "content_sha256": "cfc552e9ac2b50b0e316911ceea2a14ad1fb5a5f78f7e3aa871e36aab744d7fc",
+          "source_fingerprint": "release-evidence-source:v1:ffb48d8012040898eb86b7b6d47e0c937df0a4f2fe6f6549a7500220221f714d",
+          "freshness_fingerprint": "release-evidence-freshness:v1:dba95eb3a4f3f08f1ad3d9a5fccdb261209ab638547d1a6a3fb4ecc212c180f7",
           "blockers": []
         }
       ]
@@ -1315,14 +1317,14 @@
         {
           "path": "release/evidence/dedup/source-similar-duplicates.json",
           "exists": true,
-          "bytes": 241,
+          "bytes": 1451,
           "read_error": null,
           "owner_lane": "testing_evidence",
           "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
           "command_mode": "spawned",
-          "content_sha256": "f73d39df68392436ed8a10ccbc9a4652b57e0fa432f2508906a4e4a7edc07e59",
-          "source_fingerprint": "release-evidence-source:v1:df4774d7faf700c3aa5d2f32f552c74c7bd9fa9de6cb698bcb8a28f5c7c20cae",
-          "freshness_fingerprint": "release-evidence-freshness:v1:fa3d3392e47c9b34ebf0a13c79061b7fadfd8fa54a253b5a8fc1b4dbcdb4fe78",
+          "content_sha256": "52facfe29a5a5237338ef99d1a0bb316cd53f27a66120dfc33ac0aaeb98fe3ba",
+          "source_fingerprint": "release-evidence-source:v1:16f624c0776f6779ec50d65c8ee5f39603edff9811aec072df2b6c266279ee46",
+          "freshness_fingerprint": "release-evidence-freshness:v1:7e8b0f79226e38bfb5277ff005c48613f5d5889076e94836edfdcc0febd4a098",
           "blockers": []
         }
       ]
@@ -1421,10 +1423,10 @@
         "owner_lane": "bench_harness",
         "generator_command": "xtask release-benchmarks --backend cuda",
         "command_mode": "external-artifacts-only",
-        "bytes": 1373,
-        "content_sha256": "6bdf84ac885e7344ffa0debffc527d3aeb53ae54a690d43e48987395994ba842",
-        "source_fingerprint": "release-evidence-source:v1:094155286283f8304f24322f3a5ee78f6629b92c751dc5cad24dfb9f9d5deeea",
-        "freshness_fingerprint": "release-evidence-freshness:v1:8d4f2f09310ad940b45c5014d64a739f648687e3c058a65422111e36076bf22a",
+        "bytes": 1372,
+        "content_sha256": "cdabb822a97513320115247fcf31ccebd1dceace70eeb5d24308f4546ffbc699",
+        "source_fingerprint": "release-evidence-source:v1:36881ed0e420ba8cf8f1eb0e76b226948b53d23e90f74a9a98831f17096ed9cc",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c49688b0195013137b79e09efb98c734e4ce07da6c7bebc1b59eb43abad31d5e",
         "blockers": []
       },
       {
@@ -1432,10 +1434,10 @@
         "owner_lane": "bench_harness",
         "generator_command": "xtask release-benchmarks --backend cuda",
         "command_mode": "external-artifacts-only",
-        "bytes": 316645,
-        "content_sha256": "f1f33f1ca210bf4a608ffe476a6bfdbdff29a1bf3602071212b941c2aab19ba3",
-        "source_fingerprint": "release-evidence-source:v1:e068aced5fc61cf2d686023535b30b332f2dca2f141a826fa8b8af8a65f9b1cb",
-        "freshness_fingerprint": "release-evidence-freshness:v1:08d11b3350b2ba39a69d81e3adc0bf5997ba43e4c2aa8c9afa11914f528e730d",
+        "bytes": 316867,
+        "content_sha256": "37069c69d2d37031b4984307b6c828f8aac857645b36d0a9980622e7b6183de8",
+        "source_fingerprint": "release-evidence-source:v1:49144904ef43db3c4fd68611bd0cc526888474e29688919cb4f3027a864fed94",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bc3f06f92f5bb250d1d148d5bf862f5272f6a27f2066b513e99396e23dd378b1",
         "blockers": []
       },
       {
@@ -1443,10 +1445,10 @@
         "owner_lane": "bench_harness",
         "generator_command": "xtask release-benchmarks --backend cuda",
         "command_mode": "external-artifacts-only",
-        "bytes": 33013,
-        "content_sha256": "37fcd22ee78e8cae117cdb8f7f966902a952c44e162270dfd1ef501d5bd24321",
-        "source_fingerprint": "release-evidence-source:v1:7ad54e89605c960caf48d25a78f8220058102cccada1c95fa67f17c6cbd800f1",
-        "freshness_fingerprint": "release-evidence-freshness:v1:51042fd2fc01aec441a7d26f578b031d2a3b8436d4764f0d2901e97879b33e52",
+        "bytes": 33023,
+        "content_sha256": "5ba85b30b50b2c1f4dfed52f6af5d7f59c645e77668af478e74eb38dfabcf990",
+        "source_fingerprint": "release-evidence-source:v1:68a58f3c0fb1bbee232a58e9641ccb2cefac69f87247f1493285a4ca43e83bf5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:6cf6906ba9a9d9ad17b2a879bd444bd8659130b04ad05de62614c03cf71a18b3",
         "blockers": []
       },
       {
@@ -1455,9 +1457,9 @@
         "generator_command": "xtask release-benchmarks --backend cuda",
         "command_mode": "external-artifacts-only",
         "bytes": 48493,
-        "content_sha256": "08f654ff6eb6f2ce016e22a0303b4a1b6e1b9cafc42dafe5fa6fd753b9786fe1",
-        "source_fingerprint": "release-evidence-source:v1:f07590fbf0f923a71181b8e25ab9210792088e46bf932de538ca124349c5b98a",
-        "freshness_fingerprint": "release-evidence-freshness:v1:1419329cece62590c1257ce8ae10fba6e81217a73a8b3558d301f9662bc5da99",
+        "content_sha256": "9779d2bc89c8e681cbd02f2f74bfc0845c198a33db017475dde6cfcd7a007e5c",
+        "source_fingerprint": "release-evidence-source:v1:d3999112aac4579185dd27c594a69e5dceaafeca6ec97ada6dc1b8758bf8bfaf",
+        "freshness_fingerprint": "release-evidence-freshness:v1:20494f44acc7f508c8a00a8f77ee82f9c5ed23d17ad8d0c5726ef285853d3cb0",
         "blockers": []
       },
       {
@@ -1509,10 +1511,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
         "command_mode": "spawned",
-        "bytes": 241,
-        "content_sha256": "f73d39df68392436ed8a10ccbc9a4652b57e0fa432f2508906a4e4a7edc07e59",
-        "source_fingerprint": "release-evidence-source:v1:df4774d7faf700c3aa5d2f32f552c74c7bd9fa9de6cb698bcb8a28f5c7c20cae",
-        "freshness_fingerprint": "release-evidence-freshness:v1:fa3d3392e47c9b34ebf0a13c79061b7fadfd8fa54a253b5a8fc1b4dbcdb4fe78",
+        "bytes": 1451,
+        "content_sha256": "52facfe29a5a5237338ef99d1a0bb316cd53f27a66120dfc33ac0aaeb98fe3ba",
+        "source_fingerprint": "release-evidence-source:v1:16f624c0776f6779ec50d65c8ee5f39603edff9811aec072df2b6c266279ee46",
+        "freshness_fingerprint": "release-evidence-freshness:v1:7e8b0f79226e38bfb5277ff005c48613f5d5889076e94836edfdcc0febd4a098",
         "blockers": []
       },
       {
@@ -1796,9 +1798,9 @@
         "generator_command": "xtask hygiene-matrix",
         "command_mode": "spawned",
         "bytes": 441324,
-        "content_sha256": "d785801fd9c27789e920c270dcb59b7bb3874a9113dae50b9c0488a59004efcd",
-        "source_fingerprint": "release-evidence-source:v1:8d2cc1da72172bc0eb7a3bf4e2ffdd42980ee0401bf16173cc37a3fce9cc2a64",
-        "freshness_fingerprint": "release-evidence-freshness:v1:cf0eb6e3822788c88feaef15dadc3032e96b8a0a7c42cc79d4febc8736e202de",
+        "content_sha256": "a88218e93bc571f68d0de9601933086edf65637baba130ec1cb4df575d0768a4",
+        "source_fingerprint": "release-evidence-source:v1:69b8d725e40bf56ad9aca25a9563fae44640801eba0f70c240c7bba0b98cddcb",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a9ab3b94d0369b13970b65612791b57a4181209a566d3d8c252ac68d8ea1bf44",
         "blockers": []
       },
       {
@@ -1894,11 +1896,13 @@
         "owner_lane": "coordination",
         "generator_command": "xtask metadata-matrix",
         "command_mode": "spawned",
-        "bytes": 36327,
-        "content_sha256": "3e5e8dacf7390a3aa2dcf1b9c088afc8592d25e5c7b42b5a04160503cd8569e4",
-        "source_fingerprint": "release-evidence-source:v1:d2f2c83ef5218a76e87bf0001d81fff3e4100ea90219e09a2eebf15cc1d273b0",
-        "freshness_fingerprint": "release-evidence-freshness:v1:c3a5c845f84184150a3c55ec4550ad587bb2dbce4ab4b43552742a90772a4cbd",
-        "blockers": []
+        "bytes": 36582,
+        "content_sha256": "a79e47b14f75806b4842458775ddf1037773786a7c1d5c960b1ee283dc2ae2c5",
+        "source_fingerprint": "release-evidence-source:v1:2841e11886a99aaa0d2714d9fb75b1cde8e17978074aca868ff192d79dc55ee1",
+        "freshness_fingerprint": "release-evidence-freshness:v1:39a98b573c3cf24ff1e1e25b73eaa655240f8fbc7d687e55dc9fb77338178bca",
+        "blockers": [
+          "release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
+        ]
       },
       {
         "path": "release/evidence/optimization/alias-aware-dse.json",
@@ -2037,10 +2041,10 @@
         "owner_lane": "bench_harness",
         "generator_command": "xtask release-benchmarks --backend cuda",
         "command_mode": "external-artifacts-only",
-        "bytes": 8131,
-        "content_sha256": "cce16cbcef5dfcc16d8407a725db8d647e91df43b31c54342c22ee8fe82d5cb7",
-        "source_fingerprint": "release-evidence-source:v1:76285b655cd187c6f75846e0f7ddaac0e7c5938d77f06aa489640295767c0258",
-        "freshness_fingerprint": "release-evidence-freshness:v1:cb8609c0dc13cc0518de906a52c5005f814e6ed082b843a6ec13bf3e1f2163e9",
+        "bytes": 8132,
+        "content_sha256": "20f08d386693f0f715108b5eb1d0651b50560773f646482659e59a41cc35ae2f",
+        "source_fingerprint": "release-evidence-source:v1:bc11d7195866413fb4d675f4d338f70e934e4c5ac38ae8afa7b51821e15a25e6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:a6c943f21b293fb502fc5c11c3a263362b7c53e7715842c10faab88a00f71fcc",
         "blockers": []
       },
       {
@@ -2071,9 +2075,9 @@
         "generator_command": "xtask parser-coherence",
         "command_mode": "spawned",
         "bytes": 9298,
-        "content_sha256": "4b30cab4fa4e8c1e9692fb3d18f0c57dbc3cc755ad649f282a2556dd33e593f2",
-        "source_fingerprint": "release-evidence-source:v1:eb144217d0b0114236588aa8d8596f3be16188ae6cfc790da3bcd1e6a787cea4",
-        "freshness_fingerprint": "release-evidence-freshness:v1:b899389b7ced4ea6ef18a3948189b2043ea0d21b507a8aab5ff834b005ad5e51",
+        "content_sha256": "072dfc5cd9ece8ff68fea126573c03ac11b8be882be1d758a5fedf026c046a63",
+        "source_fingerprint": "release-evidence-source:v1:dac86df5a8303e9ee127a4e3302207ecc36f6d607be9030f4d1912dd173fa0e5",
+        "freshness_fingerprint": "release-evidence-freshness:v1:bc5809df3ee63c9939cac1d3ba3c05f4128cc4f63e3f422e71edddd0b9e1ee99",
         "blockers": []
       },
       {
@@ -2082,9 +2086,9 @@
         "generator_command": "xtask parser-coherence",
         "command_mode": "spawned",
         "bytes": 1735,
-        "content_sha256": "34f7e17df6bb5f95c814ce74af91fd8b135286356b404a7b9431a1c361ea2da1",
-        "source_fingerprint": "release-evidence-source:v1:1dc1d29e575c9caa63120797380e37cfa78b6478d37336d84fee64f70d4f82dc",
-        "freshness_fingerprint": "release-evidence-freshness:v1:bf42b0c7f5e9bf70148f02e40ea078f032116cb65931e1d214afdde16a3ba9aa",
+        "content_sha256": "ed401b401a9f8fe0acee3a5f3d94951899240f8e6f3b171e828249cf08956e2d",
+        "source_fingerprint": "release-evidence-source:v1:77a49ba77c9a1c8944397f09d6b213c59dbdc41b9d8ef12390aed46fe84b1809",
+        "freshness_fingerprint": "release-evidence-freshness:v1:3801f502f21c5cd1dc96ecc0c80d50d9f669338d07a4d76a2fb599f5449d1a14",
         "blockers": []
       },
       {
@@ -2115,9 +2119,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 760361,
-        "content_sha256": "a102d2aea8eda7c626cc0936de76aba6781610ce6343a9bd42935647dfa85c4e",
-        "source_fingerprint": "release-evidence-source:v1:a30c0895d6c60447055a5a36977e9888273a91c35764e1c0f5bdd4becbac3fbb",
-        "freshness_fingerprint": "release-evidence-freshness:v1:adbc399424240106b54dfaf609d57957382d86b51e58259e3659cae0804edc93",
+        "content_sha256": "78e2318438b4db7d5412899ee4df299839aa397ebaa72ff8970912c8c12a051d",
+        "source_fingerprint": "release-evidence-source:v1:77b0552d5d4ec76a028bd5fbc54031093d23fffa9dad2ac4ed1cd5c9450e76a6",
+        "freshness_fingerprint": "release-evidence-freshness:v1:727010c8da9c4cb1d8235676b6ab2b90d1e1acda491fc0c3290d0128f8f59c3c",
         "blockers": []
       },
       {
@@ -2125,10 +2129,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
-        "bytes": 3447450,
-        "content_sha256": "3fc12d97340317dd36cf41e911dd5cc7786101f6b2fb514af5e77c604c41f166",
-        "source_fingerprint": "release-evidence-source:v1:ad6e48493db2f4953bc45c8c7131036557f10341513c2c0cd03300d6d22bf216",
-        "freshness_fingerprint": "release-evidence-freshness:v1:0a5f3efaebaed87bb41d5ede6cbc24774d9923e2371d453025a3b37460a53a35",
+        "bytes": 3448433,
+        "content_sha256": "40205e2941dd5807158fad66170c7a21da8b35cbeba8b908afbf6710f6cb38c1",
+        "source_fingerprint": "release-evidence-source:v1:49dd2cd45d4b27f18ec2816b4b219edf824532639610b94b9366bcf39c8e2cb8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:79e8272b508b449ec040482d3a76f2950b73169a3377ee6c6632e0341c8a35cb",
         "blockers": []
       },
       {
@@ -2137,9 +2141,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 1303096,
-        "content_sha256": "4dc4f93c73f07c3c4d3d92c80d69ee9ae33923b0d6fb59832f828709577a15b3",
-        "source_fingerprint": "release-evidence-source:v1:e757f93f226c6e33a0409ad17091a886cf937ecdbce6d98e3a9d5fd26f7f72f4",
-        "freshness_fingerprint": "release-evidence-freshness:v1:f55e0591900ae921b60b0d79718968ee27075d433fb1353323fe3ccad5876dde",
+        "content_sha256": "39f8990f188145d601b0c0cb2fa88b864b8a9a4da5ab0c594e583e41086c350f",
+        "source_fingerprint": "release-evidence-source:v1:3860c9e8df571edd1e8864a433b06a36a37f4890de2497960d6c4f94bb911253",
+        "freshness_fingerprint": "release-evidence-freshness:v1:71f73e57f97a8fe9ba2064cca5c51f3c136aefbc877267f0bffaa59200f49aa8",
         "blockers": []
       },
       {
@@ -2170,9 +2174,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 308811,
-        "content_sha256": "1fc506f3a32036fb3aecccadd7b3eed30525efacd68bbcd714c20c6d7a9bfc65",
-        "source_fingerprint": "release-evidence-source:v1:62a3c754afda1e1cfc9b3d7375f2b8ea0a09756294a573ce7d85f4060734df07",
-        "freshness_fingerprint": "release-evidence-freshness:v1:8ce58f186f52b0af218d9c1be6b5852b4e21c3bf182632bdb7659ec33d76593b",
+        "content_sha256": "0b56117d44a45a97ab653cca832ccebc75da729fa1743805f411fd1a9ef9dc9e",
+        "source_fingerprint": "release-evidence-source:v1:c9f0b28927a3f205af679f611645da311b81a1107e5942270af68a9033f12573",
+        "freshness_fingerprint": "release-evidence-freshness:v1:f9aa258548abad0ce585a6e5630572c9693600c55eec9bc1a1594c82af89a877",
         "blockers": []
       },
       {
@@ -2225,9 +2229,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 3216,
-        "content_sha256": "c42b789577f8a93d1a6f47ac453b92b10ad4f58581447ccb192815ea210f4653",
-        "source_fingerprint": "release-evidence-source:v1:58af42f586f059ee8289ba436048986a9dcc4d0b0e501a75986c7bbe15a3eee8",
-        "freshness_fingerprint": "release-evidence-freshness:v1:1243c5d1b47edc3380e1e53194ffe29ba5ab0db89fe928b884cb946e3fbc1023",
+        "content_sha256": "24927229d4f01e000d9b4f64049545f08ce7f04009f244d5f435012fdca0273c",
+        "source_fingerprint": "release-evidence-source:v1:871a970f5b7231fd4858d04069413696d0f1fc5cd3359eb0eab6c12cba6383df",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c4ffe70da662a40f8b599a7893f6ca9f801e3f440ad2e48fa9609f269123520c",
         "blockers": []
       },
       {
@@ -2236,9 +2240,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 104063,
-        "content_sha256": "eb25484f902fd80a9abb1ca0d176731277188cfdeb2a2f85cc00a4db862771ee",
-        "source_fingerprint": "release-evidence-source:v1:51cd5e31bd83cc8a40411ff88cc46ed258018335a887f2c32756cb59925b805f",
-        "freshness_fingerprint": "release-evidence-freshness:v1:69ffd10d6420c75919a94b454b7097dd161d5903a195132c2cce61de1a814e95",
+        "content_sha256": "eb14db09a22bb0efa89cac963c4e5bc262e812f4cef5f90cb0eba5f5a01f6a86",
+        "source_fingerprint": "release-evidence-source:v1:32aab6884f7dd8174462012f7546d2dcc411e79beda69642e9819cb49eb760e8",
+        "freshness_fingerprint": "release-evidence-freshness:v1:929a23897624fc01f7c9dc5985bf11f038044036efa4d6a453f9c01d878c1da1",
         "blockers": []
       },
       {
@@ -2247,9 +2251,9 @@
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
         "bytes": 107191,
-        "content_sha256": "7c60563c6c729f0bca3f07b8f086711a012950e7dc5d8f9fee8122598c37720f",
-        "source_fingerprint": "release-evidence-source:v1:2bce955d13762c72a78f5a76403d714e8eda6f66cb0165b29e04cb72cccc89af",
-        "freshness_fingerprint": "release-evidence-freshness:v1:504a881fd2c3d7fce3cbeb47686811b980c95d601b5b6da2e79d9629baac4c9f",
+        "content_sha256": "d30d414ecc7a6a394e00c9c767124fdb54bf021ef600020cf19080d373d2e145",
+        "source_fingerprint": "release-evidence-source:v1:34b566a91a52697243d6e84ff734c39ae7726c5c2ff168ea459a078dddc0ba29",
+        "freshness_fingerprint": "release-evidence-freshness:v1:29d48abd33b3536664991c1ca5d33ab4372116bef5248b5e4ca5544d246880b1",
         "blockers": []
       },
       {
@@ -2257,10 +2261,10 @@
         "owner_lane": "testing_evidence",
         "generator_command": "xtask test-matrix",
         "command_mode": "spawned",
-        "bytes": 3789130,
-        "content_sha256": "3a0179abd8c3277098ec48be84896134af01ef91a9247f75063dfc6e2dc90f77",
-        "source_fingerprint": "release-evidence-source:v1:b5deee2f11f66b9b8a294177ee11a37a03e92a2cfca4fcf93aa209c56e27e494",
-        "freshness_fingerprint": "release-evidence-freshness:v1:87503332816e5b23f7c82aa8eeb4b959dd0860af259f8d2a2bfef53c5391f14a",
+        "bytes": 3790113,
+        "content_sha256": "9616b6fd7553c705c2b0e714ed0c5dd745def7d499cf1d54c74546df7a9b3452",
+        "source_fingerprint": "release-evidence-source:v1:cd6d9f77bc5f8bb41db9d18f50c46af15d7272f5192db0fc117f27aee4d93efb",
+        "freshness_fingerprint": "release-evidence-freshness:v1:c3ea8df2ffe2d68fd466269cd69a36c8533ab915bc8fb4038d151d1787a8b5f2",
         "blockers": []
       },
       {
@@ -2268,10 +2272,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 1193,
-        "content_sha256": "f3e408cefcb7ac0101a5a9402cc04550b48b3e34a973fa4b80d8791ab10257b0",
-        "source_fingerprint": "release-evidence-source:v1:6b102f0cb8f2ac09cf4c9fd0d4fa327d0e2961a1cade22509c048b15d70e4380",
-        "freshness_fingerprint": "release-evidence-freshness:v1:2257e42d68b917873236a000b6cfbbb1b7693aad47b59f8d4de5de404306c606",
+        "bytes": 1323,
+        "content_sha256": "4aaeb96a532fd700c9506cba6fec3225b3d8a2b442d7f7d47afcd05ee60cf3b7",
+        "source_fingerprint": "release-evidence-source:v1:2790bed1314916e04debced28ae998a7ad944b55b0eb6f300446a026a6be3968",
+        "freshness_fingerprint": "release-evidence-freshness:v1:2b0c74f01e08a5827aa236fca491be9ccc2af0f4c1528a2c75057224937a8828",
         "blockers": []
       },
       {
@@ -2279,10 +2283,10 @@
         "owner_lane": "coordination",
         "generator_command": "xtask version-matrix",
         "command_mode": "spawned",
-        "bytes": 19496,
-        "content_sha256": "4de87616d059184253372549cc9649a0ca7b604dfea70233d6f25a9c25371595",
-        "source_fingerprint": "release-evidence-source:v1:6cc956dbb4dd16e0a3c1ffe64afc771192c1472640a3f8304b01b31a5c269f5b",
-        "freshness_fingerprint": "release-evidence-freshness:v1:487ae48ad89f066b2873bc71f7d8498c583de7b98040f463a3b2b234eda4e421",
+        "bytes": 19655,
+        "content_sha256": "66835b34fc6a0f6b494b5cbbd061e2bd7f9581dc919eb11b9f8fdd55184336b7",
+        "source_fingerprint": "release-evidence-source:v1:4722dd77d74b81db4009366d2c8a68782d31b8a65704e94cbdcf6bb50a0520ca",
+        "freshness_fingerprint": "release-evidence-freshness:v1:9b42166c0002f63b6d391a70abe60731acf5c49d9426c3b481ca2b12cc2272c0",
         "blockers": []
       },
       {
@@ -2291,9 +2295,9 @@
         "generator_command": "xtask weir-matrix",
         "command_mode": "spawned",
         "bytes": 55059,
-        "content_sha256": "fa1419b5f708772cdf5c0854c9026dbba851d5dc904ed979387063333c34d004",
-        "source_fingerprint": "release-evidence-source:v1:12966a4180186ba687099bca236081e4044ecdda76ec46d70b1a10a0fb376b15",
-        "freshness_fingerprint": "release-evidence-freshness:v1:a74fc016f5d6313260afc4458660a9bc8578cde74b5b5286b2ce2f58718fdee2",
+        "content_sha256": "c8b7b5b4235f3958562aab467d8e426da890ad3419d6f60e6305b4b25619c066",
+        "source_fingerprint": "release-evidence-source:v1:0567cafac3be6f3bb9df0e94509f6c14ea1af7de7667bfd815e4447d1cad4583",
+        "freshness_fingerprint": "release-evidence-freshness:v1:7b8b39042e215acab71d3d891df63dd7a388bb259c73c22f9159f1e4f599639e",
         "blockers": []
       },
       {
@@ -2302,9 +2306,9 @@
         "generator_command": "xtask weir-matrix",
         "command_mode": "spawned",
         "bytes": 25652,
-        "content_sha256": "21a3ea64827550ccb2de58181a0ca3a15227e78d7a27236c9c05e730ea49fb12",
-        "source_fingerprint": "release-evidence-source:v1:963c51f086e5d8f0dff08755845eebc64320fc238ef7cea52218b6d62b5a09de",
-        "freshness_fingerprint": "release-evidence-freshness:v1:56770fa9a3e00d1737f38559202f2696617239e13aa5840be83af1dbe80f3010",
+        "content_sha256": "cfc552e9ac2b50b0e316911ceea2a14ad1fb5a5f78f7e3aa871e36aab744d7fc",
+        "source_fingerprint": "release-evidence-source:v1:ffb48d8012040898eb86b7b6d47e0c937df0a4f2fe6f6549a7500220221f714d",
+        "freshness_fingerprint": "release-evidence-freshness:v1:dba95eb3a4f3f08f1ad3d9a5fccdb261209ab638547d1a6a3fb4ecc212c180f7",
         "blockers": []
       },
       {
@@ -2330,7 +2334,9 @@
         "blockers": []
       }
     ],
-    "blockers": []
+    "blockers": [
+      "`release/evidence/metadata/metadata-matrix.json` generated by `xtask metadata-matrix`: release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`"
+    ]
   },
   "expected_artifact_registry": {
     "schema_version": 2,
@@ -2593,7 +2599,11 @@
       }
     ]
   },
-  "blockers": [],
+  "blockers": [
+    "`xtask version-matrix` failed with exit status: 1",
+    "`xtask metadata-matrix` expected `release/evidence/metadata/metadata-matrix.json` but it was missing, empty, unreadable, or missing provenance: release/evidence/metadata/metadata-matrix.json: public artifact names repository outside the release train `santhreal/weirflow`",
+    "`xtask metadata-matrix` failed with exit status: 1"
+  ],
   "reports": [
     "`xtask release-benchmarks --backend cuda` was not run by release-evidence; existing explicit artifacts were inspected"
   ]

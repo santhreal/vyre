@@ -299,8 +299,8 @@
   ],
   "release_contract_path": "../docs/RELEASE.md",
   "total_requirements": 20,
-  "closed_requirements": 20,
-  "blocked_or_open_requirements": 0,
+  "closed_requirements": 17,
+  "blocked_or_open_requirements": 3,
   "requirements": [
     {
       "id": "version-story",
@@ -310,8 +310,13 @@
       "evidence_count": 4,
       "existing_evidence_count": 4,
       "missing_evidence": [],
-      "semantic_blockers": [],
-      "complete": true
+      "semantic_blockers": [
+        "evidence/version/version-matrix.json: reports 2 blocker(s)",
+        "evidence/version/version-matrix.json: missing_required_release_packages must exist and be empty",
+        "evidence/version/release-tag-plan.json: reports 2 blocker(s)",
+        "evidence/version/release-tag-plan.json: version_matrix_blocker_count is 2, expected zero"
+      ],
+      "complete": false
     },
     {
       "id": "cuda-first-path",
@@ -497,8 +502,14 @@
       "evidence_count": 9,
       "existing_evidence_count": 9,
       "missing_evidence": [],
-      "semantic_blockers": [],
-      "complete": true
+      "semantic_blockers": [
+        "evidence/metadata/metadata-matrix.json: reports 2 blocker(s)",
+        "evidence/metadata/metadata-matrix.json: missing_required_release_surfaces has 1 entrie(s), expected zero",
+        "evidence/metadata/metadata-matrix.json: package `weirflow` release_group `weir` has version `0.1.2`, expected `0.1.1`",
+        "evidence/version/version-matrix.json: reports 2 blocker(s)",
+        "evidence/version/version-matrix.json: missing_required_release_packages must exist and be empty"
+      ],
+      "complete": false
     },
     {
       "id": "release-hygiene",
@@ -519,9 +530,31 @@
       "evidence_count": 11,
       "existing_evidence_count": 11,
       "missing_evidence": [],
-      "semantic_blockers": [],
-      "complete": true
+      "semantic_blockers": [
+        "evidence/final/release-evidence-run.json: reports 3 blocker(s)",
+        "evidence/final/release-evidence-run.json: successful_commands=15, total_commands=17, command_failures=2, artifact_failures=1; release evidence run must be clean",
+        "evidence/final/release-evidence-run.json: release-evidence-run recorded 3 blocker(s)",
+        "evidence/final/release-evidence-run.json: release-evidence generator `version-matrix` did not report success",
+        "evidence/final/release-evidence-run.json: release-evidence generator `metadata-matrix` did not report success"
+      ],
+      "complete": false
     }
   ],
-  "blockers": []
+  "blockers": [
+    "version-story is status `closed` with 4/4 evidence files present and 4 semantic blocker(s)",
+    "crate-metadata is status `closed` with 9/9 evidence files present and 5 semantic blocker(s)",
+    "final-completion-audit is status `closed` with 11/11 evidence files present and 5 semantic blocker(s)",
+    "release/evidence/version/version-matrix.json: reports 2 blocker(s)",
+    "release/evidence/version/version-matrix.json: missing_required_release_packages must exist and be empty",
+    "release/evidence/version/release-tag-plan.json: reports 2 blocker(s)",
+    "release/evidence/version/release-tag-plan.json: version_matrix_blocker_count is 2, expected zero",
+    "release/evidence/metadata/metadata-matrix.json: reports 2 blocker(s)",
+    "release/evidence/metadata/metadata-matrix.json: missing_required_release_surfaces has 1 entrie(s), expected zero",
+    "release/evidence/metadata/metadata-matrix.json: package `weirflow` release_group `weir` has version `0.1.2`, expected `0.1.1`",
+    "release/evidence/final/release-evidence-run.json: reports 3 blocker(s)",
+    "release/evidence/final/release-evidence-run.json: successful_commands=15, total_commands=17, command_failures=2, artifact_failures=1; release evidence run must be clean",
+    "release/evidence/final/release-evidence-run.json: release-evidence-run recorded 3 blocker(s)",
+    "release/evidence/final/release-evidence-run.json: release-evidence generator `version-matrix` did not report success",
+    "release/evidence/final/release-evidence-run.json: release-evidence generator `metadata-matrix` did not report success"
+  ]
 }

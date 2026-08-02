@@ -33,7 +33,9 @@
     "vyrec@0.1.0",
     "vyre-frontend-c@0.7.0"
   ],
-  "missing_required_release_packages": [],
+  "missing_required_release_packages": [
+    "weirflow@0.1.1:weir"
+  ],
   "crates": [
     {
       "package": "vyre",
@@ -289,7 +291,7 @@
     },
     {
       "package": "weirflow",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "manifest": "../../../../libs/dataflow/weir/Cargo.toml",
       "release_group": "weir",
       "publishable": true
@@ -777,5 +779,8 @@
   ],
   "release_doc_tag_findings": [],
   "release_note_token_findings": [],
-  "blockers": []
+  "blockers": [
+    "weirflow is version 0.1.2, requested Weir release is 0.1.1",
+    "missing required release package `weirflow@0.1.1:weir`"
+  ]
 }

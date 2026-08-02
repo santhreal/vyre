@@ -2,6 +2,35 @@
   "schema_version": 2,
   "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
   "detector_family": "rust-source-token-shingles",
-  "family_count": 0,
-  "families": []
+  "family_count": 1,
+  "families": [
+    {
+      "family_id": "duplicate-family:v1:19afa9a2c1e17ab2f6bdfbd7e6260f7ce383d4dc77ef87946a5b5f7995313b5f",
+      "detector": "source-similar",
+      "severity": "duplicate",
+      "score": 1.0,
+      "left": {
+        "id": "xtask/src/json_output.rs#write_pretty_json",
+        "owner_lane": "testing_evidence",
+        "fingerprint": "source-token-fingerprint:v1:4b85b3e85bb96b329077075e167ecdc993a564f03f6d7f3762f9f4593dfdc271",
+        "tokens": 104,
+        "bytes": 440
+      },
+      "right": {
+        "id": "xtask/src/release_conformance.rs#write_json",
+        "owner_lane": "testing_evidence",
+        "fingerprint": "source-token-fingerprint:v1:4b85b3e85bb96b329077075e167ecdc993a564f03f6d7f3762f9f4593dfdc271",
+        "tokens": 104,
+        "bytes": 440
+      },
+      "import_owner": "testing_evidence",
+      "import_target": "xtask::dedup::shared_json_output_release_conformance",
+      "evidence": {
+        "similarity_metric": "normalized-token-shingle-cosine-times-size-ratio-and-semantic-jaccard",
+        "left_metric": "tokens=104:bytes=440",
+        "right_metric": "tokens=104:bytes=440",
+        "dedup_action": "extract_shared_module_or_import_existing_owner"
+      }
+    }
+  ]
 }

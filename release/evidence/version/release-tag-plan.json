@@ -16,6 +16,9 @@
   ],
   "required_gate_before_rc_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
   "required_gate_before_tag": "cargo_full run --bin xtask -- version-matrix --output release/evidence/version/version-matrix.json && cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json && cargo_full run --bin xtask -- vyre-release-gate && scripts/apply-branch-protection.sh main",
-  "version_matrix_blocker_count": 0,
-  "blockers": []
+  "version_matrix_blocker_count": 2,
+  "blockers": [
+    "weirflow is version 0.1.2, requested Weir release is 0.1.1",
+    "missing required release package `weirflow@0.1.1:weir`"
+  ]
 }

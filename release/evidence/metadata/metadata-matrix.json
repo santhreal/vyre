@@ -15,7 +15,9 @@
     "vyrec",
     "vyre-frontend-c"
   ],
-  "missing_required_release_surfaces": [],
+  "missing_required_release_surfaces": [
+    "weirflow@0.1.1:dataflow-analysis"
+  ],
   "packages": [
     {
       "name": "vyre",
@@ -923,11 +925,11 @@
     {
       "name": "weirflow",
       "manifest": "../../../../libs/dataflow/weir/Cargo.toml",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "GPU-first dataflow analysis primitives for Vyre and Santh compiler pipelines.",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
-      "repository": "https://github.com/santhreal/weir",
+      "repository": "https://github.com/santhreal/weirflow",
       "example_count": 9,
       "example_files": [
         "../../../../libs/dataflow/weir/examples/ifds_to_witness.rs",
@@ -943,7 +945,9 @@
       "release_surface": "dataflow-analysis",
       "expected_version": "0.1.1",
       "publish_policy": "publishable release crate",
-      "blockers": []
+      "blockers": [
+        "package.version must be `0.1.1` for weir release"
+      ]
     },
     {
       "name": "xtask",
@@ -967,5 +971,8 @@
       "blockers": []
     }
   ],
-  "blockers": []
+  "blockers": [
+    "weirflow: package.version must be `0.1.1` for weir release",
+    "missing required release surface `weirflow@0.1.1:dataflow-analysis`"
+  ]
 }

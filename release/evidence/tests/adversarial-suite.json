@@ -1544,7 +1544,7 @@
         "conformance",
         "unit"
       ],
-      "lines": 1459,
+      "lines": 1480,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,

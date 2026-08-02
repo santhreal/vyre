@@ -219,7 +219,7 @@
           "path": "../../../../libs/dataflow/weir/Cargo.toml",
           "exists": true,
           "read_error": null,
-          "source_bytes": 7544
+          "source_bytes": 7548
         },
         {
           "path": "../../../../libs/dataflow/weir/src/lib.rs",

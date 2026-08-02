@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "unit",
-  "file_count": 3688,
-  "vyre_file_count": 3325,
+  "file_count": 3689,
+  "vyre_file_count": 3326,
   "dataflow_consumer_file_count": 347,
   "vyrec_file_count": 16,
   "files": [
@@ -10852,7 +10852,7 @@
         "conformance",
         "unit"
       ],
-      "lines": 1459,
+      "lines": 1480,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -13116,6 +13116,50 @@
       ],
       "corpus_families": [
         "differential"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "vyre-driver/tests/source_fingerprint_operator_files.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 113,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 6,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "direct"
+      ],
+      "feature_families": [
+        "soundness",
+        "validation"
+      ],
+      "error_path_families": [
+        "malformed_input",
+        "missing_input"
+      ],
+      "corpus_families": [
+        "fixture",
+        "release"
       ],
       "weir_flow_families": [
         "non_weir"
@@ -24102,7 +24146,7 @@
         "gap",
         "unit"
       ],
-      "lines": 406,
+      "lines": 413,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
