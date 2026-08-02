@@ -162,7 +162,6 @@ fn completion_marker_complete(path: &Path) -> bool {
             .is_some_and(|tags| {
                 release_train::tag_creation_order()
                     .iter()
-                    .skip(3)
                     .all(|required| tags.iter().any(|tag| tag.as_str() == Some(*required)))
             })
         && repo_boundary::has_single_public_repository(&value)
@@ -208,7 +207,6 @@ mod tests {
     fn completed_marker_json(vyre: &str, weir: &str) -> String {
         let tags = crate::release_train::tag_creation_order()
             .iter()
-            .skip(3)
             .map(|tag| format!("      \"{tag}\""))
             .collect::<Vec<_>>()
             .join(",\n");
@@ -288,6 +286,27 @@ mod tests {
         );
     }
 
+    /// Final-only tag evidence must fail because the documented ceremony requires every RC tag before final promotion.
+    #[test]
+    fn completion_marker_rejects_a_missing_release_candidate_tag() {
+        let dir = tempfile::tempdir().expect("Fix: create missing RC tag fixture directory.");
+        let marker = dir.path().join("public-launch-completion.json");
+        let rc_line = format!("      \"{}\",\n", crate::release_train::vyre_rc_tag());
+        let marker_json = completed_marker_json(
+            crate::release_train::vyre_version(),
+            crate::release_train::weir_version(),
+        )
+        .replacen(&rc_line, "", 1);
+        std::fs::write(&marker, marker_json)
+            .expect("Fix: write launch completion marker without the Vyre RC tag.");
+
+        assert!(
+            !completion_marker_complete(&marker),
+            "Fix: launch-state must reject evidence that omits any release candidate tag."
+        );
+    }
+
+    /// Legacy plural repository evidence must not bypass the singular public-repository boundary.
     #[test]
     fn completion_marker_rejects_legacy_single_public_repository_array() {
         let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");

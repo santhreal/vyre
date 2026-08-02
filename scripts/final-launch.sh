@@ -125,6 +125,9 @@ jq -n \
     --arg vyre_version "$VYRE_RELEASE_VYRE_VERSION" \
     --arg weir_version "$VYRE_RELEASE_WEIR_VERSION" \
     --arg verify_public_repo_action "$VYRE_RELEASE_VERIFY_PUBLIC_REPO_ACTION" \
+    --arg vyre_rc_tag "$VYRE_RELEASE_TAG_VYRE_RC" \
+    --arg weir_rc_tag "$VYRE_RELEASE_TAG_WEIR_RC" \
+    --arg combined_rc_tag "$VYRE_RELEASE_TAG_COMBINED_RC" \
     --arg vyre_tag "$VYRE_RELEASE_TAG_VYRE" \
     --arg weir_tag "$VYRE_RELEASE_TAG_WEIR" \
     --arg combined_tag "$VYRE_RELEASE_TAG_COMBINED" \
@@ -137,6 +140,9 @@ jq -n \
         git: {
             branch: $branch,
             tags: [
+                $vyre_rc_tag,
+                $weir_rc_tag,
+                $combined_rc_tag,
                 $vyre_tag,
                 $weir_tag,
                 $combined_tag
@@ -162,7 +168,7 @@ jq -n \
             {
                 action: "git push release branch and tags",
                 status: "complete",
-                evidence: ("git push origin release branch && git push origin " + $vyre_tag + " " + $weir_tag + " " + $combined_tag)
+                evidence: ("git push origin release branch && git push origin " + $vyre_rc_tag + " " + $weir_rc_tag + " " + $combined_rc_tag + " " + $vyre_tag + " " + $weir_tag + " " + $combined_tag)
             }
         ],
         completion_status: "complete"

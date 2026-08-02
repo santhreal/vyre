@@ -179,3 +179,35 @@ pub(crate) fn release_group_version(group: &str) -> Option<&'static str> {
         _ => None,
     }
 }
+#[cfg(test)]
+mod tests {
+    use std::{path::Path, process::Command};
+
+    /// The shell launch path must load the same six RC and final tags, in the same order, as the Rust release contract.
+    #[test]
+    fn shell_release_loader_matches_canonical_tag_creation_order() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("Fix: xtask must live directly under the Vyre workspace.");
+        let output = Command::new("bash")
+            .arg("-c")
+            .arg(
+                r#"source scripts/lib/release_train.sh; vyre_load_release_train; printf '%s\n' "${VYRE_RELEASE_TAGS[@]}""#,
+            )
+            .current_dir(workspace)
+            .output()
+            .expect("Fix: bash must be available to validate the release launcher contract.");
+
+        assert!(
+            output.status.success(),
+            "shell release loader failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout =
+            String::from_utf8(output.stdout).expect("Fix: shell release tags must be valid UTF-8.");
+        assert_eq!(
+            stdout.lines().collect::<Vec<_>>(),
+            super::tag_creation_order()
+        );
+    }
+}

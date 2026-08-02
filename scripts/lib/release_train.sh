@@ -10,9 +10,12 @@ vyre_load_release_train() {
     if ! vyre_read_toml_values \
         "$manifest" \
         "release-train" \
-        5 \
+        8 \
         "versions.vyre" \
         "versions.weir" \
+        "tags.vyre_rc" \
+        "tags.weir_rc" \
+        "tags.combined_release_train_rc" \
         "tags.vyre" \
         "tags.weir" \
         "tags.combined_release_train"; then
@@ -20,13 +23,19 @@ vyre_load_release_train() {
     fi
     VYRE_RELEASE_VYRE_VERSION="${VYRE_TOML_VALUES[0]}"
     VYRE_RELEASE_WEIR_VERSION="${VYRE_TOML_VALUES[1]}"
-    VYRE_RELEASE_TAG_VYRE="${VYRE_TOML_VALUES[2]}"
-    VYRE_RELEASE_TAG_WEIR="${VYRE_TOML_VALUES[3]}"
-    VYRE_RELEASE_TAG_COMBINED="${VYRE_TOML_VALUES[4]}"
+    VYRE_RELEASE_TAG_VYRE_RC="${VYRE_TOML_VALUES[2]}"
+    VYRE_RELEASE_TAG_WEIR_RC="${VYRE_TOML_VALUES[3]}"
+    VYRE_RELEASE_TAG_COMBINED_RC="${VYRE_TOML_VALUES[4]}"
+    VYRE_RELEASE_TAG_VYRE="${VYRE_TOML_VALUES[5]}"
+    VYRE_RELEASE_TAG_WEIR="${VYRE_TOML_VALUES[6]}"
+    VYRE_RELEASE_TAG_COMBINED="${VYRE_TOML_VALUES[7]}"
     VYRE_RELEASE_LAUNCH_APPROVAL_TOKEN="launch-vyre-${VYRE_RELEASE_VYRE_VERSION}-weir-${VYRE_RELEASE_WEIR_VERSION}"
     VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN="publish-vyre-${VYRE_RELEASE_VYRE_VERSION}-weir-${VYRE_RELEASE_WEIR_VERSION}"
     VYRE_RELEASE_DISPLAY="Vyre ${VYRE_RELEASE_VYRE_VERSION} / Weir ${VYRE_RELEASE_WEIR_VERSION}"
     VYRE_RELEASE_TAGS=(
+        "$VYRE_RELEASE_TAG_VYRE_RC"
+        "$VYRE_RELEASE_TAG_WEIR_RC"
+        "$VYRE_RELEASE_TAG_COMBINED_RC"
         "$VYRE_RELEASE_TAG_VYRE"
         "$VYRE_RELEASE_TAG_WEIR"
         "$VYRE_RELEASE_TAG_COMBINED"
