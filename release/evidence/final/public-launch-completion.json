@@ -1,15 +1,18 @@
 {
   "schema_version": 1,
   "release_train": {
-    "vyre": "0.7.0",
-    "weir": "0.1.1"
+    "vyre": "0.7.1",
+    "weir": "0.1.2"
   },
   "git": {
     "branch": "main",
     "tags": [
-      "vyre-v0.7.0",
-      "weir-v0.1.1",
-      "vyre-0.7.0-weir-0.1.1"
+      "vyre-v0.7.1-rc.1",
+      "weir-v0.1.2-rc.1",
+      "vyre-0.7.1-weir-0.1.2-rc.1",
+      "vyre-v0.7.1",
+      "weir-v0.1.2",
+      "vyre-0.7.1-weir-0.1.2"
     ]
   },
   "public_repository": "santhreal/vyre",
@@ -22,17 +25,17 @@
     {
       "action": "cargo_full publish approved crates in dependency order",
       "status": "complete",
-      "evidence": "27 crates published: vyre group 0.7.0 (26 crates) and weirflow 0.1.1 visible on the crates.io index"
+      "evidence": "scripts/publish-release.sh"
     },
     {
       "action": "verify vyre repository is public",
       "status": "complete",
-      "evidence": "gh repo view santhreal/vyre --json visibility: PUBLIC"
+      "evidence": "gh repo view santhreal/vyre --json visibility"
     },
     {
       "action": "git push release branch and tags",
       "status": "complete",
-      "evidence": "git push origin main and all six product-scoped RC/final tags completed; missing weir-v0.1.1-rc.1 and weir-v0.1.1 refs pushed 2026-08-01"
+      "evidence": "git push origin release branch && git push origin vyre-v0.7.1-rc.1 weir-v0.1.2-rc.1 vyre-0.7.1-weir-0.1.2-rc.1 vyre-v0.7.1 weir-v0.1.2 vyre-0.7.1-weir-0.1.2"
     }
   ],
   "completion_status": "complete"

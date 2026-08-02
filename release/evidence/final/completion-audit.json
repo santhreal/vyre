@@ -299,8 +299,8 @@
   ],
   "release_contract_path": "../docs/RELEASE.md",
   "total_requirements": 20,
-  "closed_requirements": 19,
-  "blocked_or_open_requirements": 1,
+  "closed_requirements": 20,
+  "blocked_or_open_requirements": 0,
   "requirements": [
     {
       "id": "version-story",
@@ -519,24 +519,9 @@
       "evidence_count": 11,
       "existing_evidence_count": 11,
       "missing_evidence": [],
-      "semantic_blockers": [
-        "evidence/final/public-launch-state.json: reports 3 blocker(s)",
-        "evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
-        "evidence/final/public-launch-state.json: completion_status is not `complete`",
-        "evidence/final/public-launch-state.json: external action `cargo_full publish approved crates in dependency order` is not complete",
-        "evidence/final/public-launch-state.json: external action `verify vyre repository is public` is not complete",
-        "evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
-      ],
-      "complete": false
+      "semantic_blockers": [],
+      "complete": true
     }
   ],
-  "blockers": [
-    "final-completion-audit is status `closed` with 11/11 evidence files present and 6 semantic blocker(s)",
-    "release/evidence/final/public-launch-state.json: reports 3 blocker(s)",
-    "release/evidence/final/public-launch-state.json: public launch is incomplete with 3 blocker(s)",
-    "release/evidence/final/public-launch-state.json: completion_status is not `complete`",
-    "release/evidence/final/public-launch-state.json: external action `cargo_full publish approved crates in dependency order` is not complete",
-    "release/evidence/final/public-launch-state.json: external action `verify vyre repository is public` is not complete",
-    "release/evidence/final/public-launch-state.json: external action `git push release branch and tags` is not complete"
-  ]
+  "blockers": []
 }

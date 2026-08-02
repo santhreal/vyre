@@ -20,8 +20,8 @@
       "selected_op_count": 359
     }
   },
-  "signature": "64eb33e5129b2caa3363976d30abef3a12c5b8d28c421101fa49aa3c8dae91497d85f557e047ac7483179ea188b574265d120f5c2dea758c54f32dc3f3ab5509",
-  "public_key": "ac936c532878bbb99a13af874c504af68eeadf85972e8add2dd5cf72c66a1fe9",
+  "signature": "d6c4e30d6b4c382764efc220d4d1844ae5aa74fb993363de534a0e2e2491aef12f0b2b297100e35a51fa7d637031afab896cc1936064d9ad00ef46309c1fa201",
+  "public_key": "c50c33705489aa659615cbb9874d33d2559e50646799b81cadcbc160436122b5",
   "pairs": [
     {
       "backend_id": "cpu-ref",
