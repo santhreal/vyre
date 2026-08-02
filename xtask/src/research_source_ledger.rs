@@ -105,16 +105,14 @@ pub(crate) fn embedded_research_source_keys() -> Result<BTreeSet<String>, String
 }
 
 fn parse_research_source_ledger_text(text: &str) -> Result<ResearchSourceLedger, String> {
-    let ledger = toml::from_str::<ResearchSourceLedger>(text)
-        .map_err(|error| format!("failed to parse {RESEARCH_SOURCE_LEDGER_PATH}: {error}"))?;
+    let ledger = crate::toml_config::parse_embedded_toml(RESEARCH_SOURCE_LEDGER_PATH, text)?;
     validate_research_source_ledger_schema(&ledger)?;
     validate_research_source_ledger_rows(&ledger)?;
     Ok(ledger)
 }
 
 fn parse_competitor_issue_ledger_text(text: &str) -> Result<CompetitorIssueLedger, String> {
-    let ledger = toml::from_str::<CompetitorIssueLedger>(text)
-        .map_err(|error| format!("failed to parse {COMPETITOR_ISSUE_LEDGER_PATH}: {error}"))?;
+    let ledger = crate::toml_config::parse_embedded_toml(COMPETITOR_ISSUE_LEDGER_PATH, text)?;
     validate_competitor_issue_ledger_schema(&ledger)?;
     validate_competitor_issue_ledger_rows(&ledger)?;
     Ok(ledger)

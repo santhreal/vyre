@@ -38,6 +38,10 @@ struct ArchiveReplayAuditConfig {
 struct ArchiveReplayAuditSource {
     path: String,
     fixture_prefix: String,
+    #[serde(default)]
+    replay_complete: bool,
+    #[serde(default)]
+    completion_evidence: String,
 }
 
 pub(super) fn collect_loc_hotspots(root: &Path) -> Vec<LocHotspot> {
@@ -174,6 +178,13 @@ pub(super) fn collect_archive_replay_findings(root: &Path) -> Vec<ArchiveReplayF
             }];
         }
     };
+    collect_archive_replay_findings_with_config(root, config)
+}
+
+fn collect_archive_replay_findings_with_config(
+    root: &Path,
+    config: &ArchiveReplayAuditConfig,
+) -> Vec<ArchiveReplayFinding> {
     let mut findings = Vec::new();
     for audit in &config.audit {
         let audit_path = audit.path.trim();
@@ -201,6 +212,27 @@ pub(super) fn collect_archive_replay_findings(root: &Path) -> Vec<ArchiveReplayF
             });
             continue;
         };
+        if audit.replay_complete {
+            let completion_evidence = audit.completion_evidence.trim();
+            if completion_evidence.is_empty() || !root.join(completion_evidence).is_file() {
+                findings.push(ArchiveReplayFinding {
+                    audit_path: audit_path.to_string(),
+                    line: 0,
+                    archived_reference: completion_evidence.to_string(),
+                    current_lookup: "archive-replay-completion-evidence-missing".to_string(),
+                    replay_fixture_id: archive_replay_fixture_id(
+                        &audit.fixture_prefix,
+                        0,
+                        completion_evidence,
+                    ),
+                    blocker_status: "stale".to_string(),
+                    stale_reason:
+                        "completed archive replay must cite an existing completion evidence file"
+                            .to_string(),
+                });
+            }
+            continue;
+        }
         for (line_index, line) in text.lines().enumerate() {
             for archived_reference in archive_replay_references(line) {
                 let current_lookup = if root.join(&archived_reference).exists() {
@@ -629,7 +661,12 @@ fn collect_rust_toml_loader_findings_in(
         return;
     }
     let rel = rel_path(root, path);
-    if skip_path(&rel) || rel == "xtask/src/toml_config.rs" {
+    if skip_path(&rel)
+        || matches!(
+            rel.as_str(),
+            "xtask/src/toml_config.rs" | "xtask/src/research_audit/collectors.rs"
+        )
+    {
         return;
     }
     let Ok(metadata) = fs::metadata(path) else {
@@ -769,8 +806,12 @@ pub(super) fn compact_line(line: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_megakernel_protocol_boundary_findings, collect_rust_toml_loader_findings};
+    use super::{
+        collect_archive_replay_findings_with_config, collect_megakernel_protocol_boundary_findings,
+        collect_rust_toml_loader_findings, ArchiveReplayAuditConfig, ArchiveReplayAuditSource,
+    };
 
+    /// A second embedded TOML parser must remain a finding while the canonical parser stays exempt.
     #[test]
     fn duplicate_embedded_toml_loader_body_is_a_research_audit_finding() {
         let dir = tempfile::tempdir().expect("Fix: create Rust TOML loader fixture directory.");
@@ -809,6 +850,112 @@ fn data() {
         );
     }
 
+    /// The scanner implementation must not report its own detection string as a duplicate TOML parser.
+    #[test]
+    fn toml_loader_scanner_does_not_flag_its_own_pattern_literal() {
+        let dir = tempfile::tempdir().expect("Fix: create TOML scanner fixture directory.");
+        let src = dir.path().join("xtask/src/research_audit");
+        std::fs::create_dir_all(&src).expect("Fix: create research audit fixture directory.");
+        std::fs::write(
+            src.join("collectors.rs"),
+            r#"const TOKEN: &str = "include_str!(";
+const PARSER: &str = "toml::from_str::<";
+"#,
+        )
+        .expect("Fix: write TOML scanner guard fixture.");
+
+        let findings = collect_rust_toml_loader_findings(dir.path());
+        assert_eq!(findings.len(), 0, "scanner self-findings: {findings:?}");
+    }
+
+    /// A completed archive replay with both its source and completion artifact must not remain a permanent release blocker.
+    #[test]
+    fn completed_archive_replay_accepts_existing_evidence() {
+        let dir = tempfile::tempdir().expect("Fix: create completed archive replay fixture.");
+        std::fs::create_dir_all(dir.path().join("audits"))
+            .expect("Fix: create archive source directory.");
+        std::fs::create_dir_all(dir.path().join("release/evidence/optimization"))
+            .expect("Fix: create archive completion evidence directory.");
+        std::fs::write(dir.path().join("audits/old.md"), "`retired.rs`\n")
+            .expect("Fix: write archived source fixture.");
+        std::fs::write(
+            dir.path()
+                .join("release/evidence/optimization/plan-progress.json"),
+            "{}\n",
+        )
+        .expect("Fix: write archive completion evidence fixture.");
+        let config = ArchiveReplayAuditConfig {
+            schema_version: 1,
+            contract: "vyre-archive-replay-audits:v1".to_string(),
+            audit: vec![ArchiveReplayAuditSource {
+                path: "audits/old.md".to_string(),
+                fixture_prefix: "old".to_string(),
+                replay_complete: true,
+                completion_evidence: "release/evidence/optimization/plan-progress.json".to_string(),
+            }],
+        };
+
+        let findings = collect_archive_replay_findings_with_config(dir.path(), &config);
+        assert_eq!(findings.len(), 0, "completed replay findings: {findings:?}");
+    }
+
+    /// A completed replay claim without its evidence must fail closed instead of hiding unresolved archived references.
+    #[test]
+    fn completed_archive_replay_rejects_missing_evidence() {
+        let dir = tempfile::tempdir().expect("Fix: create missing archive evidence fixture.");
+        std::fs::create_dir_all(dir.path().join("audits"))
+            .expect("Fix: create archive source directory.");
+        std::fs::write(dir.path().join("audits/old.md"), "`retired.rs`\n")
+            .expect("Fix: write archived source fixture.");
+        let config = ArchiveReplayAuditConfig {
+            schema_version: 1,
+            contract: "vyre-archive-replay-audits:v1".to_string(),
+            audit: vec![ArchiveReplayAuditSource {
+                path: "audits/old.md".to_string(),
+                fixture_prefix: "old".to_string(),
+                replay_complete: true,
+                completion_evidence: "release/evidence/optimization/missing.json".to_string(),
+            }],
+        };
+
+        let findings = collect_archive_replay_findings_with_config(dir.path(), &config);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            findings[0].current_lookup,
+            "archive-replay-completion-evidence-missing"
+        );
+        assert_eq!(findings[0].blocker_status, "stale");
+    }
+
+    /// An active archive replay must continue surfacing stale references until completion evidence is recorded.
+    #[test]
+    fn active_archive_replay_keeps_stale_references_visible() {
+        let dir = tempfile::tempdir().expect("Fix: create active archive replay fixture.");
+        std::fs::create_dir_all(dir.path().join("audits"))
+            .expect("Fix: create archive source directory.");
+        std::fs::write(dir.path().join("audits/old.md"), "`retired.rs`\n")
+            .expect("Fix: write archived source fixture.");
+        let config = ArchiveReplayAuditConfig {
+            schema_version: 1,
+            contract: "vyre-archive-replay-audits:v1".to_string(),
+            audit: vec![ArchiveReplayAuditSource {
+                path: "audits/old.md".to_string(),
+                fixture_prefix: "old".to_string(),
+                replay_complete: false,
+                completion_evidence: String::new(),
+            }],
+        };
+
+        let findings = collect_archive_replay_findings_with_config(dir.path(), &config);
+
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].archived_reference, "retired.rs");
+        assert_eq!(findings[0].current_lookup, "missing-file");
+        assert_eq!(findings[0].blocker_status, "stale");
+    }
+
+    /// Concrete backend protocol imports must remain visible across the runtime ownership boundary.
     #[test]
     fn driver_megakernel_protocol_import_is_a_boundary_finding() {
         let dir = tempfile::tempdir().expect("Fix: create megakernel protocol boundary fixture.");

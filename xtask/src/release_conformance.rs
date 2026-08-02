@@ -319,7 +319,7 @@ fn run_backend_conformance(
         pairs,
         blockers,
     };
-    write_json(&workspace_root.join(artifact), &artifact_body)?;
+    crate::json_output::write_pretty_json(&workspace_root.join(artifact), &artifact_body)?;
     if artifact_body.blockers.is_empty() {
         Ok(())
     } else {
@@ -664,24 +664,13 @@ fn write_release_log(workspace_root: &Path, requested_backends: &[String], failu
         artifact_statuses,
         blockers: failures,
     };
-    if let Err(error) = write_json(
+    if let Err(error) = crate::json_output::write_pretty_json(
         &workspace_root.join("release/evidence/conformance/release-gate-log.json"),
         &log,
     ) {
         eprintln!("{error}");
         std::process::exit(1);
     }
-}
-
-fn write_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create `{}`: {error}", parent.display()))?;
-    }
-    let json = serde_json::to_string_pretty(value)
-        .map_err(|error| format!("failed to serialize `{}`: {error}", path.display()))?;
-    fs::write(path, format!("{json}\n"))
-        .map_err(|error| format!("failed to write `{}`: {error}", path.display()))
 }
 
 struct Config {

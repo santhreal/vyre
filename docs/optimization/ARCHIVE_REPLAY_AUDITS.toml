@@ -4,7 +4,11 @@ contract = "vyre-archive-replay-audits:v1"
 [[audit]]
 path = "audits/PHASE10_DIFF.md"
 fixture_prefix = "phase10-diff"
+replay_complete = true
+completion_evidence = "release/evidence/optimization/acceleration-plan-progress.json"
 
 [[audit]]
 path = "audits/RELEASE_1000X_PLAN.md"
 fixture_prefix = "release-1000x-plan"
+replay_complete = true
+completion_evidence = "release/evidence/optimization/acceleration-plan-progress.json"

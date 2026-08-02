@@ -3795,3 +3795,279 @@ release_floor_eligible = true
 artifact_url = "https://substrait.io/spec/specification/"
 vx_rows = ["VX-1601"]
 digest_material = "SUBSTRAIT_SPECIFICATION|https://substrait.io/spec/specification/|primary-plan-specification|substrait-specification|official-spec|documentation-only|release_floor_eligible=true|https://substrait.io/spec/specification/"
+
+[[sources]]
+key = "BLACKWELL_TUNING"
+url = "https://docs.nvidia.com/cuda/blackwell-tuning-guide/index.html"
+source_class = "official-technical-documentation"
+baseline_type = "blackwell-architecture-tuning-tensor-core-evolution-memory-hierarchy-and-hardware-specific-speedup-boundaries"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/cuda/blackwell-tuning-guide/index.html"
+vx_rows = ["VX-559", "VX-610"]
+digest_material = "BLACKWELL_TUNING|https://docs.nvidia.com/cuda/blackwell-tuning-guide/index.html|official-technical-documentation|blackwell-architecture-tuning-tensor-core-evolution-memory-hierarchy-and-hardware-specific-speedup-boundaries|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/cuda/blackwell-tuning-guide/index.html"
+
+[[sources]]
+key = "BLUEFIELD_REGEX"
+url = "https://docs.nvidia.com/networking/display/BlueFieldDPUBSPv420/RegEx%2BAcceleration"
+source_class = "official-technical-documentation"
+baseline_type = "bluefield-hardware-regex-acceleration-rule-set-loading-job-submission-and-match-offset-length-output-evidence"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/networking/display/BlueFieldDPUBSPv420/RegEx%2BAcceleration"
+vx_rows = ["VX-645"]
+digest_material = "BLUEFIELD_REGEX|https://docs.nvidia.com/networking/display/BlueFieldDPUBSPv420/RegEx%2BAcceleration|official-technical-documentation|bluefield-hardware-regex-acceleration-rule-set-loading-job-submission-and-match-offset-length-output-evidence|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/networking/display/BlueFieldDPUBSPv420/RegEx%2BAcceleration"
+
+[[sources]]
+key = "CUDA_DSM"
+url = "https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html"
+source_class = "official-technical-documentation"
+baseline_type = "thread-block-clusters-distributed-shared-memory-cluster-synchronization-and-cluster-scale-cooperative-kernels"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html"
+vx_rows = ["VX-552", "VX-565", "VX-576", "VX-671"]
+digest_material = "CUDA_DSM|https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html|official-technical-documentation|thread-block-clusters-distributed-shared-memory-cluster-synchronization-and-cluster-scale-cooperative-kernels|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html"
+
+[[sources]]
+key = "CUDA_MEMPOOL"
+url = "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/stream-ordered-memory-allocation.html"
+source_class = "official-technical-documentation"
+baseline_type = "stream-ordered-cuda-allocation-allocation-free-ordering-with-kernels-and-copies-and-capture-safe-memory-reuse"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/stream-ordered-memory-allocation.html"
+vx_rows = ["VX-643", "VX-673"]
+digest_material = "CUDA_MEMPOOL|https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/stream-ordered-memory-allocation.html|official-technical-documentation|stream-ordered-cuda-allocation-allocation-free-ordering-with-kernels-and-copies-and-capture-safe-memory-reuse|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/stream-ordered-memory-allocation.html"
+
+[[sources]]
+key = "CUDA_TMA"
+url = "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html"
+source_class = "official-technical-documentation"
+baseline_type = "cuda-asynchronous-data-copies-tensor-memory-accelerator-transfers-barriers-and-producer-consumer-pipelines"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html"
+vx_rows = ["VX-556", "VX-557", "VX-564"]
+digest_material = "CUDA_TMA|https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html|official-technical-documentation|cuda-asynchronous-data-copies-tensor-memory-accelerator-transfers-barriers-and-producer-consumer-pipelines|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html"
+
+[[sources]]
+key = "DOCA_REGEX_PROGRAMMING"
+url = "https://docs.nvidia.com/doca/archive/doca-v2.2.0/regex-programming-guide/index.html"
+source_class = "official-technical-documentation"
+baseline_type = "bluefield-regex-library-programming-model-compiled-rules-hardware-software-engine-boundaries-and-match-result-shapes"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/doca/archive/doca-v2.2.0/regex-programming-guide/index.html"
+vx_rows = ["VX-645"]
+digest_material = "DOCA_REGEX_PROGRAMMING|https://docs.nvidia.com/doca/archive/doca-v2.2.0/regex-programming-guide/index.html|official-technical-documentation|bluefield-regex-library-programming-model-compiled-rules-hardware-software-engine-boundaries-and-match-result-shapes|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/doca/archive/doca-v2.2.0/regex-programming-guide/index.html"
+
+[[sources]]
+key = "FPGA_OD_REM"
+url = "https://dl.acm.org/doi/10.1145/3774651"
+source_class = "peer-reviewed-or-preprint-research"
+baseline_type = "on-demand-fpga-regex-matching-automata-activation-and-high-throughput-dpi-accelerator-architecture"
+reproducibility_class = "published-paper"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://dl.acm.org/doi/10.1145/3774651"
+vx_rows = ["VX-646"]
+digest_material = "FPGA_OD_REM|https://dl.acm.org/doi/10.1145/3774651|peer-reviewed-or-preprint-research|on-demand-fpga-regex-matching-automata-activation-and-high-throughput-dpi-accelerator-architecture|published-paper|documentation-only|release_floor_eligible=true|https://dl.acm.org/doi/10.1145/3774651"
+
+[[sources]]
+key = "ICU_REGEX"
+url = "https://unicode-org.github.io/icu/userguide/strings/regexp.html"
+source_class = "official-technical-documentation"
+baseline_type = "unicode-aware-regex-semantics-category-property-handling-and-locale-sensitive-behavior-boundaries"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://unicode-org.github.io/icu/userguide/strings/regexp.html"
+vx_rows = ["VX-633"]
+digest_material = "ICU_REGEX|https://unicode-org.github.io/icu/userguide/strings/regexp.html|official-technical-documentation|unicode-aware-regex-semantics-category-property-handling-and-locale-sensitive-behavior-boundaries|official-doc|documentation-only|release_floor_eligible=true|https://unicode-org.github.io/icu/userguide/strings/regexp.html"
+
+[[sources]]
+key = "METAL_COUNTERS"
+url = "https://developer.apple.com/videos/play/tech-talks/10001/"
+source_class = "official-technical-documentation"
+baseline_type = "runtime-metal-counter-collection-gpu-profiling-data-occupancy-and-bottleneck-evidence-on-apple-gpus"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://developer.apple.com/videos/play/tech-talks/10001/"
+vx_rows = ["VX-546", "VX-561", "VX-572", "VX-606", "VX-617", "VX-642", "VX-650", "VX-678", "VX-679", "VX-689", "VX-715", "VX-789"]
+digest_material = "METAL_COUNTERS|https://developer.apple.com/videos/play/tech-talks/10001/|official-technical-documentation|runtime-metal-counter-collection-gpu-profiling-data-occupancy-and-bottleneck-evidence-on-apple-gpus|official-doc|documentation-only|release_floor_eligible=true|https://developer.apple.com/videos/play/tech-talks/10001/"
+
+[[sources]]
+key = "METAL_HAZARD"
+url = "https://developer.apple.com/documentation/metal/mtlhazardtrackingmode"
+source_class = "official-technical-documentation"
+baseline_type = "metal-resource-hazard-tracking-heap-resource-dependency-declarations-and-synchronization-evidence"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://developer.apple.com/documentation/metal/mtlhazardtrackingmode"
+vx_rows = ["VX-571", "VX-678"]
+digest_material = "METAL_HAZARD|https://developer.apple.com/documentation/metal/mtlhazardtrackingmode|official-technical-documentation|metal-resource-hazard-tracking-heap-resource-dependency-declarations-and-synchronization-evidence|official-doc|documentation-only|release_floor_eligible=true|https://developer.apple.com/documentation/metal/mtlhazardtrackingmode"
+
+[[sources]]
+key = "METAL_ICB"
+url = "https://developer.apple.com/documentation/metal/indirect-command-encoding"
+source_class = "official-technical-documentation"
+baseline_type = "metal-indirect-command-buffers-for-persistent-command-encoding-and-repeated-command-reuse"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://developer.apple.com/documentation/metal/indirect-command-encoding"
+vx_rows = ["VX-570", "VX-677"]
+digest_material = "METAL_ICB|https://developer.apple.com/documentation/metal/indirect-command-encoding|official-technical-documentation|metal-indirect-command-buffers-for-persistent-command-encoding-and-repeated-command-reuse|official-doc|documentation-only|release_floor_eligible=true|https://developer.apple.com/documentation/metal/indirect-command-encoding"
+
+[[sources]]
+key = "METAL_SIMDGROUPS"
+url = "https://developer.apple.com/documentation/metal/creating-threads-and-threadgroups"
+source_class = "official-technical-documentation"
+baseline_type = "metal-simd-group-execution-divergence-constraints-and-threadgroup-planning-for-scan-kernels"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://developer.apple.com/documentation/metal/creating-threads-and-threadgroups"
+vx_rows = ["VX-642", "VX-680"]
+digest_material = "METAL_SIMDGROUPS|https://developer.apple.com/documentation/metal/creating-threads-and-threadgroups|official-technical-documentation|metal-simd-group-execution-divergence-constraints-and-threadgroup-planning-for-scan-kernels|official-doc|documentation-only|release_floor_eligible=true|https://developer.apple.com/documentation/metal/creating-threads-and-threadgroups"
+
+[[sources]]
+key = "MPS_GRAPH"
+url = "https://developer.apple.com/documentation/metalperformanceshadersgraph"
+source_class = "official-technical-documentation"
+baseline_type = "metal-performance-shaders-graph-as-a-tuned-graph-compute-baseline-for-apple-math-and-ml-kernels"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://developer.apple.com/documentation/metalperformanceshadersgraph"
+vx_rows = ["VX-561", "VX-606", "VX-689"]
+digest_material = "MPS_GRAPH|https://developer.apple.com/documentation/metalperformanceshadersgraph|official-technical-documentation|metal-performance-shaders-graph-as-a-tuned-graph-compute-baseline-for-apple-math-and-ml-kernels|official-doc|documentation-only|release_floor_eligible=true|https://developer.apple.com/documentation/metalperformanceshadersgraph"
+
+[[sources]]
+key = "NSIGHT_COMPUTE"
+url = "https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html"
+source_class = "official-technical-documentation"
+baseline_type = "cuda-kernel-profiling-metric-collection-baseline-comparison-occupancy-memory-and-instruction-pressure-evidence"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html"
+vx_rows = ["VX-541", "VX-542", "VX-609", "VX-617", "VX-650", "VX-679", "VX-682", "VX-696", "VX-714", "VX-732", "VX-790", "VX-797"]
+digest_material = "NSIGHT_COMPUTE|https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html|official-technical-documentation|cuda-kernel-profiling-metric-collection-baseline-comparison-occupancy-memory-and-instruction-pressure-evidence|official-doc|documentation-only|release_floor_eligible=true|https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html"
+
+[[sources]]
+key = "PCRE2_API"
+url = "https://www.pcre.org/current/doc/html/pcre2api.html"
+source_class = "official-technical-documentation"
+baseline_type = "pcre2-compile-match-context-compiled-pattern-introspection-and-resource-control-surfaces"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://www.pcre.org/current/doc/html/pcre2api.html"
+vx_rows = ["VX-621", "VX-623", "VX-624", "VX-627", "VX-628"]
+digest_material = "PCRE2_API|https://www.pcre.org/current/doc/html/pcre2api.html|official-technical-documentation|pcre2-compile-match-context-compiled-pattern-introspection-and-resource-control-surfaces|official-doc|documentation-only|release_floor_eligible=true|https://www.pcre.org/current/doc/html/pcre2api.html"
+
+[[sources]]
+key = "PCRE2_JIT"
+url = "https://www.pcre.org/current/doc/html/pcre2jit.html"
+source_class = "official-technical-documentation"
+baseline_type = "jit-matching-jit-stack-controls-unsupported-jit-conditions-and-parity-with-interpretive-pcre2-results"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://www.pcre.org/current/doc/html/pcre2jit.html"
+vx_rows = ["VX-629"]
+digest_material = "PCRE2_JIT|https://www.pcre.org/current/doc/html/pcre2jit.html|official-technical-documentation|jit-matching-jit-stack-controls-unsupported-jit-conditions-and-parity-with-interpretive-pcre2-results|official-doc|documentation-only|release_floor_eligible=true|https://www.pcre.org/current/doc/html/pcre2jit.html"
+
+[[sources]]
+key = "RE2_PRODUCTION"
+url = "https://swtch.com/~rsc/regexp/regexp3.html"
+source_class = "official-technical-documentation"
+baseline_type = "production-re2-engine-architecture-linear-time-execution-and-multiple-engine-fallback-design"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://swtch.com/~rsc/regexp/regexp3.html"
+vx_rows = ["VX-624", "VX-629", "VX-635"]
+digest_material = "RE2_PRODUCTION|https://swtch.com/~rsc/regexp/regexp3.html|official-technical-documentation|production-re2-engine-architecture-linear-time-execution-and-multiple-engine-fallback-design|official-doc|documentation-only|release_floor_eligible=true|https://swtch.com/~rsc/regexp/regexp3.html"
+
+[[sources]]
+key = "RE2_SYNTAX"
+url = "https://github.com/google/re2/wiki/syntax"
+source_class = "peer-or-official-implementation"
+baseline_type = "re2-dialect-boundaries-unsupported-pcre-perl-constructs-and-guaranteed-nonbacktracking-compatible-syntax-subsets"
+reproducibility_class = "implementation"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/google/re2/wiki/syntax"
+vx_rows = ["VX-621", "VX-623", "VX-630"]
+digest_material = "RE2_SYNTAX|https://github.com/google/re2/wiki/syntax|peer-or-official-implementation|re2-dialect-boundaries-unsupported-pcre-perl-constructs-and-guaranteed-nonbacktracking-compatible-syntax-subsets|implementation|source-available|release_floor_eligible=true|https://github.com/google/re2/wiki/syntax"
+
+[[sources]]
+key = "RE_SHARP"
+url = "https://popl25.sigplan.org/details/POPL-2025-popl-research-papers/1/RE-High-Performance-Derivative-Based-Regex-Matching-with-Intersection-Complement-a"
+source_class = "official-technical-documentation"
+baseline_type = "derivative-based-nonbacktracking-regex-with-intersection-complement-restricted-lookarounds-and-input-linear-matching-claims"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://popl25.sigplan.org/details/POPL-2025-popl-research-papers/1/RE-High-Performance-Derivative-Based-Regex-Matching-with-Intersection-Complement-a"
+vx_rows = ["VX-578", "VX-626", "VX-636"]
+digest_material = "RE_SHARP|https://popl25.sigplan.org/details/POPL-2025-popl-research-papers/1/RE-High-Performance-Derivative-Based-Regex-Matching-with-Intersection-Complement-a|official-technical-documentation|derivative-based-nonbacktracking-regex-with-intersection-complement-restricted-lookarounds-and-input-linear-matching-claims|official-doc|documentation-only|release_floor_eligible=true|https://popl25.sigplan.org/details/POPL-2025-popl-research-papers/1/RE-High-Performance-Derivative-Based-Regex-Matching-with-Intersection-Complement-a"
+
+[[sources]]
+key = "TEDDY_SIMD"
+url = "https://dl.acm.org/doi/fullHtml/10.1145/3472456.3473512"
+source_class = "peer-reviewed-or-preprint-research"
+baseline_type = "simd-literal-matching-for-scalable-dpi-small-literal-set-acceleration-and-prefilter-selectivity-evidence"
+reproducibility_class = "published-paper"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://dl.acm.org/doi/fullHtml/10.1145/3472456.3473512"
+vx_rows = ["VX-305"]
+digest_material = "TEDDY_SIMD|https://dl.acm.org/doi/fullHtml/10.1145/3472456.3473512|peer-reviewed-or-preprint-research|simd-literal-matching-for-scalable-dpi-small-literal-set-acceleration-and-prefilter-selectivity-evidence|published-paper|documentation-only|release_floor_eligible=true|https://dl.acm.org/doi/fullHtml/10.1145/3472456.3473512"
+
+[[sources]]
+key = "WEBGPU_SPEC"
+url = "https://www.w3.org/TR/webgpu/"
+source_class = "official-technical-documentation"
+baseline_type = "webgpu-compute-command-encoding-queue-semantics-optional-timestamp-query-timing-and-portability-constraints"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://www.w3.org/TR/webgpu/"
+vx_rows = ["VX-546", "VX-558", "VX-560", "VX-568", "VX-569", "VX-575", "VX-577", "VX-617", "VX-641", "VX-670", "VX-672", "VX-675", "VX-679", "VX-715", "VX-973", "VX-975", "VX-1432"]
+digest_material = "WEBGPU_SPEC|https://www.w3.org/TR/webgpu/|official-technical-documentation|webgpu-compute-command-encoding-queue-semantics-optional-timestamp-query-timing-and-portability-constraints|official-doc|documentation-only|release_floor_eligible=true|https://www.w3.org/TR/webgpu/"
+
+[[sources]]
+key = "WGPU_SUBGROUPS"
+url = "https://docs.rs/wgpu/latest/wgpu/struct.Features.html"
+source_class = "official-technical-documentation"
+baseline_type = "native-wgpu-subgroup-feature-flags-supported-backends-subgroup-barriers-and-portable-fallback-boundaries"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://docs.rs/wgpu/latest/wgpu/struct.Features.html"
+vx_rows = ["VX-640", "VX-676"]
+digest_material = "WGPU_SUBGROUPS|https://docs.rs/wgpu/latest/wgpu/struct.Features.html|official-technical-documentation|native-wgpu-subgroup-feature-flags-supported-backends-subgroup-barriers-and-portable-fallback-boundaries|official-doc|documentation-only|release_floor_eligible=true|https://docs.rs/wgpu/latest/wgpu/struct.Features.html"
+
+[[sources]]
+key = "WGSL_SUBGROUPS"
+url = "https://www.w3.org/TR/WGSL/"
+source_class = "official-technical-documentation"
+baseline_type = "wgsl-subgroup-uniformity-rules-subgroup-built-ins-and-portability-constraints-for-gpu-scan-kernels"
+reproducibility_class = "official-doc"
+artifact_state = "documentation-only"
+release_floor_eligible = true
+artifact_url = "https://www.w3.org/TR/WGSL/"
+vx_rows = ["VX-640", "VX-641", "VX-676", "VX-680"]
+digest_material = "WGSL_SUBGROUPS|https://www.w3.org/TR/WGSL/|official-technical-documentation|wgsl-subgroup-uniformity-rules-subgroup-built-ins-and-portability-constraints-for-gpu-scan-kernels|official-doc|documentation-only|release_floor_eligible=true|https://www.w3.org/TR/WGSL/"
