@@ -4,6 +4,8 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-01
+
 ### Fixed
 
 - Release benchmark source fingerprints now exclude operator-internal files such
