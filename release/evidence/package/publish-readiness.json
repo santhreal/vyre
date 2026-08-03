@@ -680,36 +680,6 @@
       "dependency": "vyre-primitives",
       "dependency_version": "0.7.1",
       "manifest": "vyre-self-substrate/Cargo.toml"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre",
-      "dependency_version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver",
-      "dependency_version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-foundation",
-      "dependency_version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-harness",
-      "dependency_version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-primitives",
-      "dependency_version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml"
     }
   ],
   "package_content_checks": [
@@ -899,8 +869,8 @@
       "package": "vyre-driver-cuda",
       "manifest": "vyre-driver-cuda/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 326,
-      "file_list_digest": "blake3:dd7a0df7bb8e90d1751d2bfcb7197ab96aa5a1fd19054d2041cc0419c4eb7adb",
+      "file_count": 327,
+      "file_list_digest": "blake3:d3f1199040750f17d642234780b7385cdcc100eac90c1c614c3a37527d3600b3",
       "example_count": 1,
       "rust_source_count": 111,
       "missing_required_files": [],
@@ -912,8 +882,8 @@
       "package": "vyre-driver-wgpu",
       "manifest": "vyre-driver-wgpu/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 478,
-      "file_list_digest": "blake3:b33764ce500bb15333164130cad0bbf16aea95281b5faf8bbf0251b5e8c2fbbb",
+      "file_count": 480,
+      "file_list_digest": "blake3:36c6b745a74f209c5a15527bfcd72e4569aeac7863ed738931f22c0263693f9f",
       "example_count": 1,
       "rust_source_count": 96,
       "missing_required_files": [],
@@ -990,8 +960,8 @@
       "package": "weirflow",
       "manifest": "../../../dataflow/weir/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 615,
-      "file_list_digest": "blake3:cec2bcbf1cfbda2a306f24c6cfdf2bf6e22b5af7805c21da587e920497662470",
+      "file_count": 613,
+      "file_list_digest": "blake3:c79cb01a412294dfa0447a0dbd227b2ff865514c16c40814cb6a7d6ffc2d6265",
       "example_count": 3,
       "rust_source_count": 323,
       "missing_required_files": [],
@@ -1016,8 +986,8 @@
       "package": "vyre-libs",
       "manifest": "vyre-libs/Cargo.toml",
       "cargo_package_list_succeeded": true,
-      "file_count": 865,
-      "file_list_digest": "blake3:85963b774f926f295dfcfc102d8f1e4a1b5d1ea5a2b4e9aae2685d4e6696c7d8",
+      "file_count": 870,
+      "file_list_digest": "blake3:8ecfc373c3207c884f041f8191750b56a92d983770ae1ed332e12dd6f5a51698",
       "example_count": 3,
       "rust_source_count": 582,
       "missing_required_files": [],
@@ -1652,76 +1622,6 @@
       "dependency": "vyre-primitives",
       "version": "0.7.1",
       "manifest": "vyre-self-substrate/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver-cuda",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver-reference",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-driver-wgpu",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "manifest"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-foundation",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-harness",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-primitives",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
-      "source": "workspace"
-    },
-    {
-      "package": "weirflow",
-      "dependency": "vyre-primitives",
-      "version": "0.7.1",
-      "manifest": "../../../dataflow/weir/Cargo.toml",
       "source": "workspace"
     }
   ],
