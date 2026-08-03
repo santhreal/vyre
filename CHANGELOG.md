@@ -23,14 +23,6 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
 - Workspace documentation now resolves NFA conversion and megakernel table links.
 
-### Changed
-
-- `run_generated_security_relation_analyzer` is now
-  `analyze_generated_security_relations`, matching the public operation naming
-  contract.
-
-
-
 ## [0.7.1] - 2026-08-01
 
 ### Fixed

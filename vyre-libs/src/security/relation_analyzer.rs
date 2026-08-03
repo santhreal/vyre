@@ -191,7 +191,7 @@ impl From<AnalysisFactError> for SecurityRelationAnalyzerError {
 /// Returns [`SecurityRelationAnalyzerError`] when the fact table is malformed,
 /// relation proof bundles are invalid, required metadata is blank, runtime
 /// accounting is missing, or comparator counts disagree.
-pub fn analyze_generated_security_relations(
+pub fn run_generated_security_relation_analyzer(
     table: &AnalysisFactTable,
     spec: GeneratedSecurityRelationAnalyzerSpec<'_>,
     stats: GeneratedSecurityRelationAnalyzerRunStats,
@@ -486,7 +486,7 @@ mod tests {
             fact(3, FactKind::Dataflow, 10, Some(20)),
         ]);
 
-        let report = analyze_generated_security_relations(&table, spec(), stats(3, 1)).unwrap();
+        let report = run_generated_security_relation_analyzer(&table, spec(), stats(3, 1)).unwrap();
 
         assert_eq!(
             report.evidence.schema_version,
@@ -516,7 +516,7 @@ mod tests {
             fact(4, FactKind::Sanitizer, 10, Some(20)),
         ]);
 
-        let report = analyze_generated_security_relations(&table, spec(), stats(4, 0)).unwrap();
+        let report = run_generated_security_relation_analyzer(&table, spec(), stats(4, 0)).unwrap();
 
         assert!(report.findings.is_empty());
         assert_eq!(report.evidence.sanitizer_tuple_count, 1);
@@ -531,7 +531,7 @@ mod tests {
             fact(3, FactKind::Dataflow, 10, Some(20)),
         ]);
 
-        let error = analyze_generated_security_relations(&table, spec(), stats(2, 1))
+        let error = run_generated_security_relation_analyzer(&table, spec(), stats(2, 1))
             .expect_err("baseline tuple mismatch must reject");
 
         assert!(matches!(
@@ -555,7 +555,7 @@ mod tests {
         let mut missing = stats(3, 1);
         missing.compile_time_ns = 0;
 
-        let error = analyze_generated_security_relations(&table, spec(), missing)
+        let error = run_generated_security_relation_analyzer(&table, spec(), missing)
             .expect_err("missing compile time must reject");
 
         assert!(matches!(
