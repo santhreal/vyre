@@ -82,7 +82,7 @@ const MARKERS: &[(&str, &str)] = &[
 pub(crate) fn run(args: &[String]) {
     let strict = args.iter().any(|a| a == "--strict");
     let workspace_root = locate_workspace_root();
-    let vyre_dir = workspace_root.join(VYRE_ROOT);
+    let vyre_dir = resolve_vyre_dir(&workspace_root);
 
     let mut findings: Vec<(PathBuf, usize, &str, &str)> = Vec::new();
     let mut scan_errors = Vec::new();
@@ -195,6 +195,14 @@ fn scan_dir(
     }
 }
 
+fn resolve_vyre_dir(workspace_root: &Path) -> PathBuf {
+    if workspace_root.join("vyre-foundation").join("src").is_dir() {
+        workspace_root.to_path_buf()
+    } else {
+        workspace_root.join(VYRE_ROOT)
+    }
+}
+
 fn locate_workspace_root() -> PathBuf {
     let mut cur = std::env::current_dir()
         .expect("Fix: cargo_full run --bin xtask -- must be runnable from a directory.");
@@ -248,6 +256,40 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
 mod tests {
     use super::*;
 
+    /// The audit must scan a standalone Vyre workspace instead of appending its monorepo path twice.
+    #[test]
+    fn resolves_standalone_vyre_workspace_root() {
+        let root = tempfile::tempdir().expect("temporary workspace");
+        fs::create_dir_all(root.path().join("vyre-foundation/src"))
+            .expect("standalone Vyre source root");
+
+        assert_eq!(resolve_vyre_dir(root.path()), root.path());
+    }
+
+    /// The audit must retain support for running from the enclosing Santh workspace.
+    #[test]
+    fn resolves_vyre_root_inside_monorepo() {
+        let root = tempfile::tempdir().expect("temporary workspace");
+        let expected = root.path().join(VYRE_ROOT);
+        fs::create_dir_all(expected.join("vyre-foundation/src"))
+            .expect("nested Vyre source root");
+
+        assert_eq!(resolve_vyre_dir(root.path()), expected);
+    }
+
+    /// A standalone workspace must win when an unrelated nested path also resembles Vyre.
+    #[test]
+    fn standalone_workspace_takes_precedence_over_nested_candidate() {
+        let root = tempfile::tempdir().expect("temporary workspace");
+        fs::create_dir_all(root.path().join("vyre-foundation/src"))
+            .expect("standalone Vyre source root");
+        fs::create_dir_all(root.path().join(VYRE_ROOT).join("vyre-foundation/src"))
+            .expect("nested Vyre source root");
+
+        assert_eq!(resolve_vyre_dir(root.path()), root.path());
+    }
+
+    /// Duplicate marker patterns would hide audit categories behind repeated findings.
     #[test]
     fn markers_have_unique_patterns() {
         let mut patterns: Vec<&str> = MARKERS.iter().map(|(p, _)| *p).collect();

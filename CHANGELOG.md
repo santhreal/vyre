@@ -3,6 +3,11 @@
 All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ## [Unreleased]
+### Fixed
+
+- `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
+  enclosing Santh workspace without duplicating the Vyre path.
+
 
 ## [0.7.1] - 2026-08-01
 
