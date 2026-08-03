@@ -3,10 +3,9 @@
 //! Category-A math and NN wrappers keep domain-specific names and op ids, but
 //! the repeated per-lane load/compute/store skeleton lives here.
 
-use crate::builder::BuildOptions;
-use crate::region::wrap_anonymous;
+use crate::builder::{build_indexed_map, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 /// Right-hand side source for an elementwise F32 multiply.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -26,23 +25,6 @@ pub(crate) fn f32_elementwise_mul(
     output: &str,
     n: u32,
 ) -> Program {
-    let i = Expr::var("i");
-    let lhs_value = Expr::load(input, i.clone());
-    let rhs_value = match rhs {
-        F32MulRhs::SameInput => lhs_value.clone(),
-        F32MulRhs::Buffer(buffer) => Expr::load(buffer, i.clone()),
-    };
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: Expr::mul(lhs_value, rhs_value),
-            }],
-        ),
-    ];
     let mut buffers =
         vec![BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n)];
     if let F32MulRhs::Buffer(buffer) = rhs {
@@ -53,7 +35,15 @@ pub(crate) fn f32_elementwise_mul(
     } else {
         buffers.push(BufferDecl::output(output, 1, DataType::F32).with_count(n));
     }
-    Program::wrapped(buffers, [64, 1, 1], vec![wrap_anonymous(op_id, body)])
+
+    build_indexed_map(op_id, buffers, output, n, [64, 1, 1], |i| {
+        let lhs_value = Expr::load(input, i.clone());
+        let rhs_value = match rhs {
+            F32MulRhs::SameInput => lhs_value.clone(),
+            F32MulRhs::Buffer(buffer) => Expr::load(buffer, i.clone()),
+        };
+        (i, Expr::mul(lhs_value, rhs_value))
+    })
 }
 
 /// Build a checked elementwise unary u32 operation.

@@ -18,9 +18,67 @@ fn adversarial_module_named_tests_inside_a_real_module() {
         "#,
     );
     let v = lint(dir.path());
-    assert_eq!(v.len(), 1, "build() flagged, tests::t() not: {v:?}");
+    assert_eq!(v.len(), 2, "module names alone cannot create test exemptions: {v:?}");
 }
 
+
+/// Renaming `Node` at an import site must not hide raw IR construction.
+#[test]
+fn renamed_node_import_is_tracked() {
+    let dir = tempfile::tempdir().unwrap();
+    write_lib_file(
+        dir.path(),
+        "nn/renamed.rs",
+        "use vyre::ir::Node as N;\nfn build() { let _ = N::let_bind(\"x\", value()); }\n",
+    );
+
+    let violations = lint(dir.path());
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].kind, ViolationKind::RawNodeConstruction);
+}
+
+/// A local type alias must retain the underlying raw IR type identity.
+#[test]
+fn type_alias_for_expr_is_tracked() {
+    let dir = tempfile::tempdir().unwrap();
+    write_lib_file(
+        dir.path(),
+        "math/alias.rs",
+        "type E = Expr;\nfn build() { let _ = E::u32(7); }\n",
+    );
+
+    let violations = lint(dir.path());
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].kind, ViolationKind::RawExprConstruction);
+}
+
+/// A mixed `cfg(any(...))` remains production-reachable and cannot exempt raw IR.
+#[test]
+fn mixed_any_cfg_does_not_create_test_exemption() {
+    let dir = tempfile::tempdir().unwrap();
+    write_lib_file(
+        dir.path(),
+        "nn/mixed_cfg.rs",
+        "#[cfg(any(test, target_os = \"linux\"))]\nfn build() { let _ = Node::let_bind(\"x\", value()); }\n",
+    );
+
+    let violations = lint(dir.path());
+    assert_eq!(violations.len(), 1);
+}
+
+/// A macro pattern that only reads an IR variant must remain permitted.
+#[test]
+fn macro_pattern_without_construction_is_not_flagged() {
+    let dir = tempfile::tempdir().unwrap();
+    write_lib_file(
+        dir.path(),
+        "nn/pattern.rs",
+        "macro_rules! classify { (Node::Store { .. }) => { 1 }; }\n",
+    );
+
+    let violations = lint(dir.path());
+    assert!(violations.is_empty(), "macro patterns only read IR: {violations:?}");
+}
 // ============== Allowlist behavior ==============
 
 #[test]

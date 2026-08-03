@@ -1,6 +1,14 @@
 use std::fs;
 use std::process::Command;
 
+fn scan_fixture(source: &str) -> Vec<vyre_lints::Violation> {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("external-consumer/src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(src.join("dispatch.rs"), source).expect("write fixture");
+    vyre_lints::run_production_cpu_fallbacks(&[src.as_path()]).expect("fallback scan")
+}
+
 #[test]
 fn flags_reference_eval_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -308,7 +316,7 @@ fn reports_external_consumer_production_cpu_reference_paths() {
     assert!(violations[0]
         .file
         .ends_with("external-consumer/src/dispatch.rs"));
-    assert!(violations[0].message.contains("cpu_ref("));
+    assert!(violations[0].message.contains("cpu_ref"));
 }
 
 #[test]
@@ -325,4 +333,77 @@ fn allows_external_consumer_cpu_reference_only_in_parity_tests() {
     let violations =
         vyre_lints::run_production_cpu_fallbacks(&[dir.path()]).expect("fallback scan");
     assert!(violations.is_empty());
+}
+
+/// Renaming a forbidden oracle import must not hide the production fallback.
+#[test]
+fn flags_renamed_reference_eval_import() {
+    let violations = scan_fixture(
+        "use vyre_reference::reference_eval as execute;\npub fn bad() { execute(&program, &values); }\n",
+    );
+
+    assert_eq!(violations.len(), 1);
+    assert!(violations[0].message.contains("reference_eval"));
+}
+
+/// Qualified paths with arbitrary formatting must remain visible to the AST gate.
+#[test]
+fn flags_multiline_fully_qualified_reference_eval() {
+    let violations = scan_fixture(
+        "pub fn bad() { let _ = vyre_reference\n    ::reference_eval(&program, &values); }\n",
+    );
+
+    assert_eq!(violations.len(), 1);
+    assert!(violations[0]
+        .message
+        .contains("vyre_reference::reference_eval"));
+}
+
+/// A mixed `cfg(any(...))` is production-reachable and must not exempt the item.
+#[test]
+fn mixed_any_cfg_does_not_create_parity_exemption() {
+    let violations =
+        scan_fixture("#[cfg(any(test, target_os = \"linux\"))]\npub fn bad() { cpu_ref(); }\n");
+
+    assert_eq!(violations.len(), 1);
+    assert!(violations[0].message.contains("cpu_ref"));
+}
+
+/// An item-level parity gate exempts only that item, not a production sibling.
+#[test]
+fn item_level_parity_scope_does_not_leak_to_siblings() {
+    let violations = scan_fixture(
+        "#[cfg(any(test, feature = \"cpu-parity\"))]\nfn oracle() { cpu_ref(); }\nfn bad() { cpu_ref(); }\n",
+    );
+
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].line, 3);
+}
+
+/// `cfg_attr(test, ...)` does not disable an item in production and cannot bypass the gate.
+#[test]
+fn cfg_attr_test_does_not_create_parity_exemption() {
+    let violations = scan_fixture("#[cfg_attr(test, allow(dead_code))]\nfn bad() { cpu_ref(); }\n");
+
+    assert_eq!(violations.len(), 1);
+    assert!(violations[0].message.contains("cpu_ref"));
+}
+
+/// Comments, documentation, and string literals are not executable fallback paths.
+#[test]
+fn ignores_forbidden_names_in_non_executable_text() {
+    let violations = scan_fixture(
+        "/// `vyre_reference::reference_eval` is test-only.\nfn ok() { let message = \"cpu_ref()\"; assert_eq!(message.len(), 9); }\n",
+    );
+
+    assert!(violations.is_empty());
+}
+
+/// Method syntax must not bypass the explicit CPU helper symbol guard.
+#[test]
+fn flags_cpu_reference_method_calls() {
+    let violations = scan_fixture("fn bad(engine: &Engine) { engine.cpu_ref(); }\n");
+
+    assert_eq!(violations.len(), 1);
+    assert!(violations[0].message.contains("cpu_ref"));
 }

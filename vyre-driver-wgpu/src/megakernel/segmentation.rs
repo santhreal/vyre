@@ -226,7 +226,7 @@ impl SyncClass {
 /// # Panics
 /// Panics if `transitions.len() < state_count * 256` (a malformed table the
 /// device decode would also read out of bounds); callers pass validated
-/// [`BatchRuleProgram`] tables.
+/// `BatchRuleProgram` tables.
 /// Thin wrapper over [`dfa_sync_class`] returning just the bounded distance
 /// (`None` for `UnboundedCycle` or `BudgetExceeded`). Callers that need to tell
 /// "genuinely unbounded" from "budget-capped", e.g. for diagnostics, call

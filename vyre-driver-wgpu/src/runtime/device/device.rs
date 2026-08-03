@@ -39,7 +39,7 @@ pub struct EnabledFeatures {
     /// Wgpu adapter minimum subgroup size (I.6). `0` means the
     /// adapter did not report a subgroup size; consumers must treat
     /// subgroup-width-dependent planning as unavailable unless
-    /// [`crate::capabilities::supports_subgroup_ops`] is true.
+    /// `crate::capabilities::supports_subgroup_ops` returns true.
     pub min_subgroup_size: u32,
 }
 

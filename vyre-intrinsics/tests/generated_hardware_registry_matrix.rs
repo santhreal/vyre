@@ -57,7 +57,7 @@ const EXPECTED: &[ExpectedHardwareEntry] = &[
 
 fn hardware_entries() -> BTreeMap<&'static str, &'static OpEntry> {
     all_entries()
-        .filter(|entry| entry.id.starts_with("vyre-intrinsics::hardware::"))
+        .filter(|entry| entry.category() == Some("hardware"))
         .map(|entry| (entry.id, entry))
         .collect()
 }
@@ -78,6 +78,15 @@ fn run_cpu(entry: &OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 #[test]
 fn generated_hardware_registry_shapes_match_declared_surface() {
     let entries = hardware_entries();
+    let invalid_namespaces = entries
+        .keys()
+        .filter(|id| !id.starts_with("vyre-intrinsics::hardware::"))
+        .copied()
+        .collect::<Vec<_>>();
+    assert!(
+        invalid_namespaces.is_empty(),
+        "hardware-category entries must use the canonical namespace: {invalid_namespaces:?}",
+    );
     assert_eq!(
         entries.len(),
         EXPECTED.len(),

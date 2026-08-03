@@ -23,19 +23,11 @@ pub fn qk_gain(
     seq_len: u32,
     head_dim: u32,
 ) -> Program {
-    let total = num_heads * seq_len * head_dim;
-    let per_head = seq_len * head_dim;
-
-    // Empty-tensor short circuit: a zero-sized total or per_head means
-    // there is no work to do. Building the IR anyway would inject a
-    // statically-zero divisor (V044) for `i / per_head`. Return a noop
-    // Program that declares the buffers but writes nothing.
-    if total == 0 || per_head == 0 {
+    if num_heads == 0 || seq_len == 0 || head_dim == 0 {
         return Program::wrapped(
             vec![
-                BufferDecl::storage(q_in, 0, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(total),
-                BufferDecl::output(q_out, 1, DataType::F32).with_count(total),
+                BufferDecl::storage(q_in, 0, BufferAccess::ReadOnly, DataType::F32).with_count(0),
+                BufferDecl::output(q_out, 1, DataType::F32).with_output_byte_range(0..0),
                 BufferDecl::storage(gain, 2, BufferAccess::ReadOnly, DataType::F32)
                     .with_count(num_heads),
             ],
@@ -43,6 +35,32 @@ pub fn qk_gain(
             vec![wrap_anonymous(OP_ID, vec![])],
         );
     }
+    let per_head = match seq_len.checked_mul(head_dim) {
+        Some(per_head) => per_head,
+        None => {
+            return crate::builder::invalid_output_program(
+                OP_ID,
+                q_out,
+                DataType::F32,
+                format!(
+                    "Fix: qk_gain per-head element count overflows u32 for seq_len={seq_len}, head_dim={head_dim}."
+                ),
+            );
+        }
+    };
+    let total = match num_heads.checked_mul(per_head) {
+        Some(total) => total,
+        None => {
+            return crate::builder::invalid_output_program(
+                OP_ID,
+                q_out,
+                DataType::F32,
+                format!(
+                    "Fix: qk_gain total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
+                ),
+            );
+        }
+    };
 
     let i = Expr::var("i");
     // head_idx = i / (seq_len * head_dim)

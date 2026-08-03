@@ -1089,11 +1089,12 @@ fn seed_backend_allocated_segment_inputs<'a>(
         if !buffer.is_backend_allocated_output() {
             continue;
         }
-        let static_len = buffer
-            .static_byte_len()
-            .map_err(|error| BackendError::InvalidProgram {
-                fix: format!("Fix: cannot seed grid-sync output `{name}`: {error}"),
-            })?;
+        let static_len =
+            buffer
+                .static_byte_len()
+                .map_err(|error| BackendError::InvalidProgram {
+                    fix: format!("Fix: cannot seed grid-sync output `{name}`: {error}"),
+                })?;
         let byte_len = static_len
             .or_else(|| buffer.output_byte_range().map(|range| range.end))
             .ok_or_else(|| BackendError::InvalidProgram {
@@ -2293,10 +2294,7 @@ mod tests {
             vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
             [1, 1, 1],
             vec![
-                Node::let_bind(
-                    "prior",
-                    Expr::atomic_add("out", Expr::u32(0), Expr::u32(1)),
-                ),
+                Node::let_bind("prior", Expr::atomic_add("out", Expr::u32(0), Expr::u32(1))),
                 Node::barrier_with_ordering(MemoryOrdering::GridSync),
                 Node::Return,
             ],
@@ -2317,13 +2315,9 @@ mod tests {
             Ok(())
         };
 
-        let outputs = dispatch_with_grid_sync_split_via(
-            &program,
-            &[],
-            &DispatchConfig::default(),
-            &dispatch,
-        )
-        .expect("backend-allocated atomic output must receive its zero seed");
+        let outputs =
+            dispatch_with_grid_sync_split_via(&program, &[], &DispatchConfig::default(), &dispatch)
+                .expect("backend-allocated atomic output must receive its zero seed");
 
         assert_eq!(outputs, vec![1_u32.to_le_bytes().to_vec()]);
     }

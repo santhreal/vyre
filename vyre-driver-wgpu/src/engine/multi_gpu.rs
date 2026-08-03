@@ -26,6 +26,8 @@ use crate::staging_reserve::{reserve_multi_gpu_vec, reserve_smallvec, reserve_ve
 
 pub use partition::{partition_work_stealing, DeviceLoad, Partition, WeightedWorkItem};
 pub use stream_shard::{shard_by_blake3, StreamShardAllocator};
+/// Error returned by public stream-sharding operations.
+pub type StreamShardError = stream_shard::StreamShardError;
 
 fn empty_gpu_work_result_slots(
     len: usize,

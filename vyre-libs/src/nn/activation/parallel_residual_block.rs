@@ -2,9 +2,9 @@
 //!
 //! Category A composition  -  residual stream addition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
-use crate::region::wrap_anonymous;
+use crate::builder::build_indexed_map;
 
 const OP_ID: &str = "vyre-libs::nn::parallel_residual_block";
 
@@ -22,33 +22,27 @@ pub fn parallel_residual_block(
     if n == 0 {
         return Err("Fix: n=0".into());
     }
-    let i = Expr::var("i");
-    let result = Expr::add(
-        Expr::add(Expr::load(x, i.clone()), Expr::load(attn_out, i.clone())),
-        Expr::load(mlp_out, i.clone()),
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: result,
-            }],
-        ),
+    let buffers = vec![
+        BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::storage(attn_out, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::storage(mlp_out, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
+        BufferDecl::output(output, 3, DataType::F32).with_count(n),
     ];
-
-    Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(x, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(attn_out, 1, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::storage(mlp_out, 2, BufferAccess::ReadOnly, DataType::F32).with_count(n),
-            BufferDecl::output(output, 3, DataType::F32).with_count(n),
-        ],
+    Ok(build_indexed_map(
+        OP_ID,
+        buffers,
+        output,
+        n,
         [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
+        |i| {
+            (
+                i.clone(),
+                Expr::add(
+                    Expr::add(Expr::load(x, i.clone()), Expr::load(attn_out, i.clone())),
+                    Expr::load(mlp_out, i),
+                ),
+            )
+        },
     ))
 }
 

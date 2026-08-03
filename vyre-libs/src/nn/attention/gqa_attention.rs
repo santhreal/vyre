@@ -2,16 +2,15 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_primitives::nn::attention_passes::{
+    attention_max_pass_with_bases, attention_sum_pass_with_bases, attention_write_pass_with_bases,
     ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };
+use vyre_primitives::nn::attention_stability::positive_denominator;
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_primitives::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
-};
 
 const OP_ID: &str = "vyre-libs::nn::gqa_attention";
 
@@ -37,206 +36,94 @@ pub fn gqa_attention(
         return Err("Fix: n_q_heads must be multiple of n_kv_heads".into());
     }
     let group_size = n_q_heads / n_kv_heads;
-    let q_total = n_q_heads * seq_len * head_dim;
-    let per_head = seq_len * head_dim;
-    let scale = 1.0f32 / (head_dim as f32).sqrt();
+    let per_head = seq_len.checked_mul(head_dim).ok_or_else(|| {
+        "gqa_attention sequence and head dimensions overflow u32. Fix: shard the attention input"
+            .to_string()
+    })?;
+    let q_rows = n_q_heads.checked_mul(seq_len).ok_or_else(|| {
+        "gqa_attention query row count overflows u32. Fix: shard the query heads".to_string()
+    })?;
+    let q_total = n_q_heads.checked_mul(per_head).ok_or_else(|| {
+        "gqa_attention query element count overflows u32. Fix: shard the query heads".to_string()
+    })?;
+    let kv_total = n_kv_heads.checked_mul(per_head).ok_or_else(|| {
+        "gqa_attention key/value element count overflows u32. Fix: shard the key/value heads"
+            .to_string()
+    })?;
+    let scale_expr = Expr::f32(1.0f32 / (head_dim as f32).sqrt());
 
-    let flat = Expr::var("flat");
+    let row_index = Expr::var("i");
     let q_head = Expr::BinOp {
         op: BinOp::Div,
-        left: Box::new(flat.clone()),
-        right: Box::new(Expr::u32(per_head)),
+        left: Box::new(row_index.clone()),
+        right: Box::new(Expr::u32(seq_len)),
     };
-    let pos_in_head = Expr::sub(flat.clone(), Expr::mul(q_head.clone(), Expr::u32(per_head)));
-    let row = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(pos_in_head.clone()),
-        right: Box::new(Expr::u32(head_dim)),
-    };
-    let col = Expr::sub(pos_in_head, Expr::mul(row.clone(), Expr::u32(head_dim)));
     let kv_head = Expr::BinOp {
         op: BinOp::Div,
-        left: Box::new(q_head.clone()),
+        left: Box::new(q_head),
         right: Box::new(Expr::u32(group_size)),
     };
+    let query_base = Expr::mul(row_index.clone(), Expr::u32(head_dim));
     let kv_base = Expr::mul(kv_head, Expr::u32(per_head));
-    let q_row_base = Expr::add(
-        Expr::mul(q_head, Expr::u32(per_head)),
-        Expr::mul(row, Expr::u32(head_dim)),
-    );
-
-    // Helper: dot(Q[row], K[j]) for a given "j" variable
-    let make_dot_loop = |dot_var: &str| -> Vec<Node> {
-        let mut body = vec![Node::let_bind(dot_var, Expr::f32(0.0))];
-        if head_dim <= 8 {
-            body.extend((0..head_dim).map(|lane| {
-                Node::assign(
-                    dot_var,
-                    Expr::fma(
-                        Expr::load(q, Expr::add(q_row_base.clone(), Expr::u32(lane))),
-                        Expr::load(
-                            k,
-                            Expr::add(
-                                Expr::add(
-                                    kv_base.clone(),
-                                    Expr::mul(Expr::var("j"), Expr::u32(head_dim)),
-                                ),
-                                Expr::u32(lane),
-                            ),
-                        ),
-                        Expr::var(dot_var),
-                    ),
-                )
-            }));
-        } else {
-            body.push(Node::loop_for(
-                "d",
-                Expr::u32(0),
-                Expr::u32(head_dim),
-                vec![Node::assign(
-                    dot_var,
-                    Expr::fma(
-                        Expr::load(q, Expr::add(q_row_base.clone(), Expr::var("d"))),
-                        Expr::load(
-                            k,
-                            Expr::add(
-                                Expr::add(
-                                    kv_base.clone(),
-                                    Expr::mul(Expr::var("j"), Expr::u32(head_dim)),
-                                ),
-                                Expr::var("d"),
-                            ),
-                        ),
-                        Expr::var(dot_var),
-                    ),
-                )],
-            ));
-        }
-        body
-    };
-
-    let exp_expr = |dot_var: &str| -> Expr {
-        Expr::UnOp {
-            op: UnOp::Exp,
-            operand: Box::new(bounded_exp_arg(Expr::sub(
-                Expr::mul(Expr::var(dot_var), Expr::f32(scale)),
-                Expr::var("max_score"),
-            ))),
-        }
-    };
-
     let parent = GeneratorRef {
         name: OP_ID.to_string(),
     };
 
-    // Each `wrap_child(...)` below creates a new Region scope, so
-    // any `Node::let_bind` inside a pass body dies when that pass's
-    // region exits  -  yet `sum_pass`'s `exp_expr` reads `max_score`
-    // and the post-pass `let_bind("denom", positive_denominator(sum_exp))`
-    // reads `sum_exp`. The outer if_then body now declares both
-    // accumulators up front and the per-pass bodies write into
-    // them with Node::assign instead of redeclaring.
-    let max_pass = {
-        let mut nodes = vec![];
-        nodes.push(Node::loop_for("j", Expr::u32(0), Expr::u32(seq_len), {
-            let mut v = make_dot_loop("dot");
-            v.push(Node::let_bind(
-                "score",
-                // Clamp ±inf (overflow on large Q/K) to -80 BEFORE the
-                // softmax recurrence so it doesn't become NaN via inf-inf.
-                // Preserve NaN inputs intact  -  the NaN-input contract
-                // requires those to flow through to the output.
-                {
-                    let raw = Expr::mul(Expr::var("dot"), Expr::f32(scale));
-                    bounded_score(raw)
-                },
-            ));
-            v.push(Node::assign(
-                "max_score",
-                Expr::select(
-                    Expr::is_nan(Expr::var("score")),
-                    Expr::var("score"),
-                    Expr::select(
-                        Expr::gt(Expr::var("score"), Expr::var("max_score")),
-                        Expr::var("score"),
-                        Expr::var("max_score"),
-                    ),
-                ),
-            ));
-            v
-        }));
-        nodes
-    };
-
-    let sum_pass = {
-        let mut nodes = vec![];
-        nodes.push(Node::loop_for("j", Expr::u32(0), Expr::u32(seq_len), {
-            let mut v = make_dot_loop("dot2");
-            v.push(Node::assign(
-                "sum_exp",
-                Expr::add(Expr::var("sum_exp"), exp_expr("dot2")),
-            ));
-            v
-        }));
-        nodes
-    };
-
-    let write_pass = {
-        let mut nodes = vec![Node::let_bind("val", Expr::f32(0.0))];
-        nodes.push(Node::loop_for("j", Expr::u32(0), Expr::u32(seq_len), {
-            let mut v = make_dot_loop("dot3");
-            v.push(Node::let_bind(
-                "w",
-                Expr::div(exp_expr("dot3"), Expr::var("denom")),
-            ));
-            v.push(Node::assign(
-                "val",
-                Expr::fma(
-                    Expr::var("w"),
-                    Expr::load(
-                        v_buf,
-                        Expr::add(
-                            Expr::add(
-                                kv_base.clone(),
-                                Expr::mul(Expr::var("j"), Expr::u32(head_dim)),
-                            ),
-                            col.clone(),
-                        ),
-                    ),
-                    Expr::var("val"),
-                ),
-            ));
-            v
-        }));
-        nodes.push(Node::Store {
-            buffer: output.into(),
-            index: flat.clone(),
-            value: flush_tiny(Expr::var("val")),
-        });
-        nodes
-    };
-
     let body = vec![
-        Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
+        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
         Node::if_then(
-            Expr::lt(flat.clone(), Expr::u32(q_total)),
+            Expr::lt(row_index, Expr::u32(q_rows)),
             vec![
-                // `max_score` and `sum_exp` are hoisted to the if_then
-                // body so they survive the per-pass `wrap_child(...)`
-                // Region scopes (each Region creates a new variable
-                // scope; an inner `Node::let_bind` would die on region
-                // exit and downstream reads would be V001 undeclared).
-                Node::let_bind("max_score", Expr::f32(f32::MIN)),
-                Node::let_bind("sum_exp", Expr::f32(0.0)),
-                wrap_child(ATTENTION_MAX_PASS_OP_ID, parent.clone(), max_pass),
-                wrap_child(ATTENTION_SUM_PASS_OP_ID, parent.clone(), sum_pass),
-                Node::let_bind("denom", positive_denominator(Expr::var("sum_exp"))),
-                wrap_child(ATTENTION_WRITE_PASS_OP_ID, parent, write_pass),
+                Node::let_bind("max_val", Expr::f32(f32::MIN)),
+                wrap_child(
+                    ATTENTION_MAX_PASS_OP_ID,
+                    parent.clone(),
+                    attention_max_pass_with_bases(
+                        q,
+                        k,
+                        head_dim,
+                        seq_len,
+                        scale_expr.clone(),
+                        query_base.clone(),
+                        kv_base.clone(),
+                    ),
+                ),
+                Node::let_bind("sum_val", Expr::f32(0.0)),
+                wrap_child(
+                    ATTENTION_SUM_PASS_OP_ID,
+                    parent.clone(),
+                    attention_sum_pass_with_bases(
+                        q,
+                        k,
+                        head_dim,
+                        seq_len,
+                        scale_expr.clone(),
+                        query_base.clone(),
+                        kv_base.clone(),
+                    ),
+                ),
+                Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
+                wrap_child(
+                    ATTENTION_WRITE_PASS_OP_ID,
+                    parent,
+                    attention_write_pass_with_bases(
+                        q,
+                        k,
+                        v_buf,
+                        head_dim,
+                        seq_len,
+                        scale_expr,
+                        output,
+                        query_base.clone(),
+                        kv_base.clone(),
+                        kv_base,
+                        query_base,
+                    ),
+                ),
             ],
         ),
     ];
 
-    let kv_total = n_kv_heads * seq_len * head_dim;
     Ok(Program::wrapped(
         vec![
             BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(q_total),

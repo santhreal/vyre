@@ -131,7 +131,7 @@ impl From<NfaToDfaError> for RegexDfaError {
 /// `max_matches` is the per-dispatch hit-buffer cap (passed through to
 /// `build_ac_bounded_ranges_program`). `max_dfa_states` is the subset-
 /// construction state cap (see
-/// [`vyre_primitives::matching::nfa_to_dfa`]). The default of 16k
+/// [`vyre_primitives::matching::nfa_to_dfa()`]). The default of 16k
 /// states matches `DEFAULT_DFA_BUDGET_BYTES = 16 MiB` (16k × 256 × 4 B).
 ///
 /// The match-append strategy is the default `append_match_subgroup`

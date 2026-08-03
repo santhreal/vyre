@@ -28,14 +28,12 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
-use std::sync::Arc;
-
 use vyre::ir::Program;
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
+use vyre_foundation::ir::{BufferAccess, DataType};
 use vyre_primitives::bitset::and::bitset_and;
 use vyre_primitives::bitset::or_into::bitset_or_into;
+use vyre_primitives::bitset::zero::bitset_zero;
 use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
@@ -44,32 +42,6 @@ use crate::security::flows_to::flows_to_alias_only;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::security::aliases_dataflow";
-
-/// Zero every word of a bitset buffer in-place.
-///
-/// `csr_forward_traverse` accumulates into `frontier_out` via `atomic_or`
-/// and does not clear it first. The CPU reference (`cpu_ref_into`) starts
-/// from an empty frontier each hop. Without this clear, `hop_*` buffers
-/// that persist across fixpoint iterations (and are not backend-cleared
-/// because they are scratch, not outputs) retain stale bits; merge then
-/// ORs a polluted hop into `reach_*` and `aliases($x, $y)` misses on
-/// multi-hop chains such as `uninit_callee_store.c`.
-fn bitset_zero_inplace(target: &str, words: u32) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
-    let body = vec![Node::store(target, t.clone(), Expr::u32(0))];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(target, 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from("vyre-libs::security::aliases_dataflow::zero"),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(Expr::lt(t, Expr::u32(words)), body)]),
-        }],
-    )
-}
 
 /// Build a Program: one bidirectional dataflow-aliases step.
 ///
@@ -147,8 +119,8 @@ pub fn try_aliases_dataflow(
 
     // Zero hop scratch, then one BFS hop (matches CPU `cpu_ref_into` clearing
     // `frontier_out` before each forward step).
-    let clear_hop_x = bitset_zero_inplace(hop_x_buf, words);
-    let clear_hop_y = bitset_zero_inplace(hop_y_buf, words);
+    let clear_hop_x = bitset_zero(hop_x_buf, words);
+    let clear_hop_y = bitset_zero(hop_y_buf, words);
     let hop_x_step = flows_to_alias_only(shape, reach_x_buf, hop_x_buf);
     let hop_y_step = flows_to_alias_only(shape, reach_y_buf, hop_y_buf);
 
@@ -424,5 +396,28 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(outputs, vec!["out"]);
+    }
+
+    /// Both scratch clears must retain canonical primitive provenance after fusion.
+    #[test]
+    fn fused_program_uses_two_canonical_bitset_zero_regions() {
+        use vyre_foundation::transform::visit::walk_nodes;
+        use vyre_primitives::bitset::zero::OP_ID as BITSET_ZERO_OP_ID;
+
+        let program = witness_program();
+        let mut primitive_zeros = 0usize;
+        let mut legacy_zeros = 0usize;
+        walk_nodes(&program, |node| {
+            if let Node::Region { generator, .. } = node {
+                match generator.as_str() {
+                    BITSET_ZERO_OP_ID => primitive_zeros += 1,
+                    "vyre-libs::security::aliases_dataflow::zero" => legacy_zeros += 1,
+                    _ => {}
+                }
+            }
+        });
+
+        assert_eq!(primitive_zeros, 2);
+        assert_eq!(legacy_zeros, 0);
     }
 }

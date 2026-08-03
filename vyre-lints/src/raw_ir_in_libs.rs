@@ -2,14 +2,18 @@
 //! `vyre-libs/src/**`. Construction sites  -  struct literals, tuple
 //! constructors, and associated-function calls  -  are flagged. Pattern
 //! matching against the same enum variants is allowed (it's read, not
-//! construct). Test modules are allowed (`#[cfg(test)]` or `mod tests`).
+//! construct). Only explicitly test-gated items are allowed (`#[cfg(test)]`).
 
 use crate::allowlist::Allowlist;
 use crate::{Violation, ViolationKind};
 use anyhow::{Context, Result};
+use proc_macro2::TokenTree;
+use std::collections::HashMap;
 use std::path::Path;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
+use syn::{Meta, Token, UseTree};
 
 const FORBIDDEN_TYPES: &[&str] = &["Node", "Expr"];
 
@@ -54,6 +58,7 @@ fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
         file: workspace_rel.to_string(),
         in_test_depth: 0,
         violations: Vec::new(),
+        aliases: HashMap::from([("Node".to_string(), "Node"), ("Expr".to_string(), "Expr")]),
     };
     visitor.visit_file(&file);
     Ok(visitor.violations)
@@ -62,6 +67,7 @@ fn scan_file(path: &Path, workspace_rel: &str) -> Result<Vec<Violation>> {
 struct LegoBlockVisitor {
     file: String,
     in_test_depth: usize,
+    aliases: HashMap<String, &'static str>,
     violations: Vec<Violation>,
 }
 
@@ -84,74 +90,147 @@ impl LegoBlockVisitor {
             message: format!("raw {ty}::{what} construction in vyre-libs"),
         });
     }
-}
 
-fn last_segment(path: &syn::Path) -> Option<String> {
-    path.segments.last().map(|s| s.ident.to_string())
-}
-
-/// `Node::Foo` or `Expr::Bar`  -  exactly two segments where the first
-/// is a forbidden type. Sub-paths like `vyre::ir::Node::Foo` also count.
-fn forbidden_path(path: &syn::Path) -> Option<(String, String)> {
-    if path.segments.len() < 2 {
-        return None;
+    fn forbidden_path(&self, path: &syn::Path) -> Option<(&'static str, String)> {
+        if path.segments.len() < 2 {
+            return None;
+        }
+        let what = path.segments.last()?.ident.to_string();
+        let owner = path.segments[path.segments.len() - 2].ident.to_string();
+        self.aliases.get(&owner).copied().map(|ty| (ty, what))
     }
-    // The forbidden type must be the SECOND-TO-LAST segment.
-    let last = last_segment(path)?;
-    let penultimate_ident = path.segments[path.segments.len() - 2].ident.to_string();
-    if FORBIDDEN_TYPES.contains(&penultimate_ident.as_str()) {
-        Some((penultimate_ident, last))
-    } else {
-        None
+
+    fn register_use_aliases(&mut self, tree: &UseTree) {
+        fn walk(
+            tree: &UseTree,
+            prefix: &mut Vec<String>,
+            aliases: &mut HashMap<String, &'static str>,
+        ) {
+            match tree {
+                UseTree::Path(path) => {
+                    prefix.push(path.ident.to_string());
+                    walk(&path.tree, prefix, aliases);
+                    prefix.pop();
+                }
+                UseTree::Name(name) => {
+                    let canonical = name.ident.to_string();
+                    if let Some(ty) = FORBIDDEN_TYPES.iter().copied().find(|ty| *ty == canonical) {
+                        aliases.insert(canonical, ty);
+                    }
+                }
+                UseTree::Rename(rename) => {
+                    let canonical = rename.ident.to_string();
+                    if let Some(ty) = FORBIDDEN_TYPES.iter().copied().find(|ty| *ty == canonical) {
+                        aliases.insert(rename.rename.to_string(), ty);
+                    }
+                }
+                UseTree::Group(group) => {
+                    for item in &group.items {
+                        walk(item, prefix, aliases);
+                    }
+                }
+                UseTree::Glob(_) => {}
+            }
+        }
+        walk(tree, &mut Vec::new(), &mut self.aliases);
+    }
+
+    fn inspect_macro_tokens(&mut self, tokens: proc_macro2::TokenStream) {
+        let tokens = tokens.into_iter().collect::<Vec<_>>();
+        for (index, token) in tokens.iter().enumerate() {
+            if let TokenTree::Group(group) = token {
+                self.inspect_macro_tokens(group.stream());
+            }
+            let TokenTree::Ident(owner) = token else {
+                continue;
+            };
+            let Some(ty) = self.aliases.get(&owner.to_string()).copied() else {
+                continue;
+            };
+            let Some(TokenTree::Punct(first_colon)) = tokens.get(index + 1) else {
+                continue;
+            };
+            let Some(TokenTree::Punct(second_colon)) = tokens.get(index + 2) else {
+                continue;
+            };
+            let Some(TokenTree::Ident(what)) = tokens.get(index + 3) else {
+                continue;
+            };
+            if first_colon.as_char() == ':' && second_colon.as_char() == ':' {
+                self.record(owner.span(), ty, &what.to_string());
+            }
+        }
+    }
+
+    fn inspect_macro_definition(&mut self, tokens: proc_macro2::TokenStream) {
+        let tokens = tokens.into_iter().collect::<Vec<_>>();
+        for (index, token) in tokens.iter().enumerate() {
+            if let TokenTree::Group(group) = token {
+                self.inspect_macro_definition(group.stream());
+            }
+            let Some(TokenTree::Punct(equals)) = tokens.get(index) else {
+                continue;
+            };
+            let Some(TokenTree::Punct(arrow)) = tokens.get(index + 1) else {
+                continue;
+            };
+            if equals.as_char() != '=' || arrow.as_char() != '>' {
+                continue;
+            }
+            if let Some(TokenTree::Group(expansion)) = tokens.get(index + 2) {
+                self.inspect_macro_tokens(expansion.stream());
+            }
+        }
+    }
+
+    fn register_type_alias(&mut self, alias: &syn::Ident, ty: &syn::Type) {
+        let syn::Type::Path(path) = ty else {
+            return;
+        };
+        let Some(last) = path.path.segments.last() else {
+            return;
+        };
+        let canonical = last.ident.to_string();
+        if let Some(ir_type) = self.aliases.get(&canonical).copied() {
+            self.aliases.insert(alias.to_string(), ir_type);
+        }
+    }
+}
+
+fn cfg_requires_test(meta: &Meta) -> bool {
+    match meta {
+        Meta::Path(path) => path.is_ident("test"),
+        Meta::NameValue(_) => false,
+        Meta::List(list) if list.path.is_ident("all") || list.path.is_ident("any") => {
+            let Ok(items) = list.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+            else {
+                return false;
+            };
+            if list.path.is_ident("all") {
+                items.iter().any(cfg_requires_test)
+            } else {
+                !items.is_empty() && items.iter().all(cfg_requires_test)
+            }
+        }
+        Meta::List(_) => false,
     }
 }
 
 fn is_test_attr(attr: &syn::Attribute) -> bool {
-    if attr.path().is_ident("test") {
-        return true;
-    }
-    if attr.path().is_ident("cfg") {
-        let mut found = false;
-        if attr
-            .parse_nested_meta(|m| {
-                if m.path.is_ident("test") {
-                    found = true;
-                }
-                Ok(())
-            })
-            .is_err()
-        {
-            return false;
-        }
-        return found;
-    }
-    if attr.path().is_ident("cfg_attr") {
-        let mut found = false;
-        if attr
-            .parse_nested_meta(|m| {
-                if m.path.is_ident("test") {
-                    found = true;
-                }
-                Ok(())
-            })
-            .is_err()
-        {
-            return false;
-        }
-        return found;
-    }
-    false
+    attr.path().is_ident("test")
+        || (attr.path().is_ident("cfg")
+            && attr
+                .parse_args::<Meta>()
+                .is_ok_and(|meta| cfg_requires_test(&meta)))
 }
 
 fn module_is_test(item_mod: &syn::ItemMod) -> bool {
-    if item_mod.attrs.iter().any(is_test_attr) {
-        return true;
-    }
-    item_mod.ident == "tests" || item_mod.ident == "test"
+    item_mod.attrs.iter().any(is_test_attr)
 }
 
 impl<'ast> Visit<'ast> for LegoBlockVisitor {
     fn visit_item_mod(&mut self, node: &'ast syn::ItemMod) {
+        let aliases = self.aliases.clone();
         let test_mod = module_is_test(node);
         if test_mod {
             self.in_test_depth += 1;
@@ -160,9 +239,11 @@ impl<'ast> Visit<'ast> for LegoBlockVisitor {
         if test_mod {
             self.in_test_depth -= 1;
         }
+        self.aliases = aliases;
     }
 
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
+        let aliases = self.aliases.clone();
         let is_test = node.attrs.iter().any(is_test_attr);
         if is_test {
             self.in_test_depth += 1;
@@ -171,29 +252,46 @@ impl<'ast> Visit<'ast> for LegoBlockVisitor {
         if is_test {
             self.in_test_depth -= 1;
         }
+        self.aliases = aliases;
+    }
+
+    fn visit_item_use(&mut self, node: &'ast syn::ItemUse) {
+        if self.in_test_depth == 0 {
+            self.register_use_aliases(&node.tree);
+        }
+    }
+
+    fn visit_item_type(&mut self, node: &'ast syn::ItemType) {
+        if self.in_test_depth == 0 {
+            self.register_type_alias(&node.ident, &node.ty);
+        }
+        syn::visit::visit_item_type(self, node);
+    }
+
+    fn visit_item_macro(&mut self, node: &'ast syn::ItemMacro) {
+        if node.ident.is_some() || node.mac.path.is_ident("macro_rules") {
+            self.inspect_macro_definition(node.mac.tokens.clone());
+        } else if !node.mac.path.is_ident("matches") {
+            self.inspect_macro_tokens(node.mac.tokens.clone());
+        }
     }
 
     fn visit_expr_struct(&mut self, node: &'ast syn::ExprStruct) {
-        if let Some((ty, variant)) = forbidden_path(&node.path) {
-            self.record(node.path.span(), &ty, &variant);
+        if let Some((ty, variant)) = self.forbidden_path(&node.path) {
+            self.record(node.path.span(), ty, &variant);
         }
         syn::visit::visit_expr_struct(self, node);
     }
 
-    fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
-        if let syn::Expr::Path(p) = &*node.func {
-            if let Some((ty, what)) = forbidden_path(&p.path) {
-                self.record(p.path.span(), &ty, &what);
-            }
+    fn visit_expr_path(&mut self, node: &'ast syn::ExprPath) {
+        if let Some((ty, what)) = self.forbidden_path(&node.path) {
+            self.record(node.path.span(), ty, &what);
         }
-        syn::visit::visit_expr_call(self, node);
     }
 
-    fn visit_expr_path(&mut self, _node: &'ast syn::ExprPath) {
-        // Tuple-variant constructors used as values (e.g. as a function
-        // pointer): `let f = Node::Store;`  -  also a construction site.
-        // But `Node::Store` standalone is rare; we rely on visit_expr_call
-        // and visit_expr_struct for the common cases. Skip here to avoid
-        // false positives on type-paths used in turbofish or trait calls.
+    fn visit_macro(&mut self, node: &'ast syn::Macro) {
+        if !node.path.is_ident("matches") {
+            self.inspect_macro_tokens(node.tokens.clone());
+        }
     }
 }

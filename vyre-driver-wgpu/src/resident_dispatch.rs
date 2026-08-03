@@ -13,6 +13,11 @@ pub(crate) fn dispatch_resident_timed(
     config: &vyre_driver::DispatchConfig,
 ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
     let started = Instant::now();
+    if vyre_driver::grid_sync::contains_grid_sync(program) {
+        return vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+            backend, program, resources, config,
+        );
+    }
     let pipeline = backend.compile_resident_pipeline_cached(program, config)?;
     let timed = pipeline.dispatch_persistent_handles_timed(resources, config)?;
     Ok(vyre_driver::TimedDispatchResult {

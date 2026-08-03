@@ -356,7 +356,7 @@ pub use predicate_catalog::{
     SecurityPredicateOperation, SecurityPredicateRow,
 };
 pub use relation_analyzer::{
-    generated_relation_finding_fact_ids, run_generated_security_relation_analyzer,
+    analyze_generated_security_relations, generated_relation_finding_fact_ids,
     GeneratedSecurityRelationAnalyzerEvidence, GeneratedSecurityRelationAnalyzerReport,
     GeneratedSecurityRelationAnalyzerRunStats, GeneratedSecurityRelationAnalyzerSpec,
     SecurityRelationAnalyzerError, SecurityRelationQueryFamily,

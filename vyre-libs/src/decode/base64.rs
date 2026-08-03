@@ -10,8 +10,8 @@ use crate::region::wrap_anonymous;
 #[cfg(test)]
 use vyre_primitives::decode::base64::decode_standard_packed_reference;
 use vyre_primitives::decode::base64::{
-    base64_decode_child, decoded_capacity, standard_decode_table_ref, BASE64_DECODE_TABLE_WORDS,
-    BASE64_WORKGROUP_SIZE,
+    base64_decode as primitive_base64_decode, base64_decode_child, decoded_capacity,
+    standard_decode_table_ref, BASE64_DECODE_TABLE_WORDS, BASE64_WORKGROUP_SIZE,
 };
 
 const OP_ID: &str = "vyre-libs::decode::base64";
@@ -51,31 +51,15 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 pub fn base64_decode(input: &str, output: &str, input_len: u32) -> Program {
     let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
     let output = scoped_decoded_output_buffer(FAMILY_PREFIX, output);
-    let body = vec![base64_decode_child(
+    crate::region::tag_program(
         OP_ID,
-        &input,
-        BASE64_DECODE_TABLE_BUFFER,
-        &output,
-        DECODED_LEN_BUFFER,
-        input_len,
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(&input, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(input_len),
-            BufferDecl::storage(
-                BASE64_DECODE_TABLE_BUFFER,
-                1,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(BASE64_DECODE_TABLE_WORDS),
-            BufferDecl::output(&output, 2, DataType::U32).with_count(decoded_capacity(input_len)),
-            // Length is aux state  -  `read_write` only (V022: at most one `::output`).
-            BufferDecl::read_write(DECODED_LEN_BUFFER, 3, DataType::U32).with_count(1),
-        ],
-        BASE64_WORKGROUP_SIZE,
-        vec![wrap_anonymous(OP_ID, body)],
+        primitive_base64_decode(
+            &input,
+            BASE64_DECODE_TABLE_BUFFER,
+            &output,
+            DECODED_LEN_BUFFER,
+            input_len,
+        ),
     )
 }
 

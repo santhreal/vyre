@@ -106,9 +106,7 @@ fn check_prepublish_audit(
         .filter(|row| row.get("complete").and_then(serde_json::Value::as_bool) != Some(true))
         .collect::<Vec<_>>();
     if incomplete.len() != 1
-        || incomplete[0]
-            .get("id")
-            .and_then(serde_json::Value::as_str)
+        || incomplete[0].get("id").and_then(serde_json::Value::as_str)
             != Some("final-completion-audit")
     {
         failures.push(
@@ -235,8 +233,7 @@ fn check_prepublish_launch_state(state: &serde_json::Value, failures: &mut Vec<S
         let matching = actions
             .iter()
             .filter(|action| {
-                action.get("action").and_then(serde_json::Value::as_str)
-                    == Some(required_action)
+                action.get("action").and_then(serde_json::Value::as_str) == Some(required_action)
             })
             .collect::<Vec<_>>();
         if matching.len() != 1 || !seen.insert(required_action) {
@@ -264,9 +261,7 @@ fn check_prepublish_launch_state(state: &serde_json::Value, failures: &mut Vec<S
         }
     }
 
-    let launch_blockers = state
-        .get("blockers")
-        .and_then(serde_json::Value::as_array);
+    let launch_blockers = state.get("blockers").and_then(serde_json::Value::as_array);
     if launch_blockers.map(Vec::len) != Some(required.len()) {
         failures.push(format!(
             "requirement `final-completion-audit` launch state must report exactly {} approval-gated blocker(s)",

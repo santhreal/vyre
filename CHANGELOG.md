@@ -7,6 +7,28 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 - `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
   enclosing Santh workspace without duplicating the Vyre path.
+- Public API checks now discover every committed crate snapshot, parse exact
+  package names, use dependency-noise-free output, and reject ordinary snapshot
+  updates that remove or change an existing item.
+- Empty QK-gain tensor shapes now declare a zero-byte output range instead of an
+  unknown-size backend allocation, while overflowing positive shapes fail closed
+  with an actionable trap program instead of wrapping their element count.
+- Grouped-query attention now composes the canonical max, normalization-sum, and
+  weighted-write primitives with explicit KV-head bases. Overflowing row or
+  element counts fail with a sharding error before buffer declarations are built.
+- WGPU resident dispatch now splits `GridSync` programs at launch boundaries
+  before compilation, preventing oversized resident fixed-point grids from
+  deadlocking inside a software global barrier.
+- The WGPU stream-sharding error is now nameable as
+  `engine::multi_gpu::StreamShardError` without changing existing signatures.
+- Workspace documentation now resolves NFA conversion and megakernel table links.
+
+### Changed
+
+- `run_generated_security_relation_analyzer` is now
+  `analyze_generated_security_relations`, matching the public operation naming
+  contract.
+
 
 
 ## [0.7.1] - 2026-08-01

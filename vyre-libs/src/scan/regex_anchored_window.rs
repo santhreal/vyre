@@ -14,7 +14,7 @@
 //! # Why a windowed walk from the origin is exactly anchored
 //!
 //! The anchored DFA produced by subset construction
-//! ([`vyre_primitives::matching::nfa_to_dfa`]) rejects into a **dedicated dead
+//! ([`vyre_primitives::matching::nfa_to_dfa()`]) rejects into a **dedicated dead
 //! state** that self-loops on every byte and never accepts, it does *not* fall
 //! back to the start state. So once the anchored path from `origin` diverges
 //! from every pattern, the walk enters the dead state and can never spuriously

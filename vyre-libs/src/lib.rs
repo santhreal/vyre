@@ -258,16 +258,16 @@ pub mod dataflow;
 pub use borrowck::{analyze as analyze_borrow_facts, ConflictKind};
 #[cfg(feature = "c-parser")]
 pub(crate) use compiler::atomic_collect::atomic_collect_u32;
+pub use dataflow::{
+    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
+    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness, SoundnessTagged,
+};
 #[cfg(any(
     feature = "math-linalg",
     feature = "math-scan",
     feature = "math-broadcast"
 ))]
 pub(crate) use math::elementwise::{f32_elementwise_mul, F32MulRhs};
-pub use dataflow::{
-    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
-    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness, SoundnessTagged,
-};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,

@@ -93,10 +93,10 @@ pub struct StagingBufferPoolStats {
 
 /// Device-local staging buffer pool keyed by `(size, usage)`.
 ///
-/// Hot dispatch paths (e.g. [`GpuBufferHandle::readback_until`]) acquire
+/// Hot dispatch paths such as `GpuBufferHandle::readback_until` acquire
 /// readback staging buffers from this pool instead of creating a fresh
 /// `wgpu::Buffer` on every call. Each `(size, usage)` class is capped at
-/// [`STAGING_BUFFER_POOL_CLASS_CAP`] entries; evictions drop the
+/// `STAGING_BUFFER_POOL_CLASS_CAP` entries; evictions drop the
 /// least-recently-used buffer.
 #[derive(Clone, Default)]
 pub struct StagingBufferPool {

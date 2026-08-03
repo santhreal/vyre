@@ -350,13 +350,9 @@ fn adversarial_node_inside_match_arm_construction_flagged() {
 }
 
 #[test]
-fn adversarial_inside_macro_body_flagged_when_visible() {
-    // Inside an inline macro_rules!, the syn parser sees the body as
-    // tokens. We don't expand macros  -  this test pins behavior so a
-    // future contributor knows: macro bodies are not scanned. If they
-    // hide construction in a macro to evade the lint, we accept that
-    // limitation today (escalation: dispatch a second lint that checks
-    // macro outputs at expansion time).
+fn adversarial_node_construction_inside_macro_expansion_is_flagged() {
+    // Macro expansion arms are token trees rather than ordinary syn
+    // expressions. The lint still inspects their right-hand sides.
     let dir = tempfile::tempdir().unwrap();
     write_lib_file(
         dir.path(),
@@ -371,11 +367,11 @@ fn adversarial_inside_macro_body_flagged_when_visible() {
         "#,
     );
     let v = lint(dir.path());
-    // Documented limitation: the lint does not expand macros. If this
-    // becomes a real evasion vector in the field, the fix is a second
-    // pass that runs after `cargo expand` on each crate. Keeping the
-    // assertion here so the limitation is committed truth.
-    assert!(v.is_empty(), "documented: macro bodies are not scanned");
+    assert_eq!(
+        v.len(),
+        1,
+        "macro expansion that constructs raw IR must be flagged: {v:?}"
+    );
 }
 
 #[test]

@@ -16,9 +16,31 @@ pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-primitives::nn::attention_sum_p
 /// Stable op id for the weighted-value write pass.
 pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-primitives::nn::attention_write_pass";
 
-/// Emit the attention max-reduction pass for one query row `i`.
+/// Emit the attention max-reduction pass for one contiguous query row `i`.
 #[must_use]
 pub fn attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) -> Vec<Node> {
+    attention_max_pass_with_bases(
+        q,
+        k,
+        d,
+        s,
+        scale_expr,
+        Expr::mul(Expr::var("i"), Expr::u32(d)),
+        Expr::u32(0),
+    )
+}
+
+/// Emit the attention max-reduction pass with explicit query and key bases.
+#[must_use]
+pub fn attention_max_pass_with_bases(
+    q: &str,
+    k: &str,
+    d: u32,
+    s: u32,
+    scale_expr: Expr,
+    query_base: Expr,
+    key_base: Expr,
+) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_MAX_PASS_OP_ID.to_string(),
     };
@@ -35,8 +57,8 @@ pub fn attention_max_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) ->
                     q,
                     k,
                     "dot_val",
-                    Expr::mul(Expr::var("i"), Expr::u32(d)),
-                    Expr::mul(Expr::var("j"), Expr::u32(d)),
+                    query_base,
+                    Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
                     d,
                 ),
                 Node::let_bind(
@@ -113,9 +135,31 @@ pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -
     )
 }
 
-/// Emit the attention normalization-sum pass for one query row `i`.
+/// Emit the attention normalization-sum pass for one contiguous query row `i`.
 #[must_use]
 pub fn attention_sum_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) -> Vec<Node> {
+    attention_sum_pass_with_bases(
+        q,
+        k,
+        d,
+        s,
+        scale_expr,
+        Expr::mul(Expr::var("i"), Expr::u32(d)),
+        Expr::u32(0),
+    )
+}
+
+/// Emit the attention normalization-sum pass with explicit query and key bases.
+#[must_use]
+pub fn attention_sum_pass_with_bases(
+    q: &str,
+    k: &str,
+    d: u32,
+    s: u32,
+    scale_expr: Expr,
+    query_base: Expr,
+    key_base: Expr,
+) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_SUM_PASS_OP_ID.to_string(),
     };
@@ -132,8 +176,8 @@ pub fn attention_sum_pass(q: &str, k: &str, d: u32, s: u32, scale_expr: Expr) ->
                     q,
                     k,
                     "dot_val",
-                    Expr::mul(Expr::var("i"), Expr::u32(d)),
-                    Expr::mul(Expr::var("j"), Expr::u32(d)),
+                    query_base,
+                    Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
                     d,
                 ),
                 Node::let_bind(
@@ -223,7 +267,7 @@ pub fn attention_sum_pass_program(
     )
 }
 
-/// Emit the attention weighted-value write pass for one query row `i`.
+/// Emit the weighted-value write pass for one contiguous query row `i`.
 #[must_use]
 pub fn attention_write_pass(
     q: &str,
@@ -233,6 +277,38 @@ pub fn attention_write_pass(
     s: u32,
     scale_expr: Expr,
     out: &str,
+) -> Vec<Node> {
+    let row_base = Expr::mul(Expr::var("i"), Expr::u32(d));
+    attention_write_pass_with_bases(
+        q,
+        k,
+        v,
+        d,
+        s,
+        scale_expr,
+        out,
+        row_base.clone(),
+        Expr::u32(0),
+        Expr::u32(0),
+        row_base,
+    )
+}
+
+/// Emit the weighted-value write pass with explicit query, key, value, and output bases.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn attention_write_pass_with_bases(
+    q: &str,
+    k: &str,
+    v: &str,
+    d: u32,
+    s: u32,
+    scale_expr: Expr,
+    out: &str,
+    query_base: Expr,
+    key_base: Expr,
+    value_base: Expr,
+    output_base: Expr,
 ) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_WRITE_PASS_OP_ID.to_string(),
@@ -256,8 +332,8 @@ pub fn attention_write_pass(
                             q,
                             k,
                             "dot_val",
-                            Expr::mul(Expr::var("i"), Expr::u32(d)),
-                            Expr::mul(Expr::var("j"), Expr::u32(d)),
+                            query_base,
+                            Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
                             d,
                         ),
                         Node::let_bind(
@@ -285,7 +361,10 @@ pub fn attention_write_pass(
                                 Expr::load(
                                     v,
                                     Expr::add(
-                                        Expr::mul(Expr::var("j"), Expr::u32(d)),
+                                        Expr::add(
+                                            value_base,
+                                            Expr::mul(Expr::var("j"), Expr::u32(d)),
+                                        ),
                                         Expr::var("t"),
                                     ),
                                 ),
@@ -304,7 +383,7 @@ pub fn attention_write_pass(
             ),
             Node::Store {
                 buffer: out.into(),
-                index: Expr::add(Expr::mul(Expr::var("i"), Expr::u32(d)), Expr::var("t")),
+                index: Expr::add(output_base, Expr::var("t")),
                 value: flush_tiny(Expr::var("accum")),
             },
         ],

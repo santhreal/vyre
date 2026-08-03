@@ -10,9 +10,10 @@ use crate::region::wrap_anonymous;
 #[cfg(test)]
 use vyre_primitives::decode::inflate::inflate_stored_reference_bytes;
 use vyre_primitives::decode::inflate::{
-    inflate_stored_child, inflate_stored_header_nodes, inflate_stored_invalid_len_trap_node,
-    inflate_stored_len_is_valid_expr, inflate_stored_non_stored_trap_nodes,
-    inflate_stored_payload_expr, INFLATE_STORED_WORKGROUP_SIZE,
+    inflate_stored as primitive_inflate_stored, inflate_stored_child, inflate_stored_header_nodes,
+    inflate_stored_invalid_len_trap_node, inflate_stored_len_is_valid_expr,
+    inflate_stored_non_stored_trap_nodes, inflate_stored_payload_expr,
+    INFLATE_STORED_WORKGROUP_SIZE,
 };
 #[cfg(test)]
 use vyre_primitives::decode::inflate::{
@@ -46,22 +47,9 @@ use vyre_primitives::wire::pack_u32_slice as pack_words;
 pub fn inflate_stored_block(input: &str, output: &str, input_len: u32) -> Program {
     let input = scoped_decode_input_buffer(FAMILY_PREFIX, input);
     let output = scoped_decoded_output_buffer(FAMILY_PREFIX, output);
-    let body = vec![inflate_stored_child(
+    crate::region::tag_program(
         OP_ID,
-        &input,
-        &output,
-        INFLATED_LEN_BUFFER,
-    )];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(&input, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(input_len),
-            BufferDecl::output(&output, 1, DataType::U32).with_count(input_len),
-            // Sidecar: actual inflated byte count (V022: at most one `::output`).
-            BufferDecl::read_write(INFLATED_LEN_BUFFER, 2, DataType::U32).with_count(1),
-        ],
-        INFLATE_STORED_WORKGROUP_SIZE,
-        vec![wrap_anonymous(OP_ID, body)],
+        primitive_inflate_stored(&input, &output, INFLATED_LEN_BUFFER, input_len),
     )
 }
 

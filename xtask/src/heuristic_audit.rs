@@ -271,8 +271,7 @@ mod tests {
     fn resolves_vyre_root_inside_monorepo() {
         let root = tempfile::tempdir().expect("temporary workspace");
         let expected = root.path().join(VYRE_ROOT);
-        fs::create_dir_all(expected.join("vyre-foundation/src"))
-            .expect("nested Vyre source root");
+        fs::create_dir_all(expected.join("vyre-foundation/src")).expect("nested Vyre source root");
 
         assert_eq!(resolve_vyre_dir(root.path()), expected);
     }

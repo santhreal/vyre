@@ -634,6 +634,27 @@ inventory::submit! {
     }
 }
 
+inventory::submit! {
+    crate::harness::OpEntry {
+        id: REFERENCE_OP_ID,
+        build: || attention_reference("q", "k", "v", "out", 2, 2),
+        test_inputs: Some(|| {
+            let pack = vyre_primitives::wire::pack_f32_slice;
+            vec![vec![
+                pack(&[0.0; 4]),
+                pack(&[0.0; 4]),
+                pack(&[2.0, 4.0, 6.0, 8.0]),
+                vec![0u8; 4 * core::mem::size_of::<f32>()],
+            ]]
+        }),
+        expected_output: Some(|| {
+            let pack = vyre_primitives::wire::pack_f32_slice;
+            vec![vec![pack(&[4.0, 6.0, 4.0, 6.0])]]
+        }),
+        category: Some("nn"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
