@@ -265,7 +265,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 641,
+      "lines": 640,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -315,7 +315,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 547,
+      "lines": 546,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -1647,7 +1647,7 @@
         "property",
         "unit"
       ],
-      "lines": 2117,
+      "lines": 2116,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2078,12 +2078,12 @@
         "gap",
         "unit"
       ],
-      "lines": 2695,
+      "lines": 2818,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 44,
+      "assertion_count": 49,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -2237,7 +2237,7 @@
         "property",
         "unit"
       ],
-      "lines": 823,
+      "lines": 833,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2547,7 +2547,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1251,
+      "lines": 1249,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2611,7 +2611,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 705,
+      "lines": 704,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2667,7 +2667,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 720,
+      "lines": 722,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2725,7 +2725,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1652,
+      "lines": 1656,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2787,7 +2787,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 1103,
+      "lines": 1134,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2846,7 +2846,7 @@
         "fuzz",
         "unit"
       ],
-      "lines": 509,
+      "lines": 522,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,

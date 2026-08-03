@@ -59,7 +59,7 @@
           "tree": "tests",
           "path": "vyre-frontend-c/tests",
           "exists": true,
-          "source_bytes": 1176030,
+          "source_bytes": 1176033,
           "unreadable_file_count": 0
         },
         {
@@ -301,7 +301,7 @@
           "path": "vyre-grammar-gen/src/lib.rs",
           "exists": true,
           "read_error": null,
-          "source_bytes": 2926
+          "source_bytes": 2928
         },
         {
           "path": "vyre-grammar-gen/README.md",

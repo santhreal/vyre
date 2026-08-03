@@ -28,7 +28,7 @@
       "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 9232,
+      "source_bytes": 9796,
       "implementation_tokens": [
         "mma",
         "fragment"
@@ -42,7 +42,7 @@
       "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 10995,
+      "source_bytes": 11270,
       "implementation_tokens": [
         "ldmatrix",
         "cp.async"
@@ -56,7 +56,7 @@
       "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 18273,
+      "source_bytes": 18684,
       "implementation_tokens": [
         "predicate",
         "predicated"
@@ -70,7 +70,7 @@
       "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 7931,
+      "source_bytes": 8366,
       "implementation_tokens": [
         "schedule",
         "latency"
@@ -84,7 +84,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17650,
+      "source_bytes": 17542,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -183,7 +183,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 56715,
+      "source_bytes": 56047,
       "implementation_tokens": [
         "download_resident_readbacks_many",
         "upload_resident_at_many",
@@ -198,7 +198,7 @@
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 59150,
+      "source_bytes": 59125,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -212,7 +212,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 76784,
+      "source_bytes": 76794,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -226,7 +226,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 76784,
+      "source_bytes": 76794,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -290,7 +290,7 @@
       "path": "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 136307,
+      "source_bytes": 136412,
       "implementation_tokens": [
         "megakernel",
         "dispatch"
@@ -304,7 +304,7 @@
       "path": "vyre-driver-wgpu/src/runtime/readback_ring.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 36207,
+      "source_bytes": 36206,
       "implementation_tokens": [
         "ring",
         "readback"
@@ -318,7 +318,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17230,
+      "source_bytes": 17229,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"

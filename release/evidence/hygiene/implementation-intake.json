@@ -90,7 +90,7 @@
       "hot_path": false,
       "pattern": "undocumented_public_api",
       "release_blocker": false,
-      "count": 25
+      "count": 6
     },
     {
       "owner_lane": "coordination",
@@ -435,15 +435,6 @@
       "count": 53
     },
     {
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "undocumented_public_api",
-      "release_blocker": false,
-      "count": 54
-    },
-    {
       "owner_lane": "nn_math",
       "surface": "production",
       "risk": "informational",
@@ -541,15 +532,6 @@
       "pattern": "test_let_underscore_result",
       "release_blocker": false,
       "count": 25
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "undocumented_public_api",
-      "release_blocker": false,
-      "count": 3
     },
     {
       "owner_lane": "testing_evidence",

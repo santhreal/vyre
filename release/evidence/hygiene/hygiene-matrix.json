@@ -6,7 +6,7 @@
     "../../../../tools/vyrec",
     "vyre-grammar-gen"
   ],
-  "scanned_files": 5318,
+  "scanned_files": 5317,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -82,7 +82,7 @@
     },
     {
       "pattern": "undocumented_public_api",
-      "count": 242
+      "count": 166
     },
     {
       "pattern": "unwrap_call",
@@ -136,7 +136,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 28
+      "count": 9
     },
     {
       "owner_lane": "coordination",
@@ -307,14 +307,6 @@
       "count": 61
     },
     {
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false,
-      "count": 54
-    },
-    {
       "owner_lane": "nn_math",
       "surface": "production",
       "risk": "informational",
@@ -393,14 +385,6 @@
       "hot_path": false,
       "release_blocker": false,
       "count": 25
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false,
-      "count": 3
     },
     {
       "owner_lane": "testing_evidence",
@@ -500,7 +484,7 @@
       "hot_path": false,
       "pattern": "undocumented_public_api",
       "release_blocker": false,
-      "count": 25
+      "count": 6
     },
     {
       "owner_lane": "coordination",
@@ -845,15 +829,6 @@
       "count": 53
     },
     {
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "undocumented_public_api",
-      "release_blocker": false,
-      "count": 54
-    },
-    {
       "owner_lane": "nn_math",
       "surface": "production",
       "risk": "informational",
@@ -951,15 +926,6 @@
       "pattern": "test_let_underscore_result",
       "release_blocker": false,
       "count": 25
-    },
-    {
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "undocumented_public_api",
-      "release_blocker": false,
-      "count": 3
     },
     {
       "owner_lane": "testing_evidence",
@@ -1180,196 +1146,6 @@
   },
   "finding_classes": [
     {
-      "path": "vyre-debug/src/naga_dump.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/dangling.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 15,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/wgsl.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 14,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 31,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 37,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 45,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 53,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 102,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/naga_trace.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 85,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-grammar-gen/src/lex_c11_max_munch.rs",
       "line": 40,
       "pattern": "documented_panic_contract",
@@ -1551,7 +1327,7 @@
     },
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1441,
+      "line": 1437,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -1601,7 +1377,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 77,
+      "line": 84,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1611,7 +1387,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 78,
+      "line": 85,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1621,7 +1397,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 242,
+      "line": 249,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1631,7 +1407,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 247,
+      "line": 254,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1641,7 +1417,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 285,
+      "line": 292,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1651,17 +1427,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 326,
-      "pattern": "placeholder_text",
-      "owner_lane": "security_dataflow",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 536,
+      "line": 333,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1681,7 +1447,7 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 542,
+      "line": 538,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1691,7 +1457,17 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 564,
+      "line": 543,
+      "pattern": "placeholder_text",
+      "owner_lane": "security_dataflow",
+      "surface": "production",
+      "risk": "release_debt",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
+      "line": 565,
       "pattern": "placeholder_text",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -1741,7 +1517,7 @@
     },
     {
       "path": "vyre-libs/src/scan/literal_set.rs",
-      "line": 1421,
+      "line": 1424,
       "pattern": "documented_panic_contract",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -1821,7 +1597,7 @@
     },
     {
       "path": "vyre-libs/src/scan/paged_corpus.rs",
-      "line": 1160,
+      "line": 1162,
       "pattern": "documented_panic_contract",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -2000,36 +1776,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-lints/src/allowlist.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 66,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 75,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "testing_evidence",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-bench/src/cases/compound_pipeline.rs",
       "line": 34,
       "pattern": "undocumented_public_api",
@@ -2151,7 +1897,7 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 16,
+      "line": 24,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2161,7 +1907,7 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 17,
+      "line": 25,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2171,7 +1917,7 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 18,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2181,7 +1927,7 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 21,
+      "line": 29,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2431,7 +2177,7 @@
     },
     {
       "path": "vyre-bench/src/cases/quantized_linear.rs",
-      "line": 62,
+      "line": 64,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2861,7 +2607,7 @@
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 7,
+      "line": 9,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2871,7 +2617,7 @@
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 24,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -2951,7 +2697,7 @@
     },
     {
       "path": "vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
-      "line": 136,
+      "line": 167,
       "pattern": "documented_panic_contract",
       "owner_lane": "runtime_megakernel",
       "surface": "production",
@@ -3660,56 +3406,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 33,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 52,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/subgroup_capabilities/mod.rs",
-      "line": 44,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-spirv/src/lib.rs",
-      "line": 49,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-reference/src/oob.rs",
       "line": 127,
       "pattern": "documented_panic_contract",
@@ -3796,136 +3492,6 @@
       "owner_lane": "driver_shared",
       "surface": "production",
       "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 17,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_load_fusion/mod.rs",
-      "line": 55,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 51,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 62,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
@@ -4041,7 +3607,7 @@
     },
     {
       "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 996,
+      "line": 994,
       "pattern": "documented_panic_contract",
       "owner_lane": "security_dataflow",
       "surface": "production",
@@ -4290,316 +3856,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-lower/src/error.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 191,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 200,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 507,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 536,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 99,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 111,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/optimization_corpus.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/value_range/mod.rs",
-      "line": 63,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/access_kind.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/shared_mem_promote/plan.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 8,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 71,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/op_histogram/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 27,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 48,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/const_buffer_promote/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/dead_op/mod.rs",
-      "line": 21,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 16,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 61,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 393,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
       "line": 16,
       "pattern": "documented_panic_contract",
@@ -4761,61 +4017,11 @@
     },
     {
       "path": "vyre-runtime/src/scheduler.rs",
-      "line": 97,
+      "line": 94,
       "pattern": "documented_panic_contract",
       "owner_lane": "runtime_megakernel",
       "surface": "production",
       "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-naga/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-naga/src/program/types.rs",
-      "line": 9,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/pipeline_prewarm/mod.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 64,
-      "pattern": "undocumented_public_api",
-      "owner_lane": "lower_emit",
-      "surface": "production",
-      "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false
     },
@@ -5031,7 +4237,7 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 95,
+      "line": 94,
       "pattern": "test_ignored",
       "owner_lane": "frontend_parsing",
       "surface": "test",
@@ -5041,7 +4247,7 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 151,
+      "line": 150,
       "pattern": "test_ignored",
       "owner_lane": "frontend_parsing",
       "surface": "test",
@@ -5051,7 +4257,7 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 201,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "owner_lane": "frontend_parsing",
       "surface": "test",
@@ -5061,7 +4267,7 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 229,
+      "line": 228,
       "pattern": "test_ignored",
       "owner_lane": "frontend_parsing",
       "surface": "test",
@@ -5071,7 +4277,7 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 253,
+      "line": 252,
       "pattern": "test_let_underscore_result",
       "owner_lane": "frontend_parsing",
       "surface": "test",
@@ -6331,7 +5537,7 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 92,
+      "line": 90,
       "pattern": "test_let_underscore_result",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6341,7 +5547,7 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 108,
+      "line": 106,
       "pattern": "test_let_underscore_result",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6351,7 +5557,7 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 155,
+      "line": 153,
       "pattern": "test_let_underscore_result",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6361,7 +5567,7 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 202,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "owner_lane": "coordination",
       "surface": "test",
@@ -6741,7 +5947,7 @@
     },
     {
       "path": "vyre-foundation/tests/optimizer_rewrite_proof_contracts.rs",
-      "line": 81,
+      "line": 80,
       "pattern": "test_let_underscore_result",
       "owner_lane": "coordination",
       "surface": "test",
@@ -7421,7 +6627,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/common/mod.rs",
-      "line": 149,
+      "line": 145,
       "pattern": "test_let_underscore_result",
       "owner_lane": "driver_wgpu",
       "surface": "test",
@@ -9443,120 +8649,6 @@
   "release_blocker_count": 0,
   "findings": [
     {
-      "path": "vyre-debug/src/naga_dump.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct NagaDump {"
-    },
-    {
-      "path": "vyre-debug/src/dangling.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DanglingRef {"
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct UncarrieredAssign {"
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 15,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct CarrierSummary {"
-    },
-    {
-      "path": "vyre-debug/src/wgsl.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct WgslDump {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDumpOptions {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDump {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 14,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanFactorRole {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainFactor {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 31,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainEngine {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 37,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanExplainExactnessClass {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 45,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainRejectedEngine {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 53,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainVerifierFragment {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainRouteEvidence {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainReport {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 102,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanExplainError {"
-    },
-    {
-      "path": "vyre-debug/src/naga_trace.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FailureTrace {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDiff {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 85,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct RewriteBisectResult {"
-    },
-    {
       "path": "vyre-grammar-gen/src/lex_c11_max_munch.rs",
       "line": 40,
       "pattern": "documented_panic_contract",
@@ -9666,7 +8758,7 @@
     },
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1441,
+      "line": 1437,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
@@ -9696,61 +8788,61 @@
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 77,
+      "line": 84,
       "pattern": "placeholder_text",
       "text": "/// `(origin, loan)`: origin is a placeholder (a universal/free region)."
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 78,
+      "line": 85,
       "pattern": "placeholder_text",
       "text": "pub placeholder: Vec<(Origin, Loan)>,"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 242,
+      "line": 249,
       "pattern": "placeholder_text",
       "text": "let mut placeholder = Vec::new();"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 247,
+      "line": 254,
       "pattern": "placeholder_text",
       "text": "placeholder.push((origins.intern(f[0]), loans.intern(f[1])));"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 285,
+      "line": 292,
       "pattern": "placeholder_text",
       "text": "placeholder,"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 326,
+      "line": 333,
       "pattern": "placeholder_text",
       "text": "for &(origin, loan) in &self.placeholder {"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 536,
+      "line": 537,
       "pattern": "placeholder_text",
       "text": "/// derived subset between two placeholder origins that is not a"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 537,
+      "line": 538,
       "pattern": "placeholder_text",
       "text": "/// known/declared placeholder subset."
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 542,
+      "line": 543,
       "pattern": "placeholder_text",
       "text": "let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 564,
+      "line": 565,
       "pattern": "placeholder_text",
       "text": "/// placeholder origins that is not a known/declared placeholder subset."
     },
@@ -9780,7 +8872,7 @@
     },
     {
       "path": "vyre-libs/src/scan/literal_set.rs",
-      "line": 1421,
+      "line": 1424,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -9828,7 +8920,7 @@
     },
     {
       "path": "vyre-libs/src/scan/paged_corpus.rs",
-      "line": 1160,
+      "line": 1162,
       "pattern": "documented_panic_contract",
       "text": "let (staging, pending) = inflight.pop_front().expect(\"depth reached\");"
     },
@@ -9935,24 +9027,6 @@
       "text": "pub enum OpIntensity {"
     },
     {
-      "path": "vyre-lints/src/allowlist.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Allowlist {"
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 66,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Violation {"
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 75,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ViolationKind {"
-    },
-    {
       "path": "vyre-bench/src/cases/compound_pipeline.rs",
       "line": 34,
       "pattern": "undocumented_public_api",
@@ -10026,25 +9100,25 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 16,
+      "line": 24,
       "pattern": "undocumented_public_api",
       "text": "pub struct SparseOutputCompactionCount;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 17,
+      "line": 25,
       "pattern": "undocumented_public_api",
       "text": "pub struct CallgraphReachabilityStep;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 18,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "text": "pub struct MetadataConditionBatch;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 21,
+      "line": 29,
       "pattern": "undocumented_public_api",
       "text": "pub enum ReleaseMacroFamily {"
     },
@@ -10194,7 +9268,7 @@
     },
     {
       "path": "vyre-bench/src/cases/quantized_linear.rs",
-      "line": 62,
+      "line": 64,
       "pattern": "undocumented_public_api",
       "text": "pub struct QuantizedLinear4BitAffineGrouped;"
     },
@@ -10452,13 +9526,13 @@
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 7,
+      "line": 9,
       "pattern": "undocumented_public_api",
       "text": "pub struct EnvironmentData {"
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 24,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "text": "pub struct GpuDeviceInfo {"
     },
@@ -10506,7 +9580,7 @@
     },
     {
       "path": "vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
-      "line": 136,
+      "line": 167,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-self-substrate homotopy schedule generation failed: {error}\");"
     },
@@ -10931,36 +10005,6 @@
       "text": "pub struct OpEntry {"
     },
     {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 33,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DeviceLimits {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum Violation {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 52,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ValidationReport {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/subgroup_capabilities/mod.rs",
-      "line": 44,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct SubgroupCapabilityReport {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/lib.rs",
-      "line": 49,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
       "path": "vyre-reference/src/oob.rs",
       "line": 127,
       "pattern": "documented_panic_contract",
@@ -11013,84 +10057,6 @@
       "line": 530,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
-    },
-    {
-      "path": "vyre-emit-ptx/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 17,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DependencyChain {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct SchedulingHints {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_load_fusion/mod.rs",
-      "line": 55,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum FragmentTile {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 51,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TensorCoreCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 62,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TensorCorePlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct AsyncCopyCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct AsyncCopyPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PredicationCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PredicationPlan {"
     },
     {
       "path": "vyre-primitives/src/markers.rs",
@@ -11160,7 +10126,7 @@
     },
     {
       "path": "vyre-primitives/src/graph/csr_bidirectional.rs",
-      "line": 996,
+      "line": 994,
       "pattern": "documented_panic_contract",
       "text": "try_merge_frontier_or_changed(current, next).unwrap_or_else(|error| panic!(\"{error}\"))"
     },
@@ -11309,192 +10275,6 @@
       "text": "pub struct OpEntry {"
     },
     {
-      "path": "vyre-lower/src/error.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum LowerError {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 191,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanConstructIntentClass {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 200,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanConstructIntentMapping {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 507,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorIntentEvidence {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 536,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum DescriptorIntentError {"
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 99,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Recommendation {"
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 111,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum RecommendationCategory {"
-    },
-    {
-      "path": "vyre-lower/src/optimization_corpus.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct OptimizationFamilyCount {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct LayoutCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;"
-    },
-    {
-      "path": "vyre-lower/src/analyses/value_range/mod.rs",
-      "line": 63,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ValueRangeReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/access_kind.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum AccessKind {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/shared_mem_promote/plan.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PromotionCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 8,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BankConflictKind {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ConflictSeverity {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 71,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BankConflictReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/op_histogram/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct OpHistogram {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct EquivalenceGroup {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct CommonSubexprReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BranchUniformity {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BranchSite {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 27,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BranchEmitHint {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BranchHint {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 48,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct WorkgroupUniformReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/const_buffer_promote/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ConstBufferPlan {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/dead_op/mod.rs",
-      "line": 21,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DeadOpReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TextureCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 16,
-      "pattern": "undocumented_public_api",
-      "text": "pub type TexturePromotionPlan = CandidatePlan<TextureCandidate>;"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 61,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct VerifyError {"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum VerifyErrorKind {"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 393,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum OperandClass {"
-    },
-    {
       "path": "vyre-runtime/src/megakernel/protocol/codec/debug_log.rs",
       "line": 16,
       "pattern": "documented_panic_contract",
@@ -11592,39 +10372,9 @@
     },
     {
       "path": "vyre-runtime/src/scheduler.rs",
-      "line": 97,
+      "line": 94,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
-    },
-    {
-      "path": "vyre-emit-naga/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
-      "path": "vyre-emit-naga/src/program/types.rs",
-      "line": 9,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TrapTag {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/pipeline_prewarm/mod.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PrewarmHint {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum PackKind {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 64,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PackingPlan {"
     },
     {
       "path": "vyre-debug/tests/well_formed_lowering_contracts.rs",
@@ -11754,31 +10504,31 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 95,
+      "line": 94,
       "pattern": "test_ignored",
       "text": "#[ignore = \"single-file timing for parse_translation_unit warm/cold profile\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 151,
+      "line": 150,
       "pattern": "test_ignored",
       "text": "#[ignore = \"real corpus per-file warm cost  -  bypasses summary cache by parsing each file once after pre-warming the per-file caches\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 201,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(f, &options);"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 229,
+      "line": 228,
       "pattern": "test_ignored",
       "text": "#[ignore = \"cold-per-file: warm GPU pipeline cache, then measure each new source\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 253,
+      "line": 252,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(warm_target, &options);"
     },
@@ -12534,25 +11284,25 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 92,
+      "line": 90,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 108,
+      "line": 106,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 155,
+      "line": 153,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 202,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
@@ -12780,7 +11530,7 @@
     },
     {
       "path": "vyre-foundation/tests/optimizer_rewrite_proof_contracts.rs",
-      "line": 81,
+      "line": 80,
       "pattern": "test_let_underscore_result",
       "text": "let _ = RewriteProofObligation::equivalence(\"bad_sort\", [], bool_expr, bv_expr);"
     },
@@ -13188,7 +11938,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/common/mod.rs",
-      "line": 149,
+      "line": 145,
       "pattern": "test_let_underscore_result",
       "text": "let _ = backend"
     },

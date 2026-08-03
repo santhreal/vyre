@@ -130,31 +130,31 @@
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 95,
+      "line": 94,
       "pattern": "test_ignored",
       "text": "#[ignore = \"single-file timing for parse_translation_unit warm/cold profile\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 151,
+      "line": 150,
       "pattern": "test_ignored",
       "text": "#[ignore = \"real corpus per-file warm cost  -  bypasses summary cache by parsing each file once after pre-warming the per-file caches\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 201,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(f, &options);"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 229,
+      "line": 228,
       "pattern": "test_ignored",
       "text": "#[ignore = \"cold-per-file: warm GPU pipeline cache, then measure each new source\"]"
     },
     {
       "path": "vyre-frontend-c/tests/r2_corpus_measurement/throughput.rs",
-      "line": 253,
+      "line": 252,
       "pattern": "test_let_underscore_result",
       "text": "let _ = parse_translation_unit(warm_target, &options);"
     },
@@ -910,25 +910,25 @@
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 92,
+      "line": 90,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 108,
+      "line": 106,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 155,
+      "line": 153,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
     {
       "path": "vyre-self-substrate/tests/release_evidence_path_contract.rs",
-      "line": 202,
+      "line": 200,
       "pattern": "test_let_underscore_result",
       "text": "let _ = std::fs::remove_dir_all(&fixture);"
     },
@@ -1156,7 +1156,7 @@
     },
     {
       "path": "vyre-foundation/tests/optimizer_rewrite_proof_contracts.rs",
-      "line": 81,
+      "line": 80,
       "pattern": "test_let_underscore_result",
       "text": "let _ = RewriteProofObligation::equivalence(\"bad_sort\", [], bool_expr, bv_expr);"
     },
@@ -1564,7 +1564,7 @@
     },
     {
       "path": "vyre-driver-wgpu/tests/common/mod.rs",
-      "line": 149,
+      "line": 145,
       "pattern": "test_let_underscore_result",
       "text": "let _ = backend"
     },

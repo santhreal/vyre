@@ -3,120 +3,6 @@
   "scan": "public-docs",
   "findings": [
     {
-      "path": "vyre-debug/src/naga_dump.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct NagaDump {"
-    },
-    {
-      "path": "vyre-debug/src/dangling.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DanglingRef {"
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct UncarrieredAssign {"
-    },
-    {
-      "path": "vyre-debug/src/carriers.rs",
-      "line": 15,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct CarrierSummary {"
-    },
-    {
-      "path": "vyre-debug/src/wgsl.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct WgslDump {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 5,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDumpOptions {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_dump.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDump {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 14,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanFactorRole {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainFactor {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 31,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainEngine {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 37,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanExplainExactnessClass {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 45,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainRejectedEngine {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 53,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainVerifierFragment {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainRouteEvidence {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanExplainReport {"
-    },
-    {
-      "path": "vyre-debug/src/scan_explain.rs",
-      "line": 102,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanExplainError {"
-    },
-    {
-      "path": "vyre-debug/src/naga_trace.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FailureTrace {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorDiff {"
-    },
-    {
-      "path": "vyre-debug/src/descriptor_diff.rs",
-      "line": 85,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct RewriteBisectResult {"
-    },
-    {
       "path": "vyre-driver/src/pipeline/cache.rs",
       "line": 345,
       "pattern": "undocumented_public_api",
@@ -157,24 +43,6 @@
       "line": 16,
       "pattern": "undocumented_public_api",
       "text": "pub enum OpIntensity {"
-    },
-    {
-      "path": "vyre-lints/src/allowlist.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Allowlist {"
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 66,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Violation {"
-    },
-    {
-      "path": "vyre-lints/src/lib.rs",
-      "line": 75,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ViolationKind {"
     },
     {
       "path": "vyre-bench/src/cases/compound_pipeline.rs",
@@ -250,25 +118,25 @@
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 16,
+      "line": 24,
       "pattern": "undocumented_public_api",
       "text": "pub struct SparseOutputCompactionCount;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 17,
+      "line": 25,
       "pattern": "undocumented_public_api",
       "text": "pub struct CallgraphReachabilityStep;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 18,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "text": "pub struct MetadataConditionBatch;"
     },
     {
       "path": "vyre-bench/src/cases/release_workloads.rs",
-      "line": 21,
+      "line": 29,
       "pattern": "undocumented_public_api",
       "text": "pub enum ReleaseMacroFamily {"
     },
@@ -406,7 +274,7 @@
     },
     {
       "path": "vyre-bench/src/cases/quantized_linear.rs",
-      "line": 62,
+      "line": 64,
       "pattern": "undocumented_public_api",
       "text": "pub struct QuantizedLinear4BitAffineGrouped;"
     },
@@ -664,13 +532,13 @@
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 7,
+      "line": 9,
       "pattern": "undocumented_public_api",
       "text": "pub struct EnvironmentData {"
     },
     {
       "path": "vyre-bench/src/probes/environment.rs",
-      "line": 24,
+      "line": 26,
       "pattern": "undocumented_public_api",
       "text": "pub struct GpuDeviceInfo {"
     },
@@ -987,114 +855,6 @@
       "text": "pub struct OpEntry {"
     },
     {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 33,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DeviceLimits {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum Violation {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/workgroup_size_validation/mod.rs",
-      "line": 52,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ValidationReport {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/patterns/subgroup_capabilities/mod.rs",
-      "line": 44,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct SubgroupCapabilityReport {"
-    },
-    {
-      "path": "vyre-emit-spirv/src/lib.rs",
-      "line": 49,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 17,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DependencyChain {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/instruction_scheduling/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct SchedulingHints {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_load_fusion/mod.rs",
-      "line": 55,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/vec_store_fusion/mod.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct FusionPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 23,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum FragmentTile {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 51,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TensorCoreCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/tensor_core_fragment/mod.rs",
-      "line": 62,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TensorCorePlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 22,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct AsyncCopyCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/ldmatrix_cp_async/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct AsyncCopyPlan {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PredicationCandidate {"
-    },
-    {
-      "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PredicationPlan {"
-    },
-    {
       "path": "vyre-primitives/src/markers.rs",
       "line": 34,
       "pattern": "undocumented_public_api",
@@ -1143,192 +903,6 @@
       "text": "pub struct OpEntry {"
     },
     {
-      "path": "vyre-lower/src/error.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum LowerError {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 191,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ScanConstructIntentClass {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 200,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ScanConstructIntentMapping {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 507,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DescriptorIntentEvidence {"
-    },
-    {
-      "path": "vyre-lower/src/descriptor.rs",
-      "line": 536,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum DescriptorIntentError {"
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 99,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct Recommendation {"
-    },
-    {
-      "path": "vyre-lower/src/audit.rs",
-      "line": 111,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum RecommendationCategory {"
-    },
-    {
-      "path": "vyre-lower/src/optimization_corpus.rs",
-      "line": 60,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct OptimizationFamilyCount {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct LayoutCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/layout_aos_to_soa/plan.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;"
-    },
-    {
-      "path": "vyre-lower/src/analyses/value_range/mod.rs",
-      "line": 63,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ValueRangeReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/access_kind.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum AccessKind {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/shared_mem_promote/plan.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PromotionCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 8,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BankConflictKind {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum ConflictSeverity {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/bank_conflict/report.rs",
-      "line": 71,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BankConflictReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/op_histogram/mod.rs",
-      "line": 25,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct OpHistogram {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 26,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct EquivalenceGroup {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/common_subexpr/mod.rs",
-      "line": 34,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct CommonSubexprReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 6,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BranchUniformity {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 18,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BranchSite {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 27,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum BranchEmitHint {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 40,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct BranchHint {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/workgroup_uniform/report.rs",
-      "line": 48,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct WorkgroupUniformReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/const_buffer_promote/mod.rs",
-      "line": 41,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct ConstBufferPlan {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/dead_op/mod.rs",
-      "line": 21,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct DeadOpReport {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TextureCandidate {"
-    },
-    {
-      "path": "vyre-lower/src/analyses/texture_promote/plan.rs",
-      "line": 16,
-      "pattern": "undocumented_public_api",
-      "text": "pub type TexturePromotionPlan = CandidatePlan<TextureCandidate>;"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 61,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct VerifyError {"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 68,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum VerifyErrorKind {"
-    },
-    {
-      "path": "vyre-lower/src/verify/mod.rs",
-      "line": 393,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum OperandClass {"
-    },
-    {
       "path": "vyre-runtime/src/uring/ring.rs",
       "line": 41,
       "pattern": "undocumented_public_api",
@@ -1357,36 +931,6 @@
       "line": 103,
       "pattern": "undocumented_public_api",
       "text": "pub struct io_uring_cqe {"
-    },
-    {
-      "path": "vyre-emit-naga/src/error.rs",
-      "line": 4,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum EmitError {"
-    },
-    {
-      "path": "vyre-emit-naga/src/program/types.rs",
-      "line": 9,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct TrapTag {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/pipeline_prewarm/mod.rs",
-      "line": 19,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PrewarmHint {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 7,
-      "pattern": "undocumented_public_api",
-      "text": "pub enum PackKind {"
-    },
-    {
-      "path": "vyre-emit-naga/src/patterns/vec_pack/plan.rs",
-      "line": 64,
-      "pattern": "undocumented_public_api",
-      "text": "pub struct PackingPlan {"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/analysis_family.rs",

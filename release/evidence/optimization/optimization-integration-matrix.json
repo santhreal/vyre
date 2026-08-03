@@ -7,7 +7,7 @@
       "exists": true,
       "read_error": null,
       "role": "Dead-store elimination",
-      "source_bytes": 37425,
+      "source_bytes": 37728,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -18,7 +18,7 @@
       "exists": true,
       "read_error": null,
       "role": "Store/load forwarding",
-      "source_bytes": 53259,
+      "source_bytes": 53540,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -29,7 +29,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop-invariant code motion",
-      "source_bytes": 56982,
+      "source_bytes": 57255,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -40,7 +40,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop fusion legality and transform",
-      "source_bytes": 16822,
+      "source_bytes": 17083,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -51,7 +51,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop fission legality and transform",
-      "source_bytes": 13059,
+      "source_bytes": 13288,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -62,7 +62,7 @@
       "exists": true,
       "read_error": null,
       "role": "Loop transform substrate",
-      "source_bytes": 28091,
+      "source_bytes": 28224,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -73,7 +73,7 @@
       "exists": true,
       "read_error": null,
       "role": "Common subexpression elimination",
-      "source_bytes": 14916,
+      "source_bytes": 14988,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -84,7 +84,7 @@
       "exists": true,
       "read_error": null,
       "role": "Dead-code elimination",
-      "source_bytes": 17645,
+      "source_bytes": 17711,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -95,7 +95,7 @@
       "exists": true,
       "read_error": null,
       "role": "Strength reduction",
-      "source_bytes": 12581,
+      "source_bytes": 12649,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -128,7 +128,7 @@
       "exists": true,
       "read_error": null,
       "role": "Bounded e-graph saturation",
-      "source_bytes": 15705,
+      "source_bytes": 16098,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -141,7 +141,7 @@
       "exists": true,
       "read_error": null,
       "role": "Definition/use facts",
-      "source_bytes": 14197,
+      "source_bytes": 14365,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -152,7 +152,7 @@
       "exists": true,
       "read_error": null,
       "role": "Range facts",
-      "source_bytes": 34428,
+      "source_bytes": 34757,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -163,7 +163,7 @@
       "exists": true,
       "read_error": null,
       "role": "Memory coalescing analysis",
-      "source_bytes": 35319,
+      "source_bytes": 35470,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -174,7 +174,7 @@
       "exists": true,
       "read_error": null,
       "role": "Shared promotion analysis",
-      "source_bytes": 21359,
+      "source_bytes": 21514,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -185,7 +185,7 @@
       "exists": true,
       "read_error": null,
       "role": "Bank-conflict analysis",
-      "source_bytes": 30920,
+      "source_bytes": 31346,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []
@@ -196,7 +196,7 @@
       "exists": true,
       "read_error": null,
       "role": "Vector packing analysis",
-      "source_bytes": 21009,
+      "source_bytes": 21045,
       "has_transform_entrypoint": true,
       "has_local_tests": true,
       "unresolved_markers": []

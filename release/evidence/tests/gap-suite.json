@@ -776,7 +776,7 @@
         "gap",
         "unit"
       ],
-      "lines": 797,
+      "lines": 791,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -834,7 +834,7 @@
         "property",
         "unit"
       ],
-      "lines": 2617,
+      "lines": 2619,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2203,7 +2203,7 @@
         "gap",
         "unit"
       ],
-      "lines": 1134,
+      "lines": 1131,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -2825,7 +2825,7 @@
         "gap",
         "unit"
       ],
-      "lines": 795,
+      "lines": 794,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -3786,7 +3786,7 @@
         "gap",
         "unit"
       ],
-      "lines": 800,
+      "lines": 822,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -4265,7 +4265,7 @@
         "integration",
         "unit"
       ],
-      "lines": 269,
+      "lines": 271,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -6958,7 +6958,7 @@
         "gap",
         "unit"
       ],
-      "lines": 1682,
+      "lines": 1679,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -8595,7 +8595,7 @@
         "gap",
         "unit"
       ],
-      "lines": 429,
+      "lines": 432,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -8643,7 +8643,7 @@
         "gap",
         "unit"
       ],
-      "lines": 496,
+      "lines": 500,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -8924,7 +8924,7 @@
         "property",
         "unit"
       ],
-      "lines": 2117,
+      "lines": 2116,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -9238,7 +9238,7 @@
         "gap",
         "unit"
       ],
-      "lines": 1801,
+      "lines": 1799,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -10140,12 +10140,12 @@
         "gap",
         "unit"
       ],
-      "lines": 2695,
+      "lines": 2818,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 44,
+      "assertion_count": 49,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -10349,7 +10349,7 @@
         "property",
         "unit"
       ],
-      "lines": 823,
+      "lines": 833,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -11621,7 +11621,7 @@
         "gap",
         "unit"
       ],
-      "lines": 6472,
+      "lines": 6471,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -11738,7 +11738,7 @@
         "gap",
         "unit"
       ],
-      "lines": 2752,
+      "lines": 2750,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -11805,7 +11805,7 @@
         "gap",
         "unit"
       ],
-      "lines": 761,
+      "lines": 760,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -12591,7 +12591,7 @@
         "integration",
         "unit"
       ],
-      "lines": 166,
+      "lines": 168,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -12786,7 +12786,7 @@
         "integration",
         "unit"
       ],
-      "lines": 455,
+      "lines": 452,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -12940,7 +12940,7 @@
         "integration",
         "unit"
       ],
-      "lines": 108,
+      "lines": 109,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,

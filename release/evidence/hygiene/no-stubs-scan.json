@@ -4,67 +4,67 @@
   "findings": [
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1441,
+      "line": 1437,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 77,
+      "line": 84,
       "pattern": "placeholder_text",
       "text": "/// `(origin, loan)`: origin is a placeholder (a universal/free region)."
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 78,
+      "line": 85,
       "pattern": "placeholder_text",
       "text": "pub placeholder: Vec<(Origin, Loan)>,"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 242,
+      "line": 249,
       "pattern": "placeholder_text",
       "text": "let mut placeholder = Vec::new();"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 247,
+      "line": 254,
       "pattern": "placeholder_text",
       "text": "placeholder.push((origins.intern(f[0]), loans.intern(f[1])));"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 285,
+      "line": 292,
       "pattern": "placeholder_text",
       "text": "placeholder,"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 326,
+      "line": 333,
       "pattern": "placeholder_text",
       "text": "for &(origin, loan) in &self.placeholder {"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 536,
+      "line": 537,
       "pattern": "placeholder_text",
       "text": "/// derived subset between two placeholder origins that is not a"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 537,
+      "line": 538,
       "pattern": "placeholder_text",
       "text": "/// known/declared placeholder subset."
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 542,
+      "line": 543,
       "pattern": "placeholder_text",
       "text": "let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();"
     },
     {
       "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 564,
+      "line": 565,
       "pattern": "placeholder_text",
       "text": "/// placeholder origins that is not a known/declared placeholder subset."
     },
