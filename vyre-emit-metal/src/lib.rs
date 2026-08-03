@@ -70,15 +70,23 @@ pub enum EmitError {
     NagaValidation(String),
     /// The requested entry point is missing or not compute.
     #[error("Metal entry point `{entry_point}` is unavailable for compute emission: {reason}. Fix: emit a compute KernelDescriptor with entry point `main` or pass the correct entry point name.")]
-    EntryPoint { entry_point: String, reason: String },
+    EntryPoint {
+        /// Requested entry-point name.
+        entry_point: String,
+        /// Validation reason that made the entry point unusable.
+        reason: String,
+    },
     /// The MSL writer rejected the validated module.
     #[error("MSL writer failed: {0}. Fix: extend the shared Naga-to-MSL emission seam or lower unsupported constructs before Metal artifact emission.")]
     MslWriter(String),
     /// A binding could not be represented in Metal's flat buffer namespace.
     #[error("Metal binding map failed for resource group {group} binding {binding}: {reason}. Fix: keep Metal buffer indices within u8::MAX or add argument-buffer metadata before native_module emission.")]
     BindingMap {
+        /// Descriptor resource group.
         group: u32,
+        /// Descriptor binding within the resource group.
         binding: u32,
+        /// Mapping failure reason.
         reason: String,
     },
     /// Descriptor hashing failed.

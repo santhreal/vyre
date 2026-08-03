@@ -14,7 +14,9 @@ use crate::{rewrites, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, Lite
 /// Saturation execution limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SaturationLimits {
+    /// Maximum rewrite iterations.
     pub max_iterations: u32,
+    /// Maximum total descriptor operations.
     pub max_nodes: u32,
 }
 
@@ -30,12 +32,19 @@ impl Default for SaturationLimits {
 /// Result of bounded saturation.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SaturationReport {
+    /// Rewrite iterations executed.
     pub iterations: u32,
+    /// Input operation count.
     pub input_ops: usize,
+    /// Output operation count.
     pub output_ops: usize,
+    /// Equality classes observed by the bounded driver.
     pub equality_classes: usize,
+    /// Rewrites applied across all iterations.
     pub applied_rewrites: usize,
+    /// Whether the iteration bound stopped saturation.
     pub hit_iteration_limit: bool,
+    /// Whether the node bound stopped saturation.
     pub hit_node_limit: bool,
 }
 

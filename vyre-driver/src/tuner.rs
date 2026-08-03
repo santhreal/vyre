@@ -441,7 +441,6 @@ pub fn identity_fisher_q16(candidate_count: usize) -> Vec<u32> {
 
 /// Write an identity inverse-Fisher square-root matrix into caller-owned
 /// storage.
-
 pub fn identity_fisher_q16_into(candidate_count: usize, out: &mut Vec<u32>) {
     let Some(cells) = candidate_count.checked_mul(candidate_count) else {
         out.clear();

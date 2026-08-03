@@ -6,6 +6,8 @@ use super::sparse_lexer_megakernel::{
 };
 use super::*;
 
+type DenseLexerOutputs = (Vec<u32>, Vec<u32>, Vec<u32>);
+
 #[derive(Default)]
 pub(super) struct CudaSparseLexerScratch {
     sparse_lexer: SparseLexerMegakernelScratch,
@@ -84,7 +86,7 @@ pub(super) fn dispatch_dense_lexer_for_sparse_diff(
     source: &str,
     config: &mut DispatchConfig,
     label: &str,
-) -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
+) -> Result<DenseLexerOutputs, String> {
     DENSE_LEXER_DIFF_SCRATCH.with(|scratch| {
         let mut scratch = scratch.try_borrow_mut().map_err(|_| {
             "dense lexer diff dispatch scratch was re-entered on the same thread. Fix: call sparse/dense diffing from a non-nested lexer context or add explicit caller-owned scratch.".to_string()
@@ -99,7 +101,7 @@ fn dispatch_dense_lexer_for_sparse_diff_with_scratch(
     config: &mut DispatchConfig,
     label: &str,
     scratch: &mut DenseLexerDiffScratch,
-) -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
+) -> Result<DenseLexerOutputs, String> {
     let haystack_len = pack_dense_diff_haystack_into(source, &mut scratch.haystack)?;
     let lex_prog = c11_lex_single_pass(
         "haystack",

@@ -296,7 +296,7 @@ fn target_duplicate_report(
     let families = scored
         .iter()
         .map(|(score, same_contract, same_family, op)| {
-            registered_op_duplicate_family(*score, target, *op, *same_contract, *same_family)
+            registered_op_duplicate_family(*score, target, op, *same_contract, *same_family)
         })
         .collect();
     duplicate_family_report(generator_command, "registered-op-ir-shape", families)
@@ -309,7 +309,7 @@ fn all_pairs_duplicate_report(
     let families = pairs
         .iter()
         .map(|(score, left, right)| {
-            registered_op_duplicate_family(*score, *left, *right, true, false)
+            registered_op_duplicate_family(*score, left, right, true, false)
         })
         .collect();
     duplicate_family_report(generator_command, "registered-op-ir-shape", families)

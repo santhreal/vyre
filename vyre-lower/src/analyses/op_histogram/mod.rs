@@ -21,18 +21,27 @@ use serde::{Deserialize, Serialize};
 
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Counts descriptor operations by performance-relevant category.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct OpHistogram {
+    /// Literal operations.
     pub literal: u32,
+    /// Arithmetic operations.
     pub arithmetic: u32,
+    /// Memory operations.
     pub memory: u32,
+    /// Structured control-flow operations.
     pub control_flow: u32,
+    /// Subgroup operations.
     pub subgroup: u32,
+    /// Built-in identifier and query operations.
     pub builtin: u32,
+    /// Operations outside the named categories.
     pub other: u32,
 }
 
 impl OpHistogram {
+    /// Return the total operation count across all categories.
     pub fn total(&self) -> u32 {
         self.literal
             + self.arithmetic
@@ -126,6 +135,7 @@ impl std::fmt::Display for OpHistogram {
     }
 }
 
+/// Count operations across a descriptor and its nested bodies.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> OpHistogram {
     let mut h = OpHistogram::default();

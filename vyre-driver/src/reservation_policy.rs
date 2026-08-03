@@ -442,7 +442,6 @@ where
 }
 
 #[cfg(test)]
-
 mod tests {
     use std::cell::Cell;
     use std::collections::{HashMap, HashSet};

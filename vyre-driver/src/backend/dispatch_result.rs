@@ -106,7 +106,7 @@ pub fn replace_output_buffers_preserving_slots_with_memory_stats(
             total_slots,
             reused_slots,
             moved_slots,
-            appended_slots: total_slots.checked_sub(previous_slots).unwrap_or(0),
+            appended_slots: total_slots.saturating_sub(previous_slots),
         },
         bytes: OutputSlotByteStats {
             incoming_bytes,

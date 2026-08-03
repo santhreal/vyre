@@ -59,11 +59,20 @@ pub struct FrontierTypedPlan {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FrontierTypedPlanError {
     /// Duplicate node id.
-    DuplicateNode { id: u32 },
+    DuplicateNode {
+        /// Duplicated node identifier.
+        id: u32,
+    },
     /// Dependency references an unknown node.
-    UnknownDependencyNode { id: u32 },
+    UnknownDependencyNode {
+        /// Unknown node identifier.
+        id: u32,
+    },
     /// Dependency graph contains a cycle.
-    Cycle { unscheduled_nodes: usize },
+    Cycle {
+        /// Nodes left unscheduled when cycle detection stopped.
+        unscheduled_nodes: usize,
+    },
     /// The plan exceeds the stable CUDA frontier wave encoding.
     PlanTooLarge {
         /// Field that exceeded its representable range.

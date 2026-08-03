@@ -3,6 +3,8 @@ use std::process::Command;
 
 const MAX_CPUINFO_BYTES: u64 = 1024 * 1024;
 
+type NvidiaSmiDeviceFields = (String, String, Option<u64>, Option<(u32, u32)>);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentData {
     pub os: String,
@@ -260,9 +262,7 @@ fn parse_nvidia_smi_device(line: &str) -> Option<GpuDeviceInfo> {
     })
 }
 /// Parse one CSV row from the canonical `nvidia-smi` device query.
-pub fn parse_nvidia_smi_device_fields(
-    line: &str,
-) -> Option<(String, String, Option<u64>, Option<(u32, u32)>)> {
+pub fn parse_nvidia_smi_device_fields(line: &str) -> Option<NvidiaSmiDeviceFields> {
     let mut fields = line.split(',').map(str::trim);
     let name = fields.next()?.to_string();
     let driver_version = fields.next()?.to_string();

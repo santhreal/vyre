@@ -885,7 +885,6 @@ pub fn checked_atomic_next_u64_with_order<E>(
 /// Raise a `u64` atomic counter to at least `value` using one atomic max update.
 ///
 /// Returns the previous value observed by the atomic operation.
-
 pub fn atomic_max_u64(counter: &AtomicU64, value: u64, order: Ordering) -> u64 {
     counter.fetch_max(value, order)
 }

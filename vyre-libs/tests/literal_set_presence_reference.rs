@@ -80,7 +80,7 @@ fn presence_program_reference_eval_matches_cpu_oracle_high_volume() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(5000);
 
-    let mut rng = Lcg(0x7265_7365_6e63_65u64);
+    let mut rng = Lcg(0x0072_6573_656e_6365_u64);
     let mut checked = 0usize;
     let mut nonempty_presence = 0usize;
 

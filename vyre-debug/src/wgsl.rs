@@ -1,12 +1,16 @@
 use std::collections::BTreeMap;
 use vyre_foundation::ir::Program;
 
+/// Emitted WGSL text and best-effort variable source lines.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct WgslDump {
+    /// Emitted WGSL source.
     pub text: String,
+    /// One-based source line for each discovered variable declaration.
     pub variable_lines: BTreeMap<String, usize>,
 }
 
+/// Lower a program and emit WGSL with variable source lines.
 pub fn dump_wgsl(program: &Program) -> Result<WgslDump, String> {
     let lowered = vyre_lower::lower_for_emit(program).map_err(|e| format!("{:?}", e))?;
     let module = vyre_emit_naga::emit(&lowered.descriptor).map_err(|e| format!("{:?}", e))?;
@@ -44,6 +48,7 @@ pub fn dump_wgsl(program: &Program) -> Result<WgslDump, String> {
     })
 }
 
+/// Lower a program and emit WGSL prefixed with source line numbers.
 pub fn dump_wgsl_with_lines(program: &Program) -> Result<WgslDump, String> {
     let dump = dump_wgsl(program)?;
     let mut numbered_text = String::new();

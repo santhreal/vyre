@@ -23,7 +23,6 @@ use vyre_foundation::validate::ValidationError;
 
 /// Baseline the existing wildcard pub re-exports in vyre-foundation and fail
 /// if any new ones are introduced. Expansion increases API surface unpredictably.
-
 mod organization_contracts_part1 {
 
     include!("__split/organization_contracts_part1.rs");

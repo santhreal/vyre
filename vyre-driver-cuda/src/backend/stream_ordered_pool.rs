@@ -138,8 +138,10 @@ impl CudaStreamOrderedPool {
     /// # Errors
     ///
     /// Returns [`BackendError`] for a zero-byte request (kept as a null sentinel,
-    /// matching [`alloc_cuda_ptr`](super::allocations::alloc_cuda_ptr)) or if the
+    /// matching the internal `alloc_cuda_ptr` path) or if the
     /// driver allocation fails.
+    // `CUstream` is an opaque driver handle, not host memory dereferenced here.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn alloc_async(&self, byte_len: usize, stream: CUstream) -> Result<u64, BackendError> {
         if byte_len == 0 {
             return Err(BackendError::InvalidProgram {
@@ -176,6 +178,8 @@ impl CudaStreamOrderedPool {
     /// # Errors
     ///
     /// Returns [`BackendError`] if the driver free fails.
+    // `CUstream` is an opaque driver handle, not host memory dereferenced here.
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn free_async(&self, ptr: u64, stream: CUstream) -> Result<(), BackendError> {
         if ptr == 0 {
             return Ok(());

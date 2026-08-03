@@ -40,7 +40,7 @@ const LITERALS: &[&[u8]] = &[
 
 /// A "file" carrying a known subset of literal hits, terminated by a separator byte
 /// (newline) that is in NO literal, so no match spans the region boundary, exactly
-/// keyhog's coalesced-batch layout.
+/// the production consumer's coalesced-batch layout.
 fn file_with(hits: &str) -> Vec<u8> {
     let mut v = hits.as_bytes().to_vec();
     v.push(b'\n');
@@ -147,7 +147,7 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
 
     // ---- Timing: one fused dispatch vs the two it replaces ----
     // CRITICAL WORKLOAD CAVEAT: the fold's win is doing ONE haystack walk instead of
-    // two, which dominates only on SPARSE match density, keyhog's coalesced GPU
+    // two, which dominates only on SPARSE match density, the production consumer's coalesced GPU
     // phase-1 regime (an 8 MiB scan fires ~10^2-10^3 anchors, not 10^5). On DENSE
     // data (a hit every few bytes) the per-hit triple append dominates and fusing it
     // into the presence kernel is SLOWER than two specialized passes (measured ~2x
@@ -157,7 +157,7 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     // (bytes/128 < 65535 ~= 8.39 MB).
     const BIG: usize = 4 * 1024 * 1024;
     // Benign filler carrying NO literal, with a lone anchor every ~8 KiB and a region
-    // boundary every ~64 KiB: ~64 regions, ~512 hits over 4 MiB (sparse, keyhog-like).
+    // boundary every ~64 KiB: ~64 regions, ~512 hits over 4 MiB (sparse consumer scale).
     let filler: &[u8] = b"plain benign filler text with no anchors here at all 0123456789\n";
     let anchor: &[u8] = b" AKIA1234 ";
     let mut big = Vec::with_capacity(BIG + 1024);
@@ -243,7 +243,7 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     // refuted on wgpu. It remains a CORRECTNESS-equivalent primitive (the assertions
     // above are the real gate); making it a perf win would need the prefilter body to
     // call the replay as a function instead of inlining it 3x (or a CUDA-backend
-    // measurement, untested here). The win lever for keyhog's GPU-8MiB phase-1 is
+    // measurement, untested here). The win lever for the production consumer's GPU-8MiB phase-1 is
     // segmentation of the existing passes / dispatch-overhead reduction, not fusion.
     // The hard gate is correctness; perf is reported, not asserted.
     assert!(

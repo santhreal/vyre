@@ -82,11 +82,13 @@ pub struct ScallopProvenanceGpuScratch {
 
 #[cfg(any(test, feature = "cpu-parity"))]
 impl ScallopProvenanceScratch {
+    /// Return the current CPU parity closure words.
     #[must_use]
     pub fn closure(&self) -> &[u32] {
         &self.closure
     }
 
+    /// Return mutable CPU parity closure storage for reuse.
     #[must_use]
     pub fn closure_mut(&mut self) -> &mut Vec<u32> {
         &mut self.closure

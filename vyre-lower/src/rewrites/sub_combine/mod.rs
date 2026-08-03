@@ -23,6 +23,7 @@ use crate::rewrites::rhs_lit_chain::{combine_rhs_lit_chain, RhsLitChainRule};
 use crate::KernelDescriptor;
 use vyre_foundation::ir::BinOp;
 
+/// Combine nested subtraction by literal operands.
 #[must_use]
 pub fn sub_combine(desc: &KernelDescriptor) -> KernelDescriptor {
     combine_rhs_lit_chain(

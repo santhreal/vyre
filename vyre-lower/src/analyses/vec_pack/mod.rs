@@ -16,6 +16,8 @@ use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
 
+type LoadsBySlotAndBase = FxHashMap<(u32, Option<u32>), Vec<(u32, usize)>>;
+
 /// One detected adjacent-load chain.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VecPackChain {
@@ -83,8 +85,8 @@ fn walk_body(body: &KernelBody, report: &mut VecPackReport) {
 
 fn detect_chains_in_body(body: &KernelBody, report: &mut VecPackReport) {
     let indices = index_expr_by_result(body);
-    let mut by_slot_and_base: FxHashMap<(u32, Option<u32>), Vec<(u32, usize)>> =
-        FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
+    let mut by_slot_and_base =
+        LoadsBySlotAndBase::with_capacity_and_hasher(body.ops.len(), Default::default());
 
     for (op_idx, op) in body.ops.iter().enumerate() {
         let Some((slot, index)) = load_with_index_expr(op, &indices) else {

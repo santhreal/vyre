@@ -319,6 +319,34 @@ pub fn tt_storage_size(compressed: &CompressedCostTensor) -> usize {
     compressed.cores.iter().map(Vec::len).sum()
 }
 
+/// Parity-only f64 TT-SVD CPU oracle for compressing a flat cost tensor.
+///
+/// Production callers must use [`compress_cost_tensor_f32_via`] or
+/// [`compress_cost_tensor_f32_via_with_scratch_into`], which dispatch
+/// [`tensor_train_decompose_step`] through the selected backend.
+///
+/// # Panics
+///
+/// Panics if `target_ranks.len() != dims.len() + 1`, if the boundary
+/// ranks are not 1, or if `tensor.len()` doesn't match the dim
+/// product.
+#[cfg(any(test, feature = "cpu-parity"))]
+#[must_use]
+pub fn reference_compress_cost_tensor(
+    tensor: &[f64],
+    dims: &[u32],
+    target_ranks: &[u32],
+) -> CompressedCostTensor {
+    use crate::observability::{bump, tensor_train_compression_calls};
+    bump(&tensor_train_compression_calls);
+    let cores = vyre_primitives::math::tensor_train_decompose::cpu_ref(tensor, dims, target_ranks);
+    CompressedCostTensor {
+        cores,
+        dims: dims.to_vec(),
+        ranks: target_ranks.to_vec(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -388,34 +416,5 @@ mod tests {
         };
         assert_eq!(tt_storage_size(&compressed), 0);
         assert_eq!(compression_ratio(&compressed), 0.0);
-    }
-}
-
-/// Parity-only f64 TT-SVD CPU oracle for compressing a flat cost tensor.
-///
-/// Production callers must use [`compress_cost_tensor_f32_via`] or
-/// [`compress_cost_tensor_f32_via_with_scratch_into`], which dispatch
-/// [`tensor_train_decompose_step`] through the selected backend.
-///
-/// # Panics
-///
-/// Panics if `target_ranks.len() != dims.len() + 1`, if the boundary
-/// ranks are not 1, or if `tensor.len()` doesn't match the dim
-/// product.
-#[cfg(any(test, feature = "cpu-parity"))]
-#[must_use]
-
-pub fn reference_compress_cost_tensor(
-    tensor: &[f64],
-    dims: &[u32],
-    target_ranks: &[u32],
-) -> CompressedCostTensor {
-    use crate::observability::{bump, tensor_train_compression_calls};
-    bump(&tensor_train_compression_calls);
-    let cores = vyre_primitives::math::tensor_train_decompose::cpu_ref(tensor, dims, target_ranks);
-    CompressedCostTensor {
-        cores,
-        dims: dims.to_vec(),
-        ranks: target_ranks.to_vec(),
     }
 }

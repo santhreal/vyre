@@ -251,7 +251,7 @@ fn hostile_bin_op(rng: &mut Rng) -> BinOp {
         BinOp::MulHigh,
         opaque,
     ];
-    ops[rng.range(ops.len() as u32) as usize].clone()
+    ops[rng.range(ops.len() as u32) as usize]
 }
 
 fn hostile_un_op(rng: &mut Rng) -> UnOp {

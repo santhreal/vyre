@@ -70,6 +70,7 @@ pub struct StringDiagramRewriteScratch {
 }
 
 impl StringDiagramRewriteScratch {
+    /// Create empty reusable rewrite scratch.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

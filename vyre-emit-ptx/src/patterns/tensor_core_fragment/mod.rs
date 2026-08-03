@@ -19,6 +19,7 @@ use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
 
 use crate::ComputeCapability;
 
+/// Matrix fragment tile supported by the PTX emitter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FragmentTile {
     /// 16×16×16 f16 fragment, supported on sm_70+.
@@ -30,6 +31,7 @@ pub enum FragmentTile {
 }
 
 impl FragmentTile {
+    /// Return whether `target` supports this fragment tile.
     #[must_use]
     pub fn supported_on(&self, target: ComputeCapability) -> bool {
         match self {
@@ -38,6 +40,7 @@ impl FragmentTile {
         }
     }
 
+    /// Return the tile dimensions as rows, columns, and reduction lanes.
     #[must_use]
     pub fn dims(&self) -> (u32, u32, u32) {
         match self {
@@ -47,8 +50,10 @@ impl FragmentTile {
     }
 }
 
+/// One kernel eligible for matrix-fragment promotion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TensorCoreCandidate {
+    /// Eligible fragment tile.
     pub fragment: FragmentTile,
     /// FMA op count in the kernel  -  the higher this is, the more
     /// accumulation work goes through tensor cores.
@@ -58,20 +63,26 @@ pub struct TensorCoreCandidate {
     pub estimated_speedup_factor: f32,
 }
 
+/// Matrix-fragment opportunities for one kernel and target.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TensorCorePlan {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Target compute capability label.
     pub target_sm: String,
+    /// Eligible fragment candidates.
     pub candidates: Vec<TensorCoreCandidate>,
 }
 
 impl TensorCorePlan {
+    /// Return the number of matrix-fragment candidates.
     #[must_use]
     pub fn candidate_count(&self) -> usize {
         self.candidates.len()
     }
 }
 
+/// Analyze a descriptor for matrix-fragment promotion.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor, target: ComputeCapability) -> TensorCorePlan {
     let fma_count = count_fma(&desc.body);

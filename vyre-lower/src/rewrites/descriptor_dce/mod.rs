@@ -11,6 +11,7 @@ use crate::operand_semantics::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor};
 use rustc_hash::FxHashSet;
 
+/// Remove pure descriptor operations whose results have no uses.
 #[must_use]
 pub fn descriptor_dce(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

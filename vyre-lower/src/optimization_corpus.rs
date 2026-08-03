@@ -56,6 +56,7 @@ pub struct OptimizationCorpusManifest {
     pub blockers: Vec<String>,
 }
 
+/// Generated case count for one optimization family.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationFamilyCount {
     /// Optimization family id.

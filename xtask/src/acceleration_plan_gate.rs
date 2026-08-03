@@ -692,9 +692,7 @@ fn parse_research_source_ledger(
     root: Option<&Path>,
     failures: &mut Vec<String>,
 ) -> Option<ResearchSourceLedger> {
-    let Some(root) = root else {
-        return None;
-    };
+    let root = root?;
     match read_research_source_ledger(root) {
         Ok(ledger) => Some(ledger),
         Err(error) => {

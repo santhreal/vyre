@@ -134,7 +134,7 @@ impl MemLoader {
         }
     }
     fn add(&mut self, name: &[u8], bytes: &[u8]) -> &mut Self {
-        self.files.insert(name.to_vec().into(), bytes.to_vec());
+        self.files.insert(name.to_vec(), bytes.to_vec());
         self
     }
     fn loads(&self) -> usize {

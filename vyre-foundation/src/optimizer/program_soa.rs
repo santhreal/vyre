@@ -1031,8 +1031,8 @@ mod tests {
         assert!(facts.has_any_kind_in_mask(kind_mask(NodeKind::Let)));
         assert!(facts.has_any_kind_in_mask(kind_mask(NodeKind::Let) | kind_mask(NodeKind::Loop)));
         assert!(!facts.has_any_kind_in_mask(kind_mask(NodeKind::Loop) | kind_mask(NodeKind::Trap)));
-        assert_eq!(facts.has_kind(NodeKind::Let), true);
-        assert_eq!(facts.has_kind(NodeKind::Loop), false);
+        assert!(facts.has_kind(NodeKind::Let));
+        assert!(!facts.has_kind(NodeKind::Loop));
     }
 
     /// `kinds_present()` mask exposes the raw bitset for callers that
@@ -1299,7 +1299,7 @@ mod tests {
         let meta = facts.region_at(region_idx).expect("Fix: region recorded");
         assert_eq!(meta.generator.as_str(), "custom");
         assert_eq!(meta.source_region, None);
-        let let_idx = facts.lets().get(0).map(|(i, _)| *i);
+        let let_idx = facts.lets().first().map(|(i, _)| *i);
         if let Some(let_idx) = let_idx {
             assert!(facts.region_at(let_idx).is_none());
         }

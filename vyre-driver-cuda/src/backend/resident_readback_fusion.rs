@@ -208,9 +208,8 @@ mod tests {
         };
         let cardinality =
             validate_fused_resident_readbacks(&bad_cardinality, 1, "test").unwrap_err();
-        assert_eq!(
+        assert!(
             cardinality.to_string().contains("view count"),
-            true,
             "Fix: CUDA fused readback validation must reject plans that would silently skip output slots: {cardinality}"
         );
 
@@ -229,9 +228,8 @@ mod tests {
             bytes: 4,
         };
         let slot = validate_fused_resident_readbacks(&bad_slot, 1, "test").unwrap_err();
-        assert_eq!(
+        assert!(
             slot.to_string().contains("copy_slot"),
-            true,
             "Fix: CUDA fused readback validation must reject views pointing outside staged copy slots: {slot}"
         );
 
@@ -250,9 +248,8 @@ mod tests {
             bytes: 4,
         };
         let range = validate_fused_resident_readbacks(&bad_range, 1, "test").unwrap_err();
-        assert_eq!(
+        assert!(
             range.to_string().contains("exceeds"),
-            true,
             "Fix: CUDA fused readback validation must reject output views that overrun the fused copy: {range}"
         );
 
@@ -271,9 +268,8 @@ mod tests {
             bytes: 3,
         };
         let bytes = validate_fused_resident_readbacks(&bad_bytes, 1, "test").unwrap_err();
-        assert_eq!(
+        assert!(
             bytes.to_string().contains("bytes"),
-            true,
             "Fix: CUDA fused readback validation must reject telemetry byte counts that drift from staged copies: {bytes}"
         );
     }

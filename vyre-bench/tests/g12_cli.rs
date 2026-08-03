@@ -23,7 +23,7 @@ fn test_cli_snapshot_diff_requires_commit() {
         "0000000000000000000000000000000000000000",
     ]);
     assert!(
-        matches!(result, Err(_)),
+        result.is_err(),
         "snapshot-diff should fail for non-existent commit"
     );
 }

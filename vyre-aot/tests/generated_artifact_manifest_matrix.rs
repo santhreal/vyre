@@ -58,7 +58,7 @@ fn generated_buffers(seed: u32) -> Vec<BufferEntry> {
 fn generated_fingerprint(seed: u32) -> Vec<u32> {
     (0..8)
         .map(|idx| {
-            seed.wrapping_mul(0x45d9_f3b).rotate_left(idx * 3) ^ idx.wrapping_mul(0x9e37_79b9)
+            seed.wrapping_mul(0x045d_9f3b).rotate_left(idx * 3) ^ idx.wrapping_mul(0x9e37_79b9)
         })
         .collect()
 }

@@ -689,7 +689,7 @@ mod tests {
             .iter()
             .enumerate()
             .map(|(index, name)| {
-                BufferDecl::read_write(*name, index as u32, DataType::U32).with_count(4)
+                BufferDecl::read_write(name, index as u32, DataType::U32).with_count(4)
             })
             .collect::<Vec<_>>();
         let p = Program::wrapped(buffers, [1, 1, 1], vec![Node::Return]);

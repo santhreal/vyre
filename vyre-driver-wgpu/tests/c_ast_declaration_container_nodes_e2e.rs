@@ -19,10 +19,9 @@ use vyre_primitives::predicate::node_kind;
 const VAST_STRIDE_U32: usize = 10;
 
 mod c_ast_gpu_parity_support;
-use c_ast_gpu_parity_support::run_gpu_classifier_with_count;
-
-mod common;
-use common::c_fixture::*;
+use c_ast_gpu_parity_support::{
+    build_fixture, run_gpu_classifier_with_count, Fixture, FixtureToken,
+};
 
 fn row_indices(rows: &[u8], kind: u32) -> Vec<usize> {
     rows.chunks_exact(VAST_STRIDE_U32 * 4)

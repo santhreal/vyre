@@ -37,8 +37,11 @@ pub fn audit_optimized(desc: &KernelDescriptor) -> SpirvAuditReport {
 /// Combined SPIR-V-pattern report.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SpirvAuditReport {
+    /// Audited kernel identifier.
     pub kernel_id: String,
+    /// Subgroup capabilities required by the kernel.
     pub subgroup: subgroup_capabilities::SubgroupCapabilityReport,
+    /// Workgroup-size validation result.
     pub workgroup_validation: workgroup_size_validation::ValidationReport,
 }
 

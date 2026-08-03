@@ -40,10 +40,7 @@ impl WorkStealingScheduler {
 
     /// Partition a large haystack across available GPUs.
     pub fn partition(&self, total_len: usize) -> Vec<Shard> {
-        match self.try_partition(total_len) {
-            Ok(shards) => shards,
-            Err(_error) => Vec::new(),
-        }
+        self.try_partition(total_len).unwrap_or_default()
     }
 
     /// Partition a large haystack across available GPUs with explicit staging

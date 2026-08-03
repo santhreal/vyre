@@ -1500,9 +1500,9 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
     *scanned_files += 1;
     let mut pending_cfg_test = false;
     let mut pending_test_attr = false;
-    let mut test_module_depth = 0usize;
+    let mut test_module_braces = BraceDepthState::default();
     let mut skipping_cfg_test_item = false;
-    let mut cfg_test_item_depth = 0usize;
+    let mut cfg_test_item_braces = BraceDepthState::default();
     let mut pending_bounded_read_chain = false;
     for (line_index, line) in text.lines().enumerate() {
         let trimmed = line.trim();
@@ -1511,42 +1511,42 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
             pending_bounded_read_chain = true;
         }
         if skipping_cfg_test_item {
-            if cfg_test_item_depth == 0 {
+            if cfg_test_item_braces.depth == 0 {
                 if trimmed.contains('{') {
-                    cfg_test_item_depth = update_brace_depth(0, line);
-                    if cfg_test_item_depth == 0 {
+                    cfg_test_item_braces = BraceDepthState::default();
+                    cfg_test_item_braces.update(line);
+                    if cfg_test_item_braces.depth == 0 {
                         skipping_cfg_test_item = false;
                     }
                 } else if trimmed.ends_with(';') {
                     skipping_cfg_test_item = false;
                 }
             } else {
-                cfg_test_item_depth = update_brace_depth(cfg_test_item_depth, line);
-                if cfg_test_item_depth == 0 {
+                cfg_test_item_braces.update(line);
+                if cfg_test_item_braces.depth == 0 {
                     skipping_cfg_test_item = false;
                 }
             }
             continue;
         }
-        if test_module_depth > 0 {
-            test_module_depth = update_brace_depth(test_module_depth, line);
+        if test_module_braces.depth > 0 {
+            test_module_braces.update(line);
             continue;
         }
         if pending_cfg_test {
             if trimmed.contains('{') {
-                test_module_depth = update_brace_depth(0, line);
-                if test_module_depth == 0 {
-                    test_module_depth = 0;
-                }
+                test_module_braces = BraceDepthState::default();
+                test_module_braces.update(line);
             } else {
                 skipping_cfg_test_item = true;
-                cfg_test_item_depth = 0;
+                cfg_test_item_braces = BraceDepthState::default();
             }
             pending_cfg_test = false;
             continue;
         }
         if pending_test_attr && trimmed.starts_with("fn ") && trimmed.contains('{') {
-            test_module_depth = update_brace_depth(0, line);
+            test_module_braces = BraceDepthState::default();
+            test_module_braces.update(line);
             pending_test_attr = false;
             continue;
         }
@@ -2121,17 +2121,128 @@ fn is_word_end(text: &str, index: usize) -> bool {
         .is_none_or(|ch| !ch.is_ascii_alphanumeric() && ch != '_')
 }
 
-fn update_brace_depth(current: usize, line: &str) -> usize {
-    let mut depth = current;
-    let code = line.split("//").next().unwrap_or(line);
-    for ch in code.chars() {
-        match ch {
-            '{' => depth = depth.saturating_add(1),
-            '}' => depth = depth.saturating_sub(1),
-            _ => {}
+#[derive(Default)]
+struct BraceDepthState {
+    depth: usize,
+    block_comment_depth: usize,
+    raw_string_hashes: Option<usize>,
+}
+
+impl BraceDepthState {
+    fn with_depth(depth: usize) -> Self {
+        Self {
+            depth,
+            ..Self::default()
         }
     }
-    depth
+
+    fn update(&mut self, line: &str) {
+        let bytes = line.as_bytes();
+        let mut index = 0usize;
+        let mut in_string = false;
+        let mut in_char = false;
+        let mut escaped = false;
+
+        while index < bytes.len() {
+            if let Some(hashes) = self.raw_string_hashes {
+                if raw_string_end_at(bytes, index, hashes) {
+                    self.raw_string_hashes = None;
+                    index += hashes + 1;
+                } else {
+                    index += 1;
+                }
+                continue;
+            }
+            if self.block_comment_depth > 0 {
+                if bytes[index..].starts_with(b"/*") {
+                    self.block_comment_depth = self.block_comment_depth.saturating_add(1);
+                    index += 2;
+                } else if bytes[index..].starts_with(b"*/") {
+                    self.block_comment_depth = self.block_comment_depth.saturating_sub(1);
+                    index += 2;
+                } else {
+                    index += 1;
+                }
+                continue;
+            }
+            if in_string {
+                match bytes[index] {
+                    _ if escaped => escaped = false,
+                    b'\\' => escaped = true,
+                    b'"' => in_string = false,
+                    _ => {}
+                }
+                index += 1;
+                continue;
+            }
+            if in_char {
+                match bytes[index] {
+                    _ if escaped => escaped = false,
+                    b'\\' => escaped = true,
+                    b'\'' => in_char = false,
+                    _ => {}
+                }
+                index += 1;
+                continue;
+            }
+
+            if bytes[index..].starts_with(b"//") {
+                break;
+            }
+            if bytes[index..].starts_with(b"/*") {
+                self.block_comment_depth = 1;
+                index += 2;
+                continue;
+            }
+            if let Some((hashes, consumed)) = raw_string_start(bytes, index) {
+                self.raw_string_hashes = Some(hashes);
+                index += consumed;
+                continue;
+            }
+
+            match bytes[index] {
+                b'"' => in_string = true,
+                b'\'' if bytes[index + 1..].contains(&b'\'') => in_char = true,
+                b'{' => self.depth = self.depth.saturating_add(1),
+                b'}' => self.depth = self.depth.saturating_sub(1),
+                _ => {}
+            }
+            index += 1;
+        }
+    }
+}
+
+fn raw_string_start(bytes: &[u8], index: usize) -> Option<(usize, usize)> {
+    let mut cursor = index;
+    if bytes.get(cursor) == Some(&b'b') {
+        cursor += 1;
+    }
+    if bytes.get(cursor) != Some(&b'r') {
+        return None;
+    }
+    cursor += 1;
+    let hash_start = cursor;
+    while bytes.get(cursor) == Some(&b'#') {
+        cursor += 1;
+    }
+    if bytes.get(cursor) != Some(&b'"') {
+        return None;
+    }
+    let hashes = cursor - hash_start;
+    Some((hashes, cursor - index + 1))
+}
+
+fn raw_string_end_at(bytes: &[u8], index: usize, hashes: usize) -> bool {
+    bytes.get(index) == Some(&b'"')
+        && bytes
+            .get(index + 1..index + 1 + hashes)
+            .is_some_and(|suffix| suffix.iter().all(|byte| *byte == b'#'))
+}
+
+fn update_brace_depth(current: usize, line: &str) -> usize {
+    let mut state = BraceDepthState::with_depth(current);
+    state.update(line);
+    state.depth
 }
 
 fn parse_output(args: &[String]) -> Result<PathBuf, String> {
@@ -2276,7 +2387,7 @@ mod tests {
 
         assert_eq!(classes[0].surface, "test");
         assert_eq!(classes[0].risk, "test_hygiene");
-        assert_eq!(classes[0].release_blocker, false);
+        assert!(!classes[0].release_blocker);
     }
 
     /// The dedicated test-support crate is test infrastructure even though its code lives under `src`.
@@ -2307,16 +2418,13 @@ mod tests {
 
     #[test]
     fn rust_doc_comment_call_examples_do_not_count_as_production_blockers() {
-        assert_eq!(
-            line_contains_blocked_pattern(
-                Path::new("libs/dataflow/weir/src/lib.rs"),
-                "unwrap_call",
-                ".unwrap()",
-                "//! let value = fallible().unwrap();",
-                "//! let value = fallible().unwrap();",
-            ),
-            false
-        );
+        assert!(!line_contains_blocked_pattern(
+            Path::new("libs/dataflow/weir/src/lib.rs"),
+            "unwrap_call",
+            ".unwrap()",
+            "//! let value = fallible().unwrap();",
+            "//! let value = fallible().unwrap();",
+        ));
     }
 
     /// Feature-gated test harness modules remain test infrastructure even when Cargo places them under `src`.
@@ -2338,18 +2446,13 @@ mod tests {
 
     #[test]
     fn cfg_cpu_parity_attr_is_classified_as_non_release_item() {
-        assert_eq!(
-            is_non_release_cfg_attr("#[cfg(any(test, feature = \"cpu-parity\"))]"),
-            true
-        );
-        assert_eq!(
-            is_non_release_cfg_attr("#[cfg(any(test, feature = \"legacy-infallible\"))]"),
-            true
-        );
-        assert_eq!(
-            is_non_release_cfg_attr("#[cfg(feature = \"serde\")]"),
-            false
-        );
+        assert!(is_non_release_cfg_attr(
+            "#[cfg(any(test, feature = \"cpu-parity\"))]"
+        ));
+        assert!(is_non_release_cfg_attr(
+            "#[cfg(any(test, feature = \"legacy-infallible\"))]"
+        ));
+        assert!(!is_non_release_cfg_attr("#[cfg(feature = \"serde\")]"));
     }
 
     #[test]
@@ -2529,6 +2632,26 @@ pub fn undocumented() {
             !has_documented_panic_contract(source, site),
             "Fix: a `# Panics` section on an earlier function must not exempt a later one."
         );
+    }
+
+    /// Braces inside string and character literals must not terminate a cfg(test) module early.
+    ///
+    /// The hygiene scan previously treated `split("}\n}")` in an inline test as two closing
+    /// module braces, then reported the remaining test assertions as production panic blockers.
+    #[test]
+    fn brace_depth_ignores_literal_and_comment_delimiters() {
+        assert_eq!(
+            update_brace_depth(1, r#"let _ = source.split("}\n}").next();"#),
+            1
+        );
+        assert_eq!(update_brace_depth(1, "let brace = '}';"), 1);
+        assert_eq!(update_brace_depth(1, "call(); // }"), 1);
+        assert_eq!(update_brace_depth(1, "if ready {"), 2);
+        let mut raw = BraceDepthState::with_depth(1);
+        raw.update("let artifact = br#\"{");
+        raw.update("  \"nested\": {");
+        raw.update("}\"#;");
+        assert_eq!(raw.depth, 1);
     }
 
     /// Every spelling of a test cfg gates the item out of the production scan.

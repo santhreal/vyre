@@ -107,7 +107,7 @@ fn cuda_graph_materialized_cache_is_telemetry_visible_and_input_exact() {
         "Fix: materialized-cache hit must be observable in CUDA telemetry."
     );
 
-    let changed_inputs = vec![u32_bytes(&[10, 20, 30, 40, 50, 60, 70, 80])];
+    let changed_inputs = [u32_bytes(&[10, 20, 30, 40, 50, 60, 70, 80])];
     let changed_refs: Vec<&[u8]> = changed_inputs.iter().map(Vec::as_slice).collect();
     backend
         .dispatch_via_cuda_graph_into(&mut cached, &changed_refs, &mut outputs)
@@ -183,7 +183,7 @@ fn cuda_graph_timed_replay_uses_exact_materialized_cache_without_device_work() {
         "Fix: timed raw cudaGraph materialized hits must still be visible as timed dispatches."
     );
 
-    let changed_inputs = vec![u32_bytes(&[15, 16, 17, 18, 19, 20, 21, 22])];
+    let changed_inputs = [u32_bytes(&[15, 16, 17, 18, 19, 20, 21, 22])];
     let changed_refs: Vec<&[u8]> = changed_inputs.iter().map(Vec::as_slice).collect();
     backend.reset_telemetry();
     let changed = backend

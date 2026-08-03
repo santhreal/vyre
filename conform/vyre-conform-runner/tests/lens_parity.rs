@@ -202,7 +202,7 @@ fn build_dispatch_backend() -> Box<dyn VyreBackend> {
         .iter()
         .find(|r| {
             vyre::backend::backend_dispatches(r.id)
-                && selected.as_deref().map_or(true, |backend| r.id == backend)
+                && selected.as_deref().is_none_or(|backend| r.id == backend)
         })
         .expect(
             "Fix: a dispatch-capable backend must be registered for convergence lens. \

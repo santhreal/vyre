@@ -471,7 +471,6 @@ pub fn try_cpu_ref_into(
 }
 
 #[cfg(any(test, feature = "cpu-parity"))]
-
 fn checked_cpu_v_cycle_sizes(
     n_fine: u32,
     n_coarse: u32,

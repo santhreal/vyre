@@ -1,5 +1,7 @@
 //! Shared C-token assembly and Program Graph row assertions for integration tests.
 
+#![allow(deprecated)]
+
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::{TOK_COMMENT, TOK_WHITESPACE};
 

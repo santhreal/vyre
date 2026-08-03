@@ -529,7 +529,6 @@ impl CudaBackend {
 ///
 /// Returns [`CudaEGraphDeviceUploadError`] if the snapshot cannot be packed or
 /// if the packed word spans overflow host byte addressing.
-
 pub fn plan_cuda_egraph_device_upload(
     snapshot: &GpuEGraphSnapshot,
 ) -> Result<CudaEGraphDeviceUploadPlan, CudaEGraphDeviceUploadError> {

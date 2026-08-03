@@ -96,13 +96,10 @@ impl ResidentIncludeResolveCache {
             .iter()
             .position(|entry| entry.key.matches(dir, is_system, is_next, name))?;
         let next_epoch = self.next_epoch();
-        let Some(entry) = self
+        let entry = self
             .entries
             .get_mut(&hash)
-            .and_then(|bucket| bucket.get_mut(index))
-        else {
-            return None;
-        };
+            .and_then(|bucket| bucket.get_mut(index))?;
         entry.last_access = next_epoch;
         Some(entry.value.clone())
     }

@@ -82,7 +82,7 @@ fn min_plus_gemm_via_matches_cpu_shortest_path_matmul() {
         let n = 1 + ((case / 25) % 5);
         // Finite weights in [0, 100_000) so any single a+b <= ~200_000 never overflows u32; ~1/6 of
         // entries are ∞ (u32::MAX = no edge) to drive the MAX-guarded combine and min-against-∞.
-        let mut gen = |state: &mut u32| {
+        let gen = |state: &mut u32| {
             let r = xorshift(state);
             if r % 6 == 0 {
                 INF
@@ -125,7 +125,7 @@ fn lineage_gemm_via_matches_cpu_provenance_matmul() {
         let n = 1 + ((case / 25) % 5);
         // Arbitrary provenance bitmasks with ~1/4 zeros → drives the `either_zero → 0` combine guard
         // as well as the bit-OR combine/accumulate on nonzero pairs.
-        let mut gen = |state: &mut u32| {
+        let gen = |state: &mut u32| {
             let r = xorshift(state);
             if r % 4 == 0 {
                 0

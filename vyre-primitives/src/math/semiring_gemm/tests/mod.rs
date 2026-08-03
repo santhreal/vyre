@@ -45,7 +45,7 @@ fn generated_cpu_matches_independent_real_gemm() {
         let b: Vec<u32> = (0..k * n)
             .map(|idx| (idx as u32).wrapping_mul(5).wrapping_add(7))
             .collect();
-        let mut c = Vec::with_capacity((m * n + 3) as usize);
+        let mut c = Vec::with_capacity(m * n + 3);
 
         try_semiring_gemm_cpu_into(&a, &b, m as u32, n as u32, k as u32, Semiring::Real, &mut c)
             .unwrap();

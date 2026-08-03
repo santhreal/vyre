@@ -529,7 +529,6 @@ impl MultiGpuExecutor {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

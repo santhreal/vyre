@@ -1,10 +1,12 @@
-//! Weir relation import certificates test suite.
+//! Cross-repository relation import certificate compatibility contracts.
 
 const CERTIFICATES: &str =
     include_str!("../../docs/optimization/WEIR_RELATION_IMPORT_CERTIFICATES.toml");
 
+/// Relation-import evidence must retain every witness boundary and stable edge identifier.
+/// Removing one makes the generated analyzer evidence impossible to replay across repositories.
 #[test]
-fn weir_relation_import_certificates_preserve_witness_boundaries() {
+fn relation_import_certificates_preserve_witness_boundaries() {
     for required in [
         "endpoint_domains",
         "call_string_ids",
@@ -16,7 +18,7 @@ fn weir_relation_import_certificates_preserve_witness_boundaries() {
     ] {
         assert!(
             CERTIFICATES.contains(required),
-            "Weir relation import certificate must expose {required}"
+            "relation import certificate must expose {required}"
         );
     }
 

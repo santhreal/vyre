@@ -16,7 +16,6 @@ pub(super) fn canonical_path(p: &Path) -> PathBuf {
 /// ```
 /// The `loc.file` field is omitted on every node that shares the previous
 /// node's file  -  `sticky_file` carries that inheritance.
-
 pub(super) fn declaration_location(
     obj: &serde_json::Map<String, Value>,
     sticky_file: &str,

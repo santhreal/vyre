@@ -15,7 +15,7 @@ use crate::dispatch_buffers::{decode_u32_output_exact, u32_word_bytes};
 use crate::graph::dispatch_bridge::{refresh_keyed_dispatch_inputs, DispatchInput};
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
-/// GPU dispatch wrapper around [`reference_build_ifds_csr`].
+/// GPU dispatch wrapper around the `reference_build_ifds_csr` CPU oracle.
 ///
 /// Returns the supergraph CSR in canonical (within-row sorted) form
 /// so callers comparing against the reference oracle don't need to
@@ -53,7 +53,7 @@ pub fn build_ifds_csr_via(
     Ok((row_ptr, col_idx))
 }
 
-/// GPU dispatch wrapper around [`reference_build_ifds_csr`] into caller-owned CSR buffers.
+/// GPU dispatch wrapper around the `reference_build_ifds_csr` CPU oracle into caller-owned CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_into(
     dispatcher: &dyn OptimizerDispatcher,
@@ -83,7 +83,7 @@ pub fn build_ifds_csr_via_into(
     )
 }
 
-/// GPU dispatch wrapper around [`reference_build_ifds_csr`] into caller-owned
+/// GPU dispatch wrapper around the `reference_build_ifds_csr` CPU oracle into caller-owned
 /// dispatch scratch and CSR buffers.
 #[allow(clippy::too_many_arguments)]
 pub fn build_ifds_csr_via_with_scratch_into(

@@ -22,9 +22,13 @@ use serde::{Deserialize, Serialize};
 /// Unified report combining every substrate-neutral analysis.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PerfAuditReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Global-memory coalescence analysis.
     pub coalesce: CoalescenceReport,
+    /// Shared-memory promotion analysis.
     pub shared_mem: PromotionPlan,
+    /// Shared-memory bank-conflict analysis.
     pub bank_conflict: BankConflictReport,
     /// Single aggregate score: sum of `1 - throughput_factor` across
     /// every coalesce site + critical bank-conflict count weight +
@@ -95,8 +99,10 @@ impl std::fmt::Display for PerfAuditReport {
     }
 }
 
+/// One prioritized optimization recommendation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Recommendation {
+    /// Optimization family that owns the recommendation.
     pub category: RecommendationCategory,
     /// Priority `0` = highest. Ties broken by category order in the enum.
     pub priority: u32,
@@ -107,6 +113,7 @@ pub struct Recommendation {
     pub estimated_speedup_upper_bound: f32,
 }
 
+/// Optimization family for a performance recommendation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RecommendationCategory {
     /// PERF B14: memory access not coalesced; emit-side fix or layout

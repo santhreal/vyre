@@ -55,7 +55,10 @@ pub struct IncrementalInvalidationPlan {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IncrementalInvalidationError {
     /// A source span had end before start or zero length.
-    InvalidSpan { span: SourceSpan },
+    InvalidSpan {
+        /// Rejected half-open source span.
+        span: SourceSpan,
+    },
 }
 
 impl std::fmt::Display for IncrementalInvalidationError {

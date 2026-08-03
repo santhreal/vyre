@@ -1011,7 +1011,6 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
 }
 
 #[cfg(test)]
-
 mod tests {
     include!("validate_tests.rs");
 }

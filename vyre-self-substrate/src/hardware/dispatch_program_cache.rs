@@ -185,8 +185,8 @@ mod tests {
 
     fn generated_key(index: u32) -> u32 {
         match index % 11 {
-            0 | 1 | 2 | 3 => index % 2,
-            4 | 5 | 6 => 2 + (index % 2),
+            0..=3 => index % 2,
+            4..=6 => 2 + (index % 2),
             7 | 8 => index % 4,
             9 => index.wrapping_mul(2_654_435_761).rotate_left(7) % 16,
             _ => index % 3,

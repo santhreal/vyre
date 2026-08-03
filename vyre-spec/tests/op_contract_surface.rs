@@ -57,7 +57,7 @@ fn operation_contract_default_is_none() {
 
 #[test]
 fn determinism_class_variants_are_distinct() {
-    let classes = vec![
+    let classes = [
         DeterminismClass::Deterministic,
         DeterminismClass::DeterministicModuloRounding,
         DeterminismClass::NonDeterministic,
@@ -79,7 +79,7 @@ fn determinism_class_variants_are_distinct() {
 
 #[test]
 fn side_effect_class_variants_are_distinct() {
-    let classes = vec![
+    let classes = [
         SideEffectClass::Pure,
         SideEffectClass::ReadsMemory,
         SideEffectClass::WritesMemory,
@@ -103,7 +103,7 @@ fn side_effect_class_variants_are_distinct() {
 
 #[test]
 fn cost_hint_variants_are_distinct() {
-    let hints = vec![
+    let hints = [
         CostHint::Cheap,
         CostHint::Medium,
         CostHint::Expensive,

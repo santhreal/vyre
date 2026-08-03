@@ -16,9 +16,11 @@ macro_rules! define_commutative_arithmetic_combine {
         overflow_first = $overflow_first:expr,
         overflow_second = $overflow_second:expr
     ) => {
+        /// Combines adjacent literal arithmetic operations of this family.
         pub mod $module {
             use super::*;
 
+            /// Fold a commutative literal chain into one operation.
             #[must_use]
             pub fn $function(desc: &KernelDescriptor) -> KernelDescriptor {
                 combine_commutative_lit_chain(

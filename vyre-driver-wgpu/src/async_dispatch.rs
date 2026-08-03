@@ -446,7 +446,6 @@ pub(crate) fn timestamp_profile_requested(config: &vyre_driver::DispatchConfig) 
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

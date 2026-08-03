@@ -24,6 +24,9 @@ use vyre_libs::scan::classic_ac::{
     classic_ac_compile, presence_by_region_words, ClassicAcAutomaton,
 };
 
+/// A labeled literal-set fixture with its haystack and region starts.
+pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
+
 /// Deterministic LCG so failures reproduce from the case index alone.
 pub struct Lcg(pub u64);
 
@@ -206,7 +209,7 @@ pub fn random_region_starts(rng: &mut Lcg, haystack_len: usize) -> Vec<u32> {
     starts.into_iter().collect()
 }
 
-/// Scaled random literal set toward keyhog's real shape: up to `max_count`
+/// Scaled random literal set toward the production consumer's real shape: up to `max_count`
 /// distinct patterns (so presence rows span multiple 32-bit words when
 /// `max_count > 32`), lengths up to `max_len`, over either the small collision
 /// alphabet or the FULL byte range (`full_byte`). Multi-word presence rows and
@@ -273,13 +276,13 @@ pub fn many_region_starts(rng: &mut Lcg, haystack_len: usize, region_count: u32)
     starts.into_iter().collect()
 }
 
-/// keyhog-shaped scale fixtures: multi-word presence rows (>32 and >64 patterns),
+/// Consumer-scale fixtures: multi-word presence rows (>32 and >64 patterns),
 /// many small regions (stressing the region binary-search width), and full
 /// byte-range patterns. These are the shapes W6-1 names as the consumer spec.
 /// Deterministic (fixed seed) so a failure reproduces exactly.
 #[must_use]
-pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
-    let mut cases: Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> = Vec::new();
+pub fn scale_cases() -> Vec<PresenceCase> {
+    let mut cases = Vec::new();
     let mut rng = Lcg::new(0x5343_414c_455fu64);
 
     // 1. Multi-word presence: ~100 patterns (4 presence words), dense small-alphabet
@@ -330,14 +333,14 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
         ));
     }
 
-    // 4. Combined keyhog-ish: 200 patterns (7 presence words), 300 regions, 16 KiB.
+    // 4. Combined consumer scale: 200 patterns (7 presence words), 300 regions, 16 KiB.
     {
         let literals = random_literals_scaled(&mut rng, 150, 220, 12, false);
         let haystack = random_haystack_scaled(&mut rng, 16384, false);
         let region_starts = many_region_starts(&mut rng, haystack.len(), 300);
         cases.push((
             format!(
-                "keyhog-ish {} patterns {} regions",
+                "consumer-scale {} patterns {} regions",
                 literals.len(),
                 region_starts.len()
             ),
@@ -347,10 +350,10 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
         ));
     }
 
-    // 5. keyhog-MAGNITUDE pattern count: ~2000 distinct patterns → 63 presence
+    // 5. Production-magnitude pattern count: ~2000 distinct patterns → 63 presence
     //    words per region, exercising `pattern_id >> 5` word indexing and
     //    `output_records` iteration at a scale the ~200-pattern cases never reach.
-    //    (keyhog runs ~6k patterns / 920 detectors; 2000 is the largest that stays
+    //    (production runs use ~6k patterns / 920 detectors; 2000 is the largest that stays
     //    tractable on the CPU reference interpreter, a scaled proxy for that shape,
     //    not a downscale of the contract. The haystack is kept small so the
     //    interpreter's per-position walk stays short while the DFA/presence width
@@ -369,8 +372,8 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
 
     // 6. THOUSANDS of tiny regions: 4000 regions over 16 KiB (~4 bytes each)
     //    the max `ceil_log2(4000)=12` binary-search width, dense region boundaries
-    //    so a match's region attribution is stressed at every boundary. keyhog's
-    //    "tens of thousands of small files coalesced" shape. (Requires the grid-aware
+    //    so a match's region attribution is stressed at every boundary. This matches
+    //    a production "tens of thousands of small files coalesced" shape. (Requires the grid-aware
     //    reference eval, buffer-shape inference under-covers this haystack.)
     {
         let literals = vec![
@@ -394,8 +397,8 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
     // 7. FEW HUGE regions: 3 regions over 48 KiB (~16 KiB each), the opposite
     //    extreme. The binary search is shallow (`ceil_log2(3)=2`) but a match deep
     //    inside a huge region must still attribute to the correct region (stresses
-    //    the region_base boundary arithmetic, not the search width). keyhog's
-    //    "few huge files" shape.
+    //    the region_base boundary arithmetic, not the search width). This matches the
+    //    production "few huge files" shape.
     {
         let literals = random_literals_scaled(&mut rng, 16, 32, 8, false);
         let haystack = random_haystack_scaled(&mut rng, 49152, false);
@@ -415,7 +418,7 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
     cases
 }
 
-/// GPU-ONLY large-scale conformance classes: the FULL keyhog literal-set
+/// GPU-ONLY large-scale conformance classes: the full production literal-set
 /// magnitude (~6,000 patterns) at ~1,000 coalesced regions, the shape
 /// [`scale_cases`]'s `many-patterns` note calls out as beyond the CPU reference
 /// INTERPRETER's tractable range (the interpreter re-walks the IR per position,
@@ -424,14 +427,14 @@ pub fn scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
 /// (`dfa_scan`, O(haystack + matches), independent of pattern count), so the
 /// GPU gate CAN prove this magnitude where the reference gate cannot.
 ///
-/// This is a SYNTHETIC scale proxy (no keyhog data): ~6k distinct small-alphabet
+/// This is a SYNTHETIC scale proxy (no consumer data): ~6k distinct small-alphabet
 /// patterns over a dense haystack so many actually fire, attributed across ~1,000
 /// regions (a `ceil_log2(1000)=10`-deep binary search) with presence rows spanning
 /// ~188 `u32` words, the widest `pattern_id >> 5` word-indexing and deepest
 /// `output_records` iteration in the suite. Kept out of [`scale_cases`] precisely
 /// so the always-run CPU-ref gate stays fast; only the GPU gate calls this.
 #[must_use]
-pub fn gpu_only_large_scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
+pub fn gpu_only_large_scale_cases() -> Vec<PresenceCase> {
     let mut rng = Lcg::new(0x6770_755f_3661u64);
     let mut cases = Vec::new();
 
@@ -462,8 +465,8 @@ pub fn gpu_only_large_scale_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u
 /// start/end, `\0` separator adjacency, dense saturation, non-ASCII adjacency,
 /// and the single-byte early-offset (i==0/i==1) cascade boundaries.
 #[must_use]
-pub fn edge_cases() -> Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> {
-    let mut cases: Vec<(String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>)> = Vec::new();
+pub fn edge_cases() -> Vec<PresenceCase> {
+    let mut cases = Vec::new();
 
     // 1. Match END straddling a region boundary at every offset.
     {

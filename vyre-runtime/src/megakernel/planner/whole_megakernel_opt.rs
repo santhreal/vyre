@@ -243,7 +243,7 @@ pub fn try_prune_redundant_work_items_with_scratch_into(
         );
         if let Some(&early_idx) = scratch.first_seen.get(&key) {
             if !found_duplicate {
-                reserve_work_items(out, items.len().checked_sub(1).unwrap_or(0), "dedup output")?;
+                reserve_work_items(out, items.len().saturating_sub(1), "dedup output")?;
                 out.extend_from_slice(&items[..idx]);
                 found_duplicate = true;
             }

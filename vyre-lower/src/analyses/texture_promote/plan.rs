@@ -3,8 +3,10 @@
 use crate::analyses::candidate_plan::CandidatePlan;
 use serde::{Deserialize, Serialize};
 
+/// One read-only binding eligible for texture-memory promotion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextureCandidate {
+    /// Binding slot to promote.
     pub binding_slot: u32,
     /// Number of distinct LoadGlobal sites against this binding.
     pub load_count: u32,
@@ -13,6 +15,7 @@ pub struct TextureCandidate {
     pub estimated_speedup_factor: f32,
 }
 
+/// Texture-promotion candidates for one kernel.
 pub type TexturePromotionPlan = CandidatePlan<TextureCandidate>;
 
 #[cfg(test)]

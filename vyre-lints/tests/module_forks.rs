@@ -1,3 +1,5 @@
+//! Module-fork lint regression contracts.
+
 use std::fs;
 use std::process::Command;
 

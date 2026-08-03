@@ -86,9 +86,7 @@ fn hostile_b64(seed: u32) -> Vec<u8> {
         for _ in 0..body_chars {
             out.push(BODY_ALPHABET[(next() as usize) % BODY_ALPHABET.len()]);
         }
-        for _ in 0..pads {
-            out.push(b'=');
-        }
+        out.extend(std::iter::repeat_n(b'=', pads));
     }
     out
 }

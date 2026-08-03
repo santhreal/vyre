@@ -175,7 +175,7 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
 
         // --- Separate positions (suffix3 prefilter) program (bindings 0-10) ---
         // `use_subgroup_coalesce = false`: the reference backend can't lower
-        // subgroup ops, and this is the exact non-subgroup form keyhog's position
+        // subgroup ops, and this is the exact non-subgroup form the production consumer's position
         // scan uses (`try_build_literal_set_program`). The fused program likewise
         // uses plain `append_match`, so both append paths match bit-for-bit.
         let sep_positions_program = try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(

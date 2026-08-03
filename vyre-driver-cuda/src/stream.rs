@@ -871,6 +871,19 @@ impl PendingDispatch for CudaPendingDispatch {
     }
 }
 
+impl Drop for CudaPendingDispatch {
+    fn drop(&mut self) {
+        if !self.force_completion_on_drop() {
+            self.leak_inflight_resources_after_drop_sync_failure();
+            return;
+        }
+        self.release_launch_resources();
+        self.allocations.take();
+        self.resident_use.take();
+        self.host_transfers.take();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{query_raw_stream_ready, synchronize_raw_stream, CudaLaunchResourcePool};
@@ -1202,18 +1215,5 @@ mod tests {
                 && leak_helper.matches("std::mem::forget(").count() >= 8,
             "Fix: CUDA pending-dispatch drop sync failure must keep the CUDA context alive and leak in-flight CUDA resources instead of dropping or pooling them."
         );
-    }
-}
-
-impl Drop for CudaPendingDispatch {
-    fn drop(&mut self) {
-        if !self.force_completion_on_drop() {
-            self.leak_inflight_resources_after_drop_sync_failure();
-            return;
-        }
-        self.release_launch_resources();
-        self.allocations.take();
-        self.resident_use.take();
-        self.host_transfers.take();
     }
 }

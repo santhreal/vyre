@@ -506,7 +506,6 @@ fn gpu_directive_metadata_with_source_layout(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

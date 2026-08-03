@@ -21,6 +21,8 @@ use crate::backend::resident_upload_fusion::{
 };
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec};
 
+type ParamUpload = (u64, Option<(u64, *const c_void, usize)>);
+
 pub(super) fn order_resident_fallback_inputs_by_logical_index(
     input_storage: &mut [(usize, Vec<u8>)],
     expected_len: usize,
@@ -205,7 +207,7 @@ impl CudaBackend {
         upload_metric_label: &'static str,
         allocations: &mut DispatchAllocations,
         host_transfers: &mut HostTransferAllocations,
-    ) -> Result<(u64, Option<(u64, *const c_void, usize)>), BackendError> {
+    ) -> Result<ParamUpload, BackendError> {
         self.validate_transient_allocation_memory_budget(
             param_bytes,
             allocation_budget_label,

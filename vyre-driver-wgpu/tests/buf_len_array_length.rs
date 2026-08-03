@@ -35,7 +35,6 @@ fn backend() -> &'static WgpuBackend {
 /// `input` is declared without a static count, so the lowering uses
 /// `naga::ArrayLength` to read the bound buffer's element count at
 /// runtime. `out` is one u32 with explicit count = 1.
-
 fn dispatch_and_read_first_word(program: &Program, input_bytes: Vec<u8>) -> u32 {
     dispatch_and_read_first_word_with_lowering(program, input_bytes, false)
 }

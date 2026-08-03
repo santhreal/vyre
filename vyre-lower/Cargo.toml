@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-lower"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "lowering", "gpu", "compiler"]
 
+[lints]
+workspace = true
+
 [lib]
 name = "vyre_lower"
 path = "src/lib.rs"

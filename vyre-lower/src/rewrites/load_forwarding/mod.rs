@@ -36,11 +36,13 @@ use crate::operand_semantics::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use rustc_hash::FxHashMap;
 
+/// Forward loads from the latest provably matching store.
 #[must_use]
 pub fn load_forwarding(desc: &KernelDescriptor) -> KernelDescriptor {
     load_forwarding_with_optional_dataflow_facts(desc, None, None)
 }
 
+/// Forward loads using canonical alias facts.
 #[must_use]
 pub fn load_forwarding_with_alias_facts(
     desc: &KernelDescriptor,
@@ -49,6 +51,7 @@ pub fn load_forwarding_with_alias_facts(
     load_forwarding_with_optional_dataflow_facts(desc, Some(alias_facts), None)
 }
 
+/// Forward loads using imported alias facts.
 #[must_use]
 pub fn load_forwarding_with_external_alias_facts(
     desc: &KernelDescriptor,
@@ -57,6 +60,7 @@ pub fn load_forwarding_with_external_alias_facts(
     load_forwarding_with_alias_facts(desc, alias_facts)
 }
 
+/// Forward loads using canonical alias and reaching-definition facts.
 #[must_use]
 pub fn load_forwarding_with_dataflow_facts(
     desc: &KernelDescriptor,
@@ -66,6 +70,7 @@ pub fn load_forwarding_with_dataflow_facts(
     load_forwarding_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
 }
 
+/// Forward loads using imported dataflow-analysis facts.
 #[must_use]
 pub fn load_forwarding_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,

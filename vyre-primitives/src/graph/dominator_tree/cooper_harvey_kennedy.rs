@@ -75,7 +75,7 @@ pub fn cooper_harvey_kennedy_idoms(
                 }
             }
             new[v / 32] |= 1u32 << (v % 32);
-            if &new[..] != &dom[row..row + words] {
+            if new[..] != dom[row..row + words] {
                 dom[row..row + words].copy_from_slice(&new);
                 changed = true;
             }

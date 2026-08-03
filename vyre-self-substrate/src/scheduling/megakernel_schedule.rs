@@ -13,19 +13,50 @@ use crate::hardware::scratch::try_reserve_vec_capacity;
 #[derive(Debug, Clone, PartialEq)]
 pub enum MegakernelScheduleError {
     /// `costs.len()` did not match `n`.
-    CostLen { expected: usize, actual: usize },
+    CostLen {
+        /// Required cost sample count.
+        expected: usize,
+        /// Received cost sample count.
+        actual: usize,
+    },
     /// A cost was negative, NaN, or infinite.
-    InvalidCost { index: usize, value: f64 },
+    InvalidCost {
+        /// Invalid sample index.
+        index: usize,
+        /// Invalid cost value.
+        value: f64,
+    },
     /// `dt` was negative, NaN, or infinite.
-    InvalidStep { value: f64 },
+    InvalidStep {
+        /// Invalid homotopy step.
+        value: f64,
+    },
     /// `frontier_density.len()` did not match `n`.
-    FrontierDensityLen { expected: usize, actual: usize },
+    FrontierDensityLen {
+        /// Required frontier-density sample count.
+        expected: usize,
+        /// Received frontier-density sample count.
+        actual: usize,
+    },
     /// A frontier-density sample was outside `[0, 1]`, NaN, or infinite.
-    InvalidFrontierDensity { index: usize, value: f64 },
+    InvalidFrontierDensity {
+        /// Invalid sample index.
+        index: usize,
+        /// Invalid frontier density.
+        value: f64,
+    },
     /// `readback_bytes.len()` did not match `n`.
-    ReadbackBytesLen { expected: usize, actual: usize },
+    ReadbackBytesLen {
+        /// Required readback sample count.
+        expected: usize,
+        /// Received readback sample count.
+        actual: usize,
+    },
     /// Launch overhead was negative, NaN, or infinite.
-    InvalidLaunchOverhead { value: f64 },
+    InvalidLaunchOverhead {
+        /// Invalid launch-overhead value.
+        value: f64,
+    },
     /// Caller-owned output storage could not reserve enough slots.
     OutputReserveFailed {
         /// Required output slot capacity.

@@ -611,7 +611,6 @@ pub fn sinkhorn_iterate_f64(
 
 /// Fallible tolerance-based Sinkhorn-Knopp iterative balancing in f64.
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn try_sinkhorn_iterate_f64(
     k: &[f64],
     a: &[f64],

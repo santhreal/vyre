@@ -17,8 +17,10 @@ use crate::{KernelBody, KernelDescriptor};
 use rustc_hash::FxHashSet;
 use serde::{Deserialize, Serialize};
 
+/// Dead-operation analysis for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DeadOpReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
     /// Op-indices (into `KernelBody.ops`) of detected dead ops.
     pub dead_op_indices: Vec<usize>,
@@ -28,11 +30,13 @@ pub struct DeadOpReport {
 }
 
 impl DeadOpReport {
+    /// Return the number of dead operations.
     #[must_use]
     pub fn dead_count(&self) -> usize {
         self.dead_op_indices.len()
     }
 
+    /// Return the fraction of body operations that are dead.
     #[must_use]
     pub fn dead_ratio(&self) -> f32 {
         if self.total_op_count == 0 {
@@ -43,6 +47,7 @@ impl DeadOpReport {
     }
 }
 
+/// Analyze a descriptor for unused pure operation results.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> DeadOpReport {
     // First pass: collect every result-id that any op produces. This

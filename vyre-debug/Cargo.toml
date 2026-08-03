@@ -12,6 +12,9 @@ categories = ["development-tools", "compilers"]
 keywords = ["vyre", "debug", "gpu", "shader"]
 exclude = ["AGENT_PLAN.md"]
 
+[lints]
+workspace = true
+
 [lib]
 
 [[bin]]

@@ -458,7 +458,6 @@ fn resize_chebyshev_cpu_vec<T: Clone>(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

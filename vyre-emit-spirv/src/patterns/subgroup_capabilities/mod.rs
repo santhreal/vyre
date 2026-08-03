@@ -18,13 +18,18 @@ use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
 /// `VkSubgroupFeatureFlagBits` for host-side pipeline construction.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct SubgroupCapabilities {
+    /// Basic subgroup operations are required.
     pub basic: bool,
+    /// Subgroup ballot operations are required.
     pub ballot: bool,
+    /// Subgroup shuffle operations are required.
     pub shuffle: bool,
+    /// Subgroup arithmetic operations are required.
     pub arithmetic: bool,
 }
 
 impl SubgroupCapabilities {
+    /// Return whether the kernel requires any subgroup capability.
     #[must_use]
     pub fn any(self) -> bool {
         self.basic || self.ballot || self.shuffle || self.arithmetic
@@ -40,12 +45,16 @@ impl SubgroupCapabilities {
     }
 }
 
+/// Subgroup capabilities discovered for one kernel descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SubgroupCapabilityReport {
+    /// Audited kernel identifier.
     pub kernel_id: String,
+    /// Capabilities required by the kernel body.
     pub capabilities: SubgroupCapabilities,
 }
 
+/// Analyze a kernel descriptor for required subgroup capabilities.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> SubgroupCapabilityReport {
     let mut caps = SubgroupCapabilities::default();

@@ -15,6 +15,7 @@ pub mod access_kind;
 pub mod alias_facts;
 pub mod alias_import;
 pub mod bank_conflict;
+/// Shared candidate-plan data structures.
 pub mod candidate_plan;
 pub mod coalesce;
 pub mod common_subexpr;
@@ -87,6 +88,24 @@ pub(crate) fn child_body_operands<'a>(
     operands.iter().skip(start).copied()
 }
 
+// Re-exports for the common case: a one-call combined audit.
+pub use access_kind::AccessKind;
+pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};
+pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};
+pub use common_subexpr::{analyze as analyze_common_subexpr, CommonSubexprReport};
+pub use const_buffer_promote::{analyze as analyze_const_buffer_promote, ConstBufferPlan};
+pub use dead_op::{analyze as analyze_dead_op, DeadOpReport};
+pub use def_use::{
+    analyze as analyze_def_use, dead_by_no_use, DefUseReport, PerBodyChains, UseSite,
+};
+pub use layout_aos_to_soa::{analyze as analyze_layout_aos_to_soa, LayoutTransformPlan};
+pub use op_histogram::{analyze as analyze_op_histogram, OpHistogram};
+pub use reaching_def_facts::import_descriptor_reaching_defs;
+pub use shared_mem_promote::{analyze as analyze_shared_mem_promote, PromotionPlan};
+pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
+pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};
+pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
+
 #[cfg(test)]
 mod dedup_guard {
     use std::path::{Path, PathBuf};
@@ -121,21 +140,3 @@ mod dedup_guard {
         }
     }
 }
-
-// Re-exports for the common case: a one-call combined audit.
-pub use access_kind::AccessKind;
-pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};
-pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};
-pub use common_subexpr::{analyze as analyze_common_subexpr, CommonSubexprReport};
-pub use const_buffer_promote::{analyze as analyze_const_buffer_promote, ConstBufferPlan};
-pub use dead_op::{analyze as analyze_dead_op, DeadOpReport};
-pub use def_use::{
-    analyze as analyze_def_use, dead_by_no_use, DefUseReport, PerBodyChains, UseSite,
-};
-pub use layout_aos_to_soa::{analyze as analyze_layout_aos_to_soa, LayoutTransformPlan};
-pub use op_histogram::{analyze as analyze_op_histogram, OpHistogram};
-pub use reaching_def_facts::import_descriptor_reaching_defs;
-pub use shared_mem_promote::{analyze as analyze_shared_mem_promote, PromotionPlan};
-pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
-pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};
-pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};

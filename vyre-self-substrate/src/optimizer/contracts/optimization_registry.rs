@@ -498,7 +498,7 @@ mod tests {
         let pass = RELEASE_OPTIMIZATION_PASSES[0];
         registry.register(pass).expect("Fix: first pass registers");
         assert!(
-            matches!(registry.register(pass), Err(_)),
+            registry.register(pass).is_err(),
             "Fix: duplicate optimization pass ids must be rejected."
         );
         assert!(

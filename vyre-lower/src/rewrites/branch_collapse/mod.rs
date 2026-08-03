@@ -18,6 +18,7 @@ use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
 
+/// Collapse structured branches whose conditions are statically known.
 #[must_use]
 pub fn branch_collapse(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

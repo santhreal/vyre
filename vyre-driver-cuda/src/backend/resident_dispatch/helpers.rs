@@ -33,9 +33,9 @@ pub(crate) fn resident_required_handles(
 }
 
 macro_rules! define_next_descriptor_resource {
-    ($name:ident, $resource:ty, $items:ident, $cursor:ident, $resource_name:literal, $rebuild:literal) => {
+    ($name:ident $(<$lifetime:lifetime>)?, $resource:ty, $items:ident, $cursor:ident, $resource_name:literal, $rebuild:literal) => {
         #[doc = concat!("Take the next ", $resource_name, " in descriptor order.")]
-        pub(crate) fn $name<'a>(
+        pub(crate) fn $name $(<$lifetime>)? (
             $items: &[$resource],
             $cursor: &mut usize,
             context: &'static str,
@@ -74,7 +74,7 @@ define_next_descriptor_resource!(
 );
 
 define_next_descriptor_resource!(
-    next_dispatch_binding,
+    next_dispatch_binding<'a>,
     CudaDispatchBinding<'a>,
     bindings,
     next_binding,

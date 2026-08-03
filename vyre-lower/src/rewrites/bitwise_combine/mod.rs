@@ -28,6 +28,7 @@ use super::literal::ResultAllocator;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 
+/// Combine adjacent bitwise operations with literal operands.
 #[must_use]
 pub fn bitwise_combine(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

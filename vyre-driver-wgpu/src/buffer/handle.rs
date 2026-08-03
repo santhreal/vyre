@@ -178,7 +178,7 @@ impl StagingBufferPool {
     pub fn release(&self, buffer: wgpu::Buffer, size: u64, usage: wgpu::BufferUsages) {
         let key = (size, usage.bits());
         let mut inner = self.lock_inner();
-        let buffers = inner.free.entry(key).or_insert_with(SmallVec::new);
+        let buffers = inner.free.entry(key).or_default();
         if buffers.len() == STAGING_BUFFER_POOL_CLASS_CAP {
             buffers.remove(0);
         }

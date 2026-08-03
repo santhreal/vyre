@@ -14,7 +14,7 @@
 //! The crate also re-exports the Region builder used by every Cat-A
 //! library to wrap its produced `Vec<Node>` so optimizer passes treat
 //! the library call as an opaque unit by default. See
-//! [`region`](self::region) for `wrap`, `wrap_anonymous`, `wrap_child`,
+//! [`region`] for `wrap`, `wrap_anonymous`, `wrap_child`,
 //! `tag_program`.
 
 pub mod fp_contract;

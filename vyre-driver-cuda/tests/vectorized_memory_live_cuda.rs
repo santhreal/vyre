@@ -350,7 +350,7 @@ fn generated_u8_values() -> Vec<u8> {
     (0..NARROW_LANE_COUNT)
         .map(|lane| {
             let lane = lane as u32;
-            (lane.wrapping_mul(0x45d9_f3b).rotate_left((lane & 7) + 1) ^ 0xa7) as u8
+            (lane.wrapping_mul(0x045d_9f3b).rotate_left((lane & 7) + 1) ^ 0xa7) as u8
         })
         .collect()
 }
@@ -398,7 +398,8 @@ fn generated_bool_values() -> Vec<bool> {
     (0..VECTOR_LANE_COUNT)
         .map(|lane| {
             let lane = lane as u32;
-            ((lane.wrapping_mul(0x45d9_f3b).rotate_left(lane & 7) ^ 0x1357_9bdf) & 0b1011) == 0b0001
+            ((lane.wrapping_mul(0x045d_9f3b).rotate_left(lane & 7) ^ 0x1357_9bdf) & 0b1011)
+                == 0b0001
                 || lane % 17 == 0
         })
         .collect()

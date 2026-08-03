@@ -1834,7 +1834,7 @@ pub(crate) fn current_freshness_fingerprint_for_report(
         .and_then(Value::as_str)
         .is_some_and(|value| !value.trim().is_empty())
     {
-        return Some(current_source_tree_fingerprint_for_evidence_path(path)?);
+        return current_source_tree_fingerprint_for_evidence_path(path);
     }
     current_source_fingerprint_for_evidence_path(path)
 }
@@ -2891,24 +2891,23 @@ pub(crate) fn backend_suite_parity_issues(
                 });
             }
         }
-        for field in ["source_tree_fingerprint"] {
-            let cuda_value = cuda_status
-                .get(field)
-                .and_then(non_empty_str)
-                .map(str::to_string);
-            let wgpu_value = wgpu_status
-                .get(field)
-                .and_then(non_empty_str)
-                .map(str::to_string);
-            if cuda_value != wgpu_value {
-                issues.push(BackendSuiteParityIssue::StatusStringFieldMismatch {
-                    family_id: pair.0.clone(),
-                    requested_case_id: pair.1.clone(),
-                    field,
-                    cuda_value,
-                    wgpu_value,
-                });
-            }
+        let field = "source_tree_fingerprint";
+        let cuda_value = cuda_status
+            .get(field)
+            .and_then(non_empty_str)
+            .map(str::to_string);
+        let wgpu_value = wgpu_status
+            .get(field)
+            .and_then(non_empty_str)
+            .map(str::to_string);
+        if cuda_value != wgpu_value {
+            issues.push(BackendSuiteParityIssue::StatusStringFieldMismatch {
+                family_id: pair.0.clone(),
+                requested_case_id: pair.1.clone(),
+                field,
+                cuda_value,
+                wgpu_value,
+            });
         }
         let cuda_blockers = suite_status_blockers(cuda_status);
         let wgpu_blockers = suite_status_blockers(wgpu_status);

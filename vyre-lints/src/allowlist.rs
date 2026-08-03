@@ -15,29 +15,35 @@ struct AllowlistFile {
     exempt_files: Vec<String>,
 }
 
+/// Workspace-relative source paths exempt from raw IR construction checks.
 #[derive(Debug, Default)]
 pub struct Allowlist {
     paths: HashSet<String>,
 }
 
 impl Allowlist {
+    /// Construct an allowlist with no exemptions.
     pub fn empty() -> Self {
         Self::default()
     }
 
+    /// Return whether a workspace-relative path is exempt.
     pub fn contains(&self, workspace_relative_path: &str) -> bool {
         self.paths.contains(workspace_relative_path)
     }
 
+    /// Return the number of exempt paths.
     pub fn len(&self) -> usize {
         self.paths.len()
     }
 
+    /// Return whether no paths are exempt.
     pub fn is_empty(&self) -> bool {
         self.paths.is_empty()
     }
 }
 
+/// Load an allowlist from a bounded TOML file.
 pub fn load(path: &Path) -> Result<Allowlist> {
     let bytes = crate::read_source_bounded(path)
         .with_context(|| format!("read allowlist {}", path.display()))?;
@@ -80,7 +86,7 @@ mod tests {
     fn missing_allowlist_file_errors() {
         let r = load(Path::new("/nonexistent/path/allowlist.toml"));
         assert!(
-            matches!(r, Err(_)),
+            r.is_err(),
             "load of nonexistent path must return Err, got Ok"
         );
     }
@@ -91,6 +97,6 @@ mod tests {
         let path = dir.path().join("allowlist.toml");
         std::fs::write(&path, "not valid toml at all = = =").unwrap();
         let r = load(&path);
-        assert!(matches!(r, Err(_)));
+        assert!(r.is_err());
     }
 }

@@ -310,6 +310,15 @@ pub(super) fn cargo_runner(workspace_root: &Path) -> PathBuf {
     PathBuf::from("cargo_full")
 }
 
+pub(super) struct Config {
+    backend: String,
+    only: Option<String>,
+    measured_samples: Option<usize>,
+    sample_timeout_secs: u64,
+    include_wgpu_comparison: bool,
+    reuse_existing: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -875,13 +884,4 @@ mod tests {
         .expect("Fix: create benchmark artifact test directory.");
         fs::write(&path, format!("{value}\n")).expect("Fix: write benchmark artifact test JSON.");
     }
-}
-
-pub(super) struct Config {
-    backend: String,
-    only: Option<String>,
-    measured_samples: Option<usize>,
-    sample_timeout_secs: u64,
-    include_wgpu_comparison: bool,
-    reuse_existing: bool,
 }

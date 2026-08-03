@@ -73,7 +73,7 @@ pub fn reference_fusion_pressure(shared_buffer_ranks: &[u32]) -> f64 {
 /// Compute fusion pressure through the GPU-dispatchable TT contraction primitive.
 ///
 /// This is the production path for callers that have a concrete backend dispatcher. It uses the
-/// same unit-core model as [`fusion_pressure`]. Accumulator lanes carry the integer rank product;
+/// same unit-core model as `reference_fusion_pressure`. Accumulator lanes carry the integer rank product;
 /// unit-core lanes are encoded as 16.16 fixed-point `1.0`, matching
 /// `vyre_primitives::math::tensor_train::tt_contract_step`'s multiply-then-shift contract without
 /// overflowing `1.0 * 1.0` in u32 space.

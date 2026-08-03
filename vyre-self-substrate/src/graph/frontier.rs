@@ -156,17 +156,23 @@ mod tests {
 
             let mut long_visited = vec![0; words + 1];
             let neighbors = vec![0; words];
-            assert!(matches!(
-                absorb_new_frontier_bits(node_count, &mut long_visited, &neighbors, &mut next_wave,),
-                Err(_)
-            ));
+            assert!(absorb_new_frontier_bits(
+                node_count,
+                &mut long_visited,
+                &neighbors,
+                &mut next_wave,
+            )
+            .is_err());
 
             let mut visited = vec![0; words];
             let long_neighbors = vec![0; words + 1];
-            assert!(matches!(
-                absorb_new_frontier_bits(node_count, &mut visited, &long_neighbors, &mut next_wave,),
-                Err(_)
-            ));
+            assert!(absorb_new_frontier_bits(
+                node_count,
+                &mut visited,
+                &long_neighbors,
+                &mut next_wave,
+            )
+            .is_err());
         }
     }
 }

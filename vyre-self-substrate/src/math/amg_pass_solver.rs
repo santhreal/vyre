@@ -2,10 +2,8 @@
 //!
 //! Self-consumer for [#3 `amg_v_cycle`](vyre_primitives::math::amg_v_cycle).
 //!
-//! The matroid scheduler at
-//! [`super::matroid_megakernel_scheduler`] currently uses a single
-//! Jacobi smoothing step ([`super::multigrid_matroid_solver::matroid_solve_step`])
-//! to weight augmenting BFS layers. That's a 1-step relaxation  -
+//! The matroid scheduler currently uses a single `matroid_solve_step` Jacobi
+//! smoothing step to weight augmenting BFS layers. That's a 1-step relaxation  -
 //! converges slowly on stiff exchange graphs (large condition number,
 //! deep dispatch chains).
 //!
@@ -452,7 +450,6 @@ pub fn solve_to_tolerance_into(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;

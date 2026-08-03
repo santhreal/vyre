@@ -2,8 +2,7 @@
 
 #![cfg(feature = "c-parser")]
 
-mod common;
-use common::words_to_bytes;
+use vyre_primitives::wire::pack_u32_slice as words_to_bytes;
 
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;

@@ -490,7 +490,6 @@ pub(crate) fn expr_type(
 }
 
 #[cfg(test)]
-
 mod typecheck_critical_test {
     include!("typecheck_critical_test.rs");
 }

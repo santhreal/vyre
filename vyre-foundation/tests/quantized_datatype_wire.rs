@@ -124,8 +124,8 @@ fn generated_quantized_buffer_matrix_roundtrips_through_program_wire() {
     let mut checked = 0usize;
 
     for storage in storages {
-        for scale in scales.iter().cloned() {
-            for zero_point in zero_points.iter().cloned() {
+        for scale in &scales {
+            for zero_point in &zero_points {
                 for count in counts {
                     let quantized = DataType::Quantized {
                         storage: Box::new(storage.clone()),

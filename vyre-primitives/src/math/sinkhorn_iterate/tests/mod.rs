@@ -420,6 +420,8 @@ fn grid_route_sizes_changed_to_one_word_per_iteration() {
     }
 }
 
+type SinkhornFixture = (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>);
+
 /// Sinkhorn fixture whose `u` vector actually EVOLVES across iterations, so an
 /// element frozen by an early retire is distinguishable from one that ran to
 /// convergence.
@@ -431,7 +433,7 @@ fn grid_route_sizes_changed_to_one_word_per_iteration() {
 /// when it should not have.
 ///
 /// Returns `(k, a, b, u_curr, v)`.
-fn evolving_sinkhorn_fixture(m: u32, n: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
+fn evolving_sinkhorn_fixture(m: u32, n: u32) -> SinkhornFixture {
     let cells = (m as usize) * (n as usize);
     (
         vec![1_u32; cells],

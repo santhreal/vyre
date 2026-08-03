@@ -307,7 +307,7 @@ fn wire_round_trip_preserves_every_probed_node_and_expr_field() {
                 var: "i".into(),
                 from: Expr::u32(0),
                 to: Expr::u32(4),
-                body: vec![Node::store("out", Expr::var("i"), Expr::u32(1))].into(),
+                body: vec![Node::store("out", Expr::var("i"), Expr::u32(1))],
             }],
         ),
         ("return", vec![Node::return_()]),

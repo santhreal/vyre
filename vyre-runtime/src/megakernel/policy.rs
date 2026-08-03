@@ -987,13 +987,9 @@ impl MegakernelLaunchPolicy {
             )
             .max(1);
             let over_threshold = u32::from(
-                match request
+                request
                     .memory_pressure_bps
-                    .checked_sub(self.memory_pressure_threshold_bps)
-                {
-                    Some(value) => value,
-                    None => 0,
-                },
+                    .saturating_sub(self.memory_pressure_threshold_bps),
             )
             .min(pressure_span);
             let shed_bps = 2_500_u32

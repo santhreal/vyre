@@ -55,6 +55,7 @@ const LOUD_DIAGNOSTIC_FRAGMENTS: &[&str] = &[
     "fix:",
 ];
 
+/// Scan a source tree for GPU tests that silently skip unavailable hardware.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for entry in walkdir::WalkDir::new(root)

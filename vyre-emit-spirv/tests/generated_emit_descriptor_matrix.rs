@@ -95,7 +95,7 @@ fn words_from_le_bytes(bytes: &[u8]) -> Vec<u32> {
 #[test]
 fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
     for seed in 0..256u32 {
-        let desc = generated_descriptor(seed.wrapping_mul(0x45d9_f3b));
+        let desc = generated_descriptor(seed.wrapping_mul(0x045d_9f3b));
         let raw = vyre_emit_spirv::emit(&desc)
             .unwrap_or_else(|err| panic!("raw SPIR-V emit failed for {}: {err:?}", desc.id));
         let optimized = vyre_emit_spirv::emit_optimized(&desc)

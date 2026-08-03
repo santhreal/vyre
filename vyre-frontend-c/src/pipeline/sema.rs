@@ -191,7 +191,7 @@ fn build_sema_scope_with_scratch(
 }
 
 fn take_exact_scope_output_from_scratch(
-    sema_out: &mut Vec<Vec<u8>>,
+    sema_out: &mut [Vec<u8>],
     expected_byte_len: u64,
     readback: bool,
 ) -> Result<Vec<u8>, String> {

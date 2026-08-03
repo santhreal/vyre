@@ -69,6 +69,7 @@ pub mod bitwise_idemp {
     use crate::KernelDescriptor;
     use vyre_foundation::ir::BinOp;
 
+    /// Fold identical bitwise operands to a copy.
     #[must_use]
     pub fn bitwise_idemp(desc: &KernelDescriptor) -> KernelDescriptor {
         rewrite_self_binops(desc, |bin| matches!(bin, BinOp::BitAnd | BinOp::BitOr))
@@ -111,6 +112,7 @@ pub mod min_max_idemp {
     use crate::KernelDescriptor;
     use vyre_foundation::ir::BinOp;
 
+    /// Fold identical minimum or maximum operands to a copy.
     #[must_use]
     pub fn min_max_idemp(desc: &KernelDescriptor) -> KernelDescriptor {
         rewrite_self_binops(desc, |bin| matches!(bin, BinOp::Min | BinOp::Max))
@@ -481,7 +483,6 @@ fn run_descriptor_passes(
 /// for the iterating wrapper. This exists so callers that want exactly
 /// one pass (e.g. for diagnostics) can have it.
 #[must_use]
-
 pub fn run_all_once(desc: &crate::KernelDescriptor) -> crate::KernelDescriptor {
     run_descriptor_passes(desc, canonical_rewrite_passes())
 }
@@ -585,9 +586,11 @@ pub struct OptimizationStats {
     /// Number of bindings before. After equals `bindings_before` minus
     /// what `drop_unused_bindings` stripped.
     pub bindings_before: usize,
+    /// Number of bindings after optimization.
     pub bindings_after: usize,
     /// Number of literals in the top-level body's pool, before/after.
     pub literals_before: usize,
+    /// Number of literals after optimization.
     pub literals_after: usize,
     /// How many `run_all_once` iterations actually fired (1 to
     /// `RUN_ALL_MAX_ITERS`). 1 means the pipeline converged on the
@@ -609,6 +612,7 @@ impl OptimizationStats {
         self.ops_before.saturating_sub(self.ops_after)
     }
 
+    /// Return the number of bindings removed by optimization.
     pub fn bindings_dropped(&self) -> usize {
         self.bindings_before.saturating_sub(self.bindings_after)
     }

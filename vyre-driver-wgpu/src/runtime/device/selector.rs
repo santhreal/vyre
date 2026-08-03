@@ -460,7 +460,6 @@ fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static s
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

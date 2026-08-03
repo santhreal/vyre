@@ -4,7 +4,7 @@
 //!    the set of pattern ids the CPU reference scan reports, no missed pattern
 //!    (recall) and no fabricated pattern (precision). Runs on whatever the wgpu
 //!    backend resolves to (the RTX 5090 here); skips cleanly if no GPU.
-//! 2. THROUGHPUT: on a match-DENSE haystack (the keyhog phase-1 regime, ~1 hit per
+//! 2. THROUGHPUT: on a match-DENSE haystack (the production phase-1 regime, ~1 hit per
 //!    few dozen bytes), compare the match-triple `scan` (atomic-append per hit +
 //!    big readback) against `scan_presence` (one idempotent atomic-OR bit per hit,
 //!    tiny readback). The triple path is output-bound and collapses; presence
@@ -16,7 +16,7 @@
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::GpuLiteralSet;
 
-/// Dense, keyhog-like literal set: short high-frequency anchors that fire all over
+/// Dense, consumer-scale literal set: short high-frequency anchors that fire all over
 /// source text, plus realistic credential prefixes.
 const LITERALS: &[&[u8]] = &[
     b"key",

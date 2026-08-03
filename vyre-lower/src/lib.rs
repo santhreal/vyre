@@ -87,6 +87,7 @@ pub enum VerifyFailure {
 }
 
 impl VerifyFailure {
+    /// Return the verifier errors carried by either failure stage.
     pub fn errors(&self) -> &[verify::VerifyError] {
         match self {
             VerifyFailure::Input(e) | VerifyFailure::Output(e) => e,
@@ -139,27 +140,39 @@ pub fn full_report(desc: &KernelDescriptor) -> FullReport {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FullReport {
     #[serde(default)]
+    /// Stable descriptor identifier.
     pub descriptor_id: String,
+    /// Input descriptor summary.
     pub summary: String,
+    /// Optimized descriptor summary, or the input summary when optimization was skipped.
     pub optimized_summary: String,
+    /// Input operation histogram.
     pub histogram: analyses::op_histogram::OpHistogram,
+    /// Input performance audit.
     pub perf: PerfAuditReport,
+    /// Verification result before optimization.
     pub verify_input: verify::VerifyResult,
     #[serde(default = "default_verify_result")]
+    /// Verification result after optimization.
     pub verify_output: verify::VerifyResult,
+    /// Rewrite statistics for the optimization pipeline.
     pub stats: rewrites::OptimizationStats,
     #[serde(default)]
+    /// Whether optimization ran after input verification.
     pub optimization_ran: bool,
     #[serde(default)]
+    /// Actionable verification failure guidance.
     pub fix_text: String,
 }
 
 impl FullReport {
+    /// Return the stable input-verification status label.
     #[must_use]
     pub fn verify_input_status(&self) -> &'static str {
         verification_status(&self.verify_input)
     }
 
+    /// Return the stable output-verification status label.
     #[must_use]
     pub fn verify_output_status(&self) -> &'static str {
         if self.optimization_ran {

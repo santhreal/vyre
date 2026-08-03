@@ -180,9 +180,7 @@ pub(crate) fn cuda_graph_lane_count_for_batch(
     let memory_lanes = if shape_bytes == 0 {
         MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE
     } else {
-        (memory_budget / shape_bytes)
-            .max(1)
-            .min(MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE)
+        (memory_budget / shape_bytes).clamp(1, MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE)
     };
     Ok(batches.len().min(hardware_lanes).min(memory_lanes).max(1))
 }
@@ -200,9 +198,10 @@ fn cuda_graph_hardware_lane_capacity(caps: &CudaDeviceCaps) -> Result<usize, Bac
     });
     let sms = sms?;
     let lanes = sms.div_ceil(CUDA_GRAPH_REPLAY_SMS_PER_LANE);
-    Ok(lanes
-        .max(CUDA_GRAPH_REPLAY_MIN_CONCURRENT_LANES)
-        .min(MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE))
+    Ok(lanes.clamp(
+        CUDA_GRAPH_REPLAY_MIN_CONCURRENT_LANES,
+        MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE,
+    ))
 }
 
 fn cuda_graph_shape_cached_bytes(

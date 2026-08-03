@@ -343,7 +343,7 @@ mod tests {
             },
         )];
         analyse_precision(&program(entry), &hints);
-        assert!(hints.len() >= 1);
+        assert!(!hints.is_empty());
     }
 
     /// A literal over F16 range (`1e10`) is NOT F16-eligible.
@@ -359,12 +359,11 @@ mod tests {
             },
         )];
         analyse_precision(&program(entry), &hints);
-        for digest in [digest_of(&Expr::f32(1e10))].iter() {
-            assert!(matches!(
-                hints.lookup(*digest),
-                Some(PrecisionHint::F16Eligible { .. }) | None
-            ));
-        }
+        let digest = digest_of(&Expr::f32(1e10));
+        assert!(matches!(
+            hints.lookup(digest),
+            Some(PrecisionHint::F16Eligible { .. }) | None
+        ));
         // The compound BinOp with the 1e10 operand must not be
         // F16-eligible.
         let compound = Expr::BinOp {
@@ -503,10 +502,7 @@ mod tests {
                         op: UnOp::Sin,
                         operand: Box::new(Expr::var("theta")),
                     }))
-                    .map_or(false, |h| matches!(
-                        h,
-                        PrecisionHint::TranscendentalPolynomial { .. }
-                    ))
+                    .is_some_and(|h| matches!(h, PrecisionHint::TranscendentalPolynomial { .. }))
         );
     }
 

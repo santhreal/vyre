@@ -1155,7 +1155,6 @@ fn elapsed_resident_sequence_wall_ns(started: std::time::Instant) -> Result<u64,
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -1256,12 +1255,12 @@ mod tests {
             .expect("Fix: default borrowed-into dispatch must succeed");
 
         let telemetry = crate::observability::snapshot_dispatch_telemetry();
-        assert!(telemetry.launches >= before.launches + 1);
+        assert!(telemetry.launches > before.launches);
         assert!(telemetry.input_bytes >= before.input_bytes + 3);
         assert!(telemetry.output_bytes >= before.output_bytes + 4);
         assert!(telemetry.output_slots >= before.output_slots + 2);
-        assert!(telemetry.output_slots_reused >= before.output_slots_reused + 1);
-        assert!(telemetry.output_slots_moved >= before.output_slots_moved + 1);
+        assert!(telemetry.output_slots_reused > before.output_slots_reused);
+        assert!(telemetry.output_slots_moved > before.output_slots_moved);
         assert!(telemetry.output_slots_appended >= before.output_slots_appended);
     }
 

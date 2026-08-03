@@ -344,7 +344,6 @@ fn has_hoistable_let_in_any_loop(node: &Node) -> bool {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};

@@ -15,10 +15,13 @@ pub enum BindResultLogError {
     Parse(usize, serde_json::Error),
 }
 
+/// Human-readable context for a Naga validation or emission failure.
 pub struct FailureTrace {
+    /// Rendered failure context.
     pub text: String,
 }
 
+/// Build a validation failure trace for a Naga module.
 pub fn failure_trace(module: &Module, error: &naga::valid::ValidationError) -> FailureTrace {
     let text = format!(
         "FAILURE: {:#?}\nentry_points={}\nfunctions={}\nglobals={}",
@@ -30,6 +33,7 @@ pub fn failure_trace(module: &Module, error: &naga::valid::ValidationError) -> F
     FailureTrace { text }
 }
 
+/// Build a WGSL writer failure trace for a validated Naga module.
 pub fn failure_trace_wgsl(
     module: &Module,
     info: &naga::valid::ModuleInfo,

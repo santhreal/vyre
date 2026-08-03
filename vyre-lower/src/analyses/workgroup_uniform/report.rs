@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Workgroup-wide behavior of one branch condition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BranchUniformity {
     /// All threads in the workgroup take the same path. Emit can use
@@ -14,15 +15,18 @@ pub enum BranchUniformity {
     Unknown,
 }
 
+/// One structured branch and its uniformity classification.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchSite {
     /// Op-index of the structured-if op in the kernel body.
     pub op_index: usize,
     /// Operand id of the condition expression.
     pub cond_operand_id: u32,
+    /// Uniformity classification for the branch condition.
     pub uniformity: BranchUniformity,
 }
 
+/// Backend-neutral emission guidance for one branch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BranchEmitHint {
     /// The condition is proven workgroup-uniform; emitters may use
@@ -36,21 +40,30 @@ pub enum BranchEmitHint {
     NeedsProfile,
 }
 
+/// Emission guidance and diagnostic context for one branch.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BranchHint {
+    /// Stable diagnostic code.
     pub code: &'static str,
+    /// Classified branch site.
     pub site: BranchSite,
+    /// Backend-neutral emission guidance.
     pub hint: BranchEmitHint,
+    /// Human-readable explanation.
     pub message: String,
 }
 
+/// Workgroup-uniformity analysis for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct WorkgroupUniformReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Structured branches in descriptor order.
     pub branches: Vec<BranchSite>,
 }
 
 impl WorkgroupUniformReport {
+    /// Return the number of proven workgroup-uniform branches.
     #[must_use]
     pub fn uniform_count(&self) -> usize {
         self.branches
@@ -59,6 +72,7 @@ impl WorkgroupUniformReport {
             .count()
     }
 
+    /// Return the number of proven divergent branches.
     #[must_use]
     pub fn divergent_count(&self) -> usize {
         self.branches

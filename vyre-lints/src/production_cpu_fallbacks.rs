@@ -42,6 +42,7 @@ const APPROVED_PARITY_PATHS: &[&str] = &[
     "/vyre-test-harness/",
 ];
 
+/// Scan a source tree for production calls into CPU reference execution.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for entry in walkdir::WalkDir::new(root)

@@ -76,7 +76,7 @@ pub(crate) fn cpu_ref_into(
     changed
 }
 
-/// Iterate [`cpu_ref_into`] until the change flag reaches zero or
+/// Iterate the internal `cpu_ref_into` step until the change flag reaches zero or
 /// `max_iters` is exhausted.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -105,7 +105,7 @@ pub fn cpu_ref_closure(
     current
 }
 
-/// Iterate [`cpu_ref_into`] using caller-owned frontier buffers.
+/// Iterate the internal `cpu_ref_into` step using caller-owned frontier buffers.
 #[allow(clippy::too_many_arguments)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_closure_into(
@@ -133,7 +133,7 @@ pub fn cpu_ref_closure_into(
     );
 }
 
-/// Iterate [`cpu_ref_into`] with a callback after each attempted expansion.
+/// Iterate the internal `cpu_ref_into` step with a callback after each attempted expansion.
 ///
 /// The hook lets consumers attach observability without owning the
 /// fixed-point algorithm.

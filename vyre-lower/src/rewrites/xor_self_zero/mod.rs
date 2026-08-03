@@ -25,6 +25,7 @@ use super::literal::ResultAllocator;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 
+/// Fold bitwise exclusive-or of a value with itself to zero.
 #[must_use]
 pub fn xor_self_zero(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

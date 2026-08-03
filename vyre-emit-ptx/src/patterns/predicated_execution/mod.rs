@@ -21,11 +21,14 @@
 use serde::{Deserialize, Serialize};
 use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// One short structured branch eligible for predicated execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PredicationCandidate {
     /// Op-index of the StructuredIfThen / StructuredIfThenElse.
     pub if_op_index: usize,
+    /// Operation count in the true branch.
     pub then_body_op_count: u32,
+    /// Operation count in the false branch.
     pub else_body_op_count: u32,
     /// Whether either body contains global stores. Kept as telemetry
     /// because store-heavy rule kernels are the main predication target;
@@ -37,13 +40,17 @@ pub struct PredicationCandidate {
     pub has_unsafe_effect: bool,
 }
 
+/// Predicated-execution opportunities for one kernel.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PredicationPlan {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Eligible structured branches.
     pub candidates: Vec<PredicationCandidate>,
 }
 
 impl PredicationPlan {
+    /// Return the number of candidates without unsafe effects.
     #[must_use]
     pub fn safe_candidate_count(&self) -> usize {
         self.candidates
@@ -56,6 +63,7 @@ impl PredicationPlan {
 /// Maximum ops in either arm for predication to be profitable.
 pub const PREDICATION_OP_THRESHOLD: u32 = 4;
 
+/// Analyze short structured branches for predicated execution.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> PredicationPlan {
     let mut candidates = Vec::new();

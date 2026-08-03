@@ -171,7 +171,7 @@ pub trait MatchEngineCache: Sized {
 
     /// Largest on-disk cache blob this engine will read back. A blob exceeding
     /// it is treated as oversized (dropped, then recompiled). Defaults to
-    /// [`MAX_MATCH_ENGINE_CACHE_BYTES`]; engines whose compiled form is
+    /// `MAX_MATCH_ENGINE_CACHE_BYTES`; engines whose compiled form is
     /// genuinely large (e.g. a batched-megakernel DFA catalog, ~GB) override it.
     const MAX_CACHE_BYTES: u64 = MAX_MATCH_ENGINE_CACHE_BYTES;
 

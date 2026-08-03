@@ -211,7 +211,7 @@ pub fn reference_shape_spectrum(
 /// Fixed-point production path for Marchenko-Pastur edge clipping.
 ///
 /// `mp_edge_fixed` is the already-scaled 16.16 upper edge. Callers that need
-/// the f64 helper can keep using [`mp_upper_edge`] at the representation
+/// the f64 helper can keep using `mp_upper_edge` at the representation
 /// boundary, then quantize once before dispatch.
 ///
 /// # Errors

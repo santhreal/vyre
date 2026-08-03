@@ -13,9 +13,7 @@ fn extract_binop(prog: &Program) -> (BinOp, Expr, Expr) {
     };
     match body.first() {
         Some(Node::Store { value, .. }) => match value {
-            Expr::BinOp { op, left, right } => {
-                (op.clone(), left.as_ref().clone(), right.as_ref().clone())
-            }
+            Expr::BinOp { op, left, right } => (*op, left.as_ref().clone(), right.as_ref().clone()),
             other => panic!("expected BinOp, got: {:?}", other),
         },
         other => panic!("expected Store, got: {:?}", other),

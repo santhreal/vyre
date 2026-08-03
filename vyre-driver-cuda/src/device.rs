@@ -685,7 +685,6 @@ impl CudaDeviceCaps {
 }
 
 #[cfg(test)]
-
 mod tests {
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
 

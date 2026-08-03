@@ -278,7 +278,7 @@ impl WindowDescriptor {
     /// lose all window work with no operator signal (Law 10). In production
     /// code, call `try_into_batch` directly so errors can be propagated.
     #[must_use]
-    pub fn into_batch(&self) -> BatchDescriptor {
+    pub fn into_batch(self) -> BatchDescriptor {
         self.try_into_batch().unwrap_or_else(|e| {
             panic!(
                 "WindowDescriptor::into_batch failed: {e}. Fix: call try_into_batch() and propagate the error instead of using the infallible wrapper."

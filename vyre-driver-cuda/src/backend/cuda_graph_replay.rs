@@ -756,30 +756,26 @@ mod source_contract_tests {
     #[test]
     fn cached_graph_replay_input_index_map_rejects_stale_or_non_dense_maps() {
         let duplicate = validate_cached_graph_input_index_map(&[0, 0, 2], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             duplicate.to_string().contains("duplicate"),
-            true,
             "Fix: duplicate CUDA graph logical input indexes must fail before replay can alias an input slot: {duplicate}"
         );
         let sparse = validate_cached_graph_input_index_map(&[0, 2, 3], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             sparse.to_string().contains("dense"),
-            true,
             "Fix: sparse CUDA graph logical input indexes must fail before replay can skip an input slot: {sparse}"
         );
         let truncated = validate_cached_graph_input_index_map(&[0, 1], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             truncated.to_string().contains("expected 3"),
-            true,
             "Fix: truncated CUDA graph logical input maps must fail before zip-based replay staging: {truncated}"
         );
 
         let only = [0xAA];
         let inputs: &[&[u8]] = &[only.as_slice()];
         let stale = cached_graph_input(inputs, 1, 0, "test replay").unwrap_err();
-        assert_eq!(
+        assert!(
             stale.to_string().contains("logical input 1"),
-            true,
             "Fix: stale CUDA graph logical input indexes must become BackendError, not a panic or wrong-slot replay: {stale}"
         );
     }
@@ -790,21 +786,18 @@ mod source_contract_tests {
             "Fix: descriptor-ordered CUDA graph outputs may map to reordered logical slots.",
         );
         let duplicate = validate_cached_graph_output_index_map(&[0, 0, 2], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             duplicate.to_string().contains("duplicate"),
-            true,
             "Fix: duplicate CUDA graph logical output indexes must fail before collection can alias an output slot: {duplicate}"
         );
         let sparse = validate_cached_graph_output_index_map(&[0, 2, 3], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             sparse.to_string().contains("dense"),
-            true,
             "Fix: sparse CUDA graph logical output indexes must fail before collection can skip an output slot: {sparse}"
         );
         let truncated = validate_cached_graph_output_index_map(&[0, 1], 3).unwrap_err();
-        assert_eq!(
+        assert!(
             truncated.to_string().contains("expected 3"),
-            true,
             "Fix: truncated CUDA graph logical output maps must fail before positional collection can drop a slot: {truncated}"
         );
     }

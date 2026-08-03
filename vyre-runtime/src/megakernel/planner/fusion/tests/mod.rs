@@ -101,7 +101,7 @@ fn selector_conflict_free_large_n_uses_mask_fast_path() {
     let costs: Vec<f64> = (0..n)
         .map(|idx| {
             let as_u = idx as u32;
-            (as_u as f64) + 0.1_f64 * (as_u as f64 % 17_u32 as f64)
+            (as_u as f64) + 0.1_f64 * (as_u as f64 % 17_f64)
         })
         .collect();
     let exchange_adj = vec![0_u32; n * n];

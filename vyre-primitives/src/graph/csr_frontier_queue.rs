@@ -1453,7 +1453,6 @@ pub fn try_csr_queue_forward_traverse_cpu_into(
 }
 
 #[cfg(test)]
-
 mod generated_cpu_oracle_tests {
     use super::*;
 

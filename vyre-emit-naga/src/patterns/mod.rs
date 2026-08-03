@@ -42,8 +42,11 @@ pub fn audit_optimized(desc: &KernelDescriptor) -> NagaAuditReport {
 /// Combined naga-pattern report.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NagaAuditReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Vector-packing opportunities.
     pub vec_pack: vec_pack::plan::PackingPlan,
+    /// Pipeline prewarming recommendation.
     pub prewarm: pipeline_prewarm::PrewarmHint,
 }
 
@@ -54,6 +57,7 @@ impl NagaAuditReport {
         self.vec_pack.groups.len() + (self.prewarm.should_prewarm as usize)
     }
 
+    /// Return whether any Naga-specific optimization is actionable.
     pub fn has_any(&self) -> bool {
         self.total_candidates() > 0
     }

@@ -45,7 +45,7 @@ mod tests {
             &dfa.transitions,
             &dfa.token_ids,
             src.as_bytes(),
-            src.len() as u32,
+            u32::try_from(src.len()).expect("hello corpus length must fit u32"),
             dfa.num_states,
             64,
             dfa.num_classes,

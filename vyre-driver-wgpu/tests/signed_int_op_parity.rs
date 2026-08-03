@@ -16,6 +16,8 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+type ComparisonCase = (&'static str, fn(Expr, Expr) -> Expr, fn(i32, i32) -> bool);
+
 /// Operand pairs spanning sign combinations, including the extremes.
 fn pairs() -> Vec<(i32, i32)> {
     vec![
@@ -105,7 +107,7 @@ fn signed_comparisons_match_rust_on_gpu() {
     let n = ps.len() as u32;
 
     // Each comparison produces a Bool stored straight into a U32 buffer (0/1).
-    let cases: [(&str, fn(Expr, Expr) -> Expr, fn(i32, i32) -> bool); 6] = [
+    let cases: [ComparisonCase; 6] = [
         ("lt", Expr::lt, |a, b| a < b),
         ("gt", Expr::gt, |a, b| a > b),
         ("le", Expr::le, |a, b| a <= b),

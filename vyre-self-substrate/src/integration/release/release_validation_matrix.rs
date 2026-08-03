@@ -720,7 +720,6 @@ pub const RELEASE_VALIDATION_MATRIX: &[ReleaseValidationCommand] = &[
 ];
 
 /// Validate the release matrix shape before publishing.
-
 pub fn validate_release_validation_matrix() -> Result<(), String> {
     if GPU_PROBE_COMMAND != "nvidia-smi" {
         return Err(

@@ -1,3 +1,5 @@
+//! Public rewrite API contracts for imported dataflow fact sets.
+
 use vyre_lower::analyses::alias_facts::AliasFactSet;
 use vyre_lower::analyses::alias_import::AliasFactSet as ExternalAliasFactSet;
 use vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet;

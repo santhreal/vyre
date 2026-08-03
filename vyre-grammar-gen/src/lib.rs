@@ -2,7 +2,7 @@
 //!
 //! Host-side C11 grammar table generator for the vyre GPU C parser.
 //! Produces DFA lexer + LR(1) action/goto tables as binary blobs that
-//! `vyre-libs::parsing` loads as ReadOnly storage buffers.
+//! `vyre-libs::parsing` loads as `ReadOnly` storage buffers.
 //!
 //! See `README.md` for the pipeline and binary-blob wire format.
 //!

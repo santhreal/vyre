@@ -288,6 +288,14 @@ pub struct CudaBackendRegistration {
     inner: CudaBackend,
 }
 
+type ResolvedUploads<'a> = SmallVec<[(CudaResidentBuffer, &'a [u8]); 8]>;
+type ResolvedOffsetUploads<'a> = SmallVec<[(CudaResidentBuffer, usize, &'a [u8]); 8]>;
+type ResolvedDownloadRanges = SmallVec<[(CudaResidentBuffer, usize, usize); 8]>;
+type ResolvedReadRanges = (
+    SmallVec<[CudaResidentBuffer; 8]>,
+    SmallVec<[crate::backend::output_range::CudaOutputReadback; 8]>,
+);
+
 impl CudaBackendRegistration {
     /// Wrap an already-acquired [`CudaBackend`] as a [`VyreBackend`] trait object.
     ///
@@ -326,7 +334,7 @@ impl CudaBackendRegistration {
     fn resolve_uploads<'a>(
         &self,
         uploads: &[(&Resource, &'a [u8])],
-    ) -> Result<SmallVec<[(CudaResidentBuffer, &'a [u8]); 8]>, BackendError> {
+    ) -> Result<ResolvedUploads<'a>, BackendError> {
         let mut concrete = SmallVec::<[(CudaResidentBuffer, &'a [u8]); 8]>::new();
         reserve_smallvec(&mut concrete, uploads.len(), "CUDA resident upload handles")?;
         for (resource, bytes) in uploads {
@@ -339,7 +347,7 @@ impl CudaBackendRegistration {
     fn resolve_offset_uploads<'a>(
         &self,
         uploads: &[(&Resource, usize, &'a [u8])],
-    ) -> Result<SmallVec<[(CudaResidentBuffer, usize, &'a [u8]); 8]>, BackendError> {
+    ) -> Result<ResolvedOffsetUploads<'a>, BackendError> {
         let mut concrete = SmallVec::<[(CudaResidentBuffer, usize, &'a [u8]); 8]>::new();
         reserve_smallvec(
             &mut concrete,
@@ -356,7 +364,7 @@ impl CudaBackendRegistration {
     fn resolve_download_ranges(
         &self,
         ranges: &[(&Resource, usize, usize)],
-    ) -> Result<SmallVec<[(CudaResidentBuffer, usize, usize); 8]>, BackendError> {
+    ) -> Result<ResolvedDownloadRanges, BackendError> {
         let mut concrete = SmallVec::<[(CudaResidentBuffer, usize, usize); 8]>::new();
         reserve_smallvec(
             &mut concrete,
@@ -373,13 +381,7 @@ impl CudaBackendRegistration {
     fn resolve_read_ranges(
         &self,
         read_ranges: &[vyre_driver::backend::ResidentReadRange<'_>],
-    ) -> Result<
-        (
-            SmallVec<[CudaResidentBuffer; 8]>,
-            SmallVec<[crate::backend::output_range::CudaOutputReadback; 8]>,
-        ),
-        BackendError,
-    > {
+    ) -> Result<ResolvedReadRanges, BackendError> {
         let mut handles = SmallVec::<[CudaResidentBuffer; 8]>::new();
         let mut concrete_readbacks =
             SmallVec::<[crate::backend::output_range::CudaOutputReadback; 8]>::new();
@@ -1104,7 +1106,6 @@ impl VyreBackend for CudaBackendRegistration {
 }
 
 /// Factory function for inventory registration.
-
 pub fn cuda_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
     let backend = CudaBackend::acquire().map_err(|e| BackendError::DispatchFailed {
         code: None,

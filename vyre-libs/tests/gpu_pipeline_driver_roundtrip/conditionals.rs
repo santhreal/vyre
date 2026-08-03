@@ -6,7 +6,7 @@ fn ifdef_when_macro_defined_keeps_active_block() {
     let out = run(
         b"#ifdef FOO\nint a;\n#endif\nint b;",
         &[MacroDef {
-            name: b"FOO".to_vec().into(),
+            name: b"FOO".to_vec(),
             args: Vec::new(),
             body: Vec::new(),
             is_function_like: false,

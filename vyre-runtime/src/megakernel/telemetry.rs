@@ -181,10 +181,8 @@ impl RingTelemetry {
         ring_bytes: &[u8],
         window_opcodes: &[u32],
     ) -> Self {
-        match Self::try_decode_with_window_opcodes(control_bytes, ring_bytes, window_opcodes) {
-            Ok(telemetry) => telemetry,
-            Err(_) => Self::default(),
-        }
+        Self::try_decode_with_window_opcodes(control_bytes, ring_bytes, window_opcodes)
+            .unwrap_or_default()
     }
 
     /// Decode the ring and control buffers into caller-owned telemetry and
@@ -419,10 +417,7 @@ impl RingTelemetry {
     #[must_use]
     #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_slots_for_opcode(&self, opcode: u32) -> Vec<&RingSlotSnapshot> {
-        match self.try_active_slots_for_opcode(opcode) {
-            Ok(slots) => slots,
-            Err(_) => Vec::default(),
-        }
+        self.try_active_slots_for_opcode(opcode).unwrap_or_default()
     }
 
     /// Active slots matching a given opcode with fallible output staging.
@@ -487,10 +482,7 @@ impl RingTelemetry {
     #[must_use]
     #[cfg(any(test, feature = "legacy-infallible"))]
     pub fn active_windows(&self) -> Vec<&WindowTelemetry> {
-        match self.try_active_windows() {
-            Ok(windows) => windows,
-            Err(_) => Vec::default(),
-        }
+        self.try_active_windows().unwrap_or_default()
     }
 
     /// Unfinished ticketed windows with fallible output staging.

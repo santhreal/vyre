@@ -452,7 +452,6 @@ fn interpret_un_op(op: &UnOp, operand: Value) -> Result<Value, EvalError> {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

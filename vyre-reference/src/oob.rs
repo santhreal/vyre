@@ -202,9 +202,9 @@ impl Buffer {
             })
     }
 
-    /// Consume this buffer and return its contents as a Value.
+    /// Consume this buffer and return its contents as a value.
     #[must_use]
-    pub fn to_value(self) -> crate::value::Value {
+    pub fn into_value(self) -> crate::value::Value {
         crate::value::Value::from(self.into_bytes())
     }
 }
@@ -393,11 +393,11 @@ mod tests {
             0,
             &Value::Float(f64::from(f32::from_bits(0x8000_0001))),
         );
-        assert_eq!(f32_bits(subnormal.to_value()), 0x8000_0000);
+        assert_eq!(f32_bits(subnormal.into_value()), 0x8000_0000);
 
         let mut payload_nan = Buffer::new(vec![0; 4], DataType::F32);
         store(&mut payload_nan, 0, &Value::U32(0x7fa0_0001));
-        assert_eq!(f32_bits(payload_nan.to_value()), 0x7fc0_0000);
+        assert_eq!(f32_bits(payload_nan.into_value()), 0x7fc0_0000);
     }
 
     #[test]

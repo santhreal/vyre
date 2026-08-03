@@ -177,10 +177,7 @@ fn node_contains_grid_sync(node: &Node) -> bool {
 /// outputs).
 #[must_use]
 pub fn split_on_grid_sync(program: &Program) -> Vec<Program> {
-    match try_split_on_grid_sync(program) {
-        Ok(segments) => segments,
-        Err(_error) => Vec::new(),
-    }
+    try_split_on_grid_sync(program).unwrap_or_default()
 }
 
 /// Fallible variant of [`split_on_grid_sync`] for production dispatch paths.
@@ -508,7 +505,6 @@ fn propagate_let_bindings(segments: &mut [Vec<Node>], hoisted_inner: &[Node]) {
 /// # Errors
 /// Returns an actionable [`BackendError`] if segment storage cannot be
 /// reserved or if split accounting overflows.
-
 pub fn try_split_on_grid_sync(program: &Program) -> Result<Vec<Program>, BackendError> {
     let (wrappers, inner) = peel_entry_wrappers(program);
     let hoisted_inner = hoist_grid_sync_barriers(inner);
@@ -1243,7 +1239,7 @@ where
 /// `backend`, looping the segment sequence to a fixpoint.
 ///
 /// This is the `&dyn VyreBackend` entry; the split, refresh, and adaptive
-/// convergence logic lives in [`dispatch_grid_sync_split_generic`], shared with
+/// convergence logic lives in the internal `dispatch_grid_sync_split_generic`, shared with
 /// the closure entry [`dispatch_with_grid_sync_split_via_into`].
 ///
 /// # Errors
@@ -1273,7 +1269,7 @@ pub fn dispatch_with_grid_sync_split_into(
 /// inputs, the whole-grid workgroup count (`config.grid_override`), and a
 /// per-segment output slot to fill in the segment program's output order. The
 /// split, refresh, and convergence logic is the SAME code as the backend entry
-/// (both call [`dispatch_grid_sync_split_generic`]), so the two paths converge
+/// (both call the internal `dispatch_grid_sync_split_generic`), so the two paths converge
 /// to identical output.
 ///
 /// # Errors
@@ -1511,11 +1507,7 @@ fn run_resident_grid_sync_fixpoint(
         config,
         "resident grid-sync split",
     )?;
-    let repeat_count = u32::try_from(iterations).map_err(|error| BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: resident grid-sync fixpoint iteration count {iterations} does not fit u32: {error}."
-        ),
-    })?;
+    let repeat_count = iterations;
 
     // Every split segment shares the full program buffer layout, so the same
     // resident resource slice binds positionally to each one.
@@ -2498,7 +2490,7 @@ mod tests {
 
         let after = crate::observability::snapshot_dispatch_telemetry();
         assert_eq!(backend.calls.load(Ordering::SeqCst), 3);
-        assert!(after.grid_sync_splits >= before.grid_sync_splits + 1);
+        assert!(after.grid_sync_splits > before.grid_sync_splits);
         assert!(after.grid_sync_segments >= before.grid_sync_segments + 3);
         assert!(after.grid_sync_points >= before.grid_sync_points + 2);
     }

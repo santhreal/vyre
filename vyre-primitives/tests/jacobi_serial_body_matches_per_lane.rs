@@ -62,7 +62,7 @@ fn run(program: &Program, n: u32, a: &[u32], b: &[u32], x_in: &[u32], omega: u32
 #[test]
 fn serial_body_matches_per_lane_builder_over_generated_systems() {
     let mut state = 0x2468_ACE0u32;
-    let mut next = |s: &mut u32| {
+    let next = |s: &mut u32| {
         *s ^= *s << 13;
         *s ^= *s >> 17;
         *s ^= *s << 5;
@@ -82,7 +82,7 @@ fn serial_body_matches_per_lane_builder_over_generated_systems() {
                 if row == col {
                     (3 + next(&mut state) % 4) * one // 3.0..=6.0
                 } else {
-                    (next(&mut state) % (one / 4)) // 0.0..0.25
+                    next(&mut state) % (one / 4) // 0.0..0.25
                 }
             })
             .collect();

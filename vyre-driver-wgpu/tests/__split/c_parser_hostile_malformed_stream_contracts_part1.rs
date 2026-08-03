@@ -19,7 +19,7 @@ fn vast_unmatched_lbrace_rbrace_lparen_mixed_produces_rows() {
 fn vast_unmatched_deep_paren_nesting_produces_rows() {
     // ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
     let depth = 64usize;
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_LPAREN).take(depth).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_LPAREN, depth).collect();
     let tok_starts: Vec<u32> = (0..depth).map(|i| i as u32).collect();
     let tok_lens = vec![1u32; depth];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);

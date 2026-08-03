@@ -428,10 +428,11 @@ fn t6_complete_graph_three_nodes() {
 // Tier 9 - Differential: LT vs CHK (external algorithm path)
 // ------------------------------------------------------------------
 
-#[test]
+type DominatorFixture = (u32, u32, Vec<(u32, u32)>);
 
+#[test]
 fn t9_differential_lt_vs_chk_all_fixtures() {
-    let fixtures: Vec<(u32, u32, Vec<(u32, u32)>)> = vec![
+    let fixtures: Vec<DominatorFixture> = vec![
         (0, 0, vec![]),
         (1, 0, vec![]),
         (2, 0, vec![(0, 1)]),

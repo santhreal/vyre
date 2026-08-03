@@ -494,7 +494,6 @@ pub fn mla_decode(
 ///   `h: [hidden_dim]`  -  current token hidden state
 ///   `w_dk: [hidden_dim, kv_lora_rank]`  -  down-projection weights
 ///   `c_out: [kv_lora_rank]`  -  compressed latent output
-
 pub fn mla_compress_kv(
     h: &str,
     w_dk: &str,

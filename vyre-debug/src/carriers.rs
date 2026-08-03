@@ -3,23 +3,35 @@ use std::collections::BTreeMap;
 use vyre_foundation::ir::Program;
 use vyre_lower::{KernelDescriptor, KernelOpKind};
 
+/// A source assignment missing one or more lowered loop-carrier operations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UncarrieredAssign {
+    /// Assigned source variable.
     pub name: String,
+    /// Nested source loop names enclosing the assignment.
     pub loop_path: Vec<String>,
+    /// Whether the descriptor reads the loop carrier.
     pub has_carrier_op: bool,
+    /// Whether the descriptor emits the final carrier value.
     pub has_final_op: bool,
 }
 
+/// Aggregate loop-carrier operation counts for a descriptor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CarrierSummary {
+    /// Total lowered operations inspected.
     pub total_ops_observed: usize,
+    /// Carrier-read count by source variable.
     pub carrier_reads: BTreeMap<String, usize>,
+    /// Carrier-initialization count by source variable.
     pub carrier_writes: BTreeMap<String, usize>,
+    /// Carrier-finalization count by source variable.
     pub carrier_finals: BTreeMap<String, usize>,
+    /// Function-local variables recorded by the descriptor.
     pub function_locals: Vec<String>,
 }
 
+/// Find source assignments whose lowered descriptor lacks complete carrier operations.
 pub fn find_uncarriered_assigns(
     program: &Program,
     desc: &KernelDescriptor,
@@ -55,6 +67,7 @@ pub fn find_uncarriered_assigns(
     assigns
 }
 
+/// Summarize loop-carrier operations in a lowered descriptor.
 pub fn carrier_summary(desc: &KernelDescriptor) -> CarrierSummary {
     let mut carrier_reads = BTreeMap::new();
     let mut carrier_writes = BTreeMap::new();

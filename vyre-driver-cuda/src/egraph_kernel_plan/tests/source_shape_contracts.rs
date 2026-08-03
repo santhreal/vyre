@@ -80,8 +80,7 @@ fn resident_signature_bucket_planning_does_not_clone_full_signature_snapshot() {
 #[test]
 fn union_compaction_uses_reserved_eclass_index_for_generated_large_components() {
     let edge_count = 1024_u32;
-    let mut equivalences = Vec::new();
-    equivalences.reserve((edge_count as usize) * 3);
+    let mut equivalences = Vec::with_capacity((edge_count as usize) * 3);
     let mut expected_self_pairs = 0_u64;
     for edge in 0..edge_count {
         equivalences.push(Equivalence {

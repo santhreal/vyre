@@ -2,18 +2,24 @@ use std::collections::{BTreeMap, HashSet};
 use vyre_foundation::ir::Program;
 use vyre_lower::KernelDescriptor;
 
+/// Structural differences between two lowered kernel descriptors.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DescriptorDiff {
+    /// Binding slots present only in the earlier descriptor.
     pub bindings_dropped: Vec<u32>,
+    /// Binding slots present only in the later descriptor.
     pub bindings_added: Vec<u32>,
     #[serde(
         serialize_with = "crate::path_map_serde::serialize_i64",
         deserialize_with = "crate::path_map_serde::deserialize_i64"
     )]
+    /// Operation-count change for each child-body path.
     pub op_count_delta: BTreeMap<Vec<usize>, i64>,
+    /// Whether root operation kinds or count changed.
     pub root_shape_changed: bool,
 }
 
+/// Compare binding and operation structure between two descriptors.
 pub fn diff_descriptors(before: &KernelDescriptor, after: &KernelDescriptor) -> DescriptorDiff {
     let before_bindings: HashSet<u32> = before.bindings.slots.iter().map(|s| s.slot).collect();
     let after_bindings: HashSet<u32> = after.bindings.slots.iter().map(|s| s.slot).collect();
@@ -81,13 +87,18 @@ pub fn diff_descriptors(before: &KernelDescriptor, after: &KernelDescriptor) -> 
     }
 }
 
+/// Verification history produced while applying rewrites one at a time.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RewriteBisectResult {
+    /// First rewrite after which descriptor verification failed.
     pub first_failing_rewrite: Option<String>,
+    /// Verification errors reported at the first failure.
     pub verify_errors: Vec<String>,
+    /// Descriptor difference recorded after each applied rewrite.
     pub rewrite_history: Vec<(String, DescriptorDiff)>,
 }
 
+/// Lower a program and identify the first rewrite that breaks verification.
 pub fn bisect_rewrites(program: &Program) -> Result<RewriteBisectResult, String> {
     let lower_result = vyre_lower::lower(program).map_err(|e| format!("{:?}", e))?;
 

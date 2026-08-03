@@ -31,17 +31,21 @@ use std::sync::Arc;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
 use vyre_foundation::runtime::memory_model::MemoryOrdering;
 
+/// Reserved binding name for trap diagnostics.
 pub const TRAP_SIDECAR_NAME: &str = "__vyre_descriptor_trap_sidecar";
+/// Number of words in the trap-diagnostic sidecar.
 pub const TRAP_SIDECAR_WORDS: u32 = 4;
 
 /// Workgroup dispatch shape. `[x, y, z]` matches every modern
 /// compute backend. `(1, 1, 1)` is a single invocation per workgroup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Dispatch {
+    /// Local invocation dimensions along the x, y, and z axes.
     pub workgroup_size: [u32; 3],
 }
 
 impl Dispatch {
+    /// Create a workgroup dispatch shape.
     pub const fn new(x: u32, y: u32, z: u32) -> Self {
         Self {
             workgroup_size: [x, y, z],
@@ -89,8 +93,11 @@ impl MemoryClass {
 /// Read/write visibility for a binding slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BindingVisibility {
+    /// Kernel may only read the binding.
     ReadOnly,
+    /// Kernel may only write the binding.
     WriteOnly,
+    /// Kernel may read and write the binding.
     ReadWrite,
 }
 
@@ -121,7 +128,9 @@ pub struct BindingSlot {
     pub element_type: DataType,
     /// Element count. `None` means runtime-sized.
     pub element_count: Option<u32>,
+    /// Storage location for the binding.
     pub memory_class: MemoryClass,
+    /// Kernel access permissions for the binding.
     pub visibility: BindingVisibility,
     /// Caller-friendly identifier (for debug; does NOT participate in
     /// kernel hashing).
@@ -131,9 +140,11 @@ pub struct BindingSlot {
 /// Full binding layout for a kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BindingLayout {
+    /// Bindings in stable slot order.
     pub slots: Vec<BindingSlot>,
 }
 
+/// Current descriptor-intent sidecar schema version.
 pub const DESCRIPTOR_INTENT_SCHEMA_VERSION: u32 = 1;
 
 /// Backend-neutral scan intent attached beside a [`KernelDescriptor`].
@@ -143,15 +154,22 @@ pub const DESCRIPTOR_INTENT_SCHEMA_VERSION: u32 = 1;
 /// these strategy classes without owning scan compiler policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DescriptorIntentKind {
+    /// Literal candidate prefiltering.
     LiteralPrefilter,
+    /// Automata state transition.
     AutomataTransition,
+    /// Candidate verification.
     Verifier,
+    /// Output stream compaction.
     OutputCompaction,
+    /// Relation seed construction.
     RelationSeed,
+    /// Persistent streaming state.
     StreamingState,
 }
 
 impl DescriptorIntentKind {
+    /// Return the backend-neutral routing class for this intent.
     #[must_use]
     pub const fn strategy(self) -> DescriptorIntentStrategy {
         match self {
@@ -179,33 +197,52 @@ impl DescriptorIntentKind {
 /// Routing class derived from [`DescriptorIntentKind`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DescriptorIntentStrategy {
+    /// Literal-prefilter strategy.
     Prefilter,
+    /// Automata-transition strategy.
     Automata,
+    /// Verification strategy.
     Verifier,
+    /// Output-compaction strategy.
     Compaction,
+    /// Relation-seed strategy.
     RelationSeed,
+    /// Streaming-state strategy.
     Streaming,
 }
 
+/// Semantic class of one scan-language construct.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub enum ScanConstructIntentClass {
+    /// Exact literal matching.
     Literal,
+    /// Finite-state automata evaluation.
     Automata,
+    /// Candidate verification.
     Verifier,
+    /// Derivative-based matching.
     Derivative,
+    /// External accelerator integration.
     ExternalAccelerator,
 }
 
+/// Required descriptor intents for one scan construct.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanConstructIntentMapping {
+    /// Stable construct identifier.
     pub construct_id: &'static str,
+    /// Support tier exposed to operators.
     pub tier: &'static str,
+    /// Semantic classes covered by the construct.
     pub classes: &'static [ScanConstructIntentClass],
+    /// Descriptor intents required to execute the construct.
     pub required_intents: &'static [DescriptorIntentKind],
+    /// Optional verifier fragment identifier.
     pub verifier_fragment_id: Option<&'static str>,
 }
 
 impl ScanConstructIntentMapping {
+    /// Return whether this construct requires a verifier fragment.
     #[must_use]
     pub fn requires_verifier_fragment(self) -> bool {
         self.required_intents
@@ -213,12 +250,14 @@ impl ScanConstructIntentMapping {
             .any(|intent| *intent == DescriptorIntentKind::Verifier)
     }
 
+    /// Return whether this construct includes `class`.
     #[must_use]
     pub fn includes_class(self, class: ScanConstructIntentClass) -> bool {
         self.classes.iter().any(|candidate| *candidate == class)
     }
 }
 
+/// Canonical scan-construct intent mappings.
 pub const SCAN_CONSTRUCT_INTENT_MAPPINGS: &[ScanConstructIntentMapping] = &[
     ScanConstructIntentMapping {
         construct_id: "regular_exact_core",
@@ -293,6 +332,7 @@ pub const SCAN_CONSTRUCT_INTENT_MAPPINGS: &[ScanConstructIntentMapping] = &[
     },
 ];
 
+/// Find the canonical intent mapping for a scan construct.
 #[must_use]
 pub fn scan_construct_intent_mapping(
     construct_id: &str,
@@ -305,15 +345,22 @@ pub fn scan_construct_intent_mapping(
 /// One intent annotation for a descriptor region, binding, or result id.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DescriptorIntent {
+    /// Intent behavior.
     pub kind: DescriptorIntentKind,
+    /// Optional referenced binding slot.
     pub binding_slot: Option<u32>,
+    /// Optional referenced operation result.
     pub op_result: Option<u32>,
+    /// Required persistent stream-state bytes.
     pub stream_state_bytes: u32,
+    /// Arity of the seeded relation.
     pub relation_arity: u16,
+    /// Stable digest of the source section.
     pub section_digest: u64,
 }
 
 impl DescriptorIntent {
+    /// Create an intent with no optional descriptor references.
     #[must_use]
     pub const fn new(kind: DescriptorIntentKind, section_digest: u64) -> Self {
         Self {
@@ -326,24 +373,28 @@ impl DescriptorIntent {
         }
     }
 
+    /// Attach a binding-slot reference.
     #[must_use]
     pub const fn with_binding_slot(mut self, slot: u32) -> Self {
         self.binding_slot = Some(slot);
         self
     }
 
+    /// Attach an operation-result reference.
     #[must_use]
     pub const fn with_op_result(mut self, result: u32) -> Self {
         self.op_result = Some(result);
         self
     }
 
+    /// Declare persistent stream-state storage.
     #[must_use]
     pub const fn with_stream_state_bytes(mut self, bytes: u32) -> Self {
         self.stream_state_bytes = bytes;
         self
     }
 
+    /// Declare relation arity.
     #[must_use]
     pub const fn with_relation_arity(mut self, arity: u16) -> Self {
         self.relation_arity = arity;
@@ -354,11 +405,14 @@ impl DescriptorIntent {
 /// Intent sidecar for a descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DescriptorIntentSet {
+    /// Sidecar schema version.
     pub schema_version: u32,
+    /// Descriptor intents in stable order.
     pub intents: Vec<DescriptorIntent>,
 }
 
 impl DescriptorIntentSet {
+    /// Create an intent sidecar using the current schema version.
     #[must_use]
     pub fn new(intents: Vec<DescriptorIntent>) -> Self {
         Self {
@@ -457,7 +511,9 @@ impl DescriptorIntentSet {
 /// Descriptor plus validated intent sidecar.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IntentAnnotatedDescriptor {
+    /// Lowered kernel descriptor.
     pub descriptor: KernelDescriptor,
+    /// Validated intent sidecar.
     pub intents: DescriptorIntentSet,
 }
 
@@ -498,26 +554,39 @@ impl IntentAnnotatedDescriptor {
         Self::try_new(descriptor, self.intents)
     }
 
+    /// Validate and return backend-neutral intent-routing evidence.
     pub fn evidence(&self) -> Result<DescriptorIntentEvidence, DescriptorIntentError> {
         self.intents.validate_for_descriptor(&self.descriptor)
     }
 }
 
+/// Validated routing evidence derived from a descriptor intent sidecar.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DescriptorIntentEvidence {
+    /// Validated sidecar schema version.
     pub schema_version: u32,
+    /// Stable descriptor identifier.
     pub descriptor_id: String,
+    /// Number of validated intents.
     pub intent_count: usize,
+    /// Whether literal-prefilter intent is present.
     pub has_literal_prefilter: bool,
+    /// Whether automata-transition intent is present.
     pub has_automata_transition: bool,
+    /// Whether verifier intent is present.
     pub has_verifier: bool,
+    /// Whether output-compaction intent is present.
     pub has_output_compaction: bool,
+    /// Whether relation-seed intent is present.
     pub has_relation_seed: bool,
+    /// Whether streaming-state intent is present.
     pub has_streaming_state: bool,
+    /// Stable digest of routing-relevant intent data.
     pub strategy_digest: u64,
 }
 
 impl DescriptorIntentEvidence {
+    /// Return whether every scan-pipeline intent is represented.
     #[must_use]
     pub const fn covers_full_scan_pipeline(&self) -> bool {
         self.schema_version == DESCRIPTOR_INTENT_SCHEMA_VERSION
@@ -532,25 +601,40 @@ impl DescriptorIntentEvidence {
     }
 }
 
+/// Invalid descriptor intent sidecar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DescriptorIntentError {
+    /// Sidecar schema version does not match this library.
     UnsupportedSchemaVersion {
+        /// Supported schema version.
         expected: u32,
+        /// Received schema version.
         actual: u32,
     },
+    /// Sidecar contains no intents.
     EmptyIntentSet,
+    /// An intent omits its source-section digest.
     MissingSectionDigest {
+        /// Intent missing the digest.
         kind: DescriptorIntentKind,
     },
+    /// An intent references an undeclared binding slot.
     UnknownBindingSlot {
+        /// Referencing intent.
         kind: DescriptorIntentKind,
+        /// Missing binding slot.
         slot: u32,
     },
+    /// An intent references an unknown operation result.
     UnknownOpResult {
+        /// Referencing intent.
         kind: DescriptorIntentKind,
+        /// Missing result identifier.
         result: u32,
     },
+    /// Relation-seed intent declares zero arity.
     MissingRelationArity,
+    /// Streaming-state intent declares zero bytes.
     MissingStreamingStateBytes,
 }
 
@@ -623,9 +707,13 @@ fn stable_descriptor_intent_digest(descriptor_id: &str, intents: &[DescriptorInt
 /// A literal value that can sit in the literal pool.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LiteralValue {
+    /// Unsigned 32-bit literal.
     U32(u32),
+    /// Signed 32-bit literal.
     I32(i32),
+    /// 32-bit floating-point literal.
     F32(f32),
+    /// Boolean literal.
     Bool(bool),
 }
 
@@ -678,16 +766,22 @@ pub enum MatrixMmaShape {
 /// Element type used by a matrix MMA fragment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MatrixMmaElement {
+    /// 16-bit floating-point elements.
     F16,
+    /// Brain floating-point 16-bit elements.
     BF16,
+    /// Tensor floating-point 32-bit elements.
     TF32,
+    /// 32-bit floating-point elements.
     F32,
 }
 
 /// Matrix fragment layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MatrixMmaLayout {
+    /// Row-major fragment layout.
     RowMajor,
+    /// Column-major fragment layout.
     ColMajor,
 }
 
@@ -697,6 +791,7 @@ pub enum MatrixMmaLayout {
 /// when needed.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KernelOp {
+    /// Operation semantics.
     pub kind: KernelOpKind,
     /// Operand ids into the same `KernelBody.ops` (or the literal pool
     /// for `Literal*` kinds  -  see the per-kind documentation).
@@ -781,7 +876,10 @@ pub enum KernelOpKind {
     /// declared this variable. Produced as the first op in that loop's
     /// child body so uses of `Expr::Var(loop_var)` remain SSA-shaped
     /// instead of resolving to the loop's lower bound.
-    LoopIndex { loop_var: Name },
+    LoopIndex {
+        /// Source-level induction-variable name.
+        loop_var: Name,
+    },
 
     /// Initialize the loop-carrier slot for `name` from the pre-loop
     /// SSA value. Emitted ONCE in the PARENT body before the
@@ -789,7 +887,10 @@ pub enum KernelOpKind {
     /// Emitters allocate a function-scope `LocalVariable` keyed by
     /// `name` (if not already allocated) and `Store(local, seed_value)`
     /// in the parent block.
-    LoopCarrierInit { name: Name },
+    LoopCarrierInit {
+        /// Source-level carrier name.
+        name: Name,
+    },
 
     /// Pure read of the carrier slot for `name`. Operands: `[]`.
     /// Result: the SSA id that in-loop reads of the source-level
@@ -802,14 +903,20 @@ pub enum KernelOpKind {
     /// `Node::Assign` inside a loop body would have no observable
     /// effect on subsequent iterations  -  name resolution would always
     /// pick the pre-loop SSA, which is baked at lowering time.
-    LoopCarrier { name: Name },
+    LoopCarrier {
+        /// Source-level carrier name.
+        name: Name,
+    },
 
     /// Loop-carried-variable write at iteration end. Operands:
     /// `[final_value_id]`. No result. Pairs with `LoopCarrier { name }`
     /// to commit the iteration's final value of `name` back to the
     /// carrier local so the next iteration (or the post-loop reader)
     /// observes it.
-    LoopCarrierEnd { name: Name },
+    LoopCarrierEnd {
+        /// Source-level carrier name.
+        name: Name,
+    },
 
     // ---------- Buffer access ----------
     /// `load(buf, index)`. Operands: [binding_slot, index_op_id].
@@ -847,23 +954,34 @@ pub enum KernelOpKind {
     /// This keeps the descriptor SSA-shaped without adding backend-specific
     /// register-fragment objects to the neutral IR.
     MatrixMma {
+        /// Matrix tile shape.
         shape: MatrixMmaShape,
+        /// Left fragment layout.
         a_layout: MatrixMmaLayout,
+        /// Right fragment layout.
         b_layout: MatrixMmaLayout,
+        /// Left fragment element type.
         a_type: MatrixMmaElement,
+        /// Right fragment element type.
         b_type: MatrixMmaElement,
+        /// Accumulator element type.
         accum_type: MatrixMmaElement,
     },
     /// Conditional select: `if cond { true_val } else { false_val }`.
     /// Operands: [cond_id, true_val_id, false_val_id].
     Select,
     /// Type cast. Operands: `value_id`. The target dtype is on the op.
-    Cast { target: DataType },
+    Cast {
+        /// Target value type.
+        target: DataType,
+    },
     /// Atomic op. Operands: [binding_slot, index_op_id, value_op_id]
     /// for most ops. CompareExchange variants prepend `expected_op_id`:
     /// [binding_slot, index_op_id, expected_op_id, value_op_id].
     Atomic {
+        /// Atomic operation.
         op: AtomicOp,
+        /// Memory ordering.
         ordering: MemoryOrdering,
     },
 
@@ -879,7 +997,10 @@ pub enum KernelOpKind {
     SubgroupBroadcast,
     /// Operand 0 = value_op_id. Reduces across the subgroup with `op`;
     /// result has the value's dtype.
-    SubgroupReduce { op: SubgroupReduceOp },
+    SubgroupReduce {
+        /// Subgroup reduction operation.
+        op: SubgroupReduceOp,
+    },
 
     // ---------- Structured control flow ----------
     /// `if (cond) { body }`. Operands: [cond_op_id, child_body_index].
@@ -892,49 +1013,79 @@ pub enum KernelOpKind {
     /// `for (var = lo; var < hi; ++var) { body }`. Operands:
     /// [lo_op_id, hi_op_id, body_index]. The loop variable name is
     /// embedded on the op (preserved for debug, not for codegen).
-    StructuredForLoop { loop_var: Name },
+    StructuredForLoop {
+        /// Source-level induction-variable name.
+        loop_var: Name,
+    },
     /// Inline statement block  -  explicit grouping; semantically a
     /// no-op (body is flattened during emit). Operand 0 = body_index.
     StructuredBlock,
     /// Function/kernel return. Operands: empty. Result: None.
     Return,
     /// Memory barrier with explicit ordering.
-    Barrier { ordering: MemoryOrdering },
+    Barrier {
+        /// Barrier memory ordering.
+        ordering: MemoryOrdering,
+    },
     /// Tracing/grouping marker (vyre IR `Node::Region`). Operand 0 =
     /// body_index. Carries no execution semantics; emitters MAY pass
     /// through as a comment or annotation. SEPARATION_AUDIT S5 plans
     /// to move this to a sidecar; until then it's an op so the
     /// descriptor preserves it round-trip.
-    Region { generator: Name },
+    Region {
+        /// Stable region generator identifier.
+        generator: Name,
+    },
 
     // ---------- Async ----------
     /// `cp.async`-style global-to-shared copy. Operands:
     /// [src_binding, dst_binding, offset_op_id, size_op_id].
     /// `tag` ties the load to a matching `AsyncWait`.
-    AsyncLoad { tag: Name },
+    AsyncLoad {
+        /// Identifier shared with the matching wait.
+        tag: Name,
+    },
     /// Mirror of AsyncLoad for shared-to-global. Operands:
     /// [src_binding, dst_binding, offset_op_id, size_op_id].
-    AsyncStore { tag: Name },
+    AsyncStore {
+        /// Identifier shared with the matching wait.
+        tag: Name,
+    },
     /// Wait on a previously-issued AsyncLoad/Store. Operands: empty.
-    AsyncWait { tag: Name },
+    AsyncWait {
+        /// Identifier of the asynchronous operation to await.
+        tag: Name,
+    },
 
     // ---------- Effect handlers ----------
     /// Trap into a host-side effect handler. Operands: `address_op_id`.
-    Trap { tag: Name },
+    Trap {
+        /// Effect-handler identifier.
+        tag: Name,
+    },
     /// Resume from a previously-trapped effect.
-    Resume { tag: Name },
+    Resume {
+        /// Effect-handler identifier.
+        tag: Name,
+    },
 
     // ---------- Indirect dispatch ----------
     /// Indirect-dispatch hint. The dispatch shape comes from
     /// `count_buffer[count_offset]`. Operand 0 = count_buffer
     /// binding_slot. Result: None.
-    IndirectDispatch { count_offset: u64 },
+    IndirectDispatch {
+        /// Byte offset of the dispatch count.
+        count_offset: u64,
+    },
 
     // ---------- Calls ----------
     /// Call into a known op-id (e.g., a vyre-primitives builder
     /// surface). Operand list is the call's args. The op_id picks the
     /// callee at emit time.
-    Call { op_id: Name },
+    Call {
+        /// Stable callee operation identifier.
+        op_id: Name,
+    },
 
     // ---------- Extension escape hatches ----------
     /// Opaque expression extension. The extension id resolves through
@@ -952,17 +1103,21 @@ pub enum KernelOpKind {
 
 /// Heap-allocated payload for [`KernelOpKind::OpaqueExpr`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-
 pub struct OpaqueExprData {
+    /// Numeric extension identifier.
     pub extension_id: u32,
+    /// Stable extension-kind name.
     pub extension_kind: String,
+    /// Opaque extension payload.
     pub payload: Vec<u8>,
 }
 
 /// Heap-allocated payload for [`KernelOpKind::OpaqueNode`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OpaqueNodeData {
+    /// Stable extension-kind name.
     pub extension_kind: String,
+    /// Opaque extension payload.
     pub payload: Vec<u8>,
 }
 
@@ -1026,6 +1181,7 @@ impl std::hash::Hash for KernelOpKind {
 /// structured control flow. The entry point is `KernelDescriptor.body`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KernelBody {
+    /// Operations in execution order.
     pub ops: Vec<KernelOp>,
     /// Child bodies referenced by `StructuredIfThen` etc. operand
     /// indices. Indexed from 0 within this body's child_bodies vec.
@@ -1053,8 +1209,11 @@ pub struct KernelDescriptor {
     /// content hash by `lower::lower`. Empty string until lowering
     /// assigns it.
     pub id: String,
+    /// Host and workgroup binding layout.
     pub bindings: BindingLayout,
+    /// Workgroup dispatch geometry.
     pub dispatch: Dispatch,
+    /// Root structured kernel body.
     pub body: KernelBody,
 }
 
@@ -2033,7 +2192,6 @@ mod desc_helper_tests {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

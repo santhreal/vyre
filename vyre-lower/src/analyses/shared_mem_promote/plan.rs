@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+/// One global binding eligible for shared-memory promotion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PromotionCandidate {
     /// Binding slot index of the global buffer being considered.
@@ -27,7 +28,9 @@ pub struct PromotionCandidate {
 /// Full promotion plan for one `KernelDescriptor`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PromotionPlan {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Eligible bindings ordered by their analysis result.
     pub candidates: Vec<PromotionCandidate>,
     /// Total tile bytes if every candidate is promoted.
     pub total_tile_bytes: u32,

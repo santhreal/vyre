@@ -253,12 +253,10 @@ fn oracle_align_up_usize(value: usize, alignment: usize, min_value: usize) -> Op
 fn hostile_u64(seed: u32) -> u64 {
     (seed as u64)
         .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-        .rotate_left((seed & 31) as u32)
+        .rotate_left(seed & 31)
         ^ u64::from(seed.rotate_left(13))
 }
 
 fn hostile_u32(seed: u32) -> u32 {
-    seed.wrapping_mul(0x85EB_CA6B)
-        .rotate_right((seed & 15) as u32)
-        ^ seed.rotate_left(7)
+    seed.wrapping_mul(0x85EB_CA6B).rotate_right(seed & 15) ^ seed.rotate_left(7)
 }

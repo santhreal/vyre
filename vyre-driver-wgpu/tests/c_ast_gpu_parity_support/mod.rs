@@ -37,6 +37,7 @@ mod row_buffer_support;
 mod typedef_gpu_support;
 
 pub(crate) use gpu_dispatch_support::*;
+#[allow(unused_imports)]
 pub(crate) use gpu_pipeline_support::*;
 pub(crate) use row_buffer_support::*;
 pub(crate) use typedef_gpu_support::*;

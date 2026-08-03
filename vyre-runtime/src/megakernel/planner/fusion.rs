@@ -265,7 +265,7 @@ pub fn plan_compact_fusion_into<'a>(
             has_op_conflict = true;
         }
     }
-    let has_output_input_chain = (0..n.checked_sub(1).unwrap_or(0)).any(|i| {
+    let has_output_input_chain = (0..n.saturating_sub(1)).any(|i| {
         work_items.get(i).map(|w| w.output_handle) == work_items.get(i + 1).map(|w| w.input_handle)
     });
     let has_divergence_conflict = scratch.effective_divergence.iter().any(|&v| v != 0);
@@ -481,7 +481,6 @@ pub fn select_fused_subset_compact_checked_into(
 /// Compute a cost-ordered maximal fusion subset with the same output contract
 /// as [`select_fused_subset`].
 #[must_use]
-
 pub fn select_optimal_fused_subset(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
     select_fused_subset(costs, n, exchange_adj)
 }

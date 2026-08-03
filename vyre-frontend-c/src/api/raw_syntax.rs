@@ -36,7 +36,7 @@ struct RawSyntaxScratch;
 
 thread_local! {
     static RAW_SYNTAX_SCRATCH: RefCell<RawSyntaxScratch> =
-        RefCell::new(RawSyntaxScratch::default());
+        const { RefCell::new(RawSyntaxScratch) };
 }
 
 pub(super) fn parse_regular_sparse_syntax_bytes_gpu(

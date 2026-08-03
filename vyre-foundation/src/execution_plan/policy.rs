@@ -449,7 +449,6 @@ const fn effective_subgroup_size(caps: &AdapterCaps) -> u32 {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

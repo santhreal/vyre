@@ -155,7 +155,7 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
 
 /// A coalesced batch: `regions` small files (each carrying a couple of the planted
 /// detector tokens), separated by a newline that is in no token, plus its ascending
-/// `region_starts`. Mirrors keyhog's phase-1 coalesced layout.
+/// `region_starts`. Mirrors the production consumer's phase-1 coalesced layout.
 fn synth_batch(detectors: &[Vec<u8>], regions: usize, batch_seed: usize) -> (Vec<u8>, Vec<u32>) {
     let mut haystack = Vec::new();
     let mut region_starts = Vec::new();

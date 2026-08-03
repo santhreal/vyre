@@ -16,16 +16,27 @@
     clippy::manual_flatten,
     clippy::explicit_counter_loop
 )]
+//! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
+///
+/// Loop-carrier diagnostics.
 pub mod carriers;
+/// Dangling descriptor-reference diagnostics.
 pub mod dangling;
+/// Structural descriptor comparison and rewrite bisection.
 pub mod descriptor_diff;
+/// Human-readable descriptor rendering.
 pub mod descriptor_dump;
+/// Reusable diagnostic fixtures.
 pub mod fixtures;
+/// Human-readable Naga module rendering.
 pub mod naga_dump;
+/// Naga validation and binding failure traces.
 pub mod naga_trace;
 pub(crate) mod path_map_serde;
 pub mod scan_explain;
+/// Source-level assignment traversal.
 pub mod source_walker;
+/// WGSL emission and source-line mapping.
 pub mod wgsl;
 
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};

@@ -7,6 +7,9 @@ use super::{
     IncludeEvent, MacroEvent, MacroExpansionEvent, TokenProvenanceEvent,
 };
 
+/// Result of resolving one include request.
+pub(super) type IncludeLoadResult = Result<Option<(std::path::PathBuf, Arc<[u8]>)>, String>;
+
 /// Include resolver used by the orchestration layer after GPU directive
 /// extraction emits an include request.
 pub trait IncludeLoader {
@@ -25,7 +28,7 @@ pub trait IncludeLoader {
         is_system: bool,
         is_next: bool,
         from: &std::path::Path,
-    ) -> Result<Option<(std::path::PathBuf, Arc<[u8]>)>, String>;
+    ) -> IncludeLoadResult;
 }
 
 /// Output of the driver.

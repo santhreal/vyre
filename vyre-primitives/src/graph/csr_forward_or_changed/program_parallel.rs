@@ -169,7 +169,7 @@ fn csr_forward_or_changed_parallel_body_prefixed_impl(
             nodes.push(Node::let_bind(
                 extra_changed_old.as_str(),
                 Expr::atomic_or(
-                    *extra_changed_buffer,
+                    extra_changed_buffer,
                     extra_changed_index.clone(),
                     Expr::u32(1),
                 ),

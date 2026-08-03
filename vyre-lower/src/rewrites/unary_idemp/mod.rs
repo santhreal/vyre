@@ -35,6 +35,7 @@ use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::UnOp;
 
+/// Collapse repeated idempotent unary operations.
 #[must_use]
 pub fn unary_idemp(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

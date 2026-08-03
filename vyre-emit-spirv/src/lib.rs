@@ -45,17 +45,22 @@ pub use anchor_dfa_offload::{
     SpirvAnchorDfaOffloadEvidence, SPIRV_ANCHOR_DFA_OFFLOAD_SCHEMA_VERSION,
 };
 
+/// Errors produced while lowering and encoding a SPIR-V module.
 #[derive(Debug, Error)]
 pub enum EmitError {
+    /// Shared descriptor-to-Naga lowering failed.
     #[error("naga emission failed: {0}")]
     NagaEmit(#[from] vyre_emit_naga::EmitError),
 
+    /// Naga rejected the generated module during validation.
     #[error("naga validation failed: {0}")]
     NagaValidation(String),
 
+    /// The SPIR-V writer could not be constructed for the module.
     #[error("SPIR-V writer construction failed: {0}")]
     WriterConstruction(String),
 
+    /// The SPIR-V writer could not encode the module.
     #[error("SPIR-V writer.write failed: {0}")]
     WriterWrite(String),
 }

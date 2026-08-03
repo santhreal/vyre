@@ -79,7 +79,7 @@ impl MegakernelReadback {
     /// Returns [`PipelineError::Backend`] when output count or protocol buffer
     /// shapes do not match the persistent megakernel ABI.
     pub fn drain_outputs_into(
-        outputs: &mut Vec<Vec<u8>>,
+        outputs: &mut [Vec<u8>],
         slot_count: u32,
         out: &mut Self,
     ) -> Result<(), PipelineError> {

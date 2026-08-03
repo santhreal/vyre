@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-emit-ptx"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "ptx", "cuda", "shader"]
 
+[lints]
+workspace = true
+
 [lib]
 name = "vyre_emit_ptx"
 path = "src/lib.rs"

@@ -474,7 +474,6 @@ pub fn crc32_update_byte_nodes(crc_var: &str, bit_var: &str, byte: Expr) -> Vec<
 /// Final CRC expression for IR compositions that fuse CRC-32 with other
 /// one-pass byte walkers.
 #[must_use]
-
 pub fn crc32_finalize_expr(crc: Expr) -> Expr {
     Expr::bitxor(crc, Expr::u32(CRC32_INIT))
 }

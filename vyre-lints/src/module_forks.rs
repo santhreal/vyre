@@ -15,6 +15,7 @@ const EXEMPT_BASENAMES: &[&str] = &[
     "lib.rs", "main.rs", "mod.rs", "tests.rs", "error.rs", "types.rs",
 ];
 
+/// Scan authority roots for duplicated Rust module basenames.
 pub fn scan_roots(roots: &[&Path]) -> Result<Vec<Violation>> {
     let mut by_basename: BTreeMap<String, Vec<ModuleHit>> = BTreeMap::new();
     for (root_index, root) in roots.iter().enumerate() {

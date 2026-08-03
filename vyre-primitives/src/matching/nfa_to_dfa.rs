@@ -821,7 +821,7 @@ mod tests {
         let mixed = seed
             .wrapping_mul(1_664_525)
             .wrapping_add(lane.wrapping_mul(1_013_904_223))
-            .wrapping_add(0x45d9_f3b);
+            .wrapping_add(0x045d_9f3b);
         b'a' + (mixed % 23) as u8
     }
 

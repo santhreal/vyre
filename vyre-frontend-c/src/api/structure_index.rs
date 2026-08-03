@@ -78,7 +78,7 @@ fn decode_function_records(section: &[u8]) -> Result<Vec<CObjectFunctionRecord>,
             words.len()
         ));
     }
-    Ok(words
+    words
         .chunks_exact(3)
         .enumerate()
         .map(|(idx, row)| {
@@ -94,7 +94,7 @@ fn decode_function_records(section: &[u8]) -> Result<Vec<CObjectFunctionRecord>,
                 body_end_token: row[2],
             })
         })
-        .collect::<Result<Vec<_>, _>>()?)
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn decode_call_records(section: &[u8]) -> Result<Vec<CObjectCallRecord>, String> {
@@ -105,7 +105,7 @@ fn decode_call_records(section: &[u8]) -> Result<Vec<CObjectCallRecord>, String>
             words.len()
         ));
     }
-    Ok(words
+    words
         .chunks_exact(4)
         .enumerate()
         .map(|(idx, row)| {
@@ -122,7 +122,7 @@ fn decode_call_records(section: &[u8]) -> Result<Vec<CObjectCallRecord>, String>
                 args_end_token: row[3],
             })
         })
-        .collect::<Result<Vec<_>, _>>()?)
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn validate_structure_index(

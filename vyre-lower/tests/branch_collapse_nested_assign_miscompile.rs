@@ -224,6 +224,8 @@ fn emitted_descriptor_pool_size_covers_every_referenced_index() {
     assert!(verify(&out).is_ok(), "{:#?}", verify(&out));
 }
 
+type NamedProgramBuilder = (&'static str, fn(u32) -> vyre_foundation::ir::Program);
+
 /// The pass must DECLINE to collapse a guard whose operand range is unknown at
 /// that point, and this must hold for every construct that can carry a
 /// mutation. This is the test that stops a future change from making the
@@ -235,7 +237,7 @@ fn emitted_descriptor_pool_size_covers_every_referenced_index() {
 /// `StructuredIfThen` ops must survive the pass.
 #[test]
 fn pass_declines_to_collapse_guards_on_mutated_variables() {
-    let cases: &[(&str, fn(u32) -> vyre_foundation::ir::Program)] = &[
+    let cases: &[NamedProgramBuilder] = &[
         ("assign in loop body", loop_assign_program),
         ("assign in else arm", else_assign_program),
         ("assign in nested region", region_assign_program),

@@ -82,7 +82,7 @@ fn gpu_step(
             Value::from(pack(&[byte as u32])),
             Value::from(pack(transition)),
             Value::from(pack(epsilon)),
-            Value::from(pack(&vec![0u32; LANES])),
+            Value::from(pack(&[0u32; LANES])),
         ],
     )
     .expect("subgroup_nfa reference evaluation must succeed");

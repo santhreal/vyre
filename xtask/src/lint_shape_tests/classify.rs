@@ -329,14 +329,14 @@ fn expr_contains_ident(expr: &Expr, target: &str) -> bool {
                     .any(|s| stmt_contains_ident(s, target))
                 || i.else_branch
                     .as_ref()
-                    .map_or(false, |(_, e)| expr_contains_ident(e, target))
+                    .is_some_and(|(_, e)| expr_contains_ident(e, target))
         }
         Expr::Match(m) => {
             expr_contains_ident(&m.expr, target)
                 || m.arms.iter().any(|a| {
                     a.guard
                         .as_ref()
-                        .map_or(false, |(_, g)| expr_contains_ident(g, target))
+                        .is_some_and(|(_, g)| expr_contains_ident(g, target))
                         || expr_contains_ident(&a.body, target)
                 })
         }
@@ -375,7 +375,7 @@ fn stmt_contains_ident(stmt: &Stmt, target: &str) -> bool {
         Stmt::Local(l) => l
             .init
             .as_ref()
-            .map_or(false, |i| expr_contains_ident(&i.expr, target)),
+            .is_some_and(|i| expr_contains_ident(&i.expr, target)),
         Stmt::Expr(e, _) => expr_contains_ident(e, target),
         Stmt::Item(_) => false,
         Stmt::Macro(m) => {

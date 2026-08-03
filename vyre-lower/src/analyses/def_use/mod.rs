@@ -39,6 +39,7 @@ pub struct UseSite {
 /// IR.)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct PerBodyChains {
+    /// Uses grouped by referenced result identifier.
     pub uses: FxHashMap<u32, Vec<UseSite>>,
     /// Path to this body (empty = top-level).
     pub body_path: Vec<usize>,
@@ -53,9 +54,11 @@ pub struct PerBodyChains {
 /// produced in pre-order (top body first, then each subtree).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct DefUseReport {
+    /// Per-body def-use chains in descriptor pre-order.
     pub bodies: Vec<PerBodyChains>,
 }
 
+/// Build def-use chains for every body in a descriptor.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> DefUseReport {
     let mut report = DefUseReport::default();

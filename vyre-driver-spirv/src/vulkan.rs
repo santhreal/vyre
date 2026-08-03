@@ -478,7 +478,7 @@ pub(crate) unsafe fn dispatch_program(
                     buffer.name()
                 ),
             }
-        })? as usize;
+        })?;
         let byte_len = if buffer.count() == 0 {
             if let Some(input_index) = binding.input_index {
                 let input = inputs[input_index];
@@ -846,7 +846,7 @@ fn infer_grid(program: &Program, workgroup_size: [u32; 3]) -> Result<[u32; 3], B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     /// Before the fix, a program with count=0 output and count=512 input launched exactly
     /// 1 workgroup (max_output_count==0 → div_ceil(lanes).max(1)==1). After the fix it

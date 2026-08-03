@@ -24,6 +24,7 @@
 
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Remove unreferenced child bodies and remap structured-body operands.
 #[must_use]
 pub fn drop_unused_child_bodies(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

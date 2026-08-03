@@ -217,7 +217,7 @@ impl CTargetAbi {
     pub const fn cache_tag(self) -> u64 {
         match self {
             Self::Lp64 => 0x4c50_3634,
-            Self::Ilp32 => 0x494c_5033_32,
+            Self::Ilp32 => 0x0049_4c50_3332,
         }
     }
 }
@@ -241,8 +241,8 @@ impl CCharSignedness {
     /// Stable cache discriminator for preprocessor and semantic keys.
     pub const fn cache_tag(self) -> u64 {
         match self {
-            Self::Signed => 0x5343_4841_52,
-            Self::Unsigned => 0x5543_4841_52,
+            Self::Signed => 0x0053_4348_4152,
+            Self::Unsigned => 0x0055_4348_4152,
         }
     }
 
@@ -323,16 +323,16 @@ impl CDialect {
     /// Stable cache discriminator for preprocessor and semantic keys.
     pub const fn cache_tag(self) -> u64 {
         match self {
-            Self::C89 => 0x4338_39,
-            Self::Gnu89 => 0x474e_5538_39,
-            Self::C99 => 0x4339_39,
-            Self::Gnu99 => 0x474e_5539_39,
-            Self::C11 => 0x4331_31,
-            Self::Gnu11 => 0x474e_5531_31,
-            Self::C17 => 0x4331_37,
-            Self::Gnu17 => 0x474e_5531_37,
-            Self::C23 => 0x4332_33,
-            Self::Gnu23 => 0x474e_5532_33,
+            Self::C89 => 0x0043_3839,
+            Self::Gnu89 => 0x0047_4e55_3839,
+            Self::C99 => 0x0043_3939,
+            Self::Gnu99 => 0x0047_4e55_3939,
+            Self::C11 => 0x0043_3131,
+            Self::Gnu11 => 0x0047_4e55_3131,
+            Self::C17 => 0x0043_3137,
+            Self::Gnu17 => 0x0047_4e55_3137,
+            Self::C23 => 0x0043_3233,
+            Self::Gnu23 => 0x0047_4e55_3233,
         }
     }
 

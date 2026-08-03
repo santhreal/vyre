@@ -43,6 +43,13 @@ pub type Origin = u32;
 /// A MIR variable id (interned from a rustc variable atom such as `_1`).
 pub type Var = u32;
 
+type FactConsumer<'a> = Box<dyn FnMut(Vec<&str>) + 'a>;
+type RegionSubsetAnalysis = (
+    HashSet<(Origin, Point)>,
+    HashMap<Point, Vec<Point>>,
+    HashSet<(Origin, Origin, Point)>,
+);
+
 /// rustc NLL input facts for one function, interned to dense per-category ids.
 #[derive(Debug, Default, Clone)]
 pub struct RustcNllFacts {
@@ -134,7 +141,7 @@ pub fn load_facts(read: impl Fn(&str) -> String) -> RustcNllFacts {
     let mut vars = Interner::default();
     let mut loans = Interner::default();
 
-    let for_each = |name: &str, mut f: Box<dyn FnMut(Vec<&str>) + '_>| {
+    let for_each = |name: &str, mut f: FactConsumer<'_>| {
         let text = read(name);
         for line in text.lines().filter(|l| !l.trim().is_empty()) {
             f(fields(line));
@@ -519,13 +526,7 @@ impl RustcNllFacts {
     /// The shared analysis base used by every error relation: region liveness,
     /// the CFG successor map, and the `subset` closure. Computed once so
     /// [`accepts`](Self::accepts) does not derive it twice (once per error kind).
-    fn region_subset(
-        &self,
-    ) -> (
-        HashSet<(Origin, Point)>,
-        HashMap<Point, Vec<Point>>,
-        HashSet<(Origin, Origin, Point)>,
-    ) {
+    fn region_subset(&self) -> RegionSubsetAnalysis {
         let region_live = self.region_live_at();
         let succ = self.succ_edges();
         let subset = self.subset_closure(&region_live, &succ);

@@ -1,3 +1,5 @@
+#![allow(unsafe_code)]
+
 //! CUDA driver-backed execution tests for the NVRTC compile gate.
 
 //! Real CUDA driver PTX module-load gate.

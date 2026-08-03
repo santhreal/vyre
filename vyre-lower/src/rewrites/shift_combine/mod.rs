@@ -31,6 +31,7 @@ use super::literal::ResultAllocator;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 
+/// Combine nested same-direction shifts by literal counts.
 #[must_use]
 pub fn shift_combine(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

@@ -251,8 +251,7 @@ mod tests {
     fn validate_buffer_ownership_rejects_cross_backend() {
         let cuda_buf = HostShimBuffer::allocate("cuda", 4);
         let wgpu_buf = HostShimBuffer::allocate("wgpu", 4);
-        let result =
-            validate_buffer_ownership("cuda", [cuda_buf.as_ref(), wgpu_buf.as_ref()].into_iter());
+        let result = validate_buffer_ownership("cuda", [cuda_buf.as_ref(), wgpu_buf.as_ref()]);
         assert!(matches!(
             result,
             Err(BackendError::UnsupportedFeature { .. })
@@ -263,7 +262,7 @@ mod tests {
     fn validate_buffer_ownership_accepts_same_backend() {
         let a = HostShimBuffer::allocate("cuda", 4);
         let b = HostShimBuffer::allocate("cuda", 8);
-        validate_buffer_ownership("cuda", [a.as_ref(), b.as_ref()].into_iter())
+        validate_buffer_ownership("cuda", [a.as_ref(), b.as_ref()])
             .expect("Fix: same-backend buffers must validate");
     }
 

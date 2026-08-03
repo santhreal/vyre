@@ -6,6 +6,7 @@ use crate::analyses::{producer_map, ProducerMap};
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use rustc_hash::FxHashSet;
 
+/// Classify structured branches by workgroup uniformity.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
     let mut branches = Vec::new();

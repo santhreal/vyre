@@ -269,48 +269,56 @@ pub fn histogram_atomic_scatter_via(
     Ok(out)
 }
 
+/// Compute an unsigned sum through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_sum(values: &[u32]) -> u32 {
     primitive_sum(values)
 }
 
+/// Compute an unsigned maximum through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_max(values: &[u32]) -> u32 {
     primitive_max(values)
 }
 
+/// Compute an unsigned minimum through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_min(values: &[u32]) -> u32 {
     primitive_min(values)
 }
 
+/// Count nonzero values through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_count_non_zero(values: &[u32]) -> u32 {
     primitive_count_non_zero(values)
 }
 
+/// Return whether any value is nonzero in the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_any(values: &[u32]) -> bool {
     primitive_any(values) != 0
 }
 
+/// Return whether every value is nonzero in the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_reduce_all(values: &[u32]) -> bool {
     primitive_all(values) != 0
 }
 
+/// Compute segmented sums through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_segment_reduce_sum(input: &[u32], segment_offsets: &[u32]) -> Vec<u32> {
     primitive_segment_reduce_sum(input, segment_offsets)
 }
 
+/// Compute a bounded histogram through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_histogram_atomic_scatter(input: &[u32], num_bins: u32) -> Vec<u32> {

@@ -29,6 +29,7 @@ pub const VULKAN_BASELINE: DeviceLimits = DeviceLimits {
     max_workgroup_invocations: 1024,
 };
 
+/// Per-device compute workgroup limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DeviceLimits {
     /// Per-dimension limit (X, Y, Z).
@@ -37,29 +38,52 @@ pub struct DeviceLimits {
     pub max_workgroup_invocations: u32,
 }
 
+/// A workgroup-size constraint violated by a kernel descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Violation {
     /// `workgroup_size[axis]` exceeds `limits.max_workgroup_size_per_dim[axis]`.
-    DimExceeded { axis: u8, actual: u32, limit: u32 },
+    DimExceeded {
+        /// Zero-based workgroup axis.
+        axis: u8,
+        /// Requested size on the axis.
+        actual: u32,
+        /// Maximum supported size on the axis.
+        limit: u32,
+    },
     /// Product `workgroup_size[0] * [1] * [2]` exceeds
     /// `limits.max_workgroup_invocations`.
-    InvocationsExceeded { actual: u32, limit: u32 },
+    InvocationsExceeded {
+        /// Requested invocation count.
+        actual: u32,
+        /// Maximum supported invocation count.
+        limit: u32,
+    },
     /// One of the dims is zero  -  kernel would never run.
-    ZeroDim { axis: u8 },
+    ZeroDim {
+        /// Zero-based workgroup axis whose size is zero.
+        axis: u8,
+    },
 }
 
+/// Workgroup-size validation result for one kernel descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ValidationReport {
+    /// Validated kernel identifier.
     pub kernel_id: String,
+    /// Requested `[x, y, z]` workgroup size.
     pub workgroup_size: [u32; 3],
+    /// Device limits used for validation.
     pub limits: DeviceLimits,
+    /// Every constraint violated by the requested size.
     pub violations: Vec<Violation>,
 }
 
 impl ValidationReport {
+    /// Return whether the workgroup size satisfies all limits.
     pub fn ok(&self) -> bool {
         self.violations.is_empty()
     }
+    /// Return the requested total invocations per workgroup.
     pub fn invocations(&self) -> u32 {
         self.workgroup_size[0]
             .saturating_mul(self.workgroup_size[1])

@@ -101,7 +101,7 @@ pub struct LrBuilder {
 
 impl LrBuilder {
     /// Allocate an empty table with all actions = ERROR and all gotos
-    /// = u32::MAX.
+    /// = `u32::MAX`.
     #[must_use]
     pub fn new(num_states: u32, num_tokens: u32, num_nonterminals: u32) -> Self {
         let action_size = (num_states * num_tokens) as usize;

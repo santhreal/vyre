@@ -353,7 +353,7 @@ impl CudaResidentStore {
             .entry(handle.handle)
             .or_insert_with(|| AtomicUsize::new(0));
         checked_atomic_add_usize_with_order(
-            &*counter,
+            &counter,
             1,
             Ordering::Acquire,
             Ordering::AcqRel,
@@ -739,7 +739,7 @@ impl Drop for ResidentUseGuard {
         for id in &self.ids {
             let should_remove = if let Some(count) = self.inflight.get(id) {
                 match checked_atomic_sub_usize_with_order(
-                    &*count,
+                    &count,
                     1,
                     Ordering::Acquire,
                     Ordering::AcqRel,

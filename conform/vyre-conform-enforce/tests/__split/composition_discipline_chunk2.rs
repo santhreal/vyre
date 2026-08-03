@@ -265,8 +265,9 @@ fn label_by_family_is_not_exempt() {
 #[test]
 fn wip_exemptions_list_does_not_grow() {
     const CURRENT_COUNT: usize = 0;
-    assert!(
-        WIP_EXEMPTIONS.len() <= CURRENT_COUNT,
+    assert_eq!(
+        WIP_EXEMPTIONS.len(),
+        CURRENT_COUNT,
         "wip_exemptions grew from {} to {}. Fix: close an exemption before adding a new one.",
         CURRENT_COUNT,
         WIP_EXEMPTIONS.len(),

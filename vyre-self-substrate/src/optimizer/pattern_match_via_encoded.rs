@@ -66,7 +66,9 @@ pub mod rewrite_action {
 /// Errors surfaced by `gpu_algebraic_identities`.
 #[derive(Debug)]
 pub enum PatternMatchError {
+    /// Expression-arena encoding failed.
     Encode(EncodeError),
+    /// Backend dispatch or output decoding failed.
     Dispatch(DispatchError),
 }
 
@@ -818,7 +820,6 @@ fn bin_op_match_body_with_cse() -> Vec<Node> {
 /// Build the pattern-match analysis Program. Parallel kernel: each
 /// GPU thread handles one Expr id via `gid_x()`. The orchestrator
 /// dispatches `ceil(expr_count / 256)` workgroups.
-
 pub fn build_pattern_match_program(expr_count: u32) -> Program {
     super::build_encoded_analysis_program(expr_count, "rewrite_action", per_expr_body())
 }

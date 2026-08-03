@@ -19,6 +19,7 @@ pub struct PolyhedralFusionScratch {
 }
 
 impl PolyhedralFusionScratch {
+    /// Create empty reusable fusion-analysis scratch.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

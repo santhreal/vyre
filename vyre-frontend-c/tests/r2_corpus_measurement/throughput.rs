@@ -9,7 +9,6 @@ use vyre_frontend_c::api::parse_translation_unit;
 
 #[test]
 #[ignore = "throughput measurement on synthetic safe corpus"]
-
 fn r2_synthetic_throughput_files_per_ms() {
     use vyre_frontend_c::api::parse_syntax_batch_bytes;
 
@@ -75,7 +74,7 @@ fn r2_synthetic_throughput_files_per_ms() {
     let files_per_ms = sources.len() as f64 / elapsed_ms.max(1e-9);
     let mb_per_sec = total_bytes as f64 / 1024.0 / 1024.0 / elapsed.as_secs_f64().max(1e-9);
 
-    eprintln!("");
+    eprintln!();
     eprintln!("[throughput] === RESULTS ===");
     eprintln!("[throughput] backend:        {}", summary.backend_id);
     eprintln!("[throughput] files:          {}", summary.file_count);
@@ -138,7 +137,7 @@ fn r2_single_file_warm_cold_timing() {
     let median = elapsed_us[elapsed_us.len() / 2];
     let min = elapsed_us[0];
     let max = elapsed_us[elapsed_us.len() - 1];
-    eprintln!("");
+    eprintln!();
     eprintln!("[timing] === RESULTS ===");
     eprintln!("[timing] file:    {}", target.display());
     eprintln!("[timing] trials:  {}", trials);
@@ -211,7 +210,7 @@ fn r2_kernel_scripts_per_file_warm_throughput() {
     let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
     let files_per_sec = warmed.len() as f64 / elapsed.as_secs_f64().max(1e-9);
 
-    eprintln!("");
+    eprintln!();
     eprintln!("[corpus-throughput] === WARM-PATH RESULTS ===");
     eprintln!("[corpus-throughput] files measured: {}", warmed.len());
     eprintln!("[corpus-throughput] elapsed total:  {:.2} ms", elapsed_ms);
@@ -287,7 +286,7 @@ fn r2_kernel_scripts_cold_per_file_throughput() {
     let max = per_file_us.last().copied().unwrap_or(0);
     let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
 
-    eprintln!("");
+    eprintln!();
     eprintln!("[cold-per-file] === COLD-PATH RESULTS (pipeline warm, source cold) ===");
     eprintln!("[cold-per-file] files measured: {} ok, {} fail", ok, fail);
     eprintln!("[cold-per-file] elapsed total:  {:.2} ms", elapsed_ms);

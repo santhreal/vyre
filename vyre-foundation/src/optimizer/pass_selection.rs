@@ -407,7 +407,7 @@ mod tests {
             &tiny_program(),
             &HotPathHints::default(),
         );
-        assert_eq!(decisions[0].selected, false);
+        assert!(!decisions[0].selected);
         assert_eq!(decisions[0].reason, PassSelectionReason::BelowThreshold);
     }
 

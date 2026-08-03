@@ -2447,7 +2447,11 @@ mod tests {
     /// throughput candidate.
     #[test]
     fn default_seg_len_candidates_are_descending_and_exclude_whole_file() {
-        assert!(!DEFAULT_SEG_LEN_CANDIDATES.is_empty());
+        assert_eq!(
+            DEFAULT_SEG_LEN_CANDIDATES.first(),
+            Some(&4096),
+            "coarsest default candidate must remain 4096"
+        );
         assert!(
             !DEFAULT_SEG_LEN_CANDIDATES.contains(&u32::MAX),
             "whole-file is a correctness floor, never a calibration candidate"

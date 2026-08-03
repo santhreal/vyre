@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-emit-spirv"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "spirv", "shader", "gpu"]
 
+[lints]
+workspace = true
+
 [lib]
 name = "vyre_emit_spirv"
 path = "src/lib.rs"

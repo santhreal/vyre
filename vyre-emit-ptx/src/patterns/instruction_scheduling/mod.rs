@@ -13,6 +13,7 @@
 use serde::{Deserialize, Serialize};
 use vyre_lower::{KernelBody, KernelDescriptor};
 
+/// One latency-sensitive operation dependency chain.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DependencyChain {
     /// Op-index where the chain starts.
@@ -21,8 +22,10 @@ pub struct DependencyChain {
     pub length: u32,
 }
 
+/// Instruction-scheduling findings for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SchedulingHints {
+    /// Stable kernel identifier.
     pub kernel_id: String,
     /// Long dependency chains. Each has `length ≥ 4`.
     pub long_chains: Vec<DependencyChain>,
@@ -31,16 +34,19 @@ pub struct SchedulingHints {
 }
 
 impl SchedulingHints {
+    /// Return the number of long dependency chains.
     #[must_use]
     pub fn long_chain_count(&self) -> usize {
         self.long_chains.len()
     }
 
+    /// Return the longest dependency-chain length.
     #[must_use]
     pub fn longest_chain(&self) -> u32 {
         self.long_chains.iter().map(|c| c.length).max().unwrap_or(0)
     }
 
+    /// Return a combined latency-pressure score.
     #[must_use]
     pub fn schedule_latency_pressure(&self) -> u32 {
         self.longest_chain()
@@ -48,8 +54,10 @@ impl SchedulingHints {
     }
 }
 
+/// Minimum operation count classified as a long dependency chain.
 pub const LONG_CHAIN_THRESHOLD: u32 = 4;
 
+/// Analyze descriptor dependencies for instruction-scheduling pressure.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> SchedulingHints {
     let mut long_chains = Vec::new();

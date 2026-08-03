@@ -11,6 +11,7 @@ pub fn loop_fission(desc: &KernelDescriptor) -> KernelDescriptor {
     loop_fission_with_optional_dataflow_facts(desc, None, None)
 }
 
+/// Split eligible loops using canonical alias facts.
 #[must_use]
 pub fn loop_fission_with_alias_facts(
     desc: &KernelDescriptor,
@@ -19,6 +20,7 @@ pub fn loop_fission_with_alias_facts(
     loop_fission_with_optional_dataflow_facts(desc, Some(alias_facts), None)
 }
 
+/// Split eligible loops using imported alias facts.
 #[must_use]
 pub fn loop_fission_with_external_alias_facts(
     desc: &KernelDescriptor,
@@ -27,6 +29,7 @@ pub fn loop_fission_with_external_alias_facts(
     loop_fission_with_alias_facts(desc, alias_facts)
 }
 
+/// Split eligible loops using canonical dataflow facts.
 #[must_use]
 pub fn loop_fission_with_dataflow_facts(
     desc: &KernelDescriptor,
@@ -36,6 +39,7 @@ pub fn loop_fission_with_dataflow_facts(
     loop_fission_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
 }
 
+/// Split eligible loops using imported dataflow-analysis facts.
 #[must_use]
 pub fn loop_fission_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,

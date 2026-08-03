@@ -10,7 +10,7 @@ use crate::graph::dispatch_bridge::{
 };
 use crate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
-/// GPU dispatch wrapper around [`reconstruct_path`]. Returns the
+/// GPU dispatch wrapper around the `reconstruct_path` CPU oracle. Returns the
 /// number of valid entries written to `scratch` (zero-padded to
 /// `max_depth`).
 ///

@@ -105,8 +105,7 @@ fn release_per_op_f32_ulp_audit() {
         let mut op_max_ulp = 0u32;
 
         // Fixture cases
-        let mut backend_inputs: Vec<&[u8]> = Vec::new();
-        backend_inputs.reserve(program.buffers().len());
+        let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(program.buffers().len());
         for (case_index, inputs) in cases.iter().enumerate() {
             if let Err(error) =
                 backend_inputs_from_fixture_into(inputs, &input_plan, &mut backend_inputs)

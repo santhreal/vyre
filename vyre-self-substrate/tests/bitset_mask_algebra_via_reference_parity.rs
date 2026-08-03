@@ -114,7 +114,7 @@ fn binary_predicates_equal_subset_via_match_cpu_ref() {
 #[test]
 fn bit_queries_and_single_bit_rewrites_via_match_cpu_ref() {
     let dispatcher = ReferenceEvalDispatcher;
-    let mut state = 0x517_00_01u32;
+    let mut state = 0x0517_0001_u32;
     let mut saw_present = 0u32;
     let mut saw_absent = 0u32;
     for case in 0..400u32 {

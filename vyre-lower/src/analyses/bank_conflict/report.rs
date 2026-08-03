@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::analyses::AccessKind;
 
+/// Shared-memory bank access classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BankConflictKind {
     /// Threads in the warp access addresses that map to distinct
@@ -16,12 +17,16 @@ pub enum BankConflictKind {
     BroadcastSafe,
     /// All N threads in a warp hit the same bank with N distinct
     /// addresses. Worst case  -  N-way serialization.
-    Conflict { way_count: u32 },
+    Conflict {
+        /// Number of accesses serialized through one bank.
+        way_count: u32,
+    },
     /// Index pattern not classifiable. Default conservative answer
     /// when phase-1 analysis can't prove safety.
     Unknown,
 }
 
+/// Severity assigned to a shared-memory bank access.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ConflictSeverity {
     /// `NoConflict` or `BroadcastSafe`  -  performance is fine.
@@ -39,6 +44,7 @@ pub enum ConflictSeverity {
 }
 
 impl BankConflictKind {
+    /// Classify the performance severity of this access pattern.
     #[must_use]
     pub fn severity(&self) -> ConflictSeverity {
         match self {
@@ -67,10 +73,14 @@ pub struct BankAccessSite {
     pub conflict: BankConflictKind,
 }
 
+/// Bank-conflict analysis for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BankConflictReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Number of shared-memory banks assumed by the analysis.
     pub bank_count: u32,
+    /// Classified shared-memory access sites.
     pub sites: Vec<BankAccessSite>,
 }
 

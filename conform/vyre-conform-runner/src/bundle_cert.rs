@@ -313,7 +313,7 @@ fn backend_dispatch<'a>(
             source,
         })?;
     outputs.clear();
-    outputs.extend(dispatched.into_iter());
+    outputs.extend(dispatched);
     Ok(())
 }
 

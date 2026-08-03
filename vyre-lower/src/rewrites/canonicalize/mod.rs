@@ -21,6 +21,7 @@ use vyre_foundation::ir::BinOp;
 
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Canonicalize operand order for commutative operations.
 #[must_use]
 pub fn canonicalize(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

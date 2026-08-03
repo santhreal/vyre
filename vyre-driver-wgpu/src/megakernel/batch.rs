@@ -1419,7 +1419,7 @@ mod tests {
 
     #[test]
     fn work_queue_rejects_u32_overflow_before_allocation() {
-        let metadata = vec![
+        let metadata = [
             FileMetadata {
                 path_hash_lo: 1,
                 path_hash_hi: 0,
@@ -1441,15 +1441,12 @@ mod tests {
 
     #[test]
     fn device_schedule_accepts_batches_above_legacy_host_queue_cap_without_allocating() {
-        let metadata = vec![
-            FileMetadata {
-                path_hash_lo: 1,
-                path_hash_hi: 0,
-                size_bytes: 1,
-                decoded_layer_index: 0,
-            };
-            2
-        ];
+        let metadata = [FileMetadata {
+            path_hash_lo: 1,
+            path_hash_hi: 0,
+            size_bytes: 1,
+            decoded_layer_index: 0,
+        }; 2];
         const LEGACY_HOST_WORK_QUEUE_CAP: usize = 16 * 1024 * 1024;
         let rule_count = u32::try_from(LEGACY_HOST_WORK_QUEUE_CAP / metadata.len() + 1).unwrap();
         let queue_len = dense_queue_len(metadata.len(), rule_count)

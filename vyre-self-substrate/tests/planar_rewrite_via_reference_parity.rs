@@ -29,7 +29,7 @@ fn xorshift(state: &mut u32) -> u32 {
 #[test]
 fn schedule_via_matches_cpu_greedy_disjoint_selection_over_generated_grids() {
     let dispatcher = ReferenceEvalDispatcher;
-    let mut state = 0x9A_11_0001u32;
+    let mut state = 0x9A11_0001_u32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
         let h = 1 + (case % 6);

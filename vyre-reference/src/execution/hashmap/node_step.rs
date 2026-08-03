@@ -538,6 +538,30 @@ fn apply_async_transfer(
     }
 }
 
+fn resolve_call(
+    call_expr: *const Expr,
+    op_id: &str,
+    invocation: &mut HashmapInvocation<'_>,
+) -> Result<HashmapResolvedCall, Error> {
+    if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
+        return Ok(resolved);
+    }
+    let lookup = vyre::dialect_lookup().ok_or_else(|| {
+        Error::interp(format!(
+            "unsupported call `{op_id}`: no DialectLookup is installed."
+        ))
+    })?;
+    let interned = lookup.intern_op(op_id);
+    let def = lookup.lookup(interned).ok_or_else(|| {
+        Error::interp(format!(
+            "unsupported call `{op_id}`. Fix: register the op in DialectRegistry."
+        ))
+    })?;
+    let resolved = HashmapResolvedCall { def };
+    invocation.op_cache.insert(call_expr, resolved);
+    Ok(resolved)
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::super::memory::HashmapMemory;
@@ -629,28 +653,4 @@ mod tests {
             "Fix: panic message must name the poisoned lock contract, got: {message}"
         );
     }
-}
-
-fn resolve_call(
-    call_expr: *const Expr,
-    op_id: &str,
-    invocation: &mut HashmapInvocation<'_>,
-) -> Result<HashmapResolvedCall, Error> {
-    if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
-        return Ok(resolved);
-    }
-    let lookup = vyre::dialect_lookup().ok_or_else(|| {
-        Error::interp(format!(
-            "unsupported call `{op_id}`: no DialectLookup is installed."
-        ))
-    })?;
-    let interned = lookup.intern_op(op_id);
-    let def = lookup.lookup(interned).ok_or_else(|| {
-        Error::interp(format!(
-            "unsupported call `{op_id}`. Fix: register the op in DialectRegistry."
-        ))
-    })?;
-    let resolved = HashmapResolvedCall { def };
-    invocation.op_cache.insert(call_expr, resolved);
-    Ok(resolved)
 }

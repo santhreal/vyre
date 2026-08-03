@@ -51,7 +51,7 @@ fn adaptive_upload_records_exact_high_degree_source_count() {
     edge_offsets.push(0);
     for degree in degrees {
         edge_targets.extend((0..degree).map(|edge| edge % node_count));
-        edge_kind_mask.extend(std::iter::repeat(1).take(degree as usize));
+        edge_kind_mask.extend(std::iter::repeat_n(1, degree as usize));
         edge_offsets.push(edge_targets.len() as u32);
     }
     let adj_rows_dense = vec![0u32; node_count as usize];

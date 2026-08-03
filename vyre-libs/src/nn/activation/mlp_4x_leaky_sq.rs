@@ -16,7 +16,7 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// Build MLP with fused leaky_relu_sq activation (F32).
 ///
 /// This is a cooperative SINGLE-WORKGROUP kernel. Both projections walk their
-/// extent in fixed [`MLP_WORKGROUP`]-wide strides off the GLOBAL invocation id,
+/// extent in fixed `MLP_WORKGROUP`-wide strides off the GLOBAL invocation id,
 /// so the work is confined to the first workgroup and every lane at or above
 /// that width retires without touching memory. Coverage stays complete for any
 /// `model_dim` and `hidden_dim`, because the strided walk runs

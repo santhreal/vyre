@@ -621,7 +621,7 @@ mod tests {
     }
 
     fn generated_valid_tree(seed: u32, node_count: u32) -> Vec<u32> {
-        let stride = NODE_STRIDE_U32 as usize;
+        let stride = NODE_STRIDE_U32;
         let mut nodes = vec![0u32; node_count as usize * stride];
         for node in 0..node_count {
             let base = node as usize * stride;
@@ -697,7 +697,7 @@ mod tests {
 
             let preorder_positions = positions(&preorder, node_count);
             let postorder_positions = positions(&postorder, node_count);
-            let stride = NODE_STRIDE_U32 as usize;
+            let stride = NODE_STRIDE_U32;
 
             for child in 1..node_count {
                 let parent = tree[child as usize * stride + 1];
@@ -715,7 +715,6 @@ mod tests {
 }
 
 #[cfg(feature = "inventory-registry")]
-
 fn fixture_u32(words: &[u32]) -> Vec<u8> {
     crate::wire::pack_u32_slice(words)
 }

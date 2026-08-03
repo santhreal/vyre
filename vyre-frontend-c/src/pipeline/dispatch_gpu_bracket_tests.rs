@@ -72,11 +72,11 @@ fn generated_bracket_case(case: u32) -> Vec<u32> {
 fn nested_case(open_tok: u32, close_tok: u32, len: usize) -> Vec<u32> {
     let depth = len / 2;
     let mut tokens = Vec::with_capacity(len);
-    tokens.extend(std::iter::repeat(open_tok).take(depth));
+    tokens.extend(std::iter::repeat_n(open_tok, depth));
     if len % 2 == 1 {
         tokens.push(TOK_IDENTIFIER);
     }
-    tokens.extend(std::iter::repeat(close_tok).take(depth));
+    tokens.extend(std::iter::repeat_n(close_tok, depth));
     tokens
 }
 
@@ -333,8 +333,8 @@ fn long_non_delimiter_stream_stays_unmatched() {
 fn cuda_nested_parens_cross_legacy_fixed_depth_cap() {
     let depth = 4097;
     let mut tokens = Vec::with_capacity(depth * 2);
-    tokens.extend(std::iter::repeat(TOK_LPAREN).take(depth));
-    tokens.extend(std::iter::repeat(TOK_RPAREN).take(depth));
+    tokens.extend(std::iter::repeat_n(TOK_LPAREN, depth));
+    tokens.extend(std::iter::repeat_n(TOK_RPAREN, depth));
     let expected = bracket_pairs_cpu_oracle(&tokens);
     let backend = cuda_factory().expect("Fix: CUDA backend must acquire on the GPU-required host.");
     let actual = dispatch_c11_bracket_pairs(

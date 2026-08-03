@@ -300,9 +300,9 @@ fn generated_scan_haystack(case: u32, len: usize) -> Vec<u8> {
 
     for (pattern_index, pattern) in PATTERNS.iter().enumerate() {
         let stride = 31 + ((mix32(case ^ pattern_index as u32) % 127) as usize);
-        let mut offset = ((mix32(case ^ (pattern_index as u32).wrapping_mul(0x45D9_F3B)) as usize)
-            % stride)
-            + pattern_index;
+        let mut offset =
+            ((mix32(case ^ (pattern_index as u32).wrapping_mul(0x045D_9F3B)) as usize) % stride)
+                + pattern_index;
         while offset + pattern.len() <= haystack.len() {
             if (offset & 31) != 0 {
                 haystack[offset..offset + pattern.len()].copy_from_slice(pattern);

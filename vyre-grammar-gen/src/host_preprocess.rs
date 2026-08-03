@@ -76,15 +76,12 @@ fn strip_line_comments(input: &str) -> String {
             }
             j += 1;
         }
-        match cut {
-            Some(idx) => {
-                out.push_str(&line[..idx]);
-                out.push('\n');
-            }
-            None => {
-                out.push_str(line);
-                out.push('\n');
-            }
+        if let Some(idx) = cut {
+            out.push_str(&line[..idx]);
+            out.push('\n');
+        } else {
+            out.push_str(line);
+            out.push('\n');
         }
     }
     if !input.ends_with('\n') && out.ends_with('\n') {

@@ -376,38 +376,6 @@ impl ModuleBuilder {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-    #[test]
-    fn storage_buffer_len_emits_runtime_array_length_for_counted_bindings() {
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(8),
-                BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
-        );
-        let descriptor =
-            vyre_lower::lower(&program).expect("Fix: counted storage buf_len program must lower");
-        let module =
-            emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");
-        let function = &module.entry_points[0].function;
-
-        assert!(
-            function
-                .expressions
-                .iter()
-                .any(|(_, expr)| matches!(expr, naga::Expression::ArrayLength(_))),
-            "Fix: storage BufferLength must emit runtime arrayLength so WGSL cache keys can ignore per-dispatch storage counts without reusing stale static bounds."
-        );
-    }
-}
-
 fn insert_scalar(module: &mut Module, kind: ScalarKind, width: u8) -> naga::Handle<Type> {
     module.types.insert(
         Type {
@@ -625,3 +593,35 @@ pub(crate) fn emit_uncached(desc: &KernelDescriptor) -> Result<naga::Module, Emi
 // `lib.rs` calls into the cache layer first, then `emit_uncached` here.
 // Re-export the cache wrapper from this module so the `crate::emit`
 // boundary stays unchanged.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+
+    #[test]
+    fn storage_buffer_len_emits_runtime_array_length_for_counted_bindings() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
+                    .with_count(8),
+                BufferDecl::storage("out", 1, BufferAccess::ReadWrite, DataType::U32).with_count(1),
+            ],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
+        );
+        let descriptor =
+            vyre_lower::lower(&program).expect("Fix: counted storage buf_len program must lower");
+        let module =
+            emit_uncached(&descriptor).expect("Fix: counted storage buf_len descriptor must emit");
+        let function = &module.entry_points[0].function;
+
+        assert!(
+            function
+                .expressions
+                .iter()
+                .any(|(_, expr)| matches!(expr, naga::Expression::ArrayLength(_))),
+            "Fix: storage BufferLength must emit runtime arrayLength so WGSL cache keys can ignore per-dispatch storage counts without reusing stale static bounds."
+        );
+    }
+}

@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 use clap::{Parser, Subcommand};
 #[cfg(test)]
 use std::collections::BTreeMap;
@@ -1002,9 +1000,8 @@ mod tests {
             "0".to_string(),
         ]);
         let _ = std::fs::remove_file(&path);
-        assert_eq!(
+        assert!(
             result.is_ok(),
-            true,
             "Fix: validate-report must accept matching backend profile evidence: {result:?}"
         );
     }

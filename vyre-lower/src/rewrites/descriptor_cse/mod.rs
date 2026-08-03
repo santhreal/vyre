@@ -11,6 +11,7 @@ use crate::operand_semantics::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOp};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// Merge equivalent descriptor operations within each structured body.
 #[must_use]
 pub fn descriptor_cse(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

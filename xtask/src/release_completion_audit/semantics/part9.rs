@@ -526,7 +526,7 @@ fn inspect_backend_suite_status_artifact_consistency(
 
 
 fn backend_suite_workspace_root(path: &Path) -> Option<&Path> {
-    Some(path.parent()?.parent()?.parent()?.parent()?)
+    path.parent()?.parent()?.parent()?.parent()
 }
 
 fn resolve_suite_artifact_path(workspace_root: &Path, artifact: &str) -> PathBuf {

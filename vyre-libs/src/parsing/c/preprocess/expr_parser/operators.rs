@@ -100,7 +100,6 @@ impl PreprocessorExprParser<'_, '_, '_> {
     /// Parse a clang `__has_include(<header>)` / `__has_include("header")` /
     /// `__has_include_next(...)` operator. Conservatively returns 0; the host
     /// source's `#else` branch executes.
-
     pub(super) fn parse_has_include_operator(&mut self) -> Result<u64, CPreprocessorError> {
         self.skip_ws_and_splices();
         if !self.consume_byte(b'(') {

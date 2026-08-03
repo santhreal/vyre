@@ -1,3 +1,5 @@
+//! Organization contracts for self-substrate domain and graph modules.
+
 #[path = "organization_contracts/csr_queue_contracts.rs"]
 mod csr_queue_contracts;
 #[path = "organization_contracts/domain_core_contracts.rs"]

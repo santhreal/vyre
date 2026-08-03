@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn mask_scheduler_selects_disjoint_wave() {
-        let schedule = planar_rewrite_schedule_mask(&vec![1; 16], 4, 4, 2);
+        let schedule = planar_rewrite_schedule_mask(&[1; 16], 4, 4, 2);
         assert_eq!(schedule.iter().sum::<u32>(), 4);
         assert_eq!(schedule[0], 1);
         assert_eq!(schedule[2], 1);

@@ -5,13 +5,14 @@ use vyre_lower::optimization_corpus::{
     generate_release_corpus, manifest_for, RELEASE_MIN_OPTIMIZATION_CASES,
 };
 
+const _: () = assert!(
+    RELEASE_MIN_OPTIMIZATION_CASES >= 4_096,
+    "release optimization corpus floor must stay at or above 4096"
+);
+
 #[test]
 fn release_optimization_corpus_has_4096_plus_cases() {
     let cases = generate_release_corpus();
-    assert!(
-        RELEASE_MIN_OPTIMIZATION_CASES >= 4_096,
-        "Fix: release optimization corpus floor is {RELEASE_MIN_OPTIMIZATION_CASES}; release requires at least 4096."
-    );
     assert!(
         cases.len() >= RELEASE_MIN_OPTIMIZATION_CASES,
         "Fix: release optimization corpus generated {} cases, but release requires at least {}.",

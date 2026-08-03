@@ -20,8 +20,10 @@ use crate::operand_semantics::operand_is_result_reference;
 use crate::rewrites::literal_pool_splice::LiteralPoolSplice;
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
+/// Maximum statically expanded loop trip count.
 pub const MAX_UNROLL_COUNT: u32 = 4;
 
+/// Expand statically bounded small loops into straight-line descriptor operations.
 #[must_use]
 pub fn loop_unroll(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

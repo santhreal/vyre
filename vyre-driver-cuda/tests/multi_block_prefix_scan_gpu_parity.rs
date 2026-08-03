@@ -131,7 +131,7 @@ fn cuda_mbps_pass_c_adds_scanned_block_offset() {
         len as u32,
         num_blocks,
     );
-    let inputs = vec![u32_bytes(&partials), u32_bytes(&scanned_totals)];
+    let inputs = [u32_bytes(&partials), u32_bytes(&scanned_totals)];
     let input_refs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
     let outputs = with_live_backend("multi-block prefix scan pass C", |backend| {
         backend

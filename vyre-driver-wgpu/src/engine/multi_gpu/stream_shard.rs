@@ -12,7 +12,7 @@ use std::collections::BinaryHeap;
 ///
 /// # Errors
 ///
-/// Returns [`StreamShardError::ZeroGpus`] when no GPU devices are available.
+/// Returns `StreamShardError::ZeroGpus` when no GPU devices are available.
 pub fn shard_by_blake3(key: &[u8], n_gpus: u32) -> Result<u32, StreamShardError> {
     if n_gpus == 0 {
         return Err(StreamShardError::ZeroGpus);

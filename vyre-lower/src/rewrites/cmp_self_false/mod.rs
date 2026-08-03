@@ -32,6 +32,7 @@ use super::literal::ResultAllocator;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 
+/// Fold self-comparisons with statically known truth values.
 #[must_use]
 pub fn cmp_self_false(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

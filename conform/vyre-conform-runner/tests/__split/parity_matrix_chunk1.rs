@@ -706,12 +706,11 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
     let selected = env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&BackendRegistration> =
-        registered_backends().iter().copied().collect();
+    let mut registrations: Vec<&BackendRegistration> = registered_backends().to_vec();
     registrations.retain(|registration| {
         selected
             .as_deref()
-            .map_or(true, |backend| registration.id == backend)
+            .is_none_or(|backend| registration.id == backend)
     });
     registrations.sort_by(|left, right| left.id.cmp(right.id));
     summary.backends_linked = registrations.len() + 1;

@@ -55,7 +55,7 @@ pub const C11_STATEMENT_BOUNDS_SCRATCH: &str = "c11_stmt_boundary_scratch";
 /// Words of scratch [`c11_statement_bounds`] needs for a `num_tokens` window.
 ///
 /// Layout: `[0, num_tokens)` holds one next-boundary mark per token position,
-/// then one [`STMT_TILE_WORDS`]-word block per tile, plus one trailing block so
+/// then one `STMT_TILE_WORDS`-word block per tile, plus one trailing block so
 /// the last tile can read its successor's slot without an out-of-bounds load.
 ///
 /// Callers must size the scratch buffer with this, never with a hand-copied

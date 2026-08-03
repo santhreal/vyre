@@ -20,6 +20,9 @@ use crate::RustFrontendError;
 
 const RUST_GPU_LEXER_WORKGROUP_SIZE: u32 = 256;
 
+type PipelineCacheKey = (String, [u8; 32]);
+type PipelineCache = Mutex<HashMap<PipelineCacheKey, Arc<dyn CompiledPipeline>>>;
+
 /// Lex source bytes, preferring GPU if configured and available.
 pub fn lex(
     source: &[u8],
@@ -124,8 +127,7 @@ fn dispatch_gpu_lexer_cached(
     grid: [u32; 3],
     label: &str,
 ) -> Result<Vec<Vec<u8>>, RustFrontendError> {
-    static PIPELINES: OnceLock<Mutex<HashMap<(String, [u8; 32]), Arc<dyn CompiledPipeline>>>> =
-        OnceLock::new();
+    static PIPELINES: OnceLock<PipelineCache> = OnceLock::new();
 
     let mut dispatch_config = DispatchConfig::default();
     dispatch_config.grid_override = Some(grid);

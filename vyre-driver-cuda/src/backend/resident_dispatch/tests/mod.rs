@@ -22,6 +22,7 @@ fn resident_dispatch_production_source() -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     #[path = "source_contracts.rs"]
     mod source_contracts;
@@ -151,23 +152,20 @@ mod tests {
             .expect("Fix: dense resident output indexes must validate.");
         let duplicate =
             validate_dense_resident_output_indices([0, 0, 2], 3, "test output").unwrap_err();
-        assert_eq!(
+        assert!(
             duplicate.to_string().contains("duplicate"),
-            true,
             "Fix: duplicate resident output indexes must fail before readback ordering can alias an output slot: {duplicate}"
         );
         let sparse =
             validate_dense_resident_output_indices([0, 2, 3], 3, "test output").unwrap_err();
-        assert_eq!(
+        assert!(
             sparse.to_string().contains("dense"),
-            true,
             "Fix: sparse resident output indexes must fail before readback ordering can skip an output slot: {sparse}"
         );
         let truncated =
             validate_dense_resident_output_indices([0, 1], 3, "test output").unwrap_err();
-        assert_eq!(
+        assert!(
             truncated.to_string().contains("expected 3"),
-            true,
             "Fix: truncated resident output indexes must fail before readback ordering can drop an output slot: {truncated}"
         );
     }
@@ -178,21 +176,18 @@ mod tests {
             .expect("Fix: dense resident input indexes must validate.");
         let duplicate =
             validate_dense_resident_input_indices([0, 0, 2], 3, "test input").unwrap_err();
-        assert_eq!(
+        assert!(
             duplicate.to_string().contains("duplicate"),
-            true,
             "Fix: duplicate resident input indexes must fail before borrowed fallback can alias a logical input slot: {duplicate}"
         );
         let sparse = validate_dense_resident_input_indices([0, 2, 3], 3, "test input").unwrap_err();
-        assert_eq!(
+        assert!(
             sparse.to_string().contains("dense"),
-            true,
             "Fix: sparse resident input indexes must fail before borrowed fallback can skip a logical input slot: {sparse}"
         );
         let truncated = validate_dense_resident_input_indices([0, 1], 3, "test input").unwrap_err();
-        assert_eq!(
+        assert!(
             truncated.to_string().contains("expected 3"),
-            true,
             "Fix: truncated resident input indexes must fail before borrowed fallback can drop a logical input slot: {truncated}"
         );
     }

@@ -28,24 +28,34 @@ use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use vyre_foundation::ir::DataType;
 
+/// One read-only binding eligible for constant-buffer promotion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConstBufferCandidate {
+    /// Binding slot to promote.
     pub binding_slot: u32,
+    /// Static binding size in bytes.
     pub bytes: u32,
+    /// Number of loads that reuse the binding.
     pub load_count: u32,
     /// Estimated speedup: roughly `1.0 + load_count * 0.4` capped at 8x.
     pub estimated_speedup_factor: f32,
 }
 
+/// Constant-buffer promotion plan for one kernel.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConstBufferPlan {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Eligible bindings in slot order.
     pub candidates: Vec<ConstBufferCandidate>,
+    /// Combined size of all eligible bindings.
     pub total_bytes: u32,
+    /// Maximum constant-buffer bytes available.
     pub budget_bytes: u32,
 }
 
 impl ConstBufferPlan {
+    /// Return whether all candidates fit within the configured budget.
     #[must_use]
     pub fn fits_in_budget(&self) -> bool {
         self.total_bytes <= self.budget_bytes
@@ -56,11 +66,13 @@ impl ConstBufferPlan {
 /// limits should pass their real budget into the analysis entry point.
 pub const DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32 = 64 * 1024;
 
+/// Analyze constant-buffer candidates using the default budget.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> ConstBufferPlan {
     analyze_with_budget(desc, DEFAULT_CONST_BUFFER_BUDGET_BYTES)
 }
 
+/// Analyze constant-buffer candidates using an explicit byte budget.
 #[must_use]
 pub fn analyze_with_budget(desc: &KernelDescriptor, budget_bytes: u32) -> ConstBufferPlan {
     // Eligible bindings.

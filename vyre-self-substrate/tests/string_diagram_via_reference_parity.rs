@@ -48,7 +48,7 @@ fn compose_fixed(f: &[u32], g: &[u32], a: usize, b: usize, c: usize) -> Vec<u32>
 #[test]
 fn compose_via_matches_exact_fixed_matmul_over_generated_shapes() {
     let dispatcher = ReferenceEvalDispatcher;
-    let mut state = 0x5D_1A_9001u32;
+    let mut state = 0x5D1A_9001_u32;
     let mut nontrivial = 0u32;
     for case in 0..400u32 {
         let a = 1 + (case % 4) as usize;

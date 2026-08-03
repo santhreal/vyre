@@ -329,54 +329,63 @@ pub fn mask_clear_bit_via(
     )
 }
 
+/// Compute the CPU parity result for packed-mask intersection.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_and(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     primitive_and(lhs, rhs)
 }
 
+/// Compute the CPU parity result for packed-mask union.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_or(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     primitive_or(lhs, rhs)
 }
 
+/// Compute the CPU parity result for packed-mask symmetric difference.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_xor(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     primitive_xor(lhs, rhs)
 }
 
+/// Compute the CPU parity result for packed-mask complement.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_not(input: &[u32]) -> Vec<u32> {
     primitive_not(input)
 }
 
+/// Return whether two packed masks are equal in the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_equal(lhs: &[u32], rhs: &[u32]) -> bool {
     primitive_equal(lhs, rhs) != 0
 }
 
+/// Return whether every bit in `lhs` is present in `rhs`.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_subset_of(lhs: &[u32], rhs: &[u32]) -> bool {
     primitive_subset_of(lhs, rhs) != 0
 }
 
+/// Return whether `bit_idx` is present in the packed mask.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_contains(input: &[u32], bit_idx: u32) -> bool {
     primitive_contains(input, bit_idx) != 0
 }
 
+/// Test `bit_idx` through the primitive CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_test_bit(input: &[u32], bit_idx: u32) -> bool {
     primitive_test_bit(input, bit_idx) != 0
 }
 
+/// Return a copy of `target` with `bit_idx` set.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_set_bit(target: &[u32], bit_idx: u32) -> Vec<u32> {
@@ -385,6 +394,7 @@ pub fn reference_mask_set_bit(target: &[u32], bit_idx: u32) -> Vec<u32> {
     out
 }
 
+/// Return a copy of `target` with `bit_idx` cleared.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_mask_clear_bit(target: &[u32], bit_idx: u32) -> Vec<u32> {

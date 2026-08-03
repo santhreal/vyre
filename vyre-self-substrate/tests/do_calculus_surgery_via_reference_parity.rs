@@ -105,7 +105,7 @@ fn rule3_subgraph_via_matches_cpu_oracle() {
         let cells = (n * n) as usize;
         let adj: Vec<u32> = (0..cells).map(|_| xorshift(&mut state) & 1).collect();
         // Mixed full/partial/empty keep masks.
-        let keep_mask: Vec<u32> = (0..n).map(|_| xorshift(&mut state) % 3 & 1).collect();
+        let keep_mask: Vec<u32> = (0..n).map(|_| (xorshift(&mut state) % 3) & 1).collect();
 
         let (via_reduced, via_kept) = rule3_subgraph_via(&dispatcher, &adj, &keep_mask, n)
             .expect("rule3_subgraph_via must dispatch");

@@ -195,21 +195,18 @@ fn every_registered_primitive_is_oob_clean_under_grid_overfire() {
         let overfire_grid = overfire_grid(&program);
         for (case_idx, case) in inputs_fn().into_iter().enumerate() {
             let values: Vec<Value> = case.into_iter().map(Value::from).collect();
-            match vyre_reference::reference_eval_with_dispatch_oob_report(
+            if let Ok((_out, report)) = vyre_reference::reference_eval_with_dispatch_oob_report(
                 &program,
                 &values,
                 overfire_grid,
             ) {
-                Ok((_out, report)) => {
-                    checked_cases += 1;
-                    if report.total() > 0 {
-                        offenders.push(format!(
-                            "{} (fixture case {case_idx}, grid>={overfire_grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
-                            entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
-                        ));
-                    }
+                checked_cases += 1;
+                if report.total() > 0 {
+                    offenders.push(format!(
+                        "{} (fixture case {case_idx}, grid>={overfire_grid}): {} OOB load(s), {} OOB store(s), {} OOB atomic(s)",
+                        entry.id, report.oob_loads, report.oob_stores, report.oob_atomics
+                    ));
                 }
-                Err(_) => {}
             }
         }
     }

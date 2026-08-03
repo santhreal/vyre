@@ -12,6 +12,7 @@ use vyre_foundation::ir::{
     BinOp, DataType, Expr, UnOp,
 };
 
+/// Fold descriptor operations whose operands are compile-time literals.
 #[must_use]
 pub fn descriptor_const_fold(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

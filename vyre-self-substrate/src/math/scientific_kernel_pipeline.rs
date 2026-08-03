@@ -456,7 +456,6 @@ pub fn reference_resolve_carry_chain_into(
 /// CPU tensor-network pair contraction reference.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn reference_tn_pair_contract(a: &[f64], b: &[f64], m: u32, k: u32, n: u32) -> Vec<f64> {
     tn_pair_contract_cpu(a, b, m, k, n)
 }

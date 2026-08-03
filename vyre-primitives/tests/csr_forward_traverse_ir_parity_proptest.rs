@@ -142,12 +142,9 @@ fn ir_matches_cpu_ref_on_boundary_graphs() {
     // frontier_out must set bits in words 1 and 2 from a single source lane.
     let node_count = 65u32;
     let offsets = {
-        let mut o = vec![0u32];
-        o.push(2); // node 0 has 2 edges
-        for _ in 1..node_count {
-            o.push(2); // every other node has 0 edges
-        }
-        o
+        let mut offsets = vec![2u32; node_count as usize + 1];
+        offsets[0] = 0;
+        offsets
     };
     let targets = vec![32u32, 64];
     let kind_mask = vec![1u32, 1];

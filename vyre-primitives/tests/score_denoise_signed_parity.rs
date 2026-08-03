@@ -110,7 +110,7 @@ fn score_denoise_signed_matches_exact_fixed_point_blend() {
         let noise: Vec<u32> = (0..n).map(|_| signed_fixed(&mut state)).collect();
         // Schedule coefficients: α positive (a contraction toward the prior), β/σ signed, the
         // reverse-SDE score term flips sign across parameterizations and σ can be a signed increment.
-        let alpha = (xorshift(&mut state) & 0x0000_FFFF) as u32; // [0, 1.0)
+        let alpha = xorshift(&mut state) & 0x0000_FFFF; // [0, 1.0)
         let beta = signed_fixed(&mut state);
         let sigma = signed_fixed(&mut state);
 

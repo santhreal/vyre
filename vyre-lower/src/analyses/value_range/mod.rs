@@ -29,7 +29,9 @@ use vyre_foundation::ir::BinOp;
 /// hold both U32 and I32 bounds without overflow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IntRange {
+    /// Inclusive lower bound.
     pub min: i64,
+    /// Inclusive upper bound.
     pub max: i64,
 }
 
@@ -59,6 +61,7 @@ impl IntRange {
     }
 }
 
+/// Statically derived integer ranges for one descriptor body.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ValueRangeReport {
     /// `result_id → IntRange` for ids in the TOP-LEVEL body whose
@@ -81,11 +84,12 @@ pub struct ValueRangeReport {
     /// cannot be folded into `ranges`: the same id is legitimately known
     /// before the mutating construct and unknown after it, so collapsing
     /// the two would either lose a sound optimization or keep an unsound
-    /// one. See [`carrier_snapshot_invalidations`].
+    /// one. See the internal `carrier_snapshot_invalidations` analysis.
     pub invalidated_from: FxHashMap<u32, usize>,
 }
 
 impl ValueRangeReport {
+    /// Return the number of result identifiers with known ranges.
     pub fn known_count(&self) -> usize {
         self.ranges.len()
     }
@@ -147,11 +151,13 @@ impl ValueRangeReport {
     }
 }
 
+/// Analyze the descriptor's top-level body for integer value ranges.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> ValueRangeReport {
     analyze_body(&desc.body)
 }
 
+/// Analyze one body for integer value ranges.
 #[must_use]
 pub fn analyze_body(body: &KernelBody) -> ValueRangeReport {
     let mut ranges: FxHashMap<u32, IntRange> = FxHashMap::default();

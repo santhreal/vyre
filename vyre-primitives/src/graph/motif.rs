@@ -474,7 +474,6 @@ pub fn motif(shape: ProgramGraphShape, edges: &[MotifEdge], witness_out: &str) -
 /// means the node participates in a complete motif match.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn cpu_ref(
     node_count: u32,
     edge_offsets: &[u32],
@@ -975,7 +974,6 @@ inventory::submit! {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

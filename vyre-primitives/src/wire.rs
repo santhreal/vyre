@@ -873,7 +873,7 @@ mod tests {
     #[test]
     fn generated_u32_pack_matches_slice_pack() {
         let words = [0, 1, 0x1234_5678, u32::MAX];
-        let generated = pack_u32_iter(words.into_iter());
+        let generated = pack_u32_iter(words);
         assert_eq!(generated, pack_u32_slice(&words));
     }
 

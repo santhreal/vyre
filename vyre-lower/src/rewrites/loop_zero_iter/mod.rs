@@ -29,6 +29,7 @@
 use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Remove structured loops with a statically zero trip count.
 #[must_use]
 pub fn loop_zero_iter(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

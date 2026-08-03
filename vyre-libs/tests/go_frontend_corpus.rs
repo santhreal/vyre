@@ -19,7 +19,6 @@ use vyre_libs::parsing::go::parse::structure::{
     go_extract_declarations, go_extract_packages_and_imports, GO_DECL_RECORD_WORDS,
     GO_SPAN_RECORD_WORDS,
 };
-use vyre_reference::value::Value;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 struct Counts {

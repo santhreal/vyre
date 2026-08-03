@@ -22,6 +22,7 @@ use vyre_lower::KernelDescriptor;
 
 use super::vec_memory_fusion::{analyze_memory_fusion, MemoryFusionCandidate, MemoryFusionKind};
 
+/// One consecutive scalar-store group eligible for vector fusion.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FusionCandidate {
     /// Op-index of the FIRST store in the group.
@@ -36,11 +37,14 @@ pub struct FusionCandidate {
     pub alignment_bytes: u32,
 }
 
+/// Vector-store fusion opportunities for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct FusionPlan {
+    /// Consecutive scalar-store groups eligible for fusion.
     pub candidates: Vec<FusionCandidate>,
 }
 
+/// Analyze consecutive global stores for vector fusion.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> FusionPlan {
     FusionPlan {

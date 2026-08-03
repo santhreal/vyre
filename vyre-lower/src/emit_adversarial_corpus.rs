@@ -18,37 +18,57 @@ use crate::{
 /// Stable family tag for matrix assertions in each emit crate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EmitAdversarialFamily {
+    /// Deeply nested conditional control flow.
     DeepIfElse,
+    /// Workgroup dimensions at hostile validation boundaries.
     HostileWorkgroup,
+    /// Multiple host-visible bindings.
     MultiBinding,
+    /// Shared and global tiled-memory interaction.
     SharedGlobalTile,
+    /// Loop containing a synchronization barrier.
     LoopWithBarrier,
+    /// Atomic counter mutation.
     AtomicCounter,
+    /// Dead arithmetic identity chain.
     DeadIdentityChain,
+    /// Adjacent vector-load fusion opportunity.
     VecLoadFusion,
+    /// Signed buffer arithmetic.
     SignedBufferArithmetic,
+    /// Unsupported generic call rejection.
     RejectCall,
+    /// Unsupported grid-wide barrier rejection.
     RejectGridSyncBarrier,
 }
 
 /// Whether emitters should accept or reject the descriptor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmitOutcome {
+    /// The emitter must produce an artifact.
     Success,
+    /// The emitter must reject the descriptor.
     Reject,
 }
 
 /// Backends that must consume this corpus in their own emit/descriptor tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EmitAdversarialBackend {
+    /// Backend-neutral text emitter.
     Naga,
+    /// Native module emitter.
     Metal,
+    /// Primary text emitter.
     Ptx,
+    /// Primary binary emitter.
     Spirv,
+    /// Portable device runtime.
     Wgpu,
+    /// Primary device runtime.
     Cuda,
 }
 
+/// Backends required to consume the adversarial corpus.
 pub const REQUIRED_BACKENDS: [EmitAdversarialBackend; 6] = [
     EmitAdversarialBackend::Naga,
     EmitAdversarialBackend::Metal,
@@ -58,6 +78,7 @@ pub const REQUIRED_BACKENDS: [EmitAdversarialBackend; 6] = [
     EmitAdversarialBackend::Cuda,
 ];
 
+/// Return the required adversarial-corpus backend set.
 #[must_use]
 pub fn required_backends() -> &'static [EmitAdversarialBackend] {
     &REQUIRED_BACKENDS
@@ -66,9 +87,13 @@ pub fn required_backends() -> &'static [EmitAdversarialBackend] {
 /// One adversarial emit program case.
 #[derive(Debug, Clone)]
 pub struct EmitAdversarialCase {
+    /// Stable case identifier.
     pub id: &'static str,
+    /// Behavior family exercised by the case.
     pub family: EmitAdversarialFamily,
+    /// Descriptor supplied to each emitter.
     pub descriptor: KernelDescriptor,
+    /// Required emitter outcome.
     pub outcome: EmitOutcome,
 }
 
@@ -670,7 +695,7 @@ mod tests {
         for case in success_cases() {
             let errors = crate::verify(&case.descriptor);
             assert!(
-                matches!(errors, Ok(_)),
+                errors.is_ok(),
                 "Fix: adversarial case `{}` must verify before emit testing: {:?}",
                 case.id,
                 errors

@@ -2,7 +2,7 @@
 //! proofs (async, prepared, and resident pipelines).
 //!
 //! One coalesced haystack carries three "files" with KNOWN literal hit sets, laid
-//! out exactly as keyhog's phase-1 coalesced batch: ascending `region_starts`
+//! out exactly as the production phase-1 coalesced batch: ascending `region_starts`
 //! beginning at 0, each file terminated by a separator byte (newline) that is in
 //! NO literal so no match spans a region boundary. Every presence test asserts
 //! the decoded bitmap reproduces these exact per-region bit SETS, real values,
@@ -31,7 +31,7 @@ fn file_with(hits: &str) -> Vec<u8> {
 }
 
 /// Three coalesced files with distinct, KNOWN hit sets, returned as a coalesced
-/// haystack + ascending region starts (the keyhog phase-1 layout).
+/// haystack + ascending region starts (the production phase-1 layout).
 pub(crate) fn planted_corpus() -> (Vec<u8>, Vec<u32>) {
     let files = [
         file_with("api key here AKIA token secret"), // {api,key,AKIA,token,secret} = {7,0,3,1,2}

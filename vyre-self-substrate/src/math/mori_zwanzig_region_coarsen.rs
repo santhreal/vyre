@@ -71,6 +71,7 @@ pub struct RegionCoarsenScratch {
 }
 
 impl RegionCoarsenScratch {
+    /// Create empty reusable region-coarsening scratch.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

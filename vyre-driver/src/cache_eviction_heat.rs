@@ -67,10 +67,7 @@ pub fn entries_to_evict(
     capacity: usize,
     current_time_s: f64,
 ) -> Vec<u64> {
-    match try_entries_to_evict(entries, capacity, current_time_s) {
-        Ok(evicted) => evicted,
-        Err(_error) => Vec::new(),
-    }
+    try_entries_to_evict(entries, capacity, current_time_s).unwrap_or_default()
 }
 
 /// Fallible variant of [`entries_to_evict`] for daemon/cache paths that must

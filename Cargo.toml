@@ -75,13 +75,12 @@ homepage = "https://santh.dev"
 [workspace.lints.clippy]
 cast_lossless = "allow"
 cast_possible_truncation = "allow"
-# `drop(perf_scope.finish())` documents intent and matches the measurement
-# lifecycle; the value being Copy doesn't make the call meaningless.
-# Renamed in clippy 1.81: drop_copy → dropping_copy_types.
-dropping_copy_types = "allow"
 # BackendError intentionally carries context strings for actionable `Fix:`
 # messages. Boxing the error would hide the message from callers.
 result_large_err = "allow"
+# QuantizationScale's public PerTensor/PerAxis/PerGroup variants encode the
+# scaling scope and cannot be renamed without breaking the published API.
+enum_variant_names = "allow"
 # Chained closures in adapter pipelines (e.g. `.map(|e| e.to_string())`)
 # are clearer than the turbofished method-reference alternative.
 redundant_closure = "allow"
@@ -168,6 +167,9 @@ erasing_op = "allow"
 identity_op = "allow"
 
 [workspace.lints.rust]
+# `drop(perf_scope.finish())` documents measurement lifecycle intent. This is
+# a rustc lint, not a Clippy lint, on the supported toolchain.
+dropping_copy_types = "allow"
 # `external_ifds_engine` and `external-baselines` gate two bridges to the
 # external dataflow engine: `vyre-libs/src/security/external_ifds.rs` and
 # `vyre-bench/src/cases/dataflow_baseline.rs`. Neither can be a Cargo feature

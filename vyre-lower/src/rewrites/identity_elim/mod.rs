@@ -67,6 +67,7 @@ use crate::operand_semantics::operand_is_result_reference;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use rustc_hash::FxHashMap;
 
+/// Eliminate arithmetic and bitwise identity operations.
 #[must_use]
 pub fn identity_elim(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

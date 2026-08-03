@@ -22,6 +22,7 @@
 use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Fold selections with known conditions or identical alternatives.
 #[must_use]
 pub fn select_fold(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

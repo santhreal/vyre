@@ -50,7 +50,7 @@ fn sweep_hash_blake3_round_volume_oracle_matrix() {
         }
         let mut expected = message;
         let mut actual = message;
-        let perm = &MSG_SCHEDULE[(idx % MSG_SCHEDULE.len()) as usize];
+        let perm = &MSG_SCHEDULE[idx % MSG_SCHEDULE.len()];
         oracle_blake3_round(&mut expected, &message, perm);
         cpu_blake3_round(&mut actual, &message, perm);
         assert_eq!(actual, expected, "Fix: blake3_round volume case {idx}");

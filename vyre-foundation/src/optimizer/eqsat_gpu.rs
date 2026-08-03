@@ -506,10 +506,7 @@ impl GpuEGraphSnapshot {
     where
         I: IntoIterator<Item = (u32, &'a str, &'a [u32])>,
     {
-        match Self::try_build(rows) {
-            Ok(snapshot) => snapshot,
-            Err(_) => Self::default(),
-        }
+        Self::try_build(rows).unwrap_or_default()
     }
 
     /// Fallible form of [`Self::build`] that rejects snapshots too large for
@@ -554,10 +551,7 @@ impl GpuEGraphSnapshot {
         F: FnMut(&L) -> S,
         S: AsRef<str>,
     {
-        match Self::try_from_egraph_with(egraph, &mut op_name) {
-            Ok(snapshot) => snapshot,
-            Err(_) => Self::default(),
-        }
+        Self::try_from_egraph_with(egraph, &mut op_name).unwrap_or_default()
     }
 
     /// Fallible form of [`Self::from_egraph_with`] that rejects CPU e-graphs
@@ -789,10 +783,7 @@ impl GpuEGraphSnapshot {
     /// the exact overflow reason must be surfaced to the operator.
     #[must_use]
     pub fn pack_device_image(&self) -> GpuEGraphDeviceImage {
-        match self.try_pack_device_image() {
-            Ok(image) => image,
-            Err(_) => GpuEGraphDeviceImage::default(),
-        }
+        self.try_pack_device_image().unwrap_or_default()
     }
 }
 

@@ -207,7 +207,7 @@ fn vyre_pass_emits_metadata_trait_impl_and_inventory_registration() {
         .any(|registration| {
             registration.metadata.name == "release_surface_pass"
                 && (registration.factory)().metadata().requires_caps
-                    == &["cuda", "resident_dispatch"]
+                    == ["cuda", "resident_dispatch"]
         });
     assert!(registered);
 }

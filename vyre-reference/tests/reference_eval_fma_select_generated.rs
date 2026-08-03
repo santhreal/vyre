@@ -62,7 +62,7 @@ fn generated_reference_eval_fma_matches_fused_mul_add_for_4096_cases() {
 fn generated_reference_eval_select_routes_u32_arms_for_8192_cases() {
     let mut checked = 0usize;
     for seed in 0u32..8192 {
-        let cond = (seed.wrapping_mul(0x45D9_F3B) ^ seed.rotate_left(13)) & 1 != 0;
+        let cond = (seed.wrapping_mul(0x045D_9F3B) ^ seed.rotate_left(13)) & 1 != 0;
         let true_value = seed
             .wrapping_mul(1_664_525)
             .wrapping_add(1_013_904_223)

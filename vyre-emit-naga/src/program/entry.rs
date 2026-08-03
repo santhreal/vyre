@@ -108,6 +108,11 @@ pub fn emit_module_with_features(
     })
 }
 
+/// Emit a prepared Naga module using explicit program features.
+///
+/// # Errors
+///
+/// Returns a lowering error when preparation or descriptor emission fails.
 pub fn emit_prepared_module_with_features(
     program: &Program,
     config: &vyre_driver::DispatchConfig,
@@ -169,11 +174,21 @@ pub fn prepared_program(program: &Program) -> Result<Program, LoweringError> {
     Ok(Program::wrapped(new_buffers, workgroup_size, entry))
 }
 
+/// Collect stable trap tags from a prepared program.
+///
+/// # Errors
+///
+/// Returns a lowering error when program preparation fails.
 pub fn trap_tags(program: &Program) -> Result<Arc<[TrapTag]>, LoweringError> {
     let program = prepared_program(program)?;
     Ok(trap_tags_for_prepared_program(&program).into())
 }
 
+/// Declare the trap sidecar buffer required by a program.
+///
+/// # Errors
+///
+/// Returns a lowering error when the trap sidecar binding cannot be allocated.
 pub fn trap_sidecar_decl(program: &Program) -> Result<BufferDecl, LoweringError> {
     Ok(BufferDecl::storage(
         TRAP_SIDECAR_NAME,

@@ -3,14 +3,19 @@
 use serde::{Deserialize, Serialize};
 use vyre_lower::analyses::AccessKind;
 
+/// Vector width selected for packed memory access.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PackKind {
+    /// Two-lane vector.
     Vec2,
+    /// Three-lane vector.
     Vec3,
+    /// Four-lane vector.
     Vec4,
 }
 
 impl PackKind {
+    /// Return the number of vector lanes.
     #[must_use]
     pub const fn lane_count(&self) -> u32 {
         match self {
@@ -38,9 +43,13 @@ pub struct PackGroup {
     /// both ends. The entire range fuses into ONE packed op at the
     /// same logical position.
     pub start_op_index: usize,
+    /// Final operation index in the packed group.
     pub end_op_index: usize,
+    /// Memory access direction.
     pub kind: AccessKind,
+    /// Binding slot shared by the group.
     pub binding_slot: u32,
+    /// Selected packed vector width.
     pub pack: PackKind,
 }
 
@@ -60,9 +69,12 @@ impl PackGroup {
     }
 }
 
+/// Vector-packing opportunities for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PackingPlan {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Adjacent memory-access groups eligible for packing.
     pub groups: Vec<PackGroup>,
 }
 

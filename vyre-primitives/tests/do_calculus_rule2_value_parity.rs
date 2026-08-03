@@ -61,7 +61,7 @@ fn run_intervention_ir(adjacency: &[u32], intervention_mask: &[u32], n: u32) -> 
 #[test]
 fn rule2_ir_matches_cpu_over_generated_graphs() {
     let mut state = 0x0BAD_F00Du32;
-    let mut next = |s: &mut u32| {
+    let next = |s: &mut u32| {
         *s ^= *s << 13;
         *s ^= *s >> 17;
         *s ^= *s << 5;
@@ -149,7 +149,7 @@ fn run_rule3_ir(adjacency: &[u32], keep_mask: &[u32], n: u32) -> (Vec<u32>, Vec<
 #[test]
 fn rule3_ir_matches_cpu_over_generated_graphs() {
     let mut state = 0x7EED_1234u32;
-    let mut next = |s: &mut u32| {
+    let next = |s: &mut u32| {
         *s ^= *s << 13;
         *s ^= *s >> 17;
         *s ^= *s << 5;
@@ -258,7 +258,7 @@ fn rule3_ir_handles_empty_and_full_keep_masks() {
 #[test]
 fn intervention_ir_matches_cpu_over_generated_graphs() {
     let mut state = 0x1357_9BDFu32;
-    let mut next = |s: &mut u32| {
+    let next = |s: &mut u32| {
         *s ^= *s << 13;
         *s ^= *s >> 17;
         *s ^= *s << 5;

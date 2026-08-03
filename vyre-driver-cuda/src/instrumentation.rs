@@ -85,7 +85,7 @@ fn compute_resident_borrowed_fallback_policy() -> ResidentBorrowedFallbackPolicy
 
     #[cfg(debug_assertions)]
     {
-        return ResidentBorrowedFallbackPolicy { enabled: true };
+        ResidentBorrowedFallbackPolicy { enabled: true }
     }
 
     #[cfg(not(debug_assertions))]

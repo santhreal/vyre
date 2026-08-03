@@ -14,6 +14,8 @@ mod programs;
 use programs::block_totals_nonzero_scan;
 pub(super) use programs::pass_c_rescan_compact_sparse_tokens_with_capacity;
 
+type SparseOutputBuffers = (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>);
+
 #[derive(Default)]
 pub(super) struct SparseCompactionScratch {
     pass_a_outputs: Vec<Vec<u8>>,
@@ -271,7 +273,7 @@ where
 fn take_four_outputs(
     outputs: &mut Vec<Vec<u8>>,
     stage: &str,
-) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), String> {
+) -> Result<SparseOutputBuffers, String> {
     let mut iter = outputs.drain(..);
     let types = iter
         .next()

@@ -2,9 +2,13 @@ use std::collections::BTreeMap;
 use std::fmt::Write;
 use vyre_lower::{BindingVisibility, KernelBody, KernelDescriptor};
 
+/// Controls for human-readable descriptor rendering.
 pub struct DescriptorDumpOptions {
+    /// Include literal values in rendered operations.
     pub show_literals: bool,
+    /// Include operation result identifiers.
     pub show_result_ids: bool,
+    /// Maximum operations rendered for each body.
     pub max_ops_per_body: usize,
 }
 
@@ -18,16 +22,20 @@ impl Default for DescriptorDumpOptions {
     }
 }
 
+/// Human-readable descriptor text with operation counts by body path.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DescriptorDump {
+    /// Rendered descriptor text.
     pub text: String,
     #[serde(
         serialize_with = "crate::path_map_serde::serialize_usize",
         deserialize_with = "crate::path_map_serde::deserialize_usize"
     )]
+    /// Operation count for every rendered child-body path.
     pub op_counts_by_path: BTreeMap<Vec<usize>, usize>,
 }
 
+/// Render a kernel descriptor using the requested display options.
 pub fn dump_descriptor(desc: &KernelDescriptor, options: &DescriptorDumpOptions) -> DescriptorDump {
     let mut out = String::new();
     let mut counts = BTreeMap::new();

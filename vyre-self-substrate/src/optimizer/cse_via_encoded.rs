@@ -839,7 +839,6 @@ impl<C: CanonicalLookup + ?Sized> LetDedupeWalker<'_, C> {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::dispatch_buffers::u32_slice_to_le_bytes;

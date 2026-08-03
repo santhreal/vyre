@@ -103,12 +103,9 @@ pub(crate) fn find_subslice(haystack: &[u8], needle: &[u8], from: usize) -> Opti
     let last_start = search.len() - needle.len();
     let mut offset = 0usize;
     while offset <= last_start {
-        let Some(next) = search[offset..=last_start]
+        let next = search[offset..=last_start]
             .iter()
-            .position(|byte| *byte == first)
-        else {
-            return None;
-        };
+            .position(|byte| *byte == first)?;
         offset += next;
         if search.get(offset..offset + needle.len()) == Some(needle) {
             return Some(from + offset);

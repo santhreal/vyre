@@ -173,14 +173,12 @@ fn direct_record_and_readback_trap_uses_readback_rings_only() {
     );
     let after_allocations = with_rings_pool.stats().allocations;
 
-    assert_eq!(
+    assert!(
         error.to_string().contains("wgpu dispatch trapped"),
-        true,
         "Fix: expected trap dispatch to surface a backend trap error, got: {error}"
     );
-    assert_eq!(
+    assert!(
         error.to_string().contains("direct-readback-ring-trap"),
-        true,
         "Fix: expected trap dispatch to surface a backend trap error, got: {error}"
     );
     assert_eq!(

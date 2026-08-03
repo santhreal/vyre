@@ -248,9 +248,7 @@ fn canonical_ifds_csr(
     reference_canonicalize_csr_within_rows(&row_ptr, &col_idx)
 }
 
-fn generated_ifds_rules(
-    seed: u64,
-) -> (
+type GeneratedIfdsRules = (
     u32,
     u32,
     u32,
@@ -258,7 +256,9 @@ fn generated_ifds_rules(
     Vec<(u32, u32, u32, u32)>,
     Vec<(u32, u32, u32)>,
     Vec<(u32, u32, u32)>,
-) {
+);
+
+fn generated_ifds_rules(seed: u64) -> GeneratedIfdsRules {
     let mut rng = Rng::new(seed);
     let num_procs = 1 + rng.range(4);
     let blocks_per_proc = 1 + rng.range(8);

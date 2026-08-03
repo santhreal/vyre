@@ -37,7 +37,7 @@ fn main() {
     println!("SPIR-V: {} words", spv.len());
 
     println!("Dispatching...");
-    match backend.dispatch(&program, &vec![a, b], &DispatchConfig::default()) {
+    match backend.dispatch(&program, &[a, b], &DispatchConfig::default()) {
         Ok(outputs) => {
             println!("Dispatch succeeded! {} output buffers", outputs.len());
             for (i, out) in outputs.iter().enumerate() {

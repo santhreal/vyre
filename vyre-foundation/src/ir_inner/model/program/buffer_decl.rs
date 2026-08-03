@@ -686,7 +686,6 @@ impl BufferDecl {
 }
 
 #[cfg(test)]
-
 mod linear_type_tests {
     use super::*;
 

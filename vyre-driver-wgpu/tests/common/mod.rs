@@ -128,17 +128,13 @@ pub(crate) fn assert_dispatch_async_ready_state_observable_for_non_trivial_work(
         .dispatch_async(&program, &[input], &DispatchConfig::default())
         .expect("Fix: dispatch_async must return a handle");
 
-    let ready_now = pending.is_ready();
+    let _ready_now = pending.is_ready();
 
     let outputs = pending
         .await_result()
         .expect("Fix: await_result must resolve");
     let expected = add_one_expected(256 * 1024);
     assert_eq!(outputs, vec![expected]);
-
-    if !ready_now {
-        return;
-    }
 }
 
 pub(crate) fn assert_multiple_concurrent_async_dispatches_do_not_serialize() {

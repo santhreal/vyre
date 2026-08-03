@@ -855,8 +855,7 @@ mod tests {
         assert!(result.changed);
         let body = region_body(result.program.entry());
         let Node::Loop { body: fused, .. } = &body[0] else {
-            assert!(false, "Fix: must be a Loop");
-            return;
+            panic!("Fix: must be a Loop");
         };
         assert_eq!(fused.len(), 2);
         if let Node::Store { index, .. } = &fused[1] {
@@ -866,7 +865,7 @@ mod tests {
                 "second store's index must be renamed to outer var"
             );
         } else {
-            assert!(false, "Fix: second fused node must be a Store");
+            panic!("Fix: second fused node must be a Store");
         }
     }
 

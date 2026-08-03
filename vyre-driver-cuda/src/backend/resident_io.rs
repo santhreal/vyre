@@ -550,7 +550,7 @@ impl CudaBackend {
                 view.copy_slot,
                 view.byte_offset,
                 view.byte_len,
-                *output,
+                output,
             )?;
         }
         self.record_resident_readback_telemetry(
@@ -1160,7 +1160,6 @@ impl CudaBackend {
 }
 
 #[cfg(test)]
-
 mod resident_budget_tests {
     use super::{cuda_resident_live_budget_bytes, cuda_resident_total_budget_bytes};
 
@@ -1254,21 +1253,13 @@ mod async_upload_tests {
             .split(concat!("fn stage_fused_resident_", "readbacks_to_host"))
             .nth(1)
         else {
-            assert!(
-                false,
-                "Fix: CUDA fused resident readback staging helper must exist."
-            );
-            return;
+            panic!("Fix: CUDA fused resident readback staging helper must exist.");
         };
         let Some(readback) = readback
             .split("fn record_resident_readback_telemetry")
             .next()
         else {
-            assert!(
-                false,
-                "Fix: fused resident readback staging must precede readback telemetry."
-            );
-            return;
+            panic!("Fix: fused resident readback staging must precede readback telemetry.");
         };
         assert!(
             readback.contains("self.with_resident_stream_classified")
@@ -1279,18 +1270,10 @@ mod async_upload_tests {
         );
 
         let Some(upload) = source.split("fn copy_resident_uploads").nth(1) else {
-            assert!(
-                false,
-                "Fix: CUDA resident upload staging helper must exist."
-            );
-            return;
+            panic!("Fix: CUDA resident upload staging helper must exist.");
         };
         let Some(upload) = upload.split("/// Async H2D copy").next() else {
-            assert!(
-                false,
-                "Fix: resident upload staging must precede async upload API."
-            );
-            return;
+            panic!("Fix: resident upload staging must precede async upload API.");
         };
         assert!(
             upload.contains("self.with_resident_stream_classified")
@@ -1306,18 +1289,10 @@ mod async_upload_tests {
         let source = include_str!("resident_io.rs");
         let Some(synchronize_uploads) = source.split("pub fn synchronize_uploads(&self)").nth(1)
         else {
-            assert!(
-                false,
-                "Fix: CUDA async upload synchronization entrypoint must exist."
-            );
-            return;
+            panic!("Fix: CUDA async upload synchronization entrypoint must exist.");
         };
         let Some(synchronize_uploads) = synchronize_uploads.split("}\n}").next() else {
-            assert!(
-                false,
-                "Fix: synchronize_uploads must end inside the resident I/O impl."
-            );
-            return;
+            panic!("Fix: synchronize_uploads must end inside the resident I/O impl.");
         };
         assert!(
             synchronize_uploads.contains("if let Err(error) = stream.synchronize()")
@@ -1327,28 +1302,16 @@ mod async_upload_tests {
             "Fix: CUDA async resident upload synchronization must leak the stream when completion cannot be proven."
         );
         let Some(sync_pos) = synchronize_uploads.find("stream.synchronize()") else {
-            assert!(
-                false,
-                "Fix: synchronize_uploads must synchronize the upload stream."
-            );
-            return;
+            panic!("Fix: synchronize_uploads must synchronize the upload stream.");
         };
         let Some(telemetry_pos) = synchronize_uploads.find("self.telemetry.record_sync_point();")
         else {
-            assert!(
-                false,
-                "Fix: synchronize_uploads must record sync telemetry after success."
-            );
-            return;
+            panic!("Fix: synchronize_uploads must record sync telemetry after success.");
         };
         let Some(release_pos) =
             synchronize_uploads.find("self.launch_resources.release_stream(stream);")
         else {
-            assert!(
-                false,
-                "Fix: synchronize_uploads must release successfully synchronized streams."
-            );
-            return;
+            panic!("Fix: synchronize_uploads must release successfully synchronized streams.");
         };
         assert!(
             sync_pos < telemetry_pos && telemetry_pos < release_pos,

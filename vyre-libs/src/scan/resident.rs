@@ -499,7 +499,7 @@ mod tests {
         // Canned counter says 9 hits but the session was sized for 4, decoding
         // would silently drop 5. The guard must error so the caller degrades.
         let mut canned = 9u32.to_le_bytes().to_vec();
-        canned.extend(std::iter::repeat(0u8).take(4 * 12)); // only 4 triples present
+        canned.extend(std::iter::repeat_n(0u8, 4 * 12)); // only 4 triples present
         let backend = MockResidentBackend::new(canned);
         let session = pipeline
             .prepare_resident(&backend, 64, 4)

@@ -419,7 +419,7 @@ pub(crate) fn generated_bool_cast_values(lane_count: usize) -> Vec<bool> {
         .map(|lane| {
             let lane = lane as u32;
             matches!(
-                lane.wrapping_mul(0x45d9_f3b).rotate_left(lane & 7) & 0b1011,
+                lane.wrapping_mul(0x045d_9f3b).rotate_left(lane & 7) & 0b1011,
                 0b0001 | 0b0011 | 0b1001
             )
         })
@@ -453,7 +453,7 @@ pub(crate) fn generated_mixed_bool_values(salt: u32) -> Vec<bool> {
     (0..GENERATED_LANE_COUNT)
         .map(|lane| {
             let lane = lane as u32;
-            let mixed = lane.wrapping_mul(0x45d9_f3b).rotate_left((lane & 7) + 1)
+            let mixed = lane.wrapping_mul(0x045d_9f3b).rotate_left((lane & 7) + 1)
                 ^ salt.rotate_right(lane & 31);
             (mixed & 0b1011) == 0b0001 || lane % 13 == 0
         })

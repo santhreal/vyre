@@ -63,9 +63,8 @@ fn truncated_wire_input_is_rejected_without_panic() {
     let encoded = program.to_wire().expect("program must encode");
 
     for len in 0..encoded.len().min(16) {
-        assert_eq!(
+        assert!(
             Program::from_wire(&encoded[..len]).is_err(),
-            true,
             "truncated wire prefix of length {len} must be rejected"
         );
     }

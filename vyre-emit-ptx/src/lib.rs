@@ -75,10 +75,12 @@ use vyre_lower::KernelDescriptor;
 pub use error::EmitError;
 pub use target::{ComputeCapability, PtxEmitOptions};
 
+/// Emit PTX for the default compute capability.
 pub fn emit(desc: &KernelDescriptor) -> Result<String, EmitError> {
     emit_with_target(desc, ComputeCapability::default())
 }
 
+/// Emit PTX for an explicit compute capability.
 pub fn emit_with_target(
     desc: &KernelDescriptor,
     target: ComputeCapability,
@@ -86,6 +88,7 @@ pub fn emit_with_target(
     emit_with_options(desc, PtxEmitOptions::for_target(target))
 }
 
+/// Emit PTX using explicit instruction-selection options.
 pub fn emit_with_options(
     desc: &KernelDescriptor,
     options: PtxEmitOptions,

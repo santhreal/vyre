@@ -407,7 +407,6 @@ pub fn flash_attention_2_reference(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::decode_f32;
@@ -493,7 +492,7 @@ mod tests {
             &k,
             &v,
         );
-        assert_eq!(out.len(), elements as usize);
+        assert_eq!(out.len(), elements);
     }
 
     /// Edge case: `seq_len == 1` degenerates to passing V through

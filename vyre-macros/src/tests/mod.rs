@@ -134,8 +134,7 @@ fn extract_laws_rejects_unknown_vyre_attribute_argument() {
     .expect("Fix: derive input should parse");
 
     let err = extract_laws_attribute(&input.attrs)
-        .err()
-        .expect("Fix: unknown vyre attribute arguments must fail");
+        .expect_err("Fix: unknown vyre attribute arguments must fail");
 
     assert!(err.to_string().contains("unknown vyre() argument"));
 }

@@ -452,7 +452,7 @@ mod tests {
     use super::*;
 
     const CONSTRUCT_TIER_DIGEST: u64 = 0x5ca1_c075_7e12;
-    const DIALECT_DIGEST: u64 = 0xd1a1_ec7;
+    const DIALECT_DIGEST: u64 = 0x0d1a_1ec7;
 
     fn header() -> ScanDatabaseHeader {
         ScanDatabaseHeader {

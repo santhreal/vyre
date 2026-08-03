@@ -18,6 +18,16 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
 
+type IfdsIntraRule = (u32, u32, u32);
+type IfdsInterRule = (u32, u32, u32, u32);
+type IfdsFactRule = (u32, u32, u32);
+type ParsedIfdsRules = (
+    Vec<IfdsIntraRule>,
+    Vec<IfdsInterRule>,
+    Vec<IfdsFactRule>,
+    Vec<IfdsFactRule>,
+);
+
 /// The buffers an [`OptimizerDispatcher`] returns, in declared order.
 ///
 /// The trait contract is "the declared outputs in the same canonical order", which
@@ -712,7 +722,7 @@ pub mod oracle {
     //! invokes (DCE → `persistent_bfs`). When CSE / const-fold land
     //! they each add a small case here.
 
-    use super::{DispatchError, OptimizerDispatcher};
+    use super::{DispatchError, OptimizerDispatcher, ParsedIfdsRules};
     use vyre_foundation::ir::Program;
 
     /// CPU oracle dispatcher. Recognizes only the optimizer's own
@@ -904,6 +914,7 @@ pub mod oracle {
     }
 
     #[cfg(test)]
+    #[allow(clippy::items_after_test_module)]
     mod changed_words_tests {
         use super::changed_words_for;
         use vyre_primitives::graph::persistent_bfs::PersistentBfsConvergence;
@@ -1025,15 +1036,7 @@ pub mod oracle {
     fn parse_ifds_rule_inputs(
         key: &vyre_primitives::graph::exploded::IfdsCsrProgramCacheKey,
         inputs: &[Vec<u8>],
-    ) -> Result<
-        (
-            Vec<(u32, u32, u32)>,
-            Vec<(u32, u32, u32, u32)>,
-            Vec<(u32, u32, u32)>,
-            Vec<(u32, u32, u32)>,
-        ),
-        DispatchError,
-    > {
+    ) -> Result<ParsedIfdsRules, DispatchError> {
         let intra_proc = crate::hardware::dispatch_buffers::read_u32s(&inputs[0]);
         let intra_src_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[1]);
         let intra_dst_block = crate::hardware::dispatch_buffers::read_u32s(&inputs[2]);

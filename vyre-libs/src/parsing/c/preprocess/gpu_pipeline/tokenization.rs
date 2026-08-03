@@ -300,12 +300,14 @@ pub(super) fn gpu_tokenize_without_directive_metadata_with_scratch(
     ))
 }
 
+type SparseTokens = (Vec<u32>, Vec<u32>, Vec<u32>);
+
 fn sparse_tokenize(
     dispatcher: &dyn GpuDispatcher,
     raw: &[u8],
     n_bytes: u32,
     scratch: &mut TokenizationScratch,
-) -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
+) -> Result<SparseTokens, String> {
     // PERF: bucket n_bytes so the sparse lexer + prefix-scan + compact
     // kernel triplet hits the dispatcher's pipeline cache across files.
     // Without bucketing every distinct file size produced a unique
@@ -459,7 +461,6 @@ fn sparse_tokenize(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use vyre::ir::Program;

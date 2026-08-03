@@ -11,6 +11,9 @@ documentation = "https://docs.rs/vyre-emit-metal"
 categories = ["compilers", "hardware-support"]
 keywords = ["vyre", "metal", "msl", "shader", "gpu"]
 
+[lints]
+workspace = true
+
 [lib]
 name = "vyre_emit_metal"
 path = "src/lib.rs"

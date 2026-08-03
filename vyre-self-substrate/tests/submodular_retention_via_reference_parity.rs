@@ -109,14 +109,14 @@ fn select_retention_set_via_hand_checked_greedy_order_and_early_stop() {
         vec![0, 1, 0],
         "a single retention takes the max-gain item"
     );
-    let want = select_retention_set(&mut vec![0u32, 3, 0], 3, 1);
+    let want = select_retention_set(&mut [0u32, 3, 0], 3, 1);
     assert_eq!(got, want, "single-pick argmax matches the reference");
 
     // The greedy fills exactly k slots even when remaining gains are zero (argmax does not treat a
     // zero gain as NO_WINNER; the loop stops only once all n items are picked). k=n retains everything.
     let mut gains = vec![0u32, 3, 0];
     let got = select_retention_set_via(&d, &mut gains, 3, 3).unwrap();
-    let want = select_retention_set(&mut vec![0u32, 3, 0], 3, 3);
+    let want = select_retention_set(&mut [0u32, 3, 0], 3, 3);
     assert_eq!(got, want, "k=n retains all items and matches the reference");
     assert_eq!(
         got,

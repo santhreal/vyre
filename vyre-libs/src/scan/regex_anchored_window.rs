@@ -382,7 +382,7 @@ mod tests {
     const MAX_MATCHES: u32 = 4096;
     const MAX_DFA_STATES: usize = 16_384;
 
-    fn validator_for<'p>(patterns: &[&str]) -> CompiledDfa {
+    fn validator_for(patterns: &[&str]) -> CompiledDfa {
         build_regex_dfa_pipeline(patterns, MAX_MATCHES, MAX_DFA_STATES)
             .expect("Fix: test patterns must compile to an anchored regex DFA")
             .dfa
@@ -599,13 +599,6 @@ mod tests {
         assert!(validator.validate_candidates(b"abcabc", &[]).is_empty());
     }
 
-    /// GPU program ↔ CPU oracle parity via the reference backend: the vyre IR
-    /// `anchored_window_extract_program`, evaluated by the reference
-    /// interpreter, must emit exactly the match set [`AnchoredWindowValidator`]
-    /// defines for the same DFA, haystack and candidate origins. This proves the
-    /// emitted kernel implements the anchored-window semantics, the same
-    /// program dispatches on the GPU.
-
     /// Decode `(pattern_id, start, end)` triples from a `[match_count, matches]`
     /// reference-output pair (little-endian u32 words).
     fn decode_match_triples(outputs: &[vyre_reference::value::Value]) -> Vec<(u32, u32, u32)> {
@@ -624,6 +617,7 @@ mod tests {
             .collect()
     }
 
+    /// Proves the emitted kernel and CPU oracle implement identical anchored-window semantics.
     #[test]
     fn extract_program_reference_eval_matches_cpu_oracle() {
         use crate::scan::{pack_haystack_u32, pack_u32_slice};

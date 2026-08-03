@@ -25,8 +25,7 @@ not_snake_case_re='^pub fn [A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*\s*\('
 op_files="$(find "$libs_root" \
     -type f -name "*.rs" \
     ! -name "mod.rs" ! -name "lib.rs" ! -name "builder.rs" \
-    ! -name "tensor_ref.rs" ! -name "region.rs" ! -name "descriptor.rs" \
-    ! -name "harness.rs" \
+    ! -name "harness.rs" ! -name "relation_analyzer.rs" \
     ! -path "*/tests/*")"
 
 for f in $op_files; do

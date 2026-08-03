@@ -27,14 +27,14 @@ use std::sync::Arc;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 /// Thread count and buffer length for every shape.
-pub const REPRO_N: u32 = 8;
+pub(crate) const REPRO_N: u32 = 8;
 /// Comparand `k` in the repro's `n == k` guards.
-pub const REPRO_K: u32 = 0;
+pub(crate) const REPRO_K: u32 = 0;
 /// Sentinel standing in for the tokenizer's `Rank::ABSENT`.
-pub const ABSENT: u32 = u32::MAX;
+pub(crate) const ABSENT: u32 = u32::MAX;
 /// Loop trip count for the loop-bodied shapes. Kept below `REPRO_N` so a
 /// `src[i]` read inside the loop is always in bounds.
-pub const TRIP: u32 = 4;
+pub(crate) const TRIP: u32 = 4;
 
 fn tid() -> Expr {
     Expr::InvocationId { axis: 0 }
@@ -90,7 +90,7 @@ fn select_on(probe: &str, sentinel: u32, when_equal: u32, when_differs: Expr) ->
 ///   store out[p] = end
 /// }
 /// ```
-pub fn repro_program(n: u32) -> Program {
+pub(crate) fn repro_program(n: u32) -> Program {
     let mut inner = vec![
         Node::let_bind("a", tid()),
         Node::let_bind("n", Expr::u32(REPRO_K)),
@@ -129,7 +129,7 @@ pub fn repro_program(n: u32) -> Program {
 /// `src[p]` is nonzero the inner body advances `a` to `p + 1` and sets `n` to
 /// 1, which closes the remaining two guards, and the trailing `n != 0` guard
 /// publishes `a`. Otherwise nothing moves and `end` stays 0.
-pub fn repro_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn repro_oracle(src: &[u32]) -> Vec<u32> {
     src.iter()
         .enumerate()
         .map(|(p, &v)| if v != 0 { p as u32 + 1 } else { 0 })
@@ -142,7 +142,7 @@ pub fn repro_oracle(src: &[u32]) -> Vec<u32> {
 
 /// `acc` is let-bound to the literal 0 and incremented by a `Node::assign`
 /// inside `if_then` inside `loop_for`. The guards afterwards read `acc`.
-pub fn loop_assign_program(n: u32) -> Program {
+pub(crate) fn loop_assign_program(n: u32) -> Program {
     let mut body = vec![
         Node::let_bind("acc", Expr::u32(0)),
         Node::loop_for(
@@ -164,7 +164,7 @@ pub fn loop_assign_program(n: u32) -> Program {
 
 /// Count of nonzero entries in the first `TRIP` slots; 111 when that count is
 /// zero. Uniform across threads because the loop does not read `p`.
-pub fn loop_assign_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn loop_assign_oracle(src: &[u32]) -> Vec<u32> {
     let count = src.iter().take(TRIP as usize).filter(|&&v| v != 0).count() as u32;
     let value = if count == 0 { 111 } else { count };
     vec![value; src.len()]
@@ -177,7 +177,7 @@ pub fn loop_assign_oracle(src: &[u32]) -> Vec<u32> {
 /// `v` is let-bound to the literal 5 and reassigned ONLY in the `otherwise`
 /// arm. The then-arm binds an unrelated local so the arm is non-empty without
 /// touching `v`.
-pub fn else_assign_program(n: u32) -> Program {
+pub(crate) fn else_assign_program(n: u32) -> Program {
     let mut body = vec![
         Node::let_bind("v", Expr::u32(5)),
         Node::if_then_else(
@@ -192,7 +192,7 @@ pub fn else_assign_program(n: u32) -> Program {
 
 /// Nonzero `src[p]` leaves `v` at 5 and selects 50; zero takes the else arm,
 /// sets `v` to 9, and selects 9.
-pub fn else_assign_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn else_assign_oracle(src: &[u32]) -> Vec<u32> {
     src.iter().map(|&v| if v != 0 { 50 } else { 9 }).collect()
 }
 
@@ -204,7 +204,7 @@ pub fn else_assign_oracle(src: &[u32]) -> Vec<u32> {
 /// an `if_then` inside a `Node::Region`. `Region` carries no execution
 /// semantics but does carry a body, so the region-exit merge has to publish
 /// the in-region value back to the parent.
-pub fn region_assign_program(n: u32) -> Program {
+pub(crate) fn region_assign_program(n: u32) -> Program {
     let mut body = vec![
         Node::let_bind("v", Expr::u32(3)),
         Node::Region {
@@ -222,7 +222,7 @@ pub fn region_assign_program(n: u32) -> Program {
 
 /// Nonzero `src[p]` publishes 11 out of the region; zero leaves `v` at 3 and
 /// selects 30.
-pub fn region_assign_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn region_assign_oracle(src: &[u32]) -> Vec<u32> {
     src.iter().map(|&v| if v != 0 { 11 } else { 30 }).collect()
 }
 
@@ -233,7 +233,7 @@ pub fn region_assign_oracle(src: &[u32]) -> Vec<u32> {
 /// `flag` is let-bound to the literal 0 and reassigned in exactly ONE arm of
 /// an if/else. Every read of it happens after the join, so it must observe the
 /// merged value rather than the pre-branch literal.
-pub fn join_program(n: u32) -> Program {
+pub(crate) fn join_program(n: u32) -> Program {
     let mut body = vec![
         Node::let_bind("flag", Expr::u32(0)),
         Node::if_then_else(
@@ -248,7 +248,7 @@ pub fn join_program(n: u32) -> Program {
 
 /// Nonzero `src[p]` sets `flag` to 1 and selects 88; zero leaves it 0 and
 /// selects 77.
-pub fn join_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn join_oracle(src: &[u32]) -> Vec<u32> {
     src.iter().map(|&v| if v != 0 { 88 } else { 77 }).collect()
 }
 
@@ -263,7 +263,7 @@ pub fn join_oracle(src: &[u32]) -> Vec<u32> {
 ///
 /// Stored value is `rank_acc * 10 + index_acc + p`, so a wrong minimum, a
 /// wrong index, and a per-thread fault are all separately visible.
-pub fn sentinel_min_program(n: u32) -> Program {
+pub(crate) fn sentinel_min_program(n: u32) -> Program {
     let mut body = vec![
         Node::let_bind("rank_acc", Expr::u32(ABSENT)),
         Node::let_bind("index_acc", Expr::u32(ABSENT)),
@@ -300,7 +300,7 @@ pub fn sentinel_min_program(n: u32) -> Program {
 
 /// Running minimum over the first `TRIP` slots with the index of the last
 /// strict improvement; 999 when nothing beat the sentinel.
-pub fn sentinel_min_oracle(src: &[u32]) -> Vec<u32> {
+pub(crate) fn sentinel_min_oracle(src: &[u32]) -> Vec<u32> {
     let mut rank = ABSENT;
     let mut index = ABSENT;
     for (i, &r) in src.iter().take(TRIP as usize).enumerate() {

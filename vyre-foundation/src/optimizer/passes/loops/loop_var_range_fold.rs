@@ -120,10 +120,6 @@ struct BoundRange {
     max: Option<u32>,
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "range-fold tree rewrite keeps loop/if/block/region reconstruction in one ownership-preserving pass"
-)]
 fn recurse(
     node: Node,
     range: Option<LoopRange<'_>>,

@@ -8,79 +8,126 @@ use vyre_lower::{
     DescriptorIntentKind, DescriptorIntentSet, DescriptorIntentStrategy, IntentAnnotatedDescriptor,
 };
 
+/// Current serialized scan-explanation report schema.
 pub const SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32 = 1;
 
+/// Structural role played by an extracted byte factor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum ScanFactorRole {
+    /// Complete literal pattern.
     Literal,
+    /// Pattern prefix.
     Prefix,
+    /// Pattern suffix.
     Suffix,
+    /// Pattern fragment bounded on both sides.
     Infix,
+    /// Pattern fragment spanning the prefix and suffix.
     Outfix,
 }
 
+/// One byte factor extracted from a scan pattern.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanExplainFactor {
+    /// Factor role within the source pattern.
     pub role: ScanFactorRole,
+    /// Zero-based source pattern index.
     pub pattern_index: u32,
+    /// Exact factor bytes.
     pub bytes: Vec<u8>,
+    /// Stable digest of the factor bytes.
     pub digest: u64,
 }
 
+/// One engine selected to execute part of a scan route.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanExplainEngine {
+    /// Descriptor strategy used by the engine.
     pub strategy: DescriptorIntentStrategy,
+    /// Evidence explaining the selection.
     pub reason: String,
 }
 
+/// Correctness guarantee provided by a scan route or engine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum ScanExplainExactnessClass {
+    /// Engine returns exact matches without verification.
     Exact,
+    /// Engine returns candidates that the route verifies exactly.
     PrefilterVerified,
+    /// Engine output is incomplete without a verifier.
     VerifierRequired,
+    /// Engine cannot represent the requested scan.
     Unsupported,
 }
 
+/// Candidate engine rejected while constructing the scan route.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanExplainRejectedEngine {
+    /// Stable engine identifier.
     pub engine_id: String,
+    /// Source pattern that caused rejection.
     pub pattern_index: u32,
+    /// Evidence explaining the rejection.
     pub reason: String,
+    /// Correctness class the rejected engine could provide.
     pub exactness_class: ScanExplainExactnessClass,
 }
 
+/// Verifier input fragment retained by a scan route.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanExplainVerifierFragment {
+    /// Fragment origin.
     pub source: String,
+    /// Fragment size in bytes.
     pub bytes: u64,
+    /// Stable digest of the fragment.
     pub digest: u64,
 }
 
+/// Evidence supporting the selected scan route.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct ScanExplainRouteEvidence {
+    /// End-to-end correctness class.
     pub exactness_class: ScanExplainExactnessClass,
+    /// Estimated verifier input bytes.
     pub verifier_cost_estimate_bytes: u64,
+    /// Evidence used to estimate literal selectivity.
     pub literal_selectivity_basis: String,
 }
 
+/// Serializable explanation of scan decomposition and route selection.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 pub struct ScanExplainReport {
+    /// Report schema version.
     pub schema_version: u32,
+    /// Stable identifier of the source pattern set.
     pub pattern_set_id: String,
+    /// Byte factors extracted from the source patterns.
     pub extracted_factors: Vec<ScanExplainFactor>,
+    /// Engines selected by the route.
     pub selected_engines: Vec<ScanExplainEngine>,
+    /// Candidate engines rejected by the route.
     pub rejected_engines: Vec<ScanExplainRejectedEngine>,
+    /// Fragments retained for exact verification.
     pub verifier_fragments: Vec<ScanExplainVerifierFragment>,
+    /// Evidence supporting route correctness and cost.
     pub route_evidence: ScanExplainRouteEvidence,
+    /// Bytes required for streaming state.
     pub streaming_state_bytes: u64,
+    /// Bytes required for resident scan tables.
     pub table_bytes: u64,
+    /// Baseline artifact used for comparison.
     pub baseline_id: String,
+    /// Requested features the route cannot execute.
     pub unsupported_features: Vec<UnsupportedScanFeature>,
+    /// Reproducible artifacts supporting the report.
     pub artifact_links: Vec<String>,
 }
 
 impl ScanExplainReport {
+    /// Return whether every required report section contains usable evidence.
     #[must_use]
     pub fn is_complete(&self) -> bool {
         self.schema_version == SCAN_EXPLAIN_REPORT_SCHEMA_VERSION
@@ -98,13 +145,20 @@ impl ScanExplainReport {
     }
 }
 
+/// Invalid or incomplete input to scan-explanation construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScanExplainError {
+    /// Pattern-set identifier is empty.
     MissingPatternSetId,
+    /// No extracted factors were supplied.
     MissingFactors,
+    /// Baseline identifier is empty.
     MissingBaselineId,
+    /// No supporting artifacts were supplied.
     MissingArtifactLinks,
+    /// Descriptor carries no executable intent annotations.
     MissingDescriptorIntents,
+    /// Scan database metadata is absent.
     MissingScanDatabase,
 }
 
@@ -131,6 +185,7 @@ impl std::fmt::Display for ScanExplainError {
 
 impl std::error::Error for ScanExplainError {}
 
+/// Build a validated scan-explanation report from descriptor and database evidence.
 pub fn scan_explain_report(
     pattern_set_id: impl Into<String>,
     extracted_factors: Vec<ScanExplainFactor>,
@@ -492,7 +547,7 @@ mod tests {
             }],
             compatibility: ScanDatabaseCompatibilityRecord {
                 construct_tier_digest: 0x51ca_51ca,
-                dialect_digest: 0xd1a1_ec7,
+                dialect_digest: 0x0d1a_1ec7,
                 reader_compatibility: ScanDatabaseReaderCompatibility::RequiresVerifier,
             },
         }

@@ -141,7 +141,7 @@ impl IndexFacts {
             return None;
         }
         let affine = self.affine_mod(body, result_id, modulus, depth)?;
-        return (affine.coeff == 0).then_some(affine.offset % modulus);
+        (affine.coeff == 0).then_some(affine.offset % modulus)
     }
 
     fn affine_mod(

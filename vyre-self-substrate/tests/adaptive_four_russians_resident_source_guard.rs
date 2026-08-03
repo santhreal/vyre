@@ -1,3 +1,5 @@
+//! Source guard for the adaptive Four Russians resident primitive wrapper.
+
 #[test]
 fn four_russians_resident_path_remains_a_primitive_wrapper() {
     let upload_source = include_str!("../src/graph/adaptive_traverse/upload.rs");

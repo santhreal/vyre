@@ -461,7 +461,6 @@ inventory::submit! {
 
 /// Build the standard base64 decode table (RFC 4648).
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn cpu_base64_table() -> [u32; 256] {
     standard_decode_table()
 }

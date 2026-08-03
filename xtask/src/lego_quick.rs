@@ -90,8 +90,8 @@ pub(crate) fn run(args: &[String]) {
     let (mut advisories, mut blockers): (Vec<Finding>, Vec<Finding>) = findings
         .into_iter()
         .partition(|f| f.category == "large-file");
-    advisories.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
-    blockers.sort_by(|a, b| sort_key(a).cmp(&sort_key(b)));
+    advisories.sort_by_key(|finding| sort_key(finding));
+    blockers.sort_by_key(|finding| sort_key(finding));
 
     if blockers.is_empty() && advisories.is_empty() {
         println!(

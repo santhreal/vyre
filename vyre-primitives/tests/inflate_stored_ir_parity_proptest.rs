@@ -29,7 +29,7 @@ fn build_stored_block(payload: &[u8], bfinal: u32, trailing_pad: usize) -> Vec<u
     words.push(u32::from(nlen & 0xFF));
     words.push(u32::from((nlen >> 8) & 0xFF));
     words.extend(payload.iter().map(|&b| u32::from(b)));
-    words.extend(std::iter::repeat(0u32).take(trailing_pad));
+    words.extend(std::iter::repeat_n(0u32, trailing_pad));
     words
 }
 

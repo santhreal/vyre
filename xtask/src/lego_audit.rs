@@ -149,9 +149,9 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn duplicate_report_json_arg(args: &[String]) -> Option<PathBuf> {
-    let Some(index) = args.iter().position(|arg| arg == "--duplicate-report-json") else {
-        return None;
-    };
+    let index = args
+        .iter()
+        .position(|arg| arg == "--duplicate-report-json")?;
     match duplicate_report_json_path(
         "--duplicate-report-json",
         args.get(index + 1).map(String::as_str),
@@ -833,7 +833,6 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 /// `vyre_libs::security::topology::match_order` for generic byte-range
 /// ordering. V5's hoist into `vyre_libs::range_ordering` and this
 /// automated check keep that coupling from returning.
-
 fn check_4_cross_dialect_reachthrough() -> usize {
     println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
     let libs_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

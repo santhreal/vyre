@@ -2,23 +2,22 @@ use super::*;
 
 #[test]
 fn parity_matrix_input_planner_tracks_dynamic_fixture_contract() {
-    for path in ["conform/vyre-conform-runner/src/witness_plan.rs"] {
-        let source = repo_file(path);
-        assert!(
-            source.contains("matching_fixture_bytes(")
-                && source.contains("fixture_index")
-                && source.contains("byte_len: Option<usize>"),
-            "Fix: `{path}` must route backend witness inputs by logical fixture order with optional static byte lengths, not only raw Program::buffers indices."
-        );
-        assert!(
-            source.contains("runtime-sized read-write buffer"),
-            "Fix: `{path}` must reject omitted runtime-sized read-write buffers instead of silently zeroing an unknown byte length."
-        );
-        assert!(
-            !source.contains("fixture_buffer_count"),
-            "Fix: `{path}` must not infer read-write fixture presence from a raw fixture count; use per-buffer fixture matching."
-        );
-    }
+    let path = "conform/vyre-conform-runner/src/witness_plan.rs";
+    let source = repo_file(path);
+    assert!(
+        source.contains("matching_fixture_bytes(")
+            && source.contains("fixture_index")
+            && source.contains("byte_len: Option<usize>"),
+        "Fix: `{path}` must route backend witness inputs by logical fixture order with optional static byte lengths, not only raw Program::buffers indices."
+    );
+    assert!(
+        source.contains("runtime-sized read-write buffer"),
+        "Fix: `{path}` must reject omitted runtime-sized read-write buffers instead of silently zeroing an unknown byte length."
+    );
+    assert!(
+        !source.contains("fixture_buffer_count"),
+        "Fix: `{path}` must not infer read-write fixture presence from a raw fixture count; use per-buffer fixture matching."
+    );
 
     let main = repo_file("conform/vyre-conform-runner/src/main.rs");
     assert!(

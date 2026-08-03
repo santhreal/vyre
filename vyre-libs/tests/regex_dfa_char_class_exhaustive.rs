@@ -17,10 +17,12 @@ fn class_admits(dfa_transitions: &[u32], dfa_accept: &[u32], byte: u8) -> bool {
     dfa_accept[state as usize] != 0
 }
 
+type CharacterClassCase = (&'static str, fn(u8) -> bool);
+
 #[test]
 fn character_class_accepts_exactly_its_members_over_all_256_bytes() {
     // (regex class, membership oracle) (oracle is the ground truth).
-    let classes: &[(&str, fn(u8) -> bool)] = &[
+    let classes: &[CharacterClassCase] = &[
         ("[a-z]", |b| b.is_ascii_lowercase()),
         ("[A-Z]", |b| b.is_ascii_uppercase()),
         ("[0-9]", |b| b.is_ascii_digit()),

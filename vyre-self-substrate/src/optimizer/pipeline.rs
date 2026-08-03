@@ -26,8 +26,11 @@ pub enum GpuOptimizeError {
     Persistent(PipelineError),
     /// Sequential per-pass GPU dispatch errors (one variant per pass).
     Canonicalize(CanonicalizeError),
+    /// Constant-fold dispatch failed.
     ConstFold(ConstFoldError),
+    /// Algebraic pattern-match dispatch failed.
     PatternMatch(PatternMatchError),
+    /// Dead-code elimination dispatch failed.
     Dce(DceError),
 }
 

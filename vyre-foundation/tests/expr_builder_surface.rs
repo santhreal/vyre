@@ -306,7 +306,7 @@ fn i32_literal_shape() {
 
 #[test]
 fn f32_literal_shape() {
-    assert!(matches!(Expr::f32(3.14), Expr::LitF32(v) if v == 3.14));
+    assert!(matches!(Expr::f32(1.25), Expr::LitF32(v) if v == 1.25));
 }
 
 #[test]

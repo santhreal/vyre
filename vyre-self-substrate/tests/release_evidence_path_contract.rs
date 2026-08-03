@@ -11,9 +11,8 @@ use std::process::Command;
 ///
 /// This exists because, before it, NOTHING validated that. Exactly two
 /// consumers read the findings array workspace-wide,
-/// `release_completion_audit/semantics/part5.rs` and
-/// `vyre_weir_release_gate/semantic/release_hygiene.rs`, and both only compare
-/// `findings.len()` against the summed `finding_summary` counts. Neither reads
+/// the completion-audit semantics and final release-gate semantics. Both only
+/// compare `findings.len()` against the summed `finding_summary` counts. Neither reads
 /// `findings[].path`, and nothing stats it. `release_evidence/artifact_status.rs`
 /// does stat files, but only the artifact files themselves from a hardcoded
 /// expected list, never paths parsed out of their contents.
@@ -28,10 +27,9 @@ use std::process::Command;
 /// Scope is every object array carrying a `path` field, not just `findings`.
 /// When this gate was written the tree carried 185 stale citations across 16
 /// artifacts and only 8 were in a findings array. The largest block, 124 of
-/// them, was a stale path PREFIX: the dataflow component was renamed from
-/// `dataflow-consumer` to `weir`, and two artifacts kept citing
-/// `libs/dataflow/dataflow-consumer/src`. Those analyses do exist, at
-/// `libs/dataflow/weir/src`.
+/// them, was a stale path prefix: a dataflow component was renamed, and two
+/// artifacts kept citing its former source prefix even though the analyses had
+/// moved to the renamed component.
 ///
 /// Breaks if it regresses: release evidence keeps citing paths no reader can
 /// open, and a rename silently invalidates the evidence for a whole component

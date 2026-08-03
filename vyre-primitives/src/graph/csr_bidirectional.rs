@@ -468,7 +468,6 @@ pub fn validate_csr_inputs(
 }
 
 /// Validate inputs and return the complete dispatch plan for one bidirectional step.
-
 pub fn plan_csr_bidirectional_step(
     node_count: u32,
     edge_offsets: &[u32],
@@ -987,7 +986,6 @@ where
 /// Panics when the two frontier slices differ in length. That is a caller
 /// contract violation: both slices must be bitsets for the same `node_count`.
 #[must_use]
-
 pub fn merge_frontier_or_changed(current: &mut [u32], next: &[u32]) -> bool {
     // Fail fast on a caller contract violation (mismatched bitset lengths).
     // `unwrap_or(false)` would silently report "no change" for an unmergeable

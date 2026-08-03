@@ -272,7 +272,7 @@ pub mod types;
 pub mod cat;
 
 /// ZX-calculus rewrite primitives (P-PRIM-5). Spider fusion,
-/// identity removal, color change. Pure-CPU on a Vec<ZxSpider> +
+/// identity removal, color change. Pure-CPU on a `Vec<ZxSpider>` +
 /// edge multiset; no FP, no IR-builder dep.
 #[cfg(feature = "zx")]
 pub mod zx;

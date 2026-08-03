@@ -2,9 +2,6 @@
 
 #![cfg(feature = "c-parser")]
 
-mod common;
-use common::words_to_bytes;
-
 #[path = "c_ast_gpu_parity_support/mod.rs"]
 mod c_ast_gpu_parity_support;
 
@@ -13,6 +10,7 @@ use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::declarations::opt_propagate_type_specifiers;
 
+use vyre_primitives::wire::pack_u32_slice as words_to_bytes;
 fn run_type_propagation(tok_types: &[u32], tok_depths: &[u32]) -> Vec<u32> {
     assert_eq!(tok_types.len(), tok_depths.len());
     let program = opt_propagate_type_specifiers(

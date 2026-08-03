@@ -434,7 +434,6 @@ pub fn validate_toposort_csr_inputs(
 }
 
 /// Validate primitive-native CSR inputs and return the full dispatch plan.
-
 pub fn plan_toposort_csr_dispatch(
     node_count: u32,
     offsets: &[u32],
@@ -990,7 +989,6 @@ pub fn toposort_program(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

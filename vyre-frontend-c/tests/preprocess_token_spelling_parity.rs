@@ -244,9 +244,9 @@ fn clang_kernel_predefined_macros() -> Vec<MacroDef> {
     ]
     .into_iter()
     .map(|(name, body)| MacroDef {
-        name: name.as_bytes().to_vec().into(),
+        name: name.as_bytes().to_vec(),
         args: Vec::new(),
-        body: body.as_bytes().to_vec().into(),
+        body: body.as_bytes().to_vec(),
         is_function_like: false,
     })
     .collect()

@@ -481,7 +481,7 @@ fn adversarial_bool_values(salt: u32) -> Vec<bool> {
     (0..LANE_COUNT)
         .map(|lane| {
             let lane = lane as u32;
-            let mixed = lane.wrapping_mul(0x45d9_f3b).rotate_left((lane & 7) + 1)
+            let mixed = lane.wrapping_mul(0x045d_9f3b).rotate_left((lane & 7) + 1)
                 ^ salt.rotate_right(lane & 31);
             (mixed & 0b1011) == 0b0001 || lane % 17 == 0
         })

@@ -27,6 +27,7 @@ use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::{BinOp, UnOp};
 
+/// Cancel nested negations and normalize subtraction of a negated value.
 #[must_use]
 pub fn negate_cancel(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

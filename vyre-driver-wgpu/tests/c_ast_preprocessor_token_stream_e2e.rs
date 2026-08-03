@@ -11,7 +11,6 @@ mod c_token_support;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
-use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
 use vyre_libs::parsing::c::parse::vast::{

@@ -13,6 +13,14 @@ use vyre_primitives::graph::program_graph::ProgramGraphShape;
 const STRING_BITMAP_RESIDENT_BATCH_SIZE: usize = 16;
 const METADATA_CONDITION_RESIDENT_BATCH_SIZE: usize = 16;
 
+type SyntheticDispatchResult = (
+    vyre_driver::TimedDispatchResult,
+    bool,
+    u64,
+    Option<u64>,
+    Option<u64>,
+);
+
 pub struct SparseOutputCompactionCount;
 pub struct CallgraphReachabilityStep;
 pub struct MetadataConditionBatch;
@@ -906,16 +914,7 @@ fn dispatch_single_metadata_resident(
 fn dispatch_single_synthetic_resident(
     ctx: &BenchContext,
     prepared: &SyntheticCountPrepared,
-) -> Result<
-    (
-        vyre_driver::TimedDispatchResult,
-        bool,
-        u64,
-        Option<u64>,
-        Option<u64>,
-    ),
-    BenchError,
-> {
+) -> Result<SyntheticDispatchResult, BenchError> {
     if let Some(resident) = prepared.resident.as_ref() {
         if !prepared.output_reset_payload.is_empty() {
             resident.upload_resource(
@@ -1338,7 +1337,7 @@ fn synthetic_count_program(pattern: SyntheticPattern, records: u32) -> Program {
     for (binding, name) in pattern_buffers(pattern).iter().enumerate() {
         buffers.push(
             BufferDecl::storage(
-                *name,
+                name,
                 (binding + 1) as u32,
                 BufferAccess::ReadOnly,
                 DataType::U32,
@@ -2060,7 +2059,7 @@ fn quantified_all_mask(index: u32) -> u32 {
 
 fn quantified_threshold_mask(index: u32) -> u32 {
     let mut mask = 0u32;
-    let mut state = index.wrapping_mul(0x45D9_F3B);
+    let mut state = index.wrapping_mul(0x045D_9F3B);
     for lane in 0..QUANTIFIED_LANES {
         state = state.rotate_right(5).wrapping_add(0x27D4_EB2D ^ lane);
         if state.count_ones() >= 14 || (index.wrapping_add(lane) % 5 == 0) {
@@ -2492,7 +2491,7 @@ fn callgraph_witness_digest(
                 continue;
             }
             let mut witness = src
-                .wrapping_mul(0x45D9_F3B)
+                .wrapping_mul(0x045D_9F3B)
                 .wrapping_add(dst.rotate_left(7))
                 .wrapping_add(edge_index as u32);
             for round in 0..12 {

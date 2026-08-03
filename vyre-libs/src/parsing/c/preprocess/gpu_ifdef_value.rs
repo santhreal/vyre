@@ -544,7 +544,6 @@ fn gpu_ifdef_value_with_byte_layouts(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use vyre::ir::DataType;

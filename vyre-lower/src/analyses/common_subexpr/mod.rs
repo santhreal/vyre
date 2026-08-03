@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use vyre_foundation::ir::BinOp;
 
+/// One set of operations with identical value semantics.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EquivalenceGroup {
     /// Op-indices that all compute the same value. The first element
@@ -30,9 +31,12 @@ pub struct EquivalenceGroup {
     pub op_indices: Vec<usize>,
 }
 
+/// Common-subexpression analysis for one kernel body.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct CommonSubexprReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Equivalent operation groups in deterministic body order.
     pub groups: Vec<EquivalenceGroup>,
 }
 
@@ -48,16 +52,19 @@ impl CommonSubexprReport {
     }
 }
 
+/// Analyze a descriptor and all nested bodies for common subexpressions.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> CommonSubexprReport {
     analyze_body(desc.id.clone(), &desc.body)
 }
 
+/// Analyze one body and its descendants for common subexpressions.
 #[must_use]
 pub fn analyze_body(kernel_id: String, body: &KernelBody) -> CommonSubexprReport {
     analyze_body_impl(kernel_id, body, true)
 }
 
+/// Analyze only the operations directly owned by one body.
 #[must_use]
 pub fn analyze_body_shallow(kernel_id: String, body: &KernelBody) -> CommonSubexprReport {
     analyze_body_impl(kernel_id, body, false)

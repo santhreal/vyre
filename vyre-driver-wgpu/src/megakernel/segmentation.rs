@@ -164,7 +164,7 @@ const PRODUCT_PAIR_BUDGET: usize = 1_000_000;
 /// [`SyncClass::Bounded`] is GPU-segmentable, but a [`SyncClass::UnboundedCycle`]
 /// (the DFA genuinely never re-synchronizes, e.g. a `.*` body that must remember
 /// unbounded context) can NEVER move to GPU, whereas a [`SyncClass::BudgetExceeded`]
-/// (the analysis hit [`PRODUCT_PAIR_BUDGET`] before proving bounded/unbounded)
+/// (the analysis hit `PRODUCT_PAIR_BUDGET` before proving bounded/unbounded)
 /// MIGHT segment with a larger budget, the catalog builder logs the split so the
 /// over-rejection from budget vs. true unbounded memory is never conflated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,7 +176,7 @@ pub enum SyncClass {
     /// A cycle of off-diagonal product pairs is reachable: two scans starting at
     /// different states never provably converge ⇒ infinite memory ⇒ whole-file.
     UnboundedCycle,
-    /// The reachable product automaton exceeded [`PRODUCT_PAIR_BUDGET`] before the
+    /// The reachable product automaton exceeded `PRODUCT_PAIR_BUDGET` before the
     /// analysis terminated. Conservatively treated as not-segmentable, but
     /// DISTINCT from `UnboundedCycle`: a larger budget could still prove it
     /// bounded. Surfaced separately so the budget can be tuned to the real

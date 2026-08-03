@@ -49,9 +49,9 @@ Builders for community ops follow the same convention.
 
 ## CI gate
 
-`scripts/check_op_names.sh` greps every `pub fn` under
-`vyre-libs/src/*/*.rs` (op modules) against the regex
-`^pub fn [a-z][a-z0-9_]*\s*\(` and rejects any name that:
+`scripts/check_op_names.sh` checks public Cat-A operation functions under
+`vyre-libs/src`. Host-side metadata and oracle modules are outside this naming
+contract. The gate rejects any operation name that:
 
 - starts with `compute_`, `do_`, `run_`, `make_`, `create_`, `new_`;
 - contains uppercase letters;

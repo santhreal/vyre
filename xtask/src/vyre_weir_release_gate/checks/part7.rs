@@ -493,15 +493,13 @@ pub(crate) fn check_backend_suite_report(
                             failures,
                         );
                     }
-                    for metric in ["cuda_ptx_source_cache_entries"] {
-                        require_case_metric_positive(
-                            requirement,
-                            &artifact_label,
-                            &artifact_report,
-                            metric,
-                            failures,
-                        );
-                    }
+                    require_case_metric_positive(
+                        requirement,
+                        &artifact_label,
+                        &artifact_report,
+                        "cuda_ptx_source_cache_entries",
+                        failures,
+                    );
                 }
                 if let Some(cases) = artifact_report
                     .get("cases")

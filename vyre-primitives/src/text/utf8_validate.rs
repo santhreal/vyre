@@ -481,7 +481,6 @@ inventory::submit! {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

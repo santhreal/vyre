@@ -75,7 +75,7 @@ fn generated_rle_pack_unpack_offsets_decode_match_independent_reference() {
         for &(length, value) in &segments {
             expected_offsets.push(expected_total);
             expected_total = expected_total.saturating_add(length);
-            expected_decoded.extend(std::iter::repeat(value).take(length as usize));
+            expected_decoded.extend(std::iter::repeat_n(value, length as usize));
         }
 
         assert_eq!(

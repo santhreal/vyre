@@ -15,8 +15,10 @@
 use serde::{Deserialize, Serialize};
 use vyre_lower::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
+/// Pipeline prewarming recommendation for one kernel.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrewarmHint {
+    /// Stable kernel identifier.
     pub kernel_id: String,
     /// True if pre-warm is recommended.
     pub should_prewarm: bool,
@@ -31,6 +33,7 @@ pub struct PrewarmHint {
 /// the reflection cost is small enough that pre-warm doesn't pay back.
 pub const PREWARM_OP_THRESHOLD: u32 = 50;
 
+/// Analyze first-dispatch compilation cost and recommend prewarming.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> PrewarmHint {
     let op_count = count_ops(&desc.body);

@@ -23,13 +23,12 @@ fn deeply_nested_parens_fail_closed() {
     // `((((...1...))))` routes parse_unary -> parse_conditional per level.
     let n = 50_000;
     let mut src = Vec::new();
-    src.extend(std::iter::repeat(b'(').take(n));
+    src.extend(std::iter::repeat_n(b'(', n));
     src.push(b'1');
-    src.extend(std::iter::repeat(b')').take(n));
+    src.extend(std::iter::repeat_n(b')', n));
     let r = eval(&src, &[]);
-    assert_eq!(
+    assert!(
         r.is_err(),
-        true,
         "Fix: 50k-deep #if parens must be rejected with an error, not crash"
     );
 }
@@ -40,9 +39,8 @@ fn deeply_nested_unary_not_fails_closed() {
     let mut src = vec![b'!'; 50_000];
     src.push(b'1');
     let r = eval(&src, &[]);
-    assert_eq!(
+    assert!(
         r.is_err(),
-        true,
         "Fix: 50k-deep #if `!` chain must fail closed, not crash"
     );
 }
@@ -53,9 +51,8 @@ fn deeply_nested_unary_minus_fails_closed() {
     let mut src = vec![b'-'; 50_000];
     src.push(b'1');
     let r = eval(&src, &[]);
-    assert_eq!(
+    assert!(
         r.is_err(),
-        true,
         "Fix: 50k-deep #if `-` chain must fail closed, not crash"
     );
 }
@@ -66,9 +63,8 @@ fn deeply_nested_bitnot_fails_closed() {
     let mut src = vec![b'~'; 50_000];
     src.push(b'1');
     let r = eval(&src, &[]);
-    assert_eq!(
+    assert!(
         r.is_err(),
-        true,
         "Fix: 50k-deep #if `~` chain must fail closed, not crash"
     );
 }
@@ -83,9 +79,8 @@ fn deeply_nested_ternary_fails_closed() {
     }
     src.push(b'1');
     let r = eval(&src, &[]);
-    assert_eq!(
+    assert!(
         r.is_err(),
-        true,
         "Fix: 50k-deep #if ternary chain must fail closed, not crash"
     );
 }
@@ -96,9 +91,9 @@ fn reasonable_nesting_still_evaluates() {
     // around a true expression must still evaluate to true.
     let depth = 32;
     let mut src = Vec::new();
-    src.extend(std::iter::repeat(b'(').take(depth));
+    src.extend(std::iter::repeat_n(b'(', depth));
     src.extend_from_slice(b"1");
-    src.extend(std::iter::repeat(b')').take(depth));
+    src.extend(std::iter::repeat_n(b')', depth));
     let r = eval(&src, &[]);
     assert_eq!(
         r,

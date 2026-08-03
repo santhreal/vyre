@@ -6,6 +6,7 @@ struct Scope {
     defs: std::collections::HashSet<String>,
 }
 
+/// Visit source assignments with their enclosing loop path.
 pub fn walk_source_assigns<F>(program: &Program, mut callback: F)
 where
     F: FnMut(&str, Vec<String>),

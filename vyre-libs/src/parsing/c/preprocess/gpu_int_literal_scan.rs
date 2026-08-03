@@ -468,7 +468,6 @@ pub fn gpu_int_literal_scan(source_len: u32) -> Program {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use vyre_reference::value::Value;

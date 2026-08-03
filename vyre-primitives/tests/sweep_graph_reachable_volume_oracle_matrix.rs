@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "graph", feature = "cpu-parity"))]
 mod graph_sweep_support;
-use graph_sweep_support::{bitset_words, generated_csr_frontier, next_u32};
+use graph_sweep_support::next_u32;
 
 use std::collections::{HashSet, VecDeque};
 

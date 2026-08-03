@@ -36,9 +36,8 @@ fn compact_cluster_metadata(
         .iter()
         .zip(survivors.iter())
         .zip(merged_ends.iter())
-        .filter_map(|((&region, &survivor), &merged_end)| {
-            (survivor != 0).then(|| RegionTriple::new(region.pid, region.start, merged_end))
-        })
+        .filter(|&((&_, &survivor), &_)| survivor != 0)
+        .map(|((&region, _), &merged_end)| RegionTriple::new(region.pid, region.start, merged_end))
         .collect()
 }
 

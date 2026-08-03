@@ -14,7 +14,10 @@ pub enum AccessPattern {
     /// Index = `base + k * LocalInvocationId.x` for some constant `k > 1`.
     /// Each thread reads a separate transaction; throughput drops by
     /// roughly `k`× on most architectures.
-    Strided { stride: u32 },
+    Strided {
+        /// Distance in elements between adjacent threads' addresses.
+        stride: u32,
+    },
     /// Index depends on data we can't prove constant-stride (indirect
     /// load, conditional offset, runtime-computed). Treated as
     /// scattered for cost purposes; rewrites that target this category
@@ -43,6 +46,7 @@ impl AccessPattern {
         }
     }
 
+    /// Return whether the access pattern warrants an optimization.
     #[must_use]
     pub const fn is_problematic(&self) -> bool {
         matches!(self, Self::Strided { .. } | Self::Scattered)

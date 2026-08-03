@@ -208,6 +208,48 @@ fn workspace_root_for_evidence_dir(evidence_dir: &Path) -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
+fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
+    let evidence = path.to_string_lossy();
+    let blockers = benchmark_evidence_blocker_issues(&evidence, value);
+    match blockers.first() {
+        Some(first) => Err(format!(
+            "Fix: benchmark evidence `{}` reports {} blocker contract issue(s); first issue: {first}",
+            path.display(),
+            blockers.len()
+        )),
+        None => Ok(()),
+    }
+}
+
+fn json_axis_text(value: &Value, axis: &str) -> Option<String> {
+    match value.get(axis)? {
+        Value::Number(number) => Some(number.to_string()),
+        Value::String(text) if !text.trim().is_empty() => Some(text.clone()),
+        _ => None,
+    }
+}
+
+fn fatal(message: &str) -> ! {
+    eprintln!("error: {message}");
+    std::process::exit(1);
+}
+
+fn read_text_bounded(path: &Path) -> io::Result<String> {
+    let mut reader = fs::File::open(path)?.take(MAX_BENCH_RELEASE_REPORT_BYTES.saturating_add(1));
+    let mut text = String::new();
+    reader.read_to_string(&mut text)?;
+    if text.len() as u64 > MAX_BENCH_RELEASE_REPORT_BYTES {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "{} exceeds {MAX_BENCH_RELEASE_REPORT_BYTES} byte release bench report read cap",
+                path.display()
+            ),
+        ));
+    }
+    Ok(text)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -628,46 +670,4 @@ mod tests {
             "Fix: bench-release must reject suite backend identity drift even when old axes have no blockers; error={error}"
         );
     }
-}
-
-fn reject_report_blockers(path: &Path, value: &Value) -> Result<(), String> {
-    let evidence = path.to_string_lossy();
-    let blockers = benchmark_evidence_blocker_issues(&evidence, value);
-    match blockers.first() {
-        Some(first) => Err(format!(
-            "Fix: benchmark evidence `{}` reports {} blocker contract issue(s); first issue: {first}",
-            path.display(),
-            blockers.len()
-        )),
-        None => Ok(()),
-    }
-}
-
-fn json_axis_text(value: &Value, axis: &str) -> Option<String> {
-    match value.get(axis)? {
-        Value::Number(number) => Some(number.to_string()),
-        Value::String(text) if !text.trim().is_empty() => Some(text.clone()),
-        _ => None,
-    }
-}
-
-fn fatal(message: &str) -> ! {
-    eprintln!("error: {message}");
-    std::process::exit(1);
-}
-
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_BENCH_RELEASE_REPORT_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_BENCH_RELEASE_REPORT_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_BENCH_RELEASE_REPORT_BYTES} byte release bench report read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
 }

@@ -107,15 +107,15 @@ fn gpu_preprocess_reuses_header_analysis_by_path_flags_defines_and_triple() {
     let loader = HeaderLoader;
     let raw = b"#include \"reuse.h\"\n";
     let enabled = [MacroDef {
-        name: b"FEATURE".to_vec().into(),
+        name: b"FEATURE".to_vec(),
         args: Vec::new(),
-        body: b"1".to_vec().into(),
+        body: b"1".to_vec(),
         is_function_like: false,
     }];
     let disabled = [MacroDef {
-        name: b"OTHER_FEATURE".to_vec().into(),
+        name: b"OTHER_FEATURE".to_vec(),
         args: Vec::new(),
-        body: b"1".to_vec().into(),
+        body: b"1".to_vec(),
         is_function_like: false,
     }];
 

@@ -189,7 +189,7 @@ fn contract_substring_real_byte_compare() {
     let haystack_bytes: Vec<u8> = "hello"
         .bytes()
         .flat_map(|b| u32::from(b).to_le_bytes())
-        .chain(std::iter::repeat(0u8).take(12))
+        .chain(std::iter::repeat_n(0u8, 12))
         .collect();
     let needle_bytes: Vec<u8> = "lo"
         .bytes()

@@ -1098,7 +1098,6 @@ pub(super) fn c11_lexer_regular_sparse_impl(
 }
 
 #[cfg(test)]
-
 mod tests {
     #[test]
     fn sparse_visible_emit_requires_nonzero_token_type() {

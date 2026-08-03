@@ -450,7 +450,6 @@ pub fn evaluate_at_regions_via_with_scratch_into(
 /// # Errors
 ///
 /// Returns [`DispatchError`] for malformed inputs, dispatch failure, or malformed backend output.
-
 pub fn fmm_compress_pairwise_via(
     dispatcher: &dyn OptimizerDispatcher,
     scores: &[f32],

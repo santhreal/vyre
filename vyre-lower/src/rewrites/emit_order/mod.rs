@@ -9,6 +9,7 @@ use super::body_index::BodyIndex;
 use crate::verify::{classify_operand, OperandClass};
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
+/// Order pure producers before same-body consumers for linear emitters.
 #[must_use]
 pub fn emit_order(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

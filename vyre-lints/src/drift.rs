@@ -36,6 +36,7 @@ pub struct DriftFinding {
 /// from  -  production uses git blame, tests inject deterministic
 /// values.
 pub trait AgeResolver {
+    /// Resolve an allowlist entry's age and introduction date.
     fn age(&self, allowlist_path: &Path, exempt_path: &str) -> Option<(i64, String)>;
 }
 

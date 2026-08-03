@@ -8,14 +8,14 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind};
 use super::BodyBuilder;
 use crate::EmitError;
 
+type LoopCarrierSnapshot = (
+    FxHashSet<u32>,
+    FxHashMap<u32, naga::Handle<LocalVariable>>,
+    FxHashMap<u32, naga::Handle<LocalVariable>>,
+);
+
 impl BodyBuilder<'_> {
-    pub(super) fn snapshot_loop_carriers(
-        &self,
-    ) -> (
-        FxHashSet<u32>,
-        FxHashMap<u32, naga::Handle<LocalVariable>>,
-        FxHashMap<u32, naga::Handle<LocalVariable>>,
-    ) {
+    pub(super) fn snapshot_loop_carriers(&self) -> LoopCarrierSnapshot {
         (
             self.loop_carrier_targets.clone(),
             self.loop_carrier_locals.clone(),
@@ -35,14 +35,7 @@ impl BodyBuilder<'_> {
     /// made Sinkhorn's inner GEMM loop replace the outer lane/count ids after
     /// the loop. Post-loop users that genuinely need the loop result are
     /// already rebound to a fresh Load in `emit_structured_for_loop`.
-    pub(super) fn restore_loop_carriers(
-        &mut self,
-        snapshot: (
-            FxHashSet<u32>,
-            FxHashMap<u32, naga::Handle<LocalVariable>>,
-            FxHashMap<u32, naga::Handle<LocalVariable>>,
-        ),
-    ) {
+    pub(super) fn restore_loop_carriers(&mut self, snapshot: LoopCarrierSnapshot) {
         let (targets, locals, block_locals) = snapshot;
         self.loop_carrier_targets = targets;
         self.loop_carrier_locals = locals;

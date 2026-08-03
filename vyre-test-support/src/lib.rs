@@ -284,7 +284,7 @@ fn first_param_is_program(after_name: &str) -> bool {
         return false;
     };
     let params = &after_name[open + 1..];
-    let first = params.split(|c| c == ',' || c == ')').next().unwrap_or("");
+    let first = params.split([',', ')']).next().unwrap_or("");
     let Some(colon) = first.find(':') else {
         return false;
     };

@@ -37,7 +37,7 @@ impl BodyCtx<'_> {
             if vec_chain.is_none() {
                 if let Some(slot) = body.ops[idx].operands.first().copied() {
                     let is_load_global = matches!(body.ops[idx].kind, KernelOpKind::LoadGlobal);
-                    let next_is_adjacent_load = body.ops.get(idx + 1).map_or(false, |next| {
+                    let next_is_adjacent_load = body.ops.get(idx + 1).is_some_and(|next| {
                         matches!(next.kind, KernelOpKind::LoadGlobal)
                             && next.operands.first().copied() == Some(slot)
                     });
@@ -387,14 +387,9 @@ impl BodyCtx<'_> {
                 self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)
             }
             KernelOpKind::Cast { target } => PtxType::from_dtype(target).ok(),
-            KernelOpKind::BinOpKind(op)
-                if matches!(
-                    op,
-                    BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge
-                ) =>
-            {
-                Some(PtxType::Bool)
-            }
+            KernelOpKind::BinOpKind(
+                BinOp::Eq | BinOp::Ne | BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge,
+            ) => Some(PtxType::Bool),
             KernelOpKind::BinOpKind(BinOp::And | BinOp::Or) => {
                 let left_ty =
                     self.result_ptx_type(body, facts, *producer.operands.first()?, depth + 1)?;

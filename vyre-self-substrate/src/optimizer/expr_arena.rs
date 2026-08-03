@@ -31,21 +31,37 @@ use super::encode::EncodeError;
 /// numbering in `vyre-spec/src/{bin_op,un_op}.rs` for op-tag families
 /// so the GPU side can share one truth table.
 pub mod expr_kind {
+    /// Unsigned 32-bit literal.
     pub const LIT_U32: u32 = 0x01;
+    /// Signed 32-bit literal.
     pub const LIT_I32: u32 = 0x02;
+    /// 32-bit floating-point literal.
     pub const LIT_F32: u32 = 0x03;
+    /// Boolean literal.
     pub const LIT_BOOL: u32 = 0x04;
+    /// Named variable reference.
     pub const VAR: u32 = 0x05;
+    /// Buffer load expression.
     pub const LOAD: u32 = 0x06;
+    /// Buffer-length expression.
     pub const BUF_LEN: u32 = 0x07;
+    /// Global invocation identifier.
     pub const INVOCATION_ID: u32 = 0x08;
+    /// Workgroup identifier.
     pub const WORKGROUP_ID: u32 = 0x09;
+    /// Local invocation identifier.
     pub const LOCAL_ID: u32 = 0x0A;
+    /// Binary operation.
     pub const BIN_OP: u32 = 0x0B;
+    /// Unary operation.
     pub const UN_OP: u32 = 0x0C;
+    /// Conditional selection.
     pub const SELECT: u32 = 0x0D;
+    /// Fused multiply-add expression.
     pub const FMA: u32 = 0x0E;
+    /// Subgroup-local invocation identifier.
     pub const SUBGROUP_LOCAL_ID: u32 = 0x0F;
+    /// Subgroup size expression.
     pub const SUBGROUP_SIZE: u32 = 0x10;
 }
 
@@ -465,7 +481,6 @@ fn un_op_tag(op: &UnOp) -> Result<u32, EncodeError> {
 /// Reverse-lookup a `bin_op_tag` u32 back into a `BinOp` for decoder
 /// use. Returns `None` for unknown / extension tags.
 #[must_use]
-
 pub fn bin_op_from_tag(tag: u32) -> Option<BinOp> {
     Some(match tag {
         0x01 => BinOp::Add,

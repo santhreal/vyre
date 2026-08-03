@@ -28,11 +28,13 @@ use super::memory_address::{
 use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
 
+/// Remove stores proven overwritten before any observation.
 #[must_use]
 pub fn dead_store(desc: &KernelDescriptor) -> KernelDescriptor {
     dead_store_with_optional_dataflow_facts(desc, None, None)
 }
 
+/// Remove dead stores using canonical alias facts.
 #[must_use]
 pub fn dead_store_with_alias_facts(
     desc: &KernelDescriptor,
@@ -41,6 +43,7 @@ pub fn dead_store_with_alias_facts(
     dead_store_with_optional_dataflow_facts(desc, Some(alias_facts), None)
 }
 
+/// Remove dead stores using imported alias facts.
 #[must_use]
 pub fn dead_store_with_external_alias_facts(
     desc: &KernelDescriptor,
@@ -49,6 +52,7 @@ pub fn dead_store_with_external_alias_facts(
     dead_store_with_alias_facts(desc, alias_facts)
 }
 
+/// Remove dead stores using canonical alias and reaching-definition facts.
 #[must_use]
 pub fn dead_store_with_dataflow_facts(
     desc: &KernelDescriptor,
@@ -58,6 +62,7 @@ pub fn dead_store_with_dataflow_facts(
     dead_store_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
 }
 
+/// Remove dead stores using imported dataflow-analysis facts.
 #[must_use]
 pub fn dead_store_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,

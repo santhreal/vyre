@@ -50,7 +50,10 @@ pub struct MultiCorpusBatchPlan {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MultiCorpusBatchError {
     /// Duplicate translation unit id.
-    DuplicateTranslationUnit { id: u32 },
+    DuplicateTranslationUnit {
+        /// Duplicated translation-unit identifier.
+        id: u32,
+    },
     /// Source byte accumulation overflowed.
     SourceBytesOverflow,
 }

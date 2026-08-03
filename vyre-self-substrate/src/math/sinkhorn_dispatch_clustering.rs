@@ -549,6 +549,7 @@ pub struct SinkhornClusteringScratch {
 
 #[cfg(any(test, feature = "cpu-parity"))]
 impl SinkhornClusteringScratch {
+    /// Create empty reusable clustering scratch.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

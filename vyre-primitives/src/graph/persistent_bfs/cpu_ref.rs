@@ -291,7 +291,7 @@ pub(crate) fn try_cpu_ref_converged_into_with_scratch(
     // Pad the density trajectory to the full budget: after convergence the device
     // loop keeps running the remaining iterations over an unchanged frontier, so
     // every entry past `stop_iter` repeats the converged popcount.
-    if let Some(density) = density_active.as_deref_mut() {
+    if let Some(density) = density_active {
         let fill = density.last().copied().unwrap_or(0);
         while (density.len() as u32) < max_iters {
             density.push(fill);

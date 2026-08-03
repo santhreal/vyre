@@ -179,7 +179,7 @@ fn cuda_char_class_u8_generated_matrix_matches_cpu() {
             state ^= state << 13;
             state ^= state >> 17;
             state ^= state << 5;
-            *slot = state.rotate_left((byte % 31) as u32) ^ (byte as u32).wrapping_mul(0x45d9_f3b);
+            *slot = state.rotate_left((byte % 31) as u32) ^ (byte as u32).wrapping_mul(0x045d_9f3b);
         }
         let mut source = Vec::with_capacity(len);
         for i in 0..len {
@@ -310,7 +310,7 @@ fn cuda_bracket_match_bounded_depth_stays_exact_for_overflow_opens() {
 
 #[test]
 fn cuda_bracket_match_parallel_generated_mixed_tokens() {
-    let mut state = 0xBADC_0DEu32;
+    let mut state = 0x0BAD_C0DE_u32;
     let mut kinds = Vec::with_capacity(1029);
     for index in 0..1029u32 {
         state = state.rotate_left(7) ^ index.wrapping_mul(0x9E37_79B9);

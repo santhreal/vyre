@@ -22,6 +22,9 @@ use vyre_driver::Resource;
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
 
+type PresenceByRegionDispatch = (Program, Vec<Vec<u8>>, DispatchConfig, usize, u32);
+type PresenceDispatch = (Program, Vec<Vec<u8>>, DispatchConfig, usize);
+
 const LITERAL_SET_DEFAULT_MAX_MATCHES: u32 = 10_000;
 const MATCH_TRIPLE_WORDS: u32 = 3;
 const U32_BYTES: usize = std::mem::size_of::<u32>();
@@ -2232,7 +2235,7 @@ impl GpuLiteralSet {
     /// The returned result's `outputs` are the same raw presence bytes already
     /// decoded into the returned bitmap (mirrors the resident `scan_into_timed`
     /// contract). This reuses the one owned-buffer prepare path
-    /// ([`Self::build_presence_by_region_dispatch`]); the untimed hot path is
+    /// (the internal `build_presence_by_region_dispatch`); the untimed hot path is
     /// untouched and pays no timing cost.
     ///
     /// # Errors
@@ -2422,7 +2425,7 @@ impl GpuLiteralSet {
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
-    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize, u32), vyre::BackendError> {
+    ) -> Result<PresenceByRegionDispatch, vyre::BackendError> {
         use crate::scan::dispatch_io;
 
         let (pattern_count, region_count) = validate_region_starts(
@@ -2474,7 +2477,7 @@ impl GpuLiteralSet {
     fn build_presence_dispatch(
         &self,
         haystack: &[u8],
-    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize), vyre::BackendError> {
+    ) -> Result<PresenceDispatch, vyre::BackendError> {
         use crate::scan::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
@@ -2512,7 +2515,7 @@ impl GpuLiteralSet {
     /// The returned bitmap is byte-for-byte identical to [`Self::scan_presence`]'s
     /// (same program, same inputs); only the dispatch call differs
     /// (`dispatch_borrowed_timed` vs `dispatch_borrowed`). This reuses the one
-    /// owned-buffer prepare path ([`Self::build_presence_dispatch`]); the untimed
+    /// owned-buffer prepare path (the internal `build_presence_dispatch`); the untimed
     /// hot path is untouched and pays no timing cost.
     ///
     /// # Errors
@@ -2548,7 +2551,7 @@ impl GpuLiteralSet {
     /// equivalent (same bitmap, no overlap, no silent change of result).
     ///
     /// Inputs are built into OWNED buffers (through the shared
-    /// [`Self::build_presence_dispatch`]) that the handle RETAINS until
+    /// internal `build_presence_dispatch` path) that the handle RETAINS until
     /// `await_words`, keeping the device-side upload's backing memory valid for the
     /// whole dispatch.
     ///
@@ -2877,7 +2880,7 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-    ) -> Result<(Program, Vec<Vec<u8>>, DispatchConfig, usize), vyre::BackendError> {
+    ) -> Result<PresenceDispatch, vyre::BackendError> {
         use crate::scan::dispatch_io;
 
         let (pattern_count, region_count) = validate_region_starts(
@@ -2926,7 +2929,7 @@ impl GpuLiteralSet {
     /// [`Self::scan_presence_and_positions_by_region`] (same program, same inputs;
     /// only `dispatch_borrowed_timed` vs `dispatch_borrowed` differs). Reuses the
     /// one owned-buffer prepare path
-    /// ([`Self::build_presence_and_positions_by_region_dispatch`]); the untimed hot
+    /// (the internal `build_presence_and_positions_by_region_dispatch`); the untimed hot
     /// path is untouched and pays no timing cost. The same overflow contract holds:
     /// a match count over `max_matches` fails closed (Law 10), never a silent
     /// truncated decode.
@@ -3001,7 +3004,7 @@ impl GpuLiteralSet {
     /// scan executes while the caller does host work; on the synchronous default in
     /// [`VyreBackend::dispatch_async`] the handle is trivially ready, same outputs,
     /// no overlap, no silent change of result. Reuses the one owned-buffer prepare
-    /// path ([`Self::build_presence_and_positions_by_region_dispatch`]); the
+    /// path (the internal `build_presence_and_positions_by_region_dispatch`); the
     /// [`PendingFusedRegion`] retains the owned inputs until the decode. The same
     /// fail-closed overflow contract holds (count over `max_matches` errors at the
     /// await, never a silent truncated decode).
@@ -4116,11 +4119,13 @@ mod compile_tests {
         }
     }
 
+    type ObservedMatchesLayouts =
+        std::sync::Arc<std::sync::Mutex<Vec<(u32, Option<std::ops::Range<usize>>)>>>;
+
     #[derive(Clone)]
     struct RecordingLiteralBackend {
         outputs: Vec<Vec<u8>>,
-        observed_matches_layouts:
-            std::sync::Arc<std::sync::Mutex<Vec<(u32, Option<std::ops::Range<usize>>)>>>,
+        observed_matches_layouts: ObservedMatchesLayouts,
         observed_program_buffer_ptrs: std::sync::Arc<std::sync::Mutex<Vec<usize>>>,
         observed_input_lengths: std::sync::Arc<std::sync::Mutex<Vec<Vec<usize>>>>,
     }

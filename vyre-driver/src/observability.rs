@@ -165,13 +165,13 @@ impl DriverObservability {
     pub fn snapshot() -> Self {
         #[cfg(feature = "self-substrate-adapters")]
         {
-            return Self::try_snapshot().unwrap_or_else(|_| Self {
+            Self::try_snapshot().unwrap_or_else(|_| Self {
                 substrate_calls: Vec::new(),
                 substrate_total_calls: 0,
                 decision_buckets: Vec::new(),
                 audit_events: Vec::new(),
                 dispatch: snapshot_dispatch_telemetry(),
-            });
+            })
         }
         #[cfg(not(feature = "self-substrate-adapters"))]
         {
@@ -679,13 +679,13 @@ mod tests {
         });
 
         let dispatch = snapshot_dispatch_telemetry();
-        assert!(dispatch.launches >= before.launches + 1);
+        assert!(dispatch.launches > before.launches);
         assert!(dispatch.input_bytes >= before.input_bytes + 4);
         assert!(dispatch.output_bytes >= before.output_bytes + 2);
         assert!(dispatch.output_slots >= before.output_slots + 3);
-        assert!(dispatch.output_slots_reused >= before.output_slots_reused + 1);
-        assert!(dispatch.output_slots_moved >= before.output_slots_moved + 1);
-        assert!(dispatch.output_slots_appended >= before.output_slots_appended + 1);
+        assert!(dispatch.output_slots_reused > before.output_slots_reused);
+        assert!(dispatch.output_slots_moved > before.output_slots_moved);
+        assert!(dispatch.output_slots_appended > before.output_slots_appended);
         assert!(dispatch.output_slot_incoming_bytes >= before.output_slot_incoming_bytes + 9);
         assert!(dispatch.output_slot_copied_bytes >= before.output_slot_copied_bytes + 2);
         assert!(dispatch.output_slot_moved_bytes >= before.output_slot_moved_bytes + 4);
@@ -712,7 +712,7 @@ mod tests {
         record_grid_sync_split(4);
         let after = snapshot_dispatch_telemetry();
 
-        assert!(after.grid_sync_splits >= before.grid_sync_splits + 1);
+        assert!(after.grid_sync_splits > before.grid_sync_splits);
         assert!(after.grid_sync_segments >= before.grid_sync_segments + 4);
         assert!(after.grid_sync_points >= before.grid_sync_points + 3);
 

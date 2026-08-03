@@ -11,6 +11,9 @@ readme = "README.md"
 categories = ["development-tools", "compilers"]
 keywords = ["vyre", "lint", "ir", "compiler"]
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "vyre-lints"
 path = "src/main.rs"

@@ -131,25 +131,6 @@ pub fn borrowed_input_slices<'a>(
     Ok(borrowed)
 }
 
-#[cfg(test)]
-mod borrowed_input_slices_tests {
-    use super::*;
-
-    #[test]
-    fn borrowed_input_slices_reuses_caller_storage() {
-        let inputs = vec![vec![1u8, 2, 3], vec![4u8, 5]];
-        let borrowed = borrowed_input_slices(&inputs, "test borrowed input").unwrap();
-        assert_eq!(borrowed.len(), inputs.len());
-        assert_eq!(borrowed[0], inputs[0].as_slice());
-        assert_eq!(borrowed[1], inputs[1].as_slice());
-        assert_eq!(
-            borrowed[0].as_ptr(),
-            inputs[0].as_ptr(),
-            "compiled dispatch must borrow caller input storage instead of copying"
-        );
-    }
-}
-
 pub(crate) fn reserve_batch_output_slots(
     outputs: &mut Vec<OutputBuffers>,
     batch_len: usize,
@@ -216,4 +197,23 @@ pub(crate) fn checked_elapsed_wall_ns(
             "Fix: {field} wall-clock timing cannot fit u64 nanoseconds: {error}. Split telemetry windows or report per-dispatch timing."
         ),
     })
+}
+
+#[cfg(test)]
+mod borrowed_input_slices_tests {
+    use super::*;
+
+    #[test]
+    fn borrowed_input_slices_reuses_caller_storage() {
+        let inputs = vec![vec![1u8, 2, 3], vec![4u8, 5]];
+        let borrowed = borrowed_input_slices(&inputs, "test borrowed input").unwrap();
+        assert_eq!(borrowed.len(), inputs.len());
+        assert_eq!(borrowed[0], inputs[0].as_slice());
+        assert_eq!(borrowed[1], inputs[1].as_slice());
+        assert_eq!(
+            borrowed[0].as_ptr(),
+            inputs[0].as_ptr(),
+            "compiled dispatch must borrow caller input storage instead of copying"
+        );
+    }
 }

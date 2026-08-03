@@ -38,7 +38,7 @@ pub fn csr_forward_or_changed_parallel_batch(
 /// flat-frontier sizing.
 ///
 /// The per-query batch expansion IS the global-slot batch expansion
-/// ([`csr_forward_or_changed_parallel_batch_global_indexed`]) with the convergence
+/// (the internal `csr_forward_or_changed_parallel_batch_global_indexed` builder) with the convergence
 /// index set to the query lane (invocation axis 1) and exactly one `changed` slot
 /// per query. Routing through that ONE canonical CSR edge-scan builder, instead of
 /// re-emitting the neighbor-expansion inner loop a second time, keeps the loop in a

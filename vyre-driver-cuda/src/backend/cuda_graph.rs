@@ -224,7 +224,7 @@ fn record_cuda_graph_output_readbacks(
         // output allocation plus checked readback offset before capture.
         unsafe {
             super::copy::d2h_async_checked_with_label(
-                host_buf.as_mut_ptr() as *mut std::ffi::c_void,
+                host_buf.as_mut_ptr(),
                 *device_ptr,
                 *output_len,
                 stream.ptr().as_ptr(),

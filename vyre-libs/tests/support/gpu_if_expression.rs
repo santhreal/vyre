@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IF, TOK_PREPROC};
 use vyre_libs::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;

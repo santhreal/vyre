@@ -24,6 +24,7 @@ use crate::rewrites::rhs_lit_chain::{combine_rhs_lit_chain, RhsLitChainRule};
 use crate::KernelDescriptor;
 use vyre_foundation::ir::BinOp;
 
+/// Combine nested unsigned divisions by literal divisors.
 #[must_use]
 pub fn div_combine(desc: &KernelDescriptor) -> KernelDescriptor {
     combine_rhs_lit_chain(

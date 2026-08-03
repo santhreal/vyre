@@ -8,6 +8,7 @@ use crate::KernelDescriptor;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::DataType;
 
+/// Analyze compound bindings for array-of-structures to structure-of-arrays conversion.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> LayoutTransformPlan {
     let compound: FxHashMap<u32, u32> = desc

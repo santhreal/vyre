@@ -100,7 +100,17 @@ struct ComponentEvidenceTree {
     unreadable_file_count: usize,
 }
 
-const COMPONENTS: &[(&str, &str, &str, &[&str], &[&str], &[&str], &[&str])] = &[
+type ComponentSpec = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    &'static [&'static str],
+    &'static [&'static str],
+);
+
+const COMPONENTS: &[ComponentSpec] = &[
     (
         "vyre-frontend-c",
         "Core GPU-first C frontend pipeline, parser contracts, object container, C fixture tests",

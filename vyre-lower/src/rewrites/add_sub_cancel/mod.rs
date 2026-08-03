@@ -30,6 +30,7 @@ use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
+/// Cancel nested addition followed by subtraction of the same value.
 #[must_use]
 pub fn add_sub_cancel(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

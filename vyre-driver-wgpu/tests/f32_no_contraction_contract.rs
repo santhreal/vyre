@@ -44,7 +44,7 @@ use vyre::{DispatchConfig, VyreBackend};
 /// below the ulp of 1.0, so a rounded multiply drops it (ties-to-even) and the
 /// subsequent subtraction yields exactly `2^-11`. An fma keeps the full product
 /// and yields `2^-11 + 2^-24`, one ulp higher at that magnitude.
-const WITNESS: f32 = 1.000_244_140_625; // 1 + 2^-12, exact in f32.
+const WITNESS: f32 = f32::from_bits(0x3F80_0800); // 1 + 2^-12, exact in f32.
 
 /// What two separately-rounded operations must produce.
 const SEPARATELY_ROUNDED: f32 = 0.000_488_281_25; // 2^-11, exact in f32.

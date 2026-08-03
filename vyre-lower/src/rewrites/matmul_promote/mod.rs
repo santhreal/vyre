@@ -51,6 +51,8 @@ const MATMUL_TILE_LEN: usize = 4; // 4 Fma ops produce c0..c3
 const A_FRAGMENT_LEN: usize = 4;
 const B_FRAGMENT_LEN: usize = 2;
 
+type PromotedMatmul = (KernelOp, usize, [(u32, u32); MATMUL_TILE_LEN]);
+
 /// One structured loop whose body contains a promotable matmul fragment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MatmulTileLoopPlan {
@@ -173,7 +175,7 @@ fn try_promote_at(
     ops: &[KernelOp],
     i: usize,
     allocator: &mut ResultAllocator,
-) -> Option<(KernelOp, usize, [(u32, u32); MATMUL_TILE_LEN])> {
+) -> Option<PromotedMatmul> {
     let FragmentMatch {
         a_ids,
         b_unique,

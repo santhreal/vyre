@@ -507,7 +507,6 @@ pub(super) fn syntax_summary_from_c_summary(
 }
 
 #[cfg(test)]
-
 mod tests {
     use std::sync::Arc;
 

@@ -3,8 +3,10 @@
 use crate::analyses::candidate_plan::CandidatePlan;
 use serde::{Deserialize, Serialize};
 
+/// One compound binding eligible for layout transformation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LayoutCandidate {
+    /// Binding slot to transform.
     pub binding_slot: u32,
     /// Number of LoadGlobal sites against this binding.
     pub load_count: u32,
@@ -15,6 +17,7 @@ pub struct LayoutCandidate {
     pub estimated_speedup_factor: f32,
 }
 
+/// Layout-transformation candidates for one kernel.
 pub type LayoutTransformPlan = CandidatePlan<LayoutCandidate>;
 
 #[cfg(test)]

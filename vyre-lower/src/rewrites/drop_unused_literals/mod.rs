@@ -21,6 +21,7 @@
 
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 
+/// Remove unreferenced literals and compact each body's literal indices.
 #[must_use]
 pub fn drop_unused_literals(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

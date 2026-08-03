@@ -128,7 +128,7 @@ pub fn reference_select_retention_set_into(
 /// Compute the retention set through the GPU-dispatchable submodular argmax primitive.
 ///
 /// This is the production path for callers with a concrete backend dispatcher. It performs the
-/// same simple independent-access greedy loop as [`select_retention_set_into`], dispatching
+/// same simple independent-access greedy loop as [`reference_select_retention_set_into`], dispatching
 /// `vyre_primitives::math::submodular_greedy::argmax_of_marginals` once per retained item.
 ///
 /// # Errors
@@ -470,6 +470,6 @@ mod tests {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let _ = select_retention_set(&mut gains, 3, 5);
         }));
-        assert!(matches!(result, Err(_)), "k > n must panic");
+        assert!(result.is_err(), "k > n must panic");
     }
 }

@@ -29,6 +29,7 @@
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use rustc_hash::FxHashSet;
 
+/// Remove unreferenced read-only bindings without changing the host dispatch contract.
 #[must_use]
 pub fn drop_unused_bindings(desc: &KernelDescriptor) -> KernelDescriptor {
     let referenced = collect_referenced_slots(desc);

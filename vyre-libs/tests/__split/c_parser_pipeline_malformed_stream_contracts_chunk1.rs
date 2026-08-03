@@ -395,7 +395,7 @@ fn expr_shape_preserves_source_idx_for_none_shapes() {
 
 #[test]
 fn vast_builder_handles_64_token_stream() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_PLUS).take(64).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_PLUS, 64).collect();
     let tok_starts: Vec<u32> = (0..64).collect();
     let tok_lens: Vec<u32> = vec![1; 64];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -408,7 +408,7 @@ fn vast_builder_handles_64_token_stream() {
 
 #[test]
 fn classifier_handles_64_node_vast() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_PLUS).take(64).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_PLUS, 64).collect();
     let tok_starts: Vec<u32> = (0..64).collect();
     let tok_lens: Vec<u32> = vec![1; 64];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -422,7 +422,7 @@ fn classifier_handles_64_node_vast() {
 
 #[test]
 fn pg_lower_handles_64_node_vast() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_PLUS).take(64).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_PLUS, 64).collect();
     let tok_starts: Vec<u32> = (0..64).collect();
     let tok_lens: Vec<u32> = vec![1; 64];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -437,7 +437,7 @@ fn pg_lower_handles_64_node_vast() {
 
 #[test]
 fn expr_shape_handles_64_node_vast() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_PLUS).take(64).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_PLUS, 64).collect();
     let tok_starts: Vec<u32> = (0..64).collect();
     let tok_lens: Vec<u32> = vec![1; 64];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -453,7 +453,7 @@ fn expr_shape_handles_64_node_vast() {
 #[test]
 fn token_stream_bounded_by_ast_max_tok_scan_contract() {
     // 256 tokens is well under the limit; the contract is that count <= limit.
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_STAR).take(256).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_STAR, 256).collect();
     let tok_starts: Vec<u32> = (0..256).collect();
     let tok_lens: Vec<u32> = vec![1; 256];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);

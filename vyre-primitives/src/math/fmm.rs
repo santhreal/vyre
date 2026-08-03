@@ -458,7 +458,6 @@ pub fn try_p2m_zeroth_moment_cpu_into(
 /// zeroth-order primitive, this is just the local moment value.
 #[cfg(test)]
 #[must_use]
-
 pub fn l2p_zeroth_eval_cpu(local_moment: f64, _target_x: f64, _target_y: f64) -> f64 {
     local_moment
 }

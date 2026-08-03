@@ -986,7 +986,6 @@ pub fn semiring_gemm_via_with_scratch_into(
 }
 
 /// Boolean-OR semiring specialisation of [`semiring_gemm_via`].
-
 pub fn semiring_gemm_via_bool_or(
     dispatcher: &dyn OptimizerDispatcher,
     a: &[u32],

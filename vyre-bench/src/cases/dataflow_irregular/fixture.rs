@@ -384,7 +384,7 @@ fn ifds_edge_kind(src: u32, edge: u32) -> u32 {
 }
 
 fn ifds_node_kind(src: u32) -> u32 {
-    mix32(src ^ 0x1F_D5_0001) & 0x1F
+    mix32(src ^ 0x1FD5_0001) & 0x1F
 }
 
 fn ifds_node_tag(src: u32) -> u32 {

@@ -570,7 +570,7 @@ impl CudaBackend {
                         view.copy_slot,
                         view.byte_offset,
                         view.byte_len,
-                        *output,
+                        output,
                     )?;
                 }
             }

@@ -28,6 +28,8 @@ use vyre_foundation::ir::Program;
 const IN_DIM: u32 = 256;
 const OUT_DIM: u32 = 4096;
 const GROUP_SIZE: u32 = 64;
+
+type QuantizedInputs = (Vec<f32>, Vec<u32>, Vec<f32>, Vec<u32>, Vec<f32>);
 const PACKED_WORDS: u32 = (IN_DIM / 8) * OUT_DIM;
 const GROUP_COUNT: u32 = (IN_DIM + GROUP_SIZE - 1) / GROUP_SIZE;
 const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
@@ -372,7 +374,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
     }
 }
 
-fn quantized_inputs() -> (Vec<f32>, Vec<u32>, Vec<f32>, Vec<u32>, Vec<f32>) {
+fn quantized_inputs() -> QuantizedInputs {
     let x = (0..IN_DIM).map(|k| (k % 17) as f32).collect::<Vec<_>>();
     let mut packed = vec![0u32; PACKED_WORDS as usize];
     for block in 0..(IN_DIM / 8) {

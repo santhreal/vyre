@@ -28,6 +28,16 @@ use vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
 use vyre_libs::parsing::c::preprocess::gpu_include_parse::gpu_include_parse;
 use vyre_libs::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse;
 
+type DefineParseOutputs = (
+    Vec<u32>,
+    Vec<u32>,
+    Vec<u32>,
+    Vec<u32>,
+    Vec<u32>,
+    Vec<u32>,
+    Vec<u32>,
+);
+
 fn pack_u32_le(words: &[u32]) -> Vec<u8> {
     words.iter().flat_map(|w| w.to_le_bytes()).collect()
 }
@@ -295,7 +305,7 @@ fn run_define_parse_real_gpu(
     tok_lens: &[u32],
     directive_kinds: &[u32],
     source: &[u8],
-) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
+) -> DefineParseOutputs {
     let n = tok_starts.len() as u32;
     let prog = gpu_define_parse(n, source.len() as u32);
     let padded_src_len = source.len().div_ceil(4) * 4;

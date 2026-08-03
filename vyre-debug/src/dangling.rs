@@ -3,18 +3,28 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_lower::verify::{classify_operand, OperandClass};
 use vyre_lower::{KernelBody, KernelDescriptor};
 
+/// A descriptor operand that references a result outside its valid body scope.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DanglingRef {
+    /// Referenced result identifier.
     pub ref_id: u32,
+    /// Child-body path where the result is produced.
     pub produced_in_body_path: Vec<usize>,
+    /// Operation index that produces the result.
     pub producing_op_index: usize,
+    /// Debug representation of the producing operation kind.
     pub producing_op_kind: String,
+    /// Child-body path where the result is referenced.
     pub referenced_in_body_path: Vec<usize>,
+    /// Operation index that references the result.
     pub referencing_op_index: usize,
+    /// Debug representation of the referencing operation kind.
     pub referencing_op_kind: String,
+    /// Operand position containing the invalid reference.
     pub operand_position: usize,
 }
 
+/// Find descriptor result references that escape their valid body scope.
 pub fn find_dangling_refs(desc: &KernelDescriptor) -> Vec<DanglingRef> {
     let mut id_origins = BTreeMap::new();
 

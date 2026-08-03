@@ -1,18 +1,22 @@
 use naga::{Block, Module, Statement};
 use std::collections::HashMap;
 
+/// Human-readable Naga module text with statement handle locations.
 pub struct NagaDump {
+    /// Rendered module text.
     pub text: String,
     // Maps handle index -> enclosing block path
     block_paths: HashMap<u32, Vec<String>>,
 }
 
 impl NagaDump {
+    /// Return the enclosing block path for a statement handle.
     pub fn find(&self, handle: u32) -> Option<&Vec<String>> {
         self.block_paths.get(&handle)
     }
 }
 
+/// Render a Naga module and index its statement handles.
 pub fn dump_naga_module(module: &Module) -> NagaDump {
     let mut out = String::new();
     let mut block_paths = HashMap::new();

@@ -69,7 +69,7 @@ const QUIESCE_BACKOFF_SHIFT_CAP: u64 = 5;
 
 #[allow(clippy::unnecessary_min_or_max)]
 fn quiesce_backoff_duration(poll: u64) -> Duration {
-    let parked_poll = poll.checked_sub(QUIESCE_SPIN_POLLS).unwrap_or(0);
+    let parked_poll = poll.saturating_sub(QUIESCE_SPIN_POLLS);
     let shift = parked_poll.min(QUIESCE_BACKOFF_SHIFT_CAP) as u32;
     let multiplier = 1_u32 << shift;
     QUIESCE_MIN_PARK
@@ -638,7 +638,6 @@ impl TenantHandle {
 }
 
 /// Thread-safe tenant registry. One per megakernel instance.
-
 pub struct TenantRegistry {
     tenants: DashMap<u32, TenantHandle>,
     next_id: AtomicU32,

@@ -87,10 +87,12 @@ fn gpu_frontier(
     unpack(&outputs[0].to_bytes())
 }
 
+type CsrQueueCase = (Vec<u32>, u32, Vec<u32>, Vec<u32>, Vec<u32>, u32, u32);
+
 /// Random CSR graph + a random active queue (a prefix of `queue_len` valid source
 /// nodes) + a random allow_mask. High-degree nodes are included so the strided
 /// team must run multiple `ceil(degree/32)` iterations.
-fn generated_case(seed: u64) -> (Vec<u32>, u32, Vec<u32>, Vec<u32>, Vec<u32>, u32, u32) {
+fn generated_case(seed: u64) -> CsrQueueCase {
     let mut rng = seed;
     let mut next = || {
         rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);

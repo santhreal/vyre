@@ -326,7 +326,7 @@ fn generated_ugly_hub_edges(node_count: u32, hub: u32, case: u32) -> Vec<(u32, u
     }
 
     for src in 0..node_count {
-        let fanout = mix32(case ^ src.wrapping_mul(0x45D9_F3B)) % 4;
+        let fanout = mix32(case ^ src.wrapping_mul(0x045D_9F3B)) % 4;
         for edge in 0..fanout {
             let dst = src
                 .wrapping_add(1)

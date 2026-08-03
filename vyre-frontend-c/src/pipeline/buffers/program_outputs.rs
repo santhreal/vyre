@@ -61,10 +61,7 @@ pub(crate) fn drop_suppressed_readbacks(outputs: &mut Vec<Vec<u8>>) {
     outputs.retain(|output| !output.is_empty());
 }
 
-pub(crate) fn take_exact_output(
-    stage: &str,
-    outputs: &mut Vec<Vec<u8>>,
-) -> Result<Vec<u8>, String> {
+pub(crate) fn take_exact_output(stage: &str, outputs: &mut [Vec<u8>]) -> Result<Vec<u8>, String> {
     if outputs.len() != 1 {
         return Err(format!(
             "{stage} returned {} output buffer(s), expected exactly 1. Fix: backend must return the declared stage output only.",

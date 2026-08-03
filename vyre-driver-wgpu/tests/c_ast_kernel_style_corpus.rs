@@ -7,7 +7,8 @@
 mod c_ast_gpu_parity_support;
 
 use c_ast_gpu_parity_support::{
-    run_gpu_classifier, run_gpu_scoped_typedef_annotation, run_gpu_vast_builder_from_parts,
+    build_fixture, run_gpu_classifier, run_gpu_scoped_typedef_annotation,
+    run_gpu_vast_builder_from_parts, Fixture, FixtureToken,
 };
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -25,9 +26,6 @@ const TYPEDEF_FLAGS_FIELD: usize = 7;
 const TYPEDEF_FLAG_VISIBLE: u32 = 1;
 const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
 const ORDINARY_FLAG_DECL: u32 = 1 << 2;
-
-mod common;
-use common::c_fixture::*;
 
 fn fixture_token_stream() -> Fixture {
     let tokens = [

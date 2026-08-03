@@ -18,6 +18,7 @@ use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
 
 use crate::ComputeCapability;
 
+/// Adjacent global-load and shared-store pair eligible for asynchronous copy.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AsyncCopyCandidate {
     /// Op-index of the LoadGlobal op.
@@ -30,6 +31,7 @@ pub struct AsyncCopyCandidate {
     pub shared_binding_slot: u32,
 }
 
+/// Asynchronous-copy opportunities for one kernel and target.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AsyncCopyPlan {
     /// Descriptor id that was analyzed.
@@ -43,12 +45,14 @@ pub struct AsyncCopyPlan {
 }
 
 impl AsyncCopyPlan {
+    /// Return the number of asynchronous-copy candidates.
     #[must_use]
     pub fn candidate_count(&self) -> usize {
         self.candidates.len()
     }
 }
 
+/// Analyze global-to-shared transfers for asynchronous-copy eligibility.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor, target: ComputeCapability) -> AsyncCopyPlan {
     let cp_async_supported = target.supports_async_copy();

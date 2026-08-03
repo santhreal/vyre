@@ -36,7 +36,7 @@ pub enum LoanKind {
 }
 
 /// Neutral borrow-check facts for one function: the stable contract between any
-/// front-end producer and the [`analyze`](crate::borrowck::analyze) engine.
+/// front-end producer and the [`analyze`] engine.
 ///
 /// Per-loan tables are parallel arrays indexed by [`Loan`]. The schema is
 /// deliberately small and append-only; new relations (regions, moves, place

@@ -161,16 +161,16 @@ fn generated_backward_program_zeroes_gradient_buffers_before_accumulation() {
             })
             .expect("Fix: backward program must seed grad_out after clearing gradients");
         let zeroed = flattened[..seed_index]
-                .iter()
-                .filter_map(|node| match node {
-                    Node::Store { buffer, value, .. }
-                        if matches!(value, Expr::LitF32(v) if *v == 0.0) =>
-                    {
-                        Some(buffer.as_str())
-                    }
-                    _ => None,
-                })
-                .collect::<Vec<_>>();
+            .iter()
+            .filter_map(|node| match node {
+                Node::Store {
+                    buffer,
+                    value: Expr::LitF32(v),
+                    ..
+                } if *v == 0.0 => Some(buffer.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
 
         assert_eq!(
                 zeroed,

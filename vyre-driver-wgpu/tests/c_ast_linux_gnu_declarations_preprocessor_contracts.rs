@@ -22,8 +22,9 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 
-mod common;
-use common::{decode_u32_words, u32_bytes};
+use vyre_primitives::wire::{
+    decode_u32_le_bytes_all as decode_u32_words, pack_u32_slice as u32_bytes,
+};
 mod c_ast_gpu_parity_support;
 use c_ast_gpu_parity_support::{
     assert_full_pipeline_parity, build_fixture, row_indices, word_at, Fixture, FixtureToken,

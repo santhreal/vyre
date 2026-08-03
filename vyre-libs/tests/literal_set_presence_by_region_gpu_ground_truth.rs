@@ -1,12 +1,11 @@
 //! REAL-GPU INDEPENDENT ground-truth gate for `GpuLiteralSet::scan_presence_by_region`
-//! (the exact consumer path keyhog dispatches for its coalesced region batches).
+//! (the exact production path used for coalesced region batches).
 //!
 //! The CPU-reference twin (`literal_set_presence_by_region_ground_truth`) proves
 //! the region-presence PROGRAM's semantics, but it evaluates the IR on the
-//! reference backend, which has no subgroups and no wgpu lowering. keyhog's open
-//! W1-1 under-fire ("GPU region-presence under-fired ... recovered by CPU recall
-//! floor, fix the vyre literal-set path before treating GPU-only as
-//! parity-safe") is exactly the class a reference-only gate cannot see: a
+//! reference backend, which has no subgroups and no wgpu lowering. A downstream
+//! consumer reported the GPU region-presence path under-firing and recovering through
+//! a CPU recall floor. This is exactly the class a reference-only gate cannot see: a
 //! divergence that manifests only on device (subgroup divergence, wgpu WGSL
 //! lowering, staging/readback).
 //!
@@ -66,8 +65,8 @@ fn gpu_region_presence_matches_independent_dfa_oracle() {
         );
     }
 
-    // keyhog-shaped scale: multi-word presence rows, many small regions, full
-    // byte-range patterns (the on-device shape closest to keyhog's real batch).
+    // Consumer-scale shape: multi-word presence rows, many small regions, full
+    // byte-range patterns (the on-device shape closest to a production batch).
     for (label, literals, haystack, region_starts) in scale_cases() {
         check_gpu(
             backend.as_ref(),

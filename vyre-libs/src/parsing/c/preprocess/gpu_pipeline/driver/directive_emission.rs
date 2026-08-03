@@ -94,7 +94,7 @@ fn flush_active_bytes(
         classified,
         segment_start,
         &run.macros,
-        &mut run.macro_events,
+        &run.macro_events,
         &mut state.macro_expansion_cache,
         &mut state.active_segment,
         &mut run.output,

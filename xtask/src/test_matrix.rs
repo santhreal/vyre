@@ -848,7 +848,7 @@ fn regex_adversarial_coverages(
             });
         }
         coverages.push(RegexAdversarialCoverage {
-            class_id: *class_id,
+            class_id,
             roles,
             required_roles: REQUIRED_REGEX_ADVERSARIAL_ROLES.to_vec(),
             missing_roles,
@@ -867,7 +867,7 @@ fn empty_regex_adversarial_coverages() -> Vec<RegexAdversarialCoverage> {
     REQUIRED_REGEX_ADVERSARIAL_CLASSES
         .iter()
         .map(|class_id| RegexAdversarialCoverage {
-            class_id: *class_id,
+            class_id,
             roles: Vec::new(),
             required_roles: REQUIRED_REGEX_ADVERSARIAL_ROLES.to_vec(),
             missing_roles: REQUIRED_REGEX_ADVERSARIAL_ROLES.to_vec(),
@@ -1001,9 +1001,11 @@ fn modularity_findings(files: &[TestFileRecord]) -> Vec<ModularityFinding> {
     findings
 }
 
+type ModularityGroupKey = (&'static str, String, &'static str, String);
+type ModularityGroupCounts = (usize, usize, usize);
+
 fn modularity_summary(findings: &[ModularityFinding]) -> Vec<ModularitySummary> {
-    let mut groups: BTreeMap<(&'static str, String, &'static str, String), (usize, usize, usize)> =
-        BTreeMap::new();
+    let mut groups: BTreeMap<ModularityGroupKey, ModularityGroupCounts> = BTreeMap::new();
     for finding in findings {
         for split in &finding.recommended_split {
             let entry = groups
@@ -1118,10 +1120,7 @@ fn risk_family_coverages(files: &[TestFileRecord]) -> Vec<RiskFamilyCoverage> {
                 family,
                 file_count: bucket.file_count,
                 assertion_count: bucket.assertion_count,
-                case_roles: {
-                    let roles = bucket.case_roles.into_iter().collect::<Vec<_>>();
-                    roles
-                },
+                case_roles: bucket.case_roles.into_iter().collect(),
                 required_case_roles: REQUIRED_CASE_ROLES.to_vec(),
                 missing_case_roles: Vec::new(),
             },

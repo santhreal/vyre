@@ -62,15 +62,22 @@ pub(crate) fn read_source_bounded(path: &Path) -> Result<String> {
     String::from_utf8(bytes).with_context(|| format!("decode UTF-8 {}", path.display()))
 }
 
+/// One source location that violates a workspace architecture rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {
+    /// Workspace-relative source path.
     pub file: String,
+    /// One-based source line.
     pub line: u32,
+    /// One-based source column.
     pub column: u32,
+    /// Architecture rule that was violated.
     pub kind: ViolationKind,
+    /// Actionable violation description.
     pub message: String,
 }
 
+/// Architecture rule categories reported by this crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ViolationKind {
     /// `Node::SomeVariant { .. }` or `Node::some_method(..)` outside

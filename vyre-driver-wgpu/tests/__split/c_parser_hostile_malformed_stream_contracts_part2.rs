@@ -216,7 +216,7 @@ fn resolved_goto_has_goto_target_edge() {
 
 #[test]
 fn vast_builder_128_token_stream_boundary() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_AMP).take(128).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_AMP, 128).collect();
     let tok_starts: Vec<u32> = (0..128).collect();
     let tok_lens = vec![1; 128];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -235,7 +235,7 @@ fn vast_builder_128_token_stream_boundary() {
 fn deeply_nested_brace_delimiter_stack() {
     // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
     let depth = 64usize;
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_LBRACE).take(depth).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_LBRACE, depth).collect();
     let tok_starts: Vec<u32> = (0..depth).map(|i| i as u32).collect();
     let tok_lens = vec![1; depth];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
@@ -277,7 +277,7 @@ fn alternating_paren_bracket_nesting_does_not_corrupt_siblings() {
 
 #[test]
 fn max_token_boundary_classifier_preserves_spans() {
-    let tok_types: Vec<u32> = std::iter::repeat(TOK_MINUS).take(256).collect();
+    let tok_types: Vec<u32> = std::iter::repeat_n(TOK_MINUS, 256).collect();
     let tok_starts: Vec<u32> = (0..256).collect();
     let tok_lens = vec![1; 256];
     let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);

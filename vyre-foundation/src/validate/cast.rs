@@ -86,6 +86,44 @@ fn integer_width_bits(data_type: &DataType) -> Option<u16> {
     }
 }
 
+/// Every target type `source` may legally cast to, formatted for a
+/// diagnostic. Lives beside the cast rules it enumerates so a change to
+/// `cast_is_valid` and the message listing its results stay together.
+#[inline]
+pub(crate) fn cast_target_set(source: &DataType) -> String {
+    let mut legal_targets = Vec::new();
+    let candidate_targets = [
+        source.clone(),
+        DataType::U8,
+        DataType::U16,
+        DataType::U32,
+        DataType::U64,
+        DataType::I8,
+        DataType::I16,
+        DataType::I32,
+        DataType::I64,
+        DataType::Bool,
+        DataType::Bytes,
+        DataType::Vec2U32,
+        DataType::Vec4U32,
+        DataType::F32,
+    ];
+
+    for target in candidate_targets {
+        if cast_is_valid(source, &target) && !legal_targets.contains(&target) {
+            legal_targets.push(target);
+        }
+    }
+
+    let formatted = legal_targets
+        .into_iter()
+        .map(|target| format!("`{target}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!("[{formatted}]")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,42 +189,4 @@ mod tests {
     fn non_integer_not_narrowing() {
         assert!(!cast_is_narrowing(&DataType::F32, &DataType::U32));
     }
-}
-
-/// Every target type `source` may legally cast to, formatted for a
-/// diagnostic. Lives beside the cast rules it enumerates so a change to
-/// `cast_is_valid` and the message listing its results stay together.
-#[inline]
-pub(crate) fn cast_target_set(source: &DataType) -> String {
-    let mut legal_targets = Vec::new();
-    let candidate_targets = [
-        source.clone(),
-        DataType::U8,
-        DataType::U16,
-        DataType::U32,
-        DataType::U64,
-        DataType::I8,
-        DataType::I16,
-        DataType::I32,
-        DataType::I64,
-        DataType::Bool,
-        DataType::Bytes,
-        DataType::Vec2U32,
-        DataType::Vec4U32,
-        DataType::F32,
-    ];
-
-    for target in candidate_targets {
-        if cast_is_valid(source, &target) && !legal_targets.contains(&target) {
-            legal_targets.push(target);
-        }
-    }
-
-    let formatted = legal_targets
-        .into_iter()
-        .map(|target| format!("`{target}`"))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    format!("[{formatted}]")
 }

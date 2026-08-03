@@ -428,7 +428,7 @@ fn generated_f32_values(kind: F32InputKind, salt: u32) -> Vec<f32> {
             let seed = F32_ARITH_BITS[lane % F32_ARITH_BITS.len()];
             let lane_word = lane as u32;
             let mixed = lane_word
-                .wrapping_mul(0x45d9_f3b)
+                .wrapping_mul(0x045d_9f3b)
                 .rotate_left((lane_word & 15) + 1)
                 ^ salt.rotate_right(lane_word & 31);
             let bits = match kind {

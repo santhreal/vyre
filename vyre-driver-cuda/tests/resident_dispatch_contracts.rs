@@ -28,7 +28,7 @@ fn cuda_resident_borrowed_fallback_active() -> bool {
     }
     #[cfg(debug_assertions)]
     {
-        return true;
+        true
     }
     #[cfg(not(debug_assertions))]
     {

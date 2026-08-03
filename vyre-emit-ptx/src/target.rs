@@ -2,18 +2,27 @@
 /// the broad-compatibility floor for the shipped PTX op set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct ComputeCapability {
+    /// Compute capability major version.
     pub major: u32,
+    /// Compute capability minor version.
     pub minor: u32,
 }
 
 impl ComputeCapability {
+    /// Compute capability 7.0.
     pub const SM_70: Self = Self { major: 7, minor: 0 };
+    /// Compute capability 7.5.
     pub const SM_75: Self = Self { major: 7, minor: 5 };
+    /// Compute capability 8.0.
     pub const SM_80: Self = Self { major: 8, minor: 0 };
+    /// Compute capability 8.6.
     pub const SM_86: Self = Self { major: 8, minor: 6 };
+    /// Compute capability 8.9.
     pub const SM_89: Self = Self { major: 8, minor: 9 };
+    /// Compute capability 9.0.
     pub const SM_90: Self = Self { major: 9, minor: 0 };
 
+    /// Return whether the target supports asynchronous memory copies.
     #[must_use]
     pub const fn supports_async_copy(&self) -> bool {
         self.major >= 8
@@ -28,11 +37,13 @@ impl ComputeCapability {
         self.major > 7 || (self.major == 7 && self.minor >= 5)
     }
 
+    /// Return whether the target supports 16-bit matrix multiply-accumulate.
     #[must_use]
     pub const fn supports_wmma_f16(&self) -> bool {
         self.major >= 7
     }
 
+    /// Return whether the target supports brain-float matrix multiply-accumulate.
     #[must_use]
     pub const fn supports_wmma_bf16(&self) -> bool {
         self.major >= 8
@@ -49,8 +60,11 @@ impl Default for ComputeCapability {
 /// descriptor semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PtxEmitOptions {
+    /// Target compute capability.
     pub target: ComputeCapability,
+    /// Hardware subgroup width.
     pub subgroup_size: u32,
+    /// Optional floating-point error budget in units in the last place.
     pub ulp_budget: Option<u32>,
     /// Lower `MemoryOrdering::GridSync` barriers to a native cooperative grid
     /// barrier (a monotonic-counter spin on a module-scope counter) instead of
@@ -66,6 +80,7 @@ pub struct PtxEmitOptions {
 }
 
 impl PtxEmitOptions {
+    /// Create default emission options for `target`.
     pub fn for_target(target: ComputeCapability) -> Self {
         Self {
             target,

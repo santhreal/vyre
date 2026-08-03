@@ -247,6 +247,19 @@ fn align_up_to_u32_word(value: usize) -> Result<usize, BackendError> {
     })
 }
 
+/// Fixed scalar element size in bytes for [`DataType`].
+///
+/// # Errors
+///
+/// Returns when the type has no fixed size (e.g. unsized or dynamic).
+pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
+    data_type.size_bytes().ok_or_else(|| {
+        BackendError::new(
+            "output buffer element type has no fixed scalar element size. Fix: validate the Program and flatten variable-size outputs before backend pipeline compilation.",
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -318,17 +331,4 @@ mod tests {
             "Fix: malformed output data-type layout diagnostics must remain actionable: {error}"
         );
     }
-}
-
-/// Fixed scalar element size in bytes for [`DataType`].
-///
-/// # Errors
-///
-/// Returns when the type has no fixed size (e.g. unsized or dynamic).
-pub fn element_size_bytes(data_type: &DataType) -> Result<usize, BackendError> {
-    data_type.size_bytes().ok_or_else(|| {
-        BackendError::new(
-            "output buffer element type has no fixed scalar element size. Fix: validate the Program and flatten variable-size outputs before backend pipeline compilation.",
-        )
-    })
 }

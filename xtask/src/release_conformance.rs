@@ -642,13 +642,13 @@ fn write_release_log(workspace_root: &Path, requested_backends: &[String], failu
                 .join(artifact);
             match fs::metadata(&path) {
                 Ok(metadata) => ReleaseArtifactStatus {
-                    path: *artifact,
+                    path: artifact,
                     exists: metadata.is_file(),
                     bytes: metadata.len(),
                     read_error: None,
                 },
                 Err(error) => ReleaseArtifactStatus {
-                    path: *artifact,
+                    path: artifact,
                     exists: false,
                     bytes: 0,
                     read_error: Some(error.to_string()),

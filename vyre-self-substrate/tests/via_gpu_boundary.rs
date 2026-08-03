@@ -356,9 +356,7 @@ fn is_reference_only_public_surface(line: &str) -> bool {
 fn public_item_name(line: &str) -> Option<&str> {
     for marker in ["fn ", "struct "] {
         if let Some((_, rest)) = line.split_once(marker) {
-            return rest
-                .split(|ch: char| ch == '(' || ch == '<' || ch == ' ' || ch == '{')
-                .next();
+            return rest.split(['(', '<', ' ', '{']).next();
         }
     }
     None

@@ -68,12 +68,12 @@ fn generated_i4_cpu_oracle_matrix_preserves_packing_and_top1_semantics() {
         assert_eq!(dot, expected_dot);
     }
 
-    let weights = vec![
+    let weights = [
         vec![7, 6, 5, 4, 3, 2, 1, 0, -1],
         vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
         vec![1, -1, 1, -1, 1, -1, 1, -1, 1],
     ];
-    let activations = vec![
+    let activations = [
         vec![1, 1, 1, 1, 1, 1, 1, 1, 1],
         vec![-1, -1, -1, -1, -1, -1, -1, -1, -1],
     ];

@@ -86,8 +86,7 @@ fn run_ir(
         .collect()
 }
 
-/// A well-conditioned 4->2 V-cycle whose entries are all exactly 16.16-representable.
-fn fixture() -> (
+type AmgFixture = (
     Vec<f64>,
     Vec<f64>,
     Vec<f64>,
@@ -95,7 +94,10 @@ fn fixture() -> (
     Vec<f64>,
     Vec<f64>,
     f64,
-) {
+);
+
+/// A well-conditioned 4->2 V-cycle whose entries are all exactly 16.16-representable.
+fn fixture() -> AmgFixture {
     // Fine A: 4x4 tridiagonal(-1, 4, -1), SPD + diagonally dominant, diagonal = 4 (power of two).
     let a = vec![
         4.0, -1.0, 0.0, 0.0, //

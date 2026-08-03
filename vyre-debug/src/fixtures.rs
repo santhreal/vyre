@@ -1,5 +1,6 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+/// Build a small loop-carrier program for diagnostics and examples.
 pub fn loop_carry_smoke() -> Program {
     Program::wrapped(
         vec![

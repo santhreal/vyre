@@ -270,9 +270,7 @@ impl PersistentEngine {
             let slot_idx = (tail as u32) & (self.ring_size - 1);
             let slot_offset = slot_idx as usize;
             let published = tail.wrapping_add(1);
-            let Some(ready) = self.atomics.ready.get(slot_offset) else {
-                return None;
-            };
+            let ready = self.atomics.ready.get(slot_offset)?;
             match ring_sequence_order(ready.load(Ordering::Acquire), published) {
                 RingSequenceOrder::Free => {}
                 RingSequenceOrder::Behind => {

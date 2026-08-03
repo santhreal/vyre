@@ -122,7 +122,7 @@ fn p2m_aggregate_via_matches_inline_f64_oracle() {
 #[test]
 fn m2l_translate_via_matches_inline_f64_oracle() {
     let dispatcher = ReferenceEvalDispatcher;
-    let mut state = 0x312_00_01u32;
+    let mut state = 0x0312_0001_u32;
     for case in 0..300u32 {
         let n_cells = 2 + (case % 4) as usize; // 2..5
         let moments: Vec<f32> = (0..n_cells).map(|_| unit_f32(&mut state)).collect();
@@ -147,7 +147,7 @@ fn l2p_evaluate_via_matches_inline_f64_oracle() {
     let mut state = 0x51_2A_00_01u32;
     for case in 0..300u32 {
         let n_cells = 2 + (case % 4); // 2..5
-        let n = (n_cells + (case % 6)) as u32; // regions >= cells
+        let n = n_cells + (case % 6); // regions >= cells
         let cell_local: Vec<f32> = (0..n_cells).map(|_| unit_f32(&mut state)).collect();
         let cell_assignment: Vec<u32> = (0..n as usize)
             .map(|_| xorshift(&mut state) % n_cells)

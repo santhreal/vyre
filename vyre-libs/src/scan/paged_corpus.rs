@@ -37,6 +37,8 @@ use vyre_foundation::match_result::Match;
 
 use crate::scan::literal_set::{GpuLiteralSet, PendingFusedRegion};
 
+type PagedPlan = Option<(u32, Vec<usize>, Vec<CorpusWindow>)>;
+
 /// One resident-window worth of a paged corpus: a maximal contiguous run of files
 /// whose combined bytes fit the window budget (or a single over-budget file on its
 /// own), plus the global region id of the run's first file.
@@ -417,7 +419,7 @@ fn finish_result(
 fn plan_paged(
     files: &[&[u8]],
     window_budget_bytes: usize,
-) -> Result<Option<(u32, Vec<usize>, Vec<CorpusWindow>)>, vyre::BackendError> {
+) -> Result<PagedPlan, vyre::BackendError> {
     let region_count = u32::try_from(files.len()).map_err(|_| {
         vyre::BackendError::new(
             "scan_paged_fused: file count exceeds the u32 region-id ABI. Fix: coalesce fewer files per corpus or shard the corpus.".to_string(),
@@ -1095,7 +1097,7 @@ const PAGED_PIPELINE_DEPTH: usize = 2;
 
 /// Asynchronous twin of [`scan_paged_fused`]: pipelines the windows so each
 /// window's host staging + upload overlaps the previous window's device execution,
-/// keeping [`PAGED_PIPELINE_DEPTH`] dispatches in flight. It uses the BORROWED async
+/// keeping `PAGED_PIPELINE_DEPTH` dispatches in flight. It uses the BORROWED async
 /// fused dispatch (the tables re-upload per window, amortized over a large window
 /// rather than staying resident), which is the trade the overlap buys. The
 /// boundary handling (`L-1` overlap, dummy overlap region, start-based dedup) is the

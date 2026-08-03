@@ -44,7 +44,7 @@ fn unknown_is_1999() {
 
 #[test]
 fn all_codes_are_unique() {
-    let codes = vec![
+    let codes = [
         ErrorCode::DeviceOutOfMemory,
         ErrorCode::UnsupportedFeature,
         ErrorCode::PoisonedLock,

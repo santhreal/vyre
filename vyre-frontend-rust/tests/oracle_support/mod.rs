@@ -54,7 +54,7 @@ pub(crate) fn lexer_parity(source: &[u8]) -> OracleResult {
     let mut rustc_spans: Vec<(usize, &str)> = Vec::new();
     let mut pos = 0usize;
     for t in rustc_lexer::tokenize(src) {
-        let len = t.len as usize;
+        let len = t.len;
         let s = pos;
         pos += len;
         if matches!(

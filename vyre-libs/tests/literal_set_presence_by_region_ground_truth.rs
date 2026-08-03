@@ -8,14 +8,14 @@
 //! and region binary search, so a bug in ANY of those shared components passes
 //! that test (all three under-fire together and still agree). It cannot catch a
 //! region-presence UNDER-FIRE, which is exactly the open W1-1 correctness debt:
-//! keyhog observed the GPU region-presence path missing real `(chunk, detector)`
-//! pairs its CPU recall floor recovered.
+//! a downstream consumer observed the GPU region-presence path missing real
+//! `(chunk, detector)` pairs its CPU recall floor recovered.
 //!
 //! This gate checks the program's output against a genuinely independent oracle
 //! (`presence_oracle::oracle_presence`, a plain-Rust DFA walk that touches none of
 //! the program's machinery). The GPU twin
 //! (`literal_set_presence_by_region_gpu_ground_truth`) runs the SAME oracle
-//! against the real wgpu backend, the actual path keyhog dispatches, so a
+//! against the real wgpu backend, the actual production path, so a
 //! subgroup-divergence under-fire that only manifests on device is caught there.
 
 mod presence_oracle;
@@ -133,7 +133,7 @@ fn region_presence_edge_classes() {
     }
 }
 
-/// keyhog-shaped scale: multi-word presence rows (>32/>64 patterns), many small
+/// Consumer-scale shape: multi-word presence rows (>32/>64 patterns), many small
 /// regions, and full byte-range patterns, the coverage the edge cases never
 /// reach and the shape W6-1 names as the consumer spec.
 #[test]

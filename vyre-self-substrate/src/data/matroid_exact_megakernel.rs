@@ -99,15 +99,38 @@ impl ExactMatroidScratch {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExactMatroidError {
     /// `n * n` overflowed `usize`.
-    AdjacencySizeOverflow { n: usize },
+    AdjacencySizeOverflow {
+        /// Requested graph dimension.
+        n: usize,
+    },
     /// `exchange_adj.len()` did not match `n * n`.
-    ExchangeAdjLen { expected: usize, actual: usize },
+    ExchangeAdjLen {
+        /// Required adjacency length.
+        expected: usize,
+        /// Received adjacency length.
+        actual: usize,
+    },
     /// `sources.len()` did not match `n`.
-    SourcesLen { expected: usize, actual: usize },
+    SourcesLen {
+        /// Required source-mask length.
+        expected: usize,
+        /// Received source-mask length.
+        actual: usize,
+    },
     /// `sinks.len()` did not match `n`.
-    SinksLen { expected: usize, actual: usize },
+    SinksLen {
+        /// Required sink-mask length.
+        expected: usize,
+        /// Received sink-mask length.
+        actual: usize,
+    },
     /// `seed_x.len()` did not match `n`.
-    SeedLen { expected: usize, actual: usize },
+    SeedLen {
+        /// Required seed length.
+        expected: usize,
+        /// Received seed length.
+        actual: usize,
+    },
 }
 
 impl std::fmt::Display for ExactMatroidError {
@@ -462,7 +485,6 @@ pub fn reference_select_optimal_subset_all_eligible(
 ///
 /// Returns a view into `scratch.result()`.
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn reference_select_optimal_subset_all_eligible_into<'a>(
     exchange_adj: &[u32],
     seed_x: &[u32],

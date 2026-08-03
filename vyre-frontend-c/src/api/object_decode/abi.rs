@@ -101,6 +101,11 @@ fn decode_abi_layout_entries(
     Ok(entries)
 }
 
+fn read_u32_word(bytes: &[u8], offset: usize, label: &str) -> Result<u32, String> {
+    // Canonical LEGO: byte-offset LE u32 read lives once in vyre-primitives::wire.
+    vyre_primitives::wire::read_u32_le_at(bytes, offset, label)
+}
+
 #[cfg(test)]
 mod tests {
     use super::decode_abi_layout_entries;
@@ -142,9 +147,4 @@ mod tests {
         assert_eq!(entries[0].type_kind, 17);
         assert_eq!(entries[1].type_kind, 23);
     }
-}
-
-fn read_u32_word(bytes: &[u8], offset: usize, label: &str) -> Result<u32, String> {
-    // Canonical LEGO: byte-offset LE u32 read lives once in vyre-primitives::wire.
-    vyre_primitives::wire::read_u32_le_at(bytes, offset, label)
 }

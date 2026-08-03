@@ -6,7 +6,7 @@ fn cli_define_visible_to_ifdef() {
     let out = run(
         b"#ifdef FROM_CLI\nint visible;\n#endif\n",
         &[MacroDef {
-            name: b"FROM_CLI".to_vec().into(),
+            name: b"FROM_CLI".to_vec(),
             args: Vec::new(),
             body: Vec::new(),
             is_function_like: false,
@@ -43,7 +43,7 @@ fn undef_above_ifdef_drops_active_branch() {
     let out = run(
         b"#undef FOO\n#ifdef FOO\nint should_drop;\n#endif\nint after;\n",
         &[MacroDef {
-            name: b"FOO".to_vec().into(),
+            name: b"FOO".to_vec(),
             args: Vec::new(),
             body: Vec::new(),
             is_function_like: false,

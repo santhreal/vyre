@@ -25,7 +25,9 @@ struct CanonicalizeKernelScratch {
 /// Errors surfaced by `gpu_canonicalize`.
 #[derive(Debug)]
 pub enum CanonicalizeError {
+    /// Expression-arena encoding failed.
     Encode(EncodeError),
+    /// Backend dispatch or output decoding failed.
     Dispatch(DispatchError),
 }
 

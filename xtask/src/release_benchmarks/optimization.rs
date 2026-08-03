@@ -23,427 +23,6 @@ pub(super) fn metric_p50(metric: &Value) -> Option<u64> {
     metric.get("p50").and_then(Value::as_u64)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use tempfile::TempDir;
-
-    #[test]
-    fn release_axes_uses_cuda_suite_artifacts_only() {
-        let dir = TempDir::new().expect("Fix: create temp workspace for release axes source test.");
-        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
-            .expect("Fix: write temporary workspace manifest.");
-        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
-        fs::create_dir_all(&benchmark_dir)
-            .expect("Fix: create temporary benchmark evidence directory.");
-        let git = vyre_bench::probes::capture_git_info_at(dir.path());
-        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
-        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
-        let mut suite_artifacts = Vec::new();
-        let mut artifact_statuses = Vec::new();
-        for index in 1..=12 {
-            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
-            let artifact_path = dir.path().join(&artifact);
-            fs::write(
-                &artifact_path,
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "selected_backend": "cuda",
-                    "source_fingerprint": &source_fingerprint,
-                    "source_tree_fingerprint": &source_tree_fingerprint,
-                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
-                    "cases": [
-                        {
-                            "id": format!("release.axis.{index}"),
-                            "backend_id": "cuda",
-                            "status": "pass",
-                            "metrics": {
-                                "wall_ns": {"p50": 10 + index},
-                                "cold_compile_ns": {"p50": 1000 + index},
-                                "wall_gb_s_x1000": {"p50": 2000 + index}
-                            }
-                        }
-                    ]
-                }))
-                .expect("Fix: serialize CUDA release axis fixture."),
-            )
-            .expect("Fix: write CUDA release axis fixture.");
-            artifact_statuses.push(serde_json::json!({
-                "path": artifact,
-                "family_id": format!("release-axis-{index}"),
-                "requested_case_id": format!("release.axis.{index}"),
-                "blockers": []
-            }));
-            suite_artifacts.push(artifact);
-        }
-        fs::write(
-            benchmark_dir.join("cuda-release-suite.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "schema_version": 2,
-                "backend": "cuda",
-                "artifacts": suite_artifacts,
-                "artifact_statuses": artifact_statuses
-            }))
-            .expect("Fix: serialize CUDA release suite fixture."),
-        )
-        .expect("Fix: write CUDA release suite fixture.");
-        fs::write(
-            benchmark_dir.join("wgpu-workload-01.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "selected_backend": "wgpu",
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "release.axis.wgpu",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"p50": 1},
-                            "cold_compile_ns": {"p50": 1},
-                            "wall_gb_s_x1000": {"p50": 99_999}
-                        }
-                    }
-                ]
-            }))
-            .expect("Fix: serialize WGPU release axis decoy."),
-        )
-        .expect("Fix: write WGPU release axis decoy.");
-        fs::write(
-            benchmark_dir.join("cpu-only-100x-proof.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "selected_backend": "cuda",
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "release.axis.aggregate-proof",
-                        "backend_id": "cuda",
-                        "status": "pass",
-                        "metrics": {
-                            "wall_ns": {"p50": 1},
-                            "cold_compile_ns": {"p50": 1},
-                            "wall_gb_s_x1000": {"p50": 99_999}
-                        }
-                    }
-                ]
-            }))
-            .expect("Fix: serialize aggregate proof release axis decoy."),
-        )
-        .expect("Fix: write aggregate proof release axis decoy.");
-
-        write_release_axes(dir.path());
-
-        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
-            .expect("Fix: read generated release axes evidence.");
-        let axes = serde_json::from_str::<Value>(&axes_text)
-            .expect("Fix: generated release axes evidence must be JSON.");
-        let source_artifacts = axes
-            .get("source_artifacts")
-            .and_then(Value::as_array)
-            .expect("Fix: release axes evidence must include source_artifacts.");
-
-        assert_eq!(
-            source_artifacts.len(),
-            12,
-            "Fix: release axes must count CUDA suite workload artifacts, not directory-wide benchmark JSON."
-        );
-        assert!(
-            !source_artifacts.iter().any(|artifact| artifact
-                .as_str()
-                .is_some_and(|artifact| artifact.contains("wgpu") || artifact.contains("100x"))),
-            "Fix: release axes must not include WGPU fallback artifacts or aggregate CPU-SOTA proof reports; source_artifacts={source_artifacts:?}"
-        );
-        assert_eq!(
-            axes.get("warm_us_per_file").and_then(Value::as_f64),
-            Some(0.011),
-            "Fix: WGPU/proof decoy metrics must not drive CUDA release-axis minima."
-        );
-        assert!(
-            axes.get("blockers")
-                .and_then(Value::as_array)
-                .is_some_and(Vec::is_empty),
-            "Fix: valid CUDA suite artifacts should generate clean release-axis evidence; axes={axes:?}"
-        );
-    }
-
-    #[test]
-    fn release_axes_records_stale_source_provenance_blockers() {
-        let dir = TempDir::new()
-            .expect("Fix: create temp workspace for release axes provenance blocker test.");
-        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
-            .expect("Fix: write temporary workspace manifest.");
-        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
-        fs::create_dir_all(&benchmark_dir)
-            .expect("Fix: create temporary benchmark evidence directory.");
-        let mut suite_artifacts = Vec::new();
-        for index in 1..=12 {
-            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
-            fs::write(
-                dir.path().join(&artifact),
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "selected_backend": "cuda",
-                    "source_fingerprint": "git:abc123:dirty=true",
-                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
-                    "cases": [
-                        {
-                            "id": format!("release.axis.provenance.{index}"),
-                            "backend_id": "cuda",
-                            "status": "pass",
-                            "metrics": {
-                                "wall_ns": {"p50": 10 + index},
-                                "cold_compile_ns": {"p50": 1000 + index},
-                                "wall_gb_s_x1000": {"p50": 2000 + index}
-                            }
-                        }
-                    ]
-                }))
-                .expect("Fix: serialize stale provenance release axis fixture."),
-            )
-            .expect("Fix: write stale provenance release axis fixture.");
-            suite_artifacts.push(artifact);
-        }
-        fs::write(
-            benchmark_dir.join("cuda-release-suite.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "schema_version": 2,
-                "backend": "cuda",
-                "artifacts": suite_artifacts
-            }))
-            .expect("Fix: serialize stale provenance CUDA release suite fixture."),
-        )
-        .expect("Fix: write stale provenance CUDA release suite fixture.");
-
-        write_release_axes(dir.path());
-
-        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
-            .expect("Fix: read generated release axes evidence.");
-        let axes = serde_json::from_str::<Value>(&axes_text)
-            .expect("Fix: generated release axes evidence must be JSON.");
-        let blockers = axes
-            .get("blockers")
-            .and_then(Value::as_array)
-            .expect("Fix: generated release axes evidence must include blockers.");
-
-        assert!(
-            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
-                |blocker| blocker.contains(
-                    "source_artifact `release/evidence/benchmarks/workload-01.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
-                )
-            )),
-            "Fix: write_release_axes must record source provenance blockers in bench-release-axes instead of leaving them only to the CLI/gate; blockers={blockers:?}"
-        );
-    }
-
-    #[test]
-    fn release_axes_records_mislabeled_cuda_suite_backend_blocker() {
-        let dir = TempDir::new()
-            .expect("Fix: create temp workspace for release axes suite backend test.");
-        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
-            .expect("Fix: write temporary workspace manifest.");
-        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
-        fs::create_dir_all(&benchmark_dir)
-            .expect("Fix: create temporary benchmark evidence directory.");
-        let git = vyre_bench::probes::capture_git_info_at(dir.path());
-        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
-        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
-        let mut suite_artifacts = Vec::new();
-        for index in 1..=12 {
-            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
-            fs::write(
-                dir.path().join(&artifact),
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "selected_backend": "cuda",
-                    "source_fingerprint": &source_fingerprint,
-                    "source_tree_fingerprint": &source_tree_fingerprint,
-                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                    "environment": {
-                        "gpu_devices": [{"memory_total_mib": 24576}]
-                    },
-                    "cases": [
-                        {
-                            "id": format!("release.axis.suite-backend.{index}"),
-                            "backend_id": "cuda",
-                            "status": "pass",
-                            "metrics": {
-                                "wall_ns": {"p50": 10 + index},
-                                "cold_compile_ns": {"p50": 1000 + index},
-                                "wall_gb_s_x1000": {"p50": 2000 + index}
-                            }
-                        }
-                    ]
-                }))
-                .expect("Fix: serialize mislabeled-suite release axis fixture."),
-            )
-            .expect("Fix: write mislabeled-suite release axis fixture.");
-            suite_artifacts.push(artifact);
-        }
-        fs::write(
-            benchmark_dir.join("cuda-release-suite.json"),
-            serde_json::to_string_pretty(&serde_json::json!({
-                "schema_version": 2,
-                "backend": "wgpu",
-                "artifacts": suite_artifacts
-            }))
-            .expect("Fix: serialize mislabeled CUDA release suite fixture."),
-        )
-        .expect("Fix: write mislabeled CUDA release suite fixture.");
-
-        write_release_axes(dir.path());
-
-        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
-            .expect("Fix: read generated release axes evidence.");
-        let axes = serde_json::from_str::<Value>(&axes_text)
-            .expect("Fix: generated release axes evidence must be JSON.");
-        let blockers = axes
-            .get("blockers")
-            .and_then(Value::as_array)
-            .expect("Fix: generated release axes evidence must include blockers.");
-
-        assert!(
-            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
-                |blocker| blocker.contains(
-                    "cuda-release-suite backend `wgpu` does not match required `cuda`"
-                )
-            )),
-            "Fix: write_release_axes must record suite backend identity drift in bench-release-axes; blockers={blockers:?}"
-        );
-    }
-
-    #[test]
-    fn optimization_artifact_inspection_surfaces_backend_and_source_integrity_blockers() {
-        let dir = TempDir::new()
-            .expect("Fix: create temp workspace for optimization artifact integrity test.");
-        let artifact = "release/evidence/optimization/optimizer-backend-drift.json";
-        let artifact_path = dir.path().join(artifact);
-        fs::create_dir_all(
-            artifact_path
-                .parent()
-                .expect("Fix: optimization artifact path must have a parent directory."),
-        )
-        .expect("Fix: create optimization artifact integrity parent directory.");
-        fs::write(
-            &artifact_path,
-            serde_json::to_string_pretty(&serde_json::json!({
-                "schema_version": 2,
-                "selected_backend": "wgpu",
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "foundation.optimizer.impact",
-                        "backend_id": "wgpu",
-                        "status": "pass",
-                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "optimizer_input_nodes": {"p50": 20},
-                            "optimizer_output_nodes": {"p50": 5},
-                            "optimizer_nodes_eliminated": {"p50": 15},
-                            "benchmark_repeats": {"p50": 30}
-                        },
-                        "contract": {
-                            "primitive": "foundation optimizer impact",
-                            "baselines": [
-                                {
-                                    "class": "CpuSota",
-                                    "backend_ids": ["cuda"],
-                                    "min_speedup_x": 100.0
-                                }
-                            ]
-                        },
-                        "performance": {"contract_passed": true, "speedup_x": 100.0}
-                    }
-                ]
-            }))
-            .expect("Fix: serialize optimization artifact integrity fixture."),
-        )
-        .expect("Fix: write optimization artifact integrity fixture.");
-
-        let inspection = inspect_optimization_benchmark_artifact(
-            dir.path(),
-            "cuda",
-            artifact,
-            &[
-                "optimizer_input_nodes",
-                "optimizer_output_nodes",
-                "optimizer_nodes_eliminated",
-            ],
-            &["optimizer_input_nodes", "optimizer_output_nodes"],
-        );
-
-        assert!(
-            inspection.blockers.iter().any(|blocker| blocker.contains(
-                "selected_backend `Some(\"wgpu\")` does not match requested backend `cuda`"
-            )),
-            "Fix: optimization benchmark inspection must expose backend identity drift; blockers={:?}",
-            inspection.blockers
-        );
-        assert!(
-            inspection.blockers.iter().any(|blocker| blocker.contains(
-                "source_artifact `release/evidence/optimization/optimizer-backend-drift.json` case `foundation.optimizer.impact` backend `wgpu` has no applicable performance contract baseline"
-            )),
-            "Fix: optimization benchmark inspection must expose wrong-backend performance contracts; blockers={:?}",
-            inspection.blockers
-        );
-        let borrowed_artifact = "release/evidence/optimization/optimizer-borrowed-cuda.json";
-        let borrowed_path = dir.path().join(borrowed_artifact);
-        fs::write(
-            &borrowed_path,
-            serde_json::to_string_pretty(&serde_json::json!({
-                "schema_version": 2,
-                "selected_backend": "cuda",
-                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
-                "cases": [
-                    {
-                        "id": "foundation.optimizer.impact",
-                        "backend_id": "cuda",
-                        "status": "pass",
-                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
-                        "metrics": {
-                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
-                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
-                            "optimizer_input_nodes": {"p50": 20},
-                            "optimizer_output_nodes": {"p50": 5},
-                            "optimizer_nodes_eliminated": {"p50": 15},
-                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
-                        },
-                        "performance": {"contract_passed": true, "speedup_x": 100.0}
-                    }
-                ]
-            }))
-            .expect("Fix: serialize borrowed CUDA optimization artifact fixture."),
-        )
-        .expect("Fix: write borrowed CUDA optimization artifact fixture.");
-
-        let borrowed_inspection = inspect_optimization_benchmark_artifact(
-            dir.path(),
-            "cuda",
-            borrowed_artifact,
-            &[
-                "optimizer_input_nodes",
-                "optimizer_output_nodes",
-                "optimizer_nodes_eliminated",
-            ],
-            &["optimizer_input_nodes", "optimizer_output_nodes"],
-        );
-
-        assert!(
-            borrowed_inspection.blockers.iter().any(|blocker| {
-                blocker.contains(
-                    "source_artifact `release/evidence/optimization/optimizer-borrowed-cuda.json` case `foundation.optimizer.impact` has cuda_resident_borrowed_fallback_dispatches p50=2",
-                ) && blocker.contains("optimization benchmark `release/evidence/optimization/optimizer-borrowed-cuda.json` must use native resident dispatch")
-            }),
-            "Fix: optimization benchmark inspection must expose borrowed resident CUDA dispatch telemetry; blockers={:?}",
-            borrowed_inspection.blockers
-        );
-    }
-}
-
 pub(super) fn inspect_optimization_benchmark_artifact(
     workspace_root: &Path,
     expected_backend: &str,
@@ -1178,4 +757,425 @@ pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backe
             blockers,
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use tempfile::TempDir;
+
+    #[test]
+    fn release_axes_uses_cuda_suite_artifacts_only() {
+        let dir = TempDir::new().expect("Fix: create temp workspace for release axes source test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(dir.path());
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut suite_artifacts = Vec::new();
+        let mut artifact_statuses = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            let artifact_path = dir.path().join(&artifact);
+            fs::write(
+                &artifact_path,
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize CUDA release axis fixture."),
+            )
+            .expect("Fix: write CUDA release axis fixture.");
+            artifact_statuses.push(serde_json::json!({
+                "path": artifact,
+                "family_id": format!("release-axis-{index}"),
+                "requested_case_id": format!("release.axis.{index}"),
+                "blockers": []
+            }));
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": suite_artifacts,
+                "artifact_statuses": artifact_statuses
+            }))
+            .expect("Fix: serialize CUDA release suite fixture."),
+        )
+        .expect("Fix: write CUDA release suite fixture.");
+        fs::write(
+            benchmark_dir.join("wgpu-workload-01.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.axis.wgpu",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"p50": 1},
+                            "cold_compile_ns": {"p50": 1},
+                            "wall_gb_s_x1000": {"p50": 99_999}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize WGPU release axis decoy."),
+        )
+        .expect("Fix: write WGPU release axis decoy.");
+        fs::write(
+            benchmark_dir.join("cpu-only-100x-proof.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "release.axis.aggregate-proof",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "metrics": {
+                            "wall_ns": {"p50": 1},
+                            "cold_compile_ns": {"p50": 1},
+                            "wall_gb_s_x1000": {"p50": 99_999}
+                        }
+                    }
+                ]
+            }))
+            .expect("Fix: serialize aggregate proof release axis decoy."),
+        )
+        .expect("Fix: write aggregate proof release axis decoy.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let source_artifacts = axes
+            .get("source_artifacts")
+            .and_then(Value::as_array)
+            .expect("Fix: release axes evidence must include source_artifacts.");
+
+        assert_eq!(
+            source_artifacts.len(),
+            12,
+            "Fix: release axes must count CUDA suite workload artifacts, not directory-wide benchmark JSON."
+        );
+        assert!(
+            !source_artifacts.iter().any(|artifact| artifact
+                .as_str()
+                .is_some_and(|artifact| artifact.contains("wgpu") || artifact.contains("100x"))),
+            "Fix: release axes must not include WGPU fallback artifacts or aggregate CPU-SOTA proof reports; source_artifacts={source_artifacts:?}"
+        );
+        assert_eq!(
+            axes.get("warm_us_per_file").and_then(Value::as_f64),
+            Some(0.011),
+            "Fix: WGPU/proof decoy metrics must not drive CUDA release-axis minima."
+        );
+        assert!(
+            axes.get("blockers")
+                .and_then(Value::as_array)
+                .is_some_and(Vec::is_empty),
+            "Fix: valid CUDA suite artifacts should generate clean release-axis evidence; axes={axes:?}"
+        );
+    }
+
+    #[test]
+    fn release_axes_records_stale_source_provenance_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for release axes provenance blocker test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let mut suite_artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": "git:abc123:dirty=true",
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.provenance.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize stale provenance release axis fixture."),
+            )
+            .expect("Fix: write stale provenance release axis fixture.");
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "cuda",
+                "artifacts": suite_artifacts
+            }))
+            .expect("Fix: serialize stale provenance CUDA release suite fixture."),
+        )
+        .expect("Fix: write stale provenance CUDA release suite fixture.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let blockers = axes
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated release axes evidence must include blockers.");
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
+                |blocker| blocker.contains(
+                    "source_artifact `release/evidence/benchmarks/workload-01.json` source_fingerprint `git:abc123:dirty=true` is dirty but has no worktree digest"
+                )
+            )),
+            "Fix: write_release_axes must record source provenance blockers in bench-release-axes instead of leaving them only to the CLI/gate; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn release_axes_records_mislabeled_cuda_suite_backend_blocker() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for release axes suite backend test.");
+        fs::write(dir.path().join("Cargo.toml"), "[workspace]\n")
+            .expect("Fix: write temporary workspace manifest.");
+        let benchmark_dir = dir.path().join("release/evidence/benchmarks");
+        fs::create_dir_all(&benchmark_dir)
+            .expect("Fix: create temporary benchmark evidence directory.");
+        let git = vyre_bench::probes::capture_git_info_at(dir.path());
+        let source_fingerprint = vyre_bench::probes::source_fingerprint(&git);
+        let source_tree_fingerprint = vyre_bench::probes::source_tree_fingerprint_at(dir.path());
+        let mut suite_artifacts = Vec::new();
+        for index in 1..=12 {
+            let artifact = format!("release/evidence/benchmarks/workload-{index:02}.json");
+            fs::write(
+                dir.path().join(&artifact),
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "selected_backend": "cuda",
+                    "source_fingerprint": &source_fingerprint,
+                    "source_tree_fingerprint": &source_tree_fingerprint,
+                    "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                    "environment": {
+                        "gpu_devices": [{"memory_total_mib": 24576}]
+                    },
+                    "cases": [
+                        {
+                            "id": format!("release.axis.suite-backend.{index}"),
+                            "backend_id": "cuda",
+                            "status": "pass",
+                            "metrics": {
+                                "wall_ns": {"p50": 10 + index},
+                                "cold_compile_ns": {"p50": 1000 + index},
+                                "wall_gb_s_x1000": {"p50": 2000 + index}
+                            }
+                        }
+                    ]
+                }))
+                .expect("Fix: serialize mislabeled-suite release axis fixture."),
+            )
+            .expect("Fix: write mislabeled-suite release axis fixture.");
+            suite_artifacts.push(artifact);
+        }
+        fs::write(
+            benchmark_dir.join("cuda-release-suite.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "backend": "wgpu",
+                "artifacts": suite_artifacts
+            }))
+            .expect("Fix: serialize mislabeled CUDA release suite fixture."),
+        )
+        .expect("Fix: write mislabeled CUDA release suite fixture.");
+
+        write_release_axes(dir.path());
+
+        let axes_text = fs::read_to_string(benchmark_dir.join("bench-release-axes.json"))
+            .expect("Fix: read generated release axes evidence.");
+        let axes = serde_json::from_str::<Value>(&axes_text)
+            .expect("Fix: generated release axes evidence must be JSON.");
+        let blockers = axes
+            .get("blockers")
+            .and_then(Value::as_array)
+            .expect("Fix: generated release axes evidence must include blockers.");
+
+        assert!(
+            blockers.iter().any(|blocker| blocker.as_str().is_some_and(
+                |blocker| blocker.contains(
+                    "cuda-release-suite backend `wgpu` does not match required `cuda`"
+                )
+            )),
+            "Fix: write_release_axes must record suite backend identity drift in bench-release-axes; blockers={blockers:?}"
+        );
+    }
+
+    #[test]
+    fn optimization_artifact_inspection_surfaces_backend_and_source_integrity_blockers() {
+        let dir = TempDir::new()
+            .expect("Fix: create temp workspace for optimization artifact integrity test.");
+        let artifact = "release/evidence/optimization/optimizer-backend-drift.json";
+        let artifact_path = dir.path().join(artifact);
+        fs::create_dir_all(
+            artifact_path
+                .parent()
+                .expect("Fix: optimization artifact path must have a parent directory."),
+        )
+        .expect("Fix: create optimization artifact integrity parent directory.");
+        fs::write(
+            &artifact_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "wgpu",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "foundation.optimizer.impact",
+                        "backend_id": "wgpu",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "optimizer_input_nodes": {"p50": 20},
+                            "optimizer_output_nodes": {"p50": 5},
+                            "optimizer_nodes_eliminated": {"p50": 15},
+                            "benchmark_repeats": {"p50": 30}
+                        },
+                        "contract": {
+                            "primitive": "foundation optimizer impact",
+                            "baselines": [
+                                {
+                                    "class": "CpuSota",
+                                    "backend_ids": ["cuda"],
+                                    "min_speedup_x": 100.0
+                                }
+                            ]
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 100.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize optimization artifact integrity fixture."),
+        )
+        .expect("Fix: write optimization artifact integrity fixture.");
+
+        let inspection = inspect_optimization_benchmark_artifact(
+            dir.path(),
+            "cuda",
+            artifact,
+            &[
+                "optimizer_input_nodes",
+                "optimizer_output_nodes",
+                "optimizer_nodes_eliminated",
+            ],
+            &["optimizer_input_nodes", "optimizer_output_nodes"],
+        );
+
+        assert!(
+            inspection.blockers.iter().any(|blocker| blocker.contains(
+                "selected_backend `Some(\"wgpu\")` does not match requested backend `cuda`"
+            )),
+            "Fix: optimization benchmark inspection must expose backend identity drift; blockers={:?}",
+            inspection.blockers
+        );
+        assert!(
+            inspection.blockers.iter().any(|blocker| blocker.contains(
+                "source_artifact `release/evidence/optimization/optimizer-backend-drift.json` case `foundation.optimizer.impact` backend `wgpu` has no applicable performance contract baseline"
+            )),
+            "Fix: optimization benchmark inspection must expose wrong-backend performance contracts; blockers={:?}",
+            inspection.blockers
+        );
+        let borrowed_artifact = "release/evidence/optimization/optimizer-borrowed-cuda.json";
+        let borrowed_path = dir.path().join(borrowed_artifact);
+        fs::write(
+            &borrowed_path,
+            serde_json::to_string_pretty(&serde_json::json!({
+                "schema_version": 2,
+                "selected_backend": "cuda",
+                "summary": {"total_cases": 1, "passed": 1, "failed": 0},
+                "cases": [
+                    {
+                        "id": "foundation.optimizer.impact",
+                        "backend_id": "cuda",
+                        "status": "pass",
+                        "optimization_passes_applied": ["cuda-resident-borrowed-escape-hatch"],
+                        "metrics": {
+                            "wall_ns": {"samples": 30, "p50": 10, "p95": 11, "p99": 12},
+                            "baseline_wall_ns": {"samples": 30, "p50": 1000, "p95": 1001, "p99": 1002},
+                            "optimizer_input_nodes": {"p50": 20},
+                            "optimizer_output_nodes": {"p50": 5},
+                            "optimizer_nodes_eliminated": {"p50": 15},
+                            "cuda_resident_borrowed_fallback_dispatches": {"p50": 2.0}
+                        },
+                        "performance": {"contract_passed": true, "speedup_x": 100.0}
+                    }
+                ]
+            }))
+            .expect("Fix: serialize borrowed CUDA optimization artifact fixture."),
+        )
+        .expect("Fix: write borrowed CUDA optimization artifact fixture.");
+
+        let borrowed_inspection = inspect_optimization_benchmark_artifact(
+            dir.path(),
+            "cuda",
+            borrowed_artifact,
+            &[
+                "optimizer_input_nodes",
+                "optimizer_output_nodes",
+                "optimizer_nodes_eliminated",
+            ],
+            &["optimizer_input_nodes", "optimizer_output_nodes"],
+        );
+
+        assert!(
+            borrowed_inspection.blockers.iter().any(|blocker| {
+                blocker.contains(
+                    "source_artifact `release/evidence/optimization/optimizer-borrowed-cuda.json` case `foundation.optimizer.impact` has cuda_resident_borrowed_fallback_dispatches p50=2",
+                ) && blocker.contains("optimization benchmark `release/evidence/optimization/optimizer-borrowed-cuda.json` must use native resident dispatch")
+            }),
+            "Fix: optimization benchmark inspection must expose borrowed resident CUDA dispatch telemetry; blockers={:?}",
+            borrowed_inspection.blockers
+        );
+    }
 }

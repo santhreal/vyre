@@ -1,6 +1,6 @@
 //! Packed binary wire format for grammar table blobs.
 //!
-//! `vyre-libs::parsing::{lexer,lr_table}` loads these blobs as ReadOnly
+//! `vyre-libs::parsing::{lexer,lr_table}` loads these blobs as `ReadOnly`
 //! storage buffers on the GPU. Layout:
 //!
 //! ```text

@@ -25,6 +25,7 @@
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
+/// Normalize comparisons to the canonical operand and predicate forms.
 #[must_use]
 pub fn cmp_normalize(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

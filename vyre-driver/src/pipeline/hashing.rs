@@ -145,6 +145,54 @@ impl PipelineDeviceFingerprint {
     }
 }
 
+pub(super) fn push_debug_option_u8(out: &mut String, value: Option<u8>) {
+    match value {
+        Some(value) => {
+            out.push_str("Some(");
+            push_decimal_u8(out, value);
+            out.push(')');
+        }
+        None => out.push_str("None"),
+    }
+}
+
+pub(super) fn push_debug_option_workgroup(out: &mut String, value: Option<[u32; 3]>) {
+    match value {
+        Some([x, y, z]) => {
+            out.push_str("Some([");
+            push_decimal_u32(out, x);
+            out.push_str(", ");
+            push_decimal_u32(out, y);
+            out.push_str(", ");
+            push_decimal_u32(out, z);
+            out.push_str("])");
+        }
+        None => out.push_str("None"),
+    }
+}
+
+pub(super) fn push_decimal_u8(out: &mut String, value: u8) {
+    push_decimal_u32(out, u32::from(value));
+}
+
+pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
+    let mut buf = [0_u8; 10];
+    let mut n = value;
+    let mut i = buf.len();
+    if n == 0 {
+        out.push('0');
+        return;
+    }
+    while n > 0 {
+        i -= 1;
+        buf[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+    }
+    for &digit in &buf[i..] {
+        out.push(digit as char);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -193,53 +241,5 @@ mod tests {
                 "Fix: dispatch-policy digest must stay single-sourced through update_dispatch_policy_cache_hash for generated case {case}."
             );
         }
-    }
-}
-
-pub(super) fn push_debug_option_u8(out: &mut String, value: Option<u8>) {
-    match value {
-        Some(value) => {
-            out.push_str("Some(");
-            push_decimal_u8(out, value);
-            out.push(')');
-        }
-        None => out.push_str("None"),
-    }
-}
-
-pub(super) fn push_debug_option_workgroup(out: &mut String, value: Option<[u32; 3]>) {
-    match value {
-        Some([x, y, z]) => {
-            out.push_str("Some([");
-            push_decimal_u32(out, x);
-            out.push_str(", ");
-            push_decimal_u32(out, y);
-            out.push_str(", ");
-            push_decimal_u32(out, z);
-            out.push_str("])");
-        }
-        None => out.push_str("None"),
-    }
-}
-
-pub(super) fn push_decimal_u8(out: &mut String, value: u8) {
-    push_decimal_u32(out, u32::from(value));
-}
-
-pub(super) fn push_decimal_u32(out: &mut String, value: u32) {
-    let mut buf = [0_u8; 10];
-    let mut n = value;
-    let mut i = buf.len();
-    if n == 0 {
-        out.push('0');
-        return;
-    }
-    while n > 0 {
-        i -= 1;
-        buf[i] = b'0' + (n % 10) as u8;
-        n /= 10;
-    }
-    for &digit in &buf[i..] {
-        out.push(digit as char);
     }
 }

@@ -144,49 +144,58 @@ pub fn four_russians_dense_matvec_program(
     four_russians_dense_matvec_byte_lut(frontier, tile_lut, out, tile_count, dst_words)
 }
 
+/// Compute packed-mask subtraction through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_subtract_mask(lhs: &[u32], rhs: &[u32]) -> Vec<u32> {
     primitive_and_not(lhs, rhs)
 }
 
+/// Intersect `target` with `mask` through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_narrow_mask_in_place(target: &mut [u32], mask: &[u32]) {
     primitive_and_into(target, mask);
 }
 
+/// Union `addend` into `target` through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_grow_mask_in_place(target: &mut [u32], addend: &[u32]) {
     primitive_or_into(target, addend);
 }
 
+/// Apply packed-mask symmetric difference to `target`.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_diff_mask_in_place(target: &mut [u32], addend: &[u32]) {
     primitive_xor_into(target, addend);
 }
 
+/// Remove every `subtrahend` bit from `target`.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_subtract_mask_in_place(target: &mut [u32], subtrahend: &[u32]) {
     primitive_and_not_into(target, subtrahend);
 }
 
+/// Copy a packed mask through the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_copy_mask(target: &mut [u32], source: &[u32]) {
     primitive_copy(target, source);
 }
 
+/// Return whether any bit is set in `input`.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_any_mask(input: &[u32]) -> bool {
     primitive_any(input) != 0
 }
 
+/// Apply the Four-Russians lookup transform in the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_four_russians_transform(lhs: &[u32], rhs: &[u32], lut: &[u32]) -> Vec<u32> {
     primitive_four_russians(lhs, rhs, lut)
 }
 
+/// Evaluate a dense Boolean matrix-vector product in the CPU parity oracle.
 #[cfg(any(test, feature = "cpu-parity"))]
 #[must_use]
 pub fn reference_dense_boolean_matvec(

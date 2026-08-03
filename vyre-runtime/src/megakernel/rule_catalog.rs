@@ -713,7 +713,6 @@ fn extend_missing_rejections(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
 

@@ -1,5 +1,5 @@
 pub(super) fn parse_preproc_integer_literal(raw: &str) -> i128 {
-    let literal = raw.trim_end_matches(|ch: char| matches!(ch, 'u' | 'U' | 'l' | 'L'));
+    let literal = raw.trim_end_matches(['u', 'U', 'l', 'L']);
     if literal.is_empty() {
         return 0;
     }

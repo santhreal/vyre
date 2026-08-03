@@ -1,3 +1,5 @@
+//! Command-line diagnostics for Vyre IR and lowered descriptors.
+
 use clap::{Parser, Subcommand};
 use std::path::Path;
 use std::process::exit;

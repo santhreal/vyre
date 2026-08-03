@@ -156,7 +156,7 @@ fn metal_macbook_gate_is_scripted_through_env_and_shared_runner() {
     );
     for backend in ["cpu-ref", "wgpu", "metal"] {
         assert!(
-            script.contains(&format!("for backend in cpu-ref wgpu metal; do"))
+            script.contains("for backend in cpu-ref wgpu metal; do")
                 && script.contains("--backend \"$backend\""),
             "Fix: Metal MacBook benchmark gate must explicitly run smoke coverage for backend `{backend}`."
         );

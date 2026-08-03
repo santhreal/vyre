@@ -500,8 +500,7 @@ fn oversupplying_a_counted_read_write_returns_an_error_not_a_process_abort() {
     // The declaration says one u32, four bytes. Supply sixteen.
     let inputs = inputs_for(&program, 16, N);
     let error = run_wgpu(&program, &inputs)
-        .err()
-        .expect("WGPU must refuse an upload that would overrun the destination buffer");
+        .expect_err("WGPU must refuse an upload that would overrun the destination buffer");
     assert!(
         error.contains("overrun"),
         "the refusal must say the upload would overrun, got: {error}"

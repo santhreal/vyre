@@ -52,6 +52,7 @@ pub fn licm(desc: &KernelDescriptor) -> KernelDescriptor {
     licm_with_optional_dataflow_facts(desc, None, None)
 }
 
+/// Hoist loop-invariant operations using canonical alias facts.
 #[must_use]
 pub fn licm_with_alias_facts(
     desc: &KernelDescriptor,
@@ -60,6 +61,7 @@ pub fn licm_with_alias_facts(
     licm_with_optional_dataflow_facts(desc, Some(alias_facts), None)
 }
 
+/// Hoist loop-invariant operations using imported alias facts.
 #[must_use]
 pub fn licm_with_external_alias_facts(
     desc: &KernelDescriptor,
@@ -68,6 +70,7 @@ pub fn licm_with_external_alias_facts(
     licm_with_alias_facts(desc, alias_facts)
 }
 
+/// Hoist loop-invariant operations using canonical dataflow facts.
 #[must_use]
 pub fn licm_with_dataflow_facts(
     desc: &KernelDescriptor,
@@ -77,6 +80,7 @@ pub fn licm_with_dataflow_facts(
     licm_with_optional_dataflow_facts(desc, Some(alias_facts), Some(reaching_defs))
 }
 
+/// Hoist loop-invariant operations using imported dataflow-analysis facts.
 #[must_use]
 pub fn licm_with_dataflow_analysis_facts(
     desc: &KernelDescriptor,

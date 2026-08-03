@@ -737,7 +737,7 @@ mod tests {
             for &(len, value) in &segments {
                 expected_offsets.push(expected_total);
                 expected_total = expected_total.saturating_add(len);
-                expected_decoded.extend(std::iter::repeat(value).take(len as usize));
+                expected_decoded.extend(std::iter::repeat_n(value, len as usize));
             }
 
             assert_eq!(lengths, expected_lengths, "case {case}");
@@ -802,7 +802,6 @@ mod tests {
 }
 
 #[cfg(test)]
-
 mod non_panicking_wrapper_tests {
     use super::*;
 

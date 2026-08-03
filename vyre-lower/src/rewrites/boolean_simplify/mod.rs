@@ -30,6 +30,7 @@ use super::literal::ResultAllocator;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::{BinOp, UnOp};
 
+/// Simplify Boolean operations with identities and known operands.
 #[must_use]
 pub fn boolean_simplify(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

@@ -33,7 +33,7 @@ fn xorshift(state: &mut u32) -> u32 {
 #[test]
 fn provenance_closure_via_matches_cpu_ref_over_random_lineage_graphs() {
     let dispatcher = ReferenceEvalDispatcher;
-    let mut rng = 0x5CA1_10_01u32;
+    let mut rng = 0x5CA1_1001_u32;
     let mut grew_beyond_seed = 0u32;
     for case in 0..300u32 {
         let n = 2 + (case % 4); // 2..5

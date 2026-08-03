@@ -78,6 +78,8 @@ pub struct UringMegakernelPump<'a> {
     /// matching CQE.
     iovec_scratch: VecDeque<Box<super::stream::Iovec>>,
     /// Reusable stable iovec boxes retired from completed CQEs.
+    // Boxes keep every SQE-visible iovec address stable across free-list growth.
+    #[allow(clippy::vec_box)]
     iovec_free: Vec<Box<super::stream::Iovec>>,
     /// Chunks submitted and pending drain, in submission order.
     /// Iterated FIFO by `drain_into_ring` as each CQE arrives.

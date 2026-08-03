@@ -108,10 +108,7 @@ impl MatmulTiledCore {
         } else {
             "a/b/out"
         };
-        let bias_shape_is_valid = self
-            .bias
-            .as_ref()
-            .map_or(true, |bias| bias.shape.len() == 1);
+        let bias_shape_is_valid = self.bias.as_ref().is_none_or(|bias| bias.shape.len() == 1);
         if self.a.shape.len() != 2
             || self.b.shape.len() != 2
             || !bias_shape_is_valid

@@ -463,7 +463,6 @@ pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use crate::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};

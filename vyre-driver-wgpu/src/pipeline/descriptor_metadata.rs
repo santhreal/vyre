@@ -93,10 +93,7 @@ pub(crate) fn descriptor_buffer_bindings(
 }
 
 fn descriptor_element_count(element_count: Option<u32>) -> u32 {
-    match element_count {
-        Some(count) => count,
-        None => 0,
-    }
+    element_count.unwrap_or_default()
 }
 
 pub(crate) fn bind_group_layout_fingerprint(

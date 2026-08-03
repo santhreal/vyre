@@ -89,11 +89,11 @@ fn compiled_pipeline_default_into_records_dispatch_telemetry() {
         .expect("default compiled-pipeline dispatch into must succeed");
 
     let after = crate::observability::snapshot_dispatch_telemetry();
-    assert!(after.launches >= before.launches + 1);
+    assert!(after.launches > before.launches);
     assert!(after.input_bytes >= before.input_bytes + 3);
     assert!(after.output_bytes >= before.output_bytes + 3);
-    assert!(after.output_slots >= before.output_slots + 1);
-    assert!(after.output_slots_reused >= before.output_slots_reused + 1);
+    assert!(after.output_slots > before.output_slots);
+    assert!(after.output_slots_reused > before.output_slots_reused);
 }
 
 #[test]

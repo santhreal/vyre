@@ -71,18 +71,16 @@ fn invalid_sort_combinations_are_rejected_before_smt_emission() {
     let invalid_bvadd = std::panic::catch_unwind(|| {
         let _ = ProofExpr::bvadd(bool_expr.clone(), bv_expr.clone());
     });
-    assert_eq!(
+    assert!(
         invalid_bvadd.is_err(),
-        true,
         "bit-vector operators must reject boolean operands"
     );
 
     let invalid_equivalence = std::panic::catch_unwind(|| {
         let _ = RewriteProofObligation::equivalence("bad_sort", [], bool_expr, bv_expr);
     });
-    assert_eq!(
+    assert!(
         invalid_equivalence.is_err(),
-        true,
         "rewrite obligations must reject mismatched before/after sorts"
     );
 }

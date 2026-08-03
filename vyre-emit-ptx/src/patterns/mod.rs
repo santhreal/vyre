@@ -58,13 +58,21 @@ pub fn audit_optimized(desc: &KernelDescriptor, target: ComputeCapability) -> Pt
 /// signal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PtxAuditReport {
+    /// Stable kernel identifier.
     pub kernel_id: String,
+    /// Target compute capability.
     pub target: ComputeCapability,
+    /// Predicated-execution opportunities.
     pub predication: predicated_execution::PredicationPlan,
+    /// Vector-load fusion opportunities.
     pub vec_load: vec_load_fusion::FusionPlan,
+    /// Vector-store fusion opportunities.
     pub vec_store: vec_store_fusion::FusionPlan,
+    /// Asynchronous-copy opportunities.
     pub async_copy: ldmatrix_cp_async::AsyncCopyPlan,
+    /// Matrix-fragment opportunities.
     pub tensor_core: tensor_core_fragment::TensorCorePlan,
+    /// Instruction-scheduling findings.
     pub scheduling: instruction_scheduling::SchedulingHints,
 }
 

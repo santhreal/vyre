@@ -41,7 +41,7 @@ const CUDA_MODULE_FROM_RAW_PTX_ARTIFACT_DOMAIN: &[u8] =
 static PTX_CACHE_TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 thread_local! {
-    static PTX_CSTR_SCRATCH: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static PTX_CSTR_SCRATCH: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Stable key for one PTX module on one CUDA architecture.

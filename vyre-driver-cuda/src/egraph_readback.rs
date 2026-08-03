@@ -72,7 +72,7 @@ pub(crate) fn upload_structural_equivalence_scratch(
     backend: &CudaBackend,
     artifact: &CudaEGraphStructuralEquivalenceLaunchArtifact,
 ) -> Result<StructuralEquivalenceScratchSlab, BackendError> {
-    Ok(build_structural_equivalence_scratch_bytes(artifact)?.upload(backend)?)
+    build_structural_equivalence_scratch_bytes(artifact)?.upload(backend)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -371,6 +371,44 @@ fn u32_word_bytes_len(word_count: usize, field: &'static str) -> Result<usize, B
         })
 }
 
+fn write_u32_words_at(
+    bytes: &mut [u8],
+    offset: usize,
+    words: &[u32],
+    field: &'static str,
+) -> Result<(), BackendError> {
+    let byte_len = u32_word_bytes_len(words.len(), field)?;
+    let end = offset
+        .checked_add(byte_len)
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA e-graph fused scratch {field} write range overflowed host usize addressing."
+            ),
+        })?;
+    let Some(dst) = bytes.get_mut(offset..end) else {
+        return Err(BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: CUDA e-graph fused scratch {field} write range [{offset}..{end}) exceeded the planned scratch slab."
+            ),
+        });
+    };
+    for (chunk, word) in dst.chunks_exact_mut(4).zip(words) {
+        chunk.copy_from_slice(&word.to_le_bytes());
+    }
+    Ok(())
+}
+
+fn read_u32_le_at(bytes: &[u8], offset: usize, context: &'static str) -> Result<u32, BackendError> {
+    let chunk = bytes
+        .get(offset..offset + 4)
+        .ok_or_else(|| BackendError::InvalidProgram {
+            fix: format!("Fix: CUDA e-graph readback missing {context} at byte offset {offset}."),
+        })?;
+    let mut raw = [0u8; 4];
+    raw.copy_from_slice(chunk);
+    Ok(u32::from_le_bytes(raw))
+}
+
 #[cfg(test)]
 mod tests {
     use super::decode_unique_equivalence_pairs;
@@ -411,42 +449,4 @@ mod tests {
             assert_eq!(unique, expected);
         }
     }
-}
-
-fn write_u32_words_at(
-    bytes: &mut [u8],
-    offset: usize,
-    words: &[u32],
-    field: &'static str,
-) -> Result<(), BackendError> {
-    let byte_len = u32_word_bytes_len(words.len(), field)?;
-    let end = offset
-        .checked_add(byte_len)
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA e-graph fused scratch {field} write range overflowed host usize addressing."
-            ),
-        })?;
-    let Some(dst) = bytes.get_mut(offset..end) else {
-        return Err(BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: CUDA e-graph fused scratch {field} write range [{offset}..{end}) exceeded the planned scratch slab."
-            ),
-        });
-    };
-    for (chunk, word) in dst.chunks_exact_mut(4).zip(words) {
-        chunk.copy_from_slice(&word.to_le_bytes());
-    }
-    Ok(())
-}
-
-fn read_u32_le_at(bytes: &[u8], offset: usize, context: &'static str) -> Result<u32, BackendError> {
-    let chunk = bytes
-        .get(offset..offset + 4)
-        .ok_or_else(|| BackendError::InvalidProgram {
-            fix: format!("Fix: CUDA e-graph readback missing {context} at byte offset {offset}."),
-        })?;
-    let mut raw = [0u8; 4];
-    raw.copy_from_slice(chunk);
-    Ok(u32::from_le_bytes(raw))
 }

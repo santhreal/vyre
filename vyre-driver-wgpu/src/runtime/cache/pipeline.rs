@@ -122,10 +122,8 @@ impl LruPipelineCache {
                         self.clear();
                         return;
                     }
-                } else {
-                    if !try_atomic_sub_usize(&self.cached_bytes, old.cost - cost) {
-                        self.rebuild_cached_bytes();
-                    }
+                } else if !try_atomic_sub_usize(&self.cached_bytes, old.cost - cost) {
+                    self.rebuild_cached_bytes();
                 }
             }
             None => {
@@ -367,6 +365,59 @@ fn atomic_to_f64(bits: u64) -> f64 {
     f64::from_bits(bits)
 }
 
+fn try_atomic_add_usize(counter: &AtomicUsize, value: usize) -> bool {
+    checked_atomic_add_usize_with_order(
+        counter,
+        value,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        |_, _| (),
+    )
+    .is_ok()
+}
+
+fn try_atomic_sub_usize(counter: &AtomicUsize, value: usize) -> bool {
+    checked_atomic_sub_usize_with_order(
+        counter,
+        value,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        |_, _| (),
+    )
+    .is_ok()
+}
+
+fn rebasing_atomic_add_u64(counter: &AtomicU64, value: u64, label: &'static str) {
+    if value == 0 {
+        return;
+    }
+    if value == 1 {
+        pinning_atomic_increment_u64(counter, Ordering::Relaxed, Ordering::Relaxed, || {
+            tracing::error!(
+                "{label} reached u64::MAX and was pinned. Fix: shard pipeline-cache telemetry collection before wrap."
+            );
+        });
+        return;
+    }
+    if checked_atomic_add_u64_with_order(
+        counter,
+        value,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+        |_, _| (),
+    )
+    .is_err()
+    {
+        counter.store(u64::MAX, Ordering::Relaxed);
+        tracing::error!(
+            "{label} exceeded u64::MAX and was pinned at u64::MAX. Fix: shard pipeline-cache telemetry collection before wrap."
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,59 +475,6 @@ mod tests {
         assert!(
             production.contains("eviction_snapshot(&self) -> Result"),
             "Fix: pipeline-cache eviction snapshot allocation failures must be represented explicitly."
-        );
-    }
-}
-
-fn try_atomic_add_usize(counter: &AtomicUsize, value: usize) -> bool {
-    checked_atomic_add_usize_with_order(
-        counter,
-        value,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        |_, _| (),
-    )
-    .is_ok()
-}
-
-fn try_atomic_sub_usize(counter: &AtomicUsize, value: usize) -> bool {
-    checked_atomic_sub_usize_with_order(
-        counter,
-        value,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        |_, _| (),
-    )
-    .is_ok()
-}
-
-fn rebasing_atomic_add_u64(counter: &AtomicU64, value: u64, label: &'static str) {
-    if value == 0 {
-        return;
-    }
-    if value == 1 {
-        pinning_atomic_increment_u64(counter, Ordering::Relaxed, Ordering::Relaxed, || {
-            tracing::error!(
-                "{label} reached u64::MAX and was pinned. Fix: shard pipeline-cache telemetry collection before wrap."
-            );
-        });
-        return;
-    }
-    if checked_atomic_add_u64_with_order(
-        counter,
-        value,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        Ordering::Relaxed,
-        |_, _| (),
-    )
-    .is_err()
-    {
-        counter.store(u64::MAX, Ordering::Relaxed);
-        tracing::error!(
-            "{label} exceeded u64::MAX and was pinned at u64::MAX. Fix: shard pipeline-cache telemetry collection before wrap."
         );
     }
 }

@@ -101,7 +101,7 @@ fn dense_matvec_pipeline_source_keeps_primitive_wiring() {
 fn generated_columns(tile_count: u32, dst_words: u32, seed: u32) -> Vec<u32> {
     let len = tile_count as usize * BYTE_TILE_WIDTH as usize * dst_words as usize;
     (0..len)
-        .map(|idx| mix(seed ^ (idx as u32).wrapping_mul(0x45D9_F3B)))
+        .map(|idx| mix(seed ^ (idx as u32).wrapping_mul(0x045D_9F3B)))
         .collect()
 }
 

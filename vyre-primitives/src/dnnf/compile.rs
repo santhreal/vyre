@@ -310,7 +310,7 @@ mod tests {
         let dag = compile_dnnf(&clauses, 6, 2);
         assert_eq!(dag.num_vars, 6);
         assert!(
-            dag.gates.len() >= 1,
+            !dag.gates.is_empty(),
             "depth budget must emit at least one gate"
         );
     }

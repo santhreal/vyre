@@ -73,11 +73,24 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatroidScheduleError {
     /// `n * n` overflowed `usize`.
-    AdjacencySizeOverflow { n: usize },
+    AdjacencySizeOverflow {
+        /// Requested graph dimension.
+        n: usize,
+    },
     /// `seed.len()` did not match `n`.
-    SeedLen { expected: usize, actual: usize },
+    SeedLen {
+        /// Required seed length.
+        expected: usize,
+        /// Received seed length.
+        actual: usize,
+    },
     /// `exchange_adj.len()` did not match `n * n`.
-    ExchangeAdjLen { expected: usize, actual: usize },
+    ExchangeAdjLen {
+        /// Required adjacency length.
+        expected: usize,
+        /// Received adjacency length.
+        actual: usize,
+    },
 }
 
 impl std::fmt::Display for MatroidScheduleError {

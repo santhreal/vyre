@@ -17,6 +17,7 @@ use syn::{Meta, Token, UseTree};
 
 const FORBIDDEN_TYPES: &[&str] = &["Node", "Expr"];
 
+/// Scan a library source tree for disallowed direct IR construction.
 pub fn scan_tree(root: &Path, allow: &Allowlist) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for entry in walkdir::WalkDir::new(root)

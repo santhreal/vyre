@@ -6,6 +6,7 @@ use crate::analyses::load_counts::count_global_loads_by_slot;
 use crate::{BindingVisibility, KernelDescriptor, MemoryClass};
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// Analyze read-only global bindings for texture-memory promotion.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
     // Eligible bindings: Global memory class, ReadOnly visibility.

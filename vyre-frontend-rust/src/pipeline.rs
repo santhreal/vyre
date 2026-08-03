@@ -86,7 +86,7 @@ impl RustPipeline {
         let token_results = self::lexer_dispatch::lex_batch(sources, &self.config, &self.lex_plan)?;
         let mut units = Vec::with_capacity(sources.len());
         for (source, tokens) in sources.iter().zip(token_results) {
-            units.push(tokens.and_then(|tokens| self.compile_unit_from_tokens(*source, &tokens)));
+            units.push(tokens.and_then(|tokens| self.compile_unit_from_tokens(source, &tokens)));
         }
         Ok(CompilationBatch {
             units,

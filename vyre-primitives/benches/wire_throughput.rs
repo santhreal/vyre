@@ -18,7 +18,8 @@
 //! bandwidth-bound too but pays for an extra register-shuffle per
 //! word).
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use std::hint::black_box;
 use vyre_primitives::wire::{
     decode_u32_le_bytes_all, pack_u32_slice, pack_u32_slice_into, unpack_u32_slice_into,
 };

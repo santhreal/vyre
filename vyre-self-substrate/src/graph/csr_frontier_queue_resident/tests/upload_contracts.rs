@@ -33,7 +33,7 @@ fn resident_upload_records_exact_high_degree_source_count() {
         2,
     ] {
         edge_targets.extend((0..degree).map(|edge| edge % 5));
-        edge_kind_mask.extend(std::iter::repeat(1).take(degree as usize));
+        edge_kind_mask.extend(std::iter::repeat_n(1, degree as usize));
         edge_offsets.push(edge_targets.len() as u32);
     }
 

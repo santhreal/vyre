@@ -51,11 +51,14 @@ pub struct FusionCandidate {
     pub alignment_bytes: u32,
 }
 
+/// Vector-load fusion opportunities for one kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct FusionPlan {
+    /// Consecutive scalar-load groups eligible for fusion.
     pub candidates: Vec<FusionCandidate>,
 }
 
+/// Analyze consecutive global loads for vector fusion.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> FusionPlan {
     FusionPlan {

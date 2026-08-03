@@ -92,9 +92,11 @@ fn loop_body(program: &Program) -> &[Node] {
     })
 }
 
+type LoopBodyEdit<'a> = Box<dyn FnOnce(&mut Vec<Node>) + 'a>;
+
 /// Run `edit` against the body of the persistent loop, in place.
 fn edit_loop_body(program: &mut Program, edit: impl FnOnce(&mut Vec<Node>)) {
-    fn walk(nodes: &mut [Node], edit: &mut Option<Box<dyn FnOnce(&mut Vec<Node>) + '_>>) -> bool {
+    fn walk(nodes: &mut [Node], edit: &mut Option<LoopBodyEdit<'_>>) -> bool {
         for node in nodes.iter_mut() {
             let done = match node {
                 Node::Loop { var, body, .. } if var.as_str() == PERSISTENT_LOOP_VAR => {
@@ -120,7 +122,7 @@ fn edit_loop_body(program: &mut Program, edit: impl FnOnce(&mut Vec<Node>)) {
         false
     }
 
-    let mut slot: Option<Box<dyn FnOnce(&mut Vec<Node>) + '_>> = Some(Box::new(edit));
+    let mut slot: Option<LoopBodyEdit<'_>> = Some(Box::new(edit));
     assert!(
         walk(program.entry_mut(), &mut slot),
         "expected to edit the body of the persistent loop"

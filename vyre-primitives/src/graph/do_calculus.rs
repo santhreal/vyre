@@ -587,7 +587,6 @@ pub fn do_rule2_reverse_incoming_cpu(
 
 /// Fallible rule-2 CPU reference.
 #[cfg(any(test, feature = "cpu-parity"))]
-
 pub fn try_do_rule2_reverse_incoming_cpu(
     adjacency: &[u32],
     treatment_mask: &[u32],
@@ -1042,7 +1041,6 @@ mod rule2_tests {
 }
 
 #[cfg(test)]
-
 mod rule3_tests {
     use super::*;
 

@@ -108,8 +108,7 @@ pub(super) fn macro_integer_values_with_builtin_prefix(
     macros: &[MacroDef],
 ) -> Result<Vec<u32>, String> {
     let user_values = macro_integer_values(macros)?;
-    let builtin_slots =
-        crate::parsing::c::parse::gnu_builtins::GPU_BUILTIN_HASH_TABLE_SIZE as usize;
+    let builtin_slots = crate::parsing::c::parse::gnu_builtins::GPU_BUILTIN_HASH_TABLE_SIZE;
     let mut values = Vec::new();
     reserve_macro_value_vec(
         &mut values,
@@ -687,9 +686,9 @@ mod tests {
     fn macro_integer_values_fail_closed_on_deep_paren_nesting() {
         let n = 50_000;
         let mut body = Vec::new();
-        body.extend(std::iter::repeat(b'(').take(n));
+        body.extend(std::iter::repeat_n(b'(', n));
         body.push(b'1');
-        body.extend(std::iter::repeat(b')').take(n));
+        body.extend(std::iter::repeat_n(b')', n));
         let macros = [object_macro(b"BOMB", &body)];
         assert_eq!(
             macro_integer_values(&macros)
@@ -734,9 +733,9 @@ mod tests {
         // Guard must not over-reject: 16 parens around a value still resolves.
         let depth = 16;
         let mut body = Vec::new();
-        body.extend(std::iter::repeat(b'(').take(depth));
+        body.extend(std::iter::repeat_n(b'(', depth));
         body.extend_from_slice(b"42");
-        body.extend(std::iter::repeat(b')').take(depth));
+        body.extend(std::iter::repeat_n(b')', depth));
         let macros = [object_macro(b"OK", &body)];
         assert_eq!(
             macro_integer_values(&macros).expect("macro integer resolution must complete"),

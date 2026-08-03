@@ -17,6 +17,9 @@ documentation = "https://docs.rs/vyre-self-substrate"
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints]
+workspace = true
+
 [features]
 default = []
 cpu-parity = ["vyre-primitives/cpu-parity"]

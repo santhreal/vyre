@@ -7,7 +7,6 @@
 //! (CUDA does no bounds-checking) faults or corrupts memory on. `base64::clamp_lookup`
 //! once forgot the table mask (a real OOB bug fixed this cycle), which a canonical
 //! helper makes impossible to reintroduce.
-#![cfg(feature = "vyre-foundation")]
 
 use vyre_foundation::ir::{DataType, Expr};
 

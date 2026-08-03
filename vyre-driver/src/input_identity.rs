@@ -165,7 +165,7 @@ mod tests {
         for seed in 0_u32..2048 {
             let left_len = ((seed.wrapping_mul(19) ^ seed.rotate_left(3)) % 48 + 1) as usize;
             let right_len = ((seed.wrapping_mul(41) ^ seed.rotate_left(9)) % 48 + 1) as usize;
-            let mut state = seed ^ 0x1D_EA_7E5D;
+            let mut state = seed ^ 0x1DEA_7E5D;
             let mut left = Vec::with_capacity(left_len);
             let mut right = Vec::with_capacity(right_len);
             for index in 0..left_len {

@@ -12,19 +12,22 @@
 //! ```
 //!
 //! `action` values:
-//!  - 0 = CONTINUE (advance to next_state, consume the byte)
-//!  - 1 = EMIT_TOKEN (emit token of kind `dfa_token_ids[state]`, reset to state 0)
-//!  - 2 = PUSH_BACK (emit previous accepting state's token, don't consume this byte)
+//!  - 0 = `CONTINUE` (advance to `next_state`, consume the byte)
+//!  - 1 = `EMIT_TOKEN` (emit token of kind `dfa_token_ids[state]`, reset to state 0)
+//!  - 2 = `PUSH_BACK` (emit previous accepting state's token, don't consume this byte)
 //!  - 3 = ERROR
 
-use regex_automata::MatchKind;
+use regex_automata::{
+    dfa::{dense, Automaton},
+    Input, MatchKind,
+};
 use serde::{Deserialize, Serialize};
 
 /// DFA action on a transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u16)]
 pub enum Action {
-    /// Advance to next_state, consume byte.
+    /// Advance to `next_state`, consume byte.
     Continue = 0,
     /// Emit a token of `dfa_token_ids[state]`, reset to initial state.
     EmitToken = 1,
@@ -101,6 +104,14 @@ pub struct DfaBuilder {
     patterns: Vec<(u32, String)>,
 }
 
+fn checked_state_index(index: usize) -> Result<u32, String> {
+    u32::try_from(index).map_err(|_| {
+        format!(
+            "Fix: DFA state index {index} exceeds the u32 table ABI. Reduce the pattern set before grammar generation."
+        )
+    })
+}
+
 impl DfaBuilder {
     /// Allocate a zero-initialized DFA with `num_states × num_classes`
     /// transitions all set to `Action::Error` and every state
@@ -124,7 +135,7 @@ impl DfaBuilder {
         }
     }
 
-    /// Add a regex pattern to the builder for the given token_id.
+    /// Add a regex pattern to the builder for the given `token_id`.
     pub fn add_pattern(&mut self, token_id: u32, pattern: &str) {
         self.patterns.push((token_id, pattern.to_string()));
     }
@@ -195,9 +206,6 @@ impl DfaBuilder {
             return Ok(self.table);
         }
 
-        use regex_automata::dfa::{dense, Automaton};
-        use regex_automata::Input;
-
         let anchored_regexes: Vec<String> = self
             .patterns
             .iter()
@@ -233,7 +241,8 @@ impl DfaBuilder {
             for byte in 0..=255u8 {
                 let next_id = dfa.next_state(id, byte);
                 if let std::collections::hash_map::Entry::Vacant(e) = id_to_idx.entry(next_id) {
-                    e.insert(state_queue.len() as u32);
+                    let next_index = checked_state_index(state_queue.len())?;
+                    e.insert(next_index);
                     state_queue.push(next_id);
                 }
             }
@@ -249,8 +258,8 @@ impl DfaBuilder {
         .pack();
 
         let mut table = DfaTable {
-            num_states: num_states as u32,
-            num_classes: num_classes as u32,
+            num_states: checked_state_index(num_states)?,
+            num_classes: 256,
             transitions: vec![error_word; size],
             token_ids: vec![0; num_states],
         };
@@ -265,6 +274,7 @@ impl DfaBuilder {
                 }
             }
 
+            let state_index = checked_state_index(state_idx)?;
             for byte in 0..=255u8 {
                 let next_id = dfa.next_state(id, byte);
                 let next_idx = id_to_idx[&next_id];
@@ -285,8 +295,8 @@ impl DfaBuilder {
                 })?;
 
                 table.set_transition(
-                    state_idx as u32,
-                    byte as u32,
+                    state_index,
+                    u32::from(byte),
                     Transition {
                         next_state: next_state_u16,
                         action,

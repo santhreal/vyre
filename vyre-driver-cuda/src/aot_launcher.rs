@@ -472,7 +472,6 @@ fn read_final_metric_record(
 }
 
 #[cfg(test)]
-
 mod tests {
     #[test]
     fn ttt_loop_does_not_sync_every_step_without_metric_readback() {

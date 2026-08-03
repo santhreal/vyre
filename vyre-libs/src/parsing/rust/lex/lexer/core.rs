@@ -86,10 +86,7 @@ pub fn lex(source: &[u8]) -> Result<Vec<Token>, usize> {
             while i < source.len() && (source[i].is_ascii_alphanumeric() || source[i] == b'_') {
                 i += 1;
             }
-            let text = match std::str::from_utf8(&source[start..i]) {
-                Ok(text) => text,
-                Err(_) => "",
-            };
+            let text = std::str::from_utf8(&source[start..i]).unwrap_or_default();
             let kind = promote(text).unwrap_or(IDENT);
             tokens.push(Token {
                 kind,

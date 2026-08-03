@@ -112,7 +112,7 @@ fn chain(node_count: u32) -> (Vec<u32>, Vec<u32>) {
 fn star(node_count: u32) -> (Vec<u32>, Vec<u32>) {
     let targets = (1..node_count).collect();
     let mut offsets = vec![0u32];
-    offsets.extend(std::iter::repeat(node_count - 1).take(node_count as usize));
+    offsets.extend(std::iter::repeat_n(node_count - 1, node_count as usize));
     (offsets, targets)
 }
 

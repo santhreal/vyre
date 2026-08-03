@@ -17,6 +17,7 @@ use crate::{KernelBody, KernelDescriptor, KernelOpKind, LiteralValue};
 use vyre_foundation::ir::BinOp;
 use vyre_foundation::optimizer::algebraic_rules::strength_reduce_power_of_two_shift;
 
+/// Replace multiplication by powers of two with equivalent shifts.
 #[must_use]
 pub fn strength_reduce(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

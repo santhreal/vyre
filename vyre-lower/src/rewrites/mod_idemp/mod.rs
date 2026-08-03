@@ -24,6 +24,7 @@ use super::body_index::BodyIndex;
 use crate::{KernelBody, KernelDescriptor, KernelOpKind};
 use vyre_foundation::ir::BinOp;
 
+/// Fold `x % x` to zero when the divisor is proven nonzero.
 #[must_use]
 pub fn mod_idemp(desc: &KernelDescriptor) -> KernelDescriptor {
     let mut out = desc.clone();

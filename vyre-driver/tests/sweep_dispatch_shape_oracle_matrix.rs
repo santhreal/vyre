@@ -117,9 +117,8 @@ fn binding_plan_layout_oracle_matches_independent_fingerprint_contract() {
             panic!("Fix: binding plan variant case {case} must build: {error}")
         });
 
-        assert_eq!(
+        assert!(
             oracle_binding_slots_sorted(&plan_a),
-            true,
             "Fix: binding plan case {case} must keep bindings sorted by binding index."
         );
         assertions += 1;
@@ -230,7 +229,7 @@ fn hostile_input_batch(seed: usize, variant: usize) -> Vec<Vec<u8>> {
     let arity = 1 + (seed % 5);
     (0..arity)
         .map(|slot| {
-            let len = ((seed.wrapping_mul(17 + slot).wrapping_add(variant)) % 128) as usize;
+            let len = (seed.wrapping_mul(17 + slot).wrapping_add(variant)) % 128;
             lcg_bytes(seed as u32 ^ slot as u32 ^ variant as u32, len)
         })
         .collect()

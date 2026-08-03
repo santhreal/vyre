@@ -58,6 +58,7 @@ fn release_coordination_docs() -> impl Iterator<Item = &'static str> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
 }
 
+/// Scan a source tree for downstream-consumer coupling.
 pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
     let mut all = Vec::new();
     for entry in walkdir::WalkDir::new(root)
