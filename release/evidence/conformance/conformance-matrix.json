@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
-  "op_count": 359,
-  "distinct_op_count": 359,
+  "op_count": 360,
+  "distinct_op_count": 360,
   "catalog_required_op_count": 364,
   "catalog_covered_op_count": 364,
   "missing_catalog_ops": [],
@@ -52434,8 +52434,8 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_input_count": 359,
-  "expected_output_count": 359,
+  "fixture_input_count": 360,
+  "expected_output_count": 360,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -53192,6 +53192,12 @@
     },
     {
       "id": "vyre-libs::nn::attention::turboquant",
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
+      "id": "vyre-libs::nn::attention_reference",
       "has_test_inputs": true,
       "has_expected_output": true,
       "tolerance_ulp": 0

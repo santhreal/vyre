@@ -736,25 +736,25 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 35,
+      "line": 93,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 44,
+      "line": 102,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"y\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 70,
+      "line": 128,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 71,
+      "line": 129,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Expr::add(a(), b());"
     },
@@ -844,31 +844,31 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 369,
+      "line": 365,
       "pattern": "test_let_underscore_result",
       "text": "let _ = evade!();"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 389,
+      "line": 385,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Expr::u32(7);"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 406,
+      "line": 402,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = Node::let_bind(\"x\", val());"
+    },
+    {
+      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
+      "line": 420,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
       "line": 424,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = Node::let_bind(\"x\", val());"
-    },
-    {
-      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 428,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"y\", val());"
     },
@@ -2020,13 +2020,13 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 82,
+      "line": 81,
       "pattern": "test_let_underscore_result",
       "text": "let _ ="
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 90,
+      "line": 89,
       "pattern": "test_let_underscore_result",
       "text": "let _ = scratch.frontier_density();"
     },
@@ -2164,21 +2164,15 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 50,
+      "line": 51,
       "pattern": "test_let_underscore_result",
       "text": "let _ = tx.send(result);"
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 57,
+      "line": 58,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Command::new(\"kill\").args([\"-9\", &pid.to_string()]).status();"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/tests/cross_language_matrix.rs",
-      "line": 120,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = try_compute_dominators(&cfg);"
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/adversarial_stress_suite.rs",
@@ -2284,9 +2278,15 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/df_property_ssa_rename.rs",
-      "line": 76,
+      "line": 78,
       "pattern": "test_let_underscore_result",
       "text": "let _ = version;"
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/tests/campaign_wave2_flowgraph.rs",
+      "line": 41,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = &$bind;"
     },
     {
       "path": "../../../../tools/vyrec/tests/e2e_compile_contracts.rs",

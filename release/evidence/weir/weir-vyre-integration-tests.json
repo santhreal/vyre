@@ -158,7 +158,7 @@
       "id": "parity_inventory_sweep",
       "path": "../../../../libs/dataflow/weir/tests/df_parity_inventory_sweep.rs",
       "exists": true,
-      "source_bytes": 11670,
+      "source_bytes": 11857,
       "has_test_entrypoint": true,
       "assertion_count": 1,
       "unresolved_markers": []
@@ -203,7 +203,7 @@
       "id": "ssa_dominators",
       "path": "../../../../libs/dataflow/weir/tests/df_ssa_dominators.rs",
       "exists": true,
-      "source_bytes": 2599,
+      "source_bytes": 2629,
       "has_test_entrypoint": true,
       "assertion_count": 10,
       "unresolved_markers": []
@@ -329,7 +329,7 @@
       "id": "property_ssa",
       "path": "../../../../libs/dataflow/weir/tests/df_property_ssa_dominators.rs",
       "exists": true,
-      "source_bytes": 2235,
+      "source_bytes": 2265,
       "has_test_entrypoint": true,
       "assertion_count": 8,
       "unresolved_markers": []

@@ -898,7 +898,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 123,
+      "line": 121,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: fake resident backend could not mint a resident owner identity. Restart the test process.\")"
     },
@@ -916,67 +916,67 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 150,
+      "line": 149,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 157,
+      "line": 156,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle bitmap byte reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 245,
+      "line": 244,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor indegree reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 256,
+      "line": 255,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 271,
+      "line": 270,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor row reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 280,
+      "line": 279,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor row entry reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 292,
+      "line": 291,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle reverse-postorder reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 343,
+      "line": 342,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 348,
+      "line": 347,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 357,
+      "line": 356,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 365,
+      "line": 364,
       "pattern": "panic_macro",
       "text": "panic!("
     },

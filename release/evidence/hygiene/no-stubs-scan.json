@@ -4,7 +4,7 @@
   "findings": [
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1440,
+      "line": 1441,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },

@@ -97,7 +97,7 @@
         "property",
         "unit"
       ],
-      "lines": 3307,
+      "lines": 3301,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -13506,7 +13506,7 @@
         "property",
         "unit"
       ],
-      "lines": 168,
+      "lines": 169,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -13550,7 +13550,7 @@
         "property",
         "unit"
       ],
-      "lines": 151,
+      "lines": 153,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -14388,7 +14388,7 @@
         "property",
         "unit"
       ],
-      "lines": 79,
+      "lines": 81,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -14407,7 +14407,7 @@
         "nn_math"
       ],
       "backend_families": [
-        "backend_agnostic"
+        "cpu_oracle"
       ],
       "feature_families": [
         "core_feature"
@@ -14430,7 +14430,7 @@
         "property",
         "unit"
       ],
-      "lines": 92,
+      "lines": 93,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,

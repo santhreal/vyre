@@ -3,9 +3,9 @@
   "surfaces": [
     {
       "surface": "vyre",
-      "file_count": 3326,
-      "assertion_count": 41557,
-      "entrypoint_count": 3326,
+      "file_count": 3335,
+      "assertion_count": 41646,
+      "entrypoint_count": 3335,
       "layers": [
         "adversarial",
         "benchmark",
@@ -56,9 +56,9 @@
     },
     {
       "surface": "weir",
-      "file_count": 347,
-      "assertion_count": 3512,
-      "entrypoint_count": 327,
+      "file_count": 349,
+      "assertion_count": 3570,
+      "entrypoint_count": 329,
       "layers": [
         "adversarial",
         "benchmark",

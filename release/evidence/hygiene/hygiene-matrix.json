@@ -6,7 +6,7 @@
     "../../../../tools/vyrec",
     "vyre-grammar-gen"
   ],
-  "scanned_files": 5308,
+  "scanned_files": 5318,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -1551,7 +1551,7 @@
     },
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1440,
+      "line": 1441,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -6041,7 +6041,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 35,
+      "line": 93,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6051,7 +6051,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 44,
+      "line": 102,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6061,7 +6061,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 70,
+      "line": 128,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6071,7 +6071,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 71,
+      "line": 129,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6221,7 +6221,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 369,
+      "line": 365,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6231,7 +6231,7 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 389,
+      "line": 385,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6241,7 +6241,17 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 406,
+      "line": 402,
+      "pattern": "test_let_underscore_result",
+      "owner_lane": "testing_evidence",
+      "surface": "generated",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
+      "line": 420,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -6252,16 +6262,6 @@
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
       "line": 424,
-      "pattern": "test_let_underscore_result",
-      "owner_lane": "testing_evidence",
-      "surface": "generated",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 428,
       "pattern": "test_let_underscore_result",
       "owner_lane": "testing_evidence",
       "surface": "generated",
@@ -8591,7 +8591,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 93,
+      "line": 91,
       "pattern": "undocumented_public_api",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8601,7 +8601,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 123,
+      "line": 121,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8651,7 +8651,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 150,
+      "line": 149,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8661,7 +8661,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 157,
+      "line": 156,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8671,7 +8671,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 245,
+      "line": 244,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8681,7 +8681,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 256,
+      "line": 255,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8691,7 +8691,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 271,
+      "line": 270,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8701,7 +8701,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 280,
+      "line": 279,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8711,7 +8711,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 292,
+      "line": 291,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8721,7 +8721,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 343,
+      "line": 342,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8731,7 +8731,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 348,
+      "line": 347,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8741,7 +8741,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 357,
+      "line": 356,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8751,7 +8751,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 365,
+      "line": 364,
       "pattern": "panic_macro",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8881,7 +8881,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 82,
+      "line": 81,
       "pattern": "test_let_underscore_result",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -8891,7 +8891,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 90,
+      "line": 89,
       "pattern": "test_let_underscore_result",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -9121,7 +9121,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 50,
+      "line": 51,
       "pattern": "test_let_underscore_result",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -9131,17 +9131,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 57,
-      "pattern": "test_let_underscore_result",
-      "owner_lane": "flow_weir",
-      "surface": "test",
-      "risk": "test_hygiene",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/tests/cross_language_matrix.rs",
-      "line": 120,
+      "line": 58,
       "pattern": "test_let_underscore_result",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -9321,7 +9311,17 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/df_property_ssa_rename.rs",
-      "line": 76,
+      "line": 78,
+      "pattern": "test_let_underscore_result",
+      "owner_lane": "flow_weir",
+      "surface": "test",
+      "risk": "test_hygiene",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/tests/campaign_wave2_flowgraph.rs",
+      "line": 41,
       "pattern": "test_let_underscore_result",
       "owner_lane": "flow_weir",
       "surface": "test",
@@ -9401,17 +9401,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 239,
-      "pattern": "raw_workspace_cargo",
-      "owner_lane": "flow_weir",
-      "surface": "docs",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 264,
+      "line": 241,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "flow_weir",
       "surface": "docs",
@@ -9432,6 +9422,16 @@
     {
       "path": "../../../../libs/dataflow/weir/README.md",
       "line": 270,
+      "pattern": "raw_workspace_cargo",
+      "owner_lane": "flow_weir",
+      "surface": "docs",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/README.md",
+      "line": 273,
       "pattern": "raw_workspace_cargo",
       "owner_lane": "flow_weir",
       "surface": "docs",
@@ -9666,7 +9666,7 @@
     },
     {
       "path": "vyre-driver/src/grid_sync.rs",
-      "line": 1440,
+      "line": 1441,
       "pattern": "placeholder_text",
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
@@ -12360,25 +12360,25 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 35,
+      "line": 93,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 44,
+      "line": 102,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"y\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 70,
+      "line": 128,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk2.rs",
-      "line": 71,
+      "line": 129,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Expr::add(a(), b());"
     },
@@ -12468,31 +12468,31 @@
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 369,
+      "line": 365,
       "pattern": "test_let_underscore_result",
       "text": "let _ = evade!();"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 389,
+      "line": 385,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Expr::u32(7);"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 406,
+      "line": 402,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = Node::let_bind(\"x\", val());"
+    },
+    {
+      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
+      "line": 420,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"x\", val());"
     },
     {
       "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
       "line": 424,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = Node::let_bind(\"x\", val());"
-    },
-    {
-      "path": "vyre-lints/tests/__split/raw_ir_in_libs_chunk1.rs",
-      "line": 428,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Node::let_bind(\"y\", val());"
     },
@@ -13890,13 +13890,13 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 93,
+      "line": 91,
       "pattern": "undocumented_public_api",
       "text": "pub struct FakeResidentBackend {"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 123,
+      "line": 121,
       "pattern": "panic_macro",
       "text": "panic!(\"Fix: fake resident backend could not mint a resident owner identity. Restart the test process.\")"
     },
@@ -13926,67 +13926,67 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 150,
+      "line": 149,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 157,
+      "line": 156,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle bitmap byte reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 245,
+      "line": 244,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor indegree reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 256,
+      "line": 255,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 271,
+      "line": 270,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor row reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 280,
+      "line": 279,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle predecessor row entry reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 292,
+      "line": 291,
       "pattern": "panic_macro",
       "text": "panic!(\"dominators CPU oracle reverse-postorder reservation failed: {error}\")"
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 343,
+      "line": 342,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 348,
+      "line": 347,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 357,
+      "line": 356,
       "pattern": "panic_macro",
       "text": "panic!("
     },
     {
       "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 365,
+      "line": 364,
       "pattern": "panic_macro",
       "text": "panic!("
     },
@@ -14064,13 +14064,13 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 82,
+      "line": 81,
       "pattern": "test_let_underscore_result",
       "text": "let _ ="
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/parameterized_analysis_matrix/dominator_contracts.rs",
-      "line": 90,
+      "line": 89,
       "pattern": "test_let_underscore_result",
       "text": "let _ = scratch.frontier_density();"
     },
@@ -14208,21 +14208,15 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 50,
+      "line": 51,
       "pattern": "test_let_underscore_result",
       "text": "let _ = tx.send(result);"
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/examples_build.rs",
-      "line": 57,
+      "line": 58,
       "pattern": "test_let_underscore_result",
       "text": "let _ = Command::new(\"kill\").args([\"-9\", &pid.to_string()]).status();"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/tests/cross_language_matrix.rs",
-      "line": 120,
-      "pattern": "test_let_underscore_result",
-      "text": "let _ = try_compute_dominators(&cfg);"
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/adversarial_stress_suite.rs",
@@ -14328,9 +14322,15 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/tests/df_property_ssa_rename.rs",
-      "line": 76,
+      "line": 78,
       "pattern": "test_let_underscore_result",
       "text": "let _ = version;"
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/tests/campaign_wave2_flowgraph.rs",
+      "line": 41,
+      "pattern": "test_let_underscore_result",
+      "text": "let _ = &$bind;"
     },
     {
       "path": "../../../../tools/vyrec/tests/e2e_compile_contracts.rs",
@@ -14376,25 +14376,25 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 239,
+      "line": 241,
       "pattern": "raw_workspace_cargo",
-      "text": "cargo bench -p weir --bench primitive_micro"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 264,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib"
+      "text": "cargo bench -p weirflow --bench primitive_micro"
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
       "line": 267,
       "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib && cargo test --doc && cargo test --examples"
+      "text": "cargo test --lib"
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
       "line": 270,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo test --lib && cargo test --doc && cargo test --examples"
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/README.md",
+      "line": 273,
       "pattern": "raw_workspace_cargo",
       "text": "cargo test --features cpu-parity"
     }

@@ -1904,12 +1904,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 263,
+      "lines": 304,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 1,
+      "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -2070,6 +2070,7 @@
     {
       "path": "xtask/src/hygiene_matrix.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
@@ -2077,16 +2078,17 @@
         "gap",
         "unit"
       ],
-      "lines": 2618,
+      "lines": 2695,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 40,
+      "assertion_count": 44,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "suite": "benchmark",
-  "file_count": 3344,
-  "vyre_file_count": 3326,
-  "dataflow_consumer_file_count": 17,
+  "file_count": 3355,
+  "vyre_file_count": 3335,
+  "dataflow_consumer_file_count": 19,
   "vyrec_file_count": 1,
   "files": [
     {
@@ -8851,7 +8851,7 @@
         "property",
         "unit"
       ],
-      "lines": 3307,
+      "lines": 3301,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -14381,7 +14381,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 380,
+      "lines": 267,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -14397,8 +14397,7 @@
         "positive"
       ],
       "op_families": [
-        "nn_math",
-        "optimizer"
+        "nn_math"
       ],
       "backend_families": [
         "cpu_oracle"
@@ -14518,7 +14517,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 824,
+      "lines": 845,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -14568,7 +14567,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 206,
+      "lines": 224,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -14594,6 +14593,8 @@
       ],
       "error_path_families": [
         "empty_zero",
+        "malformed_input",
+        "overflow",
         "panic_path"
       ],
       "corpus_families": [
@@ -18368,12 +18369,12 @@
         "gap",
         "unit"
       ],
-      "lines": 428,
+      "lines": 423,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 5,
+      "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -19004,7 +19005,7 @@
         "gap",
         "unit"
       ],
-      "lines": 548,
+      "lines": 536,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -19050,7 +19051,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 345,
+      "lines": 329,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -24511,6 +24512,47 @@
       ],
       "weir_flow_families": [
         "slice"
+      ]
+    },
+    {
+      "path": "vyre-libs/tests/indexed_map_composition_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 55,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 10,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "validation"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -32764,6 +32806,87 @@
       ]
     },
     {
+      "path": "vyre-libs/tests/gqa_attention_primitive_composition_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 123,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 5,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability",
+        "soundness"
+      ],
+      "error_path_families": [
+        "overflow"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
+      "path": "vyre-libs/tests/decode_primitive_composition_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 44,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 13,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "positive"
+      ],
+      "op_families": [
+        "uncategorized_op"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "generated"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
       "path": "vyre-libs/tests/weir_relation_import_certificates.rs",
       "layers": [
         "adversarial",
@@ -33370,6 +33493,49 @@
       ]
     },
     {
+      "path": "vyre-libs/tests/qk_gain_shape_overflow_contracts.rs",
+      "layers": [
+        "adversarial",
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 36,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "adversarial",
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "capability"
+      ],
+      "error_path_families": [
+        "overflow"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
       "path": "vyre-libs/tests/c_lexer_preprocessor_hash_contracts.rs",
       "layers": [
         "benchmark",
@@ -33900,6 +34066,47 @@
       ],
       "weir_flow_families": [
         "slice"
+      ]
+    },
+    {
+      "path": "vyre-libs/tests/qk_gain_zero_shape_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 39,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive"
+      ],
+      "op_families": [
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "capability"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
       ]
     },
     {
@@ -37731,15 +37938,16 @@
       "layers": [
         "benchmark",
         "conformance",
+        "corpus",
         "integration",
         "unit"
       ],
-      "lines": 328,
+      "lines": 409,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 27,
+      "assertion_count": 41,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -37754,6 +37962,7 @@
         "driver_runtime",
         "flow",
         "lower_emit",
+        "nn_math",
         "scan_static"
       ],
       "backend_families": [
@@ -37772,7 +37981,8 @@
       ],
       "corpus_families": [
         "differential",
-        "fixture"
+        "fixture",
+        "linux"
       ],
       "weir_flow_families": [
         "slice"
@@ -37822,15 +38032,16 @@
       "layers": [
         "adversarial",
         "benchmark",
+        "corpus",
         "integration",
         "unit"
       ],
-      "lines": 92,
+      "lines": 150,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 10,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -37850,10 +38061,10 @@
         "core_feature"
       ],
       "error_path_families": [
-        "nominal"
+        "empty_zero"
       ],
       "corpus_families": [
-        "unit_fixture"
+        "linux"
       ],
       "weir_flow_families": [
         "non_weir"
@@ -37867,7 +38078,7 @@
         "integration",
         "unit"
       ],
-      "lines": 435,
+      "lines": 431,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -37884,21 +38095,17 @@
         "positive"
       ],
       "op_families": [
-        "driver_runtime",
         "nn_math",
-        "parser_frontend",
         "scan_static"
       ],
       "backend_families": [
         "cpu_oracle"
       ],
       "feature_families": [
-        "simd",
         "soundness"
       ],
       "error_path_families": [
-        "empty_zero",
-        "resource_budget"
+        "empty_zero"
       ],
       "corpus_families": [
         "unit_fixture"
@@ -60919,6 +61126,47 @@
       "weir_flow_families": [
         "liveness",
         "slice"
+      ]
+    },
+    {
+      "path": "vyre-driver-cuda/tests/gqa_attention_primitive_composition_cuda.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 46,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cuda_ptx"
+      ],
+      "feature_families": [
+        "soundness"
+      ],
+      "error_path_families": [
+        "resource_budget"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness"
       ]
     },
     {
@@ -88130,7 +88378,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 609,
+      "lines": 611,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -96556,6 +96804,47 @@
       ]
     },
     {
+      "path": "vyre-driver-wgpu/tests/stream_shard_public_error_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 16,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "empty_zero"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "non_weir"
+      ]
+    },
+    {
       "path": "vyre-driver-wgpu/tests/c_ast_statement_construct_gaps_e2e.rs",
       "layers": [
         "benchmark",
@@ -104834,6 +105123,48 @@
       ]
     },
     {
+      "path": "vyre-driver-wgpu/tests/resident_grid_sync_contracts.rs",
+      "layers": [
+        "benchmark",
+        "integration",
+        "unit"
+      ],
+      "lines": 67,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 1,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime"
+      ],
+      "backend_families": [
+        "resident",
+        "wgpu"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "missing_input"
+      ],
+      "corpus_families": [
+        "unit_fixture"
+      ],
+      "weir_flow_families": [
+        "liveness",
+        "resident_flow"
+      ]
+    },
+    {
       "path": "vyre-driver-wgpu/tests/readback_ring_liveness_contracts.rs",
       "layers": [
         "benchmark",
@@ -112480,7 +112811,7 @@
         "gap",
         "unit"
       ],
-      "lines": 372,
+      "lines": 367,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -112771,12 +113102,12 @@
         "fuzz",
         "unit"
       ],
-      "lines": 263,
+      "lines": 304,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 1,
+      "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -113005,21 +113336,23 @@
     {
       "path": "xtask/src/research_audit/collectors.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "gap",
         "unit"
       ],
-      "lines": 834,
+      "lines": 981,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 5,
+      "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -113064,21 +113397,23 @@
         "benchmark",
         "unit"
       ],
-      "lines": 163,
+      "lines": 254,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 2,
+      "assertion_count": 5,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
         "benchmark",
         "boundary",
+        "negative",
         "positive"
       ],
       "op_families": [
+        "nn_math",
         "parser_frontend"
       ],
       "backend_families": [
@@ -113256,7 +113591,7 @@
         "gap",
         "unit"
       ],
-      "lines": 871,
+      "lines": 860,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -113467,12 +113802,12 @@
         "gap",
         "unit"
       ],
-      "lines": 336,
+      "lines": 355,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 3,
+      "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -113493,7 +113828,8 @@
         "serde"
       ],
       "error_path_families": [
-        "empty_zero"
+        "empty_zero",
+        "missing_input"
       ],
       "corpus_families": [
         "fixture",
@@ -113506,6 +113842,7 @@
     {
       "path": "xtask/src/hygiene_matrix.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
@@ -113513,16 +113850,17 @@
         "gap",
         "unit"
       ],
-      "lines": 2618,
+      "lines": 2695,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 40,
+      "assertion_count": 44,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -113584,10 +113922,11 @@
       "layers": [
         "adversarial",
         "benchmark",
+        "corpus",
         "gap",
         "unit"
       ],
-      "lines": 235,
+      "lines": 239,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -113604,10 +113943,11 @@
         "positive"
       ],
       "op_families": [
-        "nn_math"
+        "nn_math",
+        "scan_static"
       ],
       "backend_families": [
-        "backend_agnostic"
+        "cpu_oracle"
       ],
       "feature_families": [
         "serde",
@@ -113620,6 +113960,7 @@
       ],
       "corpus_families": [
         "fixture",
+        "generated",
         "release"
       ],
       "weir_flow_families": [
@@ -115000,7 +115341,7 @@
         "benchmark",
         "unit"
       ],
-      "lines": 1020,
+      "lines": 1018,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -115661,6 +116002,51 @@
       ]
     },
     {
+      "path": "xtask/src/release_train.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "unit"
+      ],
+      "lines": 213,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cuda_ptx",
+        "direct",
+        "wgpu"
+      ],
+      "feature_families": [
+        "serde",
+        "validation"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "release"
+      ],
+      "weir_flow_families": [
+        "liveness"
+      ]
+    },
+    {
       "path": "xtask/src/bin/lint_shape_tests.rs",
       "layers": [
         "benchmark",
@@ -115700,32 +116086,37 @@
     {
       "path": "xtask/src/bin/public_api_check.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "unit"
       ],
-      "lines": 315,
+      "lines": 581,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 12,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "negative",
         "positive"
       ],
       "op_families": [
+        "driver_runtime",
         "nn_math",
         "scan_static"
       ],
       "backend_families": [
-        "backend_agnostic"
+        "direct",
+        "wgpu"
       ],
       "feature_families": [
+        "soundness",
         "validation"
       ],
       "error_path_families": [
@@ -115734,7 +116125,7 @@
         "missing_input"
       ],
       "corpus_families": [
-        "unit_fixture"
+        "release"
       ],
       "weir_flow_families": [
         "non_weir"
@@ -137250,12 +137641,12 @@
         "integration",
         "unit"
       ],
-      "lines": 173,
+      "lines": 182,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 17,
+      "assertion_count": 18,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -137280,6 +137671,7 @@
       ],
       "error_path_families": [
         "empty_zero",
+        "malformed_input",
         "missing_input",
         "panic_path"
       ],
@@ -153560,6 +153952,62 @@
       ]
     },
     {
+      "path": "../../../../libs/dataflow/weir/src/ssa.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "unit"
+      ],
+      "lines": 927,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 3,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "lower_emit",
+        "nn_math"
+      ],
+      "backend_families": [
+        "cpu_oracle",
+        "resident"
+      ],
+      "feature_families": [
+        "allocation_scratch",
+        "capability",
+        "simd",
+        "soundness"
+      ],
+      "error_path_families": [
+        "empty_zero",
+        "missing_input",
+        "overflow"
+      ],
+      "corpus_families": [
+        "differential",
+        "fixture",
+        "release"
+      ],
+      "weir_flow_families": [
+        "dispatch_decode",
+        "points_to",
+        "reaching",
+        "resident_flow"
+      ]
+    },
+    {
       "path": "../../../../libs/dataflow/weir/src/ifds_resident_direct_prepare.rs",
       "layers": [
         "benchmark",
@@ -153899,7 +154347,7 @@
         "conformance",
         "unit"
       ],
-      "lines": 151,
+      "lines": 156,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -153935,7 +154383,8 @@
         "resource_budget"
       ],
       "corpus_families": [
-        "differential"
+        "differential",
+        "release"
       ],
       "weir_flow_families": [
         "ifds",
@@ -153950,7 +154399,7 @@
         "corpus",
         "unit"
       ],
-      "lines": 187,
+      "lines": 190,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
@@ -153971,6 +154420,7 @@
       ],
       "backend_families": [
         "cpu_oracle",
+        "cuda_ptx",
         "resident"
       ],
       "feature_families": [
@@ -154033,12 +154483,12 @@
         "benchmark",
         "unit"
       ],
-      "lines": 293,
+      "lines": 370,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 4,
+      "assertion_count": 8,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -154204,21 +154654,24 @@
     {
       "path": "../../../../libs/dataflow/weir/tests/release_evidence_contract.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
+        "corpus",
         "integration",
         "unit"
       ],
-      "lines": 117,
+      "lines": 296,
       "dedicated_test_file": true,
       "inline_test_module_file": false,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 6,
+      "assertion_count": 21,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -154227,18 +154680,26 @@
       ],
       "op_families": [
         "driver_runtime",
-        "flow"
+        "flow",
+        "lower_emit",
+        "nn_math"
       ],
       "backend_families": [
         "cpu_oracle",
-        "direct"
+        "cuda_ptx",
+        "direct",
+        "resident",
+        "wgpu"
       ],
       "feature_families": [
         "capability",
         "serde",
-        "soundness"
+        "soundness",
+        "validation"
       ],
       "error_path_families": [
+        "empty_zero",
+        "malformed_input",
         "missing_input",
         "panic_path"
       ],
@@ -154248,7 +154709,10 @@
       ],
       "weir_flow_families": [
         "dispatch_decode",
-        "ifds"
+        "ifds",
+        "liveness",
+        "reaching",
+        "resident_flow"
       ]
     },
     {
@@ -154297,6 +154761,50 @@
         "ifds",
         "reaching",
         "resident_flow"
+      ]
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/tests/package_contents_contract.rs",
+      "layers": [
+        "benchmark",
+        "conformance",
+        "corpus",
+        "integration",
+        "unit"
+      ],
+      "lines": 65,
+      "dedicated_test_file": true,
+      "inline_test_module_file": false,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "boundary",
+        "conformance",
+        "positive"
+      ],
+      "op_families": [
+        "flow"
+      ],
+      "backend_families": [
+        "backend_agnostic"
+      ],
+      "feature_families": [
+        "core_feature"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "differential",
+        "release"
+      ],
+      "weir_flow_families": [
+        "weir_uncategorized"
       ]
     },
     {

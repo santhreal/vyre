@@ -46,7 +46,7 @@
       "kind": "bench",
       "path": "../../../../libs/dataflow/weir/benches/bitset_closure_oracle_test.rs",
       "exists": true,
-      "source_bytes": 1619,
+      "source_bytes": 1594,
       "read_error": null,
       "required_tokens": [],
       "missing_tokens": []
@@ -96,7 +96,7 @@
       "kind": "bench",
       "path": "../../../../libs/dataflow/weir/benches/ifds_direct_resident_hot_path.rs",
       "exists": true,
-      "source_bytes": 5380,
+      "source_bytes": 5766,
       "read_error": null,
       "required_tokens": [],
       "missing_tokens": []
@@ -106,7 +106,7 @@
       "kind": "bench",
       "path": "../../../../libs/dataflow/weir/benches/primitive_micro.rs",
       "exists": true,
-      "source_bytes": 4456,
+      "source_bytes": 4465,
       "read_error": null,
       "required_tokens": [],
       "missing_tokens": []
@@ -116,7 +116,7 @@
       "kind": "bench",
       "path": "../../../../libs/dataflow/weir/benches/primitive_scale.rs",
       "exists": true,
-      "source_bytes": 6660,
+      "source_bytes": 6716,
       "read_error": null,
       "required_tokens": [],
       "missing_tokens": []
@@ -136,7 +136,7 @@
       "kind": "bench",
       "path": "../../../../libs/dataflow/weir/benches/resident_fixed_point_hot_path.rs",
       "exists": true,
-      "source_bytes": 10240,
+      "source_bytes": 12849,
       "read_error": null,
       "required_tokens": [],
       "missing_tokens": []
@@ -157,11 +157,11 @@
       "id": "ifds_direct_resident_hot_path",
       "path": "../../../../libs/dataflow/weir/benches/ifds_direct_resident_hot_path.rs",
       "exists": true,
-      "source_bytes": 5380,
+      "source_bytes": 5766,
       "read_error": null,
       "backend_id": "wgpu",
       "device_signature": "wgpu-live-device-required",
-      "source_fingerprint": "weir-resident-bench-source:v1:62ae5d30d52a92c4",
+      "source_fingerprint": "weir-resident-bench-source:v1:d1264673084b6324",
       "bench_command": "cargo_full bench --bench ifds_direct_resident_hot_path",
       "required_fields": [
         "ResidentBenchmarkEvidence",
@@ -180,11 +180,11 @@
       "id": "resident_fixed_point_hot_path",
       "path": "../../../../libs/dataflow/weir/benches/resident_fixed_point_hot_path.rs",
       "exists": true,
-      "source_bytes": 10240,
+      "source_bytes": 12849,
       "read_error": null,
       "backend_id": "weir_bench_resident_fixed_point",
       "device_signature": "mock-resident-sequence-window",
-      "source_fingerprint": "weir-resident-bench-source:v1:71936a31746b2691",
+      "source_fingerprint": "weir-resident-bench-source:v1:ce8031d51dd00f7e",
       "bench_command": "cargo_full bench --bench resident_fixed_point_hot_path",
       "required_fields": [
         "ResidentBenchmarkEvidence",

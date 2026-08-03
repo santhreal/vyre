@@ -22,25 +22,25 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 239,
+      "line": 241,
       "pattern": "raw_workspace_cargo",
-      "text": "cargo bench -p weir --bench primitive_micro"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 264,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib"
+      "text": "cargo bench -p weirflow --bench primitive_micro"
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
       "line": 267,
       "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib && cargo test --doc && cargo test --examples"
+      "text": "cargo test --lib"
     },
     {
       "path": "../../../../libs/dataflow/weir/README.md",
       "line": 270,
+      "pattern": "raw_workspace_cargo",
+      "text": "cargo test --lib && cargo test --doc && cargo test --examples"
+    },
+    {
+      "path": "../../../../libs/dataflow/weir/README.md",
+      "line": 273,
       "pattern": "raw_workspace_cargo",
       "text": "cargo test --features cpu-parity"
     }

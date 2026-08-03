@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "suite": "gap",
-  "file_count": 273,
-  "vyre_file_count": 269,
+  "file_count": 274,
+  "vyre_file_count": 270,
   "dataflow_consumer_file_count": 3,
   "vyrec_file_count": 1,
   "files": [
@@ -948,12 +948,12 @@
         "gap",
         "unit"
       ],
-      "lines": 428,
+      "lines": 423,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 5,
+      "assertion_count": 7,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -1049,7 +1049,7 @@
         "gap",
         "unit"
       ],
-      "lines": 548,
+      "lines": 536,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -9460,7 +9460,7 @@
         "gap",
         "unit"
       ],
-      "lines": 372,
+      "lines": 367,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -9755,21 +9755,23 @@
     {
       "path": "xtask/src/research_audit/collectors.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "gap",
         "unit"
       ],
-      "lines": 834,
+      "lines": 981,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 5,
+      "assertion_count": 14,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -9922,7 +9924,7 @@
         "gap",
         "unit"
       ],
-      "lines": 871,
+      "lines": 860,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -10090,12 +10092,12 @@
         "gap",
         "unit"
       ],
-      "lines": 336,
+      "lines": 355,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 3,
+      "assertion_count": 4,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
@@ -10116,7 +10118,8 @@
         "serde"
       ],
       "error_path_families": [
-        "empty_zero"
+        "empty_zero",
+        "missing_input"
       ],
       "corpus_families": [
         "fixture",
@@ -10129,6 +10132,7 @@
     {
       "path": "xtask/src/hygiene_matrix.rs",
       "layers": [
+        "adversarial",
         "benchmark",
         "conformance",
         "corpus",
@@ -10136,16 +10140,17 @@
         "gap",
         "unit"
       ],
-      "lines": 2618,
+      "lines": 2695,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
       "has_test_entrypoint": true,
-      "assertion_count": 40,
+      "assertion_count": 44,
       "oversized": false,
       "god_test_candidate": false,
       "recommended_split": [],
       "case_roles": [
+        "adversarial",
         "benchmark",
         "boundary",
         "conformance",
@@ -10207,10 +10212,11 @@
       "layers": [
         "adversarial",
         "benchmark",
+        "corpus",
         "gap",
         "unit"
       ],
-      "lines": 235,
+      "lines": 239,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,
@@ -10227,10 +10233,11 @@
         "positive"
       ],
       "op_families": [
-        "nn_math"
+        "nn_math",
+        "scan_static"
       ],
       "backend_families": [
-        "backend_agnostic"
+        "cpu_oracle"
       ],
       "feature_families": [
         "serde",
@@ -10243,6 +10250,7 @@
       ],
       "corpus_families": [
         "fixture",
+        "generated",
         "release"
       ],
       "weir_flow_families": [
@@ -11673,6 +11681,51 @@
         "ifds",
         "resident_flow",
         "witness"
+      ]
+    },
+    {
+      "path": "xtask/src/release_train.rs",
+      "layers": [
+        "benchmark",
+        "gap",
+        "unit"
+      ],
+      "lines": 213,
+      "dedicated_test_file": false,
+      "inline_test_module_file": true,
+      "line_threshold_exceeded": false,
+      "has_test_entrypoint": true,
+      "assertion_count": 2,
+      "oversized": false,
+      "god_test_candidate": false,
+      "recommended_split": [],
+      "case_roles": [
+        "benchmark",
+        "negative",
+        "positive"
+      ],
+      "op_families": [
+        "driver_runtime",
+        "flow",
+        "parser_frontend"
+      ],
+      "backend_families": [
+        "cuda_ptx",
+        "direct",
+        "wgpu"
+      ],
+      "feature_families": [
+        "serde",
+        "validation"
+      ],
+      "error_path_families": [
+        "nominal"
+      ],
+      "corpus_families": [
+        "release"
+      ],
+      "weir_flow_families": [
+        "liveness"
       ]
     },
     {
@@ -13850,7 +13903,7 @@
         "gap",
         "unit"
       ],
-      "lines": 630,
+      "lines": 633,
       "dedicated_test_file": false,
       "inline_test_module_file": true,
       "line_threshold_exceeded": false,

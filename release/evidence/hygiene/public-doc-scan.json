@@ -1438,7 +1438,7 @@
     },
     {
       "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 93,
+      "line": 91,
       "pattern": "undocumented_public_api",
       "text": "pub struct FakeResidentBackend {"
     },
