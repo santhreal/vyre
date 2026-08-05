@@ -1,5 +1,7 @@
 //! Smoke tests for target-neutral `vyre_aot::compile` behavior.
 
+mod common;
+
 use vyre_aot::artifact::Target;
 use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -50,29 +52,5 @@ fn launcher_requires_linked_target_emitter() {
 }
 
 fn minimal_ptx_artifact_for_template_test() -> vyre_aot::CompiledArtifact {
-    use vyre_aot::artifact::{
-        BufferAccessKind, BufferEntry, BufferMemoryKind, CompiledArtifact, DispatchConfig as AC,
-    };
-    const MINIMAL_PTX_KERNEL: &[u8] =
-        b".version 8.0\n.target sm_80\n.address_size 64\n.visible .entry main() {\n\tret;\n}\n";
-    CompiledArtifact {
-        target: Target::Ptx,
-        kernel_bytes: MINIMAL_PTX_KERNEL.to_vec(),
-        entry_point: "main".to_string(),
-        buffers: vec![BufferEntry {
-            name: "out".to_string(),
-            binding: 0,
-            element_count: 16,
-            element_size_bytes: 4,
-            memory_kind: BufferMemoryKind::Global,
-            access: BufferAccessKind::ReadWrite,
-        }],
-        dispatch: AC {
-            workgroup_size: [1, 1, 1],
-            grid_size: [0, 0, 0],
-            dynamic_shared_bytes: 0,
-        },
-        aot_version: vyre_aot::VERSION.to_string(),
-        vsa_fingerprint: Vec::new(),
-    }
+    common::compiled_artifact()
 }

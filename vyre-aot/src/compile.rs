@@ -1,21 +1,26 @@
-//! Program → CompiledArtifact lowering.
-//!
-//! The compile path asks the `vyre-driver` AOT registry for a linked
-//! target emitter and packs the resulting bytes plus binding/dispatch
-//! metadata into a [`CompiledArtifact`].
+//! Program to canonical neutral artifact plus attached target payload.
+
+use std::collections::BTreeMap;
 
 use thiserror::Error;
-use vyre_foundation::ir::{inline_calls_with_resolver, OpResolver, Program};
-
-use crate::artifact::{
-    BufferAccessKind, BufferEntry, BufferMemoryKind, CompiledArtifact, DispatchGeometry, Target,
+use vyre_foundation::ir::{
+    inline_calls_with_resolver, BufferAccess, MemoryKind, OpResolver, Program, ProgramGraph,
+    ShapeDim, TensorContract, ValueLifetime,
 };
+use vyre_megakernel::{
+    ArtifactRoute, CompileOptions, MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest,
+};
+
+use crate::artifact::{target_payload_format, CompiledArtifact, Target};
 use crate::VERSION;
+
+const MAX_NEUTRAL_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 
 /// Errors returned by [`compile`].
 #[derive(Debug, Error)]
 pub enum CompileError {
-    /// The chosen `Target` is not enabled in this build (feature flag).
+    /// The chosen `Target` is not enabled in this build.
     #[error(
         "vyre-aot: target {0:?} has no linked AOT emitter. Fix: link the concrete driver crate that owns this target."
     )]
@@ -25,80 +30,44 @@ pub enum CompileError {
     #[error("vyre-aot: backend rejected Program: {0}")]
     BackendError(String),
 
-    /// The Program cannot be represented accurately in the AOT artifact schema.
+    /// The Program cannot be represented accurately in the canonical artifact envelope.
     #[error("vyre-aot: artifact layout rejected Program: {0}")]
     ArtifactLayout(String),
+
+    /// Canonical artifact construction or payload association failed at an AOT stage.
+    #[error("vyre-aot: canonical artifact stage `{stage}` failed: {source}")]
+    CanonicalArtifact {
+        /// AOT stage that failed.
+        stage: &'static str,
+        /// Structured canonical artifact error, including its exact field path.
+        #[source]
+        source: vyre_megakernel::CompileError,
+    },
 }
 
-/// Compile a `Program` into a self-contained artifact for a chosen target.
-///
-/// This is the load-bearing entry point. All vyre-foundation / vyre-driver
-/// machinery is touched HERE; the resulting [`CompiledArtifact`] is
-/// self-describing and the launcher does not need vyre at runtime.
-///
-/// # Errors
-///
-/// Returns [`CompileError::TargetNotEnabled`] if the requested target's
-/// feature flag is not enabled, or [`CompileError::BackendError`] if the
-/// backend rejects the Program.
+/// Compile a `Program` into a canonical artifact envelope for a chosen target.
 pub fn compile(program: &Program, target: Target) -> Result<CompiledArtifact, CompileError> {
     compile_with_resolver(program, target, None)
 }
 
 /// Compile with a caller-supplied resolver to inline `Expr::Call` nodes.
-///
-/// When the input Program contains `Expr::Call` to ops registered through
-/// `vyre-driver`'s `DialectRegistry` or `vyre-libs::harness::OpEntry`, supply
-/// an [`OpResolver`] (an `fn(&str) -> Option<Program>`) so the inline pass
-/// can substitute their bodies before backend emission. Pass `None` if the
-/// Program has no `Expr::Call` nodes (e.g. low-level smoke tests).
-///
-/// # Errors
-///
-/// Same as [`compile`], plus inline-pass errors when the Program has
-/// unresolvable calls.
 pub fn compile_with_resolver(
     program: &Program,
     target: Target,
     resolver: Option<OpResolver>,
 ) -> Result<CompiledArtifact, CompileError> {
-    // AOT emitters need a Program with no `Expr::Call` nodes  -  run
-    // inline_calls when a resolver is provided, otherwise pass through
-    // unchanged (the caller has either pre-inlined or guarantees no Call).
     let inlined = match resolver {
-        Some(r) => inline_calls_with_resolver(program, r)
-            .map_err(|e| CompileError::BackendError(format!("{e:?}")))?,
+        Some(resolver) => inline_calls_with_resolver(program, resolver)
+            .map_err(|error| CompileError::BackendError(format!("{error:?}")))?,
         None => program.clone(),
     };
-
-    // P-AOT-2: run the canonical optimizer pipeline (canonicalize →
-    // region_inline → CSE → DCE) so AOT and JIT produce identical
-    // post-optimization Programs for identical inputs. This is the
-    // single seam where every recursion-thesis self-consumer wired
-    // into `vyre_foundation::optimizer::pre_lowering::optimize` (categorical
-    // pass scheduler, tensor-network fusion order, dataflow fixpoint,
-    // submodular cache eviction, etc.) flows into the AOT compile
-    // path. Pre-fix: AOT bypassed all optimization and emitted bytecode
-    // directly from the inlined Program. Post-fix: AOT inherits every
-    // substrate upgrade landed in vyre-foundation for free.
     let optimized = vyre_foundation::ir::optimize(inlined);
+    let vsa_fingerprint = vyre_driver::program_vsa_fingerprint(&optimized);
 
-    // P-AOT-1: AOT artifacts carry a VSA fingerprint of the optimized
-    // Program for downstream cache-dedup. Two compilations that
-    // differ only in non-semantic detail (instruction order,
-    // commutative-operand ordering) collide on the same VSA
-    // fingerprint, letting AOT toolchains skip redundant emit.
-    // Computed via the driver-level canonical VSA fingerprint  -  the
-    // same approximate-match cache key that driver validation caches
-    // use, so AOT and JIT share artifact-identity without reaching
-    // into a CPU-named substrate helper.
-    let vsa = vyre_driver::program_vsa_fingerprint(&optimized);
-
-    let buffers = collect_buffer_entries(&optimized)?;
-
-    let dispatch_config = vyre_driver::DispatchConfig::default();
-    let kernel_bytes =
-        vyre_driver::aot::emit_aot_target(target.aot_target_id(), &optimized, &dispatch_config)
+    let dispatch = derive_dispatch_grid(&optimized)?;
+    let driver_dispatch = vyre_driver::DispatchConfig::default();
+    let target_bytes =
+        vyre_driver::aot::emit_aot_target(target.aot_target_id(), &optimized, &driver_dispatch)
             .map_err(|error| match error {
                 vyre_driver::BackendError::UnsupportedFeature { .. } => {
                     CompileError::TargetNotEnabled(target)
@@ -106,99 +75,187 @@ pub fn compile_with_resolver(
                 other => CompileError::BackendError(other.to_string()),
             })?;
 
-    let dispatch = derive_dispatch_geometry(&optimized)?;
-
-    Ok(CompiledArtifact {
-        target,
-        kernel_bytes,
-        entry_point: "main".to_string(),
-        buffers,
-        dispatch,
-        aot_version: VERSION.to_string(),
-        vsa_fingerprint: vsa,
+    let neutral = compile_neutral_artifact(&optimized)?;
+    let entry_node = neutral
+        .nodes()
+        .iter()
+        .find(|node| node.name == "main")
+        .map(|node| node.id)
+        .ok_or_else(|| {
+            CompileError::ArtifactLayout(
+                "canonical single-entry graph did not produce its `main` node".to_string(),
+            )
+        })?;
+    let bindings = collect_resource_bindings(&optimized, &neutral)?;
+    let entry = TargetEntryPoint {
+        name: "main".to_string(),
+        node: entry_node,
+        grid_size: dispatch,
+        dynamic_shared_bytes: 0,
+        resource_bindings: bindings,
+    };
+    let format = target_payload_format(target).map_err(|source| CompileError::CanonicalArtifact {
+        stage: "target-format",
+        source,
+    })?;
+    let payload = TargetPayload::new(&neutral, format, vec![entry], target_bytes).map_err(
+        |source| CompileError::CanonicalArtifact {
+            stage: "target-payload",
+            source,
+        },
+    )?;
+    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+    envelope
+        .attach_target_payload(payload)
+        .map_err(|source| CompileError::CanonicalArtifact {
+            stage: "payload-association",
+            source,
+        })?;
+    CompiledArtifact::new(target, envelope, VERSION, vsa_fingerprint).map_err(|source| {
+        CompileError::CanonicalArtifact {
+            stage: "package-admission",
+            source,
+        }
     })
 }
 
-fn derive_dispatch_geometry(program: &Program) -> Result<DispatchGeometry, CompileError> {
+fn compile_neutral_artifact(
+    program: &Program,
+) -> Result<vyre_megakernel::MegakernelArtifact, CompileError> {
+    let mut graph = ProgramGraph::new();
+    for buffer in program.buffers() {
+        graph
+            .add_external_value(
+                buffer.name(),
+                TensorContract {
+                    dtype: buffer.element(),
+                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                    access: buffer.access(),
+                    lifetime: resource_lifetime(buffer.access(), buffer.kind()),
+                },
+            )
+            .map_err(|error| {
+                CompileError::ArtifactLayout(format!(
+                    "resource `{}` cannot enter the canonical graph: {error}",
+                    buffer.name()
+                ))
+            })?;
+    }
+    graph
+        .add_node("main", program.clone(), Vec::new(), Vec::new())
+        .map_err(|error| {
+            CompileError::ArtifactLayout(format!(
+                "optimized Program cannot enter the canonical graph: {error}"
+            ))
+        })?;
+    let request = ValidatedCompileRequest::new(
+        graph,
+        CompileOptions::new(
+            ArtifactRoute::Static,
+            BTreeMap::new(),
+            MAX_NEUTRAL_ARTIFACT_BYTES,
+        ),
+    )
+    .map_err(|source| CompileError::CanonicalArtifact {
+        stage: "neutral-request",
+        source,
+    })?;
+    vyre_megakernel::compile(&request).map_err(|source| CompileError::CanonicalArtifact {
+        stage: "neutral-compile",
+        source,
+    })
+}
+
+fn derive_dispatch_grid(program: &Program) -> Result<[u32; 3], CompileError> {
     let plan = vyre_driver::binding::BindingPlan::build(program)
         .map_err(|error| CompileError::BackendError(error.to_string()))?;
     let element_count =
         vyre_driver::program_walks::dispatch_element_count_for_program(program, &plan.bindings);
-    let grid_size =
-        vyre_driver::infer_dispatch_grid_for_count(element_count, program.workgroup_size)
-            .map_err(|error| CompileError::BackendError(error.to_string()))?;
-    Ok(DispatchGeometry {
-        workgroup_size: program.workgroup_size,
-        grid_size,
-        dynamic_shared_bytes: 0,
-    })
+    vyre_driver::infer_dispatch_grid_for_count(element_count, program.workgroup_size)
+        .map_err(|error| CompileError::BackendError(error.to_string()))
 }
 
-fn collect_buffer_entries(program: &Program) -> Result<Vec<BufferEntry>, CompileError> {
+fn collect_resource_bindings(
+    program: &Program,
+    neutral: &vyre_megakernel::MegakernelArtifact,
+) -> Result<Vec<TargetResourceBinding>, CompileError> {
     program
         .buffers()
         .iter()
-        .map(|buf| {
-            Ok(BufferEntry {
-                name: buf.name().to_string(),
-                binding: buf.binding(),
-                element_count: buf.count(),
-                element_size_bytes: element_size_bytes(buf.name(), buf.element())?,
-                memory_kind: convert_memory_kind(buf.kind()),
-                access: convert_access(buf.name(), buf.access())?,
+        .map(|buffer| {
+            let resource = neutral
+                .resources()
+                .iter()
+                .find(|resource| resource.name == buffer.name())
+                .ok_or_else(|| {
+                    CompileError::ArtifactLayout(format!(
+                        "canonical artifact omitted resource `{}`",
+                        buffer.name()
+                    ))
+                })?;
+            Ok(TargetResourceBinding {
+                resource: resource.value,
+                slot: buffer.binding(),
+                memory: convert_memory_kind(buffer.kind()),
+                access: convert_access(buffer.name(), buffer.access())?,
             })
         })
         .collect()
 }
 
-fn element_size_bytes(name: &str, ty: vyre_foundation::ir::DataType) -> Result<u32, CompileError> {
-    // Delegate to the canonical size table on `DataType` so every
-    // variant (Vec2U32 = 8, Vec4U32 = 16, Bytes = 1, Array = element
-    // size, F8/F4/I4/NF4 = 1, etc.) round-trips correctly into the AOT
-    // artifact. The previous hand-written match defaulted to 4 for any
-    // unenumerated variant, mis-sizing Bytes (1 byte/element treated
-    // as 4) and the vector / quantized families.
-    let raw = ty.size_bytes().ok_or_else(|| {
-        CompileError::ArtifactLayout(format!(
-            "buffer `{name}` uses runtime-sized element type {ty:?}. Fix: lower this buffer to a concrete fixed-width ABI type before AOT emission; do not encode a guessed element size."
-        ))
-    })?;
-    u32::try_from(raw).map_err(|_| {
-        CompileError::ArtifactLayout(format!(
-            "buffer `{name}` element type {ty:?} has {raw} bytes per element, which exceeds the AOT artifact u32 size field. Fix: shard or specialize the buffer layout before AOT emission."
-        ))
-    })
-}
-
-fn convert_memory_kind(k: vyre_foundation::ir::MemoryKind) -> BufferMemoryKind {
-    use vyre_foundation::ir::MemoryKind;
-    match k {
-        MemoryKind::Shared | MemoryKind::Local => BufferMemoryKind::Shared,
-        MemoryKind::Uniform | MemoryKind::Push | MemoryKind::Readonly => BufferMemoryKind::Constant,
-        _ => BufferMemoryKind::Global,
+fn resource_lifetime(access: BufferAccess, memory: MemoryKind) -> ValueLifetime {
+    match (access, memory) {
+        (BufferAccess::ReadOnly | BufferAccess::Uniform, MemoryKind::Uniform | MemoryKind::Push | MemoryKind::Readonly) => {
+            ValueLifetime::ImmutableWeight
+        }
+        (BufferAccess::WriteOnly, _) => ValueLifetime::Output,
+        (BufferAccess::ReadWrite, _) => ValueLifetime::SequenceState,
+        _ => ValueLifetime::Invocation,
     }
 }
 
-fn convert_access(
-    name: &str,
-    a: vyre_foundation::ir::BufferAccess,
-) -> Result<BufferAccessKind, CompileError> {
-    use vyre_foundation::ir::BufferAccess;
-    match a {
-        BufferAccess::ReadOnly => Ok(BufferAccessKind::ReadOnly),
-        BufferAccess::WriteOnly => Ok(BufferAccessKind::WriteOnly),
-        BufferAccess::ReadWrite => Ok(BufferAccessKind::ReadWrite),
-        // Uniform is semantically read-only (small, fast, read-only path).
-        BufferAccess::Uniform => Ok(BufferAccessKind::ReadOnly),
-        // Workgroup-local shared memory is both read and written within a workgroup.
-        BufferAccess::Workgroup => Ok(BufferAccessKind::ReadWrite),
+fn convert_memory_kind(kind: MemoryKind) -> TargetResourceMemory {
+    match kind {
+        MemoryKind::Shared | MemoryKind::Local => TargetResourceMemory::Shared,
+        MemoryKind::Uniform | MemoryKind::Push | MemoryKind::Readonly => {
+            TargetResourceMemory::Constant
+        }
+        _ => TargetResourceMemory::Global,
+    }
+}
+
+fn convert_access(name: &str, access: BufferAccess) -> Result<TargetResourceAccess, CompileError> {
+    match access {
+        BufferAccess::ReadOnly | BufferAccess::Uniform => Ok(TargetResourceAccess::ReadOnly),
+        BufferAccess::WriteOnly => Ok(TargetResourceAccess::WriteOnly),
+        BufferAccess::ReadWrite | BufferAccess::Workgroup => Ok(TargetResourceAccess::ReadWrite),
         other => Err(CompileError::ArtifactLayout(format!(
-            "buffer `{name}` uses unrecognised access kind {other:?}. \
-             Fix: add an explicit mapping for this variant in convert_access \
-             (vyre-aot/src/compile.rs). Silently defaulting to ReadWrite would \
-             miscompile buffers that are not read-write."
+            "buffer `{name}` uses unrecognised access kind {other:?}. Fix: lower it to an explicit target resource access before AOT emission."
         ))),
     }
+}
+
+#[cfg(test)]
+pub(crate) fn artifact_fixture(program: &Program, target_bytes: Vec<u8>) -> CompiledArtifact {
+    let neutral = compile_neutral_artifact(program).expect("test Program must compile neutrally");
+    let entry = TargetEntryPoint {
+        name: "main".to_string(),
+        node: neutral.nodes()[0].id,
+        grid_size: derive_dispatch_grid(program).expect("test dispatch must be finite"),
+        dynamic_shared_bytes: 0,
+        resource_bindings: collect_resource_bindings(program, &neutral)
+            .expect("test resources must bind"),
+    };
+    let payload = TargetPayload::new(
+        &neutral,
+        target_payload_format(Target::Ptx).unwrap(),
+        vec![entry],
+        target_bytes,
+    )
+    .unwrap();
+    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+    envelope.attach_target_payload(payload).unwrap();
+    CompiledArtifact::new(Target::Ptx, envelope, VERSION, Vec::new()).unwrap()
 }
 
 #[cfg(test)]
@@ -224,14 +281,13 @@ mod tests {
             ],
         );
 
-        let dispatch = derive_dispatch_geometry(&program)
-            .expect("Fix: AOT dispatch geometry derivation must accept finite buffer shapes.");
+        let dispatch = derive_dispatch_grid(&program)
+            .expect("Fix: AOT dispatch grid derivation must accept finite buffer shapes.");
 
-        assert_eq!(dispatch.workgroup_size, [128, 1, 1]);
         assert_eq!(
-            dispatch.grid_size,
+            dispatch,
             [8, 1, 1],
-            "Fix: vyre-aot must emit explicit finite grid geometry for CUDA launchers, not [0,0,0]."
+            "Fix: vyre-aot must attach explicit finite grid metadata to its canonical payload."
         );
     }
 
@@ -246,8 +302,8 @@ mod tests {
             ],
         );
 
-        let err = derive_dispatch_geometry(&program).expect_err(
-            "Fix: AOT must reject zero workgroup axes instead of emitting a poisoned manifest.",
+        let err = derive_dispatch_grid(&program).expect_err(
+            "Fix: AOT must reject zero workgroup axes before target payload emission.",
         );
 
         assert!(
@@ -267,7 +323,7 @@ mod tests {
             .expect("Fix: BufferAccess::Uniform must map to ReadOnly, not Err");
         assert_eq!(
             result,
-            BufferAccessKind::ReadOnly,
+            TargetResourceAccess::ReadOnly,
             "Fix: BufferAccess::Uniform must map to BufferAccessKind::ReadOnly, \
              not ReadWrite. Got {result:?}."
         );
@@ -284,7 +340,7 @@ mod tests {
             .expect("Fix: BufferAccess::Workgroup must map to ReadWrite, not Err");
         assert_eq!(
             result,
-            BufferAccessKind::ReadWrite,
+            TargetResourceAccess::ReadWrite,
             "Fix: BufferAccess::Workgroup must map to BufferAccessKind::ReadWrite. \
              Got {result:?}."
         );
@@ -297,11 +353,11 @@ mod tests {
         // to vyre_foundation::ir::BufferAccess but not handled in convert_access.
         use vyre_foundation::ir::BufferAccess;
         let cases = [
-            (BufferAccess::ReadOnly, BufferAccessKind::ReadOnly),
-            (BufferAccess::WriteOnly, BufferAccessKind::WriteOnly),
-            (BufferAccess::ReadWrite, BufferAccessKind::ReadWrite),
-            (BufferAccess::Uniform, BufferAccessKind::ReadOnly),
-            (BufferAccess::Workgroup, BufferAccessKind::ReadWrite),
+            (BufferAccess::ReadOnly, TargetResourceAccess::ReadOnly),
+            (BufferAccess::WriteOnly, TargetResourceAccess::WriteOnly),
+            (BufferAccess::ReadWrite, TargetResourceAccess::ReadWrite),
+            (BufferAccess::Uniform, TargetResourceAccess::ReadOnly),
+            (BufferAccess::Workgroup, TargetResourceAccess::ReadWrite),
         ];
         for (access, expected) in cases {
             let got = convert_access("buf", access.clone())

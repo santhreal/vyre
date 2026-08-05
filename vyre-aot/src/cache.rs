@@ -27,27 +27,26 @@ pub enum RuntimeCacheError {
         #[source]
         source: io::Error,
     },
+
+    /// Canonical envelope serialization failed before the cache write.
+    #[error("runtime cache canonical artifact serialization failed: {0}")]
+    CanonicalArtifact(#[from] vyre_megakernel::CompileError),
 }
 
-/// Write `kernel_bytes` to `cache_dir` in the
-/// `vyre-runtime::DiskCache` on-disk format (`<payload><blake3 footer>`).
+/// Write the canonical artifact envelope to `cache_dir` with a BLAKE3 footer.
 ///
-/// `program` is the Program the artifact was compiled from. The runtime
-/// cache key is `vyre_foundation::optimizer::pipeline_fingerprint_bytes(program)`,
-/// which is the byte-for-byte same algorithm `vyre_runtime::PipelineFingerprint`
-/// uses, so the runtime cache hits the AOT-emitted blob without any
-/// additional registration step.
+/// `program` supplies the existing cache lookup key while `artifact` supplies
+/// the sole versioned artifact representation stored as the cache payload.
 ///
 /// Returns the absolute path of the file written.
 ///
 /// # Errors
 ///
-/// Returns [`RuntimeCacheError::Io`] when the cache directory cannot be
-/// created, the temp file cannot be written, or the rename to final path
-/// fails.
+/// Returns [`RuntimeCacheError::CanonicalArtifact`] when the envelope cannot
+/// encode, or [`RuntimeCacheError::Io`] when the atomic cache write fails.
 pub fn emit_runtime_cache_blob(
     program: &Program,
-    kernel_bytes: &[u8],
+    artifact: &crate::artifact::CompiledArtifact,
     cache_dir: &Path,
 ) -> Result<PathBuf, RuntimeCacheError> {
     fs::create_dir_all(cache_dir).map_err(|source| RuntimeCacheError::Io {
@@ -55,15 +54,17 @@ pub fn emit_runtime_cache_blob(
         source,
     })?;
 
+    let envelope_bytes = artifact.envelope().to_bytes()?;
+
     let fingerprint = vyre_foundation::optimizer::pipeline_fingerprint_bytes(program);
     let hex = fingerprint_hex(&fingerprint);
     let final_path = cache_dir.join(format!("{hex}.bin"));
     let tmp_path = cache_dir.join(format!(".{hex}.bin.tmp"));
 
     let write_one_shot = || -> io::Result<()> {
-        let footer = blake3::hash(kernel_bytes);
+        let footer = blake3::hash(&envelope_bytes);
         let mut f = File::create(&tmp_path)?;
-        f.write_all(kernel_bytes)?;
+        f.write_all(&envelope_bytes)?;
         f.write_all(footer.as_bytes())?;
         f.sync_all()?;
         drop(f);
@@ -130,30 +131,32 @@ mod tests {
     }
 
     #[test]
-    fn emit_writes_payload_with_blake3_footer() {
+    fn emit_writes_canonical_envelope_with_blake3_footer() {
         let program = add_one_program();
-        let kernel_bytes: Vec<u8> = (0..1024).map(|i| (i % 251) as u8).collect();
+        let artifact = crate::compile::artifact_fixture(
+            &program,
+            (0..1024).map(|index| (index % 251) as u8).collect(),
+        );
+        let envelope_bytes = artifact.envelope().to_bytes().unwrap();
         let dir = tempfile::tempdir().expect("Fix: tempdir must succeed");
-        let path = emit_runtime_cache_blob(&program, &kernel_bytes, dir.path())
-            .expect("Fix: emit must succeed for a valid Program + kernel");
+        let path = emit_runtime_cache_blob(&program, &artifact, dir.path())
+            .expect("Fix: emit must succeed for a valid canonical artifact");
 
         let blob = std::fs::read(&path).expect("Fix: blob must be readable");
-        assert_eq!(blob.len(), kernel_bytes.len() + 32);
-
-        let payload = &blob[..kernel_bytes.len()];
-        let footer = &blob[kernel_bytes.len()..];
-        assert_eq!(payload, kernel_bytes.as_slice());
-
-        let expected_footer = blake3::hash(&kernel_bytes);
-        assert_eq!(footer, expected_footer.as_bytes());
+        assert_eq!(blob.len(), envelope_bytes.len() + 32);
+        let payload = &blob[..envelope_bytes.len()];
+        let footer = &blob[envelope_bytes.len()..];
+        assert_eq!(payload, envelope_bytes);
+        assert_eq!(footer, blake3::hash(&envelope_bytes).as_bytes());
     }
 
     #[test]
     fn emit_filename_matches_runtime_fingerprint() {
         let program = add_one_program();
-        let kernel_bytes = b"\x00\x01\x02\x03";
+        let artifact =
+            crate::compile::artifact_fixture(&program, b"\x00\x01\x02\x03".to_vec());
         let dir = tempfile::tempdir().expect("Fix: tempdir must succeed");
-        let path = emit_runtime_cache_blob(&program, kernel_bytes, dir.path())
+        let path = emit_runtime_cache_blob(&program, &artifact, dir.path())
             .expect("Fix: emit must succeed");
 
         let expected_fingerprint = vyre_foundation::optimizer::pipeline_fingerprint_bytes(&program);

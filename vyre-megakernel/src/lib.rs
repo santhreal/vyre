@@ -5,6 +5,14 @@
 
 #![forbid(unsafe_code)]
 
+mod envelope;
+
+pub use envelope::{
+    MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
+};
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -251,6 +259,16 @@ pub enum DiagnosticCode {
     VersionSkew,
     /// Artifact content identity did not match its body.
     DigestMismatch,
+    /// Target payload framing or metadata was malformed.
+    MalformedTargetPayload,
+    /// Target payload schema or format version is incompatible.
+    TargetPayloadVersionSkew,
+    /// Target payload content identity did not match its metadata and bytes.
+    TargetPayloadDigestMismatch,
+    /// Target payload metadata names a different neutral artifact record.
+    TargetPayloadAssociationMismatch,
+    /// No attached target payload satisfies the required format identity.
+    IncompatibleTargetPayload,
 }
 
 impl DiagnosticCode {
@@ -274,6 +292,11 @@ impl DiagnosticCode {
             Self::MalformedArtifact => "MKC014_MALFORMED_ARTIFACT",
             Self::VersionSkew => "MKC015_VERSION_SKEW",
             Self::DigestMismatch => "MKC016_DIGEST_MISMATCH",
+            Self::MalformedTargetPayload => "MKC017_MALFORMED_TARGET_PAYLOAD",
+            Self::TargetPayloadVersionSkew => "MKC018_TARGET_PAYLOAD_VERSION_SKEW",
+            Self::TargetPayloadDigestMismatch => "MKC019_TARGET_PAYLOAD_DIGEST_MISMATCH",
+            Self::TargetPayloadAssociationMismatch => "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH",
+            Self::IncompatibleTargetPayload => "MKC021_INCOMPATIBLE_TARGET_PAYLOAD",
         }
     }
 }

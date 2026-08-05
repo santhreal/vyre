@@ -36,13 +36,15 @@ pub mod compile;
 pub mod launcher;
 pub mod manifest;
 
-pub use artifact::{
-    BufferAccessKind, BufferEntry, BufferMemoryKind, CompiledArtifact, DispatchGeometry, Target,
-};
-pub use bundle::{bundle, Bundle, BundleError};
+pub use artifact::{target_payload_format, CompiledArtifact, Target};
+pub use bundle::{bundle, package_artifact, read_bundle_artifact, Bundle, BundleError};
 pub use compile::{compile, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
+pub use vyre_megakernel::{
+    MegakernelArtifact, MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload,
+    TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+};
 
 /// Crate version surfaced into emitted artifacts and manifests.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

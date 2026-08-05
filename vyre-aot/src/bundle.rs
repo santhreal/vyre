@@ -57,6 +57,10 @@ pub enum BundleError {
     #[error("vyre-aot bundle: manifest serialization: {0}")]
     Json(#[from] serde_json::Error),
 
+    /// Canonical artifact envelope validation failed.
+    #[error("vyre-aot bundle: canonical artifact: {0}")]
+    CanonicalArtifact(#[from] vyre_megakernel::CompileError),
+
     /// LZMA compression failed.
     #[error("vyre-aot bundle: lzma error: {0}")]
     Lzma(String),
@@ -89,47 +93,11 @@ pub fn bundle(
     validate_artifact_for_bundle(artifact, weights)?;
     let launcher_tree: BTreeMap<PathBuf, String> = emit_launcher_rust(artifact, launcher_opts)?;
     fs::create_dir_all(out_dir)?;
-
-    // 1. Compress kernel bytes via LZMA.
-    let kernel_compressed = lzma_compress(&artifact.kernel_bytes)?;
-    let kernel_filename = format!("kernel.{}.lzma", artifact.target.extension());
-    let kernel_path = out_dir.join(&kernel_filename);
-    fs::write(&kernel_path, &kernel_compressed)?;
-
-    // 2. Compress weights via Brotli-11.
-    let weights_compressed = brotli_compress(weights)?;
-    let weights_filename = "weights.brotli".to_string();
-    let weights_path = out_dir.join(&weights_filename);
-    fs::write(&weights_path, &weights_compressed)?;
-
-    // 3. Compute hashes of the *uncompressed* bytes for manifest.
-    let kernel_sha = sha256_hex(&artifact.kernel_bytes);
-    let weights_sha = sha256_hex(weights);
-
-    // 4. Write manifest.
-    let manifest = Manifest {
-        schema: Manifest::SCHEMA_VERSION.to_string(),
-        aot_version: artifact.aot_version.clone(),
-        artifact_name: artifact_name.to_string(),
-        target: artifact.target,
-        entry_point: artifact.entry_point.clone(),
-        dispatch: artifact.dispatch,
-        kernel_file: kernel_filename.clone(),
-        weights_file: weights_filename.clone(),
-        kernel_compression: "lzma".to_string(),
-        weights_compression: "brotli-11".to_string(),
-        buffers: artifact.buffers.clone(),
-        kernel_sha256_hex: kernel_sha,
-        weights_sha256_hex: weights_sha,
-        notes: notes.to_string(),
-        vsa_fingerprint: artifact.vsa_fingerprint.clone(),
-    };
-    let manifest_path = out_dir.join("manifest.json");
-    fs::write(&manifest_path, serde_json::to_vec_pretty(&manifest)?)?;
+    let mut written = write_package_files(out_dir, artifact, weights, artifact_name, notes)?;
 
     // 5. Write launcher source tree.
     let launcher_root = out_dir.join(&launcher_opts.crate_name);
-    let mut written: Vec<PathBuf> = Vec::with_capacity(launcher_tree.len() + 3);
+    written.reserve(launcher_tree.len() + 1);
     for (rel, contents) in launcher_tree {
         let abs = launcher_root.join(rel);
         if let Some(parent) = abs.parent() {
@@ -157,163 +125,248 @@ pub fn bundle(
     let readme_path = out_dir.join("README.md");
     fs::write(&readme_path, readme)?;
 
-    written.extend([kernel_path, weights_path, manifest_path, readme_path]);
+    written.push(readme_path);
 
     Ok(Bundle { files: written })
+}
+
+/// Write the canonical envelope, weights, and manifest without generating a launcher.
+pub fn package_artifact(
+    out_dir: &Path,
+    artifact: &CompiledArtifact,
+    weights: &[u8],
+    artifact_name: &str,
+    notes: &str,
+) -> Result<Bundle, BundleError> {
+    validate_artifact_for_bundle(artifact, weights)?;
+    fs::create_dir_all(out_dir)?;
+    Ok(Bundle {
+        files: write_package_files(out_dir, artifact, weights, artifact_name, notes)?,
+    })
+}
+
+fn write_package_files(
+    out_dir: &Path,
+    artifact: &CompiledArtifact,
+    weights: &[u8],
+    artifact_name: &str,
+    notes: &str,
+) -> Result<Vec<PathBuf>, BundleError> {
+    let envelope_bytes = artifact.envelope().to_bytes()?;
+    let envelope_compressed = lzma_compress(&envelope_bytes)?;
+    let envelope_filename = "artifact.vmk.lzma".to_string();
+    let envelope_path = out_dir.join(&envelope_filename);
+    fs::write(&envelope_path, &envelope_compressed)?;
+
+    let weights_compressed = brotli_compress(weights)?;
+    let weights_filename = "weights.brotli".to_string();
+    let weights_path = out_dir.join(&weights_filename);
+    fs::write(&weights_path, &weights_compressed)?;
+
+    let target_payload = artifact.target_payload()?;
+    let manifest = Manifest {
+        schema: Manifest::SCHEMA_VERSION.to_string(),
+        aot_version: artifact.aot_version().to_string(),
+        artifact_name: artifact_name.to_string(),
+        target: artifact.target,
+        envelope_file: envelope_filename,
+        envelope_compression: "lzma".to_string(),
+        envelope_sha256_hex: sha256_hex(&envelope_bytes),
+        neutral_artifact_digest_hex: digest_hex(artifact.envelope().neutral().digest()),
+        target_payload_digest_hex: digest_hex(target_payload.digest()),
+        weights_file: weights_filename,
+        weights_compression: "brotli-11".to_string(),
+        weights_sha256_hex: sha256_hex(weights),
+        notes: notes.to_string(),
+        vsa_fingerprint: artifact.vsa_fingerprint().to_vec(),
+    };
+    let manifest_path = out_dir.join("manifest.json");
+    fs::write(&manifest_path, serde_json::to_vec_pretty(&manifest)?)?;
+    Ok(vec![envelope_path, weights_path, manifest_path])
+}
+
+/// Read and authenticate a packaged canonical artifact envelope.
+pub fn read_bundle_artifact(
+    bundle_dir: &Path,
+) -> Result<(Manifest, CompiledArtifact), BundleError> {
+    let manifest_bytes = fs::read(bundle_dir.join("manifest.json"))?;
+    let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
+    if manifest.schema != Manifest::SCHEMA_VERSION {
+        return Err(BundleError::InvalidArtifact(format!(
+            "manifest schema `{}` is incompatible; expected `{}`",
+            manifest.schema,
+            Manifest::SCHEMA_VERSION
+        )));
+    }
+    if manifest.envelope_compression != "lzma" {
+        return Err(BundleError::InvalidArtifact(format!(
+            "envelope compression `{}` is unsupported; expected `lzma`",
+            manifest.envelope_compression
+        )));
+    }
+    let compressed = fs::read(bundle_dir.join(&manifest.envelope_file))?;
+    let envelope_bytes = lzma_decompress(&compressed)?;
+    if sha256_hex(&envelope_bytes) != manifest.envelope_sha256_hex {
+        return Err(BundleError::InvalidArtifact(
+            "canonical envelope SHA-256 does not match manifest identity".to_string(),
+        ));
+    }
+    let envelope = vyre_megakernel::MegakernelArtifactEnvelope::from_bytes(&envelope_bytes)?;
+    let artifact = CompiledArtifact::new(
+        manifest.target,
+        envelope,
+        manifest.aot_version.clone(),
+        manifest.vsa_fingerprint.clone(),
+    )?;
+    if digest_hex(artifact.envelope().neutral().digest())
+        != manifest.neutral_artifact_digest_hex
+    {
+        return Err(BundleError::InvalidArtifact(
+            "neutral artifact digest does not match manifest identity".to_string(),
+        ));
+    }
+    if digest_hex(artifact.target_payload()?.digest()) != manifest.target_payload_digest_hex {
+        return Err(BundleError::InvalidArtifact(
+            "target payload digest does not match manifest identity".to_string(),
+        ));
+    }
+    Ok((manifest, artifact))
 }
 
 fn validate_artifact_for_bundle(
     artifact: &CompiledArtifact,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    if artifact.kernel_bytes.is_empty() {
+    let payload = artifact.target_payload()?;
+    if payload.bytes().is_empty() {
         return Err(BundleError::InvalidArtifact(
-            "kernel bytes are empty. Fix: compile the Program for a concrete GPU target before bundling.".to_string(),
+            "target payload bytes are empty".to_string(),
         ));
     }
-    if artifact.entry_point.is_empty() {
+    let entry = payload.entries().first().ok_or_else(|| {
+        BundleError::InvalidArtifact("target payload has no entry metadata".to_string())
+    })?;
+    if entry.resource_bindings.is_empty() {
         return Err(BundleError::InvalidArtifact(
-            "entry_point is empty. Fix: compile the artifact with a concrete visible kernel entry name.".to_string(),
+            "target entry has no canonical resource bindings".to_string(),
         ));
     }
-    if artifact.buffers.is_empty() {
-        return Err(BundleError::InvalidArtifact(
-            "buffer table is empty. Fix: emit at least the parameter/weight buffer required by launchers.".to_string(),
-        ));
-    }
-    validate_dispatch_geometry(artifact)?;
-    validate_buffer_table(artifact)?;
-    validate_weight_payload_fits_first_finite_buffer(artifact, weights)?;
-    Ok(())
+    let neutral = artifact.envelope().neutral();
+    let geometry = neutral
+        .geometry()
+        .iter()
+        .find(|geometry| geometry.node == entry.node)
+        .ok_or_else(|| {
+            BundleError::InvalidArtifact(
+                "target entry is not associated with canonical neutral geometry".to_string(),
+            )
+        })?;
+    validate_axes("workgroup_size", geometry.workgroup_size)?;
+    validate_axes("grid_size", entry.grid_size)?;
+    validate_resource_bindings(artifact)?;
+    validate_weight_payload_fits_first_finite_resource(artifact, weights)
 }
 
-fn validate_dispatch_geometry(artifact: &CompiledArtifact) -> Result<(), BundleError> {
-    for axis in 0..3 {
-        if artifact.dispatch.workgroup_size[axis] == 0 {
-            return Err(BundleError::InvalidArtifact(format!(
-                "workgroup_size axis {axis} is zero. Fix: derive explicit positive dispatch geometry before bundling."
-            )));
-        }
-        if artifact.dispatch.grid_size[axis] == 0 {
-            return Err(BundleError::InvalidArtifact(format!(
-                "grid_size axis {axis} is zero. Fix: run vyre-aot compile() or provide explicit finite grid geometry; runtime-grid placeholders are not bundleable."
-            )));
-        }
+fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
+    if let Some(axis) = axes.iter().position(|extent| *extent == 0) {
+        return Err(BundleError::InvalidArtifact(format!(
+            "{label} axis {axis} is zero; explicit positive geometry is required"
+        )));
     }
-    checked_axis_product("workgroup_size", artifact.dispatch.workgroup_size)?;
-    checked_axis_product("grid_size", artifact.dispatch.grid_size)?;
-    Ok(())
-}
-
-fn checked_axis_product(label: &str, axes: [u32; 3]) -> Result<u64, BundleError> {
     u64::from(axes[0])
         .checked_mul(u64::from(axes[1]))
         .and_then(|xy| xy.checked_mul(u64::from(axes[2])))
         .ok_or_else(|| {
             BundleError::InvalidArtifact(format!(
-                "{label} {axes:?} overflows u64. Fix: shard the AOT dispatch before bundling."
+                "{label} {axes:?} overflows u64; shard the AOT dispatch"
             ))
-        })
+        })?;
+    Ok(())
 }
 
-fn validate_buffer_table(artifact: &CompiledArtifact) -> Result<(), BundleError> {
-    let mut bindings: Vec<(u32, usize)> = Vec::with_capacity(artifact.buffers.len());
-    let mut names: Vec<(&str, usize)> = Vec::with_capacity(artifact.buffers.len());
-    let mut metrics_buffers = 0_usize;
-
-    for (index, buffer) in artifact.buffers.iter().enumerate() {
-        if buffer.name.is_empty() {
-            return Err(BundleError::InvalidArtifact(format!(
-                "buffer {index} has an empty name. Fix: emit stable buffer names before bundling."
-            )));
-        }
-        if buffer.element_size_bytes == 0 {
-            return Err(BundleError::InvalidArtifact(format!(
-                "buffer {index} `{}` has element_size_bytes=0. Fix: lower the buffer to a concrete fixed-width ABI element.",
-                buffer.name
-            )));
-        }
-        let _ = checked_buffer_bytes(index, buffer)?;
-        if buffer.name == "metrics" {
-            metrics_buffers += 1;
-            if buffer.element_size_bytes != 4 {
+fn validate_resource_bindings(artifact: &CompiledArtifact) -> Result<(), BundleError> {
+    let neutral = artifact.envelope().neutral();
+    let entry = &artifact.target_payload()?.entries()[0];
+    let mut metrics_resources = 0_usize;
+    for binding in &entry.resource_bindings {
+        let resource = neutral
+            .resources()
+            .iter()
+            .find(|resource| resource.value == binding.resource)
+            .ok_or_else(|| {
+                BundleError::InvalidArtifact(format!(
+                    "binding slot {} names missing canonical resource {}",
+                    binding.slot, binding.resource.0
+                ))
+            })?;
+        if resource.name == "metrics" {
+            metrics_resources += 1;
+            let element_size = if resource.element_count == 0 {
+                0
+            } else {
+                resource.byte_count / resource.element_count
+            };
+            if element_size != 4 {
                 return Err(BundleError::InvalidArtifact(format!(
-                    "metrics buffer has element_size_bytes={} but metrics records are u32 words. Fix: emit metrics.element_size_bytes=4.",
-                    buffer.element_size_bytes
+                    "metrics resource has {element_size} bytes per element; expected 4"
                 )));
             }
-            if buffer.element_count < METRIC_RECORD_WORDS {
+            if resource.element_count < u64::from(METRIC_RECORD_WORDS) {
                 return Err(BundleError::InvalidArtifact(format!(
-                    "metrics buffer has {} word(s) but final records require at least {METRIC_RECORD_WORDS}. Fix: allocate a larger metrics ring.",
-                    buffer.element_count
+                    "metrics resource has {} word(s); expected at least {METRIC_RECORD_WORDS}",
+                    resource.element_count
                 )));
             }
         }
-        bindings.push((buffer.binding, index));
-        names.push((buffer.name.as_str(), index));
     }
-
-    bindings.sort_unstable_by_key(|(binding, _)| *binding);
-    for pair in bindings.windows(2) {
-        if pair[0].0 == pair[1].0 {
-            return Err(BundleError::InvalidArtifact(format!(
-                "buffers {} and {} both use binding {}. Fix: emit a one-to-one CUDA argument table before bundling.",
-                pair[0].1, pair[1].1, pair[0].0
-            )));
-        }
-    }
-    names.sort_unstable_by(|left, right| left.0.cmp(right.0));
-    for pair in names.windows(2) {
-        if pair[0].0 == pair[1].0 {
-            return Err(BundleError::InvalidArtifact(format!(
-                "buffers {} and {} both use name `{}`. Fix: emit unique stable buffer names before bundling.",
-                pair[0].1, pair[1].1, pair[0].0
-            )));
-        }
-    }
-    if metrics_buffers > 1 {
+    if metrics_resources > 1 {
         return Err(BundleError::InvalidArtifact(format!(
-            "artifact has {metrics_buffers} metrics buffers. Fix: emit exactly one `metrics` buffer."
+            "target entry binds {metrics_resources} metrics resources; expected at most one"
         )));
     }
     Ok(())
 }
 
-fn checked_buffer_bytes(
-    index: usize,
-    buffer: &crate::artifact::BufferEntry,
-) -> Result<u64, BundleError> {
-    u64::from(buffer.element_count)
-        .checked_mul(u64::from(buffer.element_size_bytes))
-        .ok_or_else(|| {
-            BundleError::InvalidArtifact(format!(
-                "buffer {index} `{}` byte size overflows u64. Fix: shard the buffer before bundling.",
-                buffer.name
-            ))
-        })
-}
-
-fn validate_weight_payload_fits_first_finite_buffer(
+fn validate_weight_payload_fits_first_finite_resource(
     artifact: &CompiledArtifact,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    let first = &artifact.buffers[0];
+    let entry = &artifact.target_payload()?.entries()[0];
+    let first_binding = entry
+        .resource_bindings
+        .iter()
+        .min_by_key(|binding| binding.slot)
+        .expect("validated non-empty target resource bindings");
+    let first = artifact
+        .envelope()
+        .neutral()
+        .resources()
+        .iter()
+        .find(|resource| resource.value == first_binding.resource)
+        .expect("canonical target payload validation guarantees resource association");
     if first.element_count == 0 {
         return Ok(());
     }
-    let capacity = checked_buffer_bytes(0, first)?;
     let weight_bytes = u64::try_from(weights.len()).map_err(|error| {
         BundleError::InvalidArtifact(format!(
-            "weights payload length cannot fit u64: {error}. Fix: shard the weights artifact before bundling."
+            "weights payload length cannot fit u64: {error}"
         ))
     })?;
-    if weight_bytes > capacity {
+    if weight_bytes > first.byte_count {
         return Err(BundleError::InvalidArtifact(format!(
-            "weights payload has {weight_bytes} byte(s) but first buffer `{}` declares {capacity} byte(s). Fix: make buffer 0 the parameter buffer and size it to cover weights.brotli.",
-            first.name
+            "weights payload has {weight_bytes} byte(s) but first canonical resource `{}` declares {} byte(s)",
+            first.name, first.byte_count
         )));
     }
     Ok(())
+}
+
+fn digest_hex(digest: vyre_megakernel::Digest) -> String {
+    digest
+        .as_bytes()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn lzma_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
@@ -322,6 +375,14 @@ fn lzma_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
     lzma_rs::lzma_compress(&mut cursor, &mut out)
         .map_err(|e| BundleError::Lzma(format!("{e:?}")))?;
     Ok(out)
+}
+
+fn lzma_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
+    let mut output = Vec::new();
+    let mut cursor = Cursor::new(input);
+    lzma_rs::lzma_decompress(&mut cursor, &mut output)
+        .map_err(|error| BundleError::Lzma(format!("{error:?}")))?;
+    Ok(output)
 }
 
 fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
