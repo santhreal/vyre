@@ -38,6 +38,7 @@ uring-cmd-nvme = []
 vyre-driver.workspace = true
 vyre-self-substrate = { workspace = true, optional = true }
 vyre-foundation.workspace = true
+vyre-megakernel.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 blake3.workspace = true

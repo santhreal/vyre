@@ -122,6 +122,9 @@ impl From<vyre_driver::backend::BackendError> for PipelineError {
     }
 }
 
+/// Canonical artifact-envelope authentication and exact-format admission.
+pub mod artifact_admission;
+
 /// Persistent megakernel  -  the vyre Program that runs forever on
 /// the GPU, decoding host-fed ring opcodes from a host-fed ring buffer.
 pub mod megakernel;
