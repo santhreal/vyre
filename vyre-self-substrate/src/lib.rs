@@ -122,8 +122,6 @@ mod test_support;
 /// private module paths.
 pub mod optimizer;
 
-/// Backward-compatible facade for the optimizer contract modules.
-pub mod optimization;
 
 pub use analysis::{
     cost_model, dataflow_fixpoint, decision_telemetry, diagnostic_aggregation,

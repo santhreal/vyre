@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Public-API stability gate.
 #
-# Extracts every `pub` item from each published crate's src/ tree and
-# diffs against docs/public-api/<crate>.txt. Any drift requires
-# --refresh + a matching CHANGELOG entry.
+# Uses rustdoc through `cargo public-api` to snapshot the externally reachable
+# API of every publishable workspace crate, including modules and reexports,
+# then diffs it against docs/public-api/<package>.txt.
 #
 # HAZARD, READ BEFORE REFRESHING IN A SHARED WORKTREE. A refresh reads the
 # tree as it exists at that instant, so an unscoped refresh installs EVERY
@@ -30,32 +30,31 @@ cd "$ROOT" || exit 2
 SNAPSHOT_DIR="docs/public-api"
 mkdir -p "$SNAPSHOT_DIR"
 
-PUBLISHED_CRATES=(
-    "vyre-core:vyre"
-    "vyre-driver:vyre-driver"
-    "vyre-driver-wgpu:vyre-driver-wgpu"
-    "vyre-foundation:vyre-foundation"
-    "vyre-primitives:vyre-primitives"
-    "vyre-spec:vyre-spec"
-)
+if ! inventory_output="$(
+    PYTHONDONTWRITEBYTECODE=1 python3 scripts/public_api_snapshot_inventory.py "$ROOT"
+)"; then
+    exit 2
+fi
+mapfile -t PUBLISHED_CRATES <<< "$inventory_output"
+if [[ "${#PUBLISHED_CRATES[@]}" -eq 0 ]]; then
+    echo "Fix: public API inventory found no publishable workspace crates." >&2
+    exit 2
+fi
 
 extract_api() {
-    local src_dir="$1"
+    local crate_name="$1"
+    local current
+
+    if ! current="$(cargo public-api -sss -p "$crate_name")"; then
+        echo "Fix: cargo public-api could not extract the $crate_name surface." >&2
+        return 1
+    fi
+
     # LC_ALL=C is LOAD-BEARING, not tidiness. Without it `sort` collates under
     # the caller's locale, so the snapshot's line order becomes a function of
-    # the environment rather than of the tree. The orders genuinely differ:
-    # byte order puts `:` (0x3A) before `_` (0x5F), so C collation emits
-    # `HOT_PATH_COST_SCALE:` before `HOT_PATH_COST_SCALE_BPS` while a
-    # locale-aware collation weights punctuation differently and swaps them.
-    # Unpinned, the gate reported drift on a pure reordering with zero surface
-    # change, and it failed in opposite environments depending on which locale
-    # last refreshed it. Pinning makes the snapshot a function of the tree
-    # alone. Changing this line rewrites all six snapshots.
-    grep -rhE '^[[:space:]]*pub[[:space:]]+(fn|struct|enum|trait|const|static|type|mod|use)[[:space:]]' \
-        "$src_dir" 2>/dev/null \
-        | grep -vE '^[[:space:]]*pub[[:space:]]+use[[:space:]]' \
-        | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//' \
-        | LC_ALL=C sort -u
+    # the environment rather than of rustdoc's public surface. Pinning makes
+    # the snapshot a function of the tree alone.
+    printf '%s\n' "$current" | LC_ALL=C sort -u
 }
 
 refresh=0
@@ -90,6 +89,22 @@ fi
 
 refreshed_any=0
 failed=0
+
+# The snapshot directory and publishable manifest inventory are one set. A
+# stale snapshot is as misleading as a missing one: it implies a stability
+# promise for a package that no longer participates in the release train.
+declare -A expected_snapshots=()
+for entry in "${PUBLISHED_CRATES[@]}"; do
+    expected_snapshots["${entry#*:}"]=1
+done
+for snap in "$SNAPSHOT_DIR"/*.txt; do
+    [[ -e "$snap" ]] || continue
+    snapshot_name="$(basename "$snap" .txt)"
+    if [[ -z "${expected_snapshots[$snapshot_name]+x}" ]]; then
+        echo "UNOWNED SNAPSHOT: $snap. Fix: remove it or restore a publishable workspace package with package.name '$snapshot_name'." >&2
+        failed=1
+    fi
+done
 for entry in "${PUBLISHED_CRATES[@]}"; do
     crate_dir="${entry%:*}"
     crate_name="${entry#*:}"
@@ -97,14 +112,18 @@ for entry in "${PUBLISHED_CRATES[@]}"; do
     snap="$SNAPSHOT_DIR/${crate_name}.txt"
 
     [[ ! -d "$src" ]] && continue
+    if [[ "$refresh" -eq 1 && -n "$only_crate" && "$only_crate" != "$crate_dir" && "$only_crate" != "$crate_name" ]]; then
+        continue
+    fi
 
-    current="$(extract_api "$src")"
+
+    if ! current="$(extract_api "$crate_name")"; then
+        failed=1
+        continue
+    fi
     [[ -z "$current" ]] && continue
 
     if [[ "$refresh" -eq 1 ]]; then
-        if [[ -n "$only_crate" && "$only_crate" != "$crate_dir" && "$only_crate" != "$crate_name" ]]; then
-            continue
-        fi
 
         # Show the change before installing it. An unreviewed diff here is the
         # whole hazard: printing it is what makes an unintended bless visible.
