@@ -17,7 +17,7 @@ use vyre_conform_runner::dispatch_grid;
 use vyre_conform_runner::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 use vyre_intrinsics::harness::OpEntry as IntrinsicsOpEntry;
-use vyre_libs::harness::OpEntry as LibsOpEntry;
+use vyre_libs::fixture_catalog::OpEntry as LibsOpEntry;
 use vyre_primitives::harness::OpEntry as PrimitivesOpEntry;
 use vyre_reference::value::Value;
 use vyre_spec::expr_variants;

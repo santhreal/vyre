@@ -205,7 +205,7 @@ fn tier_of(op_id: &str) -> Tier {
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         ops.push(build_info(entry.id, (entry.build)()));
     }
     for entry in vyre_primitives::harness::all_entries() {

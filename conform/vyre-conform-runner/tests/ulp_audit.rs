@@ -50,7 +50,7 @@ struct UnifiedEntry {
 }
 
 fn all_entries() -> Vec<UnifiedEntry> {
-    let libs = iter::<vyre_libs::harness::OpEntry>
+    let libs = iter::<vyre_libs::fixture_catalog::OpEntry>
         .into_iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,

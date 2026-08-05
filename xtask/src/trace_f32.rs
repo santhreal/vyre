@@ -22,7 +22,7 @@ use std::process;
 
 use vyre::ir::Program;
 use vyre_intrinsics::harness::OpEntry as IntrinsicsEntry;
-use vyre_libs::harness::OpEntry as LibsEntry;
+use vyre_libs::fixture_catalog::OpEntry as LibsEntry;
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
@@ -89,7 +89,7 @@ pub(crate) fn run_cmd(args: &[String]) {
 }
 
 fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
-    if let Some(entry) = vyre_libs::harness::all_entries().find(|e: &&LibsEntry| e.id == op_id) {
+    if let Some(entry) = vyre_libs::fixture_catalog::all_entries().find(|e: &&LibsEntry| e.id == op_id) {
         let inputs = entry.test_inputs?;
         return Some(((entry.build)(), (inputs)()));
     }

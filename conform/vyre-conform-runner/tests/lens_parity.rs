@@ -30,7 +30,7 @@ fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: 
 
 #[test]
 fn every_op_passes_the_witness_lens() {
-    let entries = vyre_libs::harness::all_entries();
+    let entries = vyre_libs::fixture_catalog::all_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut failures = Vec::with_capacity(failure_capacity);
     let mut passed = 0usize;
@@ -57,8 +57,8 @@ fn fixpoint_contract_reachable_for_every_registered_op() {
     // Loops every op with a registered FixpointContract and confirms
     // the contract's structural invariants: named flag buffer resolvable,
     // max_iterations > 0.
-    for entry in vyre_libs::harness::all_entries() {
-        let Some(contract) = vyre_libs::harness::fixpoint_contract(entry.id) else {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
+        let Some(contract) = vyre_libs::fixture_catalog::fixpoint_contract(entry.id) else {
             continue;
         };
         assert!(
@@ -88,13 +88,13 @@ fn convergence_contract_reachable_for_every_registered_op() {
     // Discover every op with a ConvergenceContract and verify structural
     // invariants plus CPU-side and backend convergence. Backend acquisition
     // must fail loudly if no dispatch-capable GPU backend is linked.
-    let entries = vyre_libs::harness::all_entries();
+    let entries = vyre_libs::fixture_catalog::all_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut cpu_failures = Vec::with_capacity(failure_capacity);
     let backend = build_dispatch_backend();
 
     for entry in entries {
-        let Some(contract) = vyre_libs::harness::convergence_contract(entry.id) else {
+        let Some(contract) = vyre_libs::fixture_catalog::convergence_contract(entry.id) else {
             continue;
         };
         assert!(
@@ -177,7 +177,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         vec![vec![]]
     }
 
-    let entry = vyre_libs::harness::OpEntry {
+    let entry = vyre_libs::fixture_catalog::OpEntry {
         id: "vyre-conform::synthetic::sin_ulp_probe",
         build: build_sin_program,
         test_inputs: Some(sin_inputs),

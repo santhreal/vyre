@@ -15,7 +15,7 @@
 use vyre_driver::{BackendError, DispatchConfig, Error, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_foundation::program_caps;
-use vyre_libs::harness::{convergence_contract, fixpoint_contract, FixpointContract, OpEntry};
+use vyre_libs::fixture_catalog::{convergence_contract, fixpoint_contract, FixpointContract, OpEntry};
 use vyre_reference::value::Value;
 
 use crate::fp_parity::{compare_output_buffers, BufferParity};
@@ -834,7 +834,7 @@ mod convergence_tests {
     fn convergence_contract_ops_are_discoverable() {
         // Every op with a ConvergenceContract must be discoverable and
         // must NOT also have a FixpointContract.
-        let convergent_ids: Vec<&str> = vyre_libs::harness::all_entries()
+        let convergent_ids: Vec<&str> = vyre_libs::fixture_catalog::all_entries()
             .filter_map(|e| convergence_contract(e.id).map(|_| e.id))
             .collect();
         assert!(

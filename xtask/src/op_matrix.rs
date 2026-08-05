@@ -279,7 +279,7 @@ fn registered_records() -> Result<Vec<OpRecord>, String> {
     for entry in vyre_primitives::harness::all_entries() {
         push_registered(&mut ids, entry.id, "vyre-primitives::harness")?;
     }
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         push_registered(&mut ids, entry.id, "vyre-harness")?;
     }
     for registration in inventory::iter::<vyre_driver::OpDefRegistration> {

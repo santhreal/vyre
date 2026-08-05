@@ -373,7 +373,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         );
     }
 
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         let tier = classify_op_id(entry.id);
         assert!(
             matches!(tier, OpTier::Libs | OpTier::External),
@@ -409,7 +409,7 @@ fn registered_ops() -> Vec<RegisteredOp> {
             tier: OpTier::Primitive,
         });
     }
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         ops.push(RegisteredOp {
             id: entry.id.to_string(),
             source: "vyre-harness",

@@ -3,7 +3,7 @@
 //!
 //! Spec: `docs/region-chain.md` (Phase J).
 //!
-//! Walks the registered op inventories (`vyre_libs::harness`,
+//! Walks the registered op inventories (`vyre_libs::fixture_catalog`,
 //! `vyre_primitives::harness`, and `vyre_intrinsics::harness`), finds the
 //! matching OpEntry, calls `build()`, and recurses into every
 //! `Node::Region` in the Program's entry body extracting the generator
@@ -46,7 +46,7 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn resolve_program(op_id: &str) -> Option<Program> {
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         if entry.id == op_id {
             return Some((entry.build)());
         }
