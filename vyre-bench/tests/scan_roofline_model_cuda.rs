@@ -18,7 +18,7 @@
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {

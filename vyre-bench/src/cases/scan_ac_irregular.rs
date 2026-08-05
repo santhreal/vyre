@@ -12,13 +12,13 @@ use crate::api::resident::{
 use crate::api::suite::SuiteKind;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
-use vyre_libs::scan::classic_ac::{
+use vyre::scan::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, ClassicAcAutomaton,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
+use vyre::scan::{pack_haystack_u32, pack_u32_slice};
 
 mod baseline;
 mod count;

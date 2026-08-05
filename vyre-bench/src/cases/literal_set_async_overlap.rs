@@ -26,7 +26,7 @@ use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// Batch A and batch B use DIFFERENT sizes so their content (and match sets)
 /// differ, a cross-handle buffer mixup in the pipeline would then be

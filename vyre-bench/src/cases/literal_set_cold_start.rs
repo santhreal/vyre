@@ -24,7 +24,7 @@ use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// A consumer-shaped single corpus. Big enough that the first upload + dispatch is
 /// a real cost, small enough that the cold path is dominated by build/first-touch,

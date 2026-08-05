@@ -21,7 +21,7 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::build_irregular_haystack;
 use crate::cases::scan_ac_irregular::PATTERNS;
-use vyre_libs::scan::{scan_paged_fused, scan_paged_fused_async, GlobalMatch, GpuLiteralSet};
+use vyre::scan::{scan_paged_fused, scan_paged_fused_async, GlobalMatch, GpuLiteralSet};
 
 /// Total corpus bytes, a few MiB so the single-shot CPU reference is tractable
 /// while the paging mechanism runs many windows.

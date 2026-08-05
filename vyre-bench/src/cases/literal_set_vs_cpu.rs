@@ -29,7 +29,7 @@ use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// A consumer-shaped mixed corpus, large enough that the GPU's staging (upload +
 /// readback) is a real fraction of wall time, so the comparison is honestly

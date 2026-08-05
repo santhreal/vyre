@@ -1,7 +1,7 @@
 use crate::api::case::BenchError;
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::dispatch_io::try_unpack_match_triples;
+use vyre::scan::dispatch_io::try_unpack_match_triples;
 
 use super::metrics::ScanAcStats;
 use super::{MATCH_TRIPLE_WORDS, PATTERNS};

@@ -12,8 +12,8 @@ use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::classic_ac::{CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS};
-use vyre_libs::scan::{
+use vyre::scan::classic_ac::{CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS};
+use vyre::scan::{
     GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedScan, LiteralSetScanScratch,
     LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
     LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES, LITERAL_SET_MATCHES_RESOURCE_INDEX,

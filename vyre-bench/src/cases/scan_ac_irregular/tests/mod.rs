@@ -207,7 +207,7 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
         .unwrap()
         .len() as u32;
     let program = with_reference_dispatch_lanes(
-        vyre_libs::scan::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
+        vyre::scan::classic_ac::build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
         haystack.len() as u32,
     );
     let mut inputs = count::scan_ac_count_inputs(&ac, &haystack);

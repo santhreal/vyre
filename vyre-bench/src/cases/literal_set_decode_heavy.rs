@@ -25,7 +25,7 @@ use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// A consumer-shaped corpus, tiled densely so the scan produces many thousands of
 /// matches and the host readback/decode is the load-bearing cost.

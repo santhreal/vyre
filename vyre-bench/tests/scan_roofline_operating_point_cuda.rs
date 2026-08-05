@@ -19,7 +19,7 @@
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 fn planted_haystack(bytes: usize) -> Vec<u8> {
     let mut haystack = vec![b'.'; bytes];

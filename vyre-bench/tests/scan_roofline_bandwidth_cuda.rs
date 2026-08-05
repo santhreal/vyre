@@ -13,7 +13,7 @@
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_scan_reports_achieved_bandwidth_within_device_peak() {

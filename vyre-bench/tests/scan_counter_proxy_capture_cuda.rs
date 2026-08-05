@@ -11,7 +11,7 @@
 //! when no CUDA device is present.
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// The four scan-counter proxies captured from one real CUDA scan, in the units
 /// the evidence table records. Mirrors the `required_counters` of the cuda backend
