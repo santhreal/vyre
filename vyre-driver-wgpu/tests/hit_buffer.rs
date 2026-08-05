@@ -6,8 +6,8 @@ use std::collections::BTreeSet;
 use vyre::DispatchConfig;
 use vyre::VyreBackend;
 use vyre_foundation::optimizer::pre_lowering::optimize;
-use vyre_libs::scan::dispatch_io::pack_u32_slice as pack_words;
-use vyre_libs::scan::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre::scan::{compact_hits_with_layout, emit_hit_with_layout};
 use vyre_reference::value::Value;
 
 fn unpack_words(bytes: &[u8]) -> Vec<u32> {

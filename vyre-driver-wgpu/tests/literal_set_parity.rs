@@ -2,7 +2,7 @@
 
 #![allow(deprecated)]
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::literal_set::{GpuLiteralSet, Match};
+use vyre::scan::literal_set::{GpuLiteralSet, Match};
 
 #[test]
 fn literal_set_parity_abc() {

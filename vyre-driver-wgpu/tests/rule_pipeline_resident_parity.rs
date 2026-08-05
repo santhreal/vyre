@@ -19,7 +19,7 @@ use std::time::Instant;
 
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::{build_rule_pipeline, ResidentRulePipeline};
+use vyre::scan::{build_rule_pipeline, ResidentRulePipeline};
 
 /// A pattern set large enough that the lane-major transition table is non-trivial
 /// (this is the table the resident path avoids re-uploading every scan).
@@ -30,7 +30,7 @@ const PATTERNS: &[&str] = &[
 const MAX_MATCHES: u32 = 10_000;
 
 fn borrowed_then_reference(
-    pipeline: &vyre_libs::scan::RulePipeline,
+    pipeline: &vyre::scan::RulePipeline,
     backend: &WgpuBackend,
     haystack: &[u8],
 ) -> Vec<Match> {

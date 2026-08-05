@@ -15,10 +15,10 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::{cached_load_or_compile, engine_cache_path, GpuLiteralSet, MatchScan};
+use vyre::scan::{cached_load_or_compile, engine_cache_path, GpuLiteralSet, MatchScan};
 
 #[cfg(feature = "matching-nfa")]
-use vyre_libs::scan::build_rule_pipeline;
+use vyre::scan::build_rule_pipeline;
 
 // ---------------------------------------------------------------------------
 // 1. Cache file corruption recovery (7 tests)
