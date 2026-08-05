@@ -2,14 +2,14 @@
 
 use naga::{Block, Statement};
 use std::sync::Arc;
-use vyre_driver::DispatchConfig;
+
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 
 fn emit_validated_module_and_wgsl(program: &Program) -> (naga::Module, String) {
-    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let module = emit_module(program, TEST_WORKGROUP_SIZE)
         .expect("Fix: test program must lower to a valid Naga module.");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

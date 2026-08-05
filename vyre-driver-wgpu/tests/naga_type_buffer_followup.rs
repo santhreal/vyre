@@ -2,7 +2,7 @@
 mod common;
 
 use common::emit_validated_wgsl as emit_wgsl;
-use vyre_driver::DispatchConfig;
+
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
@@ -11,7 +11,7 @@ const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 /// Emit `program` to a naga module and assert it passes naga's full validator
 /// the same validation the wgpu backend runs before dispatch.
 fn emit_validated_module(program: &Program) -> naga::Module {
-    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let module = emit_module(program, TEST_WORKGROUP_SIZE)
         .expect("Fix: test program must lower to valid Naga.");
     naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -122,7 +122,7 @@ fn bytes_buffers_fail_with_pack_prepass_error() {
         vec![Node::Return],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: raw byte buffers must not lower as invalid array<u32> storage.");
     assert!(
         err.to_string().contains("pack-to-u32 pre-pass"),
@@ -143,7 +143,7 @@ fn non_word_arrays_fail_with_struct_lowering_error() {
         vec![Node::Return],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: non-4-byte arrays must not silently lower through array<u32>.");
     assert!(
         err.to_string().contains("struct-backed array"),
@@ -158,7 +158,7 @@ fn zero_sized_workgroup_buffers_are_rejected_at_lowering_boundary() {
         [1, 1, 1],
         vec![Node::Return],
     );
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: zero-sized workgroup buffers must not lower to Naga.");
     assert!(
         err.to_string().contains("zero static element count"),
@@ -178,7 +178,7 @@ fn persistent_buffers_are_rejected_before_naga_address_space_lowering() {
         vec![Node::Return],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: persistent buffers must be stripped before wgpu lowering.");
     assert!(
         err.to_string().contains("AsyncLoad/AsyncStore"),
@@ -199,7 +199,7 @@ fn f16_buffers_reject_until_wgsl_parser_accepts_enable_f16() {
         vec![Node::Return],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE).expect_err(
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE).expect_err(
         "Fix: F16 buffers must reject before emitting WGSL this Naga stack cannot parse",
     );
     assert!(

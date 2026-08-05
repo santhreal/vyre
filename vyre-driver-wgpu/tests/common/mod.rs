@@ -48,7 +48,7 @@ pub(crate) use vyre_primitives::wire::decode_u32_le_bytes_all as words_from_byte
 
 /// Lower a test program with the canonical unit workgroup, validate it, and return WGSL.
 pub(crate) fn emit_validated_wgsl(program: &Program) -> String {
-    let module = emit_module(program, &DispatchConfig::default(), [1, 1, 1])
+    let module = emit_module(program, [1, 1, 1])
         .expect("Fix: test program must lower to a valid Naga module.");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

@@ -3,7 +3,7 @@
 mod common;
 
 use common::emit_validated_wgsl as emit_wgsl;
-use vyre_driver::DispatchConfig;
+
 use vyre_emit_naga::program::emit_module;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
@@ -100,7 +100,7 @@ fn fma_rejects_non_f32_operands_with_actionable_message() {
         )],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: Fma with integer operands must reject before emitting invalid Naga.");
     let message = err.to_string();
     assert!(
@@ -331,7 +331,7 @@ fn async_nodes_are_rejected_in_naga_emit() {
         ],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: async nodes should fail hard in wgpu lowering.");
     let message = err.to_string();
     assert!(
@@ -368,7 +368,7 @@ fn resume_nodes_are_rejected_in_naga_emit() {
         vec![Node::resume("trap-tag")],
     );
 
-    let err = emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err("Fix: resume nodes should fail hard in wgpu lowering.");
     let message = err.to_string();
     assert!(

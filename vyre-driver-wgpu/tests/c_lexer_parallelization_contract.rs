@@ -13,7 +13,7 @@ mod common;
 use common::words_from_bytes;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
-use vyre::DispatchConfig;
+
 use vyre_emit_naga::program::emit_module;
 use vyre_libs::parsing::c::lex::keyword::{
     c_keyword, c_keyword_map_words, reference_c_keyword_types, C_KEYWORDS,
@@ -32,7 +32,7 @@ fn haystack_words(source: &[u8]) -> Vec<u32> {
 }
 
 fn emit_wgsl(program: &vyre::ir::Program) -> String {
-    let module = emit_module(program, &DispatchConfig::default(), [1, 1, 1])
+    let module = emit_module(program, [1, 1, 1])
         .expect("Program must lower to a valid Naga module");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

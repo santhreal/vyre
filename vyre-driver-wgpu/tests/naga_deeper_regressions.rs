@@ -7,7 +7,7 @@
 
 use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::memory_model::MemoryOrdering;
-use vyre::DispatchConfig;
+
 use vyre_emit_naga::program as naga_emit;
 
 const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
@@ -75,7 +75,7 @@ fn f53_cast_to_u64_lowers_to_vec2_pair() {
     );
 
     let wgsl = module_to_wgsl(
-        &naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+        &naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE)
             .expect("Fix: U32 -> U64 cast must lower to the vec2<u32> backing representation."),
     );
     assert!(
@@ -106,7 +106,7 @@ fn f59_u64_add_rejects_with_named_carry_hint() {
         )],
     );
 
-    let err = naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let err = naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect_err(
             "Fix: U64 Add must reject; a componentwise vec2<u32> sum \
              without carry would silently produce wrong results.",
@@ -139,7 +139,7 @@ fn f59_u64_bitand_still_lowers() {
         )],
     );
 
-    let res = naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE);
+    let res = naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE);
     assert!(
         res.is_ok(),
         "Fix: bitwise ops on U64 are componentwise-correct under the \
@@ -174,7 +174,7 @@ fn f_gap1_atomic_lru_update_lowers_to_timestamp_atomic_max() {
     );
 
     let wgsl = module_to_wgsl(
-        &naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+        &naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE)
             .expect("Fix: LRU update must lower to timestamp atomic max on wgpu."),
     );
     assert!(

@@ -10,11 +10,11 @@ use c_grammar_gen::lex_c11_max_munch_kinds;
 use proptest::prelude::*;
 use std::sync::OnceLock;
 use vyre::ir::{Expr, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
 use vyre_foundation::optimizer::pre_lowering::optimize;
-use vyre_libs::harness::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::{all_entries, OpEntry};
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
@@ -374,7 +374,7 @@ fn node_count_from_vast(bytes: &[u8]) -> u32 {
     u32::try_from(bytes.len() / VAST_STRIDE_BYTES).unwrap_or_default()
 }
 fn emit_wgsl(program: &Program) -> String {
-    let module = naga_emit::emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let module = naga_emit::emit_module(program, TEST_WORKGROUP_SIZE)
         .expect("Fix: program must lower to a Naga module");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

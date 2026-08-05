@@ -53,11 +53,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     // end, without the test having to dig into naga_emit internals.
     {
         use vyre_emit_naga::program::emit_module;
-        let module = emit_module(
-            &program,
-            &DispatchConfig::default(),
-            [workgroup_size_x, 1, 1],
-        )
+        let module = emit_module(&program, [workgroup_size_x, 1, 1])
         .expect("megakernel Program must emit valid Naga");
         let info = naga::valid::Validator::new(
             naga::valid::ValidationFlags::all(),
@@ -140,7 +136,7 @@ fn megakernel_wgsl_contains_compute_entry_and_atomic_cas() {
     use vyre_emit_naga::program::emit_module;
 
     let program = megakernel::build_program_sharded(64, &[]);
-    let module = emit_module(&program, &DispatchConfig::default(), [64, 1, 1])
+    let module = emit_module(&program, [64, 1, 1])
         .expect("megakernel must emit Naga");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

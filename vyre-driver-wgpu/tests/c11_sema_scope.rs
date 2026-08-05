@@ -185,7 +185,7 @@ fn c_sema_scope_program_emits_valid_wgsl() {
     let program = program_for(fixture.tok_types.len() as u32, fixture.haystack.len());
     let errors = validate(&program);
     assert!(errors.is_empty(), "c_sema_scope must validate: {errors:?}");
-    let module = naga_emit::emit_module(&program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let module = naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE)
         .expect("Scope op must lower to a valid Naga module");
     let _info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

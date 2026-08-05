@@ -23,7 +23,7 @@
 #![cfg(feature = "c-parser")]
 
 use c_grammar_gen::{c11_lexer::build_c11_lexer_dfa, wire::PackedBlob};
-use vyre::DispatchConfig;
+
 use vyre_emit_naga::program::emit_module;
 use vyre_libs::parsing::c::lex::keyword::{c_keyword, C_KEYWORDS};
 use vyre_libs::parsing::c::lex::lexer::c11_lexer;
@@ -37,7 +37,7 @@ const TEST_WORKGROUP_SIZE: [u32; 3] = [1, 1, 1];
 const C11_PIPELINE_SMOKE_TOKENS: u32 = 9;
 
 fn emit_wgsl(program: &vyre::ir::Program) -> String {
-    let module = emit_module(program, &DispatchConfig::default(), TEST_WORKGROUP_SIZE)
+    let module = emit_module(program, TEST_WORKGROUP_SIZE)
         .expect("Program must lower to a valid Naga module");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
