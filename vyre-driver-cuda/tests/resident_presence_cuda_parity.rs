@@ -22,7 +22,7 @@
 use std::collections::BTreeSet;
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 // pattern_id order: key=0 token=1 secret=2 AKIA=3 ghp_=4 sk_live_=5 password=6 api=7
 const LITERALS: &[&[u8]] = &[

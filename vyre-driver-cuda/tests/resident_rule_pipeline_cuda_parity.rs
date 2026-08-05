@@ -18,7 +18,7 @@
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::build_rule_pipeline;
+use vyre::scan::build_rule_pipeline;
 
 /// Sort matches into a deterministic order so the expected-set assertion is
 /// independent of the kernel's per-workgroup emission order.

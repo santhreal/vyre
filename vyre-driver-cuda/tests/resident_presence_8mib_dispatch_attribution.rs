@@ -28,7 +28,7 @@
 use std::time::Instant;
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 const HAYSTACK_BYTES: usize = 8 * 1024 * 1024;
 const ITERS: usize = 20;
