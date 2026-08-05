@@ -1,6 +1,6 @@
 [package]
 name = "vyre-emit-spirv"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "SPIR-V binary emitter for vyre KernelDescriptor. Routes through naga::Module → naga::back::spv to share substrate-neutral lowering with vyre-emit-naga."
@@ -21,24 +21,13 @@ path = "src/lib.rs"
 [dependencies]
 vyre-emit-naga = { workspace = true }
 vyre-lower = { workspace = true }
-# `matching` enables `vyre_primitives::matching` (AnchorDfaPlan, build_anchor_dfa_plan,
-# …) used UNCONDITIONALLY by `src/anchor_dfa_offload.rs`. The workspace dep is
-# default-features = false, so this must be requested explicitly: it built locally
-# only because another workspace crate unifies it on; the isolated `cargo publish`
-# verify build compiled it out (E0432).
-# `hash` is stated explicitly: `vyre_primitives::matching::nfa_to_dfa` imports
-# `crate::hash::fnv1a` UNCONDITIONALLY, and vyre-primitives 0.6.3 and 0.6.4 shipped a
-# `matching` feature that did not self-enable `hash`, so an isolated build against
-# either failed with E0433. 0.6.5 fixed the self-enable; naming both features here
-# keeps this crate buildable against the older published floors as well.
-vyre-primitives = { workspace = true, features = ["matching", "hash"] }
 naga = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-vyre-foundation.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true
+vyre-foundation.workspace = true
 # integration tests/benches assert against these crates' public APIs
 vyre-emit-ptx = { path = "../vyre-emit-ptx" }
 proptest.workspace = true

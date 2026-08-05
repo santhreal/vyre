@@ -39,7 +39,6 @@ mod error;
 pub mod patterns;
 pub mod program;
 pub use error::EmitError;
-pub use vyre_lower;
 
 /// Stable diagnostic row emitted when binding a lowered Vyre operation into a
 /// Naga module.
@@ -273,6 +272,33 @@ pub fn emit(desc: &KernelDescriptor) -> Result<naga::Module, EmitError> {
     let module = emitter::emit_uncached(desc)?;
     lock_module_cache().insert(cache_key, desc, &module);
     Ok(module)
+}
+
+/// Emit a Naga module only when `target` supports every descriptor requirement.
+///
+/// This entry point separates target admission from driver dispatch policy.
+/// The returned module is byte-for-byte equivalent to [`emit`] when admitted.
+///
+/// # Errors
+///
+/// Returns a stable unsupported-capability error before Naga construction when
+/// the descriptor exceeds the supplied subgroup or workgroup capabilities.
+pub fn emit_with_capabilities(
+    desc: &KernelDescriptor,
+    target: &vyre_lower::EmissionTargetCapabilities,
+) -> Result<naga::Module, EmitError> {
+    let required = vyre_lower::required_subgroup_capabilities(desc);
+    if let Some(capability) = target.subgroup.first_missing(required) {
+        return Err(EmitError::UnsupportedCapability(capability));
+    }
+    if let Some(violation) =
+        vyre_lower::validate_workgroup_size(desc.dispatch.workgroup_size, target.workgroup)
+            .into_iter()
+            .next()
+    {
+        return Err(EmitError::UnsupportedWorkgroup(violation));
+    }
+    emit(desc)
 }
 
 /// Emit many independent descriptors exactly as provided.

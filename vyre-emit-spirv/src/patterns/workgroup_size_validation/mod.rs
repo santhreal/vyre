@@ -19,51 +19,16 @@
 //! raise the device requirement bar.
 
 use serde::{Deserialize, Serialize};
-use vyre_lower::KernelDescriptor;
-
-/// Vulkan-baseline limits  -  every conformant Vulkan implementation
-/// must support at least these. Most desktop GPUs support
-/// considerably higher.
-pub const VULKAN_BASELINE: DeviceLimits = DeviceLimits {
-    max_workgroup_size_per_dim: [1024, 1024, 64],
-    max_workgroup_invocations: 1024,
+use vyre_lower::{
+    validate_workgroup_size, KernelDescriptor, WorkgroupLimitViolation, WorkgroupLimits,
 };
 
-/// Per-device compute workgroup limits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct DeviceLimits {
-    /// Per-dimension limit (X, Y, Z).
-    pub max_workgroup_size_per_dim: [u32; 3],
-    /// Product limit  -  total threads per workgroup.
-    pub max_workgroup_invocations: u32,
-}
-
-/// A workgroup-size constraint violated by a kernel descriptor.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Violation {
-    /// `workgroup_size[axis]` exceeds `limits.max_workgroup_size_per_dim[axis]`.
-    DimExceeded {
-        /// Zero-based workgroup axis.
-        axis: u8,
-        /// Requested size on the axis.
-        actual: u32,
-        /// Maximum supported size on the axis.
-        limit: u32,
-    },
-    /// Product `workgroup_size[0] * [1] * [2]` exceeds
-    /// `limits.max_workgroup_invocations`.
-    InvocationsExceeded {
-        /// Requested invocation count.
-        actual: u32,
-        /// Maximum supported invocation count.
-        limit: u32,
-    },
-    /// One of the dims is zero  -  kernel would never run.
-    ZeroDim {
-        /// Zero-based workgroup axis whose size is zero.
-        axis: u8,
-    },
-}
+/// Vulkan-baseline limits: every conformant Vulkan implementation must
+/// support at least these values.
+pub const VULKAN_BASELINE: WorkgroupLimits = WorkgroupLimits {
+    max_size: [1024, 1024, 64],
+    max_invocations: 1024,
+};
 
 /// Workgroup-size validation result for one kernel descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -72,10 +37,10 @@ pub struct ValidationReport {
     pub kernel_id: String,
     /// Requested `[x, y, z]` workgroup size.
     pub workgroup_size: [u32; 3],
-    /// Device limits used for validation.
-    pub limits: DeviceLimits,
+    /// Target-neutral limits used for validation.
+    pub limits: WorkgroupLimits,
     /// Every constraint violated by the requested size.
-    pub violations: Vec<Violation>,
+    pub violations: Vec<WorkgroupLimitViolation>,
 }
 
 impl ValidationReport {
@@ -83,6 +48,7 @@ impl ValidationReport {
     pub fn ok(&self) -> bool {
         self.violations.is_empty()
     }
+
     /// Return the requested total invocations per workgroup.
     pub fn invocations(&self) -> u32 {
         self.workgroup_size[0]
@@ -91,46 +57,21 @@ impl ValidationReport {
     }
 }
 
-/// Validate against the Vulkan baseline (`VULKAN_BASELINE`).
+/// Validate against the Vulkan baseline ([`VULKAN_BASELINE`]).
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> ValidationReport {
     analyze_against(desc, VULKAN_BASELINE)
 }
 
-/// Validate against a custom device profile (use when targeting a
-/// specific GPU's known limits, e.g. NVIDIA RTX 4090's
-/// `[1024, 1024, 64]` and 1024 invocations  -  same as baseline).
+/// Validate against a target-neutral device limit profile.
 #[must_use]
-pub fn analyze_against(desc: &KernelDescriptor, limits: DeviceLimits) -> ValidationReport {
-    let wg = desc.dispatch.workgroup_size;
-    let mut violations = Vec::new();
-
-    for (axis, &dim) in wg.iter().enumerate() {
-        let axis = axis as u8;
-        if dim == 0 {
-            violations.push(Violation::ZeroDim { axis });
-        } else if dim > limits.max_workgroup_size_per_dim[axis as usize] {
-            violations.push(Violation::DimExceeded {
-                axis,
-                actual: dim,
-                limit: limits.max_workgroup_size_per_dim[axis as usize],
-            });
-        }
-    }
-
-    let invocations = wg[0].saturating_mul(wg[1]).saturating_mul(wg[2]);
-    if invocations > limits.max_workgroup_invocations {
-        violations.push(Violation::InvocationsExceeded {
-            actual: invocations,
-            limit: limits.max_workgroup_invocations,
-        });
-    }
-
+pub fn analyze_against(desc: &KernelDescriptor, limits: WorkgroupLimits) -> ValidationReport {
+    let workgroup_size = desc.dispatch.workgroup_size;
     ValidationReport {
         kernel_id: desc.id.clone(),
-        workgroup_size: wg,
+        workgroup_size,
         limits,
-        violations,
+        violations: validate_workgroup_size(workgroup_size, limits),
     }
 }
 
@@ -172,7 +113,7 @@ mod tests {
         let has_dim_violation = report
             .violations
             .iter()
-            .any(|v| matches!(v, Violation::DimExceeded { axis: 0, .. }));
+            .any(|v| matches!(v, WorkgroupLimitViolation::DimensionExceeded { axis: 0, .. }));
         assert!(has_dim_violation);
     }
 
@@ -183,7 +124,7 @@ mod tests {
         let has = report.violations.iter().any(|v| {
             matches!(
                 v,
-                Violation::DimExceeded {
+                WorkgroupLimitViolation::DimensionExceeded {
                     axis: 2,
                     actual: 128,
                     limit: 64
@@ -201,7 +142,7 @@ mod tests {
         let has = report
             .violations
             .iter()
-            .any(|v| matches!(v, Violation::InvocationsExceeded { actual: 2048, .. }));
+            .any(|v| matches!(v, WorkgroupLimitViolation::InvocationsExceeded { actual: 2048, .. }));
         assert!(has);
     }
 
@@ -211,7 +152,7 @@ mod tests {
         let has = report
             .violations
             .iter()
-            .any(|v| matches!(v, Violation::ZeroDim { axis: 1 }));
+            .any(|v| matches!(v, WorkgroupLimitViolation::ZeroDimension { axis: 1 }));
         assert!(has);
     }
 
@@ -219,9 +160,9 @@ mod tests {
     fn high_end_device_profile_allows_more() {
         // Custom profile: NVIDIA modern desktop allows 1024x1024x1024
         // (well above baseline z=64) and a higher product limit.
-        let limits = DeviceLimits {
-            max_workgroup_size_per_dim: [1024, 1024, 1024],
-            max_workgroup_invocations: 1024,
+        let limits = WorkgroupLimits {
+            max_size: [1024, 1024, 1024],
+            max_invocations: 1024,
         };
         // 1x1x128 should fail baseline (z>64) but pass this profile (z<1024).
         let report = analyze_against(&empty_with_dispatch(Dispatch::new(1, 1, 128)), limits);

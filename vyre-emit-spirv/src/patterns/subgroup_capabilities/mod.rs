@@ -12,38 +12,7 @@
 //! - `SubgroupLocalId` / `SubgroupSize` → `VK_SUBGROUP_FEATURE_BASIC_BIT`
 
 use serde::{Deserialize, Serialize};
-use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
-
-/// Vulkan subgroup feature bits used by the kernel. Maps directly to
-/// `VkSubgroupFeatureFlagBits` for host-side pipeline construction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
-pub struct SubgroupCapabilities {
-    /// Basic subgroup operations are required.
-    pub basic: bool,
-    /// Subgroup ballot operations are required.
-    pub ballot: bool,
-    /// Subgroup shuffle operations are required.
-    pub shuffle: bool,
-    /// Subgroup arithmetic operations are required.
-    pub arithmetic: bool,
-}
-
-impl SubgroupCapabilities {
-    /// Return whether the kernel requires any subgroup capability.
-    #[must_use]
-    pub fn any(self) -> bool {
-        self.basic || self.ballot || self.shuffle || self.arithmetic
-    }
-
-    /// Number of distinct capabilities required.
-    #[must_use]
-    pub fn count(self) -> u32 {
-        u32::from(self.basic)
-            + u32::from(self.ballot)
-            + u32::from(self.shuffle)
-            + u32::from(self.arithmetic)
-    }
-}
+use vyre_lower::{required_subgroup_capabilities, KernelDescriptor, SubgroupCapabilities};
 
 /// Subgroup capabilities discovered for one kernel descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -57,42 +26,18 @@ pub struct SubgroupCapabilityReport {
 /// Analyze a kernel descriptor for required subgroup capabilities.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> SubgroupCapabilityReport {
-    let mut caps = SubgroupCapabilities::default();
-    walk_body(&desc.body, &mut caps);
     SubgroupCapabilityReport {
         kernel_id: desc.id.clone(),
-        capabilities: caps,
-    }
-}
-
-fn walk_body(body: &KernelBody, caps: &mut SubgroupCapabilities) {
-    for op in &body.ops {
-        match &op.kind {
-            KernelOpKind::SubgroupBallot => caps.ballot = true,
-            KernelOpKind::SubgroupShuffle => caps.shuffle = true,
-            KernelOpKind::SubgroupReduce { .. } => caps.arithmetic = true,
-            KernelOpKind::SubgroupLocalId | KernelOpKind::SubgroupSize => caps.basic = true,
-            KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                for child_id in op.operands.iter() {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        walk_body(child, caps);
-                    }
-                }
-            }
-            _ => {}
-        }
+        capabilities: required_subgroup_capabilities(desc),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_emit_naga::vyre_lower::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, LiteralValue,
+    use vyre_lower::{
+        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
+        LiteralValue,
     };
 
     fn empty_desc() -> KernelDescriptor {

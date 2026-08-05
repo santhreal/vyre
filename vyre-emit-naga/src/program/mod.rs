@@ -13,12 +13,6 @@ mod types;
 
 pub(crate) use vyre_foundation::lower::LoweringError;
 
-/// Runtime feature switches accepted by the compatibility API.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct ProgramEmitFeatures {
-    /// Whether the target runtime can accept Naga subgroup barriers.
-    pub supports_subgroup_barrier: bool,
-}
 
 /// Map a core IR memory kind to the bind-group index used by compatibility
 /// helpers that still inspect Program buffers.
@@ -30,8 +24,8 @@ pub fn bind_group_for(kind: vyre_foundation::ir::MemoryKind) -> u32 {
     }
 }
 
-pub use entry::emit_prepared_module_with_features;
-pub use entry::{emit_module, emit_module_with_features, prepared_program};
+pub use entry::emit_prepared_module_with_capabilities;
+pub use entry::{emit_module, emit_module_with_capabilities, prepared_program};
 
 pub use entry::{trap_sidecar_decl, trap_tags};
 pub use types::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};

@@ -7,6 +7,14 @@ pub enum EmitError {
     #[error("unsupported KernelOp kind in naga emit: {0:?}")]
     UnsupportedOp(vyre_lower::KernelOp),
 
+    /// The requested target lacks a subgroup feature required by the descriptor.
+    #[error("unsupported emission capability `{0}`")]
+    UnsupportedCapability(&'static str),
+
+    /// The descriptor's workgroup shape exceeds the requested target limits.
+    #[error("unsupported emission capability `workgroup`: {0}")]
+    UnsupportedWorkgroup(vyre_lower::WorkgroupLimitViolation),
+
     /// Naga module assembly failed.
     #[error("naga module construction failed: {0}")]
     NagaConstructionFailed(String),

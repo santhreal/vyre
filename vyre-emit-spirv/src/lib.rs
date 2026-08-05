@@ -37,13 +37,8 @@
 use thiserror::Error;
 use vyre_lower::KernelDescriptor;
 
-/// SPIR-V anchor-DFA offload evidence.
-pub mod anchor_dfa_offload;
 pub mod patterns;
 
-pub use anchor_dfa_offload::{
-    SpirvAnchorDfaOffloadEvidence, SPIRV_ANCHOR_DFA_OFFLOAD_SCHEMA_VERSION,
-};
 
 /// Errors produced while lowering and encoding a SPIR-V module.
 #[derive(Debug, Error)]
@@ -76,6 +71,24 @@ pub enum EmitError {
 /// pipeline before emission.
 pub fn emit(desc: &KernelDescriptor) -> Result<Vec<u32>, EmitError> {
     let module = vyre_emit_naga::emit(desc).map_err(EmitError::NagaEmit)?;
+    emit_from_naga_module(&module)
+}
+
+/// Emit SPIR-V only when `target` supports every descriptor requirement.
+///
+/// Capability admission is delegated to the Naga emitter, the single owner of
+/// descriptor-to-Naga translation, before the shared module is encoded.
+///
+/// # Errors
+///
+/// Returns [`EmitError::NagaEmit`] with a stable unsupported-capability
+/// diagnostic when the supplied target cannot admit the descriptor.
+pub fn emit_with_capabilities(
+    desc: &KernelDescriptor,
+    target: &vyre_lower::EmissionTargetCapabilities,
+) -> Result<Vec<u32>, EmitError> {
+    let module =
+        vyre_emit_naga::emit_with_capabilities(desc, target).map_err(EmitError::NagaEmit)?;
     emit_from_naga_module(&module)
 }
 
@@ -200,7 +213,6 @@ pub const SPIRV_MAGIC: u32 = 0x07230203;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_emit_naga::vyre_lower;
     use vyre_foundation::ir::DataType;
     use vyre_lower::{
         BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,

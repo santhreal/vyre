@@ -47,6 +47,7 @@ pub(crate) mod operand_semantics;
 pub mod optimization_corpus;
 pub mod pre_emit;
 pub mod rewrites;
+pub mod target;
 pub mod verify;
 
 pub use audit::{
@@ -325,6 +326,10 @@ pub use descriptor::{
 pub use error::LowerError;
 pub use lower::lower;
 pub use pre_emit::{lower_for_emit, prepare_program_for_emit, LoweredKernel, PreEmitError};
+pub use target::{
+    required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
+    SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,
+};
 /// Re-exported so consumers matching/constructing `KernelOpKind::SubgroupReduce`
 /// can name the reduction operator without depending on `vyre-foundation`.
 pub use vyre_foundation::ir::SubgroupReduceOp;

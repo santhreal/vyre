@@ -16,7 +16,7 @@ use vyre_foundation::visit::visit_node_preorder;
 use super::atomic_scanner::scan_atomic_targets_into;
 use super::trap_collector::TrapTagCollector;
 use super::types::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
-use super::{bind_group_for, LoweringError, ProgramEmitFeatures};
+use super::{bind_group_for, LoweringError};
 
 /// Emit a validated Naga module for a vyre program.
 ///
@@ -27,26 +27,27 @@ use super::{bind_group_for, LoweringError, ProgramEmitFeatures};
 /// emitted module.
 pub fn emit_module(
     program: &Program,
-    config: &vyre_driver::DispatchConfig,
     workgroup_size: [u32; 3],
 ) -> Result<Module, LoweringError> {
-    emit_module_with_features(
-        program,
-        config,
-        workgroup_size,
-        ProgramEmitFeatures::default(),
-    )
+    emit_module_impl(program, workgroup_size, None)
 }
 
-/// Emit a Naga module using the exact feature contract supplied by the runtime.
+/// Emit a Naga module after admitting it against target-neutral capabilities.
 ///
-/// feature-sensitive IR such as `MemoryOrdering::SeqCst` barriers must be
-/// lowered against the real device contract instead of a permissive default.
-pub fn emit_module_with_features(
+/// Feature-sensitive IR must be lowered against the real target contract
+/// instead of a permissive runtime default.
+pub fn emit_module_with_capabilities(
     program: &Program,
-    _config: &vyre_driver::DispatchConfig,
     workgroup_size: [u32; 3],
-    _features: ProgramEmitFeatures,
+    target: &vyre_lower::EmissionTargetCapabilities,
+) -> Result<Module, LoweringError> {
+    emit_module_impl(program, workgroup_size, Some(target))
+}
+
+fn emit_module_impl(
+    program: &Program,
+    workgroup_size: [u32; 3],
+    target: Option<&vyre_lower::EmissionTargetCapabilities>,
 ) -> Result<Module, LoweringError> {
     // Fail closed on the ONE IR-validity hazard that otherwise BOTH silently
     // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
@@ -101,25 +102,29 @@ pub fn emit_module_with_features(
             vyre_lower::verify::format_verify_errors(&errors)
         )));
     }
-    crate::emit(&lowered.descriptor).map_err(|error| {
+    let emitted = match target {
+        Some(target) => crate::emit_with_capabilities(&lowered.descriptor, target),
+        None => crate::emit(&lowered.descriptor),
+    };
+    emitted.map_err(|error| {
         LoweringError::invalid(format!(
             "descriptor Naga emission failed from Program compatibility entry point: {error}. Fix: extend vyre-emit-naga descriptor emission; direct Program lowering is not a fallback path."
         ))
     })
 }
 
-/// Emit a prepared Naga module using explicit program features.
+/// Emit a prepared Naga module after target-capability admission.
 ///
 /// # Errors
 ///
-/// Returns a lowering error when preparation or descriptor emission fails.
-pub fn emit_prepared_module_with_features(
+/// Returns a lowering error when preparation, target admission, or descriptor
+/// emission fails.
+pub fn emit_prepared_module_with_capabilities(
     program: &Program,
-    config: &vyre_driver::DispatchConfig,
     workgroup_size: [u32; 3],
-    features: ProgramEmitFeatures,
+    target: &vyre_lower::EmissionTargetCapabilities,
 ) -> Result<Module, LoweringError> {
-    emit_module_with_features(program, config, workgroup_size, features)
+    emit_module_with_capabilities(program, workgroup_size, target)
 }
 
 /// Inline, optimize, and infer buffer access modes before Naga lowering.

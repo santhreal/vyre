@@ -9,7 +9,7 @@ pub mod subgroup_capabilities;
 pub mod workgroup_size_validation;
 
 use serde::{Deserialize, Serialize};
-use vyre_lower::KernelDescriptor;
+use vyre_lower::{KernelDescriptor, SubgroupCapabilities};
 
 /// Unified SPIR-V-side pattern audit. Runs every shipped SPIR-V
 /// pattern against the descriptor and bundles the reports. Mirror of
@@ -107,7 +107,7 @@ impl SpirvAuditReport {
             kernel_id: String::new(),
             subgroup: subgroup_capabilities::SubgroupCapabilityReport {
                 kernel_id: String::new(),
-                capabilities: subgroup_capabilities::SubgroupCapabilities {
+                capabilities: SubgroupCapabilities {
                     basic: false,
                     ballot: false,
                     shuffle: false,
