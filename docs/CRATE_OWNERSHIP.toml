@@ -1,0 +1,297 @@
+schema_version = 1
+
+[[crate]]
+package = "vyre-megakernel"
+path = "vyre-megakernel"
+owner = "megakernel-compiler"
+layer = "compiler-boundary"
+responsibility = "Compile validated typed Program graphs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy."
+allowed_dependencies = ["vyre-foundation"]
+
+[[crate]]
+package = "vyre"
+path = "vyre-core"
+owner = "public-facade"
+layer = "facade"
+responsibility = "Expose the public Vyre API and feature-gated backend selection surface."
+allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-lower"]
+
+[[crate]]
+package = "vyre-foundation"
+path = "vyre-foundation"
+owner = "foundation-ir"
+layer = "foundation"
+responsibility = "Own the typed IR, validation, optimizer, serialization, and foundational program contracts."
+allowed_dependencies = ["vyre-macros", "vyre-spec"]
+
+[[crate]]
+package = "vyre-driver"
+path = "vyre-driver"
+owner = "backend-contract"
+layer = "backend-neutral"
+responsibility = "Define backend-neutral device, capability, dispatch, evidence, and artifact contracts."
+allowed_dependencies = ["vyre-foundation", "vyre-intrinsics", "vyre-macros", "vyre-self-substrate", "vyre-spec"]
+
+[[crate]]
+package = "vyre-harness"
+path = "vyre-harness"
+owner = "runtime-harness"
+layer = "tooling"
+responsibility = "Provide reusable backend-neutral harness utilities for executing and comparing programs."
+allowed_dependencies = ["vyre", "vyre-foundation"]
+
+[[crate]]
+package = "vyre-driver-metal"
+path = "vyre-driver-metal"
+owner = "metal-driver"
+layer = "concrete-backend"
+responsibility = "Own native Apple device acquisition, lowering integration, dispatch, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-metal", "vyre-foundation", "vyre-lower"]
+
+[[crate]]
+package = "vyre-driver-wgpu"
+path = "vyre-driver-wgpu"
+owner = "portable-driver"
+layer = "concrete-backend"
+responsibility = "Own portable GPU acquisition, lowering, dispatch, graph execution, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-self-substrate", "vyre-spec"]
+
+[[crate]]
+package = "vyre-driver-spirv"
+path = "vyre-driver-spirv"
+owner = "spirv-driver"
+layer = "concrete-backend"
+responsibility = "Own SPIR-V backend lowering, dispatch integration, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-spec"]
+
+[[crate]]
+package = "vyre-driver-cuda"
+path = "vyre-driver-cuda"
+owner = "cuda-driver"
+layer = "concrete-backend"
+responsibility = "Own native NVIDIA device acquisition, lowering, dispatch, graphs, and release-path evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-ptx", "vyre-foundation", "vyre-lower", "vyre-self-substrate", "vyre-spec"]
+
+[[crate]]
+package = "vyre-driver-reference"
+path = "vyre-driver-reference"
+owner = "reference-driver"
+layer = "concrete-backend"
+responsibility = "Adapt the reference interpreter to the backend contract for deterministic conformance execution."
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-reference"]
+
+[[crate]]
+package = "vyre-reference"
+path = "vyre-reference"
+owner = "reference-semantics"
+layer = "semantics"
+responsibility = "Execute programs with the canonical host oracle and produce semantic witnesses."
+allowed_dependencies = ["vyre-foundation", "vyre-primitives", "vyre-spec"]
+
+[[crate]]
+package = "vyre-spec"
+path = "vyre-spec"
+owner = "specification"
+layer = "foundation"
+responsibility = "Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies."
+allowed_dependencies = []
+
+[[crate]]
+package = "vyre-macros"
+path = "vyre-macros"
+owner = "registration-macros"
+layer = "foundation"
+responsibility = "Provide compile-time registration and declaration macros without depending on runtime crates."
+allowed_dependencies = []
+
+[[crate]]
+package = "vyre-primitives"
+path = "vyre-primitives"
+owner = "primitive-library"
+layer = "primitives"
+responsibility = "Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes."
+allowed_dependencies = ["vyre-foundation", "vyre-spec"]
+
+[[crate]]
+package = "vyre-test-support"
+path = "vyre-test-support"
+owner = "test-support"
+layer = "test-tooling"
+responsibility = "Provide shared deterministic fixtures and assertions for workspace tests."
+allowed_dependencies = []
+
+[[crate]]
+package = "vyre-self-substrate"
+path = "vyre-self-substrate"
+owner = "self-substrate"
+layer = "scheduler"
+responsibility = "Use Vyre primitives to implement scheduler, graph, coverage, and optimization support."
+allowed_dependencies = ["vyre-foundation", "vyre-primitives"]
+
+[[crate]]
+package = "vyre-conform-spec"
+path = "conform/vyre-conform-spec"
+owner = "conformance"
+layer = "conformance"
+responsibility = "Define conformance case, result, and certificate schemas against the public facade."
+allowed_dependencies = ["vyre-spec"]
+
+[[crate]]
+package = "vyre-conform-generate"
+path = "conform/vyre-conform-generate"
+owner = "conformance"
+layer = "conformance"
+responsibility = "Generate deterministic conformance cases from the conformance specification."
+allowed_dependencies = ["vyre-conform-spec"]
+
+[[crate]]
+package = "vyre-conform-enforce"
+path = "conform/vyre-conform-enforce"
+owner = "conformance"
+layer = "conformance"
+responsibility = "Evaluate conformance results and enforce release certificate policy."
+allowed_dependencies = ["vyre", "vyre-conform-generate", "vyre-conform-spec"]
+
+[[crate]]
+package = "vyre-conform-runner"
+path = "conform/vyre-conform-runner"
+owner = "conformance"
+layer = "conformance"
+responsibility = "Execute generated conformance cases across eligible concrete and reference backends."
+allowed_dependencies = ["vyre", "vyre-conform-spec", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-wgpu", "vyre-foundation", "vyre-intrinsics", "vyre-libs", "vyre-primitives", "vyre-reference", "vyre-spec", "vyre-test-harness"]
+
+[[crate]]
+package = "vyre-test-harness"
+path = "conform/vyre-test-harness"
+owner = "conformance"
+layer = "test-tooling"
+responsibility = "Provide shared execution and comparison infrastructure for conformance suites."
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-harness", "vyre-libs", "vyre-reference", "vyre-self-substrate"]
+
+[[crate]]
+package = "xtask"
+path = "xtask"
+owner = "release-tooling"
+layer = "tooling"
+responsibility = "Generate evidence and enforce repository, release, documentation, and architecture contracts."
+allowed_dependencies = ["vyre", "vyre-bench", "vyre-driver", "vyre-driver-cuda", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-metal", "vyre-foundation", "vyre-frontend-c", "vyre-harness", "vyre-intrinsics", "vyre-libs", "vyre-lints", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-spec"]
+
+[[crate]]
+package = "vyre-runtime"
+path = "vyre-runtime"
+owner = "runtime"
+layer = "runtime"
+responsibility = "Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate."
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-self-substrate"]
+
+[[crate]]
+package = "vyre-libs"
+path = "vyre-libs"
+owner = "product-libraries"
+layer = "libraries"
+responsibility = "Own product-facing Tier 3 program compositions built from neutral primitives and contracts."
+allowed_dependencies = ["vyre-foundation", "vyre-primitives", "vyre-spec"]
+
+[[crate]]
+package = "vyre-intrinsics"
+path = "vyre-intrinsics"
+owner = "hardware-intrinsics"
+layer = "intrinsics"
+responsibility = "Own registered hardware-mapped intrinsic contracts and their neutral program builders."
+allowed_dependencies = ["vyre-foundation", "vyre-primitives"]
+
+[[crate]]
+package = "vyre-aot"
+path = "vyre-aot"
+owner = "aot-artifacts"
+layer = "packaging"
+responsibility = "Plan and package ahead-of-time artifacts without owning live backend execution."
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-primitives", "vyre-spec"]
+
+[[crate]]
+package = "vyre-frontend-c"
+path = "vyre-frontend-c"
+owner = "c-frontend"
+layer = "frontend"
+responsibility = "Parse C input and lower supported language constructs into typed Vyre programs."
+allowed_dependencies = ["vyre-foundation"]
+
+[[crate]]
+package = "vyre-frontend-rust"
+path = "vyre-frontend-rust"
+owner = "rust-frontend"
+layer = "frontend"
+responsibility = "Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends."
+allowed_dependencies = ["vyre-foundation"]
+
+[[crate]]
+package = "vyre-bench"
+path = "vyre-bench"
+owner = "benchmarks"
+layer = "tooling"
+responsibility = "Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence."
+allowed_dependencies = ["vyre", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-ptx", "vyre-foundation", "vyre-frontend-c", "vyre-frontend-rust", "vyre-intrinsics", "vyre-libs", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-runtime", "vyre-spec"]
+
+[[crate]]
+package = "vyre-lints"
+path = "vyre-lints"
+owner = "lint-policy"
+layer = "tooling"
+responsibility = "Enforce source-level project policies without depending on runtime crates."
+allowed_dependencies = []
+
+[[crate]]
+package = "vyre-lower"
+path = "vyre-lower"
+owner = "lowering"
+layer = "lowering"
+responsibility = "Own backend-neutral lowering helpers and pre-emission transforms."
+allowed_dependencies = ["vyre-foundation"]
+
+[[crate]]
+package = "vyre-emit-naga"
+path = "vyre-emit-naga"
+owner = "primary-text-emitter"
+layer = "emitter"
+responsibility = "Lower neutral programs into the primary text emitter representation and related binary targets."
+allowed_dependencies = ["vyre-foundation", "vyre-lower"]
+
+[[crate]]
+package = "vyre-emit-ptx"
+path = "vyre-emit-ptx"
+owner = "primary-binary-emitter"
+layer = "emitter"
+responsibility = "Lower neutral programs into the primary binary backend text artifact."
+allowed_dependencies = ["vyre-foundation", "vyre-lower"]
+
+[[crate]]
+package = "vyre-emit-spirv"
+path = "vyre-emit-spirv"
+owner = "spirv-emitter"
+layer = "emitter"
+responsibility = "Lower neutral programs into SPIR-V artifacts through the shared emitter path."
+allowed_dependencies = ["vyre-emit-naga", "vyre-lower"]
+
+[[crate]]
+package = "vyre-emit-metal"
+path = "vyre-emit-metal"
+owner = "metal-emitter"
+layer = "emitter"
+responsibility = "Lower neutral programs into native Apple shader source through the shared emitter path."
+allowed_dependencies = ["vyre-emit-naga", "vyre-foundation", "vyre-lower"]
+
+[[crate]]
+package = "vyre-debug"
+path = "vyre-debug"
+owner = "debugging"
+layer = "tooling"
+responsibility = "Inspect, explain, and diagnose typed programs, lowering, and product-library composition."
+allowed_dependencies = ["vyre", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives"]
+
+[[crate]]
+package = "vyre-grammar-gen"
+path = "vyre-grammar-gen"
+owner = "grammar-generation"
+layer = "tooling"
+responsibility = "Generate host-side grammar tables consumed by frontend and parsing crates."
+allowed_dependencies = []

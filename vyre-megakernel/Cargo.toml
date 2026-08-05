@@ -1,0 +1,23 @@
+[package]
+name = "vyre-megakernel"
+version = "0.7.2"
+edition.workspace = true
+rust-version.workspace = true
+description = "Backend-neutral compiler for canonical Vyre megakernel artifacts"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/vyre-megakernel"
+keywords = ["vyre", "compiler", "graph", "artifact"]
+categories = ["compilers", "data-structures"]
+
+[dependencies]
+vyre-foundation.workspace = true
+blake3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

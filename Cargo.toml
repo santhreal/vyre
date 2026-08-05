@@ -6,6 +6,7 @@ resolver = "2"
 members = [
     "vyre-core",
     "vyre-foundation",
+    "vyre-megakernel",
     "vyre-driver",
     "vyre-harness",
     "vyre-driver-metal",
@@ -170,18 +171,13 @@ identity_op = "allow"
 # `drop(perf_scope.finish())` documents measurement lifecycle intent. This is
 # a rustc lint, not a Clippy lint, on the supported toolchain.
 dropping_copy_types = "allow"
-# `external_ifds_engine` and `external-baselines` gate two bridges to the
-# external dataflow engine: `vyre-libs/src/security/external_ifds.rs` and
-# `vyre-bench/src/cases/dataflow_baseline.rs`. Neither can be a Cargo feature
-# here. The engine crate depends on the vyre platform, and `xtask
-# platform-boundary` forbids the platform from depending back on a consumer, so
-# declaring these as features would only make `--all-features` fail to compile.
-# They are declared to the compiler instead, so the guards name a cfg it knows
-# about and no build warns. Moving the two bridges to the consumer side is
-# BACKLOG R47.
+# `external_ifds_engine` names the disabled bridge in
+# `vyre-libs/src/security/external_ifds.rs`. It cannot be a Cargo feature here:
+# the engine crate depends on the Vyre platform, and `xtask platform-boundary`
+# forbids the platform from depending back on a consumer. Moving the bridge to
+# the consumer side is BACKLOG R47.
 unexpected_cfgs = { level = "warn", check-cfg = [
   'cfg(feature, values("external_ifds_engine"))',
-  'cfg(feature, values("external-baselines"))',
 ] }
 unsafe_code = "deny"
 missing_docs = "deny"
@@ -200,42 +196,43 @@ private_intra_doc_links = "warn"
 # version (the `version` is required so a published crate can resolve its
 # workspace siblings from crates.io after publication).
 [workspace.dependencies]
-vyre = { version = "0.7.1", path = "vyre-core", default-features = false }
-vyre-foundation = { version = "0.7.1", path = "vyre-foundation" }
-vyre-driver = { version = "0.7.1", path = "vyre-driver" }
-vyre-driver-metal = { version = "0.7.1", path = "vyre-driver-metal" }
-vyre-driver-wgpu = { version = "0.7.1", path = "vyre-driver-wgpu" }
-vyre-driver-cuda = { version = "0.7.1", path = "vyre-driver-cuda" }
-vyre-driver-reference = { version = "0.7.1", path = "vyre-driver-reference" }
-vyre-driver-spirv = { version = "0.7.1", path = "vyre-driver-spirv" }
-vyre-reference = { version = "0.7.1", path = "vyre-reference" }
-vyre-spec = { version = "0.7.1", path = "vyre-spec" }
-vyre-macros = { version = "0.7.1", path = "vyre-macros" }
-vyre-primitives = { version = "0.7.1", path = "vyre-primitives", default-features = false }
+vyre = { version = "0.7.2", path = "vyre-core", default-features = false }
+vyre-foundation = { version = "0.7.2", path = "vyre-foundation" }
+vyre-megakernel = { version = "0.7.2", path = "vyre-megakernel" }
+vyre-driver = { version = "0.7.2", path = "vyre-driver" }
+vyre-driver-metal = { version = "0.7.2", path = "vyre-driver-metal" }
+vyre-driver-wgpu = { version = "0.7.2", path = "vyre-driver-wgpu" }
+vyre-driver-cuda = { version = "0.7.2", path = "vyre-driver-cuda" }
+vyre-driver-reference = { version = "0.7.2", path = "vyre-driver-reference" }
+vyre-driver-spirv = { version = "0.7.2", path = "vyre-driver-spirv" }
+vyre-reference = { version = "0.7.2", path = "vyre-reference" }
+vyre-spec = { version = "0.7.2", path = "vyre-spec" }
+vyre-macros = { version = "0.7.2", path = "vyre-macros" }
+vyre-primitives = { version = "0.7.2", path = "vyre-primitives", default-features = false }
 # Dev-only shared harness (publish = false). PATH-ONLY (no version): cargo strips
 # path-only dev-deps at publish, so this never joins/blocks the publish train.
 vyre-test-support = { path = "vyre-test-support" }
-vyre-runtime = { version = "0.7.1", path = "vyre-runtime" }
-vyre-libs = { version = "0.7.1", path = "vyre-libs" }
-vyre-self-substrate = { version = "0.7.1", path = "vyre-self-substrate" }
-vyre-intrinsics = { version = "0.7.1", path = "vyre-intrinsics" }
-vyre-aot = { version = "0.7.1", path = "vyre-aot" }
-vyre-bench = { version = "0.7.1", path = "vyre-bench" }
-vyre-test-harness = { version = "0.7.1", path = "conform/vyre-test-harness" }
-vyre-harness = { version = "0.7.1", path = "vyre-harness" }
-vyre-lower = { version = "0.7.1", path = "vyre-lower" }
-vyre-emit-naga = { version = "0.7.1", path = "vyre-emit-naga" }
-vyre-emit-ptx = { version = "0.7.1", path = "vyre-emit-ptx" }
-vyre-emit-spirv = { version = "0.7.1", path = "vyre-emit-spirv" }
-vyre-emit-metal = { version = "0.7.1", path = "vyre-emit-metal" }
-vyre-frontend-c = { version = "0.7.1", path = "vyre-frontend-c" }
-vyre-frontend-rust = { version = "0.7.1", path = "vyre-frontend-rust" }
-vyre-lints = { version = "0.7.1", path = "vyre-lints" }
-vyre-debug = { version = "0.7.1", path = "vyre-debug" }
+vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
+vyre-libs = { version = "0.7.2", path = "vyre-libs" }
+vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
+vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
+vyre-aot = { version = "0.7.2", path = "vyre-aot" }
+vyre-bench = { version = "0.7.2", path = "vyre-bench" }
+vyre-test-harness = { version = "0.7.2", path = "conform/vyre-test-harness" }
+vyre-harness = { version = "0.7.2", path = "vyre-harness" }
+vyre-lower = { version = "0.7.2", path = "vyre-lower" }
+vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
+vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
+vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
+vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
+vyre-frontend-c = { version = "0.7.2", path = "vyre-frontend-c" }
+vyre-frontend-rust = { version = "0.7.2", path = "vyre-frontend-rust" }
+vyre-lints = { version = "0.7.2", path = "vyre-lints" }
+vyre-debug = { version = "0.7.2", path = "vyre-debug" }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 vyre-conform-generate = { path = "conform/vyre-conform-generate" }
 vyre-conform-enforce = { path = "conform/vyre-conform-enforce" }
-c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.1", path = "vyre-grammar-gen" }
+c-grammar-gen = { package = "vyre-grammar-gen", version = "0.7.2", path = "vyre-grammar-gen" }
 
 # Shared third-party pins; every member agrees on versions.
 serde = { version = "=1.0.229", features = ["derive", "rc"] }
