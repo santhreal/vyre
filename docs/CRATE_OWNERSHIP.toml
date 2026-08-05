@@ -14,7 +14,7 @@ path = "vyre-core"
 owner = "public-facade"
 layer = "facade"
 responsibility = "Expose the public Vyre API and feature-gated backend selection surface."
-allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-lower"]
+allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives"]
 
 [[crate]]
 package = "vyre-foundation"

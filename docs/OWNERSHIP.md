@@ -25,7 +25,7 @@ Expose the public Vyre API and feature-gated backend selection surface.
 - Path: `vyre-core`
 - Owner: `public-facade`
 - Layer: `facade`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-lower`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`
 
 ### `vyre-aot`
 

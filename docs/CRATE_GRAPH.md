@@ -53,7 +53,9 @@ graph TD
   C0 --> C9
   C0 --> C13
   C0 --> C18
+  C0 --> C24
   C0 --> C26
+  C0 --> C29
   C1 --> C8
   C1 --> C18
   C1 --> C29
@@ -192,7 +194,7 @@ graph TD
 
 | Crate | Path | Owner | Layer | Internal production dependencies |
 | --- | --- | --- | --- | --- |
-| `vyre` | `vyre-core` | `public-facade` | `facade` | `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-lower` |
+| `vyre` | `vyre-core` | `public-facade` | `facade` | `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives` |
 | `vyre-aot` | `vyre-aot` | `aot-artifacts` | `packaging` | `vyre-driver`, `vyre-foundation`, `vyre-primitives`, `vyre-spec` |
 | `vyre-bench` | `vyre-bench` | `benchmarks` | `tooling` | `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
 | `vyre-conform-enforce` | `conform/vyre-conform-enforce` | `conformance` | `conformance` | `vyre`, `vyre-conform-generate`, `vyre-conform-spec` |
