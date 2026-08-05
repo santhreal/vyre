@@ -1,6 +1,6 @@
 [package]
 name = "vyre"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 description = "GPU compute intermediate representation with a standard operation library"
@@ -18,8 +18,13 @@ exclude = ["**/SKILL.md"]
 vyre-driver.workspace = true
 vyre-foundation.workspace = true
 vyre-lower.workspace = true
+vyre-libs = { workspace = true, features = ["full", "c-parser", "matching-regex"] }
+vyre-primitives.workspace = true
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
+bytemuck.workspace = true
+smallvec.workspace = true
+tracing.workspace = true
 blake3.workspace = true
 
 [dev-dependencies]

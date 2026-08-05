@@ -86,6 +86,8 @@
 //! types exported here. Changing the target-text lowering path never breaks a
 //! frontend; changing a frontend AST never affects backend dispatch logic.
 //! This module is the single source of truth for the vyre public API.
+extern crate self as vyre;
+
 
 /// The vyre Program model.
 ///
@@ -140,6 +142,9 @@ pub use vyre_foundation::memory_model;
 /// Substrate-neutral memory ordering type.
 /// Public API re-export.
 pub use vyre_foundation::MemoryOrdering;
+
+/// Execution adapters for neutral scan programs and immutable matcher artifacts.
+pub mod scan;
 
 /// Distribution-aware runtime algorithm selection.
 /// Public API re-export.
