@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-cuda"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -58,6 +58,7 @@ vyre-test-support.workspace = true
 #   - `matching-nfa`: `ResidentRulePipeline` for the CUDA resident parity test
 #                     (not pulled by `full`).
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser", "matching-nfa"] }
+vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true

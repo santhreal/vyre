@@ -1,6 +1,14 @@
-use vyre_libs::borrowck::{gpu, BorrowFacts, Conflict, ConflictKind, LoanKind};
+use vyre_frontend_rust::borrowck::{BorrowFacts, Conflict, ConflictKind, LoanKind};
 use vyre_self_substrate::csr_forward_or_changed::forward_closure_via_change_flag_gpu;
 use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
+#[path = "borrowck_batched_cuda.rs"]
+mod batched;
+pub(crate) mod gpu {
+    pub(crate) use super::batched::{
+        analyze_crate_batched, analyze_crate_batched_with_shard_cap,
+    };
+}
+
 
 const ALLOW_ALL: u32 = 0xFFFF_FFFF;
 
@@ -210,13 +218,11 @@ pub(crate) fn corpus() -> Vec<(&'static str, BorrowFacts)> {
     ]
 }
 
-/// Thin wrapper so tests exercise the shipped library borrow checker
-/// (`vyre_libs::borrowck::gpu::analyze_batched`) on the real CUDA device,
-/// rather than a copy of its logic: the batched megakernel path lives in the library.
+/// Batched CUDA adapter owned by this upper integration harness.
 pub(crate) fn cuda_conflicts_batched(
     dispatcher: &dyn OptimizerDispatcher,
     facts: &BorrowFacts,
 ) -> Vec<Conflict> {
-    gpu::analyze_batched(dispatcher, facts)
+    batched::analyze_batched(dispatcher, facts)
         .expect("batched GPU borrow-check dispatch must succeed on the CUDA device")
 }

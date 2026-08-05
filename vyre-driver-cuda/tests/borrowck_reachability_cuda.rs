@@ -1,8 +1,4 @@
-//! GPU borrow checker on CUDA: the NLL loan-liveness reachability that the
-//! front-end-agnostic engine (`vyre_libs::borrowck::analyze`) computes on the
-//! CPU, evaluated instead on the CUDA device via the iterated-closure graph
-//! primitive, and parity-gated against the CPU engine across the full
-//! control-flow-correctness suite.
+//! GPU borrow checker parity against the frontend-owned neutral CPU contract.
 //!
 //! The engine's two monotone bitset dataflows are equivalent to per-loan
 //! reachability:
@@ -25,10 +21,10 @@ mod common;
 
 use std::time::Instant;
 
-use borrowck_reachability_cuda::{corpus, cuda_conflicts, cuda_conflicts_batched, facts};
+use borrowck_reachability_cuda::{corpus, cuda_conflicts, cuda_conflicts_batched, facts, gpu};
 use common::{with_cuda_optimizer_dispatcher, with_live_backend};
 use vyre_driver_cuda::CudaOptimizerDispatcher as CudaResidentDispatcher;
-use vyre_libs::borrowck::{analyze, gpu, BorrowFacts, Conflict, ConflictKind, LoanKind};
+use vyre_frontend_rust::borrowck::{analyze, BorrowFacts, Conflict, ConflictKind, LoanKind};
 
 #[test]
 fn cuda_borrow_checker_matches_cpu_engine_across_cfg_suite() {
