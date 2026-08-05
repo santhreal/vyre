@@ -15,8 +15,8 @@ use ed25519_dalek::{Signer, SigningKey};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform_runner::{
     issue_bundle_cert, verify_bundle_against_reference, verify_cert_signature_hex,
-    BundleCertificate, CorpusWitness,
 };
+use vyre_conform_spec::{BundleCertificate, ConformanceCase};
 use vyre_driver::registry::{
     Category, LoweringTable, OpDef, OpDefRegistration, Signature, TypedParam,
 };
@@ -27,7 +27,7 @@ use vyre_driver_metal as _;
 #[cfg(feature = "gpu")]
 use vyre_driver_wgpu as _;
 
-type BundleBuilderFn = fn() -> (Program, Vec<CorpusWitness>);
+type BundleBuilderFn = fn() -> (Program, Vec<ConformanceCase>);
 
 const TEST_IDENTITY_U32_OP: &str = "vyre-conform.test.identity_u32";
 
@@ -141,13 +141,13 @@ fn sign_bundle_cert(cert: &mut BundleCertificate, key: &SigningKey) {
 // ---------------------------------------------------------------------------
 // Bundle 1  -  trivial const
 // ---------------------------------------------------------------------------
-fn bundle_trivial_const() -> (Program, Vec<CorpusWitness>) {
+fn bundle_trivial_const() -> (Program, Vec<ConformanceCase>) {
     let program = Program::wrapped(
         vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "tc1".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
@@ -157,7 +157,7 @@ fn bundle_trivial_const() -> (Program, Vec<CorpusWitness>) {
 // ---------------------------------------------------------------------------
 // Bundle 2  -  1-op add
 // ---------------------------------------------------------------------------
-fn bundle_one_op_add() -> (Program, Vec<CorpusWitness>) {
+fn bundle_one_op_add() -> (Program, Vec<ConformanceCase>) {
     let program = Program::wrapped(
         vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
@@ -167,7 +167,7 @@ fn bundle_one_op_add() -> (Program, Vec<CorpusWitness>) {
             Expr::add(Expr::u32(1), Expr::u32(2)),
         )],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "add1".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
@@ -177,7 +177,7 @@ fn bundle_one_op_add() -> (Program, Vec<CorpusWitness>) {
 // ---------------------------------------------------------------------------
 // Bundle 3  -  loop-add
 // ---------------------------------------------------------------------------
-fn bundle_loop_add() -> (Program, Vec<CorpusWitness>) {
+fn bundle_loop_add() -> (Program, Vec<ConformanceCase>) {
     let program = Program::wrapped(
         vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
@@ -195,7 +195,7 @@ fn bundle_loop_add() -> (Program, Vec<CorpusWitness>) {
             Node::store("out", Expr::u32(0), Expr::var("acc")),
         ],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "loop1".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
@@ -205,7 +205,7 @@ fn bundle_loop_add() -> (Program, Vec<CorpusWitness>) {
 // ---------------------------------------------------------------------------
 // Bundle 4  -  composed nested regions
 // ---------------------------------------------------------------------------
-fn bundle_composed_nested() -> (Program, Vec<CorpusWitness>) {
+fn bundle_composed_nested() -> (Program, Vec<ConformanceCase>) {
     let inner = vec![Node::store("out", Expr::u32(0), Expr::u32(7))];
     let outer = vec![Node::Region {
         generator: "inner".into(),
@@ -221,7 +221,7 @@ fn bundle_composed_nested() -> (Program, Vec<CorpusWitness>) {
             body: Arc::new(outer),
         }],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "nest1".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
@@ -235,7 +235,7 @@ fn bundle_composed_nested() -> (Program, Vec<CorpusWitness>) {
 // dialect op. The CPU reference resolves the call via the DialectRegistry; the
 // bundle cert hashes are still stable.
 // ---------------------------------------------------------------------------
-fn bundle_region_chain_intrinsic_dialect() -> (Program, Vec<CorpusWitness>) {
+fn bundle_region_chain_intrinsic_dialect() -> (Program, Vec<ConformanceCase>) {
     let body = vec![
         Node::let_bind("acc", Expr::u32(0)),
         Node::loop_for(
@@ -262,14 +262,14 @@ fn bundle_region_chain_intrinsic_dialect() -> (Program, Vec<CorpusWitness>) {
             body: Arc::new(body),
         }],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "rd1".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
     (program, corpus)
 }
 
-fn bundle_region_chain_backend_witness() -> (Program, Vec<CorpusWitness>) {
+fn bundle_region_chain_backend_witness() -> (Program, Vec<ConformanceCase>) {
     let body = vec![
         Node::let_bind("acc", Expr::u32(0)),
         Node::loop_for(
@@ -293,7 +293,7 @@ fn bundle_region_chain_backend_witness() -> (Program, Vec<CorpusWitness>) {
             body: Arc::new(body),
         }],
     );
-    let corpus = vec![CorpusWitness {
+    let corpus = vec![ConformanceCase {
         name: "rd-backend".into(),
         inputs: vec![bytes_u32(&[0])],
     }];
@@ -320,7 +320,7 @@ fn cert_regression_pin_all_five_bundles() {
     #[allow(clippy::type_complexity)]
     let cases: Vec<(
         &str,
-        fn() -> (Program, Vec<CorpusWitness>),
+        fn() -> (Program, Vec<ConformanceCase>),
         &str,  // pinned bundle_blake3
         usize, // pinned wire_len
         &str,  // pinned signature

@@ -1,5 +1,22 @@
 //! Witness set enumeration.
 
+use vyre_spec::DataType;
+
+/// Deterministic witness inventory for one frozen semantic data type.
+pub trait WitnessSet {
+    /// Host value represented by this witness inventory.
+    type Value;
+
+    /// Stable semantic data type certified by this inventory.
+    const DATA_TYPE: DataType;
+
+    /// Enumerate witnesses in canonical order.
+    fn enumerate() -> Vec<Self::Value>;
+
+    /// Fingerprint the canonical witness byte stream.
+    fn fingerprint_canonical() -> [u8; 32];
+}
+
 /// Canonical u32 witness set: boundary values + deterministic pseudo-random samples.
 pub struct U32Witness;
 
@@ -46,6 +63,20 @@ impl U32Witness {
             hasher.update(&v.to_le_bytes());
         }
         *hasher.finalize().as_bytes()
+    }
+}
+
+impl WitnessSet for U32Witness {
+    type Value = u32;
+
+    const DATA_TYPE: DataType = DataType::U32;
+
+    fn enumerate() -> Vec<Self::Value> {
+        U32Witness::enumerate()
+    }
+
+    fn fingerprint_canonical() -> [u8; 32] {
+        U32Witness::fingerprint_canonical()
     }
 }
 

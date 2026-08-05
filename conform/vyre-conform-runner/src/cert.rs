@@ -3,87 +3,8 @@
 //! Emitted by the runner after verifying an op satisfies its laws on a
 //! backend. Byte-identical across backends (modulo `backend_id`) = portable op.
 
-use serde::{Deserialize, Serialize};
 use vyre::ir::OpId;
-
-fn serialize_op_id<S>(op_id: &OpId, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(op_id.as_ref())
-}
-
-fn deserialize_op_id<'de, D>(deserializer: D) -> Result<OpId, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let op_id = String::deserialize(deserializer)?;
-    Ok(op_id.into())
-}
-
-/// Conformance certificate for one (op, backend) pair.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Certificate {
-    /// Certificate format version (follows vyre minor).
-    pub version: String,
-    /// Op identifier.
-    #[serde(
-        serialize_with = "crate::cert::serialize_op_id",
-        deserialize_with = "crate::cert::deserialize_op_id"
-    )]
-    pub op_id: OpId,
-    /// Wire format version at run time.
-    pub wire_format_version: u32,
-    /// `blake3(program.to_wire())`.
-    pub program_blake3: String,
-    /// `blake3(sorted witness inputs)`.
-    pub witness_set_blake3: String,
-    /// Backend that produced the cert.
-    pub backend_id: String,
-    /// Backend crate version string.
-    pub backend_version: String,
-    /// Laws verified to hold.
-    pub laws_verified: Vec<String>,
-    /// ISO 8601 UTC timestamp string.
-    pub timestamp: String,
-    /// Ed25519 signature over the canonical JSON body (hex).
-    pub signature_ed25519: String,
-    /// Ed25519 public key (hex).
-    pub pubkey: String,
-}
-
-impl Certificate {
-    /// Fresh certificate with the provided fields and "TBD" signature fields.
-    #[must_use]
-    pub fn new(
-        op_id: impl Into<OpId>,
-        backend_id: impl Into<String>,
-        backend_version: impl Into<String>,
-        laws_verified: Vec<String>,
-    ) -> Self {
-        Self {
-            version: "0.4.1".to_string(),
-            op_id: op_id.into(),
-            wire_format_version: 1,
-            program_blake3: "TBD".to_string(),
-            witness_set_blake3: "TBD".to_string(),
-            backend_id: backend_id.into(),
-            backend_version: backend_version.into(),
-            laws_verified,
-            timestamp: "1970-01-01T00:00:00Z".to_string(),
-            signature_ed25519: "TBD".to_string(),
-            pubkey: "TBD".to_string(),
-        }
-    }
-
-    /// Serialize to canonical JSON.
-    ///
-    /// # Errors
-    /// Returns the underlying serde error when serialization fails.
-    pub fn to_json(&self) -> serde_json::Result<String> {
-        serde_json::to_string_pretty(self)
-    }
-}
+use vyre_conform_spec::{Certificate, CERTIFICATE_SCHEMA_VERSION};
 
 /// P5.4  -  Input to [`issue_certificate`]. The issuer runs the
 /// witness corpus through the target backend and through the CPU
@@ -131,8 +52,8 @@ pub fn issue_certificate(input: IssueInput<'_>) -> Result<Certificate, Certifica
     let witness_set_blake3 = blake3::hash(input.witness_bytes).to_hex().to_string();
 
     Ok(Certificate {
-        version: "0.4.1".to_string(),
-        op_id: input.op_id.clone(),
+        version: CERTIFICATE_SCHEMA_VERSION.to_string(),
+        op_id: input.op_id.to_string(),
         wire_format_version: 1,
         program_blake3,
         witness_set_blake3,
@@ -158,6 +79,8 @@ pub fn issue_certificate(input: IssueInput<'_>) -> Result<Certificate, Certifica
 /// the "TBD" sentinel; [`CertificateError::BadFingerprint`] when
 /// a blake3 field isn't 64 hex chars.
 pub fn verify_structural(cert: &Certificate) -> Result<(), CertificateError> {
+    cert.validate_schema_version()
+        .map_err(|error| CertificateError::UnsupportedSchemaVersion(error.found().to_string()))?;
     for (name, value) in [
         ("program_blake3", &cert.program_blake3),
         ("witness_set_blake3", &cert.witness_set_blake3),
@@ -190,6 +113,11 @@ pub enum CertificateError {
     /// Witness set was empty at issue time  -  nothing to certify.
     #[error("empty witness set  -  no witnesses ran through the backend")]
     EmptyWitnessSet,
+    /// Certificate schema version is not supported by this runner.
+    #[error(
+        "unsupported certificate schema version `{0}`; supported version is `{CERTIFICATE_SCHEMA_VERSION}`"
+    )]
+    UnsupportedSchemaVersion(String),
     /// A cert field is still the "TBD" sentinel.
     #[error("cert field `{0}` is still set to the reserved value 'TBD'")]
     UnsetField(String),
@@ -206,7 +134,7 @@ mod tests {
     fn round_trips_through_json() {
         let op_id: OpId = "primitive.bitwise.xor".into();
         let cert = Certificate::new(
-            op_id,
+            op_id.to_string(),
             "backend-a",
             "0.5.0",
             vec!["Commutative".to_string(), "Associative".to_string()],
@@ -233,7 +161,7 @@ mod tests {
             pubkey: &key,
         };
         let cert = issue_certificate(input).unwrap();
-        assert_eq!(cert.op_id.as_ref(), "vyre-libs::nn::softmax");
+        assert_eq!(cert.op_id.as_str(), "vyre-libs::nn::softmax");
         assert_eq!(cert.backend_id, "backend-a");
         assert_eq!(cert.program_blake3.len(), 64);
         assert_eq!(cert.witness_set_blake3.len(), 64);
@@ -262,7 +190,7 @@ mod tests {
 
     #[test]
     fn verify_structural_catches_tbd_sentinel() {
-        let cert = Certificate::new(OpId::from("x"), "backend-a", "0.5.0", vec![]);
+        let cert = Certificate::new("x", "backend-a", "0.5.0", vec![]);
         let err = verify_structural(&cert).unwrap_err();
         assert!(matches!(err, CertificateError::UnsetField(_)));
     }

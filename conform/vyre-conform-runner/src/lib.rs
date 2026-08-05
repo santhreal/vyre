@@ -18,6 +18,6 @@ pub mod witness_plan;
 
 pub use bundle_cert::{
     issue_bundle_cert, verify_bundle_against_reference, verify_bundle_with_backend,
-    verify_cert_signature_hex, BundleCertError, BundleCertificate, CorpusWitness,
+    verify_cert_signature_hex, BundleCertError,
 };
-pub use cert::{issue_certificate, verify_structural, Certificate, CertificateError, IssueInput};
+pub use cert::{issue_certificate, verify_structural, CertificateError, IssueInput};

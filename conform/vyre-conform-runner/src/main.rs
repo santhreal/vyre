@@ -4,8 +4,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::Serialize;
-use vyre::ir::OpId;
 use vyre::VyreBackend;
+use vyre_conform_spec::{
+    ConformanceResult, ReplayCapsule, ReplayMinimization, ReplayMismatch,
+    REPLAY_CAPSULE_SCHEMA_VERSION,
+};
 use vyre_conform_runner::convergence_lens;
 use vyre_conform_runner::dispatch_grid;
 use vyre_conform_runner::fp_parity::{compare_output_buffers, BufferParity};
@@ -31,61 +34,6 @@ use vyre_libs as _;
 const DEFAULT_CERTIFICATE_DIR: &str = ".internals/certs/";
 const DEFAULT_CERTIFICATE_FILE: &str = "prove.json";
 
-#[derive(Clone, Debug, Serialize)]
-struct PairResult {
-    #[serde(serialize_with = "serialize_op_id")]
-    op_id: OpId,
-    backend_id: String,
-    passed: bool,
-    message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    replay_capsule: Option<ReplayCapsule>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct ReplayCapsule {
-    schema_version: u32,
-    op_id: String,
-    backend_id: String,
-    case_index: usize,
-    replay_command: String,
-    program_blake3: String,
-    witness_input_blake3: String,
-    reference_output_blake3: String,
-    backend_output_blake3: String,
-    witness_input_buffers_hex: Vec<String>,
-    reference_output_buffers_hex: Vec<String>,
-    backend_output_buffers_hex: Vec<String>,
-    witness_input_count: usize,
-    reference_output_count: usize,
-    backend_output_count: usize,
-    first_mismatch: ReplayMismatch,
-    minimization: ReplayMinimization,
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct ReplayMismatch {
-    kind: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    output_index: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    byte_index: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reference_len: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    backend_len: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reference_byte: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    backend_byte: Option<u8>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct ReplayMinimization {
-    strategy: &'static str,
-    original_case_count: usize,
-    retained_case_count: usize,
-}
 
 #[derive(Debug, Serialize)]
 struct ProveArtifact {
@@ -95,7 +43,7 @@ struct ProveArtifact {
     plan: ProofPlanSummary,
     signature: String,
     public_key: String,
-    pairs: Vec<PairResult>,
+    pairs: Vec<ConformanceResult>,
 }
 
 #[derive(Debug, Serialize)]
@@ -161,13 +109,6 @@ type FixtureCases = Vec<Vec<Vec<u8>>>;
 /// Signature of the zero-argument closure an `OpEntry` ships as its
 /// `test_inputs` / `expected_output` generator.
 type FixtureFn = fn() -> FixtureCases;
-
-fn serialize_op_id<S>(op_id: &OpId, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_str(op_id.as_ref())
-}
 
 #[derive(Clone, Copy)]
 struct UnifiedEntry {
@@ -283,7 +224,7 @@ fn print_usage() {
     );
 }
 
-fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String> {
+fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<ConformanceResult>, String> {
     let entries = unified_entries();
     let mut pairs = Vec::with_capacity(entries.len());
     let backend_id = backend_id.to_string();
@@ -307,7 +248,7 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
         let prepared = match prepare_entry(entry) {
             Ok(prepared) => prepared,
             Err(error) => {
-                pairs.push(PairResult {
+                pairs.push(ConformanceResult {
                     op_id: entry.id.into(),
                     backend_id: backend_id.clone(),
                     passed: false,
@@ -320,7 +261,7 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<PairResult>, String
         let backend = match acquire_backend(&backend_id) {
             Ok(backend) => backend,
             Err(error) => {
-                pairs.push(PairResult {
+                pairs.push(ConformanceResult {
                     op_id: entry.id.into(),
                     backend_id: backend_id.clone(),
                     passed: false,
@@ -537,7 +478,7 @@ fn unified_entries() -> Vec<UnifiedEntry> {
     // coverage while leaving primitive semantics untested against the
     // backend. Match the breadth of parity_matrix.rs by chaining
     // primitives in too.
-    let mut entries = vyre_libs::harness::all_entries()
+    let mut entries = vyre_libs::fixture_catalog::all_entries()
         .map(|entry| UnifiedEntry {
             id: entry.id,
             build: entry.build,
@@ -596,7 +537,7 @@ fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String> {
     }
     let input_plan = backend_dispatch_plan(&program)?;
     let convergence_max_iterations =
-        vyre_libs::harness::convergence_contract(entry.id).map(|contract| contract.max_iterations);
+        vyre_libs::fixture_catalog::convergence_contract(entry.id).map(|contract| contract.max_iterations);
     let reference_cases = prepare_reference_cases(
         entry.id,
         &program,
@@ -619,7 +560,7 @@ fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String> {
 
 struct PreparedEntryBatch {
     entries: Vec<PreparedEntry>,
-    pairs: Vec<PairResult>,
+    pairs: Vec<ConformanceResult>,
     any_failed: bool,
 }
 
@@ -797,7 +738,7 @@ fn prepare_entries_in_parallel(
             Ok(prepared) => prepared_entries.push(prepared),
             Err(error) => {
                 for backend in backends {
-                    pairs.push(PairResult {
+                    pairs.push(ConformanceResult {
                         op_id: op_id.into(),
                         backend_id: backend.id.to_string(),
                         passed: false,
@@ -820,7 +761,7 @@ fn prepare_entries_in_parallel(
 fn prove_backends_in_parallel(
     backends: &[&'static vyre::BackendRegistration],
     prepared_entries: &[PreparedEntry],
-) -> Vec<Vec<PairResult>> {
+) -> Vec<Vec<ConformanceResult>> {
     std::thread::scope(|scope| {
         let mut handles = Vec::with_capacity(backends.len());
         for &backend in backends {
@@ -843,7 +784,7 @@ fn prove_backends_in_parallel(
                     results.push(
                         prepared_entries
                             .iter()
-                            .map(|entry| PairResult {
+                            .map(|entry| ConformanceResult {
                                 op_id: entry.id.into(),
                                 backend_id: backend.id.to_string(),
                                 passed: false,
@@ -862,7 +803,7 @@ fn prove_backends_in_parallel(
 fn prove_one_backend(
     backend: &'static vyre::BackendRegistration,
     prepared_entries: &[PreparedEntry],
-) -> Vec<PairResult> {
+) -> Vec<ConformanceResult> {
     let started = std::time::Instant::now();
     if prepared_entries.is_empty() {
         return Vec::new();
@@ -874,7 +815,7 @@ fn prove_one_backend(
             let backend_id = backend.id.to_string();
             return prepared_entries
                 .iter()
-                .map(|entry| PairResult {
+                .map(|entry| ConformanceResult {
                             op_id: entry.id.into(),
                             backend_id: backend_id.clone(),
                             passed: false,
@@ -938,7 +879,7 @@ fn prove_one_backend(
                     indexed_pairs.extend(ids.into_iter().map(|(index, op_id)| {
                         (
                             index,
-                            PairResult {
+                            ConformanceResult {
                                 op_id: op_id.into(),
                                 backend_id: backend.id.to_string(),
                                 passed: false,
@@ -1023,7 +964,7 @@ fn compare_backend_against_reference(
     backend: &dyn VyreBackend,
     backend_id: &str,
     prepared: &PreparedEntry,
-) -> PairResult {
+) -> ConformanceResult {
     let backend_id = backend_id.to_string();
     let mut checked_cases = 0usize;
     let mut backend_inputs: Vec<&[u8]> = Vec::with_capacity(prepared.input_plan.source_count());
@@ -1039,7 +980,7 @@ fn compare_backend_against_reference(
             ) {
                 Ok(outputs) => outputs,
                 Err(error) => {
-                    return PairResult {
+                    return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -1054,7 +995,7 @@ fn compare_backend_against_reference(
             if let BufferParity::Mismatch(detail) =
                 compare_output_buffers(&prepared.program, &outputs, reference)
             {
-                return PairResult {
+                return ConformanceResult {
                     op_id: prepared.id.into(),
                     backend_id: backend_id.clone(),
                     passed: false,
@@ -1077,7 +1018,7 @@ fn compare_backend_against_reference(
                 &prepared.input_plan,
                 &mut backend_inputs,
             ) {
-                return PairResult {
+                return ConformanceResult {
                     op_id: prepared.id.into(),
                     backend_id: backend_id.clone(),
                     passed: false,
@@ -1099,7 +1040,7 @@ fn compare_backend_against_reference(
                     if let BufferParity::Mismatch(detail) =
                         compare_output_buffers(&prepared.program, &outputs, reference)
                     {
-                        return PairResult {
+                        return ConformanceResult {
                             op_id: prepared.id.into(),
                             backend_id: backend_id.clone(),
                             passed: false,
@@ -1118,7 +1059,7 @@ fn compare_backend_against_reference(
                     }
                 }
                 Ok(Err(error)) => {
-                    return PairResult {
+                    return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -1129,7 +1070,7 @@ fn compare_backend_against_reference(
                     };
                 }
                 Err(payload) => {
-                    return PairResult {
+                    return ConformanceResult {
                         op_id: prepared.id.into(),
                         backend_id: backend_id.clone(),
                         passed: false,
@@ -1145,7 +1086,7 @@ fn compare_backend_against_reference(
         checked_cases += 1;
     }
 
-    PairResult {
+    ConformanceResult {
         op_id: prepared.id.into(),
         backend_id,
         passed: true,
@@ -1165,7 +1106,7 @@ fn build_replay_capsule(
     reference_outputs: &[Vec<u8>],
 ) -> ReplayCapsule {
     ReplayCapsule {
-        schema_version: 1,
+        schema_version: REPLAY_CAPSULE_SCHEMA_VERSION,
         op_id: prepared.id.to_string(),
         backend_id: backend_id.to_string(),
         case_index,
@@ -1194,7 +1135,7 @@ fn build_replay_capsule(
         backend_output_count: backend_outputs.len(),
         first_mismatch: first_replay_mismatch(backend_outputs, reference_outputs),
         minimization: ReplayMinimization {
-            strategy: "single_witness_case",
+            strategy: "single_witness_case".to_string(),
             original_case_count: prepared.cases.len(),
             retained_case_count: 1,
         },
@@ -1227,7 +1168,7 @@ fn first_replay_mismatch(
 ) -> ReplayMismatch {
     if backend_outputs.len() != reference_outputs.len() {
         return ReplayMismatch {
-            kind: "output_count",
+            kind: "output_count".to_string(),
             output_index: None,
             byte_index: None,
             reference_len: Some(reference_outputs.len()),
@@ -1244,7 +1185,7 @@ fn first_replay_mismatch(
     {
         if backend.len() != reference.len() {
             return ReplayMismatch {
-                kind: "output_length",
+                kind: "output_length".to_string(),
                 output_index: Some(output_index),
                 byte_index: None,
                 reference_len: Some(reference.len()),
@@ -1261,7 +1202,7 @@ fn first_replay_mismatch(
             .find(|(_, (backend_byte, reference_byte))| backend_byte != reference_byte)
         {
             return ReplayMismatch {
-                kind: "byte",
+                kind: "byte".to_string(),
                 output_index: Some(output_index),
                 byte_index: Some(byte_index),
                 reference_len: Some(reference.len()),
@@ -1273,7 +1214,7 @@ fn first_replay_mismatch(
     }
 
     ReplayMismatch {
-        kind: "unclassified",
+        kind: "unclassified".to_string(),
         output_index: None,
         byte_index: None,
         reference_len: None,
@@ -2215,7 +2156,7 @@ mod tests {
 
     #[test]
     fn pair_result_omits_capsule_on_success_and_serializes_capsule_on_failure() {
-        let success = PairResult {
+        let success = ConformanceResult {
             op_id: "test.success".into(),
             backend_id: "metal".to_string(),
             passed: true,
@@ -2245,7 +2186,7 @@ mod tests {
             reference_cases: vec![vec![vec![0]]],
             convergence_max_iterations: None,
         };
-        let failure = PairResult {
+        let failure = ConformanceResult {
             op_id: "test.failure".into(),
             backend_id: "metal".to_string(),
             passed: false,

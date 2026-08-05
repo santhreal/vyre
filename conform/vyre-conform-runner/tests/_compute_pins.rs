@@ -3,7 +3,8 @@
 use ed25519_dalek::{Signer, SigningKey};
 use std::sync::Arc;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform_runner::{issue_bundle_cert, CorpusWitness};
+use vyre_conform_runner::issue_bundle_cert;
+use vyre_conform_spec::{BundleCertificate, ConformanceCase};
 use vyre_driver::registry::{
     Category, LoweringTable, OpDef, OpDefRegistration, Signature, TypedParam,
 };
@@ -48,7 +49,7 @@ fn deterministic_key() -> SigningKey {
     SigningKey::from_bytes(&seed_arr)
 }
 
-fn sign(cert: &mut vyre_conform_runner::BundleCertificate, key: &SigningKey) {
+fn sign(cert: &mut BundleCertificate, key: &SigningKey) {
     let signable = serde_json::json!({
         "version": cert.version,
         "bundle_blake3": cert.bundle_blake3,
@@ -160,11 +161,11 @@ fn compute_pins() {
     let pubkey = hex::encode(key.verifying_key().to_bytes());
     eprintln!("PUBKEY: {}", pubkey);
 
-    let programs: Vec<(&str, Program, Vec<CorpusWitness>)> = vec![
+    let programs: Vec<(&str, Program, Vec<ConformanceCase>)> = vec![
         (
             "trivial_const",
             trivial_const(),
-            vec![CorpusWitness {
+            vec![ConformanceCase {
                 name: "tc1".into(),
                 inputs: vec![bytes_u32(&[0])],
             }],
@@ -172,7 +173,7 @@ fn compute_pins() {
         (
             "one_op_add",
             one_op_add(),
-            vec![CorpusWitness {
+            vec![ConformanceCase {
                 name: "add1".into(),
                 inputs: vec![bytes_u32(&[0])],
             }],
@@ -180,7 +181,7 @@ fn compute_pins() {
         (
             "loop_add",
             loop_add(),
-            vec![CorpusWitness {
+            vec![ConformanceCase {
                 name: "loop1".into(),
                 inputs: vec![bytes_u32(&[0])],
             }],
@@ -188,7 +189,7 @@ fn compute_pins() {
         (
             "composed_nested",
             composed_nested(),
-            vec![CorpusWitness {
+            vec![ConformanceCase {
                 name: "nest1".into(),
                 inputs: vec![bytes_u32(&[0])],
             }],
@@ -196,7 +197,7 @@ fn compute_pins() {
         (
             "region_chain_intrinsic_dialect",
             region_chain_intrinsic_dialect(),
-            vec![CorpusWitness {
+            vec![ConformanceCase {
                 name: "rd1".into(),
                 inputs: vec![bytes_u32(&[0])],
             }],

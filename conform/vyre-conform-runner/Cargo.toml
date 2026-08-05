@@ -1,6 +1,6 @@
 [package]
 name = "vyre-conform-runner"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -31,6 +31,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tempfile = { workspace = true }
 vyre = { workspace = true }
+vyre-conform-spec = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-metal = { workspace = true, optional = true }

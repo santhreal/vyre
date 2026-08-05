@@ -1,8 +1,9 @@
 //! Contract tests for witness-set determinism, edge-case coverage,
 //! and Program wire-format fingerprint stability.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_conform_spec::U32Witness;
+use vyre_conform_spec::{U32Witness, WitnessSet};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
+use vyre_spec::DataType;
 
 #[test]
 fn u32_witness_is_deterministic() {
@@ -12,6 +13,11 @@ fn u32_witness_is_deterministic() {
         a, b,
         "U32Witness::enumerate must be deterministic across calls"
     );
+}
+
+#[test]
+fn u32_witness_uses_the_stable_semantic_data_type() {
+    assert_eq!(<U32Witness as WitnessSet>::DATA_TYPE, DataType::U32);
 }
 
 #[test]

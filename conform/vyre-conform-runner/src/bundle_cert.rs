@@ -26,7 +26,7 @@
 //! ## Design
 //!
 //! - **Input determinism**: the corpus is supplied as a list of
-//!   [`CorpusWitness`] records, each naming one dispatch. They're
+//!   [`ConformanceCase`] records, each naming one dispatch. They're
 //!   sorted by `name` before hashing so the same logical corpus
 //!   produces the same cert regardless of enumeration order.
 //! - **Output determinism**: outputs are captured as
@@ -44,7 +44,9 @@
 #[allow(unused_imports)]
 use std::fmt::Write;
 
-use serde::{Deserialize, Serialize};
+use vyre_conform_spec::{
+    BundleCertificate, ConformanceCase, CERTIFICATE_SCHEMA_VERSION,
+};
 use vyre::ir::Program;
 use vyre::{BackendError, VyreBackend};
 
@@ -53,43 +55,6 @@ use vyre_reference::value::Value;
 use crate::dispatch_grid;
 use crate::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 
-/// Conformance certificate for a whole compiled document (bundle).
-///
-/// Unlike the per-op [`Certificate`](crate::cert::Certificate) this
-/// cert spans an entire fused Program plus a named corpus of
-/// witnesses.  A consumer that can reproduce both hashes on their
-/// backend is guaranteed to see identical rule hits.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct BundleCertificate {
-    /// Certificate format version (follows vyre minor).
-    pub version: String,
-    /// `blake3(program.to_wire())`  -  bundle wire bytes.
-    pub bundle_blake3: String,
-    /// `blake3(canonicalized corpus input stream)`.
-    pub corpus_blake3: String,
-    /// `blake3(canonicalized reference-output stream)`.
-    pub reference_output_blake3: String,
-    /// Number of witness inputs (aka dispatches per pass).
-    pub witness_count: u64,
-    /// ISO 8601 UTC timestamp.
-    pub timestamp: String,
-    /// Ed25519 signature over the canonical JSON body (hex).
-    pub signature_ed25519: String,
-    /// Ed25519 public key (hex).
-    pub pubkey: String,
-}
-
-/// One corpus witness: a named input set fed to the Program as a
-/// single dispatch.
-#[derive(Debug, Clone)]
-pub struct CorpusWitness {
-    /// Stable label for this witness  -  used as the sort key when
-    /// canonicalising the corpus hash.
-    pub name: String,
-    /// Logical witness input buffers. Declared outputs may be omitted; static
-    /// read-write buffers may be omitted and are zero-filled before dispatch.
-    pub inputs: Vec<Vec<u8>>,
-}
 
 /// Errors surfaced by bundle-cert issue / verify.
 #[derive(Debug, thiserror::Error)]
@@ -153,6 +118,11 @@ pub enum BundleCertError {
         /// Hash observed at verify time.
         observed: String,
     },
+    /// Certificate schema version is not supported by this runner.
+    #[error(
+        "unsupported bundle certificate schema version `{0}`; supported version is `{CERTIFICATE_SCHEMA_VERSION}`"
+    )]
+    UnsupportedSchemaVersion(String),
     /// A cert field is still the "TBD" sentinel.
     #[error("cert field `{0}` is still set to the reserved value 'TBD'  -  sign before shipping")]
     UnsetField(&'static str),
@@ -207,7 +177,7 @@ pub enum BundleCertError {
 /// A consumer that receives the same witness set in any order
 /// produces the same hash.
 fn canonicalise_corpus(
-    corpus: &[CorpusWitness],
+    corpus: &[ConformanceCase],
 ) -> Result<(Vec<usize>, [u8; 32]), BundleCertError> {
     let mut sorted_indices: Vec<usize> = (0..corpus.len()).collect();
     sorted_indices.sort_by(|&left, &right| corpus[left].name.cmp(&corpus[right].name));
@@ -264,7 +234,7 @@ fn hex32(bytes: &[u8; 32]) -> String {
 
 fn reference_dispatch<'a>(
     program: &Program,
-    witness: &'a CorpusWitness,
+    witness: &'a ConformanceCase,
     input_plan: &'a WitnessInputPlan,
     planned_inputs: &mut Vec<&'a [u8]>,
     values: &mut Vec<Value>,
@@ -294,7 +264,7 @@ fn reference_dispatch<'a>(
 fn backend_dispatch<'a>(
     backend: &dyn VyreBackend,
     program: &Program,
-    witness: &'a CorpusWitness,
+    witness: &'a ConformanceCase,
     input_plan: &'a WitnessInputPlan,
     config: &vyre::DispatchConfig,
     borrowed_inputs: &mut Vec<&'a [u8]>,
@@ -332,7 +302,7 @@ fn backend_dispatch<'a>(
 ///   rejected a witness.
 pub fn issue_bundle_cert(
     program: &Program,
-    corpus: &[CorpusWitness],
+    corpus: &[ConformanceCase],
     timestamp: &str,
     signature_ed25519: &str,
     pubkey: &str,
@@ -385,7 +355,7 @@ pub fn issue_bundle_cert(
     };
 
     Ok(BundleCertificate {
-        version: "0.4.1".to_string(),
+        version: CERTIFICATE_SCHEMA_VERSION.to_string(),
         bundle_blake3: bundle_hash.to_hex().to_string(),
         corpus_blake3: hex32(&corpus_hash),
         reference_output_blake3: hex32(&output_hash),
@@ -417,7 +387,7 @@ pub fn verify_bundle_with_backend(
     cert: &BundleCertificate,
     program: &Program,
     backend: &dyn VyreBackend,
-    corpus: &[CorpusWitness],
+    corpus: &[ConformanceCase],
 ) -> Result<(), BundleCertError> {
     let config = dispatch_grid::config_for_program(program).map_err(|message| {
         BundleCertError::ReferenceFailed {
@@ -448,7 +418,7 @@ pub fn verify_bundle_with_backend(
 pub fn verify_bundle_against_reference(
     cert: &BundleCertificate,
     program: &Program,
-    corpus: &[CorpusWitness],
+    corpus: &[ConformanceCase],
 ) -> Result<(), BundleCertError> {
     verify_bundle_with(
         cert,
@@ -491,6 +461,8 @@ pub fn verify_cert_signature_hex(
     cert: &BundleCertificate,
     trusted_pubkey_hex: &str,
 ) -> Result<(), BundleCertError> {
+    cert.validate_schema_version()
+        .map_err(|error| BundleCertError::UnsupportedSchemaVersion(error.found().to_string()))?;
     // Hex-length sanity on declared fields (CRITIQUE_CONFORM M2).
     if cert.signature_ed25519 == "TBD" || cert.pubkey == "TBD" {
         return Err(BundleCertError::UnsetField(
@@ -584,19 +556,21 @@ pub fn verify_cert_signature_hex(
 fn verify_bundle_with<F>(
     cert: &BundleCertificate,
     program: &Program,
-    corpus: &[CorpusWitness],
+    corpus: &[ConformanceCase],
     mut dispatch: F,
 ) -> Result<(), BundleCertError>
 where
     F: for<'a> FnMut(
         &Program,
-        &'a CorpusWitness,
+        &'a ConformanceCase,
         &'a WitnessInputPlan,
         &mut Vec<Value>,
         &mut Vec<&'a [u8]>,
         &mut Vec<Vec<u8>>,
     ) -> Result<(), BundleCertError>,
 {
+    cert.validate_schema_version()
+        .map_err(|error| BundleCertError::UnsupportedSchemaVersion(error.found().to_string()))?;
     if corpus.is_empty() {
         return Err(BundleCertError::EmptyCorpus);
     }
@@ -718,13 +692,13 @@ mod tests {
         )
     }
 
-    fn sample_corpus() -> Vec<CorpusWitness> {
+    fn sample_corpus() -> Vec<ConformanceCase> {
         vec![
-            CorpusWitness {
+            ConformanceCase {
                 name: "alpha".into(),
                 inputs: vec![bytes_u32(&[1, 2, 3, 4]), bytes_u32(&[0, 0])],
             },
-            CorpusWitness {
+            ConformanceCase {
                 name: "beta".into(),
                 inputs: vec![bytes_u32(&[7, 8, 9, 10]), bytes_u32(&[0, 0])],
             },
@@ -760,7 +734,7 @@ mod tests {
     fn corpus_hash_is_order_independent() {
         let program = copy_first_program();
         let forward = sample_corpus();
-        let reversed: Vec<CorpusWitness> = forward.iter().cloned().rev().collect();
+        let reversed: Vec<ConformanceCase> = forward.iter().cloned().rev().collect();
         let cert_a = issue_bundle_cert(&program, &forward, "t", "s", "p").unwrap();
         let cert_b = issue_bundle_cert(&program, &reversed, "t", "s", "p").unwrap();
         assert_eq!(cert_a.corpus_blake3, cert_b.corpus_blake3);
@@ -823,7 +797,7 @@ mod tests {
     #[test]
     fn bundle_cert_accepts_logical_witness_order_after_output_buffer() {
         let program = output_first_copy_program();
-        let corpus = vec![CorpusWitness {
+        let corpus = vec![ConformanceCase {
             name: "logical-input-only".into(),
             inputs: vec![bytes_u32(&[0xA5A5_5A5A])],
         }];
@@ -837,7 +811,7 @@ mod tests {
     #[test]
     fn bundle_backend_verifier_accepts_logical_witness_order_after_output_buffer() {
         let program = output_first_copy_program();
-        let corpus = vec![CorpusWitness {
+        let corpus = vec![ConformanceCase {
             name: "backend-logical-input-only".into(),
             inputs: vec![bytes_u32(&[0xFEED_FACE])],
         }];
@@ -862,7 +836,7 @@ mod tests {
             [1, 1, 1],
             Vec::<Node>::new(),
         );
-        let corpus = vec![CorpusWitness {
+        let corpus = vec![ConformanceCase {
             name: "missing-runtime-scratch".into(),
             inputs: Vec::new(),
         }];

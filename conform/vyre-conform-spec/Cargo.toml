@@ -1,6 +1,6 @@
 [package]
 name = "vyre-conform-spec"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -17,5 +17,10 @@ publish = false
 workspace = true
 
 [dependencies]
-vyre.workspace = true
 blake3 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+vyre-spec = { workspace = true }
+
+[dev-dependencies]
+vyre-foundation = { workspace = true }
