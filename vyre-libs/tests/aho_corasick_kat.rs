@@ -13,7 +13,7 @@
 #![allow(deprecated)]
 mod common;
 use common::{decode_u32_words, u32_bytes};
-use vyre_libs::scan::{aho_corasick, dfa_compile, CompiledDfa};
+use vyre::scan::{aho_corasick, dfa_compile, CompiledDfa};
 use vyre_reference::value::Value;
 
 /// Reference oracle: walk the DFA byte-by-byte, emit accept[state] at each

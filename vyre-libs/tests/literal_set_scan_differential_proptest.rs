@@ -12,7 +12,7 @@
 
 use proptest::prelude::*;
 use vyre_driver_reference::CpuRefBackend;
-use vyre_libs::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{GpuLiteralSet, LiteralMatch};
 
 fn sorted_triples(matches: &[LiteralMatch]) -> Vec<(u32, u32, u32)> {
     let mut v: Vec<(u32, u32, u32)> = matches

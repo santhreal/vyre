@@ -14,7 +14,7 @@
 //!   cargo test -p vyre-libs --test literal_set_presence_gpu --release -- --nocapture
 
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// Dense, consumer-scale literal set: short high-frequency anchors that fire all over
 /// source text, plus realistic credential prefixes.

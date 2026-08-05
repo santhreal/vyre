@@ -18,7 +18,7 @@ use vyre::ir::{BufferAccess, MemoryKind, Program};
 use vyre_libs::hash::fnv1a32;
 use vyre_libs::math::{broadcast, dot, matmul, scan_prefix_sum};
 use vyre_libs::nn::{linear, relu};
-use vyre_libs::scan::substring_search;
+use vyre::scan::substring_search;
 
 fn assert_valid(p: &Program) {
     let errors = vyre::ir::validate(p);
@@ -116,7 +116,7 @@ fn nn_relu_produces_valid_program() {
 fn matching_substring_produces_valid_program() {
     let p = substring_search("haystack", "needle", "matches", 16, 5);
     assert_valid(&p);
-    // The canonical path is `vyre_libs::scan::substring_search`, which this
+    // The canonical path is `vyre::scan::substring_search`, which this
     // file imports. `vyre_libs::matching::substring_search` is a deprecated
     // alias that keeps the old op id for transition consumers; asserting the
     // legacy id here made the canonical builder look like the alias.

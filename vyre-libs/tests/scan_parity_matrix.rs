@@ -24,7 +24,7 @@
 #![cfg(feature = "matching-nfa")]
 #![allow(deprecated)]
 use std::collections::BTreeSet;
-use vyre_libs::scan::{build_rule_pipeline, GpuLiteralSet};
+use vyre::scan::{build_rule_pipeline, GpuLiteralSet};
 
 fn match_set<I>(matches: I) -> BTreeSet<(u32, u32, u32)>
 where

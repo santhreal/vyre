@@ -11,7 +11,7 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 use vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::gpu_int_literal_scan;
-use vyre_libs::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn unpack_u32(bytes: &[u8]) -> u32 {

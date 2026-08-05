@@ -14,7 +14,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre_libs::scan::classic_ac::{
+use vyre::scan::classic_ac::{
     classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_compile, presence_by_region_words,
@@ -22,7 +22,7 @@ use vyre_libs::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
-use vyre_libs::scan::{pack_haystack_u32, pack_u32_slice};
+use vyre::scan::{pack_haystack_u32, pack_u32_slice};
 
 struct Lcg(u64);
 impl Lcg {

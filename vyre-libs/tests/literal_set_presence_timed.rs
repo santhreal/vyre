@@ -11,7 +11,7 @@
 //! zero (on the CPU reference backend that has no device timer)).
 
 use vyre_driver_reference::CpuRefBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// A haystack containing two of three patterns (`alpha`, `tango`) but not the
 /// third (`kilo`), so the global-presence bitmap has some set bits and some

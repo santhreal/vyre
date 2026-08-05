@@ -17,7 +17,7 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::{GpuLiteralSet, RulePipeline};
+use vyre::scan::{GpuLiteralSet, RulePipeline};
 use vyre_primitives::matching::CompiledDfa;
 
 fn arb_random_bytes() -> impl Strategy<Value = Vec<u8>> {

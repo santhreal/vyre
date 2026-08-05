@@ -26,7 +26,7 @@ use presence_oracle::{
     random_literals, random_region_starts, scale_cases, Lcg,
 };
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// Dispatch the real GPU region-presence scan and assert it matches the oracle.
 fn check_gpu(

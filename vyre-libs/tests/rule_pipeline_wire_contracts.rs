@@ -3,7 +3,7 @@
 #![cfg(feature = "matching-nfa")]
 
 use vyre_foundation::serial::envelope::EnvelopeError;
-use vyre_libs::scan::{build_rule_pipeline, MatchEngineCache, PipelineWireError, RulePipeline};
+use vyre::scan::{build_rule_pipeline, MatchEngineCache, PipelineWireError, RulePipeline};
 
 #[test]
 fn rule_pipeline_wire_round_trips_basic_pipeline() {

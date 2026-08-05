@@ -21,7 +21,7 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre_libs::scan::regex_dfa::build_regex_dfa_unanchored;
+use vyre::scan::regex_dfa::build_regex_dfa_unanchored;
 
 /// Build the unanchored DFA and run the production single-pass scan (mirrors
 /// `regex_dfa.rs`): follow one transition per byte off the public transition table;

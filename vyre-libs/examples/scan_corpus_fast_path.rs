@@ -24,7 +24,7 @@ use vyre::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// The demo pattern set, a handful of secret-shaped literals a consumer might
 /// hunt for. In a real consumer these come from a rule catalog (Tier-B data).

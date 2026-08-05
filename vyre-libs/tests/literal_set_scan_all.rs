@@ -7,7 +7,7 @@
 //! `GpuLiteralSet::reference_scan` (an independent plain-Rust DFA walk).
 
 use vyre_driver_reference::CpuRefBackend;
-use vyre_libs::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{GpuLiteralSet, LiteralMatch};
 
 /// The fixed-cap default `scan_all` starts at; a corpus with more matches than
 /// this forces the auto-resize path. Mirrors `LITERAL_SET_DEFAULT_MAX_MATCHES`.

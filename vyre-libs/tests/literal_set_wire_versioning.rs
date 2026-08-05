@@ -8,7 +8,7 @@
 //! magic/version constants: a valid blob's own header bytes are read and mutated
 //! in place, so the test tracks whatever the current version is.
 
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 fn sample_matcher() -> GpuLiteralSet {
     GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_", b"token", b"a"])

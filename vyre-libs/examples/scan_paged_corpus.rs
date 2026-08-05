@@ -33,7 +33,7 @@ use std::path::{Path, PathBuf};
 
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::{
+use vyre::scan::{
     scan_paged_fused_async, scan_paths_paged_prefetched, GlobalMatch, GpuLiteralSet,
     PagedScanResult,
 };

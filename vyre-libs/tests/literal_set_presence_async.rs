@@ -14,7 +14,7 @@
 
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// Three patterns; two occur (`alpha`, `tango`), one does not (`kilo`), so the
 /// bitmap has some set and some clear bits (non-vacuous equality).

@@ -12,7 +12,7 @@
 //! uppercase input: Law 10).
 
 use vyre_driver_reference::CpuRefBackend;
-use vyre_libs::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{GpuLiteralSet, LiteralMatch};
 
 struct Lcg(u64);
 impl Lcg {

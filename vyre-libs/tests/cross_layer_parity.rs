@@ -22,7 +22,7 @@
 
 #[test]
 fn literal_set_cpu_finds_planted_secret() {
-    use vyre_libs::scan::GpuLiteralSet;
+    use vyre::scan::GpuLiteralSet;
     let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
     let haystack = b"foo AKIAIOSFODNN7 bar ghp_xxxx baz";
     let matches = engine.reference_scan(haystack);
@@ -33,7 +33,7 @@ fn literal_set_cpu_finds_planted_secret() {
 
 #[test]
 fn literal_set_idempotent() {
-    use vyre_libs::scan::GpuLiteralSet;
+    use vyre::scan::GpuLiteralSet;
     let engine = GpuLiteralSet::compile(&[b"abc".as_slice()]);
     let haystack = b"abc";
     let first = engine.reference_scan(haystack);
@@ -43,14 +43,14 @@ fn literal_set_idempotent() {
 
 #[test]
 fn empty_haystack_yields_empty_matches() {
-    use vyre_libs::scan::GpuLiteralSet;
+    use vyre::scan::GpuLiteralSet;
     let engine = GpuLiteralSet::compile(&[b"x".as_slice()]);
     assert!(engine.reference_scan(b"").is_empty());
 }
 
 #[test]
 fn no_matches_when_pattern_absent() {
-    use vyre_libs::scan::GpuLiteralSet;
+    use vyre::scan::GpuLiteralSet;
     let engine = GpuLiteralSet::compile(&[b"DEADBEEF".as_slice()]);
     assert!(engine.reference_scan(b"the quick brown fox").is_empty());
 }
@@ -62,7 +62,7 @@ fn regex_compile_round_trips_literal_via_nfa() {
     // recognize the same substring the literal-set engine would
     // (modulo NFA-vs-DFA stepping differences). Smoke-check by
     // ensuring construction + round-trip succeeds without panic.
-    let compiled = vyre_libs::scan::compile_regex_set(&["abc"]).expect("compile");
+    let compiled = vyre::scan::compile_regex_set(&["abc"]).expect("compile");
     assert_eq!(compiled.plan.accept_states.len(), 1);
     assert!(compiled.plan.num_states > 0);
 }
@@ -70,14 +70,14 @@ fn regex_compile_round_trips_literal_via_nfa() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn regex_alternation_compiles_to_nfa() {
-    let compiled = vyre_libs::scan::compile_regex_set(&["foo|bar"]).expect("compile");
+    let compiled = vyre::scan::compile_regex_set(&["foo|bar"]).expect("compile");
     assert_eq!(compiled.plan.accept_states.len(), 1);
 }
 
 #[cfg(feature = "matching-regex")]
 #[test]
 fn regex_class_compiles_to_nfa() {
-    let compiled = vyre_libs::scan::compile_regex_set(&[r"[a-z]+"]).expect("compile");
+    let compiled = vyre::scan::compile_regex_set(&[r"[a-z]+"]).expect("compile");
     assert_eq!(compiled.plan.accept_states.len(), 1);
 }
 
@@ -95,7 +95,7 @@ fn regex_class_compiles_to_nfa() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn regex_start_anchor_compiles_and_is_recorded_on_the_accept_state() {
-    let compiled = vyre_libs::scan::compile_regex_set(&["^foo"]).expect("^foo must compile");
+    let compiled = vyre::scan::compile_regex_set(&["^foo"]).expect("^foo must compile");
     assert_eq!(
         compiled.plan.accept_start_anchored,
         vec![true],
@@ -116,7 +116,7 @@ fn regex_start_anchor_compiles_and_is_recorded_on_the_accept_state() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn an_unanchored_pattern_records_no_anchor() {
-    let compiled = vyre_libs::scan::compile_regex_set(&["foo"]).expect("foo must compile");
+    let compiled = vyre::scan::compile_regex_set(&["foo"]).expect("foo must compile");
     assert_eq!(compiled.plan.accept_start_anchored, vec![false]);
     assert_eq!(compiled.plan.accept_end_anchored, vec![false]);
 }
@@ -128,7 +128,7 @@ fn an_unanchored_pattern_records_no_anchor() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn anchors_are_tracked_per_pattern_within_one_set() {
-    let compiled = vyre_libs::scan::compile_regex_set(&["foo", "^bar", "baz$", "^qux$"])
+    let compiled = vyre::scan::compile_regex_set(&["foo", "^bar", "baz$", "^qux$"])
         .expect("a mixed anchored set must compile");
     assert_eq!(
         compiled.plan.accept_start_anchored,
@@ -154,7 +154,7 @@ fn region_dedup_collapses_overlap() {
 
 #[test]
 fn match_engine_cache_key_changes_with_patterns() {
-    use vyre_libs::scan::{GpuLiteralSet, MatchScan};
+    use vyre::scan::{GpuLiteralSet, MatchScan};
     let a = GpuLiteralSet::compile(&[b"foo".as_slice()]);
     let b = GpuLiteralSet::compile(&[b"bar".as_slice()]);
     assert_ne!(MatchScan::cache_key(&a), MatchScan::cache_key(&b));
@@ -177,7 +177,7 @@ fn match_engine_cache_key_changes_with_patterns() {
 /// it is built.
 #[test]
 fn cache_key_is_deterministic_constant() {
-    use vyre_libs::scan::{GpuLiteralSet, MatchScan};
+    use vyre::scan::{GpuLiteralSet, MatchScan};
 
     let patterns: &[&[u8]] = &[b"AKIA".as_slice(), b"ghp_".as_slice()];
     let key = MatchScan::cache_key(&GpuLiteralSet::compile(patterns));
@@ -232,7 +232,7 @@ fn every_match_engine_implements_match_scan() {
     // implement `MatchScan`. If a future refactor breaks this, the
     // compile error here is the canary. (Trait objects double-check
     // dyn-safety at the same time.)
-    use vyre_libs::scan::{GpuLiteralSet, MatchScan};
+    use vyre::scan::{GpuLiteralSet, MatchScan};
     let engine = GpuLiteralSet::compile(&[b"x".as_slice()]);
     let _trait_obj: &dyn MatchScan = &engine;
 }
@@ -240,7 +240,7 @@ fn every_match_engine_implements_match_scan() {
 #[cfg(feature = "matching-nfa")]
 #[test]
 fn rule_pipeline_implements_match_scan() {
-    use vyre_libs::scan::{build_rule_pipeline, MatchScan};
+    use vyre::scan::{build_rule_pipeline, MatchScan};
     let pipe = build_rule_pipeline(&["abc"], "input", "hits", 16);
     let _trait_obj: &dyn MatchScan = &pipe;
 }

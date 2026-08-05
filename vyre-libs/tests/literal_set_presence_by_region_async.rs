@@ -27,7 +27,7 @@ use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
 use vyre::VyreBackend;
 use vyre_driver_reference::CpuRefBackend;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {

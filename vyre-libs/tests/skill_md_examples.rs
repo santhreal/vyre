@@ -11,7 +11,7 @@
     feature = "matching-dfa",
     feature = "matching-nfa"
 ))]
-use vyre_libs::scan::{
+use vyre::scan::{
     cached_load_or_compile, dedup_regions_inplace, dedup_regions_reference, engine_cache_path,
     pack_haystack_u32, pack_u32_slice, scan_guard, unpack_match_triples, GpuLiteralSet,
     RegionTriple, DEFAULT_MAX_SCAN_BYTES,
@@ -98,7 +98,7 @@ fn skill_md_cache_helpers_round_trip() {
 #[cfg(feature = "matching-nfa")]
 #[test]
 fn skill_md_rule_pipeline_cpu_finds_documented_match() {
-    use vyre_libs::scan::build_rule_pipeline;
+    use vyre::scan::build_rule_pipeline;
     // Decision-table row: "RulePipeline / mega_scan  -  regex (NFA)".
     let pipe = build_rule_pipeline(&["abc"], "input", "hits", 16);
     let matches = pipe.reference_scan(b"xxabcxx");
@@ -111,7 +111,7 @@ fn skill_md_rule_pipeline_cpu_finds_documented_match() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn skill_md_compile_regex_set_round_trips() {
-    use vyre_libs::scan::compile_regex_set;
+    use vyre::scan::compile_regex_set;
     // Decision-table row: "compile_regex_set  -  regex set → RulePipeline".
     let set = compile_regex_set(&["AKIA[A-Z0-9]{4}"]).expect("compile");
     assert_eq!(set.plan.accept_states.len(), 1);
@@ -121,8 +121,8 @@ fn skill_md_compile_regex_set_round_trips() {
 #[test]
 fn skill_md_substring_search_emits_program() {
     use vyre::ir::Node;
-    use vyre_libs::scan::substring_search;
-    use vyre_libs::scan::SCAN_SUBSTRING_OP_ID;
+    use vyre::scan::substring_search;
+    use vyre::scan::SCAN_SUBSTRING_OP_ID;
     // Decision-table row: "substring_search  -  one literal needle".
     let prog = substring_search("input", "needle", "matches", 64, 4);
     let [Node::Region { generator, .. }] = prog.entry() else {
@@ -135,7 +135,7 @@ fn skill_md_substring_search_emits_program() {
 #[test]
 fn skill_md_aho_corasick_emits_program() {
     use vyre::ir::Node;
-    use vyre_libs::scan::{aho_corasick, dfa_compile};
+    use vyre::scan::{aho_corasick, dfa_compile};
     // Decision-table row: "aho_corasick  -  many literals".
     let dfa = dfa_compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
     let prog = aho_corasick(

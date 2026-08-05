@@ -3,7 +3,7 @@
 #![cfg(feature = "matching")]
 #![allow(deprecated)]
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::{
+use vyre::scan::{
     shannon_entropy_bits_per_byte, try_reference_post_process, GpuLiteralSet, Pipeline,
     PostProcessedMatch,
 };
@@ -34,7 +34,7 @@ fn corrupt_match_range_uses_result_error_contract() {
         .expect_err("Fix: corrupt hit ranges must surface a Result error");
     assert!(matches!(
         error,
-        vyre_libs::scan::PostProcessError::InvalidRange { .. }
+        vyre::scan::PostProcessError::InvalidRange { .. }
     ));
 }
 
@@ -127,7 +127,7 @@ fn pipeline_post_process_is_swappable() {
     fn passthrough(
         _: &[Match],
         _: &[u8],
-    ) -> Result<Vec<PostProcessedMatch>, vyre_libs::scan::PostProcessError> {
+    ) -> Result<Vec<PostProcessedMatch>, vyre::scan::PostProcessError> {
         Ok(Vec::new())
     }
     let pipe_default = Pipeline::new(GpuLiteralSet::compile(&[b"x".as_slice()]));

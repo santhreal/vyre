@@ -20,7 +20,7 @@ use std::time::Instant;
 
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {

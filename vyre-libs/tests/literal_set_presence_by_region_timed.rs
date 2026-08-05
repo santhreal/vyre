@@ -12,7 +12,7 @@
 //! timer).
 
 use vyre_driver_reference::CpuRefBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 /// A haystack with two regions; region 0 contains `alpha`+`kilo`, region 1
 /// contains `tango` only (so the two region rows differ (a meaningful bitmap)).

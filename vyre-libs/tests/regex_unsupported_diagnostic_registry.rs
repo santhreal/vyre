@@ -101,7 +101,7 @@ fn regex_unsupported_diagnostic_registry_records_operator_fields() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
-    use vyre_libs::scan::{compile_regex_set, RegexConstruct};
+    use vyre::scan::{compile_regex_set, RegexConstruct};
 
     // Compile-error constructs -> RegexCompileError::diagnostic_code().
     let cases: &[(&str, &str)] = &[
@@ -150,7 +150,7 @@ fn frontend_emits_registry_diagnostic_codes_from_real_patterns() {
 
     // The exported ONE-PLACE map agrees with the registry codes.
     assert_eq!(
-        vyre_libs::scan::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
+        vyre::scan::regex_construct_diagnostic_code(RegexConstruct::HugeAlternation),
         "VYRE_SCAN_UNSUPPORTED_HUGE_ALTERNATION_BUDGET"
     );
 }

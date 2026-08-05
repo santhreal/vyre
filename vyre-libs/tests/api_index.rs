@@ -1,8 +1,8 @@
-//! Verifies the `vyre_libs::scan::API_INDEX` const matches the
+//! Verifies the `vyre::scan::API_INDEX` const matches the
 //! actual `pub use` surface. Failing test = stale index  -  refresh by
 //! adding/removing the entry, never by softening the test.
 
-use vyre_libs::scan::{ApiKind, API_INDEX};
+use vyre::scan::{ApiKind, API_INDEX};
 
 /// Every name in `API_INDEX` must be unique. A duplicate means a
 /// refactor renamed an export but left the old entry behind.

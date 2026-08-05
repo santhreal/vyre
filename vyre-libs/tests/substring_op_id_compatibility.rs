@@ -1,6 +1,6 @@
 //! Substring-search op id compatibility contract.
 //!
-//! `substring_search` moved from `vyre_libs::matching` to `vyre_libs::scan`.
+//! `substring_search` moved from `vyre_libs::matching` to `vyre::scan`.
 //! The move kept a deprecated alias at the old path, and that alias keeps
 //! emitting the OLD op id so already-recorded conformance rows, cache keys,
 //! and operator dashboards that key on `vyre-libs::matching::substring_search`
@@ -25,7 +25,7 @@
 use vyre::ir::{Node, Program};
 use vyre_libs::compat_aliases::{CompatibilityAlias, MATCHING_SUBSTRING_ALIAS};
 
-/// The op id the canonical `vyre_libs::scan` path must emit.
+/// The op id the canonical `vyre::scan` path must emit.
 const CANONICAL_OP_ID: &str = "vyre-libs::scan::substring_search";
 /// The op id the deprecated `vyre_libs::matching` path must keep emitting.
 const LEGACY_OP_ID: &str = "vyre-libs::matching::substring_search";
@@ -50,7 +50,7 @@ fn region_generator(program: &Program) -> String {
 }
 
 fn canonical(haystack_len: u32, needle_len: u32) -> Program {
-    vyre_libs::scan::substring_search("haystack", "needle", "matches", haystack_len, needle_len)
+    vyre::scan::substring_search("haystack", "needle", "matches", haystack_len, needle_len)
 }
 
 fn legacy(haystack_len: u32, needle_len: u32) -> Program {
@@ -190,7 +190,7 @@ fn both_paths_produce_programs_that_validate() {
 fn the_alias_registry_row_points_at_the_canonical_substring_module() {
     let alias: CompatibilityAlias = MATCHING_SUBSTRING_ALIAS;
     assert_eq!(alias.deprecated_path, "vyre_libs::matching::substring");
-    assert_eq!(alias.canonical_path, "vyre_libs::scan::substring");
+    assert_eq!(alias.canonical_path, "vyre::scan::substring");
     assert_eq!(alias.canonical_owner, "vyre-libs/src/scan/substring");
     assert!(
         !alias.removal_condition.is_empty() && alias.removal_condition.contains("substring"),
@@ -201,7 +201,7 @@ fn the_alias_registry_row_points_at_the_canonical_substring_module() {
 
 /// The registry row and the emitted op ids describe the same rename.
 ///
-/// The row is written in Rust path syntax (`vyre_libs::scan::substring`) and
+/// The row is written in Rust path syntax (`vyre::scan::substring`) and
 /// the op ids in crate-name syntax (`vyre-libs::scan::substring_search`).
 /// Nothing enforced that they agreed, so a future rename could move the module
 /// and leave the op id behind. This ties the two spellings together.

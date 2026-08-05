@@ -1,4 +1,4 @@
-//! Adversarial tests for `vyre_libs::scan::regex_compile`.
+//! Adversarial tests for `vyre::scan::regex_compile`.
 //!
 //! Exercises the regex AST → NfaPlan frontend with pathological,
 //! malformed, and boundary inputs. Every test asserts a specific
@@ -7,7 +7,7 @@
 
 #![cfg(feature = "matching-regex")]
 
-use vyre_libs::scan::{
+use vyre::scan::{
     build_rule_pipeline_from_regex, compile_regex_set, MatchScan, RegexCompileError,
 };
 

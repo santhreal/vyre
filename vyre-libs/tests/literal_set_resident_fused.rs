@@ -20,7 +20,7 @@ mod presence_corpus;
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {

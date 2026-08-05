@@ -11,7 +11,7 @@ use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PREPRO
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
-use vyre_libs::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn unpack_u32(bytes: &[u8]) -> Vec<u32> {

@@ -22,7 +22,7 @@ use std::collections::HashSet;
     feature = "matching-dfa",
     feature = "matching-nfa"
 ))]
-use vyre_libs::scan::{GpuLiteralSet, MatchScan};
+use vyre::scan::{GpuLiteralSet, MatchScan};
 
 /// 200+ literal patterns drawn from real secret-detector shapes.
 /// Mix of prefixes, hex strings, base64-ish, version tokens, and

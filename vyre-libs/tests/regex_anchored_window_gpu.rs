@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::{
+use vyre::scan::{
     anchored_window_extract_program, build_regex_dfa_pipeline, pack_haystack_u32, pack_u32_slice,
     regex_admission_by_region_program, regex_admission_by_region_reference,
     regex_admission_presence_words, unpack_match_triples, AnchoredWindowValidator,

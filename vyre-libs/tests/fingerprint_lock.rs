@@ -153,7 +153,7 @@ fn fp_attention() {
 #[cfg(feature = "matching-substring")]
 #[test]
 fn fp_substring_search() {
-    use vyre_libs::scan::substring_search;
+    use vyre::scan::substring_search;
     let p = substring_search("h", "n", "m", 8, 3);
     let p2 = substring_search("h", "n", "m", 8, 3);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -162,7 +162,7 @@ fn fp_substring_search() {
 #[cfg(feature = "matching-dfa")]
 #[test]
 fn fp_aho_corasick() {
-    use vyre_libs::scan::aho_corasick;
+    use vyre::scan::aho_corasick;
     let p = aho_corasick("h", "t", "a", "m", 8, 4);
     let p2 = aho_corasick("h", "t", "a", "m", 8, 4);
     assert_eq!(fingerprint(&p), fingerprint(&p2));

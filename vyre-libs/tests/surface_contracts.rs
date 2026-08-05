@@ -102,7 +102,7 @@ fn contract_nn_attention_small_shapes_unroll_directly() {
 
 #[test]
 fn contract_matching_dfa_compile_exists() {
-    use vyre_libs::scan::dfa_compile;
+    use vyre::scan::dfa_compile;
     let dfa = dfa_compile(&[b"foo", b"bar"]);
     assert!(dfa.state_count >= 1);
     assert_eq!(dfa.transitions.len(), (dfa.state_count as usize) * 256);
@@ -110,7 +110,7 @@ fn contract_matching_dfa_compile_exists() {
 
 #[test]
 fn contract_matching_aho_corasick_exists() {
-    use vyre_libs::scan::aho_corasick;
+    use vyre::scan::aho_corasick;
     let p = aho_corasick("haystack", "transitions", "accept", "matches", 16, 8);
     assert_eq!(p.buffers().len(), 4);
 }
@@ -133,7 +133,7 @@ fn contract_crypto_blake3_exists() {
 #[test]
 fn contract_substring_real_byte_compare() {
     use vyre::ir::{Expr, Node};
-    use vyre_libs::scan::substring_search;
+    use vyre::scan::substring_search;
 
     let program = substring_search("haystack", "needle", "matches", 5, 2);
 

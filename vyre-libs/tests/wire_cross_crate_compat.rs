@@ -4,7 +4,7 @@
 //! crate-boundary stable - independent re-implementations would
 //! show up here as divergent output.
 
-use vyre_libs::scan::dispatch_io::{pack_haystack_u32, pack_u32_slice};
+use vyre::scan::dispatch_io::{pack_haystack_u32, pack_u32_slice};
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, decode_u64_le_bytes_all, pack_f32_slice,
     pack_u32_slice as wire_pack_u32, pack_u64_slice, unpack_u32_slice_into,
@@ -17,7 +17,7 @@ fn vyre_libs_scan_pack_matches_vyre_primitives_wire() {
     let wire_path = wire_pack_u32(&words);
     assert_eq!(
         scan_path, wire_path,
-        "vyre_libs::scan::pack_u32_slice diverged from vyre_primitives::wire"
+        "vyre::scan::pack_u32_slice diverged from vyre_primitives::wire"
     );
 }
 

@@ -10,7 +10,7 @@
 
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn timed_scan_all_equals_untimed_and_reports_timing() {

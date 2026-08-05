@@ -25,7 +25,7 @@
 use std::collections::BTreeSet;
 
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 const LITERALS: &[&[u8]] = &[
     b"key",

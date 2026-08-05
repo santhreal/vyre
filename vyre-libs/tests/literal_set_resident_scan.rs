@@ -17,7 +17,7 @@ use std::time::Instant;
 
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 // pattern_id order matches the compile order: key=0 .. api=7.
 const LITERALS: &[&[u8]] = &[

@@ -4,7 +4,7 @@
 //! cases drive `GpuLiteralSet::count` through the official CPU reference backend
 //! and compare against an independent brute-force literal counter.
 
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 const GENERATED_CASES: usize = 2_048;
 const ALPHABET: &[u8] = b"\0\x01abAB_:/-\xff";

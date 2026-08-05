@@ -89,7 +89,7 @@ fn regex_capture_mode_contracts_keep_whole_match_modes_accelerator_eligible() {
 #[cfg(feature = "matching-regex")]
 #[test]
 fn capture_mode_enum_matches_the_toml_contract_row_for_row() {
-    use vyre_libs::scan::CaptureMode;
+    use vyre::scan::CaptureMode;
 
     // Every mode the enum knows appears in the TOML with byte-identical fields.
     for mode in CaptureMode::ALL {

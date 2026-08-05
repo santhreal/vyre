@@ -3,7 +3,7 @@
 #![cfg(feature = "matching-nfa")]
 #![allow(deprecated)]
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::{dispatch_io, mega_scan, nfa};
+use vyre::scan::{dispatch_io, mega_scan, nfa};
 
 #[test]
 fn candidate_start_dispatch_uses_one_workgroup_per_byte() {

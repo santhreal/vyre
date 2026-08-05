@@ -11,7 +11,7 @@
 
 use vyre_driver_reference::CpuRefBackend;
 use vyre_foundation::match_result::Match;
-use vyre_libs::scan::GpuLiteralSet;
+use vyre::scan::GpuLiteralSet;
 
 const MAX_MATCHES: u32 = 256;
 

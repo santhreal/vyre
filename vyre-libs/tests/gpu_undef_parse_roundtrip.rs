@@ -8,7 +8,7 @@
 #![allow(deprecated)]
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_UNDEF, TOK_PREPROC};
 use vyre_libs::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse;
-use vyre_libs::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn unpack_u32(bytes: &[u8]) -> Vec<u32> {
