@@ -34,49 +34,28 @@ fn parse_borrow() {
 }
 
 #[test]
-fn compile_pipeline_gpu_lex_dispatches_real_lexer_ir() {
-    let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: true,
-        borrow_check: false,
-        lower: false,
-        lower_lane_count: None,
-    });
+fn compile_pipeline_lexes_and_checks_source() {
+    let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let unit = pipeline
         .compile_unit(b"fn main() { let x: i32 = 5; }")
-        .expect("Fix: gpu_lex=true must dispatch the Rust lexer IR and feed parser/typeck");
+        .expect("Fix: the source pipeline must feed lexer output into parser and type checking");
     assert_eq!(unit.module.functions.len(), 1);
-    assert!(
-        unit.token_count > 8,
-        "Fix: GPU lexer must return a real token stream, not an empty placeholder"
-    );
-    assert!(
-        unit.program.is_none(),
-        "lowering is off in this smoke path, so gpu_lex must not fabricate a Program"
-    );
+    assert!(unit.token_count > 8, "the lexer must return a real token stream");
+    assert!(unit.program.is_none(), "lowering is off in this smoke path");
 }
 
 #[test]
-fn compile_pipeline_gpu_lex_surfaces_unknown_byte_as_lex_error() {
-    let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: true,
-        borrow_check: false,
-        lower: false,
-        lower_lane_count: None,
-    });
+fn compile_pipeline_surfaces_hostile_byte_as_exact_lex_error() {
+    let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let error = pipeline
         .compile_unit(b"fn main() { @ }")
-        .expect_err("Fix: GPU lexer ERROR tokens must become frontend lex errors");
+        .expect_err("Fix: unsupported bytes must remain frontend lex errors");
     assert!(matches!(error, RustFrontendError::Lex(_)), "got {error:?}");
 }
 
 #[test]
-fn compile_pipeline_gpu_batch_lex_dispatches_many_sources() {
-    let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: true,
-        borrow_check: false,
-        lower: false,
-        lower_lane_count: None,
-    });
+fn compile_pipeline_batch_handles_multiple_sources() {
+    let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let sources: [&[u8]; 3] = [
         b"fn a() { let x: i32 = 1; }",
         b"fn b(n: i32) -> i32 { return n + 2; }",
@@ -84,8 +63,7 @@ fn compile_pipeline_gpu_batch_lex_dispatches_many_sources() {
     ];
     let batch = pipeline
         .compile_units(&sources)
-        .expect("Fix: gpu_lex=true compile_units must use one batched lexer dispatch");
-    assert!(batch.gpu_lex);
+        .expect("Fix: batch compilation must preserve independent source results");
     assert_eq!(batch.units.len(), sources.len());
     for (source_idx, unit) in batch.units.iter().enumerate() {
         let unit = unit
@@ -98,13 +76,8 @@ fn compile_pipeline_gpu_batch_lex_dispatches_many_sources() {
 }
 
 #[test]
-fn compile_pipeline_gpu_batch_lex_isolates_bad_source() {
-    let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: true,
-        borrow_check: false,
-        lower: false,
-        lower_lane_count: None,
-    });
+fn compile_pipeline_batch_isolates_hostile_source() {
+    let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let sources: [&[u8]; 3] = [
         b"fn good() { let x: i32 = 1; }",
         b"fn bad() { @ }",
@@ -122,7 +95,7 @@ fn compile_pipeline_gpu_batch_lex_isolates_bad_source() {
 }
 
 #[test]
-fn compile_units_cpu_returns_per_source_results() {
+fn compile_units_returns_per_source_results() {
     let pipeline = RustPipeline::new(RustPipelineConfig::default());
     let sources: [&[u8]; 2] = [
         b"fn ok() -> i32 { return 1; }",
@@ -131,7 +104,6 @@ fn compile_units_cpu_returns_per_source_results() {
     let batch = pipeline
         .compile_units(&sources)
         .expect("Fix: CPU batch lexing should not need a global failure path");
-    assert!(!batch.gpu_lex);
     assert!(batch.units[0].is_ok());
     assert!(matches!(&batch.units[1], Err(RustFrontendError::Typeck(_))));
 }
@@ -164,7 +136,6 @@ fn compile_unit_rejects_type_mismatch() {
 #[test]
 fn compile_unit_borrow_check_catches_e0596() {
     let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: false,
         lower_lane_count: None,
@@ -184,7 +155,6 @@ fn compile_unit_borrow_check_accepts_clean_program() {
     // The conflicting-borrow rules are wired (CFG NLL dataflow engine), so a
     // conflict-free program borrow-checks successfully, matching rustc.
     let pipeline = RustPipeline::new(RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: false,
         lower_lane_count: None,

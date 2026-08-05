@@ -1,4 +1,4 @@
-//! Name-resolution tests for the nano-subset (`vyre_libs::parsing::rust::sema::resolve`).
+//! Name-resolution tests for the nano-subset (`vyre_frontend_rust::sema::resolve`).
 //!
 //! Truth assertions on the resolved binding table and use map, plus negative
 //! cases for undefined names, scope escape, and unknown function calls.
@@ -7,9 +7,9 @@
 
 use std::collections::HashSet;
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{resolve, BindingId, Resolution, RustSemaError};
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::{resolve, BindingId, Resolution, RustSemaError};
 
 fn resolve_src(src: &str) -> Result<Resolution, RustSemaError> {
     let bytes = src.as_bytes();

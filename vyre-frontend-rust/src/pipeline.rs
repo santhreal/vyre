@@ -1,13 +1,12 @@
 //! Pipeline orchestration: lex -> parse -> resolve -> typeck -> borrow -> lower.
 
-use vyre_libs::parsing::rust::lex::lexer::core::Token;
-use vyre_libs::parsing::rust::lex::lexer::plan::RustLexerPlan;
-use vyre_libs::parsing::rust::parse::Module;
+use crate::lex::lexer::core::Token;
+use crate::parse::Module;
 
 use crate::RustFrontendError;
 
 pub mod borrow_stage;
-pub mod lexer_dispatch;
+pub mod lexer_stage;
 pub mod lower_stage;
 pub mod parse_stage;
 pub mod resolve_stage;
@@ -16,9 +15,6 @@ pub mod typeck_stage;
 /// Configuration for the Rust frontend pipeline.
 #[derive(Debug, Clone)]
 pub struct RustPipelineConfig {
-    /// Whether to dispatch the Rust lexer IR on a GPU backend. Off by default
-    /// so library users can run the host parser without requiring a GPU.
-    pub gpu_lex: bool,
     /// Whether to run borrow checking (E0596/E0597/E0499/E0502). Off by
     /// default; when enabled it runs the full nano-subset borrow check (CFG NLL
     /// dataflow), rustc-differential-verified by `rust_sema_borrow_oracle`.
@@ -36,11 +32,9 @@ pub struct RustPipelineConfig {
 
 impl Default for RustPipelineConfig {
     fn default() -> Self {
-        // The default keeps host parser users off the GPU dispatch path.
-        // GPU lexing, borrow checking, and lowering are opt-in wired stages:
-        // requested work either runs or fails loudly with stage context.
+        // Borrow checking and lowering are opt-in wired stages: requested work
+        // either runs or fails loudly with stage context.
         Self {
-            gpu_lex: false,
             borrow_check: false,
             lower: false,
             lower_lane_count: None,
@@ -51,16 +45,12 @@ impl Default for RustPipelineConfig {
 /// Pipeline state holder. Construct once, compile many files.
 pub struct RustPipeline {
     config: RustPipelineConfig,
-    lex_plan: RustLexerPlan,
 }
 
 impl RustPipeline {
     /// Create a new pipeline.
     pub fn new(config: RustPipelineConfig) -> Self {
-        Self {
-            config,
-            lex_plan: RustLexerPlan::new(),
-        }
+        Self { config }
     }
 
     /// Run the pipeline on a single source buffer.
@@ -68,30 +58,26 @@ impl RustPipeline {
     /// CPU lex, parse, name resolution, and type checking always run. Borrow
     /// checking and lowering are gated on the config. Borrow checking runs the
     /// full nano-subset rules (E0596/E0597/E0499/E0502 via CFG NLL dataflow),
-    /// and lowering produces an executable Vyre `Program` (unsupported
+    /// and lowering produces a backend-neutral Vyre `Program` (unsupported
     /// constructs fail loudly), so a caller never receives a success that
     /// skipped or miscompiled a requested stage.
     pub fn compile_unit(&self, source: &[u8]) -> Result<CompilationUnit, RustFrontendError> {
-        let tokens = self::lexer_dispatch::lex(source, &self.config, &self.lex_plan)?;
+        let tokens = self::lexer_stage::lex(source)?;
         self.compile_unit_from_tokens(source, &tokens)
     }
 
-    /// Run the pipeline on many source buffers, sharing the GPU lexer dispatch
-    /// when `gpu_lex` is enabled.
+    /// Run the pipeline on many independent source buffers.
     ///
     /// The returned vector keeps source order. Each element is independent, so
     /// a syntax, type, borrow, or lex error in one source does not discard
     /// successful compilation results for neighboring sources.
     pub fn compile_units(&self, sources: &[&[u8]]) -> Result<CompilationBatch, RustFrontendError> {
-        let token_results = self::lexer_dispatch::lex_batch(sources, &self.config, &self.lex_plan)?;
+        let token_results = self::lexer_stage::lex_batch(sources);
         let mut units = Vec::with_capacity(sources.len());
         for (source, tokens) in sources.iter().zip(token_results) {
             units.push(tokens.and_then(|tokens| self.compile_unit_from_tokens(source, &tokens)));
         }
-        Ok(CompilationBatch {
-            units,
-            gpu_lex: self.config.gpu_lex,
-        })
+        Ok(CompilationBatch { units })
     }
 
     fn compile_unit_from_tokens(
@@ -131,7 +117,7 @@ pub struct CompilationUnit {
     /// Parsed module.
     pub module: Module,
     /// Lowered Vyre program (if lowering was enabled).
-    pub program: Option<vyre::ir::Program>,
+    pub program: Option<vyre_foundation::ir::Program>,
 }
 
 /// Result of compiling a batch of translation units.
@@ -139,6 +125,4 @@ pub struct CompilationUnit {
 pub struct CompilationBatch {
     /// Per-source compilation results in the same order as the input slice.
     pub units: Vec<Result<CompilationUnit, RustFrontendError>>,
-    /// Whether the batch used the GPU lexer path.
-    pub gpu_lex: bool,
 }

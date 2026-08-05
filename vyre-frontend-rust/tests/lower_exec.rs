@@ -10,7 +10,6 @@ use vyre_reference::value::Value;
 
 fn run(src: &str, inputs: &[i32]) -> i32 {
     let config = RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: true,
         lower_lane_count: None,
@@ -47,7 +46,6 @@ fn bytes_to_i32s(bytes: &[u8]) -> Vec<i32> {
 
 fn run_batched(src: &str, inputs: &[i32]) -> Vec<i32> {
     let config = RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: true,
         lower_lane_count: Some(inputs.len() as u32),
@@ -126,7 +124,6 @@ fn f(n: i32) -> i32 {
 #[test]
 fn compile_unit_rejects_zero_lane_batched_lowering() {
     let config = RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: true,
         lower_lane_count: Some(0),

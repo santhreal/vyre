@@ -1,4 +1,4 @@
-//! Engine tests for the front-end-agnostic borrow checker (`vyre_libs::borrowck`).
+//! Engine tests for the front-end-agnostic borrow checker (`vyre_frontend_rust::borrowck`).
 //!
 //! Hand-built `BorrowFacts` drive the dataflow engine directly (no front-end),
 //! proving the spine in isolation. The branch cases show the engine is correct
@@ -7,7 +7,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::borrowck::{analyze, BorrowFacts, ConflictKind, LoanKind};
+use vyre_frontend_rust::borrowck::{analyze, BorrowFacts, ConflictKind, LoanKind};
 
 /// Build two-or-more-loan facts. Each loan is `(place, kind, issue_point, offset)`.
 fn facts(

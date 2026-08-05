@@ -27,7 +27,6 @@ pub mod emit;
 pub mod engine;
 mod executable_api;
 pub mod ext;
-pub mod megakernel;
 mod numeric;
 mod padded_upload;
 #[cfg(feature = "parity-testing")]

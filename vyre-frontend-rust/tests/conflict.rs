@@ -1,15 +1,15 @@
 //! Conflicting-borrow tests (rustc E0499 / E0502) for the nano-subset.
 //!
-//! Truth assertions on `vyre_libs::parsing::rust::sema::check_conflicts`: two
+//! Truth assertions on `vyre_frontend_rust::sema::check_conflicts`: two
 //! live mutable borrows of one place, or a mutable plus a live shared borrow,
 //! are rejected; two shared borrows and NLL-dead borrows are allowed. Verdicts
 //! match rustc on straight-line programs.
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{check_conflicts, resolve, RustSemaError};
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::{check_conflicts, resolve, RustSemaError};
 
 fn check_src(src: &str) -> Result<(), RustSemaError> {
     let bytes = src.as_bytes();

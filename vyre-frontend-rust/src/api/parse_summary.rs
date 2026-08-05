@@ -4,9 +4,7 @@
 #[derive(Debug, Clone)]
 pub struct ParseSummary {
     /// The parsed module AST.
-    pub module: vyre_libs::parsing::rust::parse::Module,
+    pub module: crate::parse::Module,
     /// Number of tokens.
     pub token_count: usize,
-    /// Whether GPU fast-path was used for lexing.
-    pub gpu_lex: bool,
 }

@@ -1,14 +1,14 @@
 //! Escape / dangling-reference tests (rustc E0597) for the nano-subset.
 //!
-//! Truth assertions on `vyre_libs::parsing::rust::sema::check_escape`: returning
+//! Truth assertions on `vyre_frontend_rust::sema::check_escape`: returning
 //! a reference to a call-local value is rejected; returning a parameter-derived
 //! reference is allowed. Verdicts match rustc's E0597 behavior.
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{check_escape, resolve, RustSemaError};
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::{check_escape, resolve, RustSemaError};
 
 fn check_src(src: &str) -> Result<(), RustSemaError> {
     let bytes = src.as_bytes();

@@ -5,8 +5,8 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
-use vyre_libs::parsing::rust::lex::lexer::core::lex as lex_cpu;
-use vyre_libs::parsing::rust::lex::lexer::plan::rust_lexer_batch;
+use vyre_frontend_rust::lex::lexer::core::lex as lex_cpu;
+use vyre_frontend_rust::lex::lexer::plan::rust_lexer_batch;
 
 struct RustLexerBatchGpuPipeline;
 
@@ -49,7 +49,7 @@ impl BenchCase for RustLexerBatchGpuPipeline {
             layer: BenchLayer::Libs,
             workload: WorkloadClass::Macro,
             determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-libs".to_string(),
+            owner_crate: "vyre-frontend-rust".to_string(),
         }
     }
 
@@ -69,7 +69,7 @@ impl BenchCase for RustLexerBatchGpuPipeline {
             min_vram_bytes: None,
             min_input_bytes: Some((RUST_LEXER_BATCH_SOURCES * 192) as u64),
             feature_set: vec![
-                "rust-parser".to_string(),
+                "rust-frontend".to_string(),
                 "gpu-lexer".to_string(),
                 "batched-lexer".to_string(),
                 "ir-lexer".to_string(),
@@ -385,7 +385,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use vyre::ir::BufferAccess;
-    use vyre_libs::parsing::rust::lex::tokens::{EOF, KW_FN};
+    use vyre_frontend_rust::lex::tokens::{EOF, KW_FN};
 
     fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
         bytes

@@ -217,3 +217,74 @@ fn compiled_pipeline_persistent_handle_into_default_reuses_output_slots() {
     assert_eq!(outputs[0].as_ptr(), first_slot_ptr);
     assert_eq!(*pipeline.calls.lock().unwrap(), vec![vec![9_u8, 8, 7]]);
 }
+
+#[test]
+fn compiled_pipeline_persistent_defaults_fail_explicitly_without_host_fallback() {
+    struct UnsupportedPersistentPipeline;
+
+    impl crate::backend::private::Sealed for UnsupportedPersistentPipeline {}
+
+    impl CompiledPipeline for UnsupportedPersistentPipeline {
+        fn id(&self) -> &str {
+            "unsupported-persistent"
+        }
+
+        fn dispatch(
+            &self,
+            _: &[Vec<u8>],
+            _: &DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, BackendError> {
+            panic!("persistent defaults must not route through host-buffer dispatch")
+        }
+    }
+
+    fn assert_unsupported(error: BackendError, expected_name: &str) {
+        let message = error.to_string();
+        match error {
+            BackendError::UnsupportedFeature { name, backend } => {
+                assert_eq!(name, expected_name);
+                assert_eq!(backend, "unspecified");
+            }
+            other => panic!("expected explicit UnsupportedFeature, got {other:?}"),
+        }
+        assert!(
+            message.contains("Fix:"),
+            "unsupported persistent path must remain actionable: {message}"
+        );
+    }
+
+    let pipeline = UnsupportedPersistentPipeline;
+    let config = DispatchConfig::default();
+
+    assert_unsupported(
+        pipeline
+            .dispatch_persistent_handles(&[], &config)
+            .expect_err("unsupported persistent handle dispatch must fail"),
+        "persistent handle dispatch",
+    );
+    assert_unsupported(
+        pipeline
+            .dispatch_persistent_handles_timed(&[], &config)
+            .expect_err("timed persistent dispatch must preserve the unsupported error"),
+        "persistent handle dispatch",
+    );
+    assert_unsupported(
+        pipeline
+            .dispatch_persistent_resource_outputs(&[], &config)
+            .expect_err("unsupported resident output dispatch must fail"),
+        "persistent resident output dispatch",
+    );
+
+    let mut outputs = vec![vec![0xA5]];
+    assert_unsupported(
+        pipeline
+            .dispatch_persistent_handles_into(&[], &config, &mut outputs)
+            .expect_err("persistent into dispatch must preserve the unsupported error"),
+        "persistent handle dispatch",
+    );
+    assert_eq!(
+        outputs,
+        vec![vec![0xA5]],
+        "failing persistent dispatch must not mutate caller output storage"
+    );
+}

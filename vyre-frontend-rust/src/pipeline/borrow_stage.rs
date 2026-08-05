@@ -1,11 +1,7 @@
-//! Borrow-checking stage: thin orchestrator over the `vyre-libs` sema substrate.
-//!
-//! The borrow analysis (mutability rule now; CFG + dataflow conflict rules via
-//! weir later) is language-specific substrate in `vyre-libs::parsing::rust::sema`.
-//! This stage only orchestrates it.
+//! Borrow-checking stage over the frontend-owned semantic substrate.
 
-use vyre_libs::parsing::rust::parse::Module;
-use vyre_libs::parsing::rust::sema::{self, Resolution};
+use crate::parse::Module;
+use crate::sema::{self, Resolution};
 
 use crate::RustFrontendError;
 

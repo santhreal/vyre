@@ -9,15 +9,14 @@
 
 use proptest::prelude::*;
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::resolve;
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::resolve;
 
 /// Drive the pipeline under every config; it must return (never panic).
 fn run_all_configs(src: &[u8]) {
     let _ = RustPipeline::new(RustPipelineConfig::default()).compile_unit(src);
     let borrow_on = RustPipelineConfig {
-        gpu_lex: false,
         borrow_check: true,
         lower: false,
         lower_lane_count: None,

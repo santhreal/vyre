@@ -1,9 +1,9 @@
-//! Lowering stage: thin orchestrator over the `vyre-libs` lowering substrate.
+//! Lowering stage over the frontend-owned typed-IR substrate.
 
-use vyre::ir::Program;
-use vyre_libs::parsing::rust::lower as rust_lower;
-use vyre_libs::parsing::rust::parse::Module;
-use vyre_libs::parsing::rust::sema::Resolution;
+use vyre_foundation::ir::Program;
+use crate::lower as rust_lower;
+use crate::parse::Module;
+use crate::sema::Resolution;
 
 use crate::RustFrontendError;
 

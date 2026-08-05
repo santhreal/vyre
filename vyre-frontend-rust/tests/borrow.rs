@@ -1,14 +1,14 @@
 //! Mutability borrow-rule tests (rustc E0596) for the nano-subset.
 //!
-//! Truth assertions on `vyre_libs::parsing::rust::sema::check_mutability`: a
+//! Truth assertions on `vyre_frontend_rust::sema::check_mutability`: a
 //! `&mut` borrow of an immutable place is rejected; of a mutable place is
 //! allowed. Verdicts match rustc's E0596 behavior on the same programs.
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{check_mutability, resolve, RustSemaError};
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::{check_mutability, resolve, RustSemaError};
 
 fn check_src(src: &str) -> Result<(), RustSemaError> {
     let bytes = src.as_bytes();

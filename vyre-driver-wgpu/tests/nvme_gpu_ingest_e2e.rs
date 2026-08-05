@@ -161,10 +161,10 @@ fn gpudirect_path_fails_loudly_when_native_nvme_is_not_configured() {
             NativeReadPath::GpuDirectNvmePassthrough,
             "Fix: new_gpudirect must construct only the native NVMe passthrough path."
         ),
-        Err(PipelineError::NvmePassthroughDisabled) => {
+        Err(error @ PipelineError::NvmePassthroughDisabled) => {
             assert!(
-                !cfg!(feature = "uring-cmd-nvme"),
-                "Fix: uring-cmd-nvme builds must not report the feature-disabled error."
+                error.to_string().contains("Fix:"),
+                "disabled native NVMe path must remain an explicit actionable error: {error}"
             );
         }
         Err(PipelineError::Backend(message)) => {

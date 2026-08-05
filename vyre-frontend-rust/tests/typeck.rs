@@ -1,13 +1,13 @@
-//! Type-checking tests for the nano-subset (`vyre_libs::parsing::rust::sema::typeck`).
+//! Type-checking tests for the nano-subset (`vyre_frontend_rust::sema::typeck`).
 //!
 //! Each construct has a positive case and a negative twin; verdicts match
 //! rustc's E0308 / E0061 / E0614 behavior on the same programs.
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
-use vyre_libs::parsing::rust::sema::{resolve, typeck, RustSemaError};
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::sema::{resolve, typeck, RustSemaError};
 
 fn typeck_src(src: &str) -> Result<(), RustSemaError> {
     let bytes = src.as_bytes();

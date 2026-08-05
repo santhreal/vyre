@@ -190,15 +190,6 @@ pub fn vyre_driver_wgpu::engine::streaming::HostIngressStream::from_runner<F>(ru
 pub fn vyre_driver_wgpu::engine::streaming::HostIngressStream::new(pipeline: vyre_driver_wgpu::pipeline::WgpuPipeline, config: vyre_driver::backend::dispatch_config::DispatchConfig) -> Self
 pub fn vyre_driver_wgpu::engine::streaming::HostIngressStream::push_chunk(&mut self, bytes: alloc::vec::Vec<u8>) -> core::result::Result<core::option::Option<alloc::vec::Vec<alloc::vec::Vec<u8>>>, vyre_driver::backend::error::BackendError>
 pub mod vyre_driver_wgpu::ext
-pub mod vyre_driver_wgpu::megakernel
-pub struct vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>
-impl<'a> vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>
-pub fn vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>::dispatch_megakernel(&self, work_items: &[vyre_runtime::megakernel::planner::caps::MegakernelWorkItem], config: &vyre_runtime::megakernel::planner::config::MegakernelConfig) -> core::result::Result<vyre_runtime::megakernel::planner::caps::MegakernelReport, vyre_driver::backend::error::BackendError>
-pub fn vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>::dispatch_megakernel_bytes(&self, work_queue_bytes: &[u8], config: &vyre_runtime::megakernel::planner::config::MegakernelConfig) -> core::result::Result<vyre_runtime::megakernel::planner::caps::MegakernelReport, vyre_driver::backend::error::BackendError>
-pub fn vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>::dispatch_megakernel_with_io_queue(&self, work_items: &[vyre_runtime::megakernel::planner::caps::MegakernelWorkItem], config: &vyre_runtime::megakernel::planner::config::MegakernelConfig, io_queue_bytes: alloc::vec::Vec<u8>) -> core::result::Result<vyre_runtime::megakernel::planner::caps::MegakernelReport, vyre_driver::backend::error::BackendError>
-pub fn vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'a>::new(backend: &'a dyn vyre_driver::backend::vyre_backend::VyreBackend) -> Self
-impl vyre_runtime::megakernel::MegakernelDispatch for vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'_>
-pub fn vyre_driver_wgpu::megakernel::WgpuMegakernelDispatcher<'_>::dispatch_megakernel(&self, work_queue: &[vyre_runtime::megakernel::planner::caps::MegakernelWorkItem], config: &vyre_runtime::megakernel::planner::config::MegakernelConfig) -> core::result::Result<vyre_runtime::megakernel::planner::caps::MegakernelReport, vyre_driver::backend::error::BackendError>
 pub mod vyre_driver_wgpu::pipeline
 pub use vyre_driver_wgpu::pipeline::IndirectDispatch
 pub use vyre_driver_wgpu::pipeline::OutputLayout

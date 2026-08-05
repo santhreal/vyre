@@ -1,0 +1,893 @@
+pub const ABI_RESOURCE_COUNT: usize = 4;
+pub const ALPHABET_SIZE: u32 = 256;
+pub const ARG0_WORD: u32 = 4;
+pub const ARGS_PER_SLOT: u32 = SLOT_WORDS - ARG0_WORD;
+pub const ATOMIC_ADD: u32 = 2;
+pub const AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+pub const BATCH_FENCE: u32 = 7;
+pub const BUFFER_WORDS: u32 = RECORDS_BASE + RECORD_CAPACITY * RECORD_WORDS;
+pub const BYTE_COUNT: u32 = 5;
+pub const CLAIMED: u32 = 2;
+pub const COMPARE_SWAP: u32 = 4;
+pub const CONTROL_MIN_WORDS: u32 = 160;
+pub const CRITICAL: u32 = 0;
+pub const CURSOR_WORD: u32 = 0;
+pub const DFA_STEP: u32 = 6;
+pub const DONE: u32 = 3;
+pub const DONE_COUNT: u32 = 1;
+pub const DST_HANDLE: u32 = 2;
+pub const EMPTY: u32 = 0;
+pub const EPOCH: u32 = METRICS_BASE + METRICS_SLOTS;
+pub const ERROR: u32 = 0x11;
+pub const EXPERT_LOAD_MISS: u32 = LOAD_MISS;
+pub const FAULT: u32 = 7;
+pub const FENCE: u32 = 0x03;
+pub const HIGH: u32 = 1;
+pub const HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+pub const IDLE: u32 = 4;
+pub const IORING_OP_READV: u8 = 1;
+pub const IORING_OP_READ_FIXED: u8 = 22;
+pub const IORING_OP_URING_CMD: u8 = 46;
+pub const IOSQE_FIXED_FILE: u8 = 1 << 0;
+pub const IO_DESTINATION_CAPABILITY_TABLE: &str = "io_destination_capability_table";
+pub const IO_QUEUE_DMA_TAG: &str = "io_queue_dma";
+pub const IO_SLOT_COUNT: u32 = 64;
+pub const IO_SLOT_WORDS: u32 = 8;
+pub const IO_SOURCE_CAPABILITY_TABLE: &str = "io_source_capability_table";
+pub const LOAD_MISS: u32 = 0x0000_FFFD;
+pub const LOAD_U32: u32 = 3;
+pub const LOW: u32 = 3;
+pub const MAX_DEBUG_RECORDS: u32 = u32::MAX / debug::RECORD_WORDS;
+pub const MAX_ENCODED_DEBUG_RECORDS: u32 = 1_048_576;
+pub const MAX_ENCODED_OBSERVABLE_SLOTS: u32 = 1_048_576;
+pub const MAX_ENCODED_RING_SLOTS: u32 = 1_048_576;
+pub const MAX_OBSERVABLE_SLOTS: u32 = u32::MAX - control::OBSERVABLE_BASE;
+pub const MAX_RING_SLOTS: u32 = u32::MAX / SLOT_WORDS;
+pub const MEMCPY: u32 = 5;
+pub const METRICS_BASE: u32 = TENANT_FAIRNESS_BASE + TENANT_FAIRNESS_SLOTS;
+pub const METRICS_SLOTS: u32 = 32;
+pub const MIXED_WORK_PROTOCOL_SCHEMA_VERSION: u32 = 1;
+pub const NOP: u32 = 0;
+pub const NORMAL: u32 = 2;
+pub const NVME_CMD_READ: u8 = 0x02;
+pub const OBSERVABLE_BASE: u32 = 160;
+pub const OFFSET_HI: u32 = 4;
+pub const OFFSET_LO: u32 = 3;
+pub const OK: u32 = 0x10;
+pub const OPCODE_RANGE_PER_TENANT: u32 = 1 << 20;
+pub const OPCODE_WORD: u32 = 1;
+pub const OP_TYPE: u32 = 0;
+pub const PACKED_SLOT: u32 = 0x8000_0001;
+pub const PRINTF: u32 = 0x0000_FFFE;
+pub const PRIORITY_COUNTER_DRAIN_FIX: &str =
+pub const PRIORITY_COUNTER_DRAIN_HEADROOM: u64 = 1024;
+pub const PRIORITY_CRITICAL: u32 = 0;
+pub const PRIORITY_FAIRNESS_BASE: u32 = PRIORITY_STARVATION_COUNTER + 1;
+pub const PRIORITY_FAIRNESS_SLOTS: u32 = 5;
+pub const PRIORITY_HIGH: u32 = 1;
+pub const PRIORITY_IDLE: u32 = 4;
+pub const PRIORITY_LEVELS: u32 = 5;
+pub const PRIORITY_LOW: u32 = 3;
+pub const PRIORITY_NORMAL: u32 = 2;
+pub const PRIORITY_OFFSETS_BASE: u32 = EPOCH + 1;
+pub const PRIORITY_OFFSETS_BASE: u32 = control::PRIORITY_OFFSETS_BASE;
+pub const PRIORITY_OFFSETS_SLOTS: u32 = 6;
+pub const PRIORITY_STARVATION_COUNTER: u32 = PRIORITY_OFFSETS_BASE + PRIORITY_OFFSETS_SLOTS;
+pub const PRIORITY_STARVATION_COUNTER: u32 = control::PRIORITY_STARVATION_COUNTER;
+pub const PRIORITY_WORD: u32 = 3;
+pub const PUBLISHED: u32 = 1;
+pub const READ: u32 = 0x01;
+pub const RECORDS_BASE: u32 = 1;
+pub const RECORD_CAPACITY: u32 = 64;
+pub const RECORD_WORDS: u32 = 4;
+pub const REQUEUE: u32 = 6;
+pub const RESERVED_MAX_RANGE_MIN: u32 = 0x0000_FFF0;
+pub const RULE_META_WORDS: usize = 5;
+pub const RUNTIME_IO_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+pub const SHUTDOWN: u32 = 0;
+pub const SHUTDOWN: u32 = u32::MAX;
+pub const SLOT_BYTES: usize = SLOT_WORDS_USIZE * 4;
+pub const SLOT_WORDS: u32 = 16;
+pub const SRC_HANDLE: u32 = 1;
+pub const STARVATION_THRESHOLD: u32 = 16;
+pub const STATUS: u32 = 6;
+pub const STATUS_WORD: u32 = 0;
+pub const STORE_U32: u32 = 1;
+pub const SYSTEM_MASK: u32 = 0x8000_0000;
+pub const TAG: u32 = 7;
+pub const TASK_FLAG_PAUSED: u32 = 1 << 0;
+pub const TASK_FLAG_REQUEUE_REQUESTED: u32 = 1 << 2;
+pub const TASK_FLAG_RESUME_READY: u32 = 1 << 3;
+pub const TASK_FLAG_YIELDED: u32 = 1 << 1;
+pub const TASK_SLOT_BYTES: usize = TASK_SLOT_WORDS * core::mem::size_of::<u32>();
+pub const TASK_SLOT_WORDS: usize = 16;
+pub const TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION: u32 = 1;
+pub const TENANT_BASE: u32 = 2;
+pub const TENANT_FAIRNESS_BASE: u32 = 64;
+pub const TENANT_FAIRNESS_SLOTS: u32 = 32;
+pub const TENANT_FAIRNESS_THRESHOLD: u32 = 64;
+pub const TENANT_ID_MAX: u32 = u32::MAX - 1;
+pub const TENANT_OPCODE_BASE: u32 = 0x4000_0000;
+pub const TENANT_QUOTA_BASE: u32 = 32;
+pub const TENANT_WORD: u32 = 2;
+pub const TOPOLOGY_EVIDENCE_SCHEMA_VERSION: u32 = 1;
+pub const VERIFIED_CHECKPOINT_IDENTITY_VERSION: &str = "vyre-verified-safetensors-blake3-v1";
+pub const WAIT_IO: u32 = 4;
+pub const WRITE: u32 = 0x02;
+pub const YIELD: u32 = 5;
+pub const fn as_str(self) -> &'static str {
+pub const fn bounded(
+pub const fn byte_len(&self) -> u64 {
+pub const fn complete(
+pub const fn complete() -> Self {
+pub const fn content_digest(&self) -> [u8; 32] {
+pub const fn covering_worker_groups(&self) -> u32 {
+pub const fn covers_scan_graph_parser_flow(self) -> bool {
+pub const fn default_worker_count(&self) -> u32 {
+pub const fn default_worker_groups_from_limits(
+pub const fn depth(&self) -> usize {
+pub const fn direct(
+pub const fn dispatch_grid_for(
+pub const fn empty() -> Self {
+pub const fn end_words(self) -> Option<u32> {
+pub const fn field(&self) -> &'static str {
+pub const fn first_workspace_region<R>(
+pub const fn fixed(id: R, words: u32, record_words: u32, capacity_records: u32) -> Self {
+pub const fn from_scheduling(scheduling: SchedulingPolicy) -> Self {
+pub const fn from_word(word: u32) -> Option<Self> {
+pub const fn from_work_item(
+pub const fn identity(&self) -> &SafetensorShardIdentity {
+pub const fn into_wire(self) -> u32 {
+pub const fn is_active(&self) -> bool {
+pub const fn is_active(self) -> bool {
+pub const fn is_builtin(op: u32) -> bool {
+pub const fn is_complete(self) -> bool {
+pub const fn is_schedulable(&self) -> bool {
+pub const fn is_schedulable(self) -> bool {
+pub const fn is_system(op: u32) -> bool {
+pub const fn is_valid(self) -> bool {
+pub const fn launch_request(
+pub const fn manifest_digest(&self) -> [u8; 32] {
+pub const fn new(
+pub const fn new() -> Self {
+pub const fn new(queue_len: u32, requested_worker_groups: u32) -> Self {
+pub const fn new(state_id: u32, byte_index: u32) -> Self {
+pub const fn new(units: &'a [MixedWorkUnit], drain_watchdog_budget_ticks: u64) -> Self {
+pub const fn padded_slot_count(&self, slot_count: u32, workgroup_size_x: u32) -> u32 {
+pub const fn raw(self) -> u32 {
+pub const fn record(id: R, record_words: u32, capacity_records: u32) -> Self {
+pub const fn slot_count(&self) -> u32 {
+pub const fn standard() -> Self {
+pub const fn supported(max_worker_count: u32) -> Self {
+pub const fn task_priority(&self) -> Option<TaskPriority> {
+pub const fn task_state(&self) -> Option<TaskState> {
+pub const fn unbounded() -> Self {
+pub const fn unsupported() -> Self {
+pub const fn validate_publish_opcode(op: u32) -> Result<(), &'static str> {
+pub const fn validate_user_opcode(op: u32) -> Result<(), &'static str> {
+pub const fn width(&self) -> usize {
+pub const fn word(self) -> u32 {
+pub const fn work_item(&self) -> MegakernelWorkItem {
+pub const fn worker_workgroup_size(&self, worker_count: u32, max_workgroup_size_x: u32) -> u32 {
+pub const fn workgroup_size_x(&self) -> u32 {
+pub const fn workspace_record_words(record_words: u32, capacity_records: u32) -> Option<u32> {
+pub enum AutomataWorklistMode {
+pub enum BuiltinOpcode {
+pub enum DiskCacheError {
+pub enum FusionSelectionError {
+pub enum GpuDirectCapability {
+pub enum InMemoryEvictionReason {
+pub enum MegakernelDispatchTopology {
+pub enum MegakernelExecutionMode {
+pub enum MegakernelGraphBlasSwitchClass {
+pub enum MegakernelPromotionRoute {
+pub enum MegakernelQueuePressure {
+pub enum MegakernelRecoveryClass {
+pub enum MegakernelRecoveryDecision {
+pub enum MegakernelWorkspaceLayoutError<R> {
+pub enum MegakernelWorkspaceRegionSpec<R> {
+pub enum MixedWorkProtocolError {
+pub enum MixedWorkQueueClass {
+pub enum MixedWorkUnitType {
+pub enum ModelAdmissionStatus {
+pub enum ModelResidencyError {
+pub enum NativeReadPath {
+pub enum PipelineError {
+pub enum PriorityDrainReason {
+pub enum ProtocolError {
+pub enum ReplayFailureClass {
+pub enum ReplayLogError {
+pub enum RingSlotTransition {
+pub enum RingStatus {
+pub enum RoutingDecision {
+pub enum RuntimeEvidenceMetricFamily {
+pub enum SafetensorDtype {
+pub enum SafetensorError {
+pub enum SlotDescriptor {
+pub enum SlotOpcode {
+pub enum TaskPriority {
+pub enum TaskState {
+pub enum TenantError {
+pub enum WindowClass {
+pub fn $name($capacity: u32, dst: &mut Vec<u8>) -> Result<(), PipelineError> {
+pub fn accepted_rule_fingerprints(
+pub fn accepted_rule_fingerprints_and_rejections_into(
+pub fn accepted_rule_fingerprints_into(
+pub fn active_sequences(&self, key: ModelResidencyKey) -> Result<u64, ModelResidencyError> {
+pub fn active_slots_for_opcode(&self, opcode: u32) -> Vec<&RingSlotSnapshot> {
+pub fn active_slots_for_opcode_into<'a>(
+pub fn active_slots_for_opcode_iter(
+pub fn active_tenants(&self) -> Vec<TenantHandle> {
+pub fn active_tenants_into(&self, out: &mut Vec<TenantHandle>) {
+pub fn active_windows(&self) -> Vec<&WindowTelemetry> {
+pub fn active_windows_into<'a>(&'a self, out: &mut Vec<&'a WindowTelemetry>) {
+pub fn add(&mut self, key: u32, amount: u64) {
+pub fn admit_model(
+pub fn advance_cq(&mut self) {
+pub fn append(&mut self, slot: RecordedSlot) -> Result<(), ReplayLogError> {
+pub fn append_with_failure(
+pub fn apply_readback(&mut self, readback: MegakernelReadback) {
+pub fn apply_to_launch_request(
+pub fn artifact(
+pub fn as_bytes(&self) -> &[u8] {
+pub fn as_bytes_mut(&mut self) -> &mut [u8] {
+pub fn as_mut_bytes(&mut self) -> &mut [u8] {
+pub fn atomic_load_relaxed(buffer: &str, index: Expr) -> Expr {
+pub fn atomic_store_relaxed(name: &str, buffer: &str, index: Expr, value: Expr) -> Node {
+pub fn autotune_hit_capacity_multiplier(
+pub fn autotune_workgroup_size(
+pub fn backend_error_indicates_device_loss(error: &BackendError) -> bool {
+pub fn backend_error_message_indicates_device_loss(error: &BackendError) -> bool {
+pub fn base_opcode(&self) -> u32 {
+pub fn batch_capacity(&self) -> usize {
+pub fn batch_publish<A>(
+pub fn batches(&self) -> &[OutputBuffers] {
+pub fn batches_mut(&mut self) -> &mut Vec<OutputBuffers> {
+pub fn bootstrap(backend: Arc<dyn VyreBackend>) -> Result<Self, PipelineError> {
+pub fn bootstrap_jit(
+pub fn bootstrap_sharded(
+pub fn bootstrap_with_opcodes(
+pub fn build_bellman_tn_order_program(
+pub fn build_byte_class_map_for_table(
+pub fn build_kfac_autotune_step_program(
+pub fn build_persistent_fixpoint_program(
+pub fn build_program() -> Program {
+pub fn build_program_jit(workgroup_size_x: u32, payload_processor: &[Node]) -> Program {
+pub fn build_program_jit_slots(
+pub fn build_program_priority(workgroup_size_x: u32, opcodes: &[OpcodeHandler]) -> Program {
+pub fn build_program_priority_slots(
+pub fn build_program_sharded(workgroup_size_x: u32, opcodes: &[OpcodeHandler]) -> Program {
+pub fn build_program_sharded_no_io(workgroup_size_x: u32, opcodes: &[OpcodeHandler]) -> Program {
+pub fn build_program_sharded_once_slots(
+pub fn build_program_sharded_once_slots_control_report_shared(
+pub fn build_program_sharded_once_slots_shared(
+pub fn build_program_sharded_slots(
+pub fn build_program_sharded_slots_shared(
+pub fn build_program_sharded_with_io_polling(
+pub fn build_program_sharded_with_workspace_adapter(
+pub fn build_program_with_self_loading_miss_handler(
+pub fn build_scallop_lineage_with_program_and_scratch(
+pub fn build_scallop_lineage_with_scratch(
+pub fn build_scallop_provenance_wide_program(
+pub fn build_sinkhorn_clustering_program(
+pub fn build_sinkhorn_full_clustering_program(
+pub fn build_state_convergence_program(
+pub fn build_workspace_regions<R: Copy>(
+pub fn bytes_moved_per_second(&self) -> u64 {
+pub fn cached_bytes(&self) -> usize {
+pub fn calculate_optimal_grid(
+pub fn cancel_sequence(&self, lease: SequenceLease) -> Result<(), ModelResidencyError> {
+pub fn capacity(&self) -> u64 {
+pub fn check_priority_fairness(priority: Expr) -> Expr {
+pub fn check_tenant_fairness(tenant_id: Expr) -> Expr {
+pub fn claim_io_requests_into(
+pub fn claim_next_unit(&self) -> usize {
+pub fn classify_backend_recovery_error(error: &BackendError) -> MegakernelRecoveryClass {
+pub fn clear(&mut self) {
+pub fn commit_sqe(&mut self) {
+pub fn complete_io_request(
+pub fn complete_io_requests_batch(
+pub fn completed(self) -> Self {
+pub fn completion(&self, queue_slot: u32) -> Option<IoCompletion> {
+pub fn compress_dense_transitions_into(
+pub fn contains_fused_segment(&self) -> bool {
+pub fn continuation_pressure_count(&self) -> u64 {
+pub fn control_byte_len(observable_slots: u32) -> Option<usize> {
+pub fn control_bytes(&self) -> &[u8] {
+pub fn count_done_ring_slots(ring_bytes: &[u8], item_count: usize) -> Option<u64> {
+pub fn counters(&self) -> &[u64] {
+pub fn counters(&self) -> Result<MegakernelReadbackCounters, PipelineError> {
+pub fn cursor(&self) -> u64 {
+pub fn debug_log_byte_len(record_capacity: u32) -> Option<usize> {
+pub fn debug_log_bytes(&self) -> &[u8] {
+pub fn debug_record_capacity() -> u32 {
+pub fn decode(control_bytes: &[u8]) -> Self {
+pub fn decode(control_bytes: &[u8], ring_bytes: &[u8]) -> Self {
+pub fn decode_capacity_evidence(
+pub fn decode_expert_miss(ring_bytes: &[u8], slot: u32) -> Option<(u32, bool)> {
+pub fn decode_into(control_bytes: &[u8], out: &mut Self) {
+pub fn decode_load_miss(ring_bytes: &[u8], slot: u32) -> Option<(u32, bool)> {
+pub fn decode_with_window_opcodes(
+pub fn decode_with_window_opcodes_into(
+pub fn default_priority_offsets(total_slots: u32) -> Vec<u32> {
+pub fn default_priority_offsets_array(total_slots: u32) -> [u32; PRIORITY_OFFSETS_WITH_SENTINEL] {
+pub fn default_worker_groups_from_limits(
+pub fn detect_cross_arm_redundancy(arms: &[&[MegakernelWorkItem]]) -> CrossArmRedundancy {
+pub fn device_allocation_bytes_per_second(&self) -> u64 {
+pub fn dfa_byte_scanner_parallel_composition() -> Vec<Node> {
+pub fn dfa_byte_scanner_parallel_composition_with(bindings: &ParallelDfaBindings) -> Vec<Node> {
+pub fn diffuse_priority_across_siblings(
+pub fn diffuse_priority_across_siblings_into(
+pub fn dispatch(
+pub fn dispatch_borrowed(
+pub fn dispatch_borrowed_observed(
+pub fn dispatch_config(&self, timeout: Option<Duration>) -> DispatchConfig {
+pub fn dispatch_grid(&self, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3] {
+pub fn dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3] {
+pub fn dispatch_observed(
+pub fn dispatch_persistent_handles(
+pub fn dispatch_persistent_handles_into(
+pub fn dispatch_persistent_handles_many_into(
+pub fn dispatch_persistent_handles_many_observed(
+pub fn dispatch_persistent_handles_many_with_scratch(
+pub fn dispatch_persistent_handles_observed(
+pub fn dispatch_update(&mut self, megakernel: &Megakernel) -> Result<(), PipelineError> {
+pub fn dispatch_update_observed(
+pub fn dispatch_update_observed_with_scratch(
+pub fn dispatch_with_io_queue(
+pub fn dispatch_with_io_queue_borrowed(
+pub fn dispatch_with_io_queue_borrowed_into(
+pub fn dispatch_with_io_queue_borrowed_observed(
+pub fn dispatch_with_io_queue_observed(
+pub fn dispatch_with_io_queue_readback(
+pub fn dispatch_with_io_queue_readback_borrowed(
+pub fn dispatch_with_io_queue_readback_borrowed_into(
+pub fn dispatch_with_io_queue_readback_borrowed_observed(
+pub fn dispatch_with_io_queue_readback_into(
+pub fn drain_into_ring(&mut self, ring_bytes: &mut [u8]) -> Result<u32, PipelineError> {
+pub fn drain_outputs_into(
+pub fn drain_recommendation(self) -> PriorityDrainRecommendation {
+pub fn drained_count(&self) -> u64 {
+pub fn durability_report(&self) -> DiskCacheDurabilityReport {
+pub fn elide_value_flow_barriers(program: Program) -> (Program, BarrierElisionReport) {
+pub fn encode_control(
+pub fn encode_empty_debug_log(record_capacity: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn encode_empty_debug_log(record_capacity: u32) -> Result<Vec<u8>, ProtocolError> {
+pub fn encode_empty_io_queue(slot_count: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn encode_empty_ring(slot_count: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn encode_empty_ring(slot_count: u32) -> Result<Vec<u8>, ProtocolError> {
+pub fn encode_expert_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
+pub fn encode_load_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
+pub fn encode_nvme_read_sqe(
+pub fn encode_work_items_ring_into(
+pub fn encode_work_items_ring_words_into(
+pub fn enter(
+pub fn estimate(&self, key: u32) -> u64 {
+pub fn evict_model(&self, key: ModelResidencyKey) -> Result<(), ModelResidencyError> {
+pub fn eviction_reports(&self) -> Vec<InMemoryEvictionReport> {
+pub fn exchange_adj(&self) -> &[u32] {
+pub fn faulted(self, fault_code: u32) -> Self {
+pub fn finish_sequence(&self, lease: SequenceLease) -> Result<(), ModelResidencyError> {
+pub fn flush_submissions(&mut self) -> Result<(), PipelineError> {
+pub fn from_backend_error(slot_status: u32, error: &BackendError, output_bytes: &[u8]) -> Self {
+pub fn from_item_count(
+pub fn from_outputs(outputs: Vec<Vec<u8>>, slot_count: u32) -> Result<Self, PipelineError> {
+pub fn from_outputs_into(
+pub fn from_parts(
+pub fn from_slots(slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> Self {
+pub fn from_tasks(tasks: &[TaskWorkItem]) -> Result<Self, BackendError> {
+pub fn geometry_from_slots(
+pub fn get_sqe(&mut self) -> Option<&mut io_uring_sqe> {
+pub fn global_opcode(&self, local: u32) -> Result<u32, TenantError> {
+pub fn health_since(&self, previous: &RingTelemetry) -> MegakernelWatchdogSnapshot {
+pub fn hex(&self) -> String {
+pub fn hit_rate_ppm(&self) -> u32 {
+pub fn host_copy_avoidance_bps(&self) -> u16 {
+pub fn id(&self) -> u32 {
+pub fn in_user_cache() -> Result<Self, DiskCacheError> {
+pub fn inflight(&self) -> u32 {
+pub fn inflight_reads(self) -> u64 {
+pub fn into_batch(self) -> BatchDescriptor {
+pub fn into_snapshot(self) -> SketchTelemetry {
+pub fn into_stream(self) -> AsyncUringStream<'a> {
+pub fn io_completion_poll_body() -> Vec<Node> {
+pub fn io_queue_bytes(&self) -> &[u8] {
+pub fn is_available(&self) -> bool {
+pub fn is_complete(&self) -> bool {
+pub fn is_complete(self) -> bool {
+pub fn is_drain_incomplete(&self) -> bool {
+pub fn is_empty(&self) -> bool {
+pub fn is_recycled(&self, queue_slot: u32) -> bool {
+pub fn is_shutdown_requested(&self) -> bool {
+pub fn label(&self) -> &str {
+pub fn launch_cache_stats() -> MegakernelLaunchCacheStats {
+pub fn launch_recommendation(
+pub fn launch_recommendation_for_tasks(
+pub fn launch_request_for_tasks(
+pub fn len(&self) -> u32 {
+pub fn len(&self) -> usize {
+pub fn lookup(&self, tenant_id: u32) -> Option<TenantHandle> {
+pub fn max_outstanding_slots(&self) -> u64 {
+pub fn megakernel_io_queue(&self) -> &MegakernelIoQueue {
+pub fn megakernel_io_queue_mut(&mut self) -> &mut MegakernelIoQueue {
+pub fn merge(&mut self, other: &Self) -> Result<(), PipelineError> {
+pub fn message(&self) -> &str {
+pub fn missing_families(self) -> Vec<RuntimeEvidenceMetricFamily> {
+pub fn missing_metric_families(&self) -> Vec<RuntimeEvidenceMetricFamily> {
+pub fn mixed_work_protocol_evidence(
+pub fn name(&self) -> &str {
+pub fn natural_gradient_autotune_step(
+pub fn natural_gradient_autotune_step_into(
+pub fn new(
+pub fn new() -> Self {
+pub fn new(backend: Arc<dyn VyreBackend>) -> Self {
+pub fn new(backend: Arc<dyn VyreBackend>, budget_bytes: u64) -> Self {
+pub fn new(backends: Vec<Arc<dyn VyreBackend>>) -> Self {
+pub fn new(base_url: impl Into<String>) -> Self {
+pub fn new(depth: usize, width: usize) -> Result<Self, PipelineError> {
+pub fn new(entries: u32) -> Result<Self, PipelineError> {
+pub fn new(layers: Vec<Arc<dyn PipelineCacheStore>>) -> Self {
+pub fn new(opcode: u8, args: Vec<u32>) -> Self {
+pub fn new(policy: impl RoutingPolicy + 'static) -> Self {
+pub fn new(root: impl Into<PathBuf>) -> Result<Self, DiskCacheError> {
+pub fn new(slot_count: u32) -> Result<Self, PipelineError> {
+pub fn new(slot_count: u32) -> Result<Self, ProtocolError> {
+pub fn new(start_slot: u32, items: Vec<SlotDescriptor>) -> Self {
+pub fn new(stream: AsyncUringStream<'a>, chunk_bytes: u32) -> Self {
+pub fn new_gpudirect(
+pub fn next_record_workspace_region<R: Copy>(
+pub fn next_workspace_region<R: Copy>(
+pub fn note_drained(&self, count: u64) {
+pub fn observation(&self) -> SpeculationObservation {
+pub fn observe_epoch(&self, control_bytes: &[u8]) -> u32 {
+pub fn of(program: &Program) -> Self {
+pub fn open(
+pub fn open(path: impl AsRef<Path>) -> Result<Self, SafetensorError> {
+pub fn open(path: impl AsRef<Path>, capacity: u64) -> Result<Self, ReplayLogError> {
+pub fn output_bytes_per_second(&self) -> u64 {
+pub fn pack_rule_catalog(rules: &[BatchRuleProgram]) -> Result<PackedRuleCatalog, PipelineError> {
+pub fn pack_rule_catalog_into(
+pub fn packed(tenant_id: u32, ops: Vec<PackedOpDescriptor>) -> Self {
+pub fn padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32 {
+pub fn partition(&self, total_len: usize) -> Vec<Shard> {
+pub fn partition_into(&self, total_len: usize, out: &mut Vec<Shard>) {
+pub fn path(&self) -> &Path {
+pub fn path(&self) -> &str {
+pub fn path_submissions(self, path: NativeReadPath) -> u64 {
+pub fn paused(self, continuation_pc: u32, continuation_data: u32, resume_epoch: u32) -> Self {
+pub fn peek_cqe(&mut self) -> Option<&io_uring_cqe> {
+pub fn persistent_body(workgroup_size_x: u32, opcodes: &[OpcodeHandler]) -> Vec<Node> {
+pub fn persistent_body_jit(workgroup_size_x: u32, payload_processor: &[Node]) -> Vec<Node> {
+pub fn persistent_body_priority(workgroup_size_x: u32, opcodes: &[OpcodeHandler]) -> Vec<Node> {
+pub fn persistent_body_priority_slots(
+pub fn pipeline(&self) -> &Arc<dyn CompiledPipeline> {
+pub fn pipeline_id(&self) -> String {
+pub fn plan_compact_fusion_into<'a>(
+pub fn plan_cross_pipeline_fusion(summaries: &[ArmBindingSummary]) -> CrossPipelineFusionPlan {
+pub fn policy_offset_start(partition_start: Expr, partition_end: Expr, lane_id: Expr) -> Expr {
+pub fn poll(&mut self) -> Result<u32, PipelineError> {
+pub fn poll_completions(&mut self) -> Result<Vec<CompletedIngest>, PipelineError> {
+pub fn poll_completions_into(
+pub fn poll_io_requests(io_queue_bytes: &[u8]) -> Result<Vec<IoRequest>, PipelineError> {
+pub fn priority_accounting(&self) -> PriorityRequeueAccounting {
+pub fn priority_partition_active_lane_count(partition_slots: u32, worker_width: u32) -> u32 {
+pub fn priority_partition_probe_budget(partition_slots: u32, worker_width: u32) -> u32 {
+pub fn priority_partition_probe_count(partition_slots: u32, worker_width: u32) -> u32 {
+pub fn priority_scan_body(total_slots: u32) -> Vec<Node> {
+pub fn priority_scan_body_with_stride(total_slots: u32, worker_stride: u32) -> Vec<Node> {
+pub fn probe() -> Self {
+pub fn promotion_report(&self) -> LayeredPromotionReport {
+pub fn prune_dead_arms_inplace(selection: &mut [u32], dead_mask: &[bool]) -> u32 {
+pub fn prune_redundant_work_items_into(
+pub fn prune_redundant_work_items_with_scratch_into(
+pub fn publish_into(&self, ring_bytes: &mut [u8]) -> Result<u32, PipelineError> {
+pub fn publish_into(&self, ring_bytes: &mut [u8], slot_idx: u32) -> Result<(), PipelineError> {
+pub fn publish_packed_slot<A>(
+pub fn publish_slot(
+pub fn publish_work_items(
+pub fn published_count(&self) -> u64 {
+pub fn pull_file_async_direct() -> Node {
+pub fn pull_file_async_direct_with(bindings: &DirectIoBindings) -> Node {
+pub fn queue_depth(&self) -> u32 {
+pub fn quiesce(&self, max_spins: u64) -> Result<(), TenantError> {
+pub fn quota_counters(&self) -> TenantQuotaCounters {
+pub fn read_debug_log(debug_bytes: &[u8]) -> Vec<DebugRecord> {
+pub fn read_debug_log_into(debug_bytes: &[u8], out: &mut Vec<DebugRecord>) {
+pub fn read_done_count(control_bytes: &[u8]) -> u32 {
+pub fn read_epoch(control_bytes: &[u8]) -> u32 {
+pub fn read_metrics(control_bytes: &[u8]) -> Vec<(u32, u32)> {
+pub fn read_metrics_into(control_bytes: &[u8], out: &mut Vec<(u32, u32)>) {
+pub fn read_observable(control_bytes: &[u8], index: u32) -> u32 {
+pub fn read_path(&self) -> NativeReadPath {
+pub fn readback_bytes_per_second(&self) -> u64 {
+pub fn recommend(
+pub fn recommend_launch(
+pub fn recommend_with_evidence(
+pub fn recommend_with_previous_topology(
+pub fn recommend_with_promotion_evidence(
+pub fn recommend_with_topology_evidence(
+pub fn record_aged_promotion(&mut self, age_ticks: u32) {
+pub fn record_hit_to_ring_hierarchical(is_hit_var: &str) -> Vec<Node> {
+pub fn record_hit_to_ring_hierarchical_with(
+pub fn record_requeue(&mut self, age_ticks: u32) {
+pub fn record_sample(
+pub fn recover_after_device_loss(&self) -> Result<MegakernelRecoveryDecision, PipelineError> {
+pub fn recover_compiled_pipeline(
+pub fn register(&self, label: impl Into<String>) -> Result<TenantHandle, TenantError> {
+pub fn register_buffers(
+pub fn register_files(&self, fds: &[i32]) -> Result<(), PipelineError> {
+pub fn register_with_backpressure(
+pub fn register_with_quotas(
+pub fn release_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
+pub fn release_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
+pub fn replace_buffer(&mut self, gpu_buffer: GpuMappedBuffer<'a>) {
+pub fn replay_all(&mut self) -> Result<Vec<RecordedSlot>, ReplayLogError> {
+pub fn replay_records(&mut self) -> Result<Vec<ReplayRecord>, ReplayLogError> {
+pub fn request_shutdown(&mut self) {
+pub fn requeued(
+pub fn reserve_resident_handles(&self, handle_count: u64) -> Result<(), TenantError> {
+pub fn reserve_staging_bytes(&self, byte_count: u64) -> Result<(), TenantError> {
+pub fn reset(&mut self, tenant_count: u32, observable_slots: u32) -> Result<(), PipelineError> {
+pub fn reset_launch_cache_for_thread() {
+pub fn reset_sequence(
+pub fn reset_shape(&mut self, depth: usize, width: usize) -> Result<(), PipelineError> {
+pub fn reset_telemetry(&mut self) {
+pub fn reset_unit_cursor(&self) {
+pub fn resource_capacity(&self) -> usize {
+pub fn result(&self) -> &[u32] {
+pub fn resumed(self) -> Self {
+pub fn retained_default_output_bytes(&self) -> usize {
+pub fn retained_default_output_slots(&self) -> usize {
+pub fn retained_output_bytes(&self) -> usize {
+pub fn retained_output_slots(&self) -> usize {
+pub fn ring_byte_len(slot_count: u32) -> Option<usize> {
+pub fn ring_bytes(&self) -> &[u8] {
+pub fn ring_bytes_mut(&mut self) -> &mut [u8] {
+pub fn root(&self) -> &Path {
+pub fn route(&self, plan: &ExecutionPlan) -> RoutingDecision {
+pub fn route_with_explanation(&self, plan: &ExecutionPlan) -> RoutingExplanation {
+pub fn runtime_counters(&self) -> MegakernelRuntimeCounters {
+pub fn runtime_counters(&self) -> TenantRuntimeCounters {
+pub fn runtime_counters(&self) -> Vec<TenantRuntimeCounters> {
+pub fn runtime_counters_into(&self, out: &mut Vec<TenantRuntimeCounters>) {
+pub fn schedulable_count(&self) -> u32 {
+pub fn select_concurrent_tenants(&self, conflict_adj: &[u32]) -> Vec<u32> {
+pub fn select_concurrent_tenants_into(
+pub fn select_fused_subset(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
+pub fn select_fused_subset_checked_into(
+pub fn select_fused_subset_compact(costs_q16: &[u16], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
+pub fn select_fused_subset_compact_checked_into(
+pub fn select_fused_subset_compact_into(
+pub fn select_fused_subset_into(
+pub fn select_fused_subset_pruned(
+pub fn select_fused_subset_pruned_into(
+pub fn select_fused_subset_with_rate(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
+pub fn select_optimal_fused_subset(costs: &[f64], n: u32, exchange_adj: &[u32]) -> Vec<u32> {
+pub fn selected(&self) -> &[u32] {
+pub fn sequence_state(
+pub fn shard_digests(&self) -> impl ExactSizeIterator<Item = (&Path, &[u8; 32])> {
+pub fn shards(&self) -> impl ExactSizeIterator<Item = (&Path, &SafetensorIndex)> {
+pub fn shared_prologue_length(arm_prologues: &[&[MegakernelWorkItem]]) -> usize {
+pub fn single(tenant_id: u32, opcode: SlotOpcode, args: Vec<u32>) -> Self {
+pub fn sketch(&self, depth: usize, width: usize) -> Result<SketchTelemetry, PipelineError> {
+pub fn sketch_into(
+pub fn slot_bytes(&self) -> usize {
+pub fn slot_count(&self) -> Result<u32, PipelineError> {
+pub fn slot_count(&self) -> u32 {
+pub fn slot_count(&self) -> usize {
+pub fn snapshot_readback(&self) -> MegakernelReadback {
+pub fn snapshot_readback_into(&self, out: &mut MegakernelReadback) {
+pub fn spawn(stream: AsyncUringStream<'static>, io_queue_mapped: &'static mut [u8]) -> Self {
+pub fn spawn_with_registered_destinations(
+pub fn sq_needs_wakeup(&self) -> bool {
+pub fn start_sequence(
+pub fn stop(&mut self) -> Result<(), PipelineError> {
+pub fn sub_region(&self, offset: usize, len: usize) -> Result<Self, crate::PipelineError> {
+pub fn submit_dma_read(
+pub fn submit_file(&mut self, path: &Path, slot: u32) -> Result<(), PipelineError> {
+pub fn sync(&mut self) -> Result<(), ReplayLogError> {
+pub fn take_result(&mut self) -> Vec<u32> {
+pub fn telemetry_snapshot(&self) -> NvmeGpuIngestTelemetry {
+pub fn tensor(&self, name: &str) -> Option<&CheckpointTensor> {
+pub fn tensor(&self, name: &str) -> Option<&SafetensorEntry> {
+pub fn tensors(&self) -> impl ExactSizeIterator<Item = &SafetensorEntry> {
+pub fn tensors(&self) -> impl ExactSizeIterator<Item = (&str, &CheckpointTensor)> {
+pub fn to_snapshot(&self) -> SketchTelemetry {
+pub fn to_task_work_item(
+pub fn total_slots(&self) -> u32 {
+pub fn transition_slot_status(
+pub fn try_active_slots_for_opcode(
+pub fn try_active_slots_for_opcode_into<'a>(
+pub fn try_active_windows(&self) -> Result<Vec<&WindowTelemetry>, PipelineError> {
+pub fn try_active_windows_into<'a>(
+pub fn try_add(&mut self, key: u32, amount: u64) -> Result<(), PipelineError> {
+pub fn try_apply_to_launch_request(
+pub fn try_build_program_with_self_loading_miss_handler(
+pub fn try_claim_io_requests_into(
+pub fn try_complete_io_request(
+pub fn try_complete_io_requests_batch(
+pub fn try_completed(mut self) -> Result<Self, BackendError> {
+pub fn try_continuation_pressure_count(&self) -> Result<u64, BackendError> {
+pub fn try_count_done_ring_slots(
+pub fn try_decode(control_bytes: &[u8]) -> Result<Self, PipelineError> {
+pub fn try_decode(control_bytes: &[u8], ring_bytes: &[u8]) -> Result<Self, PipelineError> {
+pub fn try_decode_into(control_bytes: &[u8], out: &mut Self) -> Result<(), PipelineError> {
+pub fn try_decode_with_window_opcodes(
+pub fn try_decode_with_window_opcodes_into(
+pub fn try_default_priority_offsets(total_slots: u32) -> Result<Vec<u32>, PipelineError> {
+pub fn try_detect_cross_arm_redundancy(
+pub fn try_diffuse_priority_across_siblings(
+pub fn try_diffuse_priority_across_siblings_into(
+pub fn try_encode_control(
+pub fn try_encode_control_into(
+pub fn try_encode_empty_debug_log(record_capacity: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn try_encode_empty_debug_log(record_capacity: u32) -> Result<Vec<u8>, ProtocolError> {
+pub fn try_encode_empty_debug_log_into(
+pub fn try_encode_empty_io_queue(slot_count: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn try_encode_empty_io_queue_into(
+pub fn try_encode_empty_ring(slot_count: u32) -> Result<Vec<u8>, PipelineError> {
+pub fn try_encode_empty_ring(slot_count: u32) -> Result<Vec<u8>, ProtocolError> {
+pub fn try_encode_empty_ring_into(slot_count: u32, dst: &mut Vec<u8>) -> Result<(), ProtocolError> {
+pub fn try_encode_load_miss(resource_id: u32, prefetch: bool) -> Result<Vec<u8>, ProtocolError> {
+pub fn try_encode_load_miss_into(
+pub fn try_faulted(mut self, fault_code: u32) -> Result<Self, BackendError> {
+pub fn try_health_since(
+pub fn try_hit_rate_ppm(&self) -> Result<u32, PipelineCacheMetricError> {
+pub fn try_into_batch(&self) -> Result<BatchDescriptor, PipelineError> {
+pub fn try_natural_gradient_autotune_step(
+pub fn try_natural_gradient_autotune_step_into(
+pub fn try_pack_u16_transitions_into(
+pub fn try_partition(&self, total_len: usize) -> Result<Vec<Shard>, BackendError> {
+pub fn try_partition_into(
+pub fn try_paused(
+pub fn try_persistent_body(
+pub fn try_poll_io_requests(io_queue_bytes: &[u8]) -> Result<Vec<IoRequest>, PipelineError> {
+pub fn try_poll_io_requests_into(
+pub fn try_prune_redundant_work_items_into(
+pub fn try_prune_redundant_work_items_with_scratch_into(
+pub fn try_read_debug_log(debug_bytes: &[u8]) -> Result<Vec<DebugRecord>, PipelineError> {
+pub fn try_read_debug_log(debug_bytes: &[u8]) -> Result<Vec<DebugRecord>, ProtocolError> {
+pub fn try_read_debug_log_into(
+pub fn try_read_done_count(control_bytes: &[u8]) -> Result<u32, PipelineError> {
+pub fn try_read_done_count(control_bytes: &[u8]) -> Result<u32, ProtocolError> {
+pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, PipelineError> {
+pub fn try_read_epoch(control_bytes: &[u8]) -> Result<u32, ProtocolError> {
+pub fn try_read_metrics(control_bytes: &[u8]) -> Result<Vec<(u32, u32)>, PipelineError> {
+pub fn try_read_metrics(control_bytes: &[u8]) -> Result<Vec<(u32, u32)>, ProtocolError> {
+pub fn try_read_metrics_into(
+pub fn try_read_observable(control_bytes: &[u8], index: u32) -> Result<u32, PipelineError> {
+pub fn try_read_observable(control_bytes: &[u8], index: u32) -> Result<u32, ProtocolError> {
+pub fn try_record_aged_promotion(&mut self, age_ticks: u32) -> Result<(), BackendError> {
+pub fn try_record_requeue(&mut self, age_ticks: u32) -> Result<(), BackendError> {
+pub fn try_requeued(
+pub fn try_resumed(mut self) -> Result<Self, BackendError> {
+pub fn try_runtime_counters(&self) -> Result<MegakernelRuntimeCounters, PipelineError> {
+pub fn try_schedulable_count(&self) -> Result<u32, BackendError> {
+pub fn try_slot_byte_len() -> Result<usize, ProtocolError> {
+pub fn try_slot_word_base(slot: u32) -> Result<usize, ProtocolError> {
+pub fn try_slot_word_index(slot: u32, word: u32) -> Result<usize, ProtocolError> {
+pub fn try_word_index(word: u32) -> Result<usize, ProtocolError> {
+pub fn try_yielded(
+pub fn unpack_u16_transition(packed: &[u32], flat_index: usize) -> u32 {
+pub fn unregister(&self, tenant_id: u32) -> Option<TenantHandle> {
+pub fn used_bytes(&self) -> Result<u64, ModelResidencyError> {
+pub fn uses_sqpoll(&self) -> bool {
+pub fn validate(&self) -> Result<(), BackendError> {
+pub fn validate_completed_zero_copy(self, path: NativeReadPath) -> Result<(), PipelineError> {
+pub fn validate_io_queue_bytes(io_queue_bytes: &[u8]) -> Result<(), PipelineError> {
+pub fn validate_mixed_work_protocol(
+pub fn validate_requirements<'a>(
+pub fn verify_shards<'a>(
+pub fn wait_for_completion(&mut self) -> Result<(), PipelineError> {
+pub fn wake_sqpoll(&self) -> Result<i32, PipelineError> {
+pub fn weight(
+pub fn with_capacity(
+pub fn with_device(device: Arc<dyn ResidencyDevice>, budget_bytes: u64) -> Self {
+pub fn with_limits(max_entries_per_shard: usize, max_bytes_per_shard: usize) -> Self {
+pub fn with_required_metadata(
+pub fn with_uring(mut self, stream: uring::AsyncUringStream<'a>) -> Self {
+pub fn worker_groups(&self) -> u32 {
+pub fn worker_groups_for_geometry(
+pub fn worker_workgroup_size(worker_count: u32, max_workgroup_size_x: u32) -> u32 {
+pub fn write_default_priority_offsets(
+pub fn yielded(self, continuation_pc: u32, continuation_data: u32) -> Self {
+pub mod advanced;
+pub mod automata_worklist;
+pub mod builder;
+pub mod checkpoint;
+pub mod control;
+pub mod debug;
+pub mod descriptor;
+pub mod driver;
+pub mod execution;
+pub mod gpudirect;
+pub mod handlers;
+pub mod hierarchical_atomics;
+pub mod io;
+pub mod io_loop;
+pub mod io_op {
+pub mod io_status {
+pub mod io_word {
+pub mod ir_util;
+pub mod megakernel;
+pub mod mixed_work;
+pub mod model_residency;
+pub mod opcode;
+pub mod parallel_dfa;
+pub mod pipeline_cache;
+pub mod planner;
+pub mod policy;
+pub mod priority {
+pub mod protocol;
+pub mod pump;
+pub mod readback;
+pub mod recovery;
+pub mod replay;
+pub mod resident;
+pub mod ring;
+pub mod routing;
+pub mod rule_catalog;
+pub mod scaling;
+pub mod scheduler;
+pub mod slot;
+pub mod speculation;
+pub mod standard_policy;
+pub mod stream;
+pub mod task;
+pub mod telemetry;
+pub mod tenant;
+pub mod uring;
+pub mod workspace_adapter;
+pub mod workspace_layout;
+pub mod zero_copy_io;
+pub struct AsyncUringStream<'a> {
+pub struct AutomataStateIndex {
+pub struct AutomataWorklistEvidence {
+pub struct AutomataWorklistPolicy {
+pub struct AutomataWorklistRecommendation {
+pub struct AutomataWorklistRequest {
+pub struct BackendResidencyDevice {
+pub struct BarrierElisionReport {
+pub struct BatchDescriptor {
+pub struct BatchRuleProgram {
+pub struct BatchRuleRejection {
+pub struct CheckpointTensor {
+pub struct CompactFusionPlanningScratch {
+pub struct CompiledArtifactBinding {
+pub struct CompletedIngest {
+pub struct ControlSnapshot {
+pub struct CountMinSketch {
+pub struct CrossArmRedundancy {
+pub struct CrossPipelineFusionPlan {
+pub struct DebugRecord {
+pub struct DirectIoBindings {
+pub struct DiskCache {
+pub struct DiskCacheDurabilityReport {
+pub struct ExpectedShardDigest<'a> {
+pub struct FusionSelectionScratch {
+pub struct GpuMappedBuffer<'a> {
+pub struct GpuStream<'a> {
+pub struct HitRingBindings {
+pub struct HostRing {
+pub struct ImmutableWeightUpload<'a> {
+pub struct InMemoryEvictionReport {
+pub struct InMemoryPipelineCache {
+pub struct IoCompletion {
+pub struct IoRequest {
+pub struct IoUringState {
+pub struct Iovec {
+pub struct LayeredPipelineCache {
+pub struct LayeredPromotionReport {
+pub struct Megakernel {
+pub struct MegakernelBatchDispatchOutput {
+pub struct MegakernelCaps {
+pub struct MegakernelConfig {
+pub struct MegakernelDispatchOutput {
+pub struct MegakernelDispatchStats {
+pub struct MegakernelGridLimits {
+pub struct MegakernelGridPlan {
+pub struct MegakernelGridRequest {
+pub struct MegakernelIoLoop {
+pub struct MegakernelIoQueue {
+pub struct MegakernelLaunchCacheStats {
+pub struct MegakernelLaunchGeometry {
+pub struct MegakernelLaunchPolicy {
+pub struct MegakernelLaunchRecommendation {
+pub struct MegakernelLaunchRequest {
+pub struct MegakernelPromotionEvidence {
+pub struct MegakernelReadback {
+pub struct MegakernelReadbackCounters {
+pub struct MegakernelRecoveryPolicy {
+pub struct MegakernelReport {
+pub struct MegakernelResidentBatchScratch {
+pub struct MegakernelResidentBuffers {
+pub struct MegakernelResidentDispatchScratch {
+pub struct MegakernelResidentHandles {
+pub struct MegakernelRuntimeCounters {
+pub struct MegakernelRuntimeEvidence {
+pub struct MegakernelSizingPolicy {
+pub struct MegakernelTelemetry {
+pub struct MegakernelTopologyEvidence {
+pub struct MegakernelWatchdogSnapshot {
+pub struct MegakernelWorkItem {
+pub struct MegakernelWorkloadHints {
+pub struct MegakernelWorkspaceRegion<R> {
+pub struct MixedWorkProtocolEvidence {
+pub struct MixedWorkProtocolPlan<'a> {
+pub struct MixedWorkUnit {
+pub struct ModelAdmission<'a> {
+pub struct ModelLease {
+pub struct ModelResidency {
+pub struct ModelResidencyKey {
+pub struct NvmeGpuIngestDriver<'a> {
+pub struct NvmeGpuIngestTelemetry {
+pub struct OpcodeHandler {
+pub struct OutputSlabId(pub u32);
+pub struct PackedOpDescriptor {
+pub struct PackedRuleCatalog {
+pub struct PairedSpeculationSample {
+pub struct PairedSpeculationUpdate {
+pub struct PairedSpeculationWindow {
+pub struct ParallelDfaBindings {
+pub struct PipelineCacheMetricError {
+pub struct PipelineCacheMetrics {
+pub struct PipelineFingerprint(pub [u8; 32]);
+pub struct PipelineFusionBreak {
+pub struct PipelineFusionSegment {
+pub struct PriorityDrainRecommendation {
+pub struct PriorityRequeueAccounting {
+pub struct RecordedSlot {
+pub struct RedundantWorkItemPruneScratch {
+pub struct RegisteredIoDestination {
+pub struct RemoteCache {
+pub struct ReplayFailureEvidence {
+pub struct ReplayRecord {
+pub struct ResidentArtifactId(pub u32);
+pub struct RingLog {
+pub struct RingOccupancy {
+pub struct RingSlotSnapshot {
+pub struct RingTelemetry {
+pub struct RoutingEngine {
+pub struct RoutingExplanation {
+pub struct RuleCatalogPackingScratch {
+pub struct RuleMeta {
+pub struct RuntimeEvidenceMetricCoverage {
+pub struct SafetensorEntry {
+pub struct SafetensorIndex {
+pub struct SafetensorRequirement<'a> {
+pub struct SafetensorShardIdentity {
+pub struct SequenceId(pub u64);
+pub struct SequenceLease {
+pub struct SequenceStateSpec<'a> {
+pub struct Shard {
+pub struct ShardedSafetensorIndex {
+pub struct SketchTelemetry {
+pub struct SketchTelemetryScratch {
+pub struct StandardPolicy;
+pub struct TaskQueueSnapshot {
+pub struct TaskWorkItem {
+pub struct TelemetryDecodeCapacityEvidence {
+pub struct TelemetryDecodeScratch {
+pub struct TenantHandle {
+pub struct TenantQuota {
+pub struct TenantQuotaCounters {
+pub struct TenantRegistry {
+pub struct TenantRuntimeCounters {
+pub struct TenantSelectionScratch {
+pub struct UringMegakernelPump<'a> {
+pub struct VerifiedCheckpointIdentity {
+pub struct WindowDescriptor {
+pub struct WindowTelemetry {
+pub struct WorkStealingScheduler {
+pub struct io_cqring_offsets {
+pub struct io_sqring_offsets {
+pub struct io_uring_cqe {
+pub struct io_uring_params {
+pub struct io_uring_sqe {
+pub trait MegakernelWorkspaceAdapter {
+pub trait PipelineCacheStore: Send + Sync {
+pub trait ResidencyDevice: Send + Sync {
+pub trait RingConsumer {
+pub trait RingProducer {
+pub trait RoutingPolicy: Send + Sync {
+pub type PersistentPipelineCacheStore = DiskCache;

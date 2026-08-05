@@ -25,15 +25,9 @@ nn-attention = ["vyre-libs/nn-attention"]
 matching-substring = ["vyre-libs/matching-substring"]
 matching-dfa = ["vyre-libs/matching-dfa"]
 matching-nfa = ["vyre-libs/matching-nfa"]
-megakernel-batch = ["vyre-runtime/megakernel-batch"]
-uring-cmd-nvme = ["vyre-runtime/uring-cmd-nvme"]
-# Forwards vyre-runtime's infallible legacy telemetry-decode API so the
-# megakernel long-term edge-case integration tests can opt into it.
-legacy-infallible = ["vyre-runtime/legacy-infallible"]
 
 [dependencies]
 vyre-driver = { workspace = true, features = ["self-substrate-adapters"] }
-vyre-runtime = { workspace = true, features = ["self-substrate-adapters"] }
 vyre-foundation = { workspace = true }
 vyre-self-substrate = { workspace = true }
 vyre-spec = { workspace = true }
@@ -62,6 +56,7 @@ libm.workspace = true
 bincode = { workspace = true }
 
 [dev-dependencies]
+vyre-runtime.workspace = true
 vyre-test-support.workspace = true
 vyre-harness = { path = "../vyre-harness" }
 criterion.workspace = true
@@ -129,13 +124,3 @@ workspace = true
 name = "vyre-wgpu"
 path = "src/bin/vyre.rs"
 
-# `megakernel_rule_support` imports `vyre_runtime::megakernel::BatchRuleProgram`, gated
-# behind `megakernel-batch`. Registered with `required-features` so a package-scoped
-# `cargo test -p vyre-driver-wgpu --all-targets` cleanly SKIPS it instead of failing to
-# compile, and so it builds and runs whenever the feature is enabled. Gating the file with
-# `#![cfg]` instead would compile it to a vacuous "0 tests ... ok" and hide whether batch
-# rule support is covered at all.
-[[test]]
-name = "megakernel_rule_support"
-path = "tests/megakernel_rule_support.rs"
-required-features = ["megakernel-batch"]

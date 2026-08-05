@@ -1,6 +1,6 @@
 [package]
 name = "vyre-bench"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -20,7 +20,7 @@ vyre-driver-spirv = { workspace = true }
 vyre-driver-reference = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
-vyre-libs = { workspace = true, features = ["nn-linear-4bit", "rust-parser"] }
+vyre-libs = { workspace = true, features = ["nn-linear-4bit"] }
 vyre-primitives = { workspace = true, features = ["bitset", "graph", "cpu-parity"] }
 vyre-intrinsics = { workspace = true }
 vyre-lower = { workspace = true }
@@ -66,6 +66,7 @@ criterion = { workspace = true }
 proptest = { workspace = true }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
+syn.workspace = true
 
 [[bench]]
 name = "release"

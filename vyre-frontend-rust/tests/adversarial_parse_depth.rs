@@ -12,8 +12,8 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_libs::parsing::rust::lex::lexer::core::lex;
-use vyre_libs::parsing::rust::parse::parse;
+use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::parse::parse;
 
 /// Lex then parse; return whether parsing returned (Ok or Err) without crashing.
 /// The value asserted is that we get a `Result` back at all, reaching the

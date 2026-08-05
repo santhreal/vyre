@@ -1,7 +1,7 @@
-//! Name resolution stage: thin orchestrator over the `vyre-libs` sema substrate.
+//! Name-resolution stage over the frontend-owned semantic substrate.
 
-use vyre_libs::parsing::rust::parse::Module;
-use vyre_libs::parsing::rust::sema::{self, Resolution};
+use crate::parse::Module;
+use crate::sema::{self, Resolution};
 
 use crate::RustFrontendError;
 

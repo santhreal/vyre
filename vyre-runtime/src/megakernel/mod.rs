@@ -54,7 +54,6 @@ pub mod telemetry;
 pub mod workspace_adapter;
 pub mod workspace_layout;
 
-use vyre_driver::backend::BackendError;
 
 // Re-export protocol constants at the megakernel level for back-compat.
 pub use automata_worklist::{
@@ -161,12 +160,3 @@ pub use workspace_layout::{
     next_workspace_region, workspace_record_words, MegakernelWorkspaceLayoutError,
     MegakernelWorkspaceRegion, MegakernelWorkspaceRegionSpec,
 };
-/// Backend-neutral megakernel dispatch contract.
-pub trait MegakernelDispatch {
-    /// Drain the requested megakernel dispatch.
-    fn dispatch_megakernel(
-        &self,
-        work_queue: &[MegakernelWorkItem],
-        config: &MegakernelConfig,
-    ) -> Result<MegakernelReport, BackendError>;
-}
