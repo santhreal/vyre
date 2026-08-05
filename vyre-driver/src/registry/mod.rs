@@ -8,6 +8,8 @@ pub mod dialect;
 pub mod enforce;
 /// `intern_string` / `InternedOpId` global string interner.
 pub mod interner;
+/// Adapter from neutral intrinsic descriptors to driver registration records.
+pub mod intrinsic_adapter;
 /// I/O lowering helpers (DMA, NVMe passthrough).
 pub mod io;
 /// Target builder traits + `LoweringTable`.
@@ -29,6 +31,7 @@ pub use dialect::{
 };
 pub use enforce::{Chain, EnforceGate, EnforceVerdict};
 pub use interner::{intern_string, InternedOpId};
+pub use intrinsic_adapter::{validate_intrinsic_lowering, IntrinsicRegistrationError};
 pub use lowering::{
     LoweringCtx, LoweringTable, NativeModule, NativeModuleBuilder, PrimaryBinaryBuilder,
     PrimaryTextBuilder, ReferenceKind, SecondaryTextBuilder, TextModule,

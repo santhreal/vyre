@@ -33,19 +33,11 @@
 /// every tier. Spec: `docs/region-chain.md`.
 pub mod region;
 
-/// Inventory-backed OpEntry registry used by the intrinsic-differential
-/// harness.
+/// Canonical intrinsic identities, signatures, semantic classifications,
+/// neutral builders, and deterministic fixtures.
 #[doc(hidden)]
 pub mod harness;
 
-/// CPU reference evaluation traits re-exported from `vyre-foundation`.
-#[allow(deprecated)]
-pub use vyre_foundation::cpu_op::{self, structured_intrinsic_cpu, CategoryAOp, CpuOp};
-/// Spec types every intrinsic registers against: algebraic laws, backend identifiers, intrinsic descriptors.
-pub use vyre_spec::{AlgebraicLaw, Backend, BackendId, CpuFn, IntrinsicDescriptor};
-
-/// Category-classification consistency gate (F-IR-34).
-pub mod category_check;
 
 /// Category C hardware intrinsics  -  subgroup collectives, barriers, bit intrinsics, FMA, inverseSqrt.
 #[cfg(feature = "hardware")]

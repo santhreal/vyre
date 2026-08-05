@@ -4,13 +4,15 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{packed_u32_input_with_output, MAP_WORKGROUP};
+/// Canonical op id shared by semantics, fixtures, and driver registration.
+pub const OP_ID: &str = "vyre-intrinsics::hardware::subgroup_add";
 
 /// Build a Program whose per-lane output is the sum of all active subgroup
 /// lanes.
 #[must_use]
 pub fn subgroup_add(values: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::region::wrap_anonymous(
-        "vyre-intrinsics::hardware::subgroup_add",
+        OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -80,7 +82,8 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::harness::OpEntry {
-        id: "vyre-intrinsics::hardware::subgroup_add",
+        id: OP_ID,
+        signature: crate::harness::U32_UNARY_SIGNATURE,
         build: || subgroup_add("values", "out", 4),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),

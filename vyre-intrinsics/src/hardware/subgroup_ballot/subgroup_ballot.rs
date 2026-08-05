@@ -6,13 +6,15 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{pack_u32, packed_u32_input_with_output, MAP_WORKGROUP};
+/// Canonical op id shared by semantics, fixtures, and driver registration.
+pub const OP_ID: &str = "vyre-intrinsics::hardware::subgroup_ballot";
 
 /// Build a Program that collects the per-lane boolean predicate into a u32
 /// bitmask broadcast to every lane.
 #[must_use]
 pub fn subgroup_ballot(cond_input: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::region::wrap_anonymous(
-        "vyre-intrinsics::hardware::subgroup_ballot",
+        OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -69,7 +71,8 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::harness::OpEntry {
-        id: "vyre-intrinsics::hardware::subgroup_ballot",
+        id: OP_ID,
+        signature: crate::harness::U32_UNARY_SIGNATURE,
         build: || subgroup_ballot("cond", "out", 4),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),

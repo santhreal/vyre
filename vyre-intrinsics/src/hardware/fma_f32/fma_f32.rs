@@ -11,6 +11,8 @@
 use vyre_foundation::ir::Program;
 
 use crate::hardware::{pack_f32, ternary_f32_program};
+/// Canonical op id shared by semantics, fixtures, and driver registration.
+pub const OP_ID: &str = "vyre-intrinsics::hardware::fma_f32";
 
 /// Map `out[i] = fma(a[i], b[i], c[i])` over n elements.
 ///
@@ -25,7 +27,7 @@ use crate::hardware::{pack_f32, ternary_f32_program};
 /// that expression explicitly and accept the rounding divergence.
 #[must_use]
 pub fn fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> Program {
-    ternary_f32_program(a, b, c, out, n)
+    ternary_f32_program(OP_ID, a, b, c, out, n)
 }
 
 fn cpu_ref(a: &[f32], b: &[f32], c: &[f32]) -> Vec<u8> {
@@ -60,7 +62,8 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::harness::OpEntry {
-        id: "vyre-intrinsics::hardware::fma_f32",
+        id: OP_ID,
+        signature: crate::harness::F32_TERNARY_SIGNATURE,
         build: || fma_f32("a", "b", "c", "out", 4),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),

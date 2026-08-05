@@ -5,12 +5,14 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::hardware::pack_u32;
 use crate::hardware::MAP_WORKGROUP;
+/// Canonical op id shared by semantics, fixtures, and driver registration.
+pub const OP_ID: &str = "vyre-intrinsics::hardware::subgroup_shuffle";
 
 /// Build a Program that maps `out[i] = values[lanes[i]]` across the subgroup.
 #[must_use]
 pub fn subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::region::wrap_anonymous(
-        "vyre-intrinsics::hardware::subgroup_shuffle",
+        OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -78,7 +80,8 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::harness::OpEntry {
-        id: "vyre-intrinsics::hardware::subgroup_shuffle",
+        id: OP_ID,
+        signature: crate::harness::U32_BINARY_SIGNATURE,
         build: || subgroup_shuffle("values", "lanes", "out", 4),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),

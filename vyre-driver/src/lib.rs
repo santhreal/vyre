@@ -249,11 +249,12 @@ pub use program_walks::{
     TailMaskPolicy,
 };
 pub use registry::{
-    default_validator, intern_string, AttrSchema, AttrType, Category, Chain, Dialect,
-    DialectRegistration, DialectRegistry, DuplicateOpIdError, EnforceGate, EnforceVerdict,
-    InternedOpId, LoweringCtx, LoweringTable, MutationClass, NativeModule, NativeModuleBuilder,
-    OpBackendTarget, OpDef, OpDefRegistration, PrimaryBinaryBuilder, PrimaryTextBuilder,
-    ReferenceKind, SecondaryTextBuilder, Signature, Target, TextModule, TypedParam,
+    default_validator, intern_string, validate_intrinsic_lowering, AttrSchema, AttrType, Category,
+    Chain, Dialect, DialectRegistration, DialectRegistry, DuplicateOpIdError, EnforceGate,
+    EnforceVerdict, InternedOpId, IntrinsicRegistrationError, LoweringCtx, LoweringTable,
+    MutationClass, NativeModule, NativeModuleBuilder, OpBackendTarget, OpDef, OpDefRegistration,
+    PrimaryBinaryBuilder, PrimaryTextBuilder, ReferenceKind, SecondaryTextBuilder, Signature,
+    Target, TextModule, TypedParam,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};

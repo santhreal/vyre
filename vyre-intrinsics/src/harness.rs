@@ -1,20 +1,91 @@
-//! Inventory-backed OpEntry registry for the intrinsic-differential harness.
+//! Canonical Category-C intrinsic catalog.
 //!
-//! **Registry Layering**: This file defines the `OpEntry` registry for Tier-2 hardware intrinsics.
-//! It operates in parallel with the Cat-A registry (`vyre-harness::OpEntry`) and the Tier-2.5 primitives registry (`vyre-primitives::harness::OpEntry`).
-//! For an architectural overview of this three-registry split, see `vyre-harness/README.md`.
-//!
-//! Every Cat-C intrinsic registers one `OpEntry` via `inventory::submit!`.
-//! The test `tests/hardware_conform.rs` iterates the inventory and
-//! asserts each op's CPU reference matches the declared
-//! `expected_output` bit-for-bit.
+//! Each entry owns one stable identity and signature together with its neutral
+//! program builder, semantic classification, and deterministic fixtures.
+//! Driver registration is intentionally absent: the shared driver consumes
+//! this catalog and adapts entries into its own registration contract.
 
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
+use thiserror::Error;
+use vyre_foundation::dialect_lookup::{AttrSchema, Signature, TypedParam};
 use vyre_foundation::ir::Program;
 
 pub type Fixture = Vec<Vec<u8>>;
 pub type Fixtures = Vec<Fixture>;
 pub type InputsFn = fn() -> Fixtures;
 pub type ExpectedFn = fn() -> Fixtures;
+
+const NO_ATTRS: &[AttrSchema] = &[];
+
+pub const U32_UNARY_SIGNATURE: Signature = Signature {
+    inputs: &[TypedParam {
+        name: "input",
+        ty: "buffer<u32>",
+    }],
+    outputs: &[TypedParam {
+        name: "output",
+        ty: "buffer<u32>",
+    }],
+    attrs: NO_ATTRS,
+    bytes_extraction: false,
+};
+
+pub const U32_BINARY_SIGNATURE: Signature = Signature {
+    inputs: &[
+        TypedParam {
+            name: "left",
+            ty: "buffer<u32>",
+        },
+        TypedParam {
+            name: "right",
+            ty: "buffer<u32>",
+        },
+    ],
+    outputs: &[TypedParam {
+        name: "output",
+        ty: "buffer<u32>",
+    }],
+    attrs: NO_ATTRS,
+    bytes_extraction: false,
+};
+
+pub const F32_UNARY_SIGNATURE: Signature = Signature {
+    inputs: &[TypedParam {
+        name: "input",
+        ty: "buffer<f32>",
+    }],
+    outputs: &[TypedParam {
+        name: "output",
+        ty: "buffer<f32>",
+    }],
+    attrs: NO_ATTRS,
+    bytes_extraction: false,
+};
+
+pub const F32_TERNARY_SIGNATURE: Signature = Signature {
+    inputs: &[
+        TypedParam {
+            name: "a",
+            ty: "buffer<f32>",
+        },
+        TypedParam {
+            name: "b",
+            ty: "buffer<f32>",
+        },
+        TypedParam {
+            name: "c",
+            ty: "buffer<f32>",
+        },
+    ],
+    outputs: &[TypedParam {
+        name: "output",
+        ty: "buffer<f32>",
+    }],
+    attrs: NO_ATTRS,
+    bytes_extraction: false,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HardwareSemantic {
@@ -60,35 +131,26 @@ impl OpShape {
 #[non_exhaustive]
 pub struct OpEntry {
     pub id: &'static str,
+    pub signature: Signature,
     pub build: fn() -> Program,
     pub test_inputs: Option<InputsFn>,
     pub expected_output: Option<ExpectedFn>,
-    /// Coarse-grained taxonomy tag (T028 / SEPARATION_AUDIT S2 prep).
-    /// Examples: `"hardware"`, `"math"`, `"crypto"`, `"graph"`,
-    /// `"matching"`. `None` means uncategorised  -  equivalent to the
-    /// pre-T028 behaviour. Use `OpEntry::with_category` to set it
-    /// without losing the const-fn `new` constructor.
     pub category: Option<&'static str>,
-    /// Declarative hardware shape for generated conformance, lowering, and
-    /// backend release gates. `None` is retained for external legacy entries.
     pub shape: Option<OpShape>,
 }
 
 impl OpEntry {
-    /// Construct an `OpEntry` with all required fields set. Exists so
-    /// external intrinsic packs can `inventory::submit!(OpEntry::new(...))`
-    /// despite the struct being `#[non_exhaustive]` (V7-EXT-003).
-    /// `category` initialises to `None`; chain `with_category` if a
-    /// category is required at submission time.
     #[must_use]
     pub const fn new(
         id: &'static str,
+        signature: Signature,
         build: fn() -> Program,
         test_inputs: Option<InputsFn>,
         expected_output: Option<ExpectedFn>,
     ) -> Self {
         Self {
             id,
+            signature,
             build,
             test_inputs,
             expected_output,
@@ -97,116 +159,67 @@ impl OpEntry {
         }
     }
 
-    /// Set the category and return `self`. `const`-friendly so callers
-    /// can write `OpEntry::new(...).with_category("hardware")` inside
-    /// `inventory::submit!`.
     #[must_use]
     pub const fn with_category(mut self, category: &'static str) -> Self {
         self.category = Some(category);
         self
     }
 
-    /// Set the declarative hardware shape and return `self`.
     #[must_use]
     pub const fn with_shape(mut self, shape: OpShape) -> Self {
         self.shape = Some(shape);
         self
     }
 
-    /// Return the registered coarse-grained taxonomy tag, if any.
     #[must_use]
     pub const fn category(&self) -> Option<&'static str> {
         self.category
     }
 
-    /// Return the registered declarative hardware shape, if any.
     #[must_use]
     pub const fn shape(&self) -> Option<OpShape> {
         self.shape
     }
 }
 
-inventory::collect!(OpEntry);
-
-pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
-    inventory::iter::<OpEntry>()
+#[derive(Debug, Clone, Eq, PartialEq, Error)]
+pub enum RegistryError {
+    #[error(
+        "duplicate intrinsic id `{id}` with the same signature; keep exactly one canonical owner"
+    )]
+    DuplicateId { id: &'static str },
+    #[error(
+        "intrinsic id `{id}` was registered with mismatched signatures; use the canonical signature from its owning entry"
+    )]
+    SignatureMismatch { id: &'static str },
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use vyre_foundation::ir::Program;
-
-    fn empty_build() -> Program {
-        Program::default()
-    }
-
-    #[test]
-    fn new_initialises_category_to_none() {
-        let entry = OpEntry::new("test::id", empty_build, None, None);
-        assert_eq!(entry.category(), None);
-        assert_eq!(entry.shape(), None);
-    }
-
-    #[test]
-    fn with_category_sets_and_returns_self() {
-        let entry = OpEntry::new("test::id", empty_build, None, None).with_category("hardware");
-        assert_eq!(entry.category(), Some("hardware"));
-    }
-
-    #[test]
-    fn with_shape_sets_and_returns_self() {
-        let shape = OpShape::new(1, 1, 4, HardwareSemantic::UnaryU32Map);
-        let entry = OpEntry::new("test::id", empty_build, None, None).with_shape(shape);
-        assert_eq!(entry.shape(), Some(shape));
-        assert_eq!(shape.total_buffers(), 2);
-    }
-
-    #[test]
-    fn registered_hardware_entries_carry_hardware_category() {
-        // Every inventory::submit! site under hardware/ must declare
-        // category = Some("hardware")  -  the T028 contract for vyre-
-        // intrinsics. If a future hardware op forgets the field this
-        // test fires.
-        let mut hardware_count = 0;
-        let mut categorised = 0;
-        for entry in all_entries() {
-            if entry.id.starts_with("vyre-intrinsics::hardware::") {
-                hardware_count += 1;
-                if entry.category() == Some("hardware") {
-                    categorised += 1;
-                }
-            }
+pub fn validate_entries<'a>(
+    entries: impl IntoIterator<Item = &'a OpEntry>,
+) -> Result<(), RegistryError> {
+    let mut signatures: HashMap<&'static str, &'a Signature> = HashMap::new();
+    for entry in entries {
+        if let Some(first) = signatures.insert(entry.id, &entry.signature) {
+            return if first == &entry.signature {
+                Err(RegistryError::DuplicateId { id: entry.id })
+            } else {
+                Err(RegistryError::SignatureMismatch { id: entry.id })
+            };
         }
-        assert_eq!(
-            categorised, hardware_count,
-            "every vyre-intrinsics::hardware::* op must declare category=Some(\"hardware\")  -  counted {hardware_count} hardware ops, {categorised} carry the category"
-        );
-        assert!(
-            hardware_count > 0,
-            "expected at least one registered vyre-intrinsics::hardware:: op"
-        );
     }
+    Ok(())
+}
 
-    #[test]
-    fn registered_hardware_entries_carry_shapes() {
-        let mut hardware_count = 0;
-        let mut shaped = 0;
-        for entry in all_entries() {
-            if entry.id.starts_with("vyre-intrinsics::hardware::") {
-                hardware_count += 1;
-                if entry.shape().is_some() {
-                    shaped += 1;
-                }
-            }
-        }
-        assert_eq!(
-            shaped, hardware_count,
-            "every vyre-intrinsics::hardware::* op must declare OpShape metadata"
-        );
-        assert!(
-            hardware_count > 0,
-            "expected at least one registered vyre-intrinsics::hardware:: op"
-        );
-    }
+inventory::collect!(OpEntry);
+
+static ENTRIES: LazyLock<Vec<&'static OpEntry>> = LazyLock::new(|| {
+    let mut entries = inventory::iter::<OpEntry>.into_iter().collect::<Vec<_>>();
+    validate_entries(entries.iter().copied())
+        .unwrap_or_else(|error| panic!("invalid intrinsic catalog: {error}"));
+    entries.sort_unstable_by_key(|entry| entry.id);
+    entries
+});
+
+pub fn all_entries() -> impl ExactSizeIterator<Item = &'static OpEntry> {
+    ENTRIES.iter().copied()
 }

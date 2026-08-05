@@ -55,6 +55,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             inventory::submit! {
                 crate::harness::OpEntry {
                     id: OP_ID,
+                    signature: crate::harness::U32_UNARY_SIGNATURE,
                     build: || $function("input", "out", 4),
                     test_inputs: Some(test_inputs),
                     expected_output: Some(expected_output),
@@ -119,7 +120,8 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
         pub mod $module {
             use vyre_foundation::ir::Program;
 
-            const OP_ID: &str = $op_id;
+            /// Canonical op id.
+            pub const OP_ID: &str = $op_id;
 
             /// Build a Program that emits this memory barrier after an identity u32 store.
             #[must_use]
@@ -149,6 +151,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             inventory::submit! {
                 crate::harness::OpEntry {
                     id: OP_ID,
+                    signature: crate::harness::U32_UNARY_SIGNATURE,
                     build: || $function("input", "out", 4),
                     test_inputs: Some(test_inputs),
                     expected_output: Some(expected_output),
@@ -326,9 +329,16 @@ pub(crate) fn barrier_identity_u32_program(
     )
 }
 
-pub(crate) fn ternary_f32_program(a: &str, b: &str, c: &str, out: &str, n: u32) -> Program {
+pub(crate) fn ternary_f32_program(
+    op_id: &'static str,
+    a: &str,
+    b: &str,
+    c: &str,
+    out: &str,
+    n: u32,
+) -> Program {
     let body = vec![crate::region::wrap_anonymous(
-        "vyre-intrinsics::hardware::ternary_f32_map",
+        op_id,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(

@@ -5,12 +5,14 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::hardware::{pack_f32, MAP_WORKGROUP};
+/// Canonical op id shared by semantics, fixtures, and driver registration.
+pub const OP_ID: &str = "vyre-intrinsics::hardware::inverse_sqrt_f32";
 
 /// Build a Program that computes finite-domain `out[i] = 1.0 / sqrt(input[i])`.
 #[must_use]
 pub fn inverse_sqrt_f32(input: &str, out: &str, n: u32) -> Program {
     let body = vec![crate::region::wrap_anonymous(
-        "vyre-intrinsics::hardware::inverse_sqrt_f32",
+        OP_ID,
         vec![
             Node::let_bind("idx", Expr::InvocationId { axis: 0 }),
             Node::if_then(
@@ -76,7 +78,8 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::harness::OpEntry {
-        id: "vyre-intrinsics::hardware::inverse_sqrt_f32",
+        id: OP_ID,
+        signature: crate::harness::F32_UNARY_SIGNATURE,
         build: || inverse_sqrt_f32("input", "out", 4),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),
