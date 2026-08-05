@@ -40,7 +40,7 @@ use vyre::ir::BufferAccess;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::Program;
-use vyre_libs::harness::fp_contract::effective_tolerance;
+use vyre_libs::fixture_catalog::fp_contract::effective_tolerance;
 use vyre_reference::value::Value;
 
 fn backend() -> &'static WgpuBackend {
@@ -172,13 +172,13 @@ fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<
     }
 }
 
-fn entry_by_id(op_id: &str) -> &'static vyre_libs::harness::OpEntry {
-    vyre_libs::harness::all_entries()
+fn entry_by_id(op_id: &str) -> &'static vyre_libs::fixture_catalog::OpEntry {
+    vyre_libs::fixture_catalog::all_entries()
         .find(|entry| entry.id == op_id)
         .expect("Fix: expected OpEntry to be registered")
 }
 
-fn run_entry_diff(entry: &'static vyre_libs::harness::OpEntry) {
+fn run_entry_diff(entry: &'static vyre_libs::fixture_catalog::OpEntry) {
     let program = (entry.build)();
     let input_cases = entry
         .test_inputs
@@ -281,7 +281,7 @@ fn diff_substring_search_gpu_regression() {
 #[test]
 fn diff_universal_registry() {
     let mut failures = Vec::new();
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         let Some(inputs_fn) = entry.test_inputs else {
             panic!(
                 "{} has no test_inputs. Fix: every registry entry must provide GPU differential inputs.",

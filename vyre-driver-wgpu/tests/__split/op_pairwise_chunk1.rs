@@ -12,7 +12,7 @@
 // hit `try_compose`.  Incompatible pairs must return `Err`  -  never panic,
 // never produce a silent-wrong Program.
 //
-// Coverage: `vyre_libs::harness::all_entries()`.
+// Coverage: `vyre_libs::fixture_catalog::all_entries()`.
 
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
@@ -22,7 +22,7 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
-use vyre_libs::harness::fp_contract;
+use vyre_libs::fixture_catalog::fp_contract;
 use vyre_reference::value::Value;
 
 // ------------------------------------------------------------------
@@ -40,7 +40,7 @@ struct UnifiedEntry {
 
 fn all_entries_vec() -> Vec<UnifiedEntry> {
     let mut out = Vec::new();
-    for e in vyre_libs::harness::all_entries() {
+    for e in vyre_libs::fixture_catalog::all_entries() {
         out.push(UnifiedEntry {
             id: e.id,
             build: e.build,

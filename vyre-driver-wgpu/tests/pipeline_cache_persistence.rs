@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::harness::{fp_contract, OpEntry};
+use vyre_libs::fixture_catalog::{fp_contract, OpEntry};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
@@ -149,7 +149,7 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
 }
 
 fn helper_case(case_id: &str) -> &'static OpEntry {
-    vyre_libs::harness::all_entries()
+    vyre_libs::fixture_catalog::all_entries()
         .find(|entry| entry.id == case_id)
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
 }

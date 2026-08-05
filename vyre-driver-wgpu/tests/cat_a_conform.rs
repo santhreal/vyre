@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 use vyre::ir::{BufferAccess, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_libs::harness::{all_entries, fp_contract, OpEntry};
+use vyre_libs::fixture_catalog::{all_entries, fp_contract, OpEntry};
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();

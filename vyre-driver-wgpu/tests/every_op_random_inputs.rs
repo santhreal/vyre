@@ -14,7 +14,7 @@ use proptest::test_runner::{Config, TestRunner};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::pre_lowering::optimize;
-use vyre_libs::harness::{all_entries, fp_contract};
+use vyre_libs::fixture_catalog::{all_entries, fp_contract};
 use vyre_reference::value::Value;
 
 mod common;
