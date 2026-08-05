@@ -143,6 +143,9 @@ pub use vyre_foundation::memory_model;
 /// Public API re-export.
 pub use vyre_foundation::MemoryOrdering;
 
+/// Execution adapter for neutral C preprocessing programs.
+pub mod c;
+
 /// Execution adapters for neutral scan programs and immutable matcher artifacts.
 pub mod scan;
 

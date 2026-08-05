@@ -12,7 +12,7 @@ use vyre_driver_wgpu as _;
 
 use support::clang_tokens::clang_preprocessed_token_facts_with_extra_args;
 use vyre_libs::parsing::c::lex::tokens::TOK_EOF;
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
+use vyre::c::{
     gpu_preprocess_translation_unit, gpu_tokenize_and_classify, BackendDispatcher, IncludeLoader,
     MacroDef,
 };
@@ -137,7 +137,7 @@ fn linux_lib_math_preprocessed_token_spellings_match_clang() {
 }
 
 fn vyre_token_spellings(
-    classified: &vyre_libs::parsing::c::preprocess::gpu_pipeline::ClassifiedTokens,
+    classified: &vyre::c::ClassifiedTokens,
 ) -> Vec<String> {
     let mut spellings = Vec::new();
     for idx in 0..classified.tok_types.len() {

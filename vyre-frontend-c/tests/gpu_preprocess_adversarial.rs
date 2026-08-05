@@ -12,7 +12,7 @@ use vyre_driver_cuda as _;
 #[allow(unused_imports)]
 use vyre_driver_wgpu as _;
 
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
+use vyre::c::{
     gpu_filter_source_bytes, gpu_preprocess_translation_unit, BackendDispatcher,
     IncludeAccelerationKind, IncludeLoader,
 };

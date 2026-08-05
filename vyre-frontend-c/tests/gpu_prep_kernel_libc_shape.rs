@@ -23,7 +23,7 @@ mod preprocess_reference;
 mod support;
 
 use std::path::PathBuf;
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
+use vyre::c::{
     gpu_preprocess_translation_unit, BackendDispatcher, IncludeLoader,
 };
 
@@ -149,7 +149,7 @@ fn reference_eval_filter_pipeline_stages_on_kernel_libc_shaped_source() {
 #[test]
 fn logging_filter_pipeline_for_kernel_libc_shaped_source() {
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_filter_source_bytes, GpuDispatcher};
+    use vyre::c::{gpu_filter_source_bytes, GpuDispatcher};
     struct LoggingDispatcher {
         idx: AtomicUsize,
     }

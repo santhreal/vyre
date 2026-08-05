@@ -2,7 +2,7 @@
 
 #![allow(deprecated)]
 use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_filter_source_bytes, BackendDispatcher};
+use vyre::c::{gpu_filter_source_bytes, BackendDispatcher};
 use vyre_primitives::parsing::line_splice_classify::reference_line_splice_classify;
 
 fn reference_filter_source_bytes(raw: &[u8]) -> Vec<u8> {
