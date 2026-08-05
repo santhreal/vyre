@@ -1,206 +1,564 @@
-//! End-to-end GPU C11 compilation pipeline orchestration.
-//!
-//! This file wires stage modules and exposes public entry points. Stage duties live in one-purpose files under `pipeline/`.
+//! C source ingestion and backend-neutral typed-IR lowering.
 
-use std::cell::RefCell;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
-use std::thread::LocalKey;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use vyre::ir::{Expr, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use thiserror::Error;
+use tree_sitter::{Node as SyntaxNode, Parser, Point, Tree};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use vyre_libs::compiler::cfg::c11_build_cfg_and_gotos;
-use vyre_libs::compiler::types_layout::c11_compute_alignments_for_abi;
-use vyre_libs::parsing::c::lex::keyword::{
-    c_keyword, c_keyword_map_words, c_keyword_packed_haystack, C_KEYWORDS,
-};
-use vyre_libs::parsing::c::lex::lexer::{
-    c11_lex_regular_single_pass, c11_lex_single_pass, c11_lexer_regular_ranked,
-    c11_lexer_regular_sparse,
-};
-use vyre_libs::parsing::c::lex::tokens::{
-    TOK_ASSIGN, TOK_CASE, TOK_COLON, TOK_COMMA, TOK_DEFAULT, TOK_EOF, TOK_GNU_LABEL, TOK_GOTO,
-    TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN, TOK_QUESTION, TOK_RBRACE, TOK_RBRACKET,
-    TOK_RPAREN, TOK_SEMICOLON, TOK_SWITCH, TOK_TYPEDEF,
-};
-use vyre_libs::parsing::c::pipeline::stages::C11_AST_MAX_TOK_SCAN;
-use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask;
-use vyre_libs::parsing::core::ast::shunting::ast_shunting_yard_with_capacity;
+/// Maximum accepted translation-unit size.
+///
+/// The bound keeps source spans representable as `u32` and prevents hostile
+/// inputs from forcing unbounded parser allocations.
+pub const MAX_SOURCE_BYTES: usize = 16 * 1024 * 1024;
 
-use crate::api::{CParseSummary, CTargetAbi, VyreCompileOptions};
-use crate::object_format::SectionTag;
+/// A successfully ingested C translation unit.
+///
+/// The syntax tree and its source are owned together. No execution substrate is
+/// captured, so the value can be cached or transferred before lowering.
+#[derive(Clone)]
+pub struct ParsedTranslationUnit {
+    source: Arc<str>,
+    tree: Tree,
+}
 
-mod abi_stage;
-mod backend_select;
-mod bracket_pair_stage;
-mod buffers;
-mod compile_unit;
-mod dispatch;
-mod full_ast_stage;
-mod keyword_dispatch;
-mod lexer_dispatch;
-mod lexer_fast_path;
-mod lexer_outputs;
-mod lexer_plan;
-mod lexer_plan_select;
-mod lexer_program_plan;
-mod lexer_sparse_cuda;
-mod object_output;
-mod parse_cache;
-mod parse_entry;
-mod parse_memory_cache;
-mod prefix_scan_dispatch;
-mod sema;
-mod semantic_fast_path;
-mod semantic_features;
-mod semantic_graph_stage;
-mod semantic_haystack;
-mod semantic_parse;
-mod span_repair;
-mod sparse_compaction;
-mod sparse_lexer_megakernel;
-mod sparse_prefix_programs;
-mod stage_validation;
-mod statement_bounds;
-mod structure_records;
-mod structure_stage;
-mod syntax_ast_stage;
-mod syntax_parse;
-mod token_materialize;
-mod translation_unit;
-mod vast_pg;
+impl std::fmt::Debug for ParsedTranslationUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParsedTranslationUnit")
+            .field("source_len", &self.source.len())
+            .field("root_kind", &self.tree.root_node().kind())
+            .finish()
+    }
+}
 
-fn with_thread_local_scratch<T, R>(
-    scratch: &'static LocalKey<RefCell<T>>,
-    reentry_error: &str,
-    use_scratch: impl FnOnce(&mut T) -> Result<R, String>,
-) -> Result<R, String> {
-    scratch.with(|scratch| {
-        let mut scratch = scratch
-            .try_borrow_mut()
-            .map_err(|_| reentry_error.to_string())?;
-        use_scratch(&mut scratch)
+impl ParsedTranslationUnit {
+    /// Return the exact source accepted by the parser.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// Return the concrete syntax tree supplied by the parser substrate.
+    #[must_use]
+    pub fn syntax_tree(&self) -> &Tree {
+        &self.tree
+    }
+}
+
+/// Deterministic C ingestion or lowering failure.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum CFrontendError {
+    /// The translation unit exceeds [`MAX_SOURCE_BYTES`].
+    #[error("C frontend source is {actual} bytes, exceeding the {max}-byte limit. Fix: split the translation unit or reduce generated source size.")]
+    SourceTooLarge {
+        /// Observed byte length.
+        actual: usize,
+        /// Accepted maximum byte length.
+        max: usize,
+    },
+    /// C source must not contain embedded NUL bytes.
+    #[error("C frontend rejected byte 0x00 at byte {offset}. Fix: remove embedded NUL bytes from C source.")]
+    EmbeddedNul {
+        /// Zero-based byte offset.
+        offset: usize,
+    },
+    /// Byte input was not UTF-8.
+    #[error("C frontend source is not UTF-8 at byte {offset}. Fix: provide UTF-8 encoded C source.")]
+    InvalidUtf8 {
+        /// Zero-based byte offset of the first invalid sequence.
+        offset: usize,
+    },
+    /// The parser substrate could not be initialized.
+    #[error("C frontend parser initialization failed. Fix: use the C grammar version shipped with vyre-frontend-c.")]
+    ParserInitialization,
+    /// The parser rejected malformed syntax.
+    #[error("C frontend parse failed at byte {byte} (line {line}, column {column}) near `{fragment}`. Fix: provide a complete C translation unit.")]
+    Syntax {
+        /// Zero-based source byte offset.
+        byte: usize,
+        /// One-based source line.
+        line: usize,
+        /// One-based byte column.
+        column: usize,
+        /// Bounded source fragment at the failure.
+        fragment: String,
+    },
+    /// No supported `kernel` entry function was present.
+    #[error("C frontend lowering found no `kernel` function. Fix: define exactly one `kernel` entry function.")]
+    MissingEntrypoint,
+    /// More than one `kernel` entry function was present.
+    #[error("C frontend lowering found multiple `kernel` functions. Fix: define exactly one `kernel` entry function.")]
+    DuplicateEntrypoint,
+    /// Syntactically valid C used a construct outside the typed-IR contract.
+    #[error("C frontend cannot lower {construct} at byte {byte}. Fix: use the supported scalar kernel subset or lower the construct before this frontend.")]
+    Unsupported {
+        /// Zero-based source byte offset.
+        byte: usize,
+        /// Stable construct description.
+        construct: String,
+    },
+}
+
+/// Ingest UTF-8 C source into an owned syntax tree.
+pub fn parse_source(source: &str) -> Result<ParsedTranslationUnit, CFrontendError> {
+    parse_validated_source(source)
+}
+
+/// Validate UTF-8 C bytes and ingest them into an owned syntax tree.
+pub fn parse_source_bytes(bytes: &[u8]) -> Result<ParsedTranslationUnit, CFrontendError> {
+    if bytes.len() > MAX_SOURCE_BYTES {
+        return Err(CFrontendError::SourceTooLarge {
+            actual: bytes.len(),
+            max: MAX_SOURCE_BYTES,
+        });
+    }
+    if let Some(offset) = bytes.iter().position(|byte| *byte == 0) {
+        return Err(CFrontendError::EmbeddedNul { offset });
+    }
+    let source = std::str::from_utf8(bytes).map_err(|error| CFrontendError::InvalidUtf8 {
+        offset: error.valid_up_to(),
+    })?;
+    parse_validated_source(source)
+}
+
+fn parse_validated_source(source: &str) -> Result<ParsedTranslationUnit, CFrontendError> {
+    if source.len() > MAX_SOURCE_BYTES {
+        return Err(CFrontendError::SourceTooLarge {
+            actual: source.len(),
+            max: MAX_SOURCE_BYTES,
+        });
+    }
+    if let Some(offset) = source.as_bytes().iter().position(|byte| *byte == 0) {
+        return Err(CFrontendError::EmbeddedNul { offset });
+    }
+
+    let mut parser = Parser::new();
+    parser
+        .set_language(&tree_sitter_c::LANGUAGE.into())
+        .map_err(|_| CFrontendError::ParserInitialization)?;
+    let tree = parser
+        .parse(source, None)
+        .ok_or(CFrontendError::ParserInitialization)?;
+    if let Some(error) = first_syntax_error(tree.root_node()) {
+        return Err(syntax_error(source, error));
+    }
+    Ok(ParsedTranslationUnit {
+        source: Arc::from(source),
+        tree,
     })
 }
 
-pub use parse_entry::{
-    parse_c11_source, parse_c11_translation_unit, parse_c11_translation_unit_bytes,
-};
-pub use syntax_parse::parse_c11_syntax_source;
-
-pub(crate) use buffers::drop_suppressed_readbacks;
-use buffers::{
-    build_ast_owned_inputs_with_capacity_into, c_abi_type_table_bytes_into,
-    cfg_ssa_words_from_vast, compiler_bytes_from_sections, cuda_lexer_haystack_view,
-    megakernel_section_bytes, pack_haystack, pad_dispatch_input_refs, read_u32_at, read_u32_stream,
-    reject_c11_lexer_diagnostics, reject_c11_source_diagnostics, token_types_from_lex,
-    vec_u32_le_bytes, vec_u32_le_bytes_min_words, AstOwnedInputBuffers,
-};
-use dispatch::{dispatch_c11_bracket_pairs, try_dispatch_elf};
-use lexer_plan::{cuda_sparse_lexer_strategy, CudaSparseLexerStrategy};
-use sema::build_sema_scope;
-use span_repair::repair_token_spans_from_source;
-use structure_records::build_structure_records;
-use vast_pg::build_vast_and_pg;
-
-use abi_stage::build_c11_abi_stage;
-pub(crate) use backend_select::{
-    dispatch_borrowed_cached_into, dispatch_borrowed_stage_cached_into,
-    dispatch_resident_stage_cached, dispatch_resident_stage_readback_cached_into,
-    free_resident_blobs, shared_dispatch_backend, stage_pipeline_cache_key, ResidentBlob,
-    ResidentStageInput,
-};
-use bracket_pair_stage::c11_dual_bracket_pairs_cost_model;
-pub(crate) use buffers::{mark_program_outputs, suppress_readwrite_readback};
-use compile_unit::compile_translation_unit;
-use full_ast_stage::{build_c11_full_ast_stage, C11AstReadback};
-use keyword_dispatch::promote_c11_keywords;
-use lexer_dispatch::{lex_c11_tokens, C11LexTokens};
-use lexer_outputs::{
-    bucketed_dense_lex_haystack, expanded_haystack, keyword_map_bytes_cached,
-    truncate_lexer_outputs_to_logical_tokens,
-};
-use lexer_plan_select::c11_lex_program_for_source;
-use lexer_sparse_cuda::reject_sparse_dense_lexer_mismatch;
-use object_output::{validate_object_output_path, write_object_atomic};
-use semantic_fast_path::{
-    c_global_typedef_fast_hashes, conditional_expression_shapes_required,
-    semantic_control_edges_required,
-};
-use semantic_features::build_semantic_feature_inputs;
-use semantic_graph_stage::build_c11_semantic_graphs;
-use semantic_haystack::select_semantic_haystack;
-use semantic_parse::parse_c11_source_with_backend;
-use stage_validation::{require_full_semantic_summary, validate_internal_stage};
-pub(crate) use statement_bounds::dispatch_c11_statement_bounds_bytes as dispatch_statement_bounds_bytes_for_api;
-pub(crate) use statement_bounds::{
-    dispatch_c11_statement_bounds_bytes_into, StatementBoundsScratch,
-};
-use structure_stage::{build_c11_structure_stage, C11StructureStage};
-use syntax_ast_stage::build_c11_syntax_ast_stage;
-use token_materialize::{decode_c11_tokens, DecodedC11Tokens};
-use translation_unit::{
-    prepare_translation_unit, prepare_translation_unit_from_bytes, read_translation_unit_bounded,
-    PreparedTranslationUnit,
-};
-
-const MAX_TOK_SCAN: u32 = C11_AST_MAX_TOK_SCAN;
-/// `ast_shunting_yard` workgroup uses one lane per statement (see `vyre-libs`).
-const MAX_STMT_THREADS: u32 = 256;
-const MAX_TRANSLATION_UNIT_BYTES: u64 = 256 * 1024 * 1024;
-/// `opt_lower_elf` writes into a 4096-word object buffer with 64 words reserved
-/// for ELF headers and 5 words for `.shstrtab` payload.
-const ELF_LOWERING_MAX_INPUT_WORDS: usize = 4096 - 64 - 5;
-
-/// Return the selected GPU dispatch backend identifier.
-pub fn preferred_backend_id() -> Result<String, String> {
-    shared_dispatch_backend().map(|backend| backend.id().to_string())
+/// Parse C source and lower its `kernel` entry to typed Vyre IR.
+///
+/// This is a source-to-IR convenience only; it never selects or invokes an
+/// execution backend.
+pub fn lower_source(source: &str) -> Result<Program, CFrontendError> {
+    let unit = parse_source(source)?;
+    lower_translation_unit(&unit)
 }
 
-/// Compile C11 source files into object artifacts through the GPU frontend.
-pub fn compile_c11_sources(options: &VyreCompileOptions) -> Result<(), String> {
-    if options.output_file.is_some() && options.input_files.len() > 1 {
-        return Err(
-            "vyre-frontend-c: -o with multiple compile-only inputs has no single-output contract; compile one TU at a time or omit -o for per-input objects."
-                .to_string(),
-        );
+/// Lower a parsed C translation unit to a backend-neutral typed program.
+///
+/// The supported executable subset is deliberately explicit:
+///
+/// - exactly one function named `kernel`;
+/// - either a scalar `int`/`unsigned int` return with no parameters, or a
+///   `void` function whose parameters are scalar pointers;
+/// - integer literals, buffer subscripts, parentheses, and `+`, `-`, `*`,
+///   `&`, `|`, `^` expressions;
+/// - a scalar return or direct assignments to writable pointer parameters.
+pub fn lower_translation_unit(unit: &ParsedTranslationUnit) -> Result<Program, CFrontendError> {
+    let source = unit.source.as_bytes();
+    let root = unit.tree.root_node();
+    let mut cursor = root.walk();
+    let mut kernels = root
+        .named_children(&mut cursor)
+        .filter(|node| node.kind() == "function_definition")
+        .filter(|node| function_name(*node, source) == Some("kernel"));
+    let kernel = kernels.next().ok_or(CFrontendError::MissingEntrypoint)?;
+    if kernels.next().is_some() {
+        return Err(CFrontendError::DuplicateEntrypoint);
+    }
+    lower_kernel(kernel, source)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ScalarType {
+    U32,
+    I32,
+}
+
+impl ScalarType {
+    fn data_type(self) -> DataType {
+        match self {
+            Self::U32 => DataType::U32,
+            Self::I32 => DataType::I32,
+        }
     }
 
-    let mut prepared = Vec::with_capacity(options.input_files.len());
-    for path in &options.input_files {
-        let dest: PathBuf = if options.input_files.len() == 1 {
-            options
-                .output_file
-                .clone()
-                .unwrap_or_else(|| path.with_extension("o"))
+    fn literal(self, value: u32, node: SyntaxNode<'_>) -> Result<Expr, CFrontendError> {
+        match self {
+            Self::U32 => Ok(Expr::u32(value)),
+            Self::I32 => i32::try_from(value).map(Expr::i32).map_err(|_| unsupported(
+                node,
+                "an integer literal outside the signed 32-bit range",
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct BufferParam {
+    name: String,
+    access: BufferAccess,
+    scalar: ScalarType,
+}
+
+fn lower_kernel(kernel: SyntaxNode<'_>, source: &[u8]) -> Result<Program, CFrontendError> {
+    let declarator = required_field(kernel, "declarator", "a kernel declarator")?;
+    let function_declarator = find_kind(declarator, "function_declarator")
+        .ok_or_else(|| unsupported(declarator, "a non-function `kernel` declarator"))?;
+    let parameters = function_declarator
+        .child_by_field_name("parameters")
+        .ok_or_else(|| unsupported(function_declarator, "a kernel without a parameter list"))?;
+    let return_type_node = required_field(kernel, "type", "a kernel return type")?;
+    let return_text = node_text(return_type_node, source);
+    let body = required_field(kernel, "body", "a kernel body")?;
+
+    let params = lower_parameters(parameters, source)?;
+    if normalized_type(return_text) == "void" {
+        lower_void_kernel(body, source, params)
+    } else {
+        let scalar = parse_scalar_type(return_type_node, return_text)?;
+        if !params.is_empty() {
+            return Err(unsupported(
+                parameters,
+                "parameters on a scalar-returning kernel",
+            ));
+        }
+        lower_scalar_kernel(body, source, scalar)
+    }
+}
+
+fn lower_parameters(
+    parameters: SyntaxNode<'_>,
+    source: &[u8],
+) -> Result<Vec<BufferParam>, CFrontendError> {
+    let mut result = Vec::new();
+    let mut cursor = parameters.walk();
+    for parameter in parameters.named_children(&mut cursor) {
+        if parameter.kind() != "parameter_declaration" {
+            return Err(unsupported(parameter, "a variadic or non-parameter declaration"));
+        }
+        let type_node = required_field(parameter, "type", "a parameter type")?;
+        let type_text = node_text(type_node, source);
+        if normalized_type(type_text) == "void" && parameter.child_by_field_name("declarator").is_none() {
+            continue;
+        }
+        let declarator = required_field(parameter, "declarator", "an unnamed kernel parameter")?;
+        if find_kind(declarator, "pointer_declarator").is_none() {
+            return Err(unsupported(parameter, "a non-pointer kernel parameter"));
+        }
+        let identifier = find_kind(declarator, "identifier")
+            .ok_or_else(|| unsupported(declarator, "an unnamed pointer parameter"))?;
+        let name = node_text(identifier, source).to_owned();
+        if result.iter().any(|existing: &BufferParam| existing.name == name) {
+            return Err(unsupported(identifier, "a duplicate kernel parameter name"));
+        }
+        let scalar = parse_scalar_type(type_node, type_text)?;
+        let declaration_text = node_text(parameter, source);
+        let access = if declaration_text
+            .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+            .any(|word| word == "const")
+        {
+            BufferAccess::ReadOnly
         } else {
-            path.with_extension("o")
+            BufferAccess::ReadWrite
         };
-        validate_object_output_path(path, &dest)?;
-        prepared.push(prepare_translation_unit(path, dest, options)?);
+        result.push(BufferParam {
+            name,
+            access,
+            scalar,
+        });
     }
-
-    let backend = shared_dispatch_backend()?;
-
-    for unit in &prepared {
-        compile_translation_unit(backend.as_ref(), unit, options.target.abi)?;
-    }
-
-    Ok(())
+    Ok(result)
 }
 
-/// Link C11 object artifacts into an executable.
-pub fn link_c11_executable(options: &VyreCompileOptions) -> Result<(), String> {
-    if options.input_files.is_empty() {
-        return Err(
-            "vyre-frontend-c link mode received no input files. Fix: pass translation units explicitly, or run `vyrec -c` for the CUDA-first pre-lowering object-evidence path."
-                .to_string(),
+fn lower_scalar_kernel(
+    body: SyntaxNode<'_>,
+    source: &[u8],
+    scalar: ScalarType,
+) -> Result<Program, CFrontendError> {
+    let statements = named_children(body);
+    if statements.len() != 1 || statements[0].kind() != "return_statement" {
+        return Err(unsupported(
+            body,
+            "a scalar kernel body other than one return statement",
+        ));
+    }
+    let return_node = statements[0];
+    let expression = return_node
+        .named_child(0)
+        .ok_or_else(|| unsupported(return_node, "a return statement without a value"))?;
+    let buffers = vec![
+        BufferDecl::storage("out", 0, BufferAccess::ReadWrite, scalar.data_type()).with_count(1),
+    ];
+    let value = lower_expression(expression, source, scalar, &HashMap::new())?;
+    Ok(Program::wrapped(
+        buffers,
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), value)],
+    ))
+}
+
+fn lower_void_kernel(
+    body: SyntaxNode<'_>,
+    source: &[u8],
+    params: Vec<BufferParam>,
+) -> Result<Program, CFrontendError> {
+    if params.is_empty() {
+        return Err(unsupported(body, "a void kernel without buffer parameters"));
+    }
+    let mut bindings = HashMap::with_capacity(params.len());
+    let mut buffers = Vec::with_capacity(params.len());
+    for (binding, parameter) in params.iter().enumerate() {
+        bindings.insert(parameter.name.as_str(), parameter);
+        buffers.push(
+            BufferDecl::storage(
+                &parameter.name,
+                binding as u32,
+                parameter.access.clone(),
+                parameter.scalar.data_type(),
+            )
+            .with_count(1),
         );
     }
-    Err(
-        "vyre-frontend-c link mode is not part of the CUDA-first release path and does not spawn a host C linker. Fix: run `vyrec -c` to emit GPU-compiled VYRECOB2 object evidence, then use an explicit external linker step outside vyre."
-            .to_string(),
-    )
+
+    let mut entry = Vec::new();
+    for statement in named_children(body) {
+        if statement.kind() != "expression_statement" {
+            return Err(unsupported(statement, "a non-assignment statement in a void kernel"));
+        }
+        let assignment = statement
+            .named_child(0)
+            .ok_or_else(|| unsupported(statement, "an empty expression statement"))?;
+        if assignment.kind() != "assignment_expression"
+            || assignment_operator(assignment, source) != "="
+        {
+            return Err(unsupported(assignment, "an expression other than direct assignment"));
+        }
+        let left = required_field(assignment, "left", "an assignment without a left operand")?;
+        let right = required_field(assignment, "right", "an assignment without a right operand")?;
+        let (buffer_name, index) = lower_subscript(left, source, ScalarType::U32, &bindings)?;
+        let parameter = bindings
+            .get(buffer_name.as_str())
+            .ok_or_else(|| unsupported(left, "assignment to an unknown buffer"))?;
+        if parameter.access == BufferAccess::ReadOnly {
+            return Err(unsupported(left, "assignment to a const buffer parameter"));
+        }
+        let value = lower_expression(right, source, parameter.scalar, &bindings)?;
+        entry.push(Node::store(buffer_name, index, value));
+    }
+    if entry.is_empty() {
+        return Err(unsupported(body, "a void kernel with no assignments"));
+    }
+    Ok(Program::wrapped(buffers, [1, 1, 1], entry))
+}
+
+fn lower_expression(
+    node: SyntaxNode<'_>,
+    source: &[u8],
+    scalar: ScalarType,
+    buffers: &HashMap<&str, &BufferParam>,
+) -> Result<Expr, CFrontendError> {
+    match node.kind() {
+        "number_literal" => {
+            let value = parse_integer_literal(node_text(node, source))
+                .ok_or_else(|| unsupported(node, "a non-32-bit integer literal"))?;
+            scalar.literal(value, node)
+        }
+        "parenthesized_expression" => {
+            let inner = node
+                .named_child(0)
+                .ok_or_else(|| unsupported(node, "an empty parenthesized expression"))?;
+            lower_expression(inner, source, scalar, buffers)
+        }
+        "subscript_expression" => {
+            let (name, index) = lower_subscript(node, source, ScalarType::U32, buffers)?;
+            let parameter = buffers
+                .get(name.as_str())
+                .ok_or_else(|| unsupported(node, "read from an unknown buffer"))?;
+            if parameter.scalar != scalar {
+                return Err(unsupported(node, "an implicit conversion between buffer element types"));
+            }
+            Ok(Expr::load(name, index))
+        }
+        "binary_expression" => {
+            let left_node = required_field(node, "left", "a binary expression without a left operand")?;
+            let right_node = required_field(node, "right", "a binary expression without a right operand")?;
+            let left = lower_expression(left_node, source, scalar, buffers)?;
+            let right = lower_expression(right_node, source, scalar, buffers)?;
+            match binary_operator(node, left_node, right_node, source) {
+                "+" => Ok(Expr::add(left, right)),
+                "-" => Ok(Expr::sub(left, right)),
+                "*" => Ok(Expr::mul(left, right)),
+                "&" => Ok(Expr::bitand(left, right)),
+                "|" => Ok(Expr::bitor(left, right)),
+                "^" => Ok(Expr::bitxor(left, right)),
+                _ => Err(unsupported(node, "an unsupported binary operator")),
+            }
+        }
+        _ => Err(unsupported(
+            node,
+            &format!("the `{}` expression", node.kind()),
+        )),
+    }
+}
+
+fn lower_subscript(
+    node: SyntaxNode<'_>,
+    source: &[u8],
+    index_type: ScalarType,
+    buffers: &HashMap<&str, &BufferParam>,
+) -> Result<(String, Expr), CFrontendError> {
+    if node.kind() != "subscript_expression" {
+        return Err(unsupported(node, "an assignment target other than a buffer subscript"));
+    }
+    let argument = required_field(node, "argument", "a subscript without a buffer")?;
+    if argument.kind() != "identifier" {
+        return Err(unsupported(argument, "a computed buffer expression"));
+    }
+    let name = node_text(argument, source).to_owned();
+    if !buffers.contains_key(name.as_str()) {
+        return Err(unsupported(argument, "an unknown buffer parameter"));
+    }
+    let index_node = required_field(node, "index", "a subscript without an index")?;
+    let index = lower_expression(index_node, source, index_type, buffers)?;
+    Ok((name, index))
+}
+
+fn parse_scalar_type(node: SyntaxNode<'_>, text: &str) -> Result<ScalarType, CFrontendError> {
+    let normalized = normalized_type(text);
+    match normalized.as_str() {
+        "unsigned" | "unsigned int" | "uint32_t" | "uint" => Ok(ScalarType::U32),
+        "int" | "signed" | "signed int" | "int32_t" => Ok(ScalarType::I32),
+        _ => Err(unsupported(node, "a scalar type other than 32-bit int")),
+    }
+}
+
+fn normalized_type(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn parse_integer_literal(text: &str) -> Option<u32> {
+    let digits = text.trim_end_matches(|character: char| matches!(character, 'u' | 'U' | 'l' | 'L'));
+    let (radix, digits) = if let Some(hex) = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")) {
+        (16, hex)
+    } else if let Some(binary) = digits.strip_prefix("0b").or_else(|| digits.strip_prefix("0B")) {
+        (2, binary)
+    } else if digits.len() > 1 && digits.starts_with('0') {
+        (8, &digits[1..])
+    } else {
+        (10, digits)
+    };
+    u32::from_str_radix(digits, radix).ok()
+}
+
+fn function_name<'a>(function: SyntaxNode<'a>, source: &'a [u8]) -> Option<&'a str> {
+    let declarator = function.child_by_field_name("declarator")?;
+    let function_declarator = find_kind(declarator, "function_declarator")?;
+    let name_declarator = function_declarator.child_by_field_name("declarator")?;
+    let identifier = find_kind(name_declarator, "identifier")?;
+    identifier.utf8_text(source).ok()
+}
+
+fn required_field<'a>(
+    node: SyntaxNode<'a>,
+    field: &str,
+    construct: &str,
+) -> Result<SyntaxNode<'a>, CFrontendError> {
+    node.child_by_field_name(field)
+        .ok_or_else(|| unsupported(node, construct))
+}
+
+fn find_kind<'a>(node: SyntaxNode<'a>, kind: &str) -> Option<SyntaxNode<'a>> {
+    if node.kind() == kind {
+        return Some(node);
+    }
+    let mut cursor = node.walk();
+    let found = node
+        .named_children(&mut cursor)
+        .find_map(|child| find_kind(child, kind));
+    found
+}
+
+fn named_children(node: SyntaxNode<'_>) -> Vec<SyntaxNode<'_>> {
+    let mut cursor = node.walk();
+    node.named_children(&mut cursor).collect()
+}
+
+fn node_text<'a>(node: SyntaxNode<'_>, source: &'a [u8]) -> &'a str {
+    node.utf8_text(source)
+        .expect("source was validated as UTF-8 before syntax traversal")
+}
+
+fn assignment_operator<'a>(node: SyntaxNode<'_>, source: &'a [u8]) -> &'a str {
+    let left = node.child_by_field_name("left");
+    let right = node.child_by_field_name("right");
+    match (left, right) {
+        (Some(left), Some(right)) => std::str::from_utf8(&source[left.end_byte()..right.start_byte()])
+            .unwrap_or("")
+            .trim(),
+        _ => "",
+    }
+}
+
+fn binary_operator<'a>(
+    _node: SyntaxNode<'_>,
+    left: SyntaxNode<'_>,
+    right: SyntaxNode<'_>,
+    source: &'a [u8],
+) -> &'a str {
+    std::str::from_utf8(&source[left.end_byte()..right.start_byte()])
+        .unwrap_or("")
+        .trim()
+}
+
+fn unsupported(node: SyntaxNode<'_>, construct: &str) -> CFrontendError {
+    CFrontendError::Unsupported {
+        byte: node.start_byte(),
+        construct: construct.to_owned(),
+    }
+}
+
+fn first_syntax_error(node: SyntaxNode<'_>) -> Option<SyntaxNode<'_>> {
+    if node.is_error() || node.is_missing() {
+        return Some(node);
+    }
+    if !node.has_error() {
+        return None;
+    }
+    let mut cursor = node.walk();
+    let found = node.children(&mut cursor).find_map(first_syntax_error);
+    found
+}
+
+fn syntax_error(source: &str, node: SyntaxNode<'_>) -> CFrontendError {
+    let Point { row, column } = node.start_position();
+    let start = node.start_byte().min(source.len());
+    let end = node.end_byte().max(start).min(source.len()).min(start.saturating_add(24));
+    let mut fragment = source[start..end]
+        .chars()
+        .flat_map(char::escape_default)
+        .collect::<String>();
+    if fragment.is_empty() {
+        fragment.push_str("<missing>");
+    }
+    CFrontendError::Syntax {
+        byte: start,
+        line: row + 1,
+        column: column + 1,
+        fragment,
+    }
 }
