@@ -6,7 +6,7 @@ macro_rules! define_wrapped_bitset_binary {
         #[doc = $doc]
         pub mod $module {
             use super::wrap::wrap_bitset_binary;
-            use vyre::ir::Program;
+            use vyre_foundation::ir::Program;
 
             const OP_ID: &str = $op_id;
 
@@ -18,7 +18,7 @@ macro_rules! define_wrapped_bitset_binary {
             }
 
             inventory::submit! {
-                crate::harness::OpEntry {
+                crate::fixture_catalog::OpEntry {
                     id: OP_ID,
                     build: || $function("a", "b", "out", 4),
                     test_inputs: Some(|| {
@@ -43,7 +43,7 @@ macro_rules! define_synthesized_logical_binary {
         #[doc = $doc]
         pub mod $module {
             use super::wrap::build_logical_binary;
-            use vyre::ir::Program;
+            use vyre_foundation::ir::Program;
 
             const OP_ID: &str = $op_id;
 
@@ -54,7 +54,7 @@ macro_rules! define_synthesized_logical_binary {
             }
 
             inventory::submit! {
-                crate::harness::OpEntry {
+                crate::fixture_catalog::OpEntry {
                     id: OP_ID,
                     build: || $function("a", "b", "out", 4),
                     test_inputs: Some(|| {
@@ -87,7 +87,7 @@ define_synthesized_logical_binary!(
     nand,
     nand,
     "vyre-libs::logical::nand",
-    |left, right| vyre::ir::Expr::bitnot(vyre::ir::Expr::bitand(left, right)),
+    |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitand(left, right)),
     &[0x0FFF_0FFF, 0xFFF0_FFF0, 0x0000_0000, 0xFFFF_FFFF],
     "Bitwise NAND."
 );
@@ -95,7 +95,7 @@ define_synthesized_logical_binary!(
     nor,
     nor,
     "vyre-libs::logical::nor",
-    |left, right| vyre::ir::Expr::bitnot(vyre::ir::Expr::bitor(left, right)),
+    |left, right| vyre_foundation::ir::Expr::bitnot(vyre_foundation::ir::Expr::bitor(left, right)),
     &[0x000F_000F, 0xF000_F000, 0x0000_0000, 0xFFFF_FFFF],
     "Bitwise NOR."
 );
@@ -128,10 +128,10 @@ pub use xor::xor;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::Node;
+    use vyre_foundation::ir::Node;
     use vyre_reference::value::Value;
 
-    fn assert_delegates_to_primitive(program: vyre::ir::Program, expected_primitive: &str) {
+    fn assert_delegates_to_primitive(program: vyre_foundation::ir::Program, expected_primitive: &str) {
         let [Node::Region { body, .. }] = program.entry() else {
             panic!("expected one top-level logical wrapper region");
         };
@@ -156,7 +156,7 @@ mod tests {
         assert_delegates_to_primitive(xor("a", "b", "out", 4), vyre_primitives::bitset::xor::OP_ID);
     }
 
-    fn eval_u32_binary(program: &vyre::ir::Program, a: &[u32], b: &[u32]) -> Vec<u32> {
+    fn eval_u32_binary(program: &vyre_foundation::ir::Program, a: &[u32], b: &[u32]) -> Vec<u32> {
         let outputs = vyre_reference::reference_eval(
             program,
             &[

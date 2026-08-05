@@ -1,6 +1,6 @@
 #[cfg(test)]
 use super::*;
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_reference::value::Value;
 
 use vyre_primitives::wire::pack_u32_slice as pack_u32_words;

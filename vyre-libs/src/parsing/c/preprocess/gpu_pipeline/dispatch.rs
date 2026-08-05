@@ -1,25 +1,17 @@
-use vyre::ir::Program;
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_foundation::ir::Program;
 
-/// Dispatcher abstraction: anything that can take a `Program` and
-/// input buffers and return output buffers. Lets the orchestrator be
-/// driven by either a real `VyreBackend` (production) or a closure
-/// over `vyre_reference::reference_eval` (tests). The closure form
-/// matters because `VyreBackend` is sealed  -  third-party impls aren't
-/// allowed  -  and because the reference path needs none of the GPU
-/// driver's transitive dependencies.
+/// Execution callback supplied by an upper integration layer.
+///
+/// This crate defines the neutral programs; it does not implement adapters for
+/// a facade, driver, or runtime backend.
 pub trait GpuDispatcher {
     /// Run `program` with `inputs`; return one `Vec<u8>` per output buffer.
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String>;
 
-    /// Run `program` with borrowed input buffers. Default delegates to
-    /// `dispatch` after staging the borrowed slices into owned `Vec<u8>`s,
-    /// preserving behavior for dispatchers that only implement the owned
-    /// path (notably the reference interpreter). Real-GPU dispatchers
-    /// override this to forward the slices straight to
-    /// `VyreBackend::dispatch_borrowed`, eliminating one full input-buffer
-    /// clone per dispatch  -  material at the per-include preprocess hot
-    /// loop where each translation unit fans out to ~30 dispatches.
+    /// Run `program` with borrowed input buffers.
+    ///
+    /// The default stages the borrowed slices for callbacks that implement only
+    /// the owned path. Upper execution adapters may override this method.
     fn dispatch_borrowed(
         &self,
         program: &Program,
@@ -32,11 +24,9 @@ pub trait GpuDispatcher {
     /// Run `program` with borrowed input buffers and write backend outputs into
     /// caller-owned slots.
     ///
-    /// The default delegates to [`GpuDispatcher::dispatch_borrowed`] and then
-    /// moves each returned buffer into `outputs` while preserving existing slot
-    /// allocations when possible. Real GPU backends override this to forward to
-    /// `VyreBackend::dispatch_borrowed_into`, eliminating the returned
-    /// `Vec<Vec<u8>>` allocation on hot preprocessing loops.
+    /// The default delegates to [`GpuDispatcher::dispatch_borrowed`] and moves
+    /// each returned buffer into `outputs`, preserving existing slot allocations
+    /// where possible.
     fn dispatch_borrowed_into(
         &self,
         program: &Program,
@@ -57,37 +47,6 @@ pub trait GpuDispatcher {
     }
 }
 
-/// Adapter so any `&dyn VyreBackend` plugs into the orchestrator
-/// without callers wrapping it manually.
-pub struct BackendDispatcher<'a>(pub &'a dyn VyreBackend);
-
-impl GpuDispatcher for BackendDispatcher<'_> {
-    fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-        VyreBackend::dispatch(self.0, program, inputs, &DispatchConfig::default())
-            .map_err(|e| format!("backend dispatch: {e}"))
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        program: &Program,
-        inputs: &[&[u8]],
-    ) -> Result<Vec<Vec<u8>>, String> {
-        self.0
-            .dispatch_borrowed(program, inputs, &DispatchConfig::default())
-            .map_err(|e| format!("backend dispatch_borrowed: {e}"))
-    }
-
-    fn dispatch_borrowed_into(
-        &self,
-        program: &Program,
-        inputs: &[&[u8]],
-        outputs: &mut Vec<Vec<u8>>,
-    ) -> Result<(), String> {
-        self.0
-            .dispatch_borrowed_into(program, inputs, &DispatchConfig::default(), outputs)
-            .map_err(|e| format!("backend dispatch_borrowed_into: {e}"))
-    }
-}
 
 fn replace_outputs_preserving_slots(outputs: &mut Vec<Vec<u8>>, result: Vec<Vec<u8>>) {
     let mut incoming = result.into_iter();

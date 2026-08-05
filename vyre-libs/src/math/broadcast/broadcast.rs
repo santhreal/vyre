@@ -4,7 +4,7 @@
 //! shape-broadcasting version (NumPy semantics) belongs in a future
 //! `broadcast_shaped` function that takes source + target shapes.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -45,7 +45,7 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::broadcast",
         build: || broadcast("src", "dst", 4),
         test_inputs: Some(|| vec![vec![

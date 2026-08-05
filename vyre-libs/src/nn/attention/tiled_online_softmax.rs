@@ -1,4 +1,4 @@
-use vyre::ir::{Expr, Node, UnOp};
+use vyre_foundation::ir::{Expr, Node, UnOp};
 
 use vyre_primitives::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
 

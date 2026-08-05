@@ -3,7 +3,7 @@
 //! Category A composition  -  pure IR. Private SDF helper (single caller,
 //! not promoted to Tier 2.5 per LEGO-BLOCK-RULE).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::box_shadow";
 
@@ -167,7 +167,7 @@ pub fn box_shadow(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000),
         test_inputs: Some(|| {

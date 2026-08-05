@@ -1,7 +1,7 @@
 //! Materialized object-like macro expansion builder.
 
 use crate::parsing::c::preprocess::materialization::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::helpers::*;
 use super::MacroByteLayout;

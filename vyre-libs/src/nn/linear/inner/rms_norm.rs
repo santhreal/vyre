@@ -1,6 +1,6 @@
 //! Fused `rms_norm_linear` constructor.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::nn::rms::{inverse_rms_expr, square_expr};
 use crate::region::wrap_anonymous;
@@ -138,7 +138,7 @@ pub fn try_rms_norm_linear(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::rms_norm_linear",
         build: || rms_norm_linear("input", "w", "b", "out", 4, 4, 4, 1e-5),
         test_inputs: Some(|| {

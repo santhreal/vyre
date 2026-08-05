@@ -1,5 +1,5 @@
 use super::bit_count_u32::{bit_count_u32_program, BitCountKind};
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 macro_rules! define_bit_count_u32_op {
     (
@@ -24,7 +24,7 @@ macro_rules! define_bit_count_u32_op {
             }
 
             inventory::submit! {
-                crate::harness::OpEntry {
+                crate::fixture_catalog::OpEntry {
                     id: OP_ID,
                     build: || $function("input", "out", 4),
                     test_inputs: Some(|| {

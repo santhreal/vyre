@@ -10,7 +10,7 @@ use crate::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 
 const INT4_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
@@ -1247,7 +1247,7 @@ mod tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::linear_4bit",
         build: || {
             linear_4bit("x", "w", "b", "out", 8, 4).unwrap_or_else(|error| {
@@ -1278,7 +1278,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::linear_4bit_affine_grouped",
         build: || {
             linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)

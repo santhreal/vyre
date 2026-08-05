@@ -31,7 +31,7 @@
 //! (`scan_presence_by_region` + `scan` + `regex_admission_by_region_program`).
 //! Prefer those until a segmentation/occupancy redesign makes fusion pay.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::CompiledDfa;
 

@@ -8,12 +8,12 @@ pub mod ast_to_pg_nodes;
 mod semantic_edges;
 
 pub(crate) fn valid_node_index_expr(
-    idx: vyre::ir::Expr,
-    num_nodes: &vyre::ir::Expr,
-) -> vyre::ir::Expr {
-    vyre::ir::Expr::and(
-        vyre::ir::Expr::ne(idx.clone(), vyre::ir::Expr::u32(u32::MAX)),
-        vyre::ir::Expr::lt(idx, num_nodes.clone()),
+    idx: vyre_foundation::ir::Expr,
+    num_nodes: &vyre_foundation::ir::Expr,
+) -> vyre_foundation::ir::Expr {
+    vyre_foundation::ir::Expr::and(
+        vyre_foundation::ir::Expr::ne(idx.clone(), vyre_foundation::ir::Expr::u32(u32::MAX)),
+        vyre_foundation::ir::Expr::lt(idx, num_nodes.clone()),
     )
 }
 

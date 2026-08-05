@@ -27,7 +27,7 @@
 //! keep working; any new rule that needs strict dominance must
 //! flag the dependency explicitly.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
@@ -99,7 +99,7 @@ pub(crate) fn cpu_dominator_sets(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout"),
         test_inputs: Some(|| {
@@ -137,7 +137,7 @@ inventory::submit! {
     // don't silently truncate at the 64th step and produce false
     // negatives. Fixpoint drivers exit early when the frontier
     // stops growing, so a higher ceiling has no cost on flat graphs.
-    crate::harness::ConvergenceContract {
+    crate::fixture_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn dominator_tree_soundness_is_mayover() {
         // The GPU dominator_tree shim is documented as MayOver (reverse reachability).
-        use vyre::ir::Node;
+        use vyre_foundation::ir::Node;
         let p = dominator_tree(ProgramGraphShape::new(2, 1), "fin", "fout");
         let [Node::Region { generator, .. }] = p.entry() else {
             panic!("dominator_tree must emit one wrapped region");

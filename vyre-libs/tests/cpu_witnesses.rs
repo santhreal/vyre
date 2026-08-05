@@ -8,10 +8,10 @@
     feature = "crypto-blake3"
 ))]
 
-use vyre_libs::harness::all_entries;
+use vyre_libs::fixture_catalog::all_entries;
 use vyre_reference::value::Value;
 
-fn entry(id: &'static str) -> &'static vyre_libs::harness::OpEntry {
+fn entry(id: &'static str) -> &'static vyre_libs::fixture_catalog::OpEntry {
     all_entries()
         .find(|entry| entry.id == id)
         .unwrap_or_else(|| panic!("Fix: missing OpEntry for {id}"))
@@ -28,7 +28,7 @@ fn assert_entry_matches_declared_witness(id: &'static str) {
 
 fn assert_entry_matches_cases(
     id: &'static str,
-    build: fn() -> vyre::Program,
+    build: fn() -> vyre_foundation::ir::Program,
     inputs: Vec<Vec<Vec<u8>>>,
     expected: Vec<Vec<Vec<u8>>>,
 ) {

@@ -22,7 +22,7 @@
 //! Region with no scratch, eliminating one buffer + one dispatch
 //! per call.
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_primitives::bitset::and_not::bitset_and_not;
 use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
@@ -47,7 +47,7 @@ pub fn sanitized_by(
     frontier_in: &str,
     sanitizers_in: &str,
     frontier_out: &str,
-) -> vyre::ir::Program {
+) -> vyre_foundation::ir::Program {
     crate::security::assert_security_inputs(
         OP_ID,
         shape.node_count,
@@ -78,7 +78,7 @@ pub fn sanitized_by(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
         test_inputs: Some(|| {
@@ -116,7 +116,7 @@ inventory::submit! {
     // AUDIT_2026-04-24 F-SB-01: raised from 64 to 4096 so taint
     // sanitization on deep call chains doesn't truncate silently;
     // same reasoning as flows_to / taint_flow.
-    crate::harness::ConvergenceContract {
+    crate::fixture_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }

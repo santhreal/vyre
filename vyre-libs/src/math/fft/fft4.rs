@@ -26,7 +26,7 @@
 //! plumbing for the base case and keeps the IR straight-line for
 //! const-fold + CSE to compress.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -143,7 +143,7 @@ pub fn fft4_complex(input: &str, output: &str) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || fft4_complex("input", "output"),
         test_inputs: Some(|| {

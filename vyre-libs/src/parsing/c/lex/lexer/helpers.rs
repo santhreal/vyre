@@ -1,4 +1,4 @@
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(super) fn byte_load(buffer: &str, index: Expr) -> Expr {
     Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))

@@ -1,4 +1,4 @@
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::avg_floor";
 
@@ -14,7 +14,7 @@ pub fn avg_floor(a: &str, b: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || avg_floor("a", "b", "out", 4),
         test_inputs: Some(|| {

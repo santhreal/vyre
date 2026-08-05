@@ -3,7 +3,7 @@
 //! Category A composition  -  gather from weight buffer by token index.
 //! Tokens are U32, embedding table is F32.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
 
@@ -40,7 +40,7 @@ pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_di
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || embedding("table", "tokens", "output", 2, 3),
         test_inputs: Some(|| {

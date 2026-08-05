@@ -1,5 +1,5 @@
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(super) fn emit_forward_matching_paren_scan(
     tok_types: &str,

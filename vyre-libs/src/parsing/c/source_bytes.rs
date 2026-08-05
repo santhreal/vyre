@@ -1,4 +1,4 @@
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 /// Return an expression that loads one source byte from either resident-expanded
 /// or packed-byte haystack storage.

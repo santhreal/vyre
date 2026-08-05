@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::{TOK_INTEGER, TOK_LPAREN};
 use crate::parsing::core::ast::node::{AST_CONST_INT, AST_VAR};
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::operator::{ast_opcode, precedence, should_pop_cached};
 use super::STACK_SLOTS_PER_STATEMENT;

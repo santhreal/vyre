@@ -4,7 +4,7 @@
 //! all three hash states using the same loaded byte, so the buffer is
 //! walked exactly once.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::hash::multi_hash::{multi_hash_program, MULTI_HASH_OP_ID};
 
 #[cfg(test)]
@@ -48,7 +48,7 @@ pub fn multi_hash(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 3),
         test_inputs: Some(|| {

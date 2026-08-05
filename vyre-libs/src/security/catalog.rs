@@ -1,4 +1,4 @@
-use crate::harness::OpEntry;
+use crate::fixture_catalog::OpEntry;
 
 fn u32s(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)

@@ -13,7 +13,7 @@
 //! `fn(...) -> Program` builder.
 
 use vyre_foundation::ir::Node;
-use vyre_libs::harness::all_entries;
+use vyre_libs::fixture_catalog::all_entries;
 
 #[test]
 fn every_cat_a_program_entry_is_a_single_generator_region() {

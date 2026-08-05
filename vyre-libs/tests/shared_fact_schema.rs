@@ -1,4 +1,4 @@
-//! Shared fact-schema contract tests for security, borrowck, and external headers.
+//! Shared fact-schema contract tests for security and external headers.
 
 use vyre_libs::dataflow::{SharedFactHeader, SharedFactKind, Soundness};
 
@@ -22,22 +22,6 @@ fn c_security_fact_maps_to_exact_shared_header() {
     );
 }
 
-#[test]
-fn rust_borrow_facts_map_placeholder_subset_to_exact_shared_header() {
-    let facts = vyre_libs::borrowck::rustc_facts::RustcNllFacts {
-        origin_count: 6,
-        loan_count: 2,
-        known_placeholder_subset: vec![(3, 5)],
-        ..Default::default()
-    };
-    let headers = facts.shared_fact_headers("rustc-nll");
-
-    // aux is absent (None) for a borrow_subset fact: wire token is "-".
-    assert_eq!(
-        headers[0].wire_header(),
-        "schema=v1;producer=rustc-nll;kind=borrow_subset;fact_id=1;subject=3;object=5;aux=-;file=0;start=0;end=0;soundness=Exact"
-    );
-}
 
 #[test]
 fn external_witness_header_is_exact_shared_schema() {

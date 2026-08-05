@@ -3,7 +3,7 @@
 //! Category-A composition.
 
 use crate::math::elementwise::{f32_elementwise_mul, F32MulRhs};
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 /// Build a Program that computes `output[i] = input[i] * input[i]`.
 #[must_use]
@@ -18,7 +18,7 @@ pub fn square(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::square",
         build: || square("input", "output", 4),
         test_inputs: Some(|| {

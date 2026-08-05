@@ -6,7 +6,7 @@ use crate::parsing::c::parse::vast::{
     C_AST_KIND_CASE_STMT, C_AST_KIND_DEFAULT_STMT, C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT,
     C_AST_KIND_SWITCH_STMT,
 };
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 mod gpu_helpers;
 mod gpu_resolution;

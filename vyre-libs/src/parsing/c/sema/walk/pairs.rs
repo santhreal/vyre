@@ -1,5 +1,5 @@
 use crate::parsing::c::lex::tokens::TOK_LBRACE;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 /// Resolve brace scopes using the precomputed `c11_dual_bracket_match` brace-pair table.
 ///

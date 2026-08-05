@@ -18,7 +18,7 @@
 //! breaking existing call sites.
 
 use std::sync::Arc;
-use vyre::ir::{DataType, Ident};
+use vyre_foundation::ir::{DataType, Ident};
 
 /// A named, typed, shaped buffer argument passed into a Cat-A op.
 ///

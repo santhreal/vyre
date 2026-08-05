@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use vyre::ir::model::expr::GeneratorRef;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use super::common::validate_complex_len;
 use super::fft_radix2_complex;
@@ -310,7 +310,7 @@ fn scale_conjugate_inverse_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: MULTIPLY_OP_ID,
         build: pointwise_complex_multiply_conjugate_program,
         test_inputs: Some(pointwise_complex_multiply_conjugate_inputs),
@@ -320,7 +320,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SCALE_OP_ID,
         build: scale_conjugate_inverse_program,
         test_inputs: Some(scale_conjugate_inverse_inputs),
@@ -330,7 +330,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || fft_convolve_circular_complex(
             "signal",

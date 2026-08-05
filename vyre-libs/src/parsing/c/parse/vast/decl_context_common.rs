@@ -1,5 +1,5 @@
 use super::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(super) fn vast_node_base(node_idx: Expr) -> Expr {
     Expr::mul(node_idx, Expr::u32(VAST_NODE_STRIDE_U32))

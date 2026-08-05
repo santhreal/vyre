@@ -18,7 +18,7 @@
 //! - The host reference mirrors the GPU heuristics so conformance can
 //!   prove the on-device path without routing production work through it.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_primitives::text::byte_histogram::byte_histogram_256_child;
 pub use vyre_primitives::text::encoding_classify::{
     classify_from_histogram, encoding_classify_child, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
@@ -129,7 +129,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         OP_ID,
         || encodex_gpu("input", "output", 5),
         Some(fixture_inputs),

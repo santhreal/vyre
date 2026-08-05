@@ -1,4 +1,4 @@
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 pub fn c11_lexer_regular_sparse_packed_haystack_with_block_totals(
     haystack: &str,

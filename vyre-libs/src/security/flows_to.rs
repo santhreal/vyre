@@ -15,7 +15,7 @@
 //! signature from the inert v2 API has been deleted  -  the shim
 //! now takes only the canonical frontier / sink buffer names.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
@@ -93,7 +93,7 @@ pub fn flows_to_alias_only(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || flows_to(ProgramGraphShape::new(4, 3), "fin", "fout"),
         test_inputs: Some(|| {
@@ -134,7 +134,7 @@ inventory::submit! {
     // a higher ceiling costs nothing on small graphs; the only
     // case where this matters is a pathologically deep reachability
     // walk, where the old 64-step cap was producing false negatives.
-    crate::harness::ConvergenceContract {
+    crate::fixture_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }
@@ -258,9 +258,9 @@ mod tests {
         // matching `max_iterations` is the contract, not a hygiene gap.
         // Their IR differs (distinct OP_ID tags) but their fixpoint
         // depths are identical by construction.
-        let c_flows = crate::harness::convergence_contract("vyre-libs::security::flows_to")
+        let c_flows = crate::fixture_catalog::convergence_contract("vyre-libs::security::flows_to")
             .expect("Fix: flows_to must have a ConvergenceContract");
-        let c_taint = crate::harness::convergence_contract("vyre-libs::security::taint_flow")
+        let c_taint = crate::fixture_catalog::convergence_contract("vyre-libs::security::taint_flow")
             .expect("Fix: taint_flow must have a ConvergenceContract");
         assert_eq!(
             c_flows.max_iterations, c_taint.max_iterations,

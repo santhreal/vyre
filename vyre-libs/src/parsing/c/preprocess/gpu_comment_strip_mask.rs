@@ -29,7 +29,7 @@
 //!     source, `1` for comment bytes to drop, `2` for the first comment
 //!     byte that must materialize as one replacement space.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod abi;
 mod builder;

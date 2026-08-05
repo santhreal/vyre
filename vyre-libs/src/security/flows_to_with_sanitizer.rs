@@ -18,14 +18,14 @@
 //! buffers. Centralising it here lets the rule write one `lhs`-shaped
 //! predicate that the optimizer fuses, caches, and CSEs across rules.
 //!
-//! Soundness: [`Exact`](vyre::soundness::Soundness::Exact)
+//! Soundness: [`Exact`](vyre_foundation::soundness::Soundness::Exact)
 //! when iterated to fixpoint with the same sanitizer mask supplied
 //! at every step. One step alone is
-//! [`MayOver`](vyre::soundness::Soundness::MayOver)  -  the
+//! [`MayOver`](vyre_foundation::soundness::Soundness::MayOver)  -  the
 //! caller is responsible for the fixpoint loop, which is the same
 //! contract every other reachability primitive in this module honours.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
@@ -235,7 +235,7 @@ pub(crate) fn cpu_ref(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || flows_to_with_sanitizer(ProgramGraphShape::new(4, 3), "source", "sink", "sanitizer", "clean", "reach", "alive", "hits", "out_scalar"),
         test_inputs: Some(|| {

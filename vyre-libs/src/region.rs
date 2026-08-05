@@ -1,9 +1,9 @@
-//! Shared Region builder  -  moved into the standalone `vyre-harness`
-//! crate so external Cat-A wrappers (`downstream dataflow engine`, `decodex`, `multimatch`)
-//! can construct provenance-tagged Programs without depending on the
-//! rest of `vyre-libs`. This module is a thin re-export so existing
-//! call sites keep compiling unchanged.
+//! Substrate-neutral composition-region helpers.
+//!
+//! The implementation is owned by `vyre-foundation`; this module gives
+//! library builders concise names without depending on a test harness.
 
-pub use vyre_harness::region::{
-    reparent_program_children, tag_program, wrap, wrap_anonymous, wrap_child,
+pub use vyre_foundation::composition::{
+    reparent_program_children, tag_program, wrap_anonymous_region as wrap_anonymous,
+    wrap_child_region as wrap_child, wrap_region as wrap,
 };

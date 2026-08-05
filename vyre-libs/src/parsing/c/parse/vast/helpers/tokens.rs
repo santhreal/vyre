@@ -1,7 +1,7 @@
 use super::super::*;
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::parse::{merged_token_ranges, token_range_expr};
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(crate) fn is_open_token(token: Expr) -> Expr {
     Expr::or(

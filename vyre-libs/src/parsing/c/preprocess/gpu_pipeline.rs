@@ -116,7 +116,7 @@ fn classified_token_bytes_opt(classified: &ClassifiedTokens, idx: usize) -> Opti
 pub use buffers::bucket_pow2;
 pub use conditional_events::{ConditionalEvent, ConditionalEventKind, ConditionalEventResidency};
 pub use directives::{gpu_extract_directive_payloads, DirectivePayload};
-pub use dispatch::{BackendDispatcher, GpuDispatcher};
+pub use dispatch::GpuDispatcher;
 pub use expansion_events::MacroExpansionEvent;
 pub use header_reuse::{HeaderReuseEvent, HeaderReuseKey};
 pub use include_acceleration::{IncludeAccelerationEvent, IncludeAccelerationKind};

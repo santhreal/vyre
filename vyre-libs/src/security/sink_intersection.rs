@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use vyre::ir::model::expr::Ident;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::sink_intersection";
@@ -75,9 +75,9 @@ pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
 
 /// Soundness marker for [`sink_intersection`].
 pub struct SinkIntersection;
-impl vyre::soundness::SoundnessTagged for SinkIntersection {
-    fn soundness(&self) -> vyre::soundness::Soundness {
-        vyre::soundness::Soundness::Exact
+impl vyre_foundation::soundness::SoundnessTagged for SinkIntersection {
+    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+        vyre_foundation::soundness::Soundness::Exact
     }
 }
 

@@ -6,7 +6,7 @@
 use crate::parsing::c::lower::semantic_edges::*;
 use crate::parsing::c::parse::vast::*;
 use crate::parsing::composition::child_phase;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::*;
 

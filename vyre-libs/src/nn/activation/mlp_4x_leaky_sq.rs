@@ -2,7 +2,7 @@
 //!
 //! Category A composition. Fused linear + activation without scratch buffer.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::{wrap_anonymous, wrap_child};
 use vyre_foundation::ir::model::expr::GeneratorRef;
@@ -225,7 +225,7 @@ fn output_projection_body(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
@@ -321,7 +321,7 @@ fn output_projection_program() -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: HIDDEN_PROJECTION_OP_ID,
         build: hidden_projection_program,
         test_inputs: Some(|| vec![vec![
@@ -345,7 +345,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OUTPUT_PROJECTION_OP_ID,
         build: output_projection_program,
         test_inputs: Some(|| vec![vec![

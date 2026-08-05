@@ -5,7 +5,7 @@
 //! so the optimizer treats it as opaque unless an inline pass
 //! explicitly unrolls.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
 use crate::region::{wrap, wrap_anonymous};
@@ -661,7 +661,7 @@ mod tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::matmul",
         build: || matmul("a", "b", "out", 4, 4, 4),
         test_inputs: Some(|| {
@@ -696,7 +696,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID_BIAS,
         build: || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
         test_inputs: Some(|| {
@@ -716,7 +716,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::matmul_bias::scalar",
         build: || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
         test_inputs: Some(|| {

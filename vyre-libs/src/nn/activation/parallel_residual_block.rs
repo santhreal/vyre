@@ -2,7 +2,7 @@
 //!
 //! Category A composition  -  residual stream addition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
 
@@ -47,7 +47,7 @@ pub fn parallel_residual_block(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             parallel_residual_block("x", "attn", "mlp", "out", 4)

@@ -1,7 +1,7 @@
 //! Materialized function-like macro expansion builder.
 
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::arg_scan::*;
 use super::paste_branch::*;

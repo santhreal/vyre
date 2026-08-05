@@ -62,7 +62,7 @@
 //! `reference_c_preprocessor_directive_metadata` for `if`/`elif` rows.
 
 use crate::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod abi;
 mod apply;

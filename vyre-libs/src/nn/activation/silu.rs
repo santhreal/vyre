@@ -2,7 +2,7 @@
 //!
 //! Category A composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
@@ -57,7 +57,7 @@ pub fn silu(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::silu",
         build: || silu("input", "output", 4),
         test_inputs: Some(|| {

@@ -3,7 +3,7 @@
 //! Forward: `out = x + attn_out + mlp_out`
 //! Backward: `grad_x = grad_attn = grad_mlp = grad_out` (addition broadcast).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -61,7 +61,7 @@ pub fn residual_block_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4),
         test_inputs: Some(|| {

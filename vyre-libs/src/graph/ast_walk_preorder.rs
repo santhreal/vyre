@@ -5,7 +5,7 @@
 //! a node it descends to `first_child` when present; otherwise it climbs
 //! parents until it finds a valid `next_sibling`.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_foundation::vast::{VastNode, NODE_STRIDE_U32, SENTINEL};
 use vyre_primitives::graph::vast_tree_walk;
 
@@ -143,7 +143,7 @@ fn preorder_harness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ast_walk_preorder("nodes", "out", 6, 8),
         test_inputs: Some(preorder_harness_inputs),
@@ -175,7 +175,7 @@ mod tests {
         // IR shape is also valid (kept as a supporting check).
         let p = ast_walk_preorder("nodes", "out", 4, 8);
         assert!(
-            vyre::validate(&p).is_empty(),
+            vyre_foundation::ir::validate(&p).is_empty(),
             "ast_walk_preorder IR must pass the validator"
         );
     }
@@ -196,6 +196,6 @@ mod tests {
         let order = vyre_foundation::vast::walk_preorder_indices(&node_region, 6, 128).unwrap();
         assert_eq!(order, vec![0, 1, 4, 2, 3, 5]);
         let p = ast_walk_preorder("nodes", "out", 6, 8);
-        assert!(vyre::validate(&p).is_empty());
+        assert!(vyre_foundation::ir::validate(&p).is_empty());
     }
 }

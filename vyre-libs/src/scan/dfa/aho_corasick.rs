@@ -16,7 +16,7 @@
 //! Callers that know the longest pattern length should use
 //! [`aho_corasick_bounded`] directly.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -120,7 +120,7 @@ pub fn aho_corasick_bounded(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::matching::aho_corasick",
         build: || {
             let patterns: [&[u8]; 1] = [b"abra"];
@@ -152,7 +152,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::Node;
+    use vyre_foundation::ir::Node;
 
     fn first_loop_bounds(nodes: &[Node]) -> Option<(&Expr, &Expr)> {
         for node in nodes {

@@ -3,7 +3,7 @@
 //! Category A composition. One workgroup owns one token row and cooperatively
 //! reduces the vocabulary dimension with log-sum-exp stabilization.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::region::wrap_anonymous;
@@ -279,7 +279,7 @@ fn reference_cross_entropy_bytes(logits: &[f32], targets: &[u32], vocab_size: us
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || cross_entropy("logits", "targets", "loss", 2, 4),
         test_inputs: Some(|| {

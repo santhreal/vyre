@@ -1,7 +1,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// LEGO Block 3: Declaration-local type-specifier propagation.
 ///
@@ -328,7 +328,7 @@ fn is_declaration_boundary(token: Expr, prev: Expr, prev_prev: Expr) -> Expr {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::opt_propagate_type_specifiers",
         build: || opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(1024)),
         // Buffers: tok_types (read-only u32), tok_depths (read-only u32),

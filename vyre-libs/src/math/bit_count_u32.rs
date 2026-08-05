@@ -1,6 +1,6 @@
 //! Shared u32 bit-count unary builders.
 
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 /// Bit-count operation over each u32 lane.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

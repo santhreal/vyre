@@ -47,7 +47,7 @@ use super::gpu_source_bytes::{
     SourceByteLayout,
 };
 use crate::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_ifdef_value";
@@ -546,7 +546,7 @@ fn gpu_ifdef_value_with_byte_layouts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::DataType;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn op_id_is_canonical_and_stable() {

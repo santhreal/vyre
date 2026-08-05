@@ -3,7 +3,7 @@
 //! Category-A composition over `nn::softmax` and `nn::top_k`.
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_primitives::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
 
@@ -147,7 +147,7 @@ fn weight_write_body(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || moe_gate("scores", "indices", "weights", 8, 2),
         // Buffer order: scores (read-only f32 × 8), indices
@@ -226,7 +226,7 @@ fn weight_write_program() -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SOFTMAX_STATS_OP_ID,
         build: softmax_stats_program,
         test_inputs: Some(|| {
@@ -251,7 +251,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: WEIGHT_WRITE_OP_ID,
         build: weight_write_program,
         test_inputs: Some(|| {

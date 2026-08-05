@@ -4,7 +4,7 @@ use crate::parsing::c::parse::vast_kinds::{
     C_AST_KIND_BUILTIN_PREFETCH_EXPR, C_AST_KIND_BUILTIN_UNREACHABLE_STMT,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Compatibility opcode for front-end streams that tag `__builtin_expect`.
 pub const GNU_BUILTIN_EXPECT_OPCODE: u32 = 0x4558_5043;
@@ -174,7 +174,7 @@ pub fn c11_gnu_builtins_pass(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_gnu_builtins_pass",
         build: || c11_gnu_builtins_pass("ast", "out_ast", Expr::u32(4)),
         test_inputs: Some(|| {

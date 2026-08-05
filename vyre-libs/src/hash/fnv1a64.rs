@@ -24,7 +24,7 @@
 //!
 //! Output: two u32 slots, `out[0] = result_lo`, `out[1] = result_hi`.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::hash::fnv1a::{fnv1a64_program, fnv1a64_program_n, FNV1A64_OP_ID};
 
 #[cfg(test)]
@@ -56,7 +56,7 @@ pub fn fnv1a64_n(input: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || fnv1a64_n("input", "out", 3),
         test_inputs: Some(|| {
@@ -144,10 +144,10 @@ mod tests {
     #[test]
     fn wrapper_delegates_to_primitive_fnv1a64_region() {
         let program = fnv1a64_n("input", "out", 3);
-        let [vyre::ir::Node::Region { body, .. }] = program.entry() else {
+        let [vyre_foundation::ir::Node::Region { body, .. }] = program.entry() else {
             panic!("expected one top-level FNV-1a64 wrapper region");
         };
-        let [vyre::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
+        let [vyre_foundation::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
             panic!("expected FNV-1a64 wrapper to contain one primitive child region");
         };
         assert_eq!(generator.as_str(), FNV1A64_OP_ID);

@@ -14,7 +14,7 @@
 //! to f32.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::nn::attention::turboquant";
 
@@ -198,7 +198,7 @@ pub fn turboquant_attention(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || turboquant_attention("q", "kp", "vp", "out", 2, 2),
         test_inputs: Some(|| {

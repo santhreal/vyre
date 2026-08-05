@@ -1,5 +1,5 @@
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Lock-Free SIMT Register Allocator (Target: x86_64)
 ///
@@ -70,7 +70,7 @@ pub fn opt_x86_64_register_allocation(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::opt_x86_64_register_allocation",
         build: || opt_x86_64_register_allocation("cfg", "regs", Expr::u32(16)),
         // 16 SSA nodes, 16 physical registers. Every lane contributes

@@ -17,7 +17,7 @@
 //! Critical for ML weighted aggregations (attention head-mixing,
 //! LayerNorm gain, gated reduction layers).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -71,7 +71,7 @@ pub fn weighted_sum_fma_f32(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             weighted_sum_fma_f32("weights", "values", "output", 4).unwrap_or_else(|error| {

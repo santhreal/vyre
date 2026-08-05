@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 use crate::region::wrap_anonymous;
 use crate::scan::dfa::CompiledDfa;

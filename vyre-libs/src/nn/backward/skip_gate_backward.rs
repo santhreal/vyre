@@ -2,7 +2,7 @@
 //!
 //! `grad_gate = grad_out * σ(g) * (1-σ(g)) * (branch - skip)`
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 
@@ -71,7 +71,7 @@ pub fn skip_gate_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || skip_gate_backward("gate", "branch", "skip", "grad_out", "grad_gate", 2),
         test_inputs: Some(|| {

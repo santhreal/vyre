@@ -3,9 +3,9 @@
 #![cfg(all(feature = "nn-attention", feature = "nn-norm"))]
 #![allow(deprecated)]
 use proptest::prelude::*;
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_foundation::optimizer::pre_lowering::optimize;
-use vyre_libs::harness::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::{all_entries, OpEntry};
 use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> &'static OpEntry {
@@ -32,7 +32,7 @@ fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 
 fn harness_path_outputs(entry: &'static OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let program = (entry.build)();
-    let errors = vyre::ir::validate(&program);
+    let errors = vyre_foundation::ir::validate(&program);
     assert!(
         errors.is_empty(),
         "Fix: {} failed validation on adversarial f32 input: {:?}",

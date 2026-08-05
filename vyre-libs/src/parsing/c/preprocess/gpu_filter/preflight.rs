@@ -2,7 +2,7 @@ use super::{
     program_helpers::source_byte_load, TRANSFORM_BLOCK_COMMENT, TRANSFORM_LINE_COMMENT,
     TRANSFORM_LINE_SPLICE, TRANSFORM_LITERAL_QUOTE,
 };
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub(super) fn transform_candidate_program(n: u32) -> Program {
     let i = Expr::var("i");

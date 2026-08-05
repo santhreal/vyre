@@ -3,7 +3,7 @@
 //! Category A composition  -  one primitive per invocation. Element-wise
 //! so the optimizer can trivially fuse into any upstream operation.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -58,7 +58,7 @@ pub fn relu(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::relu",
         build: || relu("input", "output", 4),
         test_inputs: Some(|| vec![vec![

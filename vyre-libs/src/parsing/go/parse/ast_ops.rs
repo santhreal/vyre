@@ -5,7 +5,7 @@ use crate::parsing::go::parse::token_predicates::{
     token_start, token_type_eq,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 macro_rules! define_go_keyword_call_extractor {
     ($name:ident, $keyword:literal, $op_id:literal, $doc:literal) => {

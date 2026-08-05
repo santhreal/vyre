@@ -1,6 +1,6 @@
 //! Shared RMS expression builders for normalization and fused linear kernels.
 
-use vyre::ir::{Expr, UnOp};
+use vyre_foundation::ir::{Expr, UnOp};
 
 pub(crate) const EMPTY_RMS_FIX: &str =
     "Fix: rms_norm n=0 is invalid; pass at least one element or bypass normalization.";

@@ -19,6 +19,32 @@ pub const SELF_EXCLUSIVE_REGION_SUFFIX: &str = "#self-exclusive";
 pub fn mark_self_exclusive_region(generator: &str) -> String {
     format!("{generator}{SELF_EXCLUSIVE_REGION_SUFFIX}")
 }
+/// Wrap nodes in a named, substrate-neutral composition region.
+#[must_use]
+pub fn wrap_region(
+    generator: &str,
+    body: Vec<Node>,
+    source_region: Option<GeneratorRef>,
+) -> Node {
+    Node::Region {
+        generator: Ident::from(generator),
+        source_region,
+        body: Arc::new(body),
+    }
+}
+
+/// Wrap nodes in a composition region without source metadata.
+#[must_use]
+pub fn wrap_anonymous_region(generator: &str, body: Vec<Node>) -> Node {
+    wrap_region(generator, body, None)
+}
+
+/// Wrap nodes in a composition region attributed to a parent generator.
+#[must_use]
+pub fn wrap_child_region(generator: &str, parent: GeneratorRef, body: Vec<Node>) -> Node {
+    wrap_region(generator, body, Some(parent))
+}
+
 /// Clone a program's entry regions and attach them to a composing parent.
 #[must_use]
 pub fn reparent_program_children(program: &Program, parent_op_id: &str) -> Vec<Node> {

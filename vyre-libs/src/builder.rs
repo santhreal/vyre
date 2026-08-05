@@ -17,7 +17,7 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 use crate::tensor_ref::{TensorRef, TensorRefError};
@@ -389,16 +389,16 @@ pub(crate) fn build_elementwise_binary<F>(
     out: crate::tensor_ref::TensorRef,
     options: BuildOptions,
     f: F,
-) -> Result<vyre::ir::Program, crate::tensor_ref::TensorRefError>
+) -> Result<vyre_foundation::ir::Program, crate::tensor_ref::TensorRefError>
 where
-    F: Fn(vyre::ir::Expr, vyre::ir::Expr) -> vyre::ir::Expr,
+    F: Fn(vyre_foundation::ir::Expr, vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
     check_tensors(
         op_id,
         &[
-            (&a, vyre::ir::DataType::U32),
-            (&b, vyre::ir::DataType::U32),
-            (&out, vyre::ir::DataType::U32),
+            (&a, vyre_foundation::ir::DataType::U32),
+            (&b, vyre_foundation::ir::DataType::U32),
+            (&out, vyre_foundation::ir::DataType::U32),
         ],
     )?;
 
@@ -434,15 +434,15 @@ where
 
     let n = a_count;
     let body = vec![
-        vyre::ir::Node::let_bind("idx", vyre::ir::Expr::InvocationId { axis: 0 }),
-        vyre::ir::Node::if_then(
-            vyre::ir::Expr::lt(vyre::ir::Expr::var("idx"), vyre::ir::Expr::u32(n)),
-            vec![vyre::ir::Node::store(
+        vyre_foundation::ir::Node::let_bind("idx", vyre_foundation::ir::Expr::InvocationId { axis: 0 }),
+        vyre_foundation::ir::Node::if_then(
+            vyre_foundation::ir::Expr::lt(vyre_foundation::ir::Expr::var("idx"), vyre_foundation::ir::Expr::u32(n)),
+            vec![vyre_foundation::ir::Node::store(
                 out.name_str(),
-                vyre::ir::Expr::var("idx"),
+                vyre_foundation::ir::Expr::var("idx"),
                 f(
-                    vyre::ir::Expr::load(a.name_str(), vyre::ir::Expr::var("idx")),
-                    vyre::ir::Expr::load(b.name_str(), vyre::ir::Expr::var("idx")),
+                    vyre_foundation::ir::Expr::load(a.name_str(), vyre_foundation::ir::Expr::var("idx")),
+                    vyre_foundation::ir::Expr::load(b.name_str(), vyre_foundation::ir::Expr::var("idx")),
                 ),
             )],
         ),
@@ -450,23 +450,23 @@ where
 
     let group = options.workgroup_size.unwrap_or([64, 1, 1]);
 
-    Ok(vyre::ir::Program::wrapped(
+    Ok(vyre_foundation::ir::Program::wrapped(
         vec![
-            vyre::ir::BufferDecl::storage(
+            vyre_foundation::ir::BufferDecl::storage(
                 a.name_str(),
                 0,
-                vyre::ir::BufferAccess::ReadOnly,
-                vyre::ir::DataType::U32,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
             )
             .with_count(n),
-            vyre::ir::BufferDecl::storage(
+            vyre_foundation::ir::BufferDecl::storage(
                 b.name_str(),
                 1,
-                vyre::ir::BufferAccess::ReadOnly,
-                vyre::ir::DataType::U32,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
             )
             .with_count(n),
-            vyre::ir::BufferDecl::output(out.name_str(), 2, vyre::ir::DataType::U32).with_count(n),
+            vyre_foundation::ir::BufferDecl::output(out.name_str(), 2, vyre_foundation::ir::DataType::U32).with_count(n),
         ],
         group,
         vec![crate::region::wrap_anonymous(op_id, body)],
@@ -480,15 +480,15 @@ pub(crate) fn build_elementwise_unary<F>(
     out: crate::tensor_ref::TensorRef,
     options: BuildOptions,
     f: F,
-) -> Result<vyre::ir::Program, crate::tensor_ref::TensorRefError>
+) -> Result<vyre_foundation::ir::Program, crate::tensor_ref::TensorRefError>
 where
-    F: Fn(vyre::ir::Expr) -> vyre::ir::Expr,
+    F: Fn(vyre_foundation::ir::Expr) -> vyre_foundation::ir::Expr,
 {
     check_tensors(
         op_id,
         &[
-            (&a, vyre::ir::DataType::U32),
-            (&out, vyre::ir::DataType::U32),
+            (&a, vyre_foundation::ir::DataType::U32),
+            (&out, vyre_foundation::ir::DataType::U32),
         ],
     )?;
 
@@ -508,15 +508,15 @@ where
         }
     })?;
     let body = vec![
-        vyre::ir::Node::let_bind("idx", vyre::ir::Expr::InvocationId { axis: 0 }),
-        vyre::ir::Node::if_then(
-            vyre::ir::Expr::lt(vyre::ir::Expr::var("idx"), vyre::ir::Expr::u32(n)),
-            vec![vyre::ir::Node::store(
+        vyre_foundation::ir::Node::let_bind("idx", vyre_foundation::ir::Expr::InvocationId { axis: 0 }),
+        vyre_foundation::ir::Node::if_then(
+            vyre_foundation::ir::Expr::lt(vyre_foundation::ir::Expr::var("idx"), vyre_foundation::ir::Expr::u32(n)),
+            vec![vyre_foundation::ir::Node::store(
                 out.name_str(),
-                vyre::ir::Expr::var("idx"),
-                f(vyre::ir::Expr::load(
+                vyre_foundation::ir::Expr::var("idx"),
+                f(vyre_foundation::ir::Expr::load(
                     a.name_str(),
-                    vyre::ir::Expr::var("idx"),
+                    vyre_foundation::ir::Expr::var("idx"),
                 )),
             )],
         ),
@@ -524,16 +524,16 @@ where
 
     let group = options.workgroup_size.unwrap_or([64, 1, 1]);
 
-    Ok(vyre::ir::Program::wrapped(
+    Ok(vyre_foundation::ir::Program::wrapped(
         vec![
-            vyre::ir::BufferDecl::storage(
+            vyre_foundation::ir::BufferDecl::storage(
                 a.name_str(),
                 0,
-                vyre::ir::BufferAccess::ReadOnly,
-                vyre::ir::DataType::U32,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
             )
             .with_count(n),
-            vyre::ir::BufferDecl::output(out.name_str(), 1, vyre::ir::DataType::U32).with_count(n),
+            vyre_foundation::ir::BufferDecl::output(out.name_str(), 1, vyre_foundation::ir::DataType::U32).with_count(n),
         ],
         group,
         vec![crate::region::wrap_anonymous(op_id, body)],
@@ -600,7 +600,7 @@ mod tests {
         let program = build_indexed_map(
             "vyre-libs::test::indexed_map_user",
             vec![
-                BufferDecl::storage("input", 0, vyre::ir::BufferAccess::ReadOnly, DataType::U32)
+                BufferDecl::storage("input", 0, vyre_foundation::ir::BufferAccess::ReadOnly, DataType::U32)
                     .with_count(4),
                 BufferDecl::output("output", 1, DataType::U32).with_count(4),
             ],

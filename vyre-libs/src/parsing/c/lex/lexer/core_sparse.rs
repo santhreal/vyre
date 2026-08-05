@@ -3,7 +3,7 @@ mod block_totals;
 
 use crate::parsing::c::lex::tokens::*;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub use block_totals::c11_lexer_regular_sparse_packed_haystack_with_block_totals;
 

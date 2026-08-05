@@ -12,8 +12,8 @@
 //! that matches `wrapping_{add,and,or,xor}`, `min`, `max`, `exchange`,
 //! or `compare_exchange` semantics under single-lane contention.
 
-use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::memory_model::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::memory_model::MemoryOrdering;
 
 // --- Macros must be defined before `pub mod` declarations so child modules
 // can name them. `macro_rules!` is textual and scoped to what appears
@@ -21,61 +21,6 @@ use vyre::memory_model::MemoryOrdering;
 // cannot see them and fail to compile with "cannot find macro …" errors.
 // F-IR-35 reclassified atomics to Category::Intrinsic through these.
 
-/// Helper macro to register a Cat-B atomic serial op in the dialect registry.
-/// Every atomic op that emits `Expr::Atomic` must carry `Category::Intrinsic`
-/// so the validator knows the backend must own the corresponding target builder arm.
-macro_rules! register_atomic_serial_op {
-    ($op_id:expr, $compose:expr) => {
-        ::inventory::submit! {
-            ::vyre_driver::registry::dialect::OpDefRegistration::new(|| ::vyre_driver::registry::OpDef {
-                id: $op_id,
-                dialect: "vyre-libs.math.atomic",
-                category: ::vyre_driver::registry::Category::Intrinsic,
-                signature: ::vyre_driver::registry::Signature {
-                    inputs: &[
-                        ::vyre_driver::registry::TypedParam { name: "values", ty: "buffer<u32>" },
-                        ::vyre_driver::registry::TypedParam { name: "state", ty: "buffer<u32>" },
-                        ::vyre_driver::registry::TypedParam { name: "trace", ty: "buffer<u32>" },
-                    ],
-                    outputs: &[],
-                    attrs: &[],
-                    bytes_extraction: false,
-                },
-                lowerings: ::vyre_foundation::dialect_lookup::LoweringTable::empty(),
-                laws: &[],
-                compose: Some($compose),
-            })
-        }
-    };
-}
-
-/// Helper macro for `atomic_compare_exchange_u32` which has a different
-/// input schema (`expected` + `desired` buffers).
-macro_rules! register_atomic_cas_op {
-    ($op_id:expr, $compose:expr) => {
-        ::inventory::submit! {
-            ::vyre_driver::registry::dialect::OpDefRegistration::new(|| ::vyre_driver::registry::OpDef {
-                id: $op_id,
-                dialect: "vyre-libs.math.atomic",
-                category: ::vyre_driver::registry::Category::Intrinsic,
-                signature: ::vyre_driver::registry::Signature {
-                    inputs: &[
-                        ::vyre_driver::registry::TypedParam { name: "expected", ty: "buffer<u32>" },
-                        ::vyre_driver::registry::TypedParam { name: "desired", ty: "buffer<u32>" },
-                        ::vyre_driver::registry::TypedParam { name: "state", ty: "buffer<u32>" },
-                        ::vyre_driver::registry::TypedParam { name: "trace", ty: "buffer<u32>" },
-                    ],
-                    outputs: &[],
-                    attrs: &[],
-                    bytes_extraction: false,
-                },
-                lowerings: ::vyre_foundation::dialect_lookup::LoweringTable::empty(),
-                laws: &[],
-                compose: Some($compose),
-            })
-        }
-    };
-}
 
 macro_rules! define_atomic_serial_module {
     (
@@ -88,7 +33,7 @@ macro_rules! define_atomic_serial_module {
         $final_state:expr,
         $trace:expr
     ) => {
-        use vyre::ir::Program;
+        use vyre_foundation::ir::Program;
 
         const OP_ID: &str = $op_id;
 
@@ -97,7 +42,7 @@ macro_rules! define_atomic_serial_module {
         pub fn $fn_name(values: &str, state: &str, trace: &str, n: u32) -> Program {
             super::build_atomic_serial(
                 OP_ID,
-                vyre::ir::AtomicOp::$atomic_op,
+                vyre_foundation::ir::AtomicOp::$atomic_op,
                 values,
                 state,
                 trace,
@@ -106,7 +51,7 @@ macro_rules! define_atomic_serial_module {
         }
 
         inventory::submit! {
-            crate::harness::OpEntry {
+            crate::fixture_catalog::OpEntry {
                 id: OP_ID,
                 build: || $fn_name("values", "state", "trace", 4),
                 test_inputs: Some(|| {
@@ -123,7 +68,6 @@ macro_rules! define_atomic_serial_module {
             }
         }
 
-        register_atomic_serial_op!(OP_ID, || $fn_name("values", "state", "trace", 4));
 
         #[cfg(test)]
         mod tests {
@@ -367,7 +311,7 @@ pub(crate) fn build_atomic_compare_exchange(
 pub(crate) mod testutil {
     use vyre_reference::value::Value;
 
-    pub(crate) use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+    pub(crate) use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub(crate) enum SerialAtomicOracle {
@@ -409,7 +353,7 @@ pub(crate) mod testutil {
     }
 
     pub(crate) fn assert_serial_matches(
-        program: &vyre::ir::Program,
+        program: &vyre_foundation::ir::Program,
         kind: SerialAtomicOracle,
         values: &[u32],
         initial_state: u32,
@@ -420,7 +364,7 @@ pub(crate) mod testutil {
     }
 
     pub(crate) fn run_serial(
-        program: &vyre::ir::Program,
+        program: &vyre_foundation::ir::Program,
         values: &[u32],
         initial_state: u32,
     ) -> (u32, Vec<u32>) {
@@ -441,7 +385,7 @@ pub(crate) mod testutil {
     }
 
     pub(crate) fn run_cas(
-        program: &vyre::ir::Program,
+        program: &vyre_foundation::ir::Program,
         expected: &[u32],
         desired: &[u32],
         initial_state: u32,

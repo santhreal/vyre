@@ -1,9 +1,9 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::builder::{
     build_indexed_map, strided_accumulate_child, INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID,
 };
-use crate::harness::OpEntry;
+use crate::fixture_catalog::OpEntry;
 use crate::region::wrap_anonymous;
 
 fn u32s(words: &[u32]) -> Vec<u8> {

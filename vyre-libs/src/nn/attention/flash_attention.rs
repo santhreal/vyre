@@ -47,7 +47,7 @@
 //! over `d` lanes lands on top of this substrate; the algorithmic
 //! correctness gate is the per-row reference.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::attention::direct_attention_program;
 use super::planner::plan_flash_attention_scalar;
@@ -265,7 +265,7 @@ pub fn flash_attention(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::flash_attention",
         build: || {
             flash_attention("q", "k", "v", "out", 9, 1).unwrap_or_else(|error| {

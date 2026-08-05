@@ -3,7 +3,7 @@
 //! Category-A compositions over `UnOp::Unpack*` primitives.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Unpack 4-bit values from a u32 buffer into f32.
 /// Input: `n/8` u32s (each holds 8 4-bit values), Output: `n` f32s.
@@ -42,7 +42,7 @@ pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::representation::unpack_4bit_f32",
         build: || unpack_4bit_f32("input", "output", 16),
         test_inputs: Some(|| {

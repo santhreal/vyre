@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// SIMT Binding Strength Pass (Innovation 1: Divergence-Free Shunting Yard)
 ///
@@ -79,7 +79,7 @@ pub fn ast_binding_strength(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::ast_binding_strength",
         // Use a small 4-token fixture so the witness is trivially
         // checkable: tok_types = [STAR, PLUS, '=', 0], depths = [1, 1, 0, 0].

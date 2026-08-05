@@ -1,6 +1,6 @@
 //! Tiled linear-layer constructors (`linear_tiled`, `linear_tiled_reference`).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::{tag_program, wrap};
 use crate::tensor_ref::TensorRef;
@@ -148,7 +148,7 @@ pub fn linear_tiled_reference(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::linear",
         build: || {
             linear("x", "w", "b", "out", 4, 4)
@@ -184,7 +184,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::linear_tiled",
         build: || {
             linear_tiled("x", "w", "b", "out", 4, 4, 2)

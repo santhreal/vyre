@@ -1,11 +1,11 @@
 use crate::parsing::c::lex::tokens::TOK_IDENTIFIER;
 use crate::parsing::core::ast::node::AST_VAR;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 use super::{ast_shunting_yard, pack_u32, MAX_TOK_SCAN, OP_ID};
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ast_shunting_yard(
             "tok_types", "statements", Expr::u32(100),

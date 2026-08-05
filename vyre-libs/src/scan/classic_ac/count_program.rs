@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte_expr;
@@ -17,7 +17,7 @@ pub use suffix2::{
     classic_ac_bounded_count_suffix2_prefilter_program, classic_ac_candidate_suffix2_mask_words,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-pub(crate) use suffix3::ascii_case_variants;
+pub use suffix3::ascii_case_variants;
 pub use suffix3::{
     build_ac_bounded_count_suffix3_prefilter_program,
     classic_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_suffix3_bloom_words,

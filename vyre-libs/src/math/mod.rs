@@ -66,8 +66,8 @@ fn invalid_f32_reduction_program(
     input: &str,
     output: &str,
     fix: &'static str,
-) -> vyre::ir::Program {
-    use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+) -> vyre_foundation::ir::Program {
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     Program::wrapped(
         vec![

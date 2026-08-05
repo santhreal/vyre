@@ -4,7 +4,7 @@
 //! Backward: `grad_x[i] = grad_out[i] * scale[i]`
 //!           `grad_scale[i] = grad_out[i] * x[i]`
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -61,7 +61,7 @@ pub fn ln_scale_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4),
         test_inputs: Some(|| {

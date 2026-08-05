@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 
 const OP_ID: &str = "vyre-libs::visual::blur";
@@ -394,7 +394,7 @@ fn gaussian_blur_pass(
 pub use vyre_primitives::math::conv1d::gaussian_weights;
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal,
         test_inputs: Some(|| {

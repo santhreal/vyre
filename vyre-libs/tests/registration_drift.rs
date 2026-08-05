@@ -85,7 +85,7 @@ fn every_dialect_registered_op_has_a_test_entry() {
     let exemptions: std::collections::HashMap<&str, &str> = EXEMPT_OP_IDS.iter().copied().collect();
 
     let mut tested: HashSet<&'static str> = HashSet::new();
-    for entry in vyre_libs::harness::all_entries() {
+    for entry in vyre_libs::fixture_catalog::all_entries() {
         tested.insert(entry.id);
     }
 

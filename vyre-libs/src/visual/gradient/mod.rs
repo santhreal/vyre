@@ -3,7 +3,7 @@
 //! Rasterizes a linear gradient with up to 16 color stops.
 //! Category A composition  -  pure IR expressions.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 const OP_ID: &str = "vyre-libs::visual::gradient";
@@ -312,7 +312,7 @@ pub fn try_linear_gradient(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || linear_gradient(
             "output", 4, 1, 90.0,

@@ -26,7 +26,7 @@
 //! against the naive O(N²) DFT formula (1.0e-3 absolute tolerance
 //! for N=8 due to f32 rounding accumulating across log2(N) stages).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::common::{bit_reverse, validate_complex_len};
 use crate::region::wrap_anonymous;
@@ -156,7 +156,7 @@ pub fn fft_radix2_complex(input: &str, output: &str, n: u32) -> Result<Program, 
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || fft_radix2_complex("input", "output", 4)
             .unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses a valid radix-2 FFT size.")),

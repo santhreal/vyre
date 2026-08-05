@@ -1,5 +1,5 @@
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// ABI type-kind tag for C `char`.
 pub const C_ABI_CHAR: u32 = 1;
@@ -122,7 +122,7 @@ pub fn c11_compute_alignments_for_abi(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_compute_alignments",
         build: || c11_compute_alignments("types", "sizes", "aligns", Expr::u32(5)),
         test_inputs: Some(|| vec![vec![

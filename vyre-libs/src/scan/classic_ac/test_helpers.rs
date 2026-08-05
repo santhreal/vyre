@@ -1,6 +1,6 @@
 //! Shared test helpers for classic-AC program conformance tests.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use crate::test_support::byte_pack::bytes_to_u32;
 

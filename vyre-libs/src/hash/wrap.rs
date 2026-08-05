@@ -5,7 +5,7 @@
 //! This module prevents every hash wrapper from rebuilding the same region and
 //! buffer declaration skeleton.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 use crate::buffer_names::scoped_generic_name;

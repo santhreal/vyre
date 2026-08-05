@@ -7,7 +7,7 @@ use crate::parsing::python::lex::{
 };
 use crate::parsing::python::{DECORATOR_RECORD_WORDS, INVALID_POS, MAX_DOTTED_SEGMENTS};
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Extract decorator occurrences and their immediate target.
 #[must_use]
@@ -248,7 +248,7 @@ pub fn python312_extract_decorators(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_extract_decorators",
         build: || python312_extract_decorators("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         test_inputs: Some(decorator_fixture_inputs),

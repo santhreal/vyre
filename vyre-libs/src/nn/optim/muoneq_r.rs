@@ -2,7 +2,7 @@
 //!
 //! Muon + `scale = max(1, rows/cols)^0.5` row normalization.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use crate::nn::optim::muon_core::muon_step_program;
 
@@ -39,7 +39,7 @@ pub fn muoneq_r(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95),
         test_inputs: Some(|| {

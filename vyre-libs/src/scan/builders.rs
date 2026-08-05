@@ -3,7 +3,7 @@
 //! Exposes granular primitives that can be composed into custom
 //! scanning engines (e.g. combined DFA + ML, decoder-aware scanners).
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 /// LEGO BLOCK: Load a byte from a packed U32 haystack.
 ///

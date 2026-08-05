@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::parsing::c::lex::lexer::c11_lex_single_pass;
 use crate::parsing::c::parse::structure::{c11_extract_calls, c11_extract_functions};
 use crate::parsing::source_cache::{source_len_u32_nonzero, ParsedSourceLru};
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 /// Cached C11 pipeline stage bundle for one source shape.
 #[derive(Debug, Clone)]

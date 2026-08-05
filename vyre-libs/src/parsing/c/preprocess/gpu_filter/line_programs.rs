@@ -3,7 +3,7 @@ use super::program_helpers::{
     source_byte_load_or_zero, source_bytes_input_buffer, store_comment_mask,
     store_final_keep_from_comment_mask, u32_read_buffer, u32_rw_buffer, wrap_gpu_filter_program,
 };
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 pub(super) fn simple_line_newline_flags_program(n: u32) -> Program {
     let i = Expr::var("i");

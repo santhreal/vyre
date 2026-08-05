@@ -1,6 +1,6 @@
 //! MMA-oriented tiled matmul body for full F16 M16N8-aligned tiles.
 
-use vyre::ir::{DataType, Expr, Node};
+use vyre_foundation::ir::{DataType, Expr, Node};
 
 use super::mma_fragment::matmul_mma_fragment;
 use super::shape::{MatrixShape, TileShape};

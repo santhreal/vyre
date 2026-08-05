@@ -1,6 +1,6 @@
 //! Backward for `logit_softcap`: `d/dx [tanh(x/cap) * cap] = 1 - tanh²(x/cap)`.
 
-use vyre::ir::{Expr, Program, UnOp};
+use vyre_foundation::ir::{Expr, Program, UnOp};
 
 use super::unary_f32::unary_f32_backward_program;
 
@@ -34,7 +34,7 @@ pub fn logit_softcap_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || logit_softcap_backward("input", "grad_out", "grad_in", 4, 30.0),
         test_inputs: Some(|| {

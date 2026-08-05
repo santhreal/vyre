@@ -12,7 +12,7 @@
 //!
 //! Category-A composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use super::planner::plan_flash_attention_tiled;
 use crate::region::wrap_anonymous;

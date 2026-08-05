@@ -1,6 +1,6 @@
 //! Linear builder + the canonical `linear()` Cat-A constructor.
 
-use vyre::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 use crate::{
     builder::{check_tensors, BuildOptions},

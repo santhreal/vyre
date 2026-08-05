@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::region::wrap_anonymous;
 use crate::scan::dfa::CompiledDfa;
@@ -92,7 +92,7 @@ pub fn classic_ac_candidate_suffix3_bloom_words(patterns: &[&[u8]]) -> Vec<u32> 
 /// the mutable mask). The ONE owner of the case fold shared by the end / suffix2
 /// / suffix3 mask builders.
 #[must_use]
-pub(crate) fn ascii_case_variants(byte: u8, case_insensitive: bool) -> ([u8; 2], usize) {
+pub fn ascii_case_variants(byte: u8, case_insensitive: bool) -> ([u8; 2], usize) {
     if case_insensitive && byte.is_ascii_alphabetic() {
         ([byte.to_ascii_lowercase(), byte.to_ascii_uppercase()], 2)
     } else {

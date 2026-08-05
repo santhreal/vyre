@@ -9,7 +9,7 @@
 //!
 //! Simplified: computes grad_x by chaining transposes.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -152,7 +152,7 @@ pub fn mlp_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || mlp_backward("x", "w1", "b1", "w2", "grad_out", "grad_x", 2, 2),
         test_inputs: Some(|| {

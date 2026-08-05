@@ -1,7 +1,7 @@
 use super::super::*;
 use super::*;
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(crate) fn emit_prior_ternary_boundary_flag(
     raw_vast_nodes: &str,

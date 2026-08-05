@@ -8,7 +8,7 @@
 use core::fmt;
 
 use crate::region::{tag_program, wrap_anonymous, wrap_child};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
@@ -325,7 +325,7 @@ pub fn try_select1_query(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: RANK_SUPERBLOCKS_OP_ID,
         build: || rank1_superblocks("bits", "superblocks", 4, 2),
         test_inputs: Some(|| {
@@ -343,7 +343,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SELECT_QUERY_OP_ID,
         build: || select1_query("bits", "queries", "out", 4, 5),
         test_inputs: Some(|| {
@@ -362,7 +362,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: RANK_QUERY_OP_ID,
         build: || rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2),
         test_inputs: Some(|| {

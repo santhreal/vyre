@@ -4,7 +4,7 @@ use crate::parsing::c::preprocess::gpu_if_expression::gpu_if_expression_u8;
 use crate::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value_u8;
 use crate::parsing::c::preprocess::gpu_include_parse::gpu_include_parse_u8;
 use crate::parsing::c::preprocess::gpu_undef_parse::gpu_undef_parse_u8;
-use vyre::execution_plan::fusion::fuse_programs;
+use vyre_foundation::execution_plan::fusion::fuse_programs;
 
 use super::buffers::{bucket_pow2, pack_u32_words_into, unpack_u32_words_exact_into};
 use super::tokenization::reject_invalid_if_expression_values;
@@ -604,7 +604,7 @@ fn payload_span_bytes(
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use vyre::ir::Program;
+    use vyre_foundation::ir::Program;
 
     struct NoDispatch;
 

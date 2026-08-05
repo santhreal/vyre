@@ -1,6 +1,6 @@
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Sparse-token sentinel: non-token byte positions stay zeroed.
 pub const TOK_NONE: u32 = 0;
@@ -586,7 +586,7 @@ pub fn python312_lexer(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_lexer",
         build: || python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16),
         test_inputs: Some(lexer_fixture_inputs),

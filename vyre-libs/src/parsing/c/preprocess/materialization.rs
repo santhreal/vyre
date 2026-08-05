@@ -2,7 +2,7 @@
 
 use crate::parsing::c::preprocess::expansion::{load_macro_byte, MacroByteLayout};
 use crate::parsing::c::preprocess::synthesis::stringification_token_type;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 /// Output source arena metadata buffer slots.
 pub const C_MACRO_SOURCE_COUNT_BYTES: u32 = 0;

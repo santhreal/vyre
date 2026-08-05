@@ -243,7 +243,7 @@ mod tests {
             "wrapped entry must be a single root Region"
         );
         let body = match &fused.entry[0] {
-            vyre::ir::Node::Region { body, .. } => body.as_ref(),
+            vyre_foundation::ir::Node::Region { body, .. } => body.as_ref(),
             other => panic!("Fix: fused entry root must be a Region, got {other:?}"),
         };
         assert!(

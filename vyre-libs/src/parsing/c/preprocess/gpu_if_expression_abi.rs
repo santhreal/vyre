@@ -78,7 +78,7 @@ pub const INVALID_EXPR_VALUE: u32 = u32::MAX;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::{BufferAccess, BufferDecl, DataType};
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
 
     #[test]
     fn source_and_macro_buffers_are_runtime_sized() {

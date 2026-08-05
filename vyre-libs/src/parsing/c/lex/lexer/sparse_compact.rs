@@ -1,5 +1,5 @@
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[must_use]
 /// Build the GPU program that compacts sparse lexer rows into dense token columns.
@@ -151,7 +151,7 @@ fn compact_output_decl_count(
 #[cfg(test)]
 mod tests {
     use super::{c11_compact_sparse_tokens, c11_compact_sparse_tokens_output};
-    use vyre::ir::BufferAccess;
+    use vyre_foundation::ir::BufferAccess;
 
     #[test]
     fn compact_output_variant_marks_final_streams_live_out_without_result_outputs() {

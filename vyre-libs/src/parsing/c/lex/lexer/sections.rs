@@ -3,7 +3,7 @@
 //! inside [`super::core::c11_lexer`]. Splitting these out keeps
 //! `core.rs` under the 500-LOC source-file cap.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use crate::parsing::c::lex::tokens::*;
 

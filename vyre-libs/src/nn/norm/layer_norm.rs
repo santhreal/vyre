@@ -12,7 +12,7 @@
 //!
 //! Both paths emit byte-identical IR.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::{check_tensors, strided_accumulate2_child, BuildOptions};
@@ -258,7 +258,7 @@ fn layer_norm_tiled_program(
 
 #[cfg(test)]
 fn layer_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Program {
-    use vyre::ir::BinOp;
+    use vyre_foundation::ir::BinOp;
 
     let n_expr = Expr::u32(n);
     let n_f32 = Expr::f32(n as f32);
@@ -378,7 +378,7 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::layer_norm",
         build: || layer_norm("input", "output", 4, 1e-5),
         test_inputs: Some(|| {

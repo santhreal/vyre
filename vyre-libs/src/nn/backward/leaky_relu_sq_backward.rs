@@ -3,7 +3,7 @@
 //! For x≥0: d/dx = 2x. For x<0: d/dx = 2·(0.5x)·0.5 = 0.5x.
 //! Branchless: `grad = dy * max(0.5*x, 2*x)`.
 
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 use super::unary_f32::unary_f32_backward_program;
 
@@ -22,7 +22,7 @@ pub fn leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || leaky_relu_sq_backward("input", "grad_out", "grad_in", 4),
         test_inputs: Some(|| {

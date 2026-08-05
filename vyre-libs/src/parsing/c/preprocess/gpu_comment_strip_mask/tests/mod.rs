@@ -1,5 +1,5 @@
 use super::*;
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 
 #[test]
 fn op_id_is_canonical_and_stable() {

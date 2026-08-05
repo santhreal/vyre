@@ -1,6 +1,6 @@
 //! Fused `linear_relu` constructor.
 
-use vyre::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 use super::fused_activation::linear_fused_activation;
 use crate::nn::activation::relu::relu_f32_expr;
@@ -35,7 +35,7 @@ pub fn linear_relu(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             linear_relu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {

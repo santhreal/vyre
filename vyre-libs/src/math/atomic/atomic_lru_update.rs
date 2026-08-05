@@ -3,8 +3,8 @@
 //! Category-B composition over `AtomicOp::Max`.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::memory_model::MemoryOrdering;
+use vyre_foundation::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::memory_model::MemoryOrdering;
 
 /// Build a Program that atomically updates an LRU slot.
 #[must_use]
@@ -36,7 +36,7 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::atomic::lru_update_u32",
         build: || atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345)),
         test_inputs: Some(|| {
@@ -54,23 +54,3 @@ inventory::submit! {
     }
 }
 
-::inventory::submit! {
-    ::vyre_driver::registry::dialect::OpDefRegistration::new(|| ::vyre_driver::registry::OpDef {
-        id: "vyre-libs::math::atomic::lru_update_u32",
-        dialect: "vyre-libs.math.atomic",
-        category: ::vyre_driver::registry::Category::Intrinsic,
-        signature: ::vyre_driver::registry::Signature {
-            inputs: &[
-                ::vyre_driver::registry::TypedParam { name: "buffer", ty: "buffer<u32>" },
-                ::vyre_driver::registry::TypedParam { name: "index", ty: "u32" },
-                ::vyre_driver::registry::TypedParam { name: "timestamp", ty: "u32" },
-            ],
-            outputs: &[],
-            attrs: &[],
-            bytes_extraction: false,
-        },
-        lowerings: ::vyre_foundation::dialect_lookup::LoweringTable::empty(),
-        laws: &[],
-        compose: Some(|| atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345))),
-    })
-}

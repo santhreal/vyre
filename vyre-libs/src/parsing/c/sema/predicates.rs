@@ -9,7 +9,7 @@ use crate::parsing::c::lex::tokens::{
     TOK_SIGNED, TOK_STAR, TOK_STATIC, TOK_STRUCT, TOK_THREAD_LOCAL, TOK_TYPEDEF, TOK_UNION,
     TOK_UNSIGNED, TOK_VOID, TOK_VOLATILE,
 };
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 /// Build an OR-chain matching `token` against any candidate token id.
 pub(crate) fn expr_is_any(token: Expr, candidates: &[u32]) -> Expr {

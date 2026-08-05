@@ -1,7 +1,7 @@
 //! Python 3.12 structural frontend.
 //!
 //! The frontend keeps the runtime path GPU-native: the lexer and every
-//! structural extractor return `vyre::Program` kernels over raw source
+//! structural extractor return `vyre_foundation::ir::Program` kernels over raw source
 //! bytes. Tests may use host helpers for reference expectations, but the
 //! shipping path never links a CPU parser.
 

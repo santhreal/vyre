@@ -2,7 +2,7 @@
 
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::preprocess::synthesis::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::arg_scan::emit_function_like_argument_scan;
 use super::helpers::*;

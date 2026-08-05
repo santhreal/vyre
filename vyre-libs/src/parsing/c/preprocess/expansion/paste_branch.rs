@@ -2,7 +2,7 @@
 
 use crate::parsing::c::lex::tokens::TOK_COMMA;
 use crate::parsing::c::preprocess::materialization::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::helpers::*;
 use super::*;

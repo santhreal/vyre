@@ -1,7 +1,7 @@
 //! Shared token predicates for Go structural extraction kernels.
 
 use crate::parsing::go::lex::TOK_IDENTIFIER;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 /// Test a token kind at `idx`.
 pub(super) fn token_type_eq(tok_types: &str, idx: Expr, token: u32) -> Expr {

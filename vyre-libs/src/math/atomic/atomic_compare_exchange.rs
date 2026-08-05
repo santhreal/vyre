@@ -2,7 +2,7 @@
 //! `state == expected[i]`, replace state with `desired[i]`; always
 //! emit the pre-op state into `trace[i]`.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use super::build_atomic_compare_exchange;
 
@@ -21,7 +21,7 @@ pub fn atomic_compare_exchange_u32(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4),
         test_inputs: Some(|| {
@@ -49,9 +49,6 @@ inventory::submit! {
     }
 }
 
-register_atomic_cas_op!(OP_ID, || atomic_compare_exchange_u32(
-    "expected", "desired", "state", "trace", 4
-));
 
 #[cfg(test)]
 mod tests {

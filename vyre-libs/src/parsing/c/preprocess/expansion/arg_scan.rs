@@ -1,7 +1,7 @@
 //! Function-like macro argument scan builders.
 
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::helpers::*;
 

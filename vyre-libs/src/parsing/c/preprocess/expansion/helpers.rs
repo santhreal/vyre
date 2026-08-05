@@ -2,7 +2,7 @@
 
 use crate::parsing::c::lex::tokens::{TOK_HASHHASH, TOK_IDENTIFIER, TOK_LPAREN};
 use crate::parsing::c::preprocess::synthesis::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
 use super::*;

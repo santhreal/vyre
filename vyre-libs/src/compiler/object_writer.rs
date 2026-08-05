@@ -304,7 +304,7 @@ mod tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: ELF_LOWERING_OP_ID,
         build: || opt_lower_elf("ssa", "obj", Expr::u32(4)),
         // Small deterministic fixture: 4 encoded words and a 4096-word object buffer.

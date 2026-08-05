@@ -3,7 +3,7 @@ use super::super::super::{
     SENTINEL, VAST_DECL_CONTEXT_PREV_DECL_CHAIN_LEN_FIELD, VAST_DECL_CONTEXT_PREV_DECL_LINK_FIELD,
     VAST_TYPEDEF_FLAGS_FIELD, VAST_TYPEDEF_SCOPE_FIELD, VAST_TYPEDEF_SYMBOL_FIELD,
 };
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(super) fn vast_field_from_base(vast_nodes: &str, base_var: &str, field: u32) -> Expr {
     decl_context_common::load_vast_node_field(vast_nodes, Expr::var(base_var), field)

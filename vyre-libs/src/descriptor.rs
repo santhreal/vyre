@@ -9,7 +9,7 @@
 //! the full IR, but the surface here is the contract external
 //! tooling pins against.
 
-use vyre::ir::{BufferAccess, DataType, Program};
+use vyre_foundation::ir::{BufferAccess, DataType, Program};
 
 /// Structural description of a Cat-A Program.
 #[derive(Debug, Clone)]

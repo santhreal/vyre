@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub(super) use super::gpu_source_bytes::SourceByteLayout as DirectiveSourceLayout;
 

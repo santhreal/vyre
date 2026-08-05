@@ -5,7 +5,7 @@ use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::load_source_byte;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build_declaration_kind_inner::emit_declaration_kind_for_index_inner;
 use super::helpers::*;

@@ -3,7 +3,7 @@
 //! Category-A composition with a workgroup-tiled Welford reduction.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::reduce_variance";
 #[cfg(test)]
@@ -293,7 +293,7 @@ fn reduce_variance_reference_program(input: &str, output: &str, n: u32, bessel: 
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::reduce_variance",
         build: || reduce_variance("input", "output", 256),
         test_inputs: Some(|| {

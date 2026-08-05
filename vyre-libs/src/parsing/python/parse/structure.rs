@@ -11,7 +11,7 @@ use crate::parsing::python::{
     DEF_RECORD_WORDS, IMPORT_RECORD_WORDS, INVALID_POS, WITH_RECORD_WORDS,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Extract `def`, `async def`, and `class` declarations.
 #[must_use]
@@ -572,7 +572,7 @@ pub fn python312_extract_with_blocks(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_extract_structure",
         build: || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         test_inputs: Some(structure_fixture_inputs),
@@ -582,7 +582,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_extract_imports",
         build: || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         test_inputs: Some(import_fixture_inputs),
@@ -592,7 +592,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_extract_with_blocks",
         build: || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
         test_inputs: Some(with_fixture_inputs),

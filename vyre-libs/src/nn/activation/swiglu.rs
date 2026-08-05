@@ -6,7 +6,7 @@
 //!
 //! Category A composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 
@@ -58,7 +58,7 @@ pub fn swiglu(gate: &str, up: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::swiglu",
         build: || swiglu("gate", "up", "output", 4),
         test_inputs: Some(|| {

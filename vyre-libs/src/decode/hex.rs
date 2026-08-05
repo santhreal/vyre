@@ -1,6 +1,6 @@
 //! GPU hex decode composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 #[cfg(test)]
 use vyre_primitives::decode::hex::hex_decode_reference_packed;
 use vyre_primitives::decode::hex::{
@@ -180,7 +180,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         OP_ID,
         || hex_decode("input", "output", 6),
         Some(fixture_inputs),

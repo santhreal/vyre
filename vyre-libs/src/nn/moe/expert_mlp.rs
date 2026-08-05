@@ -5,7 +5,7 @@
 //! kept in the same dispatch body so the hidden activation does not need to
 //! materialize to a global intermediate buffer.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 

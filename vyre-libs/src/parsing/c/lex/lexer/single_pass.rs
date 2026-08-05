@@ -17,7 +17,7 @@
 
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
-use vyre::ir::{BufferDecl, Node, Program};
+use vyre_foundation::ir::{BufferDecl, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 use super::core::{c11_lexer, c11_lexer_regular};
@@ -162,7 +162,7 @@ pub fn c11_lex_regular_single_pass(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || c11_lex_single_pass(
             "haystack",
@@ -207,7 +207,7 @@ fn single_pass_expected() -> Vec<Vec<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::Node;
+    use vyre_foundation::ir::Node;
 
     /// `c11_lex_single_pass` produces the same Program shape as
     /// running `c11_lexer` followed by `c11_lex_digraphs`. The

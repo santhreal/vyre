@@ -1,6 +1,6 @@
 //! Identifier and GNU/Clang builtin-call parsing helpers for the GPU #if evaluator.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::super::gpu_source_bytes::SourceByteLayout;
 use super::byte_load::safe_load_src_expr;

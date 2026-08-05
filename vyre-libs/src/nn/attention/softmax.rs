@@ -20,7 +20,7 @@
 //!
 //! Both paths produce the same IR. New code should prefer the builder.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::{
@@ -344,7 +344,7 @@ fn softmax_reference_program(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::softmax",
         build: || softmax("input", "output", 4),
         test_inputs: Some(|| {

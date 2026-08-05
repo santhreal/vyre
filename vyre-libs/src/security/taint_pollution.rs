@@ -4,7 +4,7 @@
 //! Region. Composes a one-step BFS with intersection against a
 //! family-tagged node set, then any-reduce.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
@@ -57,14 +57,14 @@ pub(crate) fn cpu_ref(
 
 /// Soundness marker for [`taint_pollution`].
 pub struct TaintPollution;
-impl vyre::soundness::SoundnessTagged for TaintPollution {
-    fn soundness(&self) -> vyre::soundness::Soundness {
-        vyre::soundness::Soundness::MayOver
+impl vyre_foundation::soundness::SoundnessTagged for TaintPollution {
+    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+        vyre_foundation::soundness::Soundness::MayOver
     }
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
         test_inputs: Some(|| {

@@ -2,7 +2,7 @@
 //!
 //! `clip_threshold = k * std(row)`  -  int6 uses k=12.85, int8 uses k=20.0.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::{finite_or, positive_finite_or_min as positive_scale};
@@ -90,7 +90,7 @@ pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: ROUND_OP_ID,
         build: || gptq_round("input", "scale", "output", 4, 63.0),
         test_inputs: Some(|| {
@@ -111,7 +111,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SDCLIP_OP_ID,
         build: || gptq_sdclip("input", "output", 4, 30.0),
         test_inputs: Some(|| {

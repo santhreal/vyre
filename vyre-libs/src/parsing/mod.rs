@@ -45,6 +45,3 @@ pub mod go;
 #[cfg(feature = "python-parser")]
 pub mod python;
 
-/// Rust pipeline (lex / parse / typeck / borrow).
-#[cfg(feature = "rust-parser")]
-pub mod rust;

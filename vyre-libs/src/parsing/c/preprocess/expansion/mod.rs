@@ -4,7 +4,7 @@
 //! owns the shared ABI constants and the public pass exports. Keep helper code
 //! in the pass that uses it unless it is shared by multiple active builders.
 
-use vyre::ir::{DataType, Expr};
+use vyre_foundation::ir::{DataType, Expr};
 
 pub(crate) const EMPTY_MACRO_SLOT: u32 = u32::MAX;
 pub(crate) const MACRO_TABLE_SLOTS: u32 = 4_096;

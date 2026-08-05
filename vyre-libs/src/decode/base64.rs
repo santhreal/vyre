@@ -1,6 +1,6 @@
 //! GPU base64 decode compositions.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
@@ -194,7 +194,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         OP_ID,
         || base64_decode("input", "output", 8),
         Some(fixture_inputs),

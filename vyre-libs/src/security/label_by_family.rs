@@ -1,7 +1,7 @@
 //! `label_by_family`  -  Tier-3 shim over
 //! [`vyre_primitives::label::resolve_family`].
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::label::resolve_family::resolve_family;
 
 const OP_ID: &str = "vyre-libs::security::label_by_family";
@@ -26,7 +26,7 @@ pub fn label_by_family(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || label_by_family("node_tags", "out", 4, 0b0010),
         test_inputs: Some(|| {

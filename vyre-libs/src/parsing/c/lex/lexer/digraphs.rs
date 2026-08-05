@@ -3,7 +3,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::core::*;
 
@@ -229,7 +229,7 @@ pub fn c11_lex_digraphs(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c_lexer",
         build: || {
             c11_lexer("haystack", "out_tok_types", "out_tok_starts", "out_tok_lens", "out_counts", 4096)
@@ -241,7 +241,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_lex_digraphs",
         build: || {
             c11_lex_digraphs("tok_types", "tok_starts", "tok_lens", 4096)

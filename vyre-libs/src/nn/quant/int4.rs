@@ -4,7 +4,7 @@
 //! weights stay packed through the inner product. This avoids the extra global
 //! memory traffic of materializing an unpacked i32 lane buffer before a dot.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::math::quantized::i4x8_batched_matmul_f32_scaled as primitive_i4x8_batched_matmul_f32_scaled;
 use vyre_primitives::math::quantized::i4x8_batched_matmul_top1_f32_scaled as primitive_i4x8_batched_matmul_top1_f32_scaled;
 use vyre_primitives::math::quantized::i4x8_batched_matvec_f32_scaled as primitive_i4x8_batched_matvec_f32_scaled;
@@ -201,7 +201,7 @@ pub fn int4_batched_matmul_top1_f32_scaled(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: DOT_OP_ID,
         build: || int4_dot_i32("lhs", "rhs", "out", 8),
         test_inputs: Some(|| {
@@ -216,7 +216,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: DOT_SCALED_OP_ID,
         build: || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
         test_inputs: Some(|| {
@@ -233,7 +233,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: MATVEC_SCALED_OP_ID,
         build: || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
         test_inputs: Some(|| {
@@ -251,7 +251,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: BATCHED_MATVEC_SCALED_OP_ID,
         build: || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
         test_inputs: Some(|| {
@@ -269,7 +269,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: BATCHED_MATMUL_SCALED_OP_ID,
         build: || {
             int4_batched_matmul_f32_scaled(
@@ -299,7 +299,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: BATCHED_MATMUL_TOP1_SCALED_OP_ID,
         build: || {
             int4_batched_matmul_top1_f32_scaled(

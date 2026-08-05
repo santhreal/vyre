@@ -3,7 +3,7 @@
 //! Emits the exact 4-FMA sequence that B6 (`matmul_promote`) detects
 //! and collapses into `KernelOpKind::MatrixMma`.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::tensor_core_policy::MatmulKernelPath;
 
@@ -176,7 +176,7 @@ pub(crate) fn matmul_mma_fragment(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::{Expr, Node};
+    use vyre_foundation::ir::{Expr, Node};
     use vyre_lower::lower;
     use vyre_lower::rewrites::matmul_promote;
 
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn matmul_mma_fragment_lowers_to_contiguous_fma_ops() {
-        let program = vyre::ir::Program::wrapped(
+        let program = vyre_foundation::ir::Program::wrapped(
             vec![],
             [1, 1, 1],
             vec![
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn matmul_mma_fragment_promotes_to_matrix_mma() {
-        let program = vyre::ir::Program::wrapped(
+        let program = vyre_foundation::ir::Program::wrapped(
             vec![],
             [1, 1, 1],
             vec![
@@ -386,9 +386,9 @@ mod tests {
 
 #[test]
 fn matmul_mma_fragment_descriptor_contains_four_child_fmas() {
-    use vyre::ir::{Expr, Node};
+    use vyre_foundation::ir::{Expr, Node};
     use vyre_lower::lower;
-    let program = vyre::ir::Program::wrapped(
+    let program = vyre_foundation::ir::Program::wrapped(
         vec![],
         [1, 1, 1],
         vec![

@@ -6,7 +6,7 @@
 //! `OpEntry` fixtures, and exposes the universal `(input, out)`
 //! signature the harness uses.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::hash::fnv1a::{fnv1a32_program, fnv1a32_program_dyn, FNV1A32_OP_ID};
 
 #[cfg(test)]
@@ -43,7 +43,7 @@ pub fn fnv1a32_n(input: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || fnv1a32_n("input", "out", 3),
         test_inputs: Some(|| vec![vec![
@@ -111,10 +111,10 @@ mod tests {
     #[test]
     fn wrapper_delegates_to_primitive_fnv1a32_region() {
         let program = fnv1a32_n("input", "out", 3);
-        let [vyre::ir::Node::Region { body, .. }] = program.entry() else {
+        let [vyre_foundation::ir::Node::Region { body, .. }] = program.entry() else {
             panic!("expected one top-level FNV-1a32 wrapper region");
         };
-        let [vyre::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
+        let [vyre_foundation::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
             panic!("expected FNV-1a32 wrapper to contain one primitive child region");
         };
         assert_eq!(generator.as_str(), FNV1A32_OP_ID);

@@ -3,7 +3,7 @@
 //! Pack layout: 4 int6 values per 3 bytes.
 //! Scale/zero buffers are F32. Packed data is U32.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
 
@@ -73,7 +73,7 @@ pub fn int6_pack(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: UNPACK_OP_ID,
         build: || int6_unpack("packed", "scale", "zero", "output", 4, 4),
         test_inputs: Some(|| {
@@ -96,7 +96,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: PACK_OP_ID,
         build: || int6_pack("input", "output", 4),
         test_inputs: Some(|| {

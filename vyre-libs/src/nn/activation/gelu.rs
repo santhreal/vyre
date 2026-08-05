@@ -2,7 +2,7 @@
 //!
 //! Category A composition.
 
-use vyre::ir::{Expr, Program, UnOp};
+use vyre_foundation::ir::{Expr, Program, UnOp};
 
 const GELU_SQRT_2_OVER_PI: f32 = 0.797_884_6;
 const GELU_COEF: f32 = 0.044715;
@@ -32,7 +32,7 @@ pub fn gelu(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || gelu("input", "output", 4),
         test_inputs: Some(|| {

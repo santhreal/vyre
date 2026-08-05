@@ -8,7 +8,7 @@ pub mod decorators;
 pub mod structure;
 
 use crate::parsing::python::INVALID_POS;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(crate) fn store_words(buffer: &str, base_var: &str, words: &[Expr]) -> Vec<Node> {
     words

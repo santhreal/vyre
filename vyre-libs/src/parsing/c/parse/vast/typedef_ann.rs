@@ -4,7 +4,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::{load_source_byte, source_haystack_words};
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build::*;
 use super::helpers::*;

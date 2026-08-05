@@ -34,7 +34,7 @@ use super::gpu_directive_parse_shared::{
     push_ws_skip_from_expr, DirectiveOutputColumn, DirectiveSourceLayout, DirectiveThreadLayout,
 };
 use crate::parsing::c::lex::tokens::TOK_PP_UNDEF;
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_undef_parse_v2";
@@ -155,7 +155,7 @@ fn gpu_undef_parse_with_source_layout(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::DataType;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn op_id_is_canonical_and_stable() {

@@ -2,7 +2,7 @@
 
 #![allow(missing_docs)] // Internal macro-expansion helpers are documented at the owning module boundary.
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::fnlike::*;
 use super::helpers::*;

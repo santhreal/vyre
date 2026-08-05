@@ -8,7 +8,7 @@ use crate::{
     nn::rms::{inverse_rms_expr, square_expr, EMPTY_RMS_FIX},
     region::wrap_anonymous,
 };
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::nn::rms_norm";
@@ -139,7 +139,7 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::rms_norm",
         build: || rms_norm("input", "output", 4, 1e-5),
         test_inputs: Some(|| {

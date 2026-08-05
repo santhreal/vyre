@@ -26,7 +26,7 @@ use super::gpu_source_bytes::{
     literal_scan_common_buffers, literal_scan_program, packed_source_byte_len_expr,
     safe_load_source_byte_expr,
 };
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_int_literal_scan";

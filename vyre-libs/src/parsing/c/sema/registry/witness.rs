@@ -196,7 +196,7 @@ fn witness_expected_identifier_intern_phase() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c_sema_scope",
         build: || {
             c_sema_scope(
@@ -216,7 +216,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SCOPE_PHASE_OP_ID,
         build: || {
             c_sema_scope_phase(
@@ -238,7 +238,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SCOPE_BRACE_PHASE_OP_ID,
         build: || {
             c_sema_scope_phase(
@@ -260,7 +260,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SCOPE_FUNCTION_PARAMS_PHASE_OP_ID,
         build: || {
             c_sema_scope_phase(
@@ -282,7 +282,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: DECL_PHASE_OP_ID,
         build: || {
             c_sema_scope_phase(
@@ -304,7 +304,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: IDENTIFIER_INTERN_PHASE_OP_ID,
         build: || {
             c_sema_scope_phase(

@@ -5,14 +5,14 @@
 
 #![allow(deprecated)]
 use blake3::Hash;
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre::{
     backend::{backend_dispatches, registered_backends},
     BackendRegistration, DispatchConfig,
 };
 use vyre_foundation::optimizer::pre_lowering::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
-use vyre_libs::harness::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::{all_entries, OpEntry};
 use vyre_reference::value::Value;
 
 #[test]

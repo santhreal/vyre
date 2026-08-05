@@ -5,7 +5,7 @@
 //! `orthogonal = newton_schulz_5step(nesterov)` (via composition)
 //! `param -= lr * orthogonal * scale`
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use crate::nn::optim::muon_core::muon_step_program;
 
@@ -29,7 +29,7 @@ pub fn muon_update(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95),
         test_inputs: Some(|| {

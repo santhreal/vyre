@@ -8,7 +8,7 @@ use crate::parsing::python::parse::structure::{
     python312_extract_imports, python312_extract_structure,
 };
 use crate::parsing::source_cache::{source_len_u32_nonzero, ParsedSourceLru};
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 /// Cached Python pipeline stage bundle for one source shape.
 #[derive(Debug, Clone)]

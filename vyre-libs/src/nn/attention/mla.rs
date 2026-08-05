@@ -15,7 +15,7 @@
 //!
 //! Category A composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::attention_stability::{

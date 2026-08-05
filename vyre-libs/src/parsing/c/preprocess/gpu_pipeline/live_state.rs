@@ -14,13 +14,13 @@ use super::live_conditional_cache::{LiveConditionalCache, LiveConditionalCacheKe
 use super::macro_values;
 use super::{GpuDispatcher, MacroDef};
 
-fn live_ifdef_program() -> std::sync::Arc<vyre::ir::Program> {
-    static CACHE: OnceLock<std::sync::Arc<vyre::ir::Program>> = OnceLock::new();
+fn live_ifdef_program() -> std::sync::Arc<vyre_foundation::ir::Program> {
+    static CACHE: OnceLock<std::sync::Arc<vyre_foundation::ir::Program>> = OnceLock::new();
     std::sync::Arc::clone(CACHE.get_or_init(|| std::sync::Arc::new(gpu_ifdef_value_u8(1, 0))))
 }
 
-fn live_if_expression_program() -> std::sync::Arc<vyre::ir::Program> {
-    static CACHE: OnceLock<std::sync::Arc<vyre::ir::Program>> = OnceLock::new();
+fn live_if_expression_program() -> std::sync::Arc<vyre_foundation::ir::Program> {
+    static CACHE: OnceLock<std::sync::Arc<vyre_foundation::ir::Program>> = OnceLock::new();
     std::sync::Arc::clone(CACHE.get_or_init(|| std::sync::Arc::new(gpu_if_expression_u8(1, 0))))
 }
 
@@ -32,7 +32,7 @@ fn live_conditional_cache() -> &'static Mutex<LiveConditionalCache> {
 #[cfg(test)]
 mod live_conditional_program_tests {
     use super::*;
-    use vyre::ir::{DataType, Program};
+    use vyre_foundation::ir::{DataType, Program};
 
     fn assert_byte_buffers_are_raw_u8(program: &Program, label: &str) {
         for name in ["source", "macro_names_packed"] {

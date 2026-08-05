@@ -4,7 +4,7 @@
 
 use crate::builder::strided_accumulate_child;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 const OP_ID: &str = "vyre-libs::math::reduce_mean";
@@ -118,7 +118,7 @@ fn reduce_mean_reference_program(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::reduce_mean",
         build: || reduce_mean("input", "output", 4),
         test_inputs: Some(|| {

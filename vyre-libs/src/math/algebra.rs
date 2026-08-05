@@ -8,7 +8,7 @@
 use crate::builder::{build_elementwise_unary, BuildOptions};
 use crate::region::wrap_anonymous;
 use crate::tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, TensorRefError};
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const JOIN_OP_ID: &str = "vyre-libs::math::algebra::join";
 const MEET_OP_ID: &str = "vyre-libs::math::algebra::meet";
@@ -346,7 +346,7 @@ pub fn try_sketch_mix(input: &str, out: &str, size: u32) -> Result<Program, Tens
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: JOIN_OP_ID,
         build: || lattice_join("a", "b", "out", 4),
         test_inputs: Some(|| {
@@ -365,7 +365,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: MEET_OP_ID,
         build: || lattice_meet("a", "b", "out", 4),
         test_inputs: Some(|| {
@@ -384,7 +384,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: MINPLUS_MUL_OP_ID,
         build: || semiring_min_plus_mul("a", "b", "out", 4),
         test_inputs: Some(|| {
@@ -403,7 +403,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: BOOL_MATMUL_OP_ID,
         build: || bool_semiring_matmul("a", "b", "out", 2, 3, 2),
         test_inputs: Some(|| {
@@ -422,7 +422,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: SKETCH_MIX_OP_ID,
         build: || sketch_mix("input", "out", 4),
         test_inputs: Some(|| {

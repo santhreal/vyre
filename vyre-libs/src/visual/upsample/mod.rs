@@ -6,7 +6,7 @@
 //!
 //! Category A composition  -  pure IR. No Tier 2.5 primitives.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::upsample";
 
@@ -64,7 +64,7 @@ pub fn upsample_2x(input: &str, output: &str, width: u32, height: u32) -> Progra
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || upsample_2x("input", "output", 4, 4),
         test_inputs: Some(|| {

@@ -19,7 +19,7 @@
 //! - `downsample`  -  IR expressions only (box filter = average of 4)
 //! - `glass`  -  composes blur + filter_chain (hero composition)
 
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
 pub mod blur;

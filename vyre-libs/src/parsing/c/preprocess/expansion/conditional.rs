@@ -4,7 +4,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::*;
 
@@ -349,7 +349,7 @@ pub fn opt_conditional_mask_with_directives(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::opt_conditional_mask_with_directives",
         build: || opt_conditional_mask_with_directives(
             "tok_types", "directive_kinds", "directive_values", "out_mask", Expr::u32(3)
@@ -374,7 +374,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::opt_dynamic_macro_expansion",
         build: || opt_dynamic_macro_expansion(
             "in_tok_types", "macro_keys", "macro_vals", "macro_sizes",

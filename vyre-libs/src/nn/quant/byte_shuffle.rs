@@ -10,7 +10,7 @@
 //! Used in the Parameter Golf submission pipeline after quantization
 //! and before Brotli-11 compression.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use crate::builder::build_indexed_map;
 
@@ -58,7 +58,7 @@ pub fn byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> Resul
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             byte_shuffle("input", "output", 3, 2)

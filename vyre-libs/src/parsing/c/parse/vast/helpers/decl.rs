@@ -1,7 +1,7 @@
 use super::super::*;
 use super::*;
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(crate) fn is_type_name_start_token(token: Expr) -> Expr {
     any_token_eq(

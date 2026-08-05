@@ -3,7 +3,7 @@
 //! `vyre-libs` is the library layer that sits ON TOP of `vyre-ops`.
 //!
 //! Almost every function is a **pure Category A composition**: it returns a
-//! [`vyre::Program`] built entirely from existing vyre IR primitives. The
+//! [`vyre_foundation::ir::Program`] built entirely from existing vyre IR primitives. The
 //! sole exception is the `math::atomic` family, which are **Category B**
 //! (`Category::Intrinsic`) because they require the backend to own the
 //! `Expr::Atomic` target builder emitter arm (F-IR-35).
@@ -13,7 +13,7 @@
 //! ```ignore
 //! use vyre_libs::nn::linear;
 //! let program = linear(/* input_buf */ "x", /* weights */ "w", /* bias */ "b");
-//! // `program` is a standard vyre::Program you dispatch against any backend.
+//! // `program` is a standard vyre_foundation::ir::Program you dispatch against any backend.
 //! ```
 //!
 //! ## Why a single `vyre-libs` crate, not five?
@@ -34,7 +34,7 @@
 //! ## Region wrapping
 //!
 //! Every public composition wraps its body in a
-//! [`vyre::ir::Node::Region`] with a stable generator name. The
+//! [`vyre_foundation::ir::Node::Region`] with a stable generator name. The
 //! optimizer treats Regions as atomic by default (preserves
 //! debuggability + source-mapping); explicit inline passes can unroll
 //! them. This is LLVM's function-vs-always-inline split at IR level.
@@ -78,14 +78,14 @@
 pub(crate) fn invalid_program(
     op_id: &'static str,
     message: impl Into<String>,
-) -> vyre::ir::Program {
+) -> vyre_foundation::ir::Program {
     let message = message.into();
-    vyre::ir::Program::wrapped(
+    vyre_foundation::ir::Program::wrapped(
         Vec::new(),
         [1, 1, 1],
         vec![region::wrap_anonymous(
             op_id,
-            vec![vyre::ir::Node::trap(vyre::ir::Expr::u32(0), message)],
+            vec![vyre_foundation::ir::Node::trap(vyre_foundation::ir::Expr::u32(0), message)],
         )],
     )
 }
@@ -118,25 +118,13 @@ pub mod descriptor;
 
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 
-/// Compatibility alias metadata for public shim paths.
-pub mod compat_aliases;
 
 #[cfg(feature = "math-linalg")]
 pub use math::{matmul_bias_tiled, matmul_tiled, MatmulBias, MatmulBiasTiled, MatmulTiled};
 
-/// Universal op harness  -  auto-testing infrastructure for every composition.
-///
-/// Each composition registers an `OpEntry` via
-/// `inventory::submit!`. The harness discovers all entries at test
-/// time and runs validation, wire round-trip, CSE stability, and
-/// reference interpreter tests automatically.
-///
-/// Hidden from docs.rs  -  external consumers of vyre-libs don't need
-/// this module's surface; it exists for internal test infrastructure
-/// only. Kept `pub` so `inventory::submit!` can reference `OpEntry`
-/// from per-op source files at crate-root scope.
+/// Neutral program fixtures consumed by upper conformance harnesses.
 #[doc(hidden)]
-pub mod harness;
+pub mod fixture_catalog;
 
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
@@ -161,12 +149,8 @@ pub mod logical;
 ))]
 pub mod nn;
 
-/// Pattern-scanning dialect  -  substring, DFA, Aho-Corasick, rule
-/// dispatch, secfinding generation. Renamed from `matching` per
-/// ROADMAP T032 (SEPARATION_AUDIT S7)  -  "scan" reflects the actual
-/// semantic surface (not just substring matching). The original
-/// `matching` name is kept as a deprecated alias for backwards
-/// compatibility.
+/// Pattern-scanning dialect: neutral substring, DFA, NFA, and regex
+/// program builders plus immutable compilation artifacts.
 #[cfg(any(
     feature = "matching-substring",
     feature = "matching-dfa",
@@ -174,20 +158,6 @@ pub mod nn;
 ))]
 pub mod scan;
 
-/// Backwards-compat alias for [`scan`]. New code should use
-/// `vyre_libs::scan::*`. Alias metadata lives in
-/// [`compat_aliases::MATCHING_ALIAS`] so internal audits and public docs
-/// agree on the canonical owner.
-#[cfg(any(
-    feature = "matching-substring",
-    feature = "matching-dfa",
-    feature = "matching-nfa"
-))]
-#[deprecated(
-    since = "0.4.1",
-    note = "use `vyre_libs::scan` instead  -  the `matching` name is kept as a transition alias only"
-)]
-pub mod matching;
 
 /// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
 /// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
@@ -215,11 +185,6 @@ pub mod representation;
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
 pub mod parsing;
 
-/// Front-end-agnostic borrow-check engine: the neutral `BorrowFacts` IR and the
-/// dataflow analysis over it. Producers (the Rust front-end now, a rustc adapter
-/// later) lower to `BorrowFacts`; the engine never depends on any front-end,
-/// which is what lets the borrow checker eventually run standalone.
-pub mod borrowck;
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
 pub mod graph;
@@ -255,7 +220,6 @@ pub mod visual;
 /// not grow a parallel dataflow implementation tree.
 pub mod dataflow;
 
-pub use borrowck::{analyze as analyze_borrow_facts, ConflictKind};
 #[cfg(feature = "c-parser")]
 pub(crate) use compiler::atomic_collect::atomic_collect_u32;
 pub use dataflow::{
@@ -273,8 +237,6 @@ pub(crate) use math::linalg::{
     plan_matmul_kernel, F32MatmulMode, MatmulFallbackReason, MatmulKernelCapabilities,
     MatmulKernelPath, MatmulKernelPlan, MatrixShape,
 };
-#[cfg(feature = "matching-substring")]
-pub(crate) use scan::substring::{substring_search_with_op_id, LEGACY_MATCHING_SUBSTRING_OP_ID};
 
 // vyre-libs::hardware removed (audit 2026-04-21 BLOCKER-1/6).
 // Canonical Cat-C intrinsics live exclusively in the `vyre-intrinsics`
@@ -310,8 +272,6 @@ pub use signatures::{
     F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
     U32_OUTPUTS, U32_U32_INPUTS,
 };
-/// Making this crate's ops resolvable in the current process.
-pub mod dialect_init;
 /// Pre-sweep shader snapshot migration entries, collected via inventory.
 /// `pub(crate)` because the registry is an internal pre-sweep tool  -
 /// downstream dialects do not submit through this path.
@@ -319,19 +279,12 @@ pub(crate) mod test_migration;
 /// Test support components for vyre-libs.
 pub mod test_support;
 
-/// Driver-tier observability re-export so vyre-libs consumers can
-/// snapshot substrate counters + decision histograms without taking a
-/// direct vyre-driver dependency.
-pub mod observability {
-    pub use vyre_driver::observability::{BackendObservabilityProvider, DriverObservability};
-}
 
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API
 /// plus the types it returns.
 pub mod prelude {
-    pub use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-    pub use vyre::{BackendError, DispatchConfig};
+    pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
     pub use vyre_foundation::ir::model::expr::GeneratorRef;
 
     // P2.1 / P2.2: the typed-tensor API + shared builder primitives.
@@ -384,30 +337,3 @@ pub mod prelude {
     pub use crate::scan::{aho_corasick, dfa_compile, CompiledDfa, DfaCompileError};
 }
 
-#[cfg(all(test, feature = "matching-substring"))]
-mod compat_alias_tests {
-    use vyre::ir::Node;
-
-    #[test]
-    #[allow(deprecated)]
-    fn legacy_matching_public_path_preserves_old_id_and_registry_metadata() {
-        let program =
-            crate::matching::substring::substring_search("haystack", "needle", "matches", 8, 3);
-        let [Node::Region { generator, .. }] = program.entry() else {
-            panic!("expected legacy substring search to emit one region");
-        };
-
-        assert_eq!(
-            generator.as_str(),
-            crate::scan::substring::LEGACY_MATCHING_SUBSTRING_OP_ID
-        );
-        assert_eq!(
-            crate::compat_aliases::MATCHING_SUBSTRING_ALIAS.canonical_path,
-            "vyre_libs::scan::substring"
-        );
-        assert_eq!(
-            crate::compat_aliases::MATCHING_SUBSTRING_ALIAS.deprecated_path,
-            "vyre_libs::matching::substring"
-        );
-    }
-}

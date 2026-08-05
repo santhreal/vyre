@@ -463,7 +463,7 @@ fn sparse_tokenize(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::Program;
+    use vyre_foundation::ir::Program;
 
     struct SparsePathSentinel;
 

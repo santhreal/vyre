@@ -9,7 +9,7 @@
 //! collapsed to a one-line delegation so the implementation stays
 //! authoritative in `flows_to.rs`.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
@@ -38,7 +38,7 @@ pub fn taint_flow(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &st
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || taint_flow(ProgramGraphShape::new(4, 3), "fin", "fout"),
         test_inputs: Some(|| {
@@ -71,7 +71,7 @@ inventory::submit! {
 inventory::submit! {
     // AUDIT_2026-04-24 F-TF-03: max_iterations matches flows_to at
     // 4096 so deep taint paths don't hit a silent 64-step truncation.
-    crate::harness::ConvergenceContract {
+    crate::fixture_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }

@@ -11,7 +11,7 @@
 //!
 //! CPU reference: `u32::clamp` bit-exact.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::clamp_u32";
 
@@ -51,7 +51,7 @@ pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program 
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || clamp_u32("input", "lo", "hi", "out", 4),
         test_inputs: Some(|| {

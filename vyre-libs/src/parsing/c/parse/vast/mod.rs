@@ -63,7 +63,7 @@ pub use typedef_ann::{
 // single pass, move it into that pass instead of growing this shared prelude.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::harness::OpEntry;
+use crate::fixture_catalog::OpEntry;
 use vyre_primitives::predicate::node_kind;
 
 pub use super::vast_kinds::{

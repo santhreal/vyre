@@ -2,7 +2,7 @@ use super::*;
 use vyre_primitives::hash::fnv1a::fnv1a32;
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_extract_functions",
         build: || c11_extract_functions(
             "tok_types", "paren_pairs", "brace_pairs", Expr::u32(6), "out_functions", "out_counts"
@@ -14,7 +14,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_extract_calls",
         build: || c11_extract_calls(
             "tok_types", "paren_pairs", "functions", Expr::u32(9), Expr::u32(1), "out_calls", "out_counts"
@@ -26,7 +26,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c11_build_call_graph",
         build: || c11_build_call_graph("calls", "fn_hashes", "tok_starts", "tok_lens", "haystack", Expr::u32(1), Expr::u32(1), Expr::u32(6), "out_edges", "out_counts"),
         test_inputs: Some(call_graph_inputs),

@@ -7,7 +7,7 @@ use super::topk_selection::{
     copy_top_k_indices, init_top_k_slots, insert_top_k_candidate, BEST_IDXS, BEST_VALS,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Build a Program that finds the indices of the `k` largest elements in `input`.
 /// `input`: `n`, `output_indices`: `k`.
@@ -127,7 +127,7 @@ mod tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::top_k",
         build: || top_k("input", "output", 8, 2),
         test_inputs: Some(|| {

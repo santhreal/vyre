@@ -6,7 +6,7 @@
 //! Delegates the executable checksum body to `vyre-primitives`; this Tier-3
 //! module owns only scoped buffer naming, provenance, and harness registration.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::hash::adler32::{adler32_program, ADLER32_OP_ID};
 
 #[cfg(test)]
@@ -34,7 +34,7 @@ fn cpu_ref(input: &[u8]) -> u32 {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || adler32("input", "out", 3),
         test_inputs: Some(|| {

@@ -4,7 +4,7 @@
 //! `v = β₂*v + (1-β₂)*g²`
 //! `θ = θ * (1 - lr*wd) - lr * m̂ / (√v̂ + ε)`
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
@@ -98,7 +98,7 @@ pub fn adamw_step(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || adamw_step("params", "grads", "m", "v", 2, 0.001, 0.9, 0.999, 1e-8, 0.01),
         test_inputs: Some(|| {

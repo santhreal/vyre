@@ -7,7 +7,7 @@
 //! buffers in row-major layout; kernel is length-9 F32 in
 //! row-major layout (`kernel[ky*3 + kx]`).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -116,7 +116,7 @@ pub fn conv2d_3x3_direct(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             conv2d_3x3_direct("input", "kernel", "output", 4, 4).unwrap_or_else(|error| {

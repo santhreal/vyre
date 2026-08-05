@@ -14,7 +14,7 @@
 //! The decision substrate lives beside this primitive once the
 //! profiling hooks are wired.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 use crate::test_support::byte_pack::f32_bytes;
@@ -101,7 +101,7 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {

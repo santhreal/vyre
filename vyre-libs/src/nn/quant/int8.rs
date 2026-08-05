@@ -3,7 +3,7 @@
 //! Unpack: `x = packed * scale[row]` (F32 output).
 //! Pack: mask to 8 bits (U32→U32).
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -78,7 +78,7 @@ pub fn int8_pack(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: UNPACK_OP_ID,
         build: || int8_unpack("packed", "scales", "output", 4, 2),
         test_inputs: Some(|| {
@@ -100,7 +100,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: PACK_OP_ID,
         build: || int8_pack("input", "output", 4),
         test_inputs: Some(|| {

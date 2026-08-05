@@ -27,7 +27,7 @@
 //! [`AnchoredWindowValidator`] extractions to regions, one source of truth for
 //! the walk semantics.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use vyre_primitives::matching::CompiledDfa;
 

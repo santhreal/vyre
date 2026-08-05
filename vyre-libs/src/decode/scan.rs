@@ -1,6 +1,6 @@
 //! Shared decode-to-DFA scan bodies.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 const ALPHABET_SIZE: u32 = 256;
 

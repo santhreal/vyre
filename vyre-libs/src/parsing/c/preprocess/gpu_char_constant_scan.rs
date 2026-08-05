@@ -33,7 +33,7 @@
 //!     was scanned; `0` if no constant at this position OR it was
 //!     malformed (unterminated, embedded newline, empty `''`).
 
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
 mod abi;
 mod builder;

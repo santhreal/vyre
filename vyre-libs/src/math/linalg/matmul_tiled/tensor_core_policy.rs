@@ -1,6 +1,6 @@
 //! Tensor-core path selection for tiled matmul.
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 
 use super::shape::MatrixShape;
 

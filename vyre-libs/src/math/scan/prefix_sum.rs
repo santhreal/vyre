@@ -4,7 +4,7 @@
 //! workgroup scan for one-block inputs and the multi-block scan for larger
 //! buffers.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::math::prefix_scan::{prefix_scan_with_op_id, ScanKind};
 use vyre_primitives::reduce::multi_block_prefix_scan::multi_block_prefix_scan_sum_u32;
 
@@ -22,7 +22,7 @@ pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
         return crate::builder::invalid_output_program(
             OP_ID,
             output,
-            vyre::ir::DataType::U32,
+            vyre_foundation::ir::DataType::U32,
             "Fix: scan_prefix_sum requires n > 0.".to_string(),
         );
     }
@@ -44,7 +44,7 @@ fn wrap_large_scan_program(program: Program) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || scan_prefix_sum("input", "output", 4),
         test_inputs: Some(|| vec![vec![
@@ -62,7 +62,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use crate::test_support::byte_pack::{bytes_to_u32 as decode_u32_words, u32_bytes};
-    use vyre::ir::{BufferAccess, Expr, Node};
+    use vyre_foundation::ir::{BufferAccess, Expr, Node};
     use vyre_reference::value::Value;
 
     /// Run `scan_prefix_sum` through the reference interpreter and return the
@@ -294,7 +294,7 @@ mod tests {
 
     fn expr_is_invocation_zero(expr: &Expr) -> bool {
         match expr {
-            Expr::BinOp { op, left, right } if *op == vyre::ir::BinOp::Eq => {
+            Expr::BinOp { op, left, right } if *op == vyre_foundation::ir::BinOp::Eq => {
                 matches!(
                     (&**left, &**right),
                     (Expr::InvocationId { axis: 0 }, Expr::LitU32(0))

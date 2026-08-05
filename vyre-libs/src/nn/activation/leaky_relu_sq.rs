@@ -4,7 +4,7 @@
 //! followed by squaring (`mul self`). Used in the Parameter Golf
 //! recipe as the MLP activation: hidden = leaky_relu_sq(linear(x)).
 
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::nn::leaky_relu_sq";
 
@@ -27,7 +27,7 @@ pub fn leaky_relu_sq(input: &str, output: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || leaky_relu_sq("input", "output", 4),
         test_inputs: Some(|| {

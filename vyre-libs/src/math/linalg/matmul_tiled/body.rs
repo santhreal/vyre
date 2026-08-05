@@ -1,7 +1,7 @@
 //! Cooperative inner kernel body shared by the plain and bias-fused
 //! tiled matmul variants.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::shape::{in_output_bounds, MatrixShape, TileShape};
 use super::tile_coords::{bind_output_tile_coordinates, OutputTileCoordNames};

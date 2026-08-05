@@ -7,7 +7,7 @@ use super::program_helpers::{
 use super::scratch::{prepare_filter_scratch, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_primitives::parsing::line_splice_classify::line_splice_classify_u8;
 
 #[derive(Default)]

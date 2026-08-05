@@ -369,7 +369,7 @@ fn parse_u32_array(value: &str, key: &str, row_no: usize) -> Result<Vec<u32>, St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::soundness::SoundnessTagged;
+    use vyre_foundation::soundness::SoundnessTagged;
 
     const EXPECTED_BITSET_PREDICATE_COUNT: usize = 10;
 
@@ -458,7 +458,7 @@ mod tests {
 
     #[test]
     fn tier_b_soundness_rows_match_marker_types() {
-        let exact = vyre::soundness::Soundness::Exact;
+        let exact = vyre_foundation::soundness::Soundness::Exact;
         for (op_id, soundness) in [
             (
                 super::super::auth_check_dominates::OP_ID,

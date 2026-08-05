@@ -10,7 +10,7 @@
 //! tells the scheduler which pages to fetch.
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_primitives::nn::quest_paging_passes::{
     quest_score_pages_body, quest_select_top_k_body, quest_zero_fill_body, QUEST_SCORE_PAGES_OP_ID,
@@ -89,7 +89,7 @@ pub fn quest_paging(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || quest_paging("q", "meta", "scores", "io", 4, 2, 2),
         test_inputs: Some(|| {

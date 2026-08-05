@@ -8,7 +8,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::helpers::{
     ascii, byte_at_or_zero, byte_eq, byte_load, is_digit, is_ident_continue, is_ident_start,

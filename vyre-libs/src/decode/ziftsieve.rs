@@ -5,7 +5,7 @@
 //! scoped buffer names, fixture registration, and stable public exports for
 //! decode-to-scan pipelines.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::decode::ziftsieve::ziftsieve_literal_copy_with_op_id;
 
 // CPU parity oracle: re-exported only for parity tests / the `cpu-parity`

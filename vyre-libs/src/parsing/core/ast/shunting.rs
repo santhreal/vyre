@@ -4,7 +4,7 @@ use crate::parsing::core::ast::node::*;
 use crate::region::wrap_anonymous;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 mod emit;
 mod operator;
@@ -252,7 +252,7 @@ fn ast_shunting_yard_program(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ast_shunting_yard_with_capacity(
             "tok_types", "statements", Expr::u32(100),

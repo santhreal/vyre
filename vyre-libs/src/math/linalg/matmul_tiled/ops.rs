@@ -1,6 +1,6 @@
 //! Public cooperative tiled matmul builders and Cat-A wrappers.
 
-use vyre::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 use crate::builder::{check_tensors, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
@@ -332,7 +332,7 @@ pub fn matmul_bias_tiled(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::matmul_tiled",
         build: || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
         test_inputs: Some(|| {
@@ -349,7 +349,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::math::matmul_bias_tiled",
         build: || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
         test_inputs: Some(|| {

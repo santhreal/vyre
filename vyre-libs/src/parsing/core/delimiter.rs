@@ -7,7 +7,7 @@
 //! Parser dialects (`parse-c`, `parse-rust`, `parse-go`,
 //! `parse-python` for f-strings) consume the exact same scanner.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use crate::region::tag_program;
 use vyre_primitives::matching::bracket_match::bracket_match as primitive_bracket_match;
@@ -73,7 +73,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || bracket_match("kinds", "stack", "match_pairs", 4, 4),
         test_inputs: Some(fixture_inputs),
@@ -83,7 +83,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: CORE_DELIMITER_OP_ID,
         build: || {
             core_delimiter_match("tok_types", "tok_depths", 8, 12, 13)

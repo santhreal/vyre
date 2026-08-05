@@ -3,7 +3,7 @@
 //! Category A composition  -  element-wise. Used in the Parameter Golf
 //! recipe to bound logits before cross-entropy loss (default cap=30.0).
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
@@ -49,7 +49,7 @@ pub fn logit_softcap(input: &str, output: &str, n: u32, cap: f32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || logit_softcap("input", "output", 4, 30.0),
         test_inputs: Some(|| {

@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub(super) const GPU_FILTER_WORKGROUP: [u32; 3] = [256, 1, 1];
 

@@ -4,7 +4,7 @@
 //!
 //! Category A  -  broadcast mul. Recipe uses gain_init=5.25.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -98,7 +98,7 @@ pub fn qk_gain(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || qk_gain("q_in", "q_out", "gain", 2, 1, 2),
         test_inputs: Some(|| {

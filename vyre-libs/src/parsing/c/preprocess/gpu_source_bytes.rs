@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum SourceByteLayout {

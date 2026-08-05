@@ -8,7 +8,7 @@
 //! The default builder maps one invocation to one query row. The
 //! scalar row-loop reference remains available through [`attention_reference`].
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_primitives::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,
@@ -609,7 +609,7 @@ fn attention_reference_program(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::attention",
         build: || attention("q", "k", "v", "out", 2, 4),
         test_inputs: Some(|| {
@@ -634,7 +634,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: REFERENCE_OP_ID,
         build: || attention_reference("q", "k", "v", "out", 2, 2),
         test_inputs: Some(|| {

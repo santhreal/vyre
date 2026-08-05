@@ -1,6 +1,6 @@
 //! GPU DEFLATE stored-block decode composition.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
@@ -280,7 +280,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         OP_ID,
         || inflate_stored_block("input", "output", 10),
         Some(fixture_inputs),

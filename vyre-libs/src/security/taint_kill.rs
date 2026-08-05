@@ -15,7 +15,7 @@
 //! Soundness: ``Exact``. The set difference
 //! is bit-precise on every word; no over- or under-approximation.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::bitset::and_not::bitset_and_not;
 use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
@@ -53,9 +53,9 @@ pub(crate) fn cpu_ref(frontier_in: &[u32], kill_set: &[u32]) -> Vec<u32> {
 /// Marker type for the taint_kill dataflow primitive.
 pub struct TaintKill;
 
-impl vyre::soundness::SoundnessTagged for TaintKill {
-    fn soundness(&self) -> vyre::soundness::Soundness {
-        vyre::soundness::Soundness::Exact
+impl vyre_foundation::soundness::SoundnessTagged for TaintKill {
+    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+        vyre_foundation::soundness::Soundness::Exact
     }
 }
 

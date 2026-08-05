@@ -1,4 +1,4 @@
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(crate) fn node_count(num_tokens: &Expr) -> u32 {
     match num_tokens {

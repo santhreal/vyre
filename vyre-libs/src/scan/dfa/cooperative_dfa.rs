@@ -4,7 +4,7 @@
 //! subgroup forward DFA state with [`Expr::SubgroupShuffle`] instead of
 //! replaying the whole prefix independently.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -14,7 +14,7 @@ const ALPHABET_SIZE: u32 = 256;
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.
 // Was a private inline copy with identical body - removed so the
 // LE-byte packing format has a single source of truth.
-use crate::scan::dispatch_io::pack_u32_slice as pack_u32;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 fn correction_lane(local_lane: Expr, offset: u32) -> Expr {
     Expr::select(
@@ -230,7 +230,7 @@ fn fixture_expected_output() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         OP_ID,
         || {
             let (_, compiled, _) = fixture_case();

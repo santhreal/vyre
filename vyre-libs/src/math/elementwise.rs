@@ -5,7 +5,7 @@
 
 use crate::builder::{build_indexed_map, BuildOptions};
 use crate::tensor_ref::{TensorRef, TensorRefError};
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 /// Right-hand side source for an elementwise F32 multiply.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -123,7 +123,7 @@ pub fn c11_lexer_regular_sparse_no_directives_no_backscan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::DataType;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn u8_haystack_entrypoint_declares_runtime_sized_raw_byte_source() {

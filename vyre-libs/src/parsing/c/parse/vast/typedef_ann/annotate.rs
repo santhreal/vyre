@@ -142,10 +142,6 @@ pub(super) fn c11_annotate_typedef_names_impl(
     decl_contexts: Option<&str>,
     visible_type: Option<&str>,
 ) -> Program {
-    // The phases below are separate registered ops, reached through
-    // `Expr::Call`, so the returned program only inlines and validates once
-    // this crate's dialect is the process lookup.
-    crate::dialect_init::ensure_ops_resolvable();
     let t = Expr::InvocationId { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
 

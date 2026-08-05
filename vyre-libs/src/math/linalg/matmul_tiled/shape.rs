@@ -1,7 +1,7 @@
 //! Geometry helpers shared by the plain and bias-fused tiled matmul
 //! variants.
 
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 use crate::tensor_ref::TensorRefError;
 

@@ -1,6 +1,6 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Topological CFG Assembly (Agent A - Frontend)
 ///
@@ -100,7 +100,7 @@ pub fn ast_cfg_blocks(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::ast_cfg_blocks",
         build: || ast_cfg_blocks(
             "tok_types", "out_scope_parents", "statements",

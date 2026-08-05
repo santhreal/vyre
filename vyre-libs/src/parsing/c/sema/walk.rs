@@ -4,7 +4,7 @@ use super::scan::{
     emit_reverse_unmatched_lbrace_scan,
 };
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 /// Resolve the enclosing scope id and parent scope id for each token slot.
 ///

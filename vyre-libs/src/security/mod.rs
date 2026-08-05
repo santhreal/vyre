@@ -40,7 +40,7 @@ macro_rules! define_bitset_and_security_op {
     ) => {
         #[doc = $doc]
         pub mod $module {
-            use vyre::ir::Program;
+            use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and::bitset_and;
             use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
@@ -68,9 +68,9 @@ macro_rules! define_bitset_and_security_op {
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
             pub struct $marker;
 
-            impl vyre::soundness::SoundnessTagged for $marker {
-                fn soundness(&self) -> vyre::soundness::Soundness {
-                    vyre::soundness::Soundness::Exact
+            impl vyre_foundation::soundness::SoundnessTagged for $marker {
+                fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+                    vyre_foundation::soundness::Soundness::Exact
                 }
             }
 
@@ -102,7 +102,7 @@ macro_rules! define_bitset_and_not_security_op {
     ) => {
         #[doc = $doc]
         pub mod $module {
-            use vyre::ir::Program;
+            use vyre_foundation::ir::Program;
             use vyre_primitives::bitset::and_not::bitset_and_not;
             use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
@@ -130,9 +130,9 @@ macro_rules! define_bitset_and_not_security_op {
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
             pub struct $marker;
 
-            impl vyre::soundness::SoundnessTagged for $marker {
-                fn soundness(&self) -> vyre::soundness::Soundness {
-                    vyre::soundness::Soundness::Exact
+            impl vyre_foundation::soundness::SoundnessTagged for $marker {
+                fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+                    vyre_foundation::soundness::Soundness::Exact
                 }
             }
 

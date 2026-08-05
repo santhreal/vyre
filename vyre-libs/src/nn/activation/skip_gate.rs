@@ -5,7 +5,7 @@
 //! Category A composition  -  sigmoid + mul + add. Used in the recipe
 //! for U-Net skip connections between encoder and decoder layers.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
@@ -73,7 +73,7 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || skip_gate("gate", "branch", "skip", "output", 2),
         test_inputs: Some(|| {

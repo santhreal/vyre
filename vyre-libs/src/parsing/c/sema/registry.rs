@@ -6,7 +6,7 @@ use crate::parsing::c::sema::{
 use crate::parsing::c::source_bytes::source_haystack_words;
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[cfg(any(test, feature = "cpu-parity"))]
 mod reference;

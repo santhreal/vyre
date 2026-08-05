@@ -16,7 +16,7 @@
 //! because the activation is element-wise and depends only on the
 //! per-output-row accumulator value.
 
-use vyre::ir::{DataType, Program};
+use vyre_foundation::ir::{DataType, Program};
 
 use super::fused_activation::linear_fused_activation;
 use crate::nn::activation::silu::silu_expr;
@@ -51,7 +51,7 @@ pub fn linear_silu(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             linear_silu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {

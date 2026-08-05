@@ -1,6 +1,6 @@
 [package]
 name = "vyre-libs"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -72,29 +72,16 @@ rule = ["dep:regex"]
 "crypto-fnv" = ["hash"]
 "crypto-blake3" = ["hash"]
 "visual" = []
-# rust-parser excluded until lex/parse WIP is green (see ROADMAP rust frontend)
 "parsing" = ["c-parser", "go-parser", "python-parser"]
-# `parsing::c` modules import from `crate::scan::dispatch_io` for u32
-# packing helpers; the `scan` module itself is gated on the matching
-# triple, so `c-parser` MUST pull the same triple or the parsing source
-# fails to resolve `crate::scan` at consumer build time. (Reproduced
-# 2026-05-23 when vyre-frontend-c built with just `c-parser` and 17
-# unresolved-import errors landed in vyre-libs.)
 "c-parser" = ["matching-substring", "matching-dfa", "matching-nfa"]
-"rust-parser" = ["matching-substring", "matching-dfa"]
 "go-parser" = []
 "python-parser" = []
 "test-fixtures" = []
 security = []
-"self-substrate" = []
 
 [dependencies]
-vyre.workspace = true
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-harness.workspace = true
 vyre-spec.workspace = true
-vyre-driver.workspace = true
-vyre-self-substrate = { workspace = true }
 vyre-primitives = { workspace = true, features = ["text", "matching", "decode", "math", "nn", "hash", "parsing", "graph", "bitset", "reduce", "label", "predicate", "fixpoint", "nfa", "inventory-registry", "geom", "opt", "topology", "visual"] }
 smallvec.workspace = true
 inventory.workspace = true
@@ -111,6 +98,7 @@ rayon.workspace = true
 bytemuck.workspace = true
 
 [dev-dependencies]
+vyre.workspace = true
 # Parity tests import the vyre-primitives CPU reference oracles, which are gated
 # behind `cpu-parity`. Enabling it here (dev-dep only) turns it on for vyre-libs'
 # own test/bench builds without leaking the oracles into production (resolver 2).
@@ -126,6 +114,7 @@ vyre-driver = { path = "../vyre-driver" }
 vyre-reference = { path = "../vyre-reference" }
 proptest.workspace = true
 tempfile.workspace = true
+sha2.workspace = true
 criterion.workspace = true
 naga.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): see vyre-driver-wgpu. cargo strips path-only
@@ -164,26 +153,6 @@ name = "sweep_hash_crc32_reference_matrix"
 path = "tests/sweep_hash_crc32_reference_matrix.rs"
 required-features = ["hash"]
 
-# Rust frontend oracle tests import `vyre_libs::parsing::rust`, which is gated
-# behind `rust-parser`. Register them with `required-features` (matching the
-# sweep tests above) so a package-scoped `cargo test -p vyre-libs` cleanly skips
-# them instead of failing to compile, and so they build+run whenever the feature
-# is enabled. Without this entry the auto-discovered tests broke the per-crate
-# gate and only ran via workspace feature unification.
-[[test]]
-name = "rust_lower_exec_oracle"
-path = "tests/rust_lower_exec_oracle.rs"
-required-features = ["rust-parser"]
-
-[[test]]
-name = "rust_sema_borrow_oracle"
-path = "tests/rust_sema_borrow_oracle.rs"
-required-features = ["rust-parser"]
-
-[[test]]
-name = "rust_gpu_lexer_plan"
-path = "tests/rust_gpu_lexer_plan.rs"
-required-features = ["rust-parser"]
 
 # C-frontend oracle tests import `vyre_libs::parsing::c`, gated behind
 # `c-parser`. Same remedy as the rust oracles above: register each with
@@ -380,3 +349,8 @@ required-features = ["c-parser"]
 name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "qwen35_config_contract"
+path = "tests/qwen35_config_contract.rs"
+required-features = ["nn-inference"]

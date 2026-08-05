@@ -2,7 +2,7 @@ use super::super::*;
 use super::*;
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::parse::gnu_builtin_catalog::GNU_BUILTIN_NAME_KINDS;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(crate) fn c_effective_expression_prev_kind(prev_kind: Expr, prev_prev_kind: Expr) -> Expr {
     let parenthesized_type_operand = Expr::and(

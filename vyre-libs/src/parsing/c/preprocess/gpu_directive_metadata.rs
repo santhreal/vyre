@@ -65,7 +65,7 @@ use crate::parsing::c::lex::tokens::{
     TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT, TOK_PP_LINE, TOK_PP_NULL,
     TOK_PP_PRAGMA, TOK_PP_SCCS, TOK_PP_UNDEF, TOK_PP_WARNING, TOK_PREPROC,
 };
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-libs::parsing::c::preprocess::gpu_directive_metadata";

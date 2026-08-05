@@ -2,7 +2,7 @@ use crate::atomic_collect_u32;
 use crate::parsing::c::lex::tokens::{
     TOK_COLON, TOK_GNU_ASM, TOK_GOTO, TOK_LPAREN, TOK_RPAREN, TOK_STRING, TOK_VOLATILE,
 };
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 /// Front-end opcode for a GNU inline-asm AST row.
 pub const GNU_INLINE_ASM_OPCODE: u32 = 0x4153_4D00;
@@ -154,7 +154,7 @@ pub fn c11_gnu_inline_asm_pass(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || c11_gnu_inline_asm_pass("ast", "out_asm", Expr::u32(4)),
         // ast: 4 u32 opcodes including one ASM tag (0x41534D00) at

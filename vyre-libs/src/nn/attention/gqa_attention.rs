@@ -2,7 +2,7 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_primitives::nn::attention_passes::{
     attention_max_pass_with_bases, attention_sum_pass_with_bases, attention_write_pass_with_bases,
@@ -138,7 +138,7 @@ pub fn gqa_attention(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || {
             gqa_attention("q", "k", "v", "out", 2, 1, 2, 2)

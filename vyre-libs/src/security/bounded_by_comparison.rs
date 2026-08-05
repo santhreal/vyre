@@ -14,7 +14,7 @@
 //! then a bound-check intersects to prove the access is covered
 //! by some dominating bound-check."
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
@@ -47,7 +47,7 @@ pub fn bounded_by_comparison(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || bounded_by_comparison(ProgramGraphShape::new(4, 4), "fin", "fout"),
         test_inputs: Some(|| {
@@ -83,7 +83,7 @@ inventory::submit! {
     // AUDIT_2026-04-24 F-BBC-01: raised from 64 to 4096 so deep
     // dominance trees don't silently truncate; same reasoning as
     // dominator_tree.
-    crate::harness::ConvergenceContract {
+    crate::fixture_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }
@@ -180,7 +180,7 @@ mod tests {
             node_count
         );
 
-        let contract = crate::harness::convergence_contract(OP_ID)
+        let contract = crate::fixture_catalog::convergence_contract(OP_ID)
             .expect("Fix: bounded_by_comparison must have a ConvergenceContract");
         assert!(
             contract.max_iterations >= node_count,

@@ -1,5 +1,5 @@
 use crate::compiler::atomic_collect::atomic_collect_u32;
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::parsing::opt_stack_layout_generation";
 
@@ -29,7 +29,7 @@ pub fn opt_stack_layout_generation(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || opt_stack_layout_generation("regs", "spills", Expr::u32(4)),
         // 4 virtual registers: two sit in the 0..=15 physical window,

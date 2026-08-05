@@ -10,7 +10,7 @@ use crate::parsing::python::{
     CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS, MAX_DOTTED_SEGMENTS,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Extract Python call sites plus top-level keyword arguments.
 #[must_use]
@@ -309,7 +309,7 @@ pub fn python312_extract_calls(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::python312_extract_calls",
         build: || python312_extract_calls(
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16

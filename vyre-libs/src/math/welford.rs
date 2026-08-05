@@ -4,7 +4,7 @@
 //! the sum and sum-of-squares stably.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::math::welford_sum_of_squares";
 const EMPTY_REDUCTION_FIX: &str = "Fix: welford_sum_of_squares n=0 is invalid; pass at least one input element or route empty reductions to a caller-defined identity.";

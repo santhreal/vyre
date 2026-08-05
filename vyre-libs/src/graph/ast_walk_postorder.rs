@@ -4,7 +4,7 @@
 //! first-child / next-sibling tree. The legacy two-argument helper is
 //! retained for callers that explicitly need the old spine sequence.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::vast_tree_walk;
 
 use crate::region::{tag_program, wrap_anonymous};
@@ -50,7 +50,7 @@ pub fn ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ast_walk_postorder_nodes("nodes", "out", 6, 8),
         test_inputs: Some(|| {
@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(post, rev);
         let p = ast_walk_postorder("out", 4);
         assert!(
-            vyre::validate(&p).is_empty(),
+            vyre_foundation::ir::validate(&p).is_empty(),
             "postorder spine program must validate"
         );
     }
@@ -100,6 +100,6 @@ mod tests {
         let order = vyre_foundation::vast::walk_postorder_indices(&node_region, 6, 128).unwrap();
         assert_eq!(order, vec![4, 1, 2, 5, 3, 0]);
         let p = ast_walk_postorder_nodes("nodes", "out", 6, 8);
-        assert!(vyre::validate(&p).is_empty());
+        assert!(vyre_foundation::ir::validate(&p).is_empty());
     }
 }

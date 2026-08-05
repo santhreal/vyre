@@ -45,7 +45,7 @@
 //! overhead across N^2 / 4 sub-matmuls, so the addition cost is a
 //! fixed fraction of the multiplication savings.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -163,7 +163,7 @@ pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || matmul_strassen_2x2("a", "b", "c"),
         test_inputs: Some(|| {

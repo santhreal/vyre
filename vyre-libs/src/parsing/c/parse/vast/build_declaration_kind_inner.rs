@@ -18,7 +18,7 @@
 #![allow(missing_docs)]
 
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::build::{
     emit_declaration_kind_result_assignment, emit_identifier_source_hash_for_index,

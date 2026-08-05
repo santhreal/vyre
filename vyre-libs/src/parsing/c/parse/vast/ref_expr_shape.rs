@@ -7,7 +7,7 @@
 #![allow(missing_docs)] // Internal oracle helpers are documented at the owning module boundary.
 #![allow(deprecated)]
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 use super::expr_shape::*;
 use super::ref_decode_err::*;

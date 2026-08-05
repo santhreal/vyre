@@ -4,7 +4,7 @@
 //! Category A composition. Recipe rotates first 16 of 64 head dims.
 //! Standard RoPE: `[x1*cos - x2*sin, x1*sin + x2*cos]` on pairs.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -129,7 +129,7 @@ pub fn partial_rope(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2),
         test_inputs: Some(|| {

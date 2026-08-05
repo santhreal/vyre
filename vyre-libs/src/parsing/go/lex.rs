@@ -1,5 +1,5 @@
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Sparse-token sentinel: non-token byte positions stay zeroed.
 pub const TOK_NONE: u32 = 0;

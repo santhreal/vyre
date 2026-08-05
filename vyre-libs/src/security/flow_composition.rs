@@ -1,4 +1,4 @@
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
 use vyre_primitives::bitset::and::bitset_and;

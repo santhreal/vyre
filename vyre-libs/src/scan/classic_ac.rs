@@ -11,7 +11,7 @@
 //! built in one BFS pass using dynamic programming on the failure
 //! links.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte;
@@ -52,7 +52,10 @@ pub use bounded_ranges::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 
-pub(crate) use count_program::{ascii_case_variants, classic_ac_dfa_buffer_decls};
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub(crate) use bounded_ranges::regex_exact_ranges_program_ext;
+pub use count_program::ascii_case_variants;
+pub(crate) use count_program::classic_ac_dfa_buffer_decls;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,

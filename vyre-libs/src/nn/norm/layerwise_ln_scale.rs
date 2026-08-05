@@ -3,7 +3,7 @@
 //! Category A  -  element-wise mul by per-dim learnable scale.
 
 use crate::{f32_elementwise_mul, F32MulRhs};
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 const OP_ID: &str = "vyre-libs::nn::layerwise_ln_scale";
 
@@ -14,7 +14,7 @@ pub fn layerwise_ln_scale(input: &str, scale: &str, output: &str, n: u32) -> Pro
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || layerwise_ln_scale("input", "scale", "output", 4),
         test_inputs: Some(|| {

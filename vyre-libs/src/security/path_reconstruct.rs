@@ -1,7 +1,7 @@
 //! `path_reconstruct`  -  Tier-3 shim over
 //! [`vyre_primitives::graph::path_reconstruct`].
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::graph::path_reconstruct::path_reconstruct as primitive_path_reconstruct;
 
 const OP_ID: &str = "vyre-libs::security::path_reconstruct";
@@ -35,7 +35,7 @@ pub fn path_reconstruct(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || path_reconstruct("parent", "target", "path_out", "path_len", 4),
         test_inputs: Some(|| {

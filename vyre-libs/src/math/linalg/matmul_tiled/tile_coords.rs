@@ -1,6 +1,6 @@
 //! Output-tile coordinate binding shared by cooperative and tensor-core bodies.
 
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 use super::shape::{MatrixShape, TileShape};
 

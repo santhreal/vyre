@@ -5,7 +5,7 @@
 //! variants cannot drift.
 
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::f32_stability::flush_tiny;
 
 /// Build a Muon-style F32 optimizer step.

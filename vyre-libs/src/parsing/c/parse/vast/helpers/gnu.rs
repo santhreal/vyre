@@ -1,7 +1,7 @@
 use super::super::*;
 use super::tokens::balanced_or;
 use crate::parsing::c::lex::tokens::*;
-use vyre::ir::Expr;
+use vyre_foundation::ir::Expr;
 
 pub(crate) fn is_gnu_typeof_symbol_hash(symbol_hash: Expr) -> Expr {
     balanced_or(

@@ -16,7 +16,7 @@
 //!
 //! Dims beyond rope_dims: grad_x = grad_out (identity).
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -81,7 +81,7 @@ pub fn partial_rope_backward(
     let grad_odd = Expr::add(
         Expr::mul(
             Expr::UnOp {
-                op: vyre::ir::UnOp::Negate,
+                op: vyre_foundation::ir::UnOp::Negate,
                 operand: Box::new(dy_even),
             },
             sin_val,
@@ -139,7 +139,7 @@ pub fn partial_rope_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || partial_rope_backward("grad_out", "cos", "sin", "grad_in", 1, 1, 4, 2),
         test_inputs: Some(|| {

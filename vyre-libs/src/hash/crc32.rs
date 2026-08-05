@@ -8,7 +8,7 @@
 //! `input[i]` packs one byte per u32 slot (low 8 bits). `out[0]`
 //! receives the final CRC-32.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::hash::crc32::{crc32_program, CRC32_OP_ID};
 
 #[cfg(test)]
@@ -36,7 +36,7 @@ fn cpu_ref(input: &[u8]) -> u32 {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || crc32("input", "out", 3),
         test_inputs: Some(|| {
@@ -129,10 +129,10 @@ mod tests {
     #[test]
     fn wrapper_delegates_to_primitive_crc32_region() {
         let program = crc32("input", "out", 3);
-        let [vyre::ir::Node::Region { body, .. }] = program.entry() else {
+        let [vyre_foundation::ir::Node::Region { body, .. }] = program.entry() else {
             panic!("expected one top-level CRC32 wrapper region");
         };
-        let [vyre::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
+        let [vyre_foundation::ir::Node::Region { generator, .. }] = body.as_ref().as_slice() else {
             panic!("expected CRC32 wrapper to contain one primitive child region");
         };
         assert_eq!(generator.as_str(), CRC32_OP_ID);

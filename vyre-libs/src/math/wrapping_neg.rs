@@ -1,4 +1,4 @@
-use vyre::ir::{Expr, Program};
+use vyre_foundation::ir::{Expr, Program};
 
 const OP_ID: &str = "vyre-libs::math::wrapping_neg";
 
@@ -11,7 +11,7 @@ pub fn wrapping_neg(a: &str, out: &str, size: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || wrapping_neg("a", "out", 4),
         test_inputs: Some(|| {

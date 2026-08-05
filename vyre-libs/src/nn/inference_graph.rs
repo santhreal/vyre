@@ -3,7 +3,7 @@
 //! Builds the forward pass as a sequence of [`Program`]s, one per layer type.
 //! Each Program is a Category-A composition over existing `vyre-libs` primitives.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use super::{
     activation::embedding,
@@ -309,7 +309,7 @@ mod tests {
         for buf in rms.buffers() {
             assert_eq!(
                 buf.element,
-                vyre::ir::DataType::F32,
+                vyre_foundation::ir::DataType::F32,
                 "rms_norm uses F32 buffers"
             );
         }

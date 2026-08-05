@@ -28,7 +28,7 @@
 //! seeds the same transition table at the same origins and must produce the
 //! byte-identical match set this walk defines.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::CompiledDfa;
 

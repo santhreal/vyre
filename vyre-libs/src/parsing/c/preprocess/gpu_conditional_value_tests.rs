@@ -1,5 +1,5 @@
 use super::{gpu_if_expression, gpu_ifdef_value};
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 fn assert_program_shape(program: Program, buffers: usize) {
     assert_eq!(program.buffers().len(), buffers);

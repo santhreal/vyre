@@ -1,4 +1,4 @@
-use vyre::ir::{Expr, Node};
+use vyre_foundation::ir::{Expr, Node};
 
 pub(super) const BEST_VALS: &str = "best_vals";
 pub(super) const BEST_IDXS: &str = "best_idxs";
@@ -127,7 +127,7 @@ mod tests {
         copy_top_k_indices, copy_top_k_indices_and_normalized_weights, init_top_k_slots,
         insert_top_k_candidate,
     };
-    use vyre::ir::Expr;
+    use vyre_foundation::ir::Expr;
 
     #[test]
     fn generated_top_k_scaffold_sizes_are_stable() {

@@ -46,7 +46,7 @@ pub fn conv2d_3x3_decision(
     output: &str,
     h: u32,
     w: u32,
-) -> Result<vyre::ir::Program, String> {
+) -> Result<vyre_foundation::ir::Program, String> {
     const IM2COL_PIXEL_THRESHOLD: u32 = 4096; // 64x64
     let pixels = h.checked_mul(w).ok_or_else(|| {
         "Fix: conv2d_3x3_decision h*w overflows u32; reduce dimensions.".to_string()
@@ -63,14 +63,14 @@ pub fn conv2d_3x3_decision(
         // Best-effort hint: replace the wrapping Region's generator
         // with a name that signals "preferred for im2col routing".
         let entry = prog.entry().to_vec();
-        let new_entry: Vec<vyre::ir::Node> = entry
+        let new_entry: Vec<vyre_foundation::ir::Node> = entry
             .into_iter()
             .map(|node| match node {
-                vyre::ir::Node::Region {
+                vyre_foundation::ir::Node::Region {
                     body,
                     source_region,
                     ..
-                } => vyre::ir::Node::Region {
+                } => vyre_foundation::ir::Node::Region {
                     generator: "vyre-libs::math::conv::conv2d_3x3_im2col_preferred".into(),
                     source_region,
                     body,

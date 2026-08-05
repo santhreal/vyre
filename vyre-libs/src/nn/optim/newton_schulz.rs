@@ -5,7 +5,7 @@
 //!
 //! Used by Muon optimizer. This is a multi-pass matmul composition.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 use vyre_primitives::math::preconditioner::newton_schulz_poly5_f32;
 
 use crate::region::tag_program;
@@ -19,7 +19,7 @@ pub fn newton_schulz_5step(mat: &str, output: &str, rows: u32, cols: u32) -> Pro
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || newton_schulz_5step("mat", "output", 2, 2),
         test_inputs: Some(|| {
@@ -40,7 +40,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::{Expr, Node};
+    use vyre_foundation::ir::{Expr, Node};
 
     #[test]
     fn emitted_expression_tree_stays_linear_in_iterations() {
@@ -85,7 +85,7 @@ mod tests {
             | Node::Resume { .. }
             | Node::Return
             | Node::Barrier {
-                ordering: vyre::memory_model::MemoryOrdering::SeqCst,
+                ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
             }
             | Node::Opaque(_)
             | Node::Barrier { .. } => 0,

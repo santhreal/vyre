@@ -8,7 +8,7 @@ use super::topk_selection::{
     BEST_VALS,
 };
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
 /// Build a Program that computes softmax over `scores`, then returns the
 /// top-k indices and their normalized weights.
@@ -211,7 +211,7 @@ mod tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::nn::softmax_top_k",
         build: || softmax_top_k("scores", "indices", "weights", 8, 2),
         test_inputs: Some(softmax_top_k_fixture_inputs),

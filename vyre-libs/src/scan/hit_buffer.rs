@@ -4,7 +4,7 @@
 //! matching pipeline appends only the live tuples into a flat u32 buffer:
 //! `(rule_id, file_id, span_start, span_len)`.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs_vec, FusionError};
 
 use crate::region::wrap_anonymous;
@@ -264,7 +264,7 @@ fn compact_hits_expected_output() -> Vec<Vec<Vec<u8>>> {
 // Forwarding alias to the canonical packer in `scan::dispatch_io`.
 // Was a private inline copy with identical body - removed so the
 // LE-byte packing format has a single source of truth.
-use crate::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 
 #[cfg(test)]
 mod emit_then_compact_tests {
@@ -292,7 +292,7 @@ mod emit_then_compact_tests {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         EMIT_HIT_OP_ID,
         || emit_hit(
             "rule_id",
@@ -308,7 +308,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::fixture_catalog::OpEntry::new(
         COMPACT_HITS_OP_ID,
         || compact_hits("out_hits", "out_cursor", DEFAULT_MAX_HITS),
         Some(compact_hits_inputs),

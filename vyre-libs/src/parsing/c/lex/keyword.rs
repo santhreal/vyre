@@ -1,7 +1,7 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::c::source_bytes::{load_source_byte, source_haystack_words};
 use crate::region::wrap_anonymous;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 pub use vyre_primitives::hash::fnv1a::fnv1a32;
 
 /// C11 keyword table consumed by the GPU keyword promotion pass.
@@ -362,7 +362,7 @@ fn c_keyword_impl(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c_keyword",
         build: || {
             c_keyword(
@@ -393,7 +393,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: "vyre-libs::parsing::c_keyword_packed_haystack",
         build: || {
             c_keyword_packed_haystack(

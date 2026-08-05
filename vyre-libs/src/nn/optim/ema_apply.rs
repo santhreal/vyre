@@ -2,7 +2,7 @@
 //!
 //! Category A  -  element-wise weighted average. Recipe decay=0.9965.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 use vyre_primitives::nn::f32_stability::flush_tiny;
@@ -49,7 +49,7 @@ pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || ema_apply("ema", "theta", 4, 0.9),
         test_inputs: Some(|| {

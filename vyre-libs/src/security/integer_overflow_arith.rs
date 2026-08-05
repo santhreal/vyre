@@ -7,8 +7,8 @@
 
 use std::sync::Arc;
 
-use vyre::ir::model::expr::Ident;
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::csr_forward_traverse::bitset_words;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::integer_overflow_arith";
@@ -85,9 +85,9 @@ pub(crate) fn cpu_ref(
 
 /// Soundness marker for [`integer_overflow_arith`].
 pub struct IntegerOverflowArith;
-impl vyre::soundness::SoundnessTagged for IntegerOverflowArith {
-    fn soundness(&self) -> vyre::soundness::Soundness {
-        vyre::soundness::Soundness::Exact
+impl vyre_foundation::soundness::SoundnessTagged for IntegerOverflowArith {
+    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
+        vyre_foundation::soundness::Soundness::Exact
     }
 }
 

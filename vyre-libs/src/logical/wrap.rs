@@ -1,4 +1,4 @@
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
 
 /// Wrap a Tier-2.5 bitset primitive as a Tier-3 logical composition.

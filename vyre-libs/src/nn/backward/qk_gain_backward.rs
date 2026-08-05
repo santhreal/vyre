@@ -1,6 +1,6 @@
 //! Backward for `qk_gain`: `grad_q = grad_out * gain[h]`.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -53,7 +53,7 @@ pub fn qk_gain_backward(
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    crate::fixture_catalog::OpEntry {
         id: OP_ID,
         build: || qk_gain_backward("gain", "grad_out", "grad_q", 2, 1, 2),
         test_inputs: Some(|| {
