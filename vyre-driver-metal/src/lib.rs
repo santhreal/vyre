@@ -142,7 +142,7 @@ mod tests {
         let source = include_str!("runtime.rs");
         assert!(
             source.contains("resident_buffers: MetalResidentBufferTable")
-                && source.contains("resident_buffers: Arc::new(Mutex::new(BTreeMap::new()))")
+                && source.contains("resident_buffers: Arc::new(Mutex::new(HashMap::new()))")
                 && source.contains("resident_buffers: Arc::clone(&self.resident_buffers)")
                 && source.contains("fn dispatch_persistent_handles_timed(")
                 && source.contains("resolve_resident_resources_from_table")
@@ -1022,11 +1022,13 @@ mod tests {
                 program: &double_program,
                 resources: &first_resources,
                 grid_override: None,
+                workgroup_override: None,
             },
             ResidentDispatchStep {
                 program: &add_program,
                 resources: &second_resources,
                 grid_override: None,
+                workgroup_override: None,
             },
         ];
         let read_ranges = [ResidentReadRange {
@@ -1111,6 +1113,7 @@ mod tests {
             program: &increment_program,
             resources: &step_resources,
             grid_override: None,
+            workgroup_override: None,
         }];
         let read_ranges = [ResidentReadRange {
             resource: &state,
@@ -2042,7 +2045,7 @@ mod tests {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     #[test]
     fn compile_native_returns_a_working_compiled_pipeline() {
-        use vyre_driver::{DispatchConfig, VyreBackend};
+        use vyre_driver::DispatchConfig;
         use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
         let program = Program::wrapped(
@@ -2096,9 +2099,6 @@ mod tests {
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     #[test]
     fn metric_snapshot_poisoned_mutex_is_loud() {
-        use std::sync::Arc;
-        use vyre_driver::VyreBackend;
-
         let backend =
             acquire().expect("Fix: Apple Metal builds must acquire the system default MTLDevice.");
 

@@ -1,6 +1,6 @@
 //! Apple Metal.framework runtime implementation.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::c_void;
 use std::sync::{
     atomic::{AtomicU32, AtomicU64, Ordering},
@@ -8,8 +8,11 @@ use std::sync::{
 };
 use std::time::Instant;
 
-use metal::{Buffer, Device, MTLCommandBufferStatus, MTLResourceOptions, MTLSize, NSUInteger};
-use vyre_driver::backend::{private, BackendError};
+use metal::{
+    Buffer, CommandBuffer, ComputePipelineState, Device, MTLCommandBufferStatus,
+    MTLResourceOptions, MTLSize, NSUInteger,
+};
+use vyre_driver::backend::{private, BackendError, PendingDispatch};
 use vyre_driver::pipeline::{PipelineCacheIdentity, PipelineCacheMissReason};
 use vyre_driver::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, ResidentTransferInterval, ResidentTransferView,
@@ -415,7 +418,7 @@ impl MetalBackend {
         Ok(Self {
             device,
             queue,
-            resident_buffers: Arc::new(Mutex::new(BTreeMap::new())),
+            resident_buffers: Arc::new(Mutex::new(HashMap::new())),
             resident_owner: ResidentOwner::new()?,
             next_resident: AtomicU64::new(1),
             pipeline_cache: Mutex::new(BTreeMap::new()),
@@ -610,7 +613,8 @@ fn dispatch_planned_buffers_with_queue(
     pipeline: &metal::ComputePipelineState,
     buffers: Vec<PlannedBuffer>,
 ) -> Result<MetalDispatchResult, BackendError> {
-    let timing = submit_planned_buffers_with_queue(
+    let output_by_binding = output_layout_map(output_binding_layouts(program)?)?;
+    submit_planned_buffers_with_queue(
         device,
         queue,
         program,
@@ -618,18 +622,10 @@ fn dispatch_planned_buffers_with_queue(
         config,
         artifact,
         pipeline,
-        &buffers,
-    )?;
-    let outputs = collect_outputs(
-        &buffers,
-        &output_layout_map(output_binding_layouts(program)?)?,
-    )?;
-    enforce_actual_output_budget(config, &outputs)?;
-    Ok(MetalDispatchResult {
-        outputs,
-        enqueue_ns: timing.enqueue_ns,
-        wait_ns: timing.wait_ns,
-    })
+        buffers,
+        output_by_binding,
+    )?
+    .retire()
 }
 
 fn submit_planned_buffers_with_queue(
@@ -640,36 +636,37 @@ fn submit_planned_buffers_with_queue(
     config: &DispatchConfig,
     artifact: &vyre_emit_metal::MetalArtifact,
     pipeline: &metal::ComputePipelineState,
-    buffers: &[PlannedBuffer],
-) -> Result<MetalCommandTiming, BackendError> {
+    buffers: Vec<PlannedBuffer>,
+    output_by_binding: BTreeMap<u32, OutputBindingLayout>,
+) -> Result<MetalPendingCommand, BackendError> {
     let sizes_buffer = artifact
         .sizes_buffer_index
-        .map(|slot| new_buffer_sizes_buffer(device, slot, &artifact.bindings, buffers))
+        .map(|slot| new_buffer_sizes_buffer(device, slot, &artifact.bindings, &buffers))
         .transpose()?;
     let mut threadgroup_memory_lengths = Vec::new();
     threadgroup_memory_lengths
-            .try_reserve(artifact.threadgroup_memories.len())
-            .map_err(|error| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: Metal threadgroup memory length list could not reserve {} entries: {error}. Split the workgroup allocations.",
-                    artifact.threadgroup_memories.len()
-                ),
-            })?;
+        .try_reserve(artifact.threadgroup_memories.len())
+        .map_err(|error| BackendError::InvalidProgram {
+            fix: format!(
+                "Fix: Metal threadgroup memory length list could not reserve {} entries: {error}. Split the workgroup allocations.",
+                artifact.threadgroup_memories.len()
+            ),
+        })?;
     for memory in &artifact.threadgroup_memories {
         threadgroup_memory_lengths.push((
-                memory.threadgroup_index,
-                checked_ns_uint(
-                    usize::try_from(memory.aligned_byte_length).map_err(|error| {
-                        BackendError::InvalidProgram {
-                            fix: format!(
-                                "Fix: Metal threadgroup memory `{}` length {} cannot fit usize: {error}. Split the workgroup allocation.",
-                                memory.name, memory.aligned_byte_length
-                            ),
-                        }
-                    })?,
-                    "Metal threadgroup memory length",
-                )?,
-            ));
+            memory.threadgroup_index,
+            checked_ns_uint(
+                usize::try_from(memory.aligned_byte_length).map_err(|error| {
+                    BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: Metal threadgroup memory `{}` length {} cannot fit usize: {error}. Split the workgroup allocation.",
+                            memory.name, memory.aligned_byte_length
+                        ),
+                    }
+                })?,
+                "Metal threadgroup memory length",
+            )?,
+        ));
     }
     let workgroup_size = config.workgroup_override.unwrap_or(artifact.workgroup_size);
     let threads_per_group = metal_threadgroup_size(workgroup_size)?;
@@ -683,10 +680,10 @@ fn submit_planned_buffers_with_queue(
     let threadgroups = metal_grid_size(workgroups)?;
 
     let enqueue_start = Instant::now();
-    let command_buffer = queue.new_command_buffer();
+    let command_buffer = queue.new_command_buffer().to_owned();
     let encoder = command_buffer.new_compute_command_encoder();
     encoder.set_compute_pipeline_state(pipeline);
-    for planned in buffers {
+    for planned in &buffers {
         encoder.set_buffer(planned.metal_slot.into(), Some(&planned.buffer), 0);
     }
     if let Some((slot, buffer)) = sizes_buffer.as_ref() {
@@ -699,23 +696,21 @@ fn submit_planned_buffers_with_queue(
     encoder.dispatch_thread_groups(threadgroups, threads_per_group);
     encoder.end_encoding();
     command_buffer.commit();
-    let enqueue_ns = elapsed_ns(enqueue_start, "Metal command buffer enqueue")?;
-    let wait_start = Instant::now();
-    command_buffer.wait_until_completed();
-    let wait_ns = elapsed_ns(wait_start, "Metal command buffer wait")?;
-    let status = command_buffer.status();
-    if status != MTLCommandBufferStatus::Completed {
-        return Err(BackendError::DispatchFailed {
-            code: Some(status as i32),
-            message: format!(
-                "Metal command buffer finished with status {status:?} after {wait_ns} ns"
-            ),
-        });
-    }
-
-    Ok(MetalCommandTiming {
+    let enqueue_ns = match elapsed_ns(enqueue_start, "Metal command buffer enqueue") {
+        Ok(enqueue_ns) => enqueue_ns,
+        Err(error) => {
+            command_buffer.wait_until_completed();
+            return Err(error);
+        }
+    };
+    Ok(MetalPendingCommand {
+        command_buffer: Some(command_buffer),
+        buffers: Some(buffers),
+        output_by_binding,
+        config: config.clone(),
         enqueue_ns,
-        wait_ns,
+        _sizes_buffer: sizes_buffer,
+        _pipeline: pipeline.to_owned(),
     })
 }
 
@@ -723,7 +718,7 @@ impl MetalBackend {
     fn lock_resident_buffers(
         &self,
         operation: &'static str,
-    ) -> Result<MutexGuard<'_, BTreeMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
+    ) -> Result<MutexGuard<'_, HashMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
         lock_resident_buffer_table(&self.resident_buffers, operation)
     }
 
@@ -1326,6 +1321,16 @@ impl VyreBackend for MetalBackend {
         resources: &[Resource],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
+        self.dispatch_resident_async(program, resources, config)?
+            .await_timed_result()
+    }
+
+    fn dispatch_resident_async(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<Box<dyn PendingDispatch>, BackendError> {
         let started = Instant::now();
         validate_metal_dispatch_config(
             config,
@@ -1338,8 +1343,7 @@ impl VyreBackend for MetalBackend {
         let resolved = self.resolve_resident_resources(&base_plan, resources)?;
         let input_lengths = resident_input_lengths(&base_plan, &resolved)?;
         let binding_plan = BindingPlan::from_input_lengths(program, &input_lengths)?;
-        let output_layouts = output_binding_layouts(program)?;
-        let output_by_binding = output_layout_map(output_layouts)?;
+        let output_by_binding = output_layout_map(output_binding_layouts(program)?)?;
         let (_, artifact, pipeline) = self.compile_pipeline(program, config)?;
         let metal_slots = metal_slot_map(&artifact)?;
         let buffers = plan_resident_buffers(
@@ -1350,21 +1354,23 @@ impl VyreBackend for MetalBackend {
             &metal_slots,
             &artifact.bindings,
         )?;
-        let result = self.dispatch_planned_buffers(
+        self.record_planned_buffer_metrics(&buffers);
+        let command = submit_planned_buffers_with_queue(
+            &self.device,
+            &self.queue,
             program,
             &binding_plan,
             config,
             &artifact,
             &pipeline,
             buffers,
+            output_by_binding,
         )?;
-        Ok(TimedDispatchResult {
-            outputs: result.outputs,
-            wall_ns: elapsed_ns(started, "Metal resident timed dispatch")?,
-            device_ns: None,
-            enqueue_ns: Some(result.enqueue_ns),
-            wait_ns: Some(result.wait_ns),
-        })
+        Ok(Box::new(MetalPendingDispatch {
+            command,
+            metrics: Arc::clone(&self.metrics),
+            started,
+        }))
     }
 
     fn compile_native(
@@ -1406,7 +1412,7 @@ impl VyreBackend for MetalBackend {
     }
 }
 
-type MetalResidentBufferTable = Arc<Mutex<BTreeMap<ResidentHandle, MetalResidentBuffer>>>;
+type MetalResidentBufferTable = Arc<Mutex<HashMap<ResidentHandle, MetalResidentBuffer>>>;
 type MetalMetricCounters = Arc<MetalMetrics>;
 
 #[derive(Default)]
@@ -1433,9 +1439,123 @@ struct MetalDispatchResult {
     wait_ns: u64,
 }
 
-struct MetalCommandTiming {
+struct MetalPendingCommand {
+    command_buffer: Option<CommandBuffer>,
+    buffers: Option<Vec<PlannedBuffer>>,
+    output_by_binding: BTreeMap<u32, OutputBindingLayout>,
+    config: DispatchConfig,
     enqueue_ns: u64,
-    wait_ns: u64,
+    _sizes_buffer: Option<(u8, Buffer)>,
+    _pipeline: ComputePipelineState,
+}
+
+impl MetalPendingCommand {
+    fn is_ready(&self) -> bool {
+        self.command_buffer.as_ref().is_none_or(|command_buffer| {
+            matches!(
+                command_buffer.status(),
+                MTLCommandBufferStatus::Completed | MTLCommandBufferStatus::Error
+            )
+        })
+    }
+
+    fn wait_and_validate(&mut self) -> Result<u64, BackendError> {
+        let Some(command_buffer) = self.command_buffer.as_ref() else {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: Metal pending command retirement was attempted more than once."
+                    .to_string(),
+            });
+        };
+        let wait_start = Instant::now();
+        command_buffer.wait_until_completed();
+        let wait_ns = elapsed_ns(wait_start, "Metal command buffer wait")?;
+        let status = command_buffer.status();
+        self.command_buffer.take();
+        if status != MTLCommandBufferStatus::Completed {
+            return Err(BackendError::DispatchFailed {
+                code: Some(status as i32),
+                message: format!(
+                    "Metal command buffer finished with status {status:?} after {wait_ns} ns"
+                ),
+            });
+        }
+        Ok(wait_ns)
+    }
+
+    fn retire(mut self) -> Result<MetalDispatchResult, BackendError> {
+        let wait_ns = self.wait_and_validate()?;
+        let buffers = self.buffers.as_deref().unwrap_or_default();
+        let outputs = collect_outputs(buffers, &self.output_by_binding)?;
+        enforce_actual_output_budget(&self.config, &outputs)?;
+        self.buffers.take();
+        Ok(MetalDispatchResult {
+            outputs,
+            enqueue_ns: self.enqueue_ns,
+            wait_ns,
+        })
+    }
+
+    fn finish_without_readback(mut self) -> Result<(), BackendError> {
+        self.wait_and_validate()?;
+        Ok(())
+    }
+}
+
+impl Drop for MetalPendingCommand {
+    fn drop(&mut self) {
+        if let Some(command_buffer) = self.command_buffer.take() {
+            command_buffer.wait_until_completed();
+        }
+    }
+}
+
+struct MetalPendingDispatch {
+    command: MetalPendingCommand,
+    metrics: MetalMetricCounters,
+    started: Instant,
+}
+
+// SAFETY: Metal command buffers, pipelines, and buffers are Objective-C Metal
+// objects designed for cross-thread completion and status observation. The
+// pending handle never shares an encoder and owns all resources until retirement.
+unsafe impl Send for MetalPendingDispatch {}
+// SAFETY: `is_ready` only reads command-buffer status. Retirement consumes the
+// handle, so no mutable buffer access can race another pending-handle operation.
+unsafe impl Sync for MetalPendingDispatch {}
+
+impl private::Sealed for MetalPendingDispatch {}
+
+impl MetalPendingDispatch {
+    fn retire_timed(self) -> Result<TimedDispatchResult, BackendError> {
+        let Self {
+            command,
+            metrics,
+            started,
+        } = self;
+        let result = command.retire()?;
+        record_output_readback_metrics(&metrics, &result.outputs);
+        Ok(TimedDispatchResult {
+            outputs: result.outputs,
+            wall_ns: elapsed_ns(started, "Metal resident timed dispatch")?,
+            device_ns: None,
+            enqueue_ns: Some(result.enqueue_ns),
+            wait_ns: Some(result.wait_ns),
+        })
+    }
+}
+
+impl PendingDispatch for MetalPendingDispatch {
+    fn is_ready(&self) -> bool {
+        self.command.is_ready()
+    }
+
+    fn await_result(self: Box<Self>) -> Result<Vec<Vec<u8>>, BackendError> {
+        Ok((*self).retire_timed()?.outputs)
+    }
+
+    fn await_timed_result(self: Box<Self>) -> Result<TimedDispatchResult, BackendError> {
+        (*self).retire_timed()
+    }
 }
 
 #[derive(Clone)]
@@ -1666,8 +1786,10 @@ impl CompiledPipeline for MetalPersistentPipeline {
             config,
             &self.artifact,
             &self.pipeline,
-            &buffers,
-        )?;
+            buffers,
+            output_by_binding,
+        )?
+        .finish_without_readback()?;
         Ok(output_resources)
     }
 }
@@ -1675,7 +1797,7 @@ impl CompiledPipeline for MetalPersistentPipeline {
 fn lock_resident_buffer_table<'a>(
     resident_buffers: &'a MetalResidentBufferTable,
     operation: &'static str,
-) -> Result<MutexGuard<'a, BTreeMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
+) -> Result<MutexGuard<'a, HashMap<ResidentHandle, MetalResidentBuffer>>, BackendError> {
     resident_buffers
         .lock()
         .map_err(|error| BackendError::InvalidProgram {
