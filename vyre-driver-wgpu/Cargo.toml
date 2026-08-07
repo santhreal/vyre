@@ -1,6 +1,6 @@
 [package]
 name = "vyre-driver-wgpu"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -29,7 +29,7 @@ matching-nfa = ["vyre-libs/matching-nfa"]
 [dependencies]
 vyre-driver = { workspace = true, features = ["self-substrate-adapters"] }
 vyre-foundation = { workspace = true }
-vyre-self-substrate = { workspace = true }
+vyre-self-substrate = { workspace = true, features = ["logic"] }
 vyre-spec = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-naga.workspace = true

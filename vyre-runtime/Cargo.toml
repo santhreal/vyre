@@ -1,13 +1,13 @@
 [package]
 name = "vyre-runtime"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Persistent megakernel + io_uring zero-copy streaming runtime for vyre  -  GPU as VIR0 bytecode interpreter"
+description = "Persistent megakernel + io_uring zero-copy streaming runtime for vyre typed programs"
 readme = "README.md"
 keywords = ["gpu", "io-uring", "megakernel", "nvme", "vyre"]
 categories = ["asynchronous", "hardware-support", "api-bindings"]
@@ -19,10 +19,15 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = []
-legacy-infallible = []
 megakernel-batch = []
 subgroup-ops = []
-self-substrate-adapters = ["dep:vyre-self-substrate"]
+self-substrate-adapters = [
+    "dep:vyre-self-substrate",
+    "vyre-self-substrate/analysis",
+    "vyre-self-substrate/data",
+    "vyre-self-substrate/math-solvers",
+    "vyre-self-substrate/telemetry",
+]
 # Compatibility no-op for older manifests. The C workspace adapter lives in
 # `vyre-frontend-c::megakernel_workspace`; runtime owns only the generic seam.
 c-frontend-adapter = []
@@ -48,6 +53,8 @@ smallvec.workspace = true
 arc-swap = { workspace = true }
 ureq = { workspace = true, optional = true }
 dashmap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc.workspace = true
@@ -56,6 +63,7 @@ libc.workspace = true
 vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs
 vyre = { path = "../vyre-core", default-features = false }
+vyre-driver-reference = { path = "../vyre-driver-reference" }
 tempfile.workspace = true
 criterion.workspace = true
 proptest.workspace = true
