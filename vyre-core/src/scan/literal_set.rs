@@ -722,6 +722,17 @@ impl ResidentLiteralScan {
     }
 }
 
+struct ResidentFusedSharedResources {
+    program: Program,
+    transitions: Resource,
+    output_offsets: Resource,
+    output_records: Resource,
+    pattern_lengths: Resource,
+    candidate_end_mask: Resource,
+    candidate_suffix2_mask: Resource,
+    candidate_suffix3_bloom: Resource,
+}
+
 /// A RESIDENT session for the FUSED per-region presence + positions scan
 /// ([`GpuLiteralSet::scan_presence_and_positions_by_region`]).
 ///
@@ -739,20 +750,13 @@ impl ResidentLiteralScan {
 /// 13, the CUDA resident dispatch rejects a borrowed mix. The `matches` buffer
 /// is fixed-size (`max_matches` triples); a scan that overflows fails CLOSED
 /// (never a silent truncated decode, Law 10).
+
 pub struct ResidentFusedRegionScan {
-    /// Fused program sized for `max_regions` files and `max_matches` triples.
-    program: Program,
+    shared: std::sync::Arc<ResidentFusedSharedResources>,
     haystack: Resource,
-    transitions: Resource,
-    output_offsets: Resource,
-    output_records: Resource,
-    pattern_lengths: Resource,
     haystack_len_buf: Resource,
     /// Resident per-region presence buffer (read-write; used prefix reset per scan).
     presence: Resource,
-    candidate_end_mask: Resource,
-    candidate_suffix2_mask: Resource,
-    candidate_suffix3_bloom: Resource,
     /// Resident region-start offsets (sized for `max_regions`; padded per scan).
     region_starts_buf: Resource,
     /// Resident shard base offset control (1 u32; re-uploaded per scan).
@@ -1001,17 +1005,19 @@ impl GpuLiteralSet {
 
         Ok(ResidentFusedRegionScan {
             workgroup_x: program.workgroup_size[0],
-            program,
+            shared: std::sync::Arc::new(ResidentFusedSharedResources {
+                program,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                candidate_end_mask,
+                candidate_suffix2_mask,
+                candidate_suffix3_bloom,
+            }),
             haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
             haystack_len_buf,
             presence,
-            candidate_end_mask,
-            candidate_suffix2_mask,
-            candidate_suffix3_bloom,
             region_starts_buf,
             region_base_buf,
             match_count_buf,
@@ -1026,6 +1032,100 @@ impl GpuLiteralSet {
 }
 
 impl ResidentFusedRegionScan {
+    /// Allocate an independent mutable IO slot while sharing immutable matcher
+    /// tables with this session.
+    ///
+    /// The returned session may be dispatched concurrently with `self` on the
+    /// same backend. Immutable tables are freed exactly once after the last
+    /// sibling session is released.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] if any mutable resident allocation fails.
+    pub fn fork_independent(&self, backend: &dyn VyreBackend) -> Result<Self, vyre::BackendError> {
+        let presence_capacity_bytes = (self.max_regions as usize)
+            .checked_mul(self.presence_words as usize)
+            .and_then(|words| words.checked_mul(U32_BYTES))
+            .ok_or_else(|| {
+                vyre::BackendError::new(
+                    "resident fused fork presence-buffer byte capacity overflows host usize. Fix: lower max_regions or shard the pattern set.",
+                )
+            })?;
+        let region_starts_capacity_bytes = (self.max_regions as usize)
+            .checked_mul(U32_BYTES)
+            .ok_or_else(|| {
+                vyre::BackendError::new(
+                    "resident fused fork region-starts byte capacity overflows host usize. Fix: lower max_regions.",
+                )
+            })?;
+        let (_, matches_output_bytes) = literal_set_match_output_layout(self.max_matches)?;
+        let sizes = [
+            self.haystack_capacity,
+            U32_BYTES,
+            presence_capacity_bytes,
+            region_starts_capacity_bytes,
+            U32_BYTES,
+            U32_BYTES,
+            matches_output_bytes,
+        ];
+        let mut resources = Vec::new();
+        resources.try_reserve_exact(sizes.len()).map_err(|error| {
+            vyre::BackendError::new(format!(
+                "resident fused fork resource ledger allocation failed: {error}"
+            ))
+        })?;
+        for size in sizes {
+            match backend.allocate_resident(size) {
+                Ok(resource) => resources.push(resource),
+                Err(error) => {
+                    let mut cleanup_error = None;
+                    for resource in resources {
+                        if let Err(free_error) = backend.free_resident(resource) {
+                            cleanup_error.get_or_insert(free_error);
+                        }
+                    }
+                    return Err(match cleanup_error {
+                        Some(cleanup_error) => vyre::BackendError::new(format!(
+                            "{error}; resident fused fork rollback also failed: {cleanup_error}"
+                        )),
+                        None => error,
+                    });
+                }
+            }
+        }
+        let [
+            haystack,
+            haystack_len_buf,
+            presence,
+            region_starts_buf,
+            region_base_buf,
+            match_count_buf,
+            matches_buf,
+        ] = resources.try_into().map_err(|resources: Vec<Resource>| {
+            for resource in resources {
+                let _ = backend.free_resident(resource);
+            }
+            vyre::BackendError::new(
+                "resident fused fork allocated an invalid resource count. Fix: keep the mutable resource layout synchronized with its allocation sizes.",
+            )
+        })?;
+        Ok(Self {
+            shared: std::sync::Arc::clone(&self.shared),
+            haystack,
+            haystack_len_buf,
+            presence,
+            region_starts_buf,
+            region_base_buf,
+            match_count_buf,
+            matches_buf,
+            haystack_capacity: self.haystack_capacity,
+            max_regions: self.max_regions,
+            presence_words: self.presence_words,
+            max_matches: self.max_matches,
+            workgroup_x: self.workgroup_x,
+            in_flight: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        })
+    }
+
     /// Scan a coalesced batch (`region_starts` ascending, beginning at 0) against
     /// the resident session, decoding the per-region presence bitmap into `out`
     /// and the `(pattern_id, start, end)` triples into `matches`: IDENTICAL output
@@ -1084,7 +1184,7 @@ impl ResidentFusedRegionScan {
         let dispatch =
             self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
         let pending = backend.dispatch_resident_async(
-            &self.program,
+            &self.shared.program,
             &dispatch.resources,
             &dispatch.config,
         )?;
@@ -1138,7 +1238,7 @@ impl ResidentFusedRegionScan {
         let dispatch =
             self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
         let timed = backend.dispatch_resident_timed(
-            &self.program,
+            &self.shared.program,
             &dispatch.resources,
             &dispatch.config,
         )?;
@@ -1233,15 +1333,15 @@ impl ResidentFusedRegionScan {
 
         let resources = [
             self.haystack.clone(),
-            self.transitions.clone(),
-            self.output_offsets.clone(),
-            self.output_records.clone(),
-            self.pattern_lengths.clone(),
+            self.shared.transitions.clone(),
+            self.shared.output_offsets.clone(),
+            self.shared.output_records.clone(),
+            self.shared.pattern_lengths.clone(),
             self.haystack_len_buf.clone(),
             self.presence.clone(),
-            self.candidate_end_mask.clone(),
-            self.candidate_suffix2_mask.clone(),
-            self.candidate_suffix3_bloom.clone(),
+            self.shared.candidate_end_mask.clone(),
+            self.shared.candidate_suffix2_mask.clone(),
+            self.shared.candidate_suffix3_bloom.clone(),
             self.region_starts_buf.clone(),
             self.region_base_buf.clone(),
             self.match_count_buf.clone(),
@@ -1289,15 +1389,8 @@ impl ResidentFusedRegionScan {
         let mut first_err = None;
         for resource in [
             self.haystack,
-            self.transitions,
-            self.output_offsets,
-            self.output_records,
-            self.pattern_lengths,
             self.haystack_len_buf,
             self.presence,
-            self.candidate_end_mask,
-            self.candidate_suffix2_mask,
-            self.candidate_suffix3_bloom,
             self.region_starts_buf,
             self.region_base_buf,
             self.match_count_buf,
@@ -1305,6 +1398,21 @@ impl ResidentFusedRegionScan {
         ] {
             if let Err(error) = backend.free_resident(resource) {
                 first_err.get_or_insert(error);
+            }
+        }
+        if let Ok(shared) = std::sync::Arc::try_unwrap(self.shared) {
+            for resource in [
+                shared.transitions,
+                shared.output_offsets,
+                shared.output_records,
+                shared.pattern_lengths,
+                shared.candidate_end_mask,
+                shared.candidate_suffix2_mask,
+                shared.candidate_suffix3_bloom,
+            ] {
+                if let Err(error) = backend.free_resident(resource) {
+                    first_err.get_or_insert(error);
+                }
             }
         }
         first_err.map_or(Ok(()), Err)

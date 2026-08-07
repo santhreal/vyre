@@ -299,3 +299,49 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
         .await_into(&mut presence, &mut matches)
         .expect("Fix: rejected premature free must not corrupt pending output.");
 }
+
+/// WHY: pipelining must overlap two mutable IO slots without duplicating the
+/// immutable matcher tables or violating exact result order.
+#[test]
+fn resident_fused_fork_dispatches_two_slots_concurrently() {
+    let backend = CudaBackendRegistration::new(
+        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
+    );
+    let matcher = GpuLiteralSet::compile(&[b"token"]);
+    let mut first = matcher
+        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .expect("Fix: primary resident fused session preparation failed.");
+    let mut second = first
+        .fork_independent(&backend)
+        .expect("Fix: independent resident fused IO slot allocation failed.");
+    let mut first_scratch = Vec::new();
+    let mut second_scratch = Vec::new();
+
+    let first_pending = first
+        .scan_async(&backend, b"xx token", &[0], 0, &mut first_scratch)
+        .expect("Fix: first resident fused slot submission failed.");
+    let second_pending = second
+        .scan_async(&backend, b"token yy", &[0], 0, &mut second_scratch)
+        .expect("Fix: second resident fused slot must submit while the first remains pending.");
+
+    let mut presence = Vec::new();
+    let mut matches = Vec::new();
+    first_pending
+        .await_into(&mut presence, &mut matches)
+        .expect("Fix: first pipelined resident result failed.");
+    assert_eq!(presence, vec![1]);
+    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 3, 8)]);
+
+    second_pending
+        .await_into(&mut presence, &mut matches)
+        .expect("Fix: second pipelined resident result failed.");
+    assert_eq!(presence, vec![1]);
+    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
+
+    first
+        .free(&backend)
+        .expect("Fix: primary shared-table session cleanup failed.");
+    second
+        .free(&backend)
+        .expect("Fix: final shared-table session cleanup failed.");
+}
