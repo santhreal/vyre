@@ -1,6 +1,6 @@
 [package]
 name = "vyre-self-substrate"
-version = "0.7.1"
+version = "0.7.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -21,12 +21,58 @@ rustdoc-args = ["--cfg", "docsrs"]
 workspace = true
 
 [features]
-default = []
-cpu-parity = ["vyre-primitives/cpu-parity"]
+default = ["optimizer"]
+optimizer = ["vyre-primitives/graph"]
+analysis = [
+    "optimizer",
+    "telemetry",
+    "vyre-primitives/effects",
+    "vyre-primitives/math",
+    "vyre-primitives/types",
+]
+data = [
+    "optimizer",
+    "telemetry",
+    "vyre-primitives/matching",
+    "vyre-primitives/math",
+    "vyre-primitives/nn",
+    "vyre-primitives/parsing",
+]
+graph-solvers = ["optimizer", "telemetry", "vyre-primitives/math"]
+logic = [
+    "analysis",
+    "vyre-primitives/cat",
+    "vyre-primitives/dnnf",
+    "vyre-primitives/zx",
+]
+math-solvers = [
+    "optimizer",
+    "telemetry",
+    "vyre-primitives/math",
+    "vyre-primitives/topology",
+]
+scheduling = [
+    "optimizer",
+    "telemetry",
+    "vyre-primitives/math",
+    "vyre-primitives/parsing",
+]
+telemetry = []
+integration = [
+    "analysis",
+    "data",
+    "graph-solvers",
+    "logic",
+    "math-solvers",
+    "scheduling",
+    "telemetry",
+]
+all-solvers = ["integration"]
+cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
 
 [dependencies]
 vyre-foundation.workspace = true
-vyre-primitives = { workspace = true, features = ["math", "graph", "fixpoint", "matching", "bitset", "reduce", "nn", "topology", "opt", "hash", "parsing", "predicate", "label", "effects", "types", "cat", "zx", "dnnf", "inventory-registry"] }
+vyre-primitives = { workspace = true }
 tracing.workspace = true
 rustc-hash.workspace = true
 

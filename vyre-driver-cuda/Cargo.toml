@@ -33,7 +33,7 @@ vyre-emit-ptx.workspace = true
 # `optimizer` module dispatches the self-hosted optimizer passes
 # (DCE/CSE/const-fold) on CUDA. Lives in [dependencies] (not dev-deps)
 # because src/optimizer.rs is shipped lib code.
-vyre-self-substrate = { workspace = true }
+vyre-self-substrate = { workspace = true, features = ["graph-solvers", "scheduling"] }
 inventory.workspace = true
 tracing.workspace = true
 blake3.workspace = true
