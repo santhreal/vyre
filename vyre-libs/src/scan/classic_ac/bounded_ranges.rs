@@ -11,6 +11,9 @@ use super::ClassicAcAutomaton;
 
 #[path = "bounded_ranges/prefilter.rs"]
 mod prefilter;
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+#[path = "bounded_ranges/regex_exact.rs"]
+mod regex_exact;
 
 pub use prefilter::{
     build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
@@ -32,6 +35,8 @@ pub use prefilter::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub(crate) use regex_exact::regex_exact_ranges_program_ext;
 
 /// Build a Program that scans `haystack` for any AC match and emits
 /// `(pattern_id, start, end)` triples through the canonical

@@ -9,7 +9,7 @@ pub use vyre_libs::scan::{
     ApiKind, CaptureMode, CaptureModeContract, CompiledDfa, CompiledRegexSet, DfaCompileError,
     FusionError, PostProcessError, PostProcessedMatch, RegexCompileError, RegexConstruct,
     RegexDfaError, RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy,
-    RegionTriple, API_INDEX,
+    RegionTriple, API_INDEX, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
 pub use vyre_libs::scan::{
     builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,

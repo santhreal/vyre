@@ -1,36 +1,20 @@
 //! Regex set → dense DFA GPU pipeline.
 //!
-//! Composes three existing primitives end-to-end:
+//! The builder composes three primitives:
 //!
-//! 1. `compile_regex_set` (this crate) - regex sources → bit-vector NFA.
-//! 2. `vyre_primitives::matching::nfa_to_dfa` - NFA → dense
-//!    `CompiledDfa` via subset construction.
-//! 3. `build_ac_bounded_ranges_program` (this crate) - `CompiledDfa`
-//!    → GPU `Program` with O(1)-per-byte AC scan semantics.
+//! 1. [`compile_regex_set`] lowers regex sources to a bit-vector NFA.
+//! 2. [`nfa_to_dfa`] performs subset construction.
+//! 3. The exact-range program replays the anchored DFA forward from each byte
+//!    origin and emits `(pattern_id, origin, end)`.
 //!
-//! The output [`RegexDfaPipeline`] is the regex-aware counterpart of
-//! the literal-pattern `ClassicAcAutomaton`: same `Program` shape, same
-//! per-byte transition cost, same `(pid, start, end)` hit triple
-//! output. Consumers that already dispatch
-//! `classic_ac_bounded_ranges_program` can swap their literal pattern
-//! source for a regex set and pay no extra per-byte cost on the GPU.
+//! This keeps one dense transition lookup per replayed byte. The full-buffer
+//! program costs `O(haystack_len * replay_limit)`, but unlike the historical
+//! suffix replay it reports exact starts for bounded and open-ended
+//! variable-length patterns. Use [`crate::scan::RegionEvidencePipeline`] when a
+//! prefilter already supplies a smaller candidate set.
 //!
-//! # When this beats `RulePipeline`
-//!
-//! `RulePipeline` (the bit-vector NFA scan kernel) is O(LANES²) per
-//! byte regardless of pattern set size - fine for short-buffer per-
-//! anchor confirmation, catastrophic for whole-buffer scans at >1 MiB.
-//! `RegexDfaPipeline` is O(1) per byte but pays a state-explosion risk
-//! in the subset construction. Use it when:
-//!
-//! * The pattern set's subset-constructed DFA stays under
-//!   `max_dfa_states` (typical for high-volume detector regexes:
-//!   bounded character classes + bounded repetitions).
-//! * The haystack is large enough that per-byte cost dominates per-
-//!   dispatch overhead.
-//!
-//! Fall back to `RulePipeline` when the subset construction returns
-//! [`vyre_primitives::matching::NfaToDfaError::StateExplosion`].
+//! Subset construction can exceed `max_dfa_states`. In that case, shard the
+//! pattern set or use `RulePipeline`.
 
 use std::error::Error;
 use std::fmt;
@@ -39,31 +23,35 @@ use vyre_foundation::ir::Program;
 
 use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
-use crate::scan::classic_ac::try_build_ac_bounded_ranges_program_ext;
-use crate::scan::regex_compile::{compile_regex_set, CompiledRegexSet, RegexCompileError};
+use crate::scan::classic_ac::{
+    regex_exact_ranges_program_ext, try_build_ac_bounded_ranges_program_ext,
+};
+use crate::scan::regex_compile::{
+    compile_regex_set, compile_regex_set_with_policy, CompiledRegexSet, RegexCompileError,
+    RegexReplayPolicy,
+};
 
 /// Ready-to-dispatch regex DFA pipeline.
 ///
-/// `program` is built by `build_ac_bounded_ranges_program` and has the
-/// same buffer contract as a literal-AC dispatch: `haystack`,
-/// `transitions`, `output_offsets`, `output_records`, `pattern_lengths`,
-/// `haystack_len`, `match_count`, `matches`. Upload the corresponding
-/// fields of [`RegexDfaPipeline::dfa`] and [`RegexDfaPipeline::pattern_lengths`]
-/// to those buffers and dispatch.
+/// Pipelines built by [`build_regex_dfa_pipeline`] and its policy variants
+/// preserve the literal-AC buffer ABI (`haystack`, `transitions`,
+/// `output_offsets`, `output_records`, `pattern_lengths`, `haystack_len`,
+/// `match_count`, `matches`) while deriving starts from each replay origin.
+/// [`build_regex_dfa_unanchored`] retains its documented end-oriented
+/// single-pass DFA semantics.
 #[derive(Debug, Clone)]
 pub struct RegexDfaPipeline {
-    /// Dispatchable GPU program. Same shape as
-    /// `classic_ac_bounded_ranges_program` output - caller wires the
-    /// existing AC kernel host-side, no new dispatch path needed.
+    /// Dispatchable whole-buffer regex program. The buffer layout remains
+    /// compatible with `classic_ac_bounded_ranges_program`.
     pub program: Program,
     /// Dense DFA produced by NFA → DFA subset construction. Owns the
     /// transition / accept / output_offsets / output_records buffers
     /// the GPU program reads from.
     pub dfa: CompiledDfa,
-    /// One entry per input regex; `pattern_lengths[pid]` is the longest
-    /// possible match length for that pattern. Uploaded to the
-    /// `pattern_lengths` buffer the AC kernel uses to derive each
-    /// match's `start` offset from the accepting `end` offset.
+    /// One entry per input regex. Bounded patterns store their maximum length;
+    /// open-ended patterns store the finite replay budget selected by
+    /// [`RegexReplayPolicy`]. The compatibility buffer remains in the program
+    /// ABI, but exact starts do not derive from these values.
     pub pattern_lengths: Vec<u32>,
 }
 
@@ -149,6 +137,46 @@ pub fn build_regex_dfa_pipeline(
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
     build_regex_dfa_pipeline_ext(patterns, max_matches, max_dfa_states, true)
 }
+/// Build a regex DFA pipeline with an explicit open-ended replay budget.
+///
+/// # Errors
+/// See [`RegexDfaError`].
+pub fn build_regex_dfa_pipeline_with_policy(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+    replay_policy: RegexReplayPolicy,
+) -> Result<RegexDfaPipeline, RegexDfaError> {
+    build_regex_dfa_pipeline_with_policy_ext(
+        patterns,
+        max_matches,
+        max_dfa_states,
+        replay_policy,
+        true,
+    )
+}
+
+/// [`build_regex_dfa_pipeline_with_policy`] with explicit match-append strategy.
+///
+/// # Errors
+/// See [`RegexDfaError`].
+pub fn build_regex_dfa_pipeline_with_policy_ext(
+    patterns: &[&str],
+    max_matches: u32,
+    max_dfa_states: usize,
+    replay_policy: RegexReplayPolicy,
+    use_subgroup_coalesce: bool,
+) -> Result<RegexDfaPipeline, RegexDfaError> {
+    let regex_set = compile_regex_set_with_policy(patterns, replay_policy)?;
+    finish_regex_dfa_pipeline(
+        regex_set,
+        patterns,
+        max_matches,
+        max_dfa_states,
+        use_subgroup_coalesce,
+        true,
+    )
+}
 
 /// [`build_regex_dfa_pipeline`] with explicit `use_subgroup_coalesce`
 /// control. Pass `false` on backends whose IR lowering cannot yet emit
@@ -172,6 +200,7 @@ pub fn build_regex_dfa_pipeline_ext(
         max_matches,
         max_dfa_states,
         use_subgroup_coalesce,
+        true,
     )
 }
 
@@ -202,7 +231,14 @@ pub fn build_regex_dfa_unanchored(
         &mut regex_set.transition_table,
         regex_set.plan.num_states as usize,
     )?;
-    finish_regex_dfa_pipeline(regex_set, patterns, max_matches, max_dfa_states, true)
+    finish_regex_dfa_pipeline(
+        regex_set,
+        patterns,
+        max_matches,
+        max_dfa_states,
+        true,
+        false,
+    )
 }
 
 /// One shard of a state-cap-sharded regex DFA set: a self-contained,
@@ -392,6 +428,7 @@ fn finish_regex_dfa_pipeline(
     max_matches: u32,
     max_dfa_states: usize,
     use_subgroup_coalesce: bool,
+    exact_starts: bool,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
     // The NFA `plan` carries accept_states as `(pattern_id, match_len)`
     // tuples. nfa_to_dfa wants the pattern ids and the max len
@@ -444,13 +481,39 @@ fn finish_regex_dfa_pipeline(
     };
     let dfa = nfa_to_dfa(&tables, max_dfa_states)?;
 
-    let program = try_build_ac_bounded_ranges_program_ext(
-        &dfa,
-        pattern_count,
-        max_matches,
-        use_subgroup_coalesce,
-    )
-    .map_err(|message| RegexDfaError::Size { message })?;
+    let program = if exact_starts {
+        let output_records_len =
+            u32::try_from(dfa.output_records.len()).map_err(|source| RegexDfaError::Size {
+                message: format!(
+                    "regex DFA output record count {} exceeds u32 GPU buffer metadata: {source}. Fix: shard the pattern set or lower the DFA budget before dispatch.",
+                    dfa.output_records.len()
+                ),
+            })?;
+        regex_exact_ranges_program_ext(
+            "haystack",
+            "transitions",
+            "output_offsets",
+            "output_records",
+            "pattern_lengths",
+            "haystack_len",
+            "match_count",
+            "matches",
+            dfa.state_count,
+            output_records_len,
+            pattern_count,
+            max_matches,
+            dfa.max_pattern_len,
+            use_subgroup_coalesce,
+        )
+    } else {
+        try_build_ac_bounded_ranges_program_ext(
+            &dfa,
+            pattern_count,
+            max_matches,
+            use_subgroup_coalesce,
+        )
+        .map_err(|message| RegexDfaError::Size { message })?
+    };
 
     Ok(RegexDfaPipeline {
         program,

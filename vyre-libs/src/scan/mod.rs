@@ -8,13 +8,25 @@
 pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ("compact_hits", ApiKind::Function, None),
     ("emit_hit", ApiKind::Function, None),
-    ("substring_search", ApiKind::Function, Some("matching-substring")),
+    (
+        "substring_search",
+        ApiKind::Function,
+        Some("matching-substring"),
+    ),
     ("aho_corasick", ApiKind::Function, Some("matching-dfa")),
     ("dfa_compile", ApiKind::Function, Some("matching-dfa")),
     ("CompiledDfa", ApiKind::Struct, Some("matching-dfa")),
-    ("build_rule_pipeline", ApiKind::Function, Some("matching-nfa")),
+    (
+        "build_rule_pipeline",
+        ApiKind::Function,
+        Some("matching-nfa"),
+    ),
     ("RulePipeline", ApiKind::Struct, Some("matching-nfa")),
-    ("compile_regex_set", ApiKind::Function, Some("matching-regex")),
+    (
+        "compile_regex_set",
+        ApiKind::Function,
+        Some("matching-regex"),
+    ),
     ("RegexDfaPipeline", ApiKind::Struct, Some("matching-regex")),
 ];
 
@@ -38,28 +50,28 @@ pub enum ApiKind {
 pub mod builders;
 pub mod hit_buffer;
 
-#[cfg(feature = "matching-substring")]
-pub mod substring;
-#[cfg(feature = "matching-dfa")]
-pub mod dfa;
 #[cfg(feature = "matching-dfa")]
 pub mod classic_ac;
-#[cfg(feature = "matching-nfa")]
-pub mod nfa;
+#[cfg(feature = "matching-dfa")]
+pub mod dfa;
 #[cfg(feature = "matching-nfa")]
 pub mod mega_scan;
+#[cfg(feature = "matching-nfa")]
+pub mod nfa;
 pub mod post_process;
+#[cfg(feature = "matching-substring")]
+pub mod substring;
 
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod fused_region_evidence;
+#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
+pub mod regex_anchored_window;
 #[cfg(feature = "matching-regex")]
 pub mod regex_compile;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub mod regex_dfa;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod regex_anchored_window;
-#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub mod regex_region_admission;
-#[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub mod fused_region_evidence;
 
 #[cfg(feature = "matching-dfa")]
 pub use dfa::{

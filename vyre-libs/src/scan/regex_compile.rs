@@ -38,6 +38,38 @@ use regex_syntax::hir::{Class, Hir, HirKind, Look, Repetition};
 use crate::scan::nfa::NfaPlan;
 
 const LANES: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
+/// Default whole-match replay budget for a pattern containing `*`, `+`, or
+/// `{n,}`. Open-ended regexes have no finite maximum, so accelerator extraction
+/// is exact only through this many bytes unless the caller supplies a larger
+/// [`RegexReplayPolicy`].
+pub const DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES: u32 = 4096;
+
+/// Runtime work bound for open-ended regex extraction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegexReplayPolicy {
+    /// Maximum bytes replayed from one candidate origin for an open-ended
+    /// pattern. It must cover the pattern's finite minimum and be nonzero.
+    pub open_ended_limit_bytes: u32,
+}
+
+impl Default for RegexReplayPolicy {
+    fn default() -> Self {
+        Self {
+            open_ended_limit_bytes: DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+        }
+    }
+}
+
+/// Static byte extent and effective replay limit for one compiled pattern.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegexPatternExtent {
+    /// Smallest byte length the pattern can accept.
+    pub min_bytes: u32,
+    /// Largest accepted byte length, or `None` for an open-ended pattern.
+    pub max_bytes: Option<u32>,
+    /// Finite byte budget used by accelerator replay.
+    pub replay_limit_bytes: u32,
+}
 
 /// Capture output mode a consumer requests for a regex scan, wiring
 /// `docs/optimization/REGEX_CAPTURE_MODE_CONTRACTS.toml` to code.
@@ -221,6 +253,20 @@ pub enum RegexCompileError {
         /// Longest matched byte length for the pattern.
         len: usize,
     },
+    /// Match-extent arithmetic overflowed before it could be represented.
+    MatchLengthArithmeticOverflow {
+        /// Index into the input slice that overflowed.
+        pattern_index: usize,
+    },
+    /// An open-ended pattern's finite replay budget cannot reach its minimum.
+    OpenEndedReplayLimitTooSmall {
+        /// Index into the input slice that cannot fit the policy.
+        pattern_index: usize,
+        /// Smallest byte length the pattern can accept.
+        minimum: u32,
+        /// Configured open-ended replay budget.
+        limit: u32,
+    },
     /// Transition or epsilon table word count overflowed host `usize`.
     TableWordCountOverflow {
         /// Table being built.
@@ -367,6 +413,18 @@ impl std::fmt::Display for RegexCompileError {
                 f,
                 "regex_compile: pattern {pattern_index} match length {len} exceeds u32 capacity. Fix: bound or shard the regex before GPU compilation."
             ),
+            Self::MatchLengthArithmeticOverflow { pattern_index } => write!(
+                f,
+                "regex_compile: pattern {pattern_index} match-length arithmetic overflowed host usize. Fix: reduce repetition bounds before GPU compilation."
+            ),
+            Self::OpenEndedReplayLimitTooSmall {
+                pattern_index,
+                minimum,
+                limit,
+            } => write!(
+                f,
+                "regex_compile: pattern {pattern_index} needs at least {minimum} byte(s), but the open-ended replay limit is {limit}. Fix: raise RegexReplayPolicy::open_ended_limit_bytes to at least {minimum}."
+            ),
             Self::TableWordCountOverflow { table } => write!(
                 f,
                 "regex_compile: {table} table word count overflows host usize. Fix: shard the regex pattern set before table construction."
@@ -399,6 +457,11 @@ pub struct CompiledRegexSet {
     /// Lane-major epsilon (free) transition table:
     /// `[num_states × LANES_PER_SUBGROUP]` u32s.
     pub epsilon_table: Vec<u32>,
+    /// Per-pattern accepted extent and finite accelerator replay budget.
+    ///
+    /// `max_bytes == None` makes the truncation boundary explicit for an
+    /// open-ended regex rather than presenting its minimum as a false maximum.
+    pub pattern_extents: Vec<RegexPatternExtent>,
     /// `true` when at least one source pattern contained a capture group.
     ///
     /// The GPU NFA is a WHOLE-MATCH multimatch engine: it accelerates the
@@ -549,12 +612,135 @@ fn pattern_uses_backreference(pat: &str) -> bool {
     }
     false
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MatchExtent {
+    min: usize,
+    max: Option<usize>,
+}
 
-/// Compile a list of regex strings into a single multimatch NFA.
+fn extent_overflow(pattern_index: usize) -> RegexCompileError {
+    RegexCompileError::MatchLengthArithmeticOverflow { pattern_index }
+}
+
+fn checked_extent_add(
+    left: usize,
+    right: usize,
+    pattern_index: usize,
+) -> Result<usize, RegexCompileError> {
+    left.checked_add(right)
+        .ok_or_else(|| extent_overflow(pattern_index))
+}
+
+fn checked_extent_mul(
+    left: usize,
+    right: usize,
+    pattern_index: usize,
+) -> Result<usize, RegexCompileError> {
+    left.checked_mul(right)
+        .ok_or_else(|| extent_overflow(pattern_index))
+}
+
+fn analyze_match_extent(hir: &Hir, pattern_index: usize) -> Result<MatchExtent, RegexCompileError> {
+    match hir.kind() {
+        HirKind::Empty | HirKind::Look(_) => Ok(MatchExtent {
+            min: 0,
+            max: Some(0),
+        }),
+        HirKind::Literal(literal) => Ok(MatchExtent {
+            min: literal.0.len(),
+            max: Some(literal.0.len()),
+        }),
+        HirKind::Class(class) => {
+            if try_class_as_ascii_byte_set(class).is_some() {
+                return Ok(MatchExtent {
+                    min: 1,
+                    max: Some(1),
+                });
+            }
+            let sequences = class_to_utf8_sequences(class, pattern_index)?;
+            let min = sequences.iter().map(Vec::len).min().unwrap_or(0);
+            let max = sequences.iter().map(Vec::len).max().unwrap_or(0);
+            Ok(MatchExtent {
+                min,
+                max: Some(max),
+            })
+        }
+        HirKind::Capture(capture) => analyze_match_extent(&capture.sub, pattern_index),
+        HirKind::Concat(parts) => {
+            let mut extent = MatchExtent {
+                min: 0,
+                max: Some(0),
+            };
+            for part in parts {
+                let next = analyze_match_extent(part, pattern_index)?;
+                extent.min = checked_extent_add(extent.min, next.min, pattern_index)?;
+                extent.max = match (extent.max, next.max) {
+                    (Some(left), Some(right)) => {
+                        Some(checked_extent_add(left, right, pattern_index)?)
+                    }
+                    _ => None,
+                };
+            }
+            Ok(extent)
+        }
+        HirKind::Alternation(alternatives) => {
+            let mut min = usize::MAX;
+            let mut max = Some(0usize);
+            for alternative in alternatives {
+                let extent = analyze_match_extent(alternative, pattern_index)?;
+                min = min.min(extent.min);
+                max = match (max, extent.max) {
+                    (Some(left), Some(right)) => Some(left.max(right)),
+                    _ => None,
+                };
+            }
+            Ok(MatchExtent {
+                min: if alternatives.is_empty() { 0 } else { min },
+                max,
+            })
+        }
+        HirKind::Repetition(repetition) => {
+            let sub = analyze_match_extent(&repetition.sub, pattern_index)?;
+            let min = checked_extent_mul(sub.min, repetition.min as usize, pattern_index)?;
+            let max = match repetition.max {
+                Some(0) => Some(0),
+                Some(count) => match sub.max {
+                    Some(sub_max) => {
+                        Some(checked_extent_mul(sub_max, count as usize, pattern_index)?)
+                    }
+                    None => None,
+                },
+                None if sub.max == Some(0) => Some(0),
+                None => None,
+            };
+            Ok(MatchExtent { min, max })
+        }
+    }
+}
+
+/// Compile with the default bounded replay policy for open-ended patterns.
 ///
 /// # Errors
 /// See [`RegexCompileError`].
 pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCompileError> {
+    compile_regex_set_with_policy(patterns, RegexReplayPolicy::default())
+}
+
+/// Compile with an explicit finite replay budget for open-ended patterns.
+///
+/// # Errors
+/// See [`RegexCompileError`].
+pub fn compile_regex_set_with_policy(
+    patterns: &[&str],
+    replay_policy: RegexReplayPolicy,
+) -> Result<CompiledRegexSet, RegexCompileError> {
+    compile_regex_set_inner(patterns, replay_policy)
+}
+
+fn compile_regex_set_inner(
+    patterns: &[&str],
+    replay_policy: RegexReplayPolicy,
+) -> Result<CompiledRegexSet, RegexCompileError> {
     let mut builder = NfaBuilder::new();
     let _pattern_count =
         u32::try_from(patterns.len()).map_err(|_| RegexCompileError::PatternCountOverflow {
@@ -576,6 +762,8 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
         patterns.len(),
         "accept end-anchor flag",
     )?;
+    let mut pattern_extents = Vec::new();
+    reserve_vec(&mut pattern_extents, patterns.len(), "pattern extent")?;
     let entry = builder.fresh_state()?; // shared entry state 0
     let mut captures_present = false;
 
@@ -635,18 +823,47 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
         };
         scan_constructs(&hir, pid, &mut construct_scan)?;
         captures_present |= construct_scan.captures_present;
+        let extent = analyze_match_extent(&hir, pid)?;
         let (frag, anchors) = build_pattern_hir(&mut builder, &hir, pid)?;
         // Connect the shared entry to this pattern's start via epsilon.
         builder.add_epsilon(entry, frag.start);
         let pid_u32 = u32::try_from(pid).map_err(|_| RegexCompileError::PatternCountOverflow {
             count: patterns.len(),
         })?;
-        let match_len_u32 =
-            u32::try_from(frag.match_len).map_err(|_| RegexCompileError::MatchLengthOverflow {
+        let min_bytes =
+            u32::try_from(extent.min).map_err(|_| RegexCompileError::MatchLengthOverflow {
                 pattern_index: pid,
-                len: frag.match_len,
+                len: extent.min,
             })?;
-        accept_states.push((pid_u32, match_len_u32));
+        let max_bytes = extent
+            .max
+            .map(|max| {
+                u32::try_from(max).map_err(|_| RegexCompileError::MatchLengthOverflow {
+                    pattern_index: pid,
+                    len: max,
+                })
+            })
+            .transpose()?;
+        let replay_limit_bytes = match max_bytes {
+            Some(max) => max,
+            None => {
+                let required = min_bytes.max(1);
+                if replay_policy.open_ended_limit_bytes < required {
+                    return Err(RegexCompileError::OpenEndedReplayLimitTooSmall {
+                        pattern_index: pid,
+                        minimum: required,
+                        limit: replay_policy.open_ended_limit_bytes,
+                    });
+                }
+                replay_policy.open_ended_limit_bytes
+            }
+        };
+        accept_states.push((pid_u32, replay_limit_bytes));
+        pattern_extents.push(RegexPatternExtent {
+            min_bytes,
+            max_bytes,
+            replay_limit_bytes,
+        });
         accept_state_ids.push(frag.end);
         accept_start_anchored.push(anchors.start);
         accept_end_anchored.push(anchors.end);
@@ -677,6 +894,7 @@ pub fn compile_regex_set(patterns: &[&str]) -> Result<CompiledRegexSet, RegexCom
         plan,
         transition_table,
         epsilon_table,
+        pattern_extents,
         captures_present,
     })
 }
@@ -1371,6 +1589,7 @@ mod tests {
         assert_eq!(r.epsilon_table.len(), r.plan.num_states as usize * LANES);
     }
 
+    /// Prevents regex metadata and table sizes from truncating across host/GPU ABIs.
     #[test]
     fn regex_compile_uses_checked_abi_and_table_allocation_paths() {
         let production = include_str!("regex_compile.rs")
@@ -1380,13 +1599,14 @@ mod tests {
 
         assert!(
             production.contains("u32::try_from(pid)")
-                && production.contains("u32::try_from(frag.match_len)")
+                && production.contains("u32::try_from(extent.min)")
+                && production.contains("u32::try_from(max)")
                 && production.contains("u32::try_from(builder.state_count())")
                 && production.contains("u32::try_from(self.state_count)")
                 && production.contains("checked_add(1)")
                 && production.contains("try_reserve_vec_to_capacity")
                 && !production.contains("pid as u32")
-                && !production.contains("frag.match_len as u32")
+                && !production.contains("extent.min as u32")
                 && !production.contains("builder.state_count() as u32")
                 && !production.contains("self.state_count as u32")
                 && !production.contains("vec![0u32;")
@@ -1707,6 +1927,12 @@ mod tests {
                 pattern_index: 2,
                 len: usize::MAX,
             },
+            RegexCompileError::MatchLengthArithmeticOverflow { pattern_index: 3 },
+            RegexCompileError::OpenEndedReplayLimitTooSmall {
+                pattern_index: 4,
+                minimum: 12,
+                limit: 8,
+            },
             RegexCompileError::TableWordCountOverflow {
                 table: "transition",
             },
@@ -1728,6 +1954,8 @@ mod tests {
                 | RegexCompileError::TooManyStates { .. }
                 | RegexCompileError::PatternCountOverflow { .. }
                 | RegexCompileError::MatchLengthOverflow { .. }
+                | RegexCompileError::MatchLengthArithmeticOverflow { .. }
+                | RegexCompileError::OpenEndedReplayLimitTooSmall { .. }
                 | RegexCompileError::TableWordCountOverflow { .. }
                 | RegexCompileError::StorageReserveFailed { .. } => {}
             }
