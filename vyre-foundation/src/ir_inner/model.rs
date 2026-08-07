@@ -32,6 +32,14 @@ pub mod node_kind;
 /// the entry node list, and optional optimization hints.
 pub mod program;
 
+/// Typed topology over connected reusable Programs.
+pub mod program_graph;
+/// Whole-composition validation, liveness, and allocation analysis.
+pub mod program_graph_analysis;
+/// Versioned content identity for connected Program compositions.
+pub mod program_graph_identity;
+mod program_graph_wire;
+
 /// Core type definitions.
 ///
 /// Re-exports frozen types from `vyre-spec`.

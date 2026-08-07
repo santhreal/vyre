@@ -99,6 +99,11 @@ pub mod ir {
         BufferDecl, CacheLocality, LinearType, MemoryHints, MemoryKind, Program, ShapePredicate,
         NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION,
     };
+    pub use crate::ir_inner::model::program_graph::{
+        GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
+        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, TensorContract,
+        ValueLifetime,
+    };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.
     /// Compose with `ProgramStats::has_any_node_kind` for O(1) `analyze_impl` gates.
     pub mod stats {
