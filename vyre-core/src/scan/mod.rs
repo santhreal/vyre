@@ -1,10 +1,6 @@
 //! Execution adapters for substrate-neutral scan artifacts from `vyre-libs`.
 
 pub use vyre_libs::scan::{
-    builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,
-    regex_anchored_window, regex_compile, regex_dfa, regex_region_admission, substring,
-};
-pub use vyre_libs::scan::{
     aho_corasick, build_regex_dfa_pipeline, build_regex_dfa_pipeline_with_policy,
     build_regex_dfa_pipeline_with_policy_ext, build_regex_dfa_shards,
     build_regex_dfa_shards_unanchored, build_regex_dfa_unanchored, compile_regex_set,
@@ -15,12 +11,16 @@ pub use vyre_libs::scan::{
     RegexDfaError, RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy,
     RegionTriple, API_INDEX,
 };
+pub use vyre_libs::scan::{
+    builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,
+    regex_anchored_window, regex_compile, regex_dfa, regex_region_admission, substring,
+};
 
-pub mod dispatch_io;
-pub mod literal_set;
 pub mod direct_gpu;
-pub mod mega_scan;
+pub mod dispatch_io;
 pub mod engine;
+pub mod literal_set;
+pub mod mega_scan;
 pub mod paged_corpus;
 pub mod pipeline;
 pub mod region_evidence_pipeline;
@@ -41,8 +41,8 @@ pub use literal_set::{
     GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedPresenceByRegion,
     LiteralSetPreparedScan, LiteralSetScanScratch, LiteralSetWireError, Match as LiteralMatch,
     PendingFusedRegion, PendingMatches, PendingPresence, PendingPresenceByRegion,
-    ResidentFusedRegionScan, ResidentLiteralScan, ScanAllTimed,
-    LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
+    PendingResidentFusedRegion, ResidentFusedRegionScan, ResidentFusedTiming, ResidentLiteralScan,
+    ScanAllTimed, LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
     LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES, LITERAL_SET_MATCHES_RESOURCE_INDEX,
     LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX,
     LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,

@@ -217,6 +217,12 @@ impl vyre_driver::PendingDispatch for WgpuPendingDispatch {
     fn await_result(self: Box<Self>) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
         (*self).await_owned()
     }
+
+    fn await_timed_result(
+        self: Box<Self>,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        (*self).await_timed_owned()
+    }
 }
 
 impl WgpuBackend {

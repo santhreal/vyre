@@ -15,7 +15,8 @@ mod source_accounting_contracts;
 use common::{bytes_u32, resident_dispatch_source, u32_bytes};
 use std::sync::Arc;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre::scan::GpuLiteralSet;
+use vyre_driver::{DispatchConfig, Resource, VyreBackend};
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration, CudaOptimizerDispatcher};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_self_substrate::optimizer::dispatcher::{
@@ -127,4 +128,174 @@ fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
     backend
         .free_resident(output)
         .expect("Fix: CUDA resident output free failed.");
+}
+
+/// WHY: the object-safe resident async seam must use CUDA's native pending
+/// dispatch rather than the synchronous trait fallback, while preserving exact
+/// output and immediate resident-handle validation.
+#[test]
+fn trait_resident_async_dispatch_preserves_output_and_rejects_nonresident_bindings() {
+    let backend = CudaBackendRegistration::new(
+        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
+    );
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::output("out", 1, DataType::U32).with_count(4),
+        ],
+        [1, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::gid_x(),
+            Expr::add(Expr::load("input", Expr::gid_x()), Expr::u32(9)),
+        )],
+    );
+    let input = backend
+        .allocate_resident(16)
+        .expect("Fix: trait resident input allocation failed.");
+    let output = backend
+        .allocate_resident(16)
+        .expect("Fix: trait resident output allocation failed.");
+    backend
+        .upload_resident(&input, &u32_bytes(&[1, 2, 3, 4]))
+        .expect("Fix: trait resident input upload failed.");
+
+    let pending = backend
+        .dispatch_resident_async(
+            &program,
+            &[input.clone(), output.clone()],
+            &DispatchConfig::default(),
+        )
+        .expect("Fix: native CUDA resident async submission failed.");
+    let in_flight_error = backend
+        .free_resident(output.clone())
+        .expect_err("Fix: pending CUDA work must retain resident output ownership until await.");
+    assert!(
+        in_flight_error.to_string().contains("in-flight"),
+        "Fix: pending resident ownership error must identify the active dispatch: {in_flight_error}"
+    );
+    let outputs = pending
+        .await_result()
+        .expect("Fix: native CUDA resident async readback failed.");
+    assert_eq!(
+        outputs.len(),
+        1,
+        "Fix: one output binding must produce one async readback slot."
+    );
+    assert_eq!(
+        bytes_u32(&outputs[0]),
+        vec![10, 11, 12, 13],
+        "Fix: resident async dispatch diverged from the exact resident program result."
+    );
+
+    let nonresident = Resource::Borrowed(vec![0; 16]);
+    let error = match backend.dispatch_resident_async(
+        &program,
+        &[nonresident, output.clone()],
+        &DispatchConfig::default(),
+    ) {
+        Ok(_) => {
+            panic!("Fix: a borrowed binding must fail before returning resident pending work.")
+        }
+        Err(error) => error,
+    };
+    assert!(
+        error.to_string().contains("resident"),
+        "Fix: nonresident-binding error must name the corrective boundary: {error}"
+    );
+
+    backend
+        .free_resident(input)
+        .expect("Fix: trait resident input free failed.");
+    backend
+        .free_resident(output)
+        .expect("Fix: trait resident output free failed.");
+}
+
+/// WHY: consumers pipeline independent resident fused slots through the public
+/// VYRE scan surface; the pending handle must preserve exact presence and
+/// position evidence and reject malformed region controls before submission.
+#[test]
+fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
+    let backend = CudaBackendRegistration::new(
+        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
+    );
+    let matcher = GpuLiteralSet::compile(&[b"token"]);
+    let mut session = matcher
+        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .expect("Fix: resident fused async session preparation failed.");
+    let mut scratch = Vec::new();
+
+    let error = match session.scan_async(&backend, b"token", &[1], 0, &mut scratch) {
+        Ok(_) => panic!("Fix: malformed region controls must fail before async submission."),
+        Err(error) => error,
+    };
+    assert!(
+        error.to_string().contains("region_starts[0] must be 0"),
+        "Fix: malformed async region diagnostics must identify the exact invariant: {error}"
+    );
+
+    let pending = session
+        .scan_async(&backend, b"xx token yy", &[0], 0, &mut scratch)
+        .expect("Fix: resident fused async submission failed.");
+    let concurrent_error = match session.scan_async(&backend, b"token", &[0], 0, &mut scratch) {
+        Ok(_) => panic!(
+            "Fix: one resident session must reject reuse until its pending result is retired."
+        ),
+        Err(error) => error,
+    };
+    assert!(
+        concurrent_error.to_string().contains("already has a dispatch in flight"),
+        "Fix: concurrent resident reuse must report the exact session invariant: {concurrent_error}"
+    );
+    let mut presence = Vec::new();
+    let mut matches = Vec::new();
+    let timing = pending
+        .await_into_timed(&mut presence, &mut matches)
+        .expect("Fix: resident fused async result decode failed.");
+    assert!(
+        timing.device_ns.is_some(),
+        "Fix: native CUDA async retirement must retain device event timing."
+    );
+    assert_eq!(
+        presence,
+        vec![1],
+        "Fix: the one-region presence bitmap must set pattern zero."
+    );
+    assert_eq!(
+        matches,
+        vec![vyre::scan::LiteralMatch::new(0, 3, 8)],
+        "Fix: resident fused async positions diverged from the literal-set contract."
+    );
+    let second = session
+        .scan_async(&backend, b"token", &[0], 0, &mut scratch)
+        .expect("Fix: awaiting must release the resident session for reuse.");
+    second
+        .await_into(&mut presence, &mut matches)
+        .expect("Fix: reused resident fused async result decode failed.");
+    assert_eq!(presence, vec![1]);
+    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
+
+    session
+        .free(&backend)
+        .expect("Fix: resident fused async session resources failed to free.");
+
+    let mut busy_session = matcher
+        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .expect("Fix: busy resident fused session preparation failed.");
+    let busy_pending = busy_session
+        .scan_async(&backend, b"token", &[0], 0, &mut scratch)
+        .expect("Fix: busy resident fused async submission failed.");
+    let free_error = busy_session
+        .free(&backend)
+        .expect_err("Fix: in-flight resident resources must never be freed.");
+    assert!(
+        free_error
+            .to_string()
+            .contains("cannot be freed while a dispatch is in flight"),
+        "Fix: premature free must identify the in-flight ownership contract: {free_error}"
+    );
+    busy_pending
+        .await_into(&mut presence, &mut matches)
+        .expect("Fix: rejected premature free must not corrupt pending output.");
 }

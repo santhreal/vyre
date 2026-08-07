@@ -771,6 +771,103 @@ pub struct ResidentFusedRegionScan {
     max_matches: u32,
     /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
     workgroup_x: u32,
+    in_flight: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+struct ResidentFusedDispatch {
+    resources: [Resource; 14],
+    config: DispatchConfig,
+    used_words: usize,
+    region_count: u32,
+}
+
+struct ResidentFusedInFlightGuard {
+    in_flight: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl Drop for ResidentFusedInFlightGuard {
+    fn drop(&mut self) {
+        self.in_flight
+            .store(false, std::sync::atomic::Ordering::Release);
+    }
+}
+
+/// Timing returned after retiring an asynchronous resident fused-region scan.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResidentFusedTiming {
+    /// Wall time spent retiring the pending dispatch.
+    pub wall_ns: u64,
+    /// Device event duration when the backend exposes native timestamps.
+    pub device_ns: Option<u64>,
+    /// Backend-reported enqueue duration when available.
+    pub enqueue_ns: Option<u64>,
+    /// Backend-reported wait duration when available.
+    pub wait_ns: Option<u64>,
+}
+
+/// In-flight resident fused-region scan.
+///
+/// The session rejects another dispatch until this handle is retired. The
+/// handle does not borrow the session, so an orchestrator may move the idle
+/// session and pending result into separate queue slots without self-references.
+/// It must keep the session alive and must not free it before awaiting.
+pub struct PendingResidentFusedRegion {
+    pending: Box<dyn PendingDispatch>,
+    in_flight: ResidentFusedInFlightGuard,
+    used_words: usize,
+    region_count: u32,
+    max_matches: u32,
+}
+
+impl PendingResidentFusedRegion {
+    /// Return whether the backend reports this dispatch ready to retire.
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.pending.is_ready()
+    }
+
+    /// Wait for readback and decode presence words and match triples into
+    /// caller-owned buffers.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on device/readback failure, malformed
+    /// output, or match-count overflow.
+    pub fn await_into(
+        self,
+        out: &mut Vec<u32>,
+        matches: &mut Vec<Match>,
+    ) -> Result<(), vyre::BackendError> {
+        self.await_into_timed(out, matches).map(|_| ())
+    }
+
+    /// Wait for readback, decode outputs, and return backend-owned timing.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] on device/readback failure, malformed
+    /// output, match-count overflow, or invalid backend timing.
+    pub fn await_into_timed(
+        self,
+        out: &mut Vec<u32>,
+        matches: &mut Vec<Match>,
+    ) -> Result<ResidentFusedTiming, vyre::BackendError> {
+        out.clear();
+        matches.clear();
+        let timed = self.pending.await_timed_result()?;
+        decode_resident_fused_outputs(
+            &timed.outputs,
+            self.used_words,
+            self.region_count,
+            self.max_matches,
+            out,
+            matches,
+        )?;
+        Ok(ResidentFusedTiming {
+            wall_ns: timed.wall_ns,
+            device_ns: timed.device_ns,
+            enqueue_ns: timed.enqueue_ns,
+            wait_ns: timed.wait_ns,
+        })
+    }
 }
 
 // SAFETY mirror of the sibling resident pipelines: `Resource` handles are plain
@@ -923,6 +1020,7 @@ impl GpuLiteralSet {
             max_regions,
             presence_words,
             max_matches,
+            in_flight: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
     }
 }
@@ -963,6 +1061,60 @@ impl ResidentFusedRegionScan {
         .map(|_timed| ())
     }
 
+    /// Start a fused resident scan and return before device execution and
+    /// readback complete.
+    ///
+    /// Host packing and bounded resident uploads complete before submission.
+    /// The returned handle keeps an exclusive borrow of this resident session,
+    /// so another independent session is required to overlap the next upload.
+    ///
+    /// # Errors
+    /// Returns [`vyre::BackendError`] under the same validation and staging
+    /// conditions as [`Self::scan_into`], or when asynchronous submission fails.
+    #[allow(clippy::too_many_arguments)]
+    pub fn scan_async(
+        &mut self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        scratch: &mut Vec<u8>,
+    ) -> Result<PendingResidentFusedRegion, vyre::BackendError> {
+        let in_flight = self.begin_dispatch()?;
+        let dispatch =
+            self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
+        let pending = backend.dispatch_resident_async(
+            &self.program,
+            &dispatch.resources,
+            &dispatch.config,
+        )?;
+        Ok(PendingResidentFusedRegion {
+            pending,
+            in_flight,
+            used_words: dispatch.used_words,
+            region_count: dispatch.region_count,
+            max_matches: self.max_matches,
+        })
+    }
+
+    fn begin_dispatch(&self) -> Result<ResidentFusedInFlightGuard, vyre::BackendError> {
+        self.in_flight
+            .compare_exchange(
+                false,
+                true,
+                std::sync::atomic::Ordering::Acquire,
+                std::sync::atomic::Ordering::Relaxed,
+            )
+            .map_err(|_| {
+                vyre::BackendError::new(
+                    "ResidentFusedRegionScan already has a dispatch in flight. Fix: await the pending result before reusing this resident session, or prepare another session for pipelining.".to_string(),
+                )
+            })?;
+        Ok(ResidentFusedInFlightGuard {
+            in_flight: std::sync::Arc::clone(&self.in_flight),
+        })
+    }
+
     /// [`Self::scan_into`] returning the backend-owned dispatch timing
     /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the fused
     /// resident scan's GPU-kernel time separately from host staging/readback.
@@ -980,10 +1132,36 @@ impl ResidentFusedRegionScan {
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
-        use crate::scan::dispatch_io;
-
+        let _in_flight = self.begin_dispatch()?;
         out.clear();
         matches.clear();
+        let dispatch =
+            self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
+        let timed = backend.dispatch_resident_timed(
+            &self.program,
+            &dispatch.resources,
+            &dispatch.config,
+        )?;
+        decode_resident_fused_outputs(
+            &timed.outputs,
+            dispatch.used_words,
+            dispatch.region_count,
+            self.max_matches,
+            out,
+            matches,
+        )?;
+        Ok(timed)
+    }
+
+    fn stage_dispatch(
+        &self,
+        backend: &dyn VyreBackend,
+        haystack: &[u8],
+        region_starts: &[u32],
+        region_base: u32,
+        scratch: &mut Vec<u8>,
+    ) -> Result<ResidentFusedDispatch, vyre::BackendError> {
+        use crate::scan::dispatch_io;
 
         let region_count = u32::try_from(region_starts.len()).map_err(|_| {
             vyre::BackendError::new(
@@ -1012,9 +1190,6 @@ impl ResidentFusedRegionScan {
             "ResidentFusedRegionScan::scan",
             dispatch_io::DEFAULT_MAX_SCAN_BYTES,
         )?;
-
-        // (1) Stage the haystack (real bytes only; the kernel bounds its cursor
-        // with haystack_len so the stale tail is never read).
         dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
         if scratch.len() > self.haystack_capacity {
             return Err(vyre::BackendError::new(format!(
@@ -1025,10 +1200,6 @@ impl ResidentFusedRegionScan {
         }
         backend.upload_resident_at(&self.haystack, 0, scratch)?;
 
-        // (2) Zero the USED prefix of the resident presence buffer (binding 6 is
-        // OR-accumulated, so it must arrive zeroed). Rows beyond region_count are
-        // never written and never read. `scratch` reuse is safe (synchronous
-        // upload copy).
         let used_words = (region_count as usize)
             .checked_mul(self.presence_words as usize)
             .ok_or_else(|| {
@@ -1045,15 +1216,10 @@ impl ResidentFusedRegionScan {
         scratch.resize(reset_bytes, 0);
         backend.upload_resident_at(&self.presence, 0, scratch)?;
 
-        // (3) Per-scan control buffers (all resident). haystack_len, region_base,
-        // and the 4-byte match_count reset are each one u32.
         backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
         backend.upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())?;
         backend.upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())?;
 
-        // region_starts padded to the fixed max_regions width with u32::MAX (a
-        // sentinel strictly greater than any candidate position, so the region
-        // binary search never maps a hit to a padding row). `scratch` reuse safe.
         scratch.clear();
         let region_starts_words = self.max_regions as usize;
         scratch.reserve(region_starts_words.saturating_mul(U32_BYTES));
@@ -1065,66 +1231,29 @@ impl ResidentFusedRegionScan {
         }
         backend.upload_resident_at(&self.region_starts_buf, 0, scratch)?;
 
-        // (4) Bind in program (BufferDecl) order, every binding resident. This is
-        // the fused program's 14-binding order (0..=13); the read-back buffers are
-        // presence(6, read_write), match_count(12, read_write) and matches(13,
-        // output).
         let resources = [
-            self.haystack.clone(),                // 0: haystack (Packed U32)
-            self.transitions.clone(),             // 1: transitions
-            self.output_offsets.clone(),          // 2: output_offsets
-            self.output_records.clone(),          // 3: output_records
-            self.pattern_lengths.clone(),         // 4: pattern_lengths
-            self.haystack_len_buf.clone(),        // 5: haystack_len
-            self.presence.clone(),                // 6: presence (read_write)
-            self.candidate_end_mask.clone(),      // 7: candidate_end_mask
-            self.candidate_suffix2_mask.clone(),  // 8: candidate_suffix2_mask
-            self.candidate_suffix3_bloom.clone(), // 9: candidate_suffix3_bloom
-            self.region_starts_buf.clone(),       // 10: region_starts (padded)
-            self.region_base_buf.clone(),         // 11: region_base
-            self.match_count_buf.clone(),         // 12: match_count (read_write)
-            self.matches_buf.clone(),             // 13: matches (output)
+            self.haystack.clone(),
+            self.transitions.clone(),
+            self.output_offsets.clone(),
+            self.output_records.clone(),
+            self.pattern_lengths.clone(),
+            self.haystack_len_buf.clone(),
+            self.presence.clone(),
+            self.candidate_end_mask.clone(),
+            self.candidate_suffix2_mask.clone(),
+            self.candidate_suffix3_bloom.clone(),
+            self.region_starts_buf.clone(),
+            self.region_base_buf.clone(),
+            self.match_count_buf.clone(),
+            self.matches_buf.clone(),
         ];
-
         let config = dispatch_io::byte_scan_dispatch_config(haystack_len, self.workgroup_x);
-        let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
-
-        // Output ordering = read_write then output by binding: presence(6) ->
-        // outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2]
-        // the exact shape the borrowed fused dispatch produces.
-        let presence_bytes = dispatch_io::try_output_bytes(
-            &timed.outputs,
-            0,
-            "ResidentFusedRegionScan presence buffer",
-        )?;
-        decode_presence_words_into(presence_bytes, used_words, out);
-        if out.len() != used_words {
-            let returned = out.len();
-            out.clear();
-            return Err(vyre::BackendError::new(format!(
-                "ResidentFusedRegionScan presence readback returned {returned} u32 word(s) but the {region_count}-region scan needs {used_words}. Fix: ensure the backend reads back the full binding-6 presence resource."
-            )));
-        }
-
-        let count_bytes = dispatch_io::try_output_bytes(
-            &timed.outputs,
-            1,
-            "ResidentFusedRegionScan match count",
-        )?;
-        let count =
-            dispatch_io::try_read_u32_prefix(count_bytes, "ResidentFusedRegionScan match count")?;
-        let matches_bytes =
-            dispatch_io::try_output_bytes(&timed.outputs, 2, "ResidentFusedRegionScan matches")?;
-        // Capped decode: fail closed if the device count exceeds max_matches (the
-        // fixed resident matches buffer cannot hold a truncated decode. Law 10).
-        dispatch_io::try_unpack_match_triples_capped_into(
-            matches_bytes,
-            count,
-            self.max_matches,
-            "ResidentFusedRegionScan matches",
-            matches,
-        )?;
-        Ok(timed)
+        Ok(ResidentFusedDispatch {
+            resources,
+            config,
+            used_words,
+            region_count,
+        })
     }
 
     /// Largest coalesced-file count this session's presence buffer was sized for.
@@ -1149,8 +1278,14 @@ impl ResidentFusedRegionScan {
     /// returns the first error; the session is consumed.
     ///
     /// # Errors
-    /// Returns the first [`vyre::BackendError`] from freeing a resource.
+    /// Returns an error without recycling any resource while a dispatch remains
+    /// in flight, or the first [`vyre::BackendError`] from freeing a resource.
     pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre::BackendError> {
+        if self.in_flight.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(vyre::BackendError::new(
+                "ResidentFusedRegionScan cannot be freed while a dispatch is in flight. Fix: await the pending result before freeing this resident session.",
+            ));
+        }
         let mut first_err = None;
         for resource in [
             self.haystack,
@@ -1174,6 +1309,42 @@ impl ResidentFusedRegionScan {
         }
         first_err.map_or(Ok(()), Err)
     }
+}
+
+fn decode_resident_fused_outputs(
+    outputs: &[Vec<u8>],
+    used_words: usize,
+    region_count: u32,
+    max_matches: u32,
+    out: &mut Vec<u32>,
+    matches: &mut Vec<Match>,
+) -> Result<(), vyre::BackendError> {
+    use crate::scan::dispatch_io;
+
+    let presence_bytes =
+        dispatch_io::try_output_bytes(outputs, 0, "ResidentFusedRegionScan presence buffer")?;
+    decode_presence_words_into(presence_bytes, used_words, out);
+    if out.len() != used_words {
+        let returned = out.len();
+        out.clear();
+        return Err(vyre::BackendError::new(format!(
+            "ResidentFusedRegionScan presence readback returned {returned} u32 word(s) but the {region_count}-region scan needs {used_words}. Fix: ensure the backend reads back the full binding-6 presence resource."
+        )));
+    }
+
+    let count_bytes =
+        dispatch_io::try_output_bytes(outputs, 1, "ResidentFusedRegionScan match count")?;
+    let count =
+        dispatch_io::try_read_u32_prefix(count_bytes, "ResidentFusedRegionScan match count")?;
+    let matches_bytes =
+        dispatch_io::try_output_bytes(outputs, 2, "ResidentFusedRegionScan matches")?;
+    dispatch_io::try_unpack_match_triples_capped_into(
+        matches_bytes,
+        count,
+        max_matches,
+        "ResidentFusedRegionScan matches",
+        matches,
+    )
 }
 
 /// In-flight handle for [`GpuLiteralSet::scan_presence_by_region_async`].

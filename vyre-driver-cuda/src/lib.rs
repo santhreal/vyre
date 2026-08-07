@@ -829,6 +829,18 @@ impl VyreBackend for CudaBackendRegistration {
             .dispatch_resident_timed(program, &handles, config)
     }
 
+    fn dispatch_resident_async(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, BackendError> {
+        self.validate_program_for_dispatch(program)?;
+        let handles = self.inner.resident_handles_from_resources(resources)?;
+        self.inner
+            .dispatch_resident_async(program, &handles, config)
+    }
+
     fn dispatch_resident_sequence_read_ranges_into(
         &self,
         steps: &[vyre_driver::backend::ResidentDispatchStep<'_>],

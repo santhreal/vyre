@@ -335,7 +335,7 @@ fn resident_sequence_captures_kernel_device_time_around_launches() {
 }
 
 #[test]
-fn resident_async_error_cleanup_leaks_resources_when_sync_is_unproven() {
+fn resident_async_transfers_all_inflight_ownership_before_returning() {
     let source = super::super::resident_dispatch_production_source();
     let dispatch = source
         .split("pub(crate) fn dispatch_resident_async_concrete_with_ptx_key")
@@ -348,31 +348,36 @@ fn resident_async_error_cleanup_leaks_resources_when_sync_is_unproven() {
         dispatch.contains("let mut launch_resources = Some(launch_resources);")
             && dispatch.contains("let mut allocations = Some(allocations);")
             && dispatch.contains("let mut resident_use = Some(resident_use);")
-            && dispatch.contains("let mut host_transfers = Some(host_transfers);")
-            && dispatch.contains("let enqueue_result = (||"),
-        "Fix: CUDA resident async dispatch must retain launch resources, resident use, transient allocations, and pinned host staging in outer cleanup ownership until post-kernel completion is proven."
+            && dispatch.contains("let mut host_transfers = Some(host_transfers);"),
+        "Fix: resident async dispatch must retain every in-flight owner until pending ownership transfer."
     );
     assert!(
-        dispatch.contains("crate::stream::synchronize_raw_stream(\n                stream_raw,\n                \"cuStreamSynchronize (resident async error cleanup)\",")
+        !dispatch.contains("cuStreamSynchronize (resident post-kernel)")
+            && !dispatch.contains("cuStreamSynchronize (resident staged output readback)"),
+        "Fix: successful resident async submission must not fence compute or readback on the caller thread."
+    );
+    let readback_pos = dispatch
+        .find("cuMemcpyDtoHAsync_v2 (resident staged output)")
+        .expect("Fix: resident async dispatch must enqueue D2H output copies.");
+    let event_pos = dispatch
+        .find("let event = self.launch_resources.acquire_event()?")
+        .expect("Fix: resident async dispatch must acquire a completion event.");
+    let transfer_pos = dispatch
+        .find("CudaPendingDispatch::new_with_timing")
+        .expect("Fix: resident async dispatch must transfer work into a pending handle.");
+    assert!(
+        readback_pos < event_pos && event_pos < transfer_pos,
+        "Fix: resident async dispatch must record completion after D2H enqueue and before pending ownership transfer."
+    );
+    assert!(
+        dispatch.contains("cuStreamSynchronize (resident async error cleanup)")
+            && dispatch.contains("cuStreamSynchronize (resident async output enqueue cleanup)")
             && dispatch.contains("In-flight resident dispatch resources will not be recycled.")
             && dispatch.contains("std::mem::forget(launch_resources);")
             && dispatch.contains("std::mem::forget(allocations);")
             && dispatch.contains("std::mem::forget(resident_use);")
             && dispatch.contains("std::mem::forget(host_transfers);"),
-        "Fix: CUDA resident async dispatch must leak in-flight resources when completion is unproven after enqueue errors."
-    );
-    let cleanup_pos = dispatch
-        .find("if let Err(error) = enqueue_result")
-        .expect("Fix: resident async dispatch must classify enqueue cleanup errors.");
-    let post_kernel_sync_pos = dispatch
-        .find("\"cuStreamSynchronize (resident post-kernel)\"")
-        .expect("Fix: resident async dispatch must prove completion before synchronous readback.");
-    let output_readback_pos = dispatch
-        .find("let mut staged_readback_bytes = 0_u64;")
-        .expect("Fix: resident async dispatch must keep synchronous output readback after cleanup classification.");
-    assert!(
-        post_kernel_sync_pos < cleanup_pos && cleanup_pos < output_readback_pos,
-        "Fix: resident async dispatch must wrap all fallible enqueue work through the post-kernel fence before releasing resources to synchronous readback."
+        "Fix: enqueue failures must synchronize or leak every resource whose completion is unproven."
     );
 }
 

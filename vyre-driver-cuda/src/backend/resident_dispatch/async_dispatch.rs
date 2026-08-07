@@ -94,7 +94,7 @@ impl CudaBackend {
         let (ptx_src, ptx_source_key) = self.ptx_for_program_cached_with_key(program, config)?;
         let module_key = self.module_cache_key_for_ptx_source_key(ptx_source_key)?;
         let native = self.dispatch_resident_async_concrete_with_ptx_key(
-            program, bindings, config, &ptx_src, module_key, false, None, true, &prepared,
+            program, bindings, config, &ptx_src, module_key, true, None, true, &prepared,
         )?;
         Ok(Box::new(native.pending))
     }
@@ -431,22 +431,9 @@ impl CudaBackend {
                 start.elapsed().as_millis()
             );
         }
-        // Kernel-only device window, probe path only.
-        //
-        // The outer timing events below bracket host work as well: function
-        // resolution, the grid-barrier lease (which scans the PTX text), and
-        // the post-launch release (which synchronizes the stream and reads the
-        // arrival counter back). CUDA event elapsed time is a difference of two
-        // DEVICE timestamps, so every stretch where the stream drained while
-        // the host had not yet enqueued the next item lands inside it. This
-        // inner pair brackets the launch loop alone, which is what lets the
-        // probe price that error instead of leaving it as a caveat on every
-        // device figure derived from the outer pair.
-        let kernel_events = if probe::enabled() && capture_timing {
-            Some(self.launch_resources.acquire_timing_event_pair()?)
-        } else {
-            None
-        };
+        // Completion and timing events are transferred to the pending handle.
+        // Do not allocate a second probe-only pair here: reading or recycling
+        // it would require the host fence this asynchronous path removes.
         let enqueue_result = (|| {
             enqueue_optional_resident_h2d_copy(param_upload, stream_raw)?;
             for &(dst_ptr, host_ptr, byte_len) in &borrowed_upload_copies {
@@ -544,9 +531,6 @@ impl CudaBackend {
                 stream_raw,
                 "resident async dispatch grid-sync launch",
                 |grid_barrier| {
-                    if let Some((kernel_start, _)) = kernel_events.as_ref() {
-                        kernel_start.record(stream_raw)?;
-                    }
                     probe::measure(probe::Phase::LaunchLoop, || {
                         for _ in 0..prepared.fixpoint_iterations {
                             // SAFETY: stream_raw is the live resident dispatch
@@ -566,9 +550,6 @@ impl CudaBackend {
                         }
                         Ok::<(), BackendError>(())
                     })?;
-                    if let Some((_, kernel_end)) = kernel_events.as_ref() {
-                        kernel_end.record(stream_raw)?;
-                    }
                     Ok(())
                 },
             )?;
@@ -586,30 +567,9 @@ impl CudaBackend {
             {
                 end_event.record(stream_raw)?;
             }
-            // SAFETY: stream_raw is the live CUDA stream used for the launches
-            // above. Native resident dispatch intentionally fences after the
-            // kernel before host-visible output staging. The direct async DtoH/DtoD
-            // path after a resident-staged launch can leave the completion event
-            // unsignaled on current CUDA drivers, while an explicit post-kernel
-            // fence followed by synchronous readback preserves correctness and
-            // keeps the actual Program execution on CUDA instead of falling back
-            // to host-buffer dispatch.
-            crate::stream::synchronize_raw_stream(
-                stream_raw,
-                "cuStreamSynchronize (resident post-kernel)",
-            )?;
-            self.telemetry.record_sync_point();
-            // Both inner events are complete: the fence above drained the
-            // stream they were recorded on.
-            if let Some((kernel_start, kernel_end)) = kernel_events.as_ref() {
-                probe::record_kernel_ns(kernel_start.elapsed_time_ns(kernel_end)?);
-            }
-            if trace {
-                tracing::debug!(
-                    "[cuda-trace] +{}ms resident post-kernel sync complete",
-                    start.elapsed().as_millis()
-                );
-            }
+            // Output copies are enqueued on the same stream after the kernel.
+            // The completion event recorded below fences uploads, compute, and
+            // D2H transfer without blocking this submission call.
             Ok(())
         })();
         if let Err(error) = enqueue_result {
@@ -642,195 +602,166 @@ impl CudaBackend {
                 }
             }
         }
-        // Recycled only on the success path. An enqueue failure returns above
-        // with the pair still owned here, and dropping it destroys the events
-        // rather than returning them to a pool whose stream state is unproven.
-        if let Some((kernel_start, kernel_end)) = kernel_events {
-            self.launch_resources.release_timing_event(kernel_start);
-            self.launch_resources.release_timing_event(kernel_end);
-        }
-        let launch_resources = launch_resources
-            .take()
-            .ok_or_else(|| BackendError::InvalidProgram {
-                fix: "Fix: CUDA resident dispatch launch resources were consumed before synchronous output readback.".to_string(),
-            })?;
-        let allocations = allocations.take().ok_or_else(|| BackendError::InvalidProgram {
-            fix: "Fix: CUDA resident dispatch allocations were consumed before synchronous output readback.".to_string(),
-        })?;
-        let resident_use = resident_use.take().ok_or_else(|| BackendError::InvalidProgram {
-            fix: "Fix: CUDA resident dispatch use guard was consumed before synchronous output readback.".to_string(),
-        })?;
-        let mut host_transfers =
-            host_transfers
+
+        let pending = (|| {
+            let mut staged_readback_bytes = 0_u64;
+            let mut staged_readback_ops = 0_u64;
+            {
+                let transfers =
+                    host_transfers
+                        .as_mut()
+                        .ok_or_else(|| BackendError::InvalidProgram {
+                            fix: "Fix: CUDA resident dispatch host staging was consumed before asynchronous output readback enqueue.".to_string(),
+                        })?;
+                for &(src_base_ptr, readback) in &output_stage_readbacks {
+                    let dst = transfers.push_output(readback.byte_len)?;
+                    if readback.byte_len == 0 {
+                        continue;
+                    }
+                    add_resident_dispatch_bytes(
+                        &mut staged_readback_bytes,
+                        readback.byte_len,
+                        "resident staged output readback",
+                    )?;
+                    add_resident_dispatch_u64_count(
+                        &mut staged_readback_ops,
+                        "resident staged output readback operation",
+                    )?;
+                    let src_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+                        src_base_ptr,
+                        readback.device_offset,
+                        || {
+                            BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: CUDA resident staged output readback offset {} does not fit CUdeviceptr arithmetic.",
+                                readback.device_offset
+                            ),
+                        }
+                        },
+                        || BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: CUDA resident staged output pointer overflowed at offset {}.",
+                                readback.device_offset
+                            ),
+                        },
+                    )?;
+                    // SAFETY: the source is a validated resident or transient
+                    // output and the pinned destination remains owned by the
+                    // pending dispatch until its completion event retires.
+                    unsafe {
+                        crate::backend::copy::d2h_async_checked_with_label(
+                            dst,
+                            src_ptr,
+                            readback.byte_len,
+                            stream_raw,
+                            "cuMemcpyDtoHAsync_v2 (resident staged output)",
+                        )?;
+                    }
+                }
+            }
+            self.telemetry
+                .record_device_to_host_readback(staged_readback_bytes);
+            self.telemetry
+                .record_device_readback_operations(staged_readback_ops);
+
+            let outputs = reserved_vec(output_stage_readbacks.len(), "resident staged output")?;
+            let event = self.launch_resources.acquire_event()?;
+            if let Err(error) = event.record(stream_raw) {
+                self.launch_resources.release_event(event);
+                return Err(error);
+            }
+            let (stream, timing_events) = launch_resources
                 .take()
                 .ok_or_else(|| BackendError::InvalidProgram {
-                    fix: "Fix: CUDA resident dispatch host staging was consumed before synchronous output readback.".to_string(),
-                })?;
-        let mut staged_readback_bytes = 0_u64;
-        let mut staged_readback_ops = 0_u64;
-        // Stage every output with one stream-ordered async copy and a single
-        // fence, rather than one blocking copy per output. A blocking copy
-        // costs a full driver round trip per binding: measured on this box
-        // (RTX 5090, driver 570.211.01), 16 blocking 16-byte readbacks take
-        // 52.5 us against 17.8 us for 16 async copies plus one synchronize,
-        // a 3.39x median over 8 ABBA rounds. The post-kernel fence above
-        // already drained the stream, so these copies are enqueued onto an
-        // idle stream and the fence below is what makes them host-visible.
-        let staging_result = (|| -> Result<(), BackendError> {
-            for &(src_base_ptr, readback) in &output_stage_readbacks {
-                let dst = host_transfers.push_output(readback.byte_len)?;
-                if readback.byte_len == 0 {
-                    continue;
+                    fix: "Fix: CUDA resident dispatch launch resources were consumed before asynchronous pending ownership transfer.".to_string(),
+                })?
+                .into_parts()?;
+            let allocations = allocations.take().ok_or_else(|| BackendError::InvalidProgram {
+                fix: "Fix: CUDA resident dispatch allocations were consumed before asynchronous pending ownership transfer.".to_string(),
+            })?;
+            let resident_use =
+                resident_use
+                    .take()
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: "Fix: CUDA resident dispatch use guard was consumed before asynchronous pending ownership transfer.".to_string(),
+                    })?;
+            let host_transfers =
+                host_transfers
+                    .take()
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: "Fix: CUDA resident dispatch host staging was consumed before asynchronous pending ownership transfer.".to_string(),
+                    })?;
+            let pending = match timing_events {
+                Some((timing_start, timing_end)) => {
+                    crate::stream::CudaPendingDispatch::new_with_timing(
+                        Arc::clone(&self.ctx),
+                        Arc::clone(&self.launch_resources),
+                        event,
+                        stream,
+                        allocations,
+                        Some(resident_use),
+                        Some(host_transfers),
+                        outputs,
+                        timing_start,
+                        timing_end,
+                        Arc::clone(&self.telemetry),
+                    )
                 }
-                add_resident_dispatch_bytes(
-                    &mut staged_readback_bytes,
-                    readback.byte_len,
-                    "resident staged output readback",
-                )?;
-                add_resident_dispatch_u64_count(
-                    &mut staged_readback_ops,
-                    "resident staged output readback operation",
-                )?;
-                let src_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
-                    src_base_ptr,
-                    readback.device_offset,
-                    || {
-                        BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident staged output readback offset {} does not fit CUdeviceptr arithmetic.",
-                            readback.device_offset
-                        ),
-                    }
-                    },
-                    || BackendError::InvalidProgram {
-                        fix: format!(
-                            "Fix: CUDA resident staged output pointer overflowed at offset {}.",
-                            readback.device_offset
-                        ),
-                    },
-                )?;
-                // SAFETY: The source is the transient launch output buffer and
-                // the destination is pinned host staging owned by
-                // host_transfers, which stays alive (or is leaked below when
-                // the fence fails) until every enqueued copy has retired.
-                unsafe {
-                    crate::backend::copy::d2h_async_checked_with_label(
-                        dst,
-                        src_ptr,
-                        readback.byte_len,
-                        stream_raw,
-                        "cuMemcpyDtoHAsync_v2 (resident staged output)",
-                    )?;
-                }
-            }
-            Ok(())
+                None => crate::stream::CudaPendingDispatch::new(
+                    Arc::clone(&self.ctx),
+                    Arc::clone(&self.launch_resources),
+                    event,
+                    stream,
+                    allocations,
+                    Some(resident_use),
+                    Some(host_transfers),
+                    outputs,
+                    Arc::clone(&self.telemetry),
+                ),
+            };
+            Ok(pending)
         })();
-        // The fence runs even when staging failed part way: copies already
-        // enqueued are still in flight and their pinned destinations cannot be
-        // recycled until the stream proves them retired.
-        let fence_result = if staged_readback_ops == 0 {
-            Ok(())
-        } else {
-            crate::stream::synchronize_raw_stream(
-                stream_raw,
-                "cuStreamSynchronize (resident staged output readback)",
-            )
-        };
-        let staging_error = match (staging_result, fence_result) {
-            (Ok(()), Ok(())) => None,
-            (Err(error), Ok(())) => Some(error),
-            (staging_outcome, Err(fence_error)) => {
-                tracing::error!(
-                    "Fix: failed to synchronize CUDA resident dispatch stream after staging output readbacks: {fence_error}. In-flight resident dispatch resources will not be recycled."
-                );
-                std::mem::forget(host_transfers);
-                std::mem::forget(launch_resources);
-                std::mem::forget(allocations);
-                std::mem::forget(resident_use);
-                return Err(staging_outcome.err().unwrap_or(fence_error));
+        let pending = match pending {
+            Ok(pending) => pending,
+            Err(error) => {
+                let Some(launch_resources) = launch_resources.take() else {
+                    return Err(error);
+                };
+                match crate::stream::synchronize_raw_stream(
+                    stream_raw,
+                    "cuStreamSynchronize (resident async output enqueue cleanup)",
+                ) {
+                    Ok(()) => {
+                        self.telemetry.record_sync_point();
+                        return Err(error);
+                    }
+                    Err(sync_error) => {
+                        tracing::error!(
+                            "Fix: failed to synchronize CUDA resident dispatch stream after output enqueue error: {sync_error}. In-flight resident dispatch resources will not be recycled."
+                        );
+                        std::mem::forget(launch_resources);
+                        if let Some(allocations) = allocations.take() {
+                            std::mem::forget(allocations);
+                        }
+                        if let Some(resident_use) = resident_use.take() {
+                            std::mem::forget(resident_use);
+                        }
+                        if let Some(host_transfers) = host_transfers.take() {
+                            std::mem::forget(host_transfers);
+                        }
+                        return Err(error);
+                    }
+                }
             }
         };
-        if let Some(error) = staging_error {
-            return Err(error);
-        }
-        if staged_readback_ops != 0 {
-            self.telemetry.record_sync_point();
-        }
-        self.telemetry
-            .record_device_to_host_readback(staged_readback_bytes);
-        self.telemetry
-            .record_device_readback_operations(staged_readback_ops);
         if trace {
             tracing::debug!(
-                "[cuda-trace] +{}ms resident launch/output readbacks",
-                start.elapsed().as_millis()
-            );
-        }
-        let (stream, timing_events) = launch_resources.into_parts()?;
-        let mut outputs = reserved_vec(output_stage_readbacks.len(), "resident staged output")?;
-        host_transfers.collect_outputs_into(&mut outputs)?;
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident output collection complete",
-                start.elapsed().as_millis()
-            );
-        }
-        self.launch_resources.release_stream(stream);
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident stream released",
-                start.elapsed().as_millis()
-            );
-        }
-        let device_ns = match timing_events.as_ref() {
-            Some((start_event, end_event)) => Some(start_event.elapsed_time_ns(end_event)?),
-            None => None,
-        };
-        if let Some((start_event, end_event)) = timing_events {
-            self.launch_resources.release_timing_event(start_event);
-            self.launch_resources.release_timing_event(end_event);
-        }
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident timing events released",
-                start.elapsed().as_millis()
-            );
-        }
-        drop(resident_use);
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident use released",
-                start.elapsed().as_millis()
-            );
-        }
-        drop(allocations);
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident allocations released",
-                start.elapsed().as_millis()
-            );
-        }
-        drop(host_transfers);
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident host transfers released",
-                start.elapsed().as_millis()
-            );
-        }
-        if trace {
-            tracing::debug!(
-                "[cuda-trace] +{}ms resident synchronous completion",
+                "[cuda-trace] +{}ms resident asynchronous submission complete",
                 start.elapsed().as_millis()
             );
         }
         Ok(CudaResidentDispatch {
-            pending: crate::stream::CudaPendingDispatch::new_ready_timed(
-                Arc::clone(&self.ctx),
-                Arc::clone(&self.launch_resources),
-                outputs,
-                device_ns,
-                Arc::clone(&self.telemetry),
-            ),
+            pending,
             output_handles,
             output_readbacks,
         })

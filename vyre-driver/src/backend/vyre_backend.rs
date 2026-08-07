@@ -429,6 +429,39 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
         })
     }
 
+    /// Start a dispatch against backend-resident resources without waiting for
+    /// device execution or output readback to complete.
+    ///
+    /// The returned handle owns every backend-specific in-flight reference
+    /// needed to keep `resources` valid until
+    /// [`PendingDispatch::await_result`]. Callers may overlap host acquisition
+    /// and staging for another independent resident slot while this dispatch is
+    /// in flight. They must not upload to, free, or redispatch any resource in
+    /// `resources` until the pending handle has completed.
+    ///
+    /// The conservative default preserves correctness by running
+    /// [`VyreBackend::dispatch_resident_timed`] synchronously and returning a
+    /// ready handle. Backends with queue/stream support override this method.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] if validation, command submission, or resident
+    /// resource binding fails before the dispatch can start. Device and
+    /// readback failures may surface from [`PendingDispatch::await_result`].
+    fn dispatch_resident_async(
+        &self,
+        program: &Program,
+        resources: &[Resource],
+        config: &DispatchConfig,
+    ) -> Result<Box<dyn PendingDispatch>, BackendError> {
+        let outputs = self
+            .dispatch_resident_timed(program, resources, config)?
+            .outputs;
+        Ok(Box::new(crate::backend::pending_dispatch::ReadyPending {
+            outputs,
+        }))
+    }
+
     /// Dispatch an ordered sequence of resident-buffer programs and read
     /// selected resident byte ranges into caller-owned storage.
     ///

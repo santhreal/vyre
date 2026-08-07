@@ -1,6 +1,6 @@
 //! Handle to a dispatch in flight.
 
-use crate::backend::{private, BackendError, OutputBuffers};
+use crate::backend::{private, BackendError, OutputBuffers, TimedDispatchResult};
 
 /// Handle to a dispatch in flight. Returned by
 /// [`crate::backend::VyreBackend::dispatch_async`].
@@ -44,6 +44,30 @@ pub trait PendingDispatch: private::Sealed + Send + Sync {
     ///
     /// Returns [`BackendError`] if the dispatch failed on the device.
     fn await_result(self: Box<Self>) -> Result<Vec<Vec<u8>>, BackendError>;
+
+    /// Consume the handle and return output buffers with backend-owned timing.
+    ///
+    /// The default measures the blocking retirement wall time and reports no
+    /// device timing. Backends with native events or timestamp queries override
+    /// this method so asynchronous consumers retain exact kernel attribution.
+    ///
+    /// # Errors
+    /// Returns [`BackendError`] if the dispatch failed on the device or wall
+    /// timing cannot fit the public nanosecond field.
+    fn await_timed_result(self: Box<Self>) -> Result<TimedDispatchResult, BackendError> {
+        let started = std::time::Instant::now();
+        let outputs = self.await_result()?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: crate::backend::checked_elapsed_wall_ns(
+                started,
+                "pending dispatch retirement",
+            )?,
+            device_ns: None,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
+    }
 
     /// Consume the handle and write output buffers into caller-owned storage.
     ///

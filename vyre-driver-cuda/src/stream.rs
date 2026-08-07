@@ -857,6 +857,25 @@ impl PendingDispatch for CudaPendingDispatch {
         Ok(outputs)
     }
 
+    fn await_timed_result(
+        self: Box<Self>,
+    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+        let started = std::time::Instant::now();
+        let (outputs, device_ns) = CudaPendingDispatch::await_timed_result(*self)?;
+        let wall_ns = u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
+            BackendError::new(
+                "CUDA pending dispatch retirement exceeded the u64 nanosecond timing range",
+            )
+        })?;
+        Ok(vyre_driver::TimedDispatchResult {
+            outputs,
+            wall_ns,
+            device_ns,
+            enqueue_ns: None,
+            wait_ns: Some(wall_ns),
+        })
+    }
+
     fn await_result_into(
         mut self: Box<Self>,
         outputs: &mut Vec<Vec<u8>>,
