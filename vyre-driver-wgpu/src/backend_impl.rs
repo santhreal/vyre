@@ -1052,6 +1052,15 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         crate::resident_dispatch::dispatch_resident_timed(self, program, resources, config)
     }
 
+    fn dispatch_resident_async(
+        &self,
+        program: &Program,
+        resources: &[vyre_driver::Resource],
+        config: &vyre_driver::DispatchConfig,
+    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+        crate::resident_dispatch::dispatch_resident_async(self, program, resources, config)
+    }
+
     fn dispatch_with_device_buffers(
         &self,
         program: &Program,

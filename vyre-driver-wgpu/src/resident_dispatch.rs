@@ -28,6 +28,30 @@ pub(crate) fn dispatch_resident_timed(
         wait_ns: timed.wait_ns,
     })
 }
+/// Submit resident work and return before compute or readback completes.
+pub(crate) fn dispatch_resident_async(
+    backend: &WgpuBackend,
+    program: &Program,
+    resources: &[vyre_driver::Resource],
+    config: &vyre_driver::DispatchConfig,
+) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+    let started = Instant::now();
+    if vyre_driver::grid_sync::contains_grid_sync(program) {
+        let outputs = vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+            backend, program, resources, config,
+        )?
+        .outputs;
+        return Ok(Box::new(crate::async_dispatch::WgpuPendingDispatch::ready(
+            outputs,
+            started,
+            config.timeout,
+        )));
+    }
+    let pipeline = backend.compile_resident_pipeline_cached(program, config)?;
+    Ok(Box::new(pipeline.dispatch_persistent_handles_async(
+        resources, config, started,
+    )?))
+}
 
 fn elapsed_nanos_u64(start: Instant, label: &str) -> Result<u64, vyre_driver::BackendError> {
     u64::try_from(start.elapsed().as_nanos()).map_err(|source| {

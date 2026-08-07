@@ -30,6 +30,20 @@ struct WgpuLaunchFeedback {
 impl vyre_driver::backend::private::Sealed for WgpuPendingDispatch {}
 
 impl WgpuPendingDispatch {
+    pub(crate) fn ready(
+        outputs: vyre_driver::OutputBuffers,
+        started: Instant,
+        timeout: Option<Duration>,
+    ) -> Self {
+        Self {
+            kind: WgpuPendingKind::Ready(outputs),
+            started,
+            timeout,
+            prefetch: None,
+            launch_feedback: None,
+        }
+    }
+
     pub(crate) fn await_owned(
         self,
     ) -> Result<vyre_driver::OutputBuffers, vyre_driver::BackendError> {

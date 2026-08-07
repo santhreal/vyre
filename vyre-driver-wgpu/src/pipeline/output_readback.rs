@@ -22,6 +22,28 @@ pub(crate) fn read_trimmed_output(
     deadline: Option<Instant>,
     bytes: &mut Vec<u8>,
 ) -> Result<(), BackendError> {
+    start_trimmed_output(handle, output, device, staging_pool, queue, label)?
+        .await_into(device, deadline, bytes)?;
+    if output.layout.read_size > bytes.len() {
+        return Err(BackendError::new(format!(
+            "{label} readback slice for `{}` returned {} bytes but {} bytes are required. Fix: verify staging readback length handling.",
+            output.name,
+            bytes.len(),
+            output.layout.read_size
+        )));
+    }
+    bytes.truncate(output.layout.read_size);
+    Ok(())
+}
+
+pub(crate) fn start_trimmed_output(
+    handle: &GpuBufferHandle,
+    output: &OutputBindingLayout,
+    device: &wgpu::Device,
+    staging_pool: &StagingBufferPool,
+    queue: &wgpu::Queue,
+    label: &str,
+) -> Result<crate::buffer::PendingGpuBufferReadback, BackendError> {
     let end = output
         .layout
         .trim_start
@@ -60,23 +82,11 @@ pub(crate) fn read_trimmed_output(
         )));
     }
 
-    handle.readback_range_until(
+    handle.readback_range_async(
         device,
         Some(staging_pool),
         queue,
         trim_start_u64,
         read_size_u64,
-        bytes,
-        deadline,
-    )?;
-    if output.layout.read_size > bytes.len() {
-        return Err(BackendError::new(format!(
-            "{label} readback slice for `{}` returned {} bytes but {} bytes are required. Fix: verify staging readback length handling.",
-            output.name,
-            bytes.len(),
-            output.layout.read_size
-        )));
-    }
-    bytes.truncate(output.layout.read_size);
-    Ok(())
+    )
 }

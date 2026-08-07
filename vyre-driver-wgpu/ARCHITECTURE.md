@@ -39,9 +39,9 @@ Buffer pool, residency tracker, GpuBufferHandle lifecycle.
 Megakernel-specific dispatch helpers (the runtime wrapper lives
 in `vyre-runtime::megakernel`).
 
-### `async_dispatch.rs`
-Async submission path that overlaps submit with the next
-preparation pass.
+### `async_dispatch.rs` + `resident_dispatch.rs`
+Queue submission and pending readback paths. Resident dispatch keeps resource
+handles, output maps, trap state, and timestamp queries alive until retirement.
 
 ### `capabilities.rs`
 Adapter-cap probe  -  returns the adapter's max workgroup size,

@@ -186,6 +186,122 @@ impl StagingBufferPool {
     }
 }
 
+/// Readback copy and map request submitted without waiting for GPU completion.
+pub(crate) enum PendingGpuBufferReadback {
+    Ready,
+    Mapping {
+        readback: wgpu::Buffer,
+        read_len: u64,
+        readback_usage: wgpu::BufferUsages,
+        pool: Option<StagingBufferPool>,
+        submission: wgpu::SubmissionIndex,
+        receiver: crossbeam_channel::Receiver<Result<(), wgpu::BufferAsyncError>>,
+        ready: Arc<std::sync::atomic::AtomicBool>,
+        trim_start: usize,
+        visible_len: usize,
+    },
+}
+
+impl PendingGpuBufferReadback {
+    pub(crate) fn is_ready(&self, device: &wgpu::Device) -> bool {
+        match self {
+            Self::Ready => true,
+            Self::Mapping { ready, .. } => {
+                if crate::runtime::device::poll_device_once(device).is_err() {
+                    return false;
+                }
+                ready.load(Ordering::Acquire)
+            }
+        }
+    }
+
+    pub(crate) fn await_into(
+        self,
+        device: &wgpu::Device,
+        deadline: Option<Instant>,
+        out: &mut Vec<u8>,
+    ) -> Result<(), BackendError> {
+        let Self::Mapping {
+            readback,
+            read_len,
+            readback_usage,
+            pool,
+            submission,
+            receiver,
+            trim_start,
+            visible_len,
+            ..
+        } = self
+        else {
+            out.clear();
+            return Ok(());
+        };
+        let mapping = if let Some(deadline) = deadline {
+            let mut backoff = crate::wait_backoff::AdaptiveWaitBackoff::from_micros(64, 2, 50, 5);
+            loop {
+                crate::runtime::device::poll_device_once(device)?;
+                match receiver.try_recv() {
+                    Ok(result) => break result,
+                    Err(crossbeam_channel::TryRecvError::Empty) => {}
+                    Err(crossbeam_channel::TryRecvError::Disconnected) => {
+                        return Err(BackendError::new(
+                            "persistent buffer readback channel closed before completion. Fix: keep the GPU device alive until readback completes.",
+                        ));
+                    }
+                }
+                let now = Instant::now();
+                if now >= deadline {
+                    return Err(BackendError::new(
+                        "dispatch cancelled after DispatchConfig.timeout before readback completed. Fix: raise DispatchConfig.timeout or split the program into smaller chunks.",
+                    ));
+                }
+                backoff.idle_for(deadline.saturating_duration_since(now));
+            }
+        } else {
+            crate::runtime::device::poll_device_wait_for(device, submission)?;
+            receiver
+                .recv_timeout(std::time::Duration::from_secs(30))
+                .map_err(|source| {
+                    BackendError::new(format!(
+                        "persistent buffer readback callback did not complete after submission wait: {source}. Fix: keep the GPU device alive and inspect driver callback progress."
+                    ))
+                })?
+        };
+        mapping.map_err(|source| {
+            BackendError::new(format!(
+                "persistent buffer readback mapping failed: {source:?}. Fix: use COPY_SRC handles and MAP_READ staging buffers."
+            ))
+        })?;
+        let slice = readback.slice(0..read_len);
+        let mapped = slice.get_mapped_range();
+        let trim_end = trim_start.checked_add(visible_len).ok_or_else(|| {
+            BackendError::new(format!(
+                "persistent buffer range trim overflows usize at offset {trim_start} len {visible_len}. Fix: split the buffer before readback."
+            ))
+        })?;
+        let visible = &mapped[trim_start..trim_end];
+        if out.len() == visible_len {
+            out.copy_from_slice(visible);
+        } else {
+            if visible_len > out.capacity() {
+                out.try_reserve_exact(visible_len - out.capacity())
+                    .map_err(|source| {
+                        BackendError::new(format!(
+                            "persistent buffer readback could not reserve {visible_len} output bytes exactly: {source}. Fix: lower max_output_bytes or stream readback in smaller shards."
+                        ))
+                    })?;
+            }
+            out.clear();
+            out.extend_from_slice(visible);
+        }
+        drop(mapped);
+        readback.unmap();
+        if let Some(pool) = pool {
+            pool.release(readback, read_len, readback_usage);
+        }
+        Ok(())
+    }
+}
 impl GpuBufferHandle {
     /// Upload `bytes` into a new GPU buffer.
     ///
@@ -386,6 +502,18 @@ impl GpuBufferHandle {
         out: &mut Vec<u8>,
         deadline: Option<Instant>,
     ) -> Result<(), BackendError> {
+        self.readback_range_async(device, pool, queue, byte_offset, len)?
+            .await_into(device, deadline, out)
+    }
+
+    pub(crate) fn readback_range_async(
+        &self,
+        device: &wgpu::Device,
+        pool: Option<&StagingBufferPool>,
+        queue: &wgpu::Queue,
+        byte_offset: u64,
+        len: u64,
+    ) -> Result<PendingGpuBufferReadback, BackendError> {
         if !self.usage().contains(wgpu::BufferUsages::COPY_SRC) {
             return Err(BackendError::new(
                 "GpuBufferHandle readback requires COPY_SRC usage. Fix: allocate terminal-output buffers with COPY_SRC.",
@@ -403,8 +531,7 @@ impl GpuBufferHandle {
             )));
         }
         if len == 0 {
-            out.clear();
-            return Ok(());
+            return Ok(PendingGpuBufferReadback::Ready);
         }
         let copy_start = byte_offset & !3;
         let trim_start = byte_offset - copy_start;
@@ -425,6 +552,16 @@ impl GpuBufferHandle {
                 self.inner.allocation_len
             )));
         }
+        let visible_len = usize::try_from(len).map_err(|source| {
+            BackendError::new(format!(
+                "persistent buffer prefix length {len} cannot fit usize: {source}. Fix: split the buffer before readback."
+            ))
+        })?;
+        let trim_start = usize::try_from(trim_start).map_err(|source| {
+            BackendError::new(format!(
+                "persistent buffer range trim offset {trim_start} cannot fit usize: {source}. Fix: split the buffer before readback."
+            ))
+        })?;
         let readback_usage = wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ;
         let readback = if let Some(pool) = pool {
             pool.acquire(device, read_len, readback_usage)
@@ -442,7 +579,9 @@ impl GpuBufferHandle {
         encoder.copy_buffer_to_buffer(self.buffer(), copy_start, &readback, 0, read_len);
         let submission = queue.submit(std::iter::once(encoder.finish()));
         let slice = readback.slice(0..read_len);
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = crossbeam_channel::bounded(1);
+        let ready = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let ready_callback = Arc::clone(&ready);
         slice.map_async(wgpu::MapMode::Read, move |result| {
             if let Err(error) = sender.send(result) {
                 tracing::error!(
@@ -450,81 +589,19 @@ impl GpuBufferHandle {
                     "persistent buffer readback map_async result was lost because the receiver dropped"
                 );
             }
+            ready_callback.store(true, Ordering::Release);
         });
-        let mapping = if let Some(deadline) = deadline {
-            let mut backoff = crate::wait_backoff::AdaptiveWaitBackoff::from_micros(64, 2, 50, 5);
-            loop {
-                crate::runtime::device::poll_device_once(device)?;
-                match receiver.try_recv() {
-                    Ok(result) => break result,
-                    Err(std::sync::mpsc::TryRecvError::Empty) => {}
-                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                        return Err(BackendError::new(
-                            "persistent buffer readback channel closed before completion. Fix: keep the GPU device alive until readback completes.",
-                        ));
-                    }
-                }
-                let now = Instant::now();
-                if now >= deadline {
-                    return Err(BackendError::new(
-                        "dispatch cancelled after DispatchConfig.timeout before readback completed. Fix: raise DispatchConfig.timeout or split the program into smaller chunks.",
-                    ));
-                }
-                backoff.idle_for(deadline.saturating_duration_since(now));
-            }
-        } else {
-            crate::runtime::device::poll_device_wait_for(device, submission)?;
-            receiver
-                .recv_timeout(std::time::Duration::from_secs(30))
-                .map_err(|source| {
-                    BackendError::new(format!(
-                        "persistent buffer readback callback did not complete after submission wait: {source}. Fix: keep the GPU device alive and inspect driver callback progress."
-                    ))
-                })?
-        };
-        let result = mapping.map_err(|source| {
-            BackendError::new(format!(
-                "persistent buffer readback mapping failed: {source:?}. Fix: use COPY_SRC handles and MAP_READ staging buffers."
-            ))
-        });
-        result?;
-        let mapped = slice.get_mapped_range();
-        let visible_len = usize::try_from(len).map_err(|source| {
-            BackendError::new(format!(
-                "persistent buffer prefix length {len} cannot fit usize: {source}. Fix: split the buffer before readback.",
-            ))
-        })?;
-        let trim_start = usize::try_from(trim_start).map_err(|source| {
-            BackendError::new(format!(
-                "persistent buffer range trim offset {trim_start} cannot fit usize: {source}. Fix: split the buffer before readback.",
-            ))
-        })?;
-        let trim_end = trim_start.checked_add(visible_len).ok_or_else(|| {
-            BackendError::new(format!(
-                "persistent buffer range trim overflows usize at offset {trim_start} len {visible_len}. Fix: split the buffer before readback."
-            ))
-        })?;
-        let visible = &mapped[trim_start..trim_end];
-        if out.len() == visible_len {
-            out.copy_from_slice(visible);
-        } else {
-            if visible_len > out.capacity() {
-                let additional = visible_len - out.capacity();
-                out.try_reserve_exact(additional).map_err(|source| {
-                    BackendError::new(format!(
-                        "persistent buffer readback could not reserve {visible_len} output bytes exactly: {source}. Fix: lower max_output_bytes or stream readback in smaller shards."
-                    ))
-                })?;
-            }
-            out.clear();
-            out.extend_from_slice(visible);
-        }
-        drop(mapped);
-        readback.unmap();
-        if let Some(pool) = pool {
-            pool.release(readback, read_len, readback_usage);
-        }
-        Ok(())
+        Ok(PendingGpuBufferReadback::Mapping {
+            readback,
+            read_len,
+            readback_usage,
+            pool: pool.cloned(),
+            submission,
+            receiver,
+            ready,
+            trim_start,
+            visible_len,
+        })
     }
 
     /// Stable process-local handle id used for cache signatures.

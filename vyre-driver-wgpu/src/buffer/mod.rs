@@ -3,7 +3,7 @@
 mod handle;
 mod pool;
 
-pub(crate) use handle::{check_resident_owner, write_padded};
+pub(crate) use handle::{check_resident_owner, write_padded, PendingGpuBufferReadback};
 pub use handle::{
     BindGroupCache, BindGroupCacheStats, GpuBufferHandle, StagingBufferPool, StagingBufferPoolStats,
 };

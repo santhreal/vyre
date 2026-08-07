@@ -127,6 +127,12 @@ impl TimestampRecorder {
     }
 }
 
+impl PendingTimestampProfile {
+    pub(crate) fn is_ready(&self) -> bool {
+        self.ready.load(Ordering::Acquire)
+    }
+}
+
 pub(crate) fn collect_timestamp_profile(
     profile: Option<PendingTimestampProfile>,
     deadline: Instant,

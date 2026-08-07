@@ -14,10 +14,260 @@ use vyre_driver::{
     OutputBuffers, TimedDispatchResult,
 };
 
-use crate::engine::record_and_readback::timestamp::{collect_timestamp_profile, TimestampRecorder};
+use crate::engine::record_and_readback::timestamp::{
+    collect_timestamp_profile, PendingTimestampProfile, TimestampRecorder,
+};
 use crate::pipeline::output_slots::resize_vec_with;
 use crate::pipeline::WgpuPipeline;
 use crate::staging_reserve::{reserve_pipeline_vec, reserve_smallvec, reserve_vec};
+
+pub(crate) struct WgpuPendingPersistentDispatch {
+    pipeline: Arc<WgpuPipeline>,
+    resolved: crate::pipeline::persistent_resources::ResolvedPersistentResources,
+    output_readbacks: SmallVec<[crate::buffer::PendingGpuBufferReadback; 8]>,
+    trap_flag_readback: Option<crate::buffer::PendingGpuBufferReadback>,
+    timestamp_profile: Option<PendingTimestampProfile>,
+    started: Instant,
+    deadline: Option<Instant>,
+    timestamp_deadline: Instant,
+    enqueue_ns: u64,
+    config: DispatchConfig,
+}
+
+impl vyre_driver::backend::private::Sealed for WgpuPendingPersistentDispatch {}
+
+impl WgpuPendingPersistentDispatch {
+    fn is_ready_inner(&self) -> bool {
+        let (device, _) = &*self.pipeline.device_queue;
+        let outputs_ready = self
+            .output_readbacks
+            .iter()
+            .all(|pending| pending.is_ready(device));
+        let trap_ready = self
+            .trap_flag_readback
+            .as_ref()
+            .map(|pending| pending.is_ready(device))
+            .unwrap_or(true);
+        let timestamp_ready = self
+            .timestamp_profile
+            .as_ref()
+            .map(PendingTimestampProfile::is_ready)
+            .unwrap_or(true);
+        outputs_ready && trap_ready && timestamp_ready
+    }
+
+    fn retire(self) -> Result<TimedDispatchResult, BackendError> {
+        let wait_started = Instant::now();
+        let (device, queue) = &*self.pipeline.device_queue;
+        if let Some(trap_flag) = self.trap_flag_readback {
+            let mut flag = Vec::new();
+            trap_flag.await_into(device, self.deadline, &mut flag)?;
+            if flag.len() != 4 {
+                return Err(BackendError::new(format!(
+                    "internal wgpu trap flag readback returned {} bytes but 4 bytes are required. Fix: allocate the trap sidecar as four or more bytes.",
+                    flag.len()
+                )));
+            }
+            if u32::from_le_bytes([flag[0], flag[1], flag[2], flag[3]]) != 0 {
+                self.pipeline.raise_if_trapped(
+                    &self.resolved.inputs,
+                    device,
+                    queue,
+                    self.deadline,
+                )?;
+            }
+        }
+
+        let mut outputs = Vec::new();
+        resize_vec_with(
+            &mut outputs,
+            self.output_readbacks.len(),
+            Vec::new,
+            "asynchronous persistent output slots",
+        )?;
+        for ((pending, output), bytes) in self
+            .output_readbacks
+            .into_iter()
+            .zip(self.pipeline.output_bindings.iter())
+            .zip(outputs.iter_mut())
+        {
+            pending.await_into(device, self.deadline, bytes)?;
+            if bytes.len() != output.layout.read_size {
+                return Err(BackendError::new(format!(
+                    "asynchronous persistent readback for `{}` returned {} bytes but {} bytes are required. Fix: keep async output range validation synchronized with OutputLayout.",
+                    output.name,
+                    bytes.len(),
+                    output.layout.read_size
+                )));
+            }
+        }
+        enforce_actual_output_budget(&self.config, outputs.as_slice())?;
+        let device_ns = collect_timestamp_profile(self.timestamp_profile, self.timestamp_deadline)?
+            .map(|profile| profile.dispatch_ns);
+        let wait_ns = checked_elapsed_ns(wait_started, "WGPU persistent asynchronous wait")?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: checked_elapsed_ns(self.started, "WGPU persistent asynchronous dispatch")?,
+            device_ns,
+            enqueue_ns: Some(self.enqueue_ns),
+            wait_ns: Some(wait_ns),
+        })
+    }
+}
+
+impl vyre_driver::PendingDispatch for WgpuPendingPersistentDispatch {
+    fn is_ready(&self) -> bool {
+        self.is_ready_inner()
+    }
+
+    fn await_result(self: Box<Self>) -> Result<OutputBuffers, BackendError> {
+        Ok((*self).retire()?.outputs)
+    }
+
+    fn await_timed_result(self: Box<Self>) -> Result<TimedDispatchResult, BackendError> {
+        (*self).retire()
+    }
+}
+
+impl WgpuPipeline {
+    pub(crate) fn dispatch_persistent_handles_async(
+        self: &Arc<Self>,
+        resources: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+        started: Instant,
+    ) -> Result<WgpuPendingPersistentDispatch, BackendError> {
+        self.enforce_static_output_budget(config)?;
+        let enqueue_started = Instant::now();
+        let (device, queue) = &*self.device_queue;
+        let deadline = config
+            .timeout
+            .and_then(|timeout| started.checked_add(timeout));
+        let timestamp_deadline =
+            deadline.unwrap_or_else(|| Instant::now() + Duration::from_secs(30));
+        let resolved = self.resolve_persistent_resources(resources, queue)?;
+        if resolved.outputs.len() != self.output_bindings.len() {
+            return Err(BackendError::new(format!(
+                "WGPU asynchronous persistent dispatch resolved {} output handles for {} output layouts. Fix: keep resident resource resolution synchronized with compiled output bindings.",
+                resolved.outputs.len(),
+                self.output_bindings.len()
+            )));
+        }
+        let item = crate::pipeline::persistent::BorrowedDispatchItem {
+            inputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.inputs),
+            outputs: crate::pipeline::persistent::borrowed_handle_refs(&resolved.outputs),
+            params: None,
+            workgroups: self.workgroups_for_dispatch(config)?,
+        };
+        let timestamp_recorder =
+            TimestampRecorder::new(device, queue, &self.persistent_pool, true, 0)?;
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("vyre asynchronous persistent dispatch"),
+        });
+        let timestamp_writes =
+            timestamp_recorder
+                .as_ref()
+                .map(|recorder| wgpu::ComputePassTimestampWrites {
+                    query_set: &recorder.query_set,
+                    beginning_of_pass_write_index: Some(0),
+                    end_of_pass_write_index: Some(1),
+                });
+        self.record_borrowed_persistent_item_with_timestamps(
+            device,
+            &mut encoder,
+            &item,
+            timestamp_writes,
+        )?;
+        drop(item);
+        if let Some(recorder) = &timestamp_recorder {
+            encoder.write_timestamp(&recorder.query_set, 2);
+            encoder.write_timestamp(&recorder.query_set, 3);
+            recorder.resolve(&mut encoder)?;
+        }
+        queue.submit(std::iter::once(encoder.finish()));
+
+        let pending_after_submit = (|| {
+            let timestamp_profile = timestamp_recorder
+                .map(TimestampRecorder::map_async)
+                .transpose()?;
+            let mut output_readbacks = SmallVec::new();
+            reserve_smallvec(
+                &mut output_readbacks,
+                resolved.outputs.len(),
+                "asynchronous persistent dispatch",
+                "output readback",
+                "split the dispatch output set before submission",
+            )?;
+            for (handle, output) in resolved.outputs.iter().zip(self.output_bindings.iter()) {
+                output_readbacks.push(crate::pipeline::output_readback::start_trimmed_output(
+                    handle,
+                    output,
+                    device,
+                    &self.staging_pool,
+                    queue,
+                    "asynchronous persistent output",
+                )?);
+            }
+
+            let trap_flag_readback = self
+                .buffer_bindings
+                .iter()
+                .filter(|info| {
+                    info.kind != vyre_foundation::ir::MemoryKind::Shared && !info.is_output
+                })
+                .enumerate()
+                .find(|(_, info)| info.internal_trap)
+                .map(|(index, _)| {
+                    resolved
+                        .inputs
+                        .get(index)
+                        .ok_or_else(|| {
+                            BackendError::new(
+                                "internal wgpu trap buffer was not allocated. Fix: keep trap buffer binding metadata synchronized with resident input resolution.",
+                            )
+                        })?
+                        .readback_range_async(
+                            device,
+                            Some(&self.staging_pool),
+                            queue,
+                            0,
+                            4,
+                        )
+                })
+                .transpose()?;
+            Ok::<_, BackendError>((output_readbacks, trap_flag_readback, timestamp_profile))
+        })();
+        let (output_readbacks, trap_flag_readback, timestamp_profile) = match pending_after_submit {
+            Ok(pending) => pending,
+            Err(error) => {
+                let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+                crate::runtime::device::poll_device_wait_for(device, fence)?;
+                return Err(error);
+            }
+        };
+
+        let enqueue_ns =
+            match checked_elapsed_ns(enqueue_started, "WGPU persistent asynchronous enqueue") {
+                Ok(elapsed) => elapsed,
+                Err(error) => {
+                    let fence = queue.submit(std::iter::empty::<wgpu::CommandBuffer>());
+                    crate::runtime::device::poll_device_wait_for(device, fence)?;
+                    return Err(error);
+                }
+            };
+        Ok(WgpuPendingPersistentDispatch {
+            pipeline: Arc::clone(self),
+            resolved,
+            output_readbacks,
+            trap_flag_readback,
+            timestamp_profile,
+            started,
+            deadline,
+            timestamp_deadline,
+            enqueue_ns,
+            config: config.clone(),
+        })
+    }
+}
 
 impl CompiledPipeline for WgpuPipeline {
     fn dispatch_persistent_handles(
