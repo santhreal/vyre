@@ -1,10 +1,14 @@
 # vyre
 
+> **Note**: Vyre is heavily experimental, rough around the edges, and not ready for production use.
+
 [![Crates.io](https://img.shields.io/crates/v/vyre)](https://crates.io/crates/vyre)
 [![Docs.rs](https://docs.rs/vyre/badge.svg)](https://docs.rs/vyre)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
-Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling. Follow [@SanthProject](https://x.com/SanthProject) on X.
+Last verified: 2026-08-04
+
+Part of [Santh](https://santh.dev) - open source Rust security and infrastructure tooling.
 
 Vyre is a Rust GPU compute stack for workloads that usually get pulled back to
 the CPU: parsing, graph traversal, fixed-point dataflow, and rule-based
@@ -15,7 +19,7 @@ PTX emitter, conformance system, and shared primitives are active. Some
 frontends remain beta. That status split is deliberately explicit, so you can
 decide what to depend on today.
 
-For `0.7.1`, the unit of release is `vyre::Program`. A program is built as IR,
+For `0.7.2`, the unit of release is `vyre::Program`. A program is built as IR,
 validated against frozen specs, checked against the CPU reference interpreter,
 and then compared against GPU backends for agreement. CUDA is the release path
 on NVIDIA systems. WGPU is the portable GPU path. Metal is the native Apple
@@ -84,7 +88,7 @@ flowchart TB
       FC["vyre-frontend-c\nC frontend pipeline"]
       FR["vyre-frontend-rust\nRust frontend pipeline"]
       Intg["External integrations\nconsumer repositories"]
-      MT["Metal backend\nplanned"]
+      MT["Metal backend\nactive on Apple targets"]
       DX["DXIL/DirectX\nplanned"]
       WG["Wasm/WebGPU\nplanned"]
     end
@@ -138,10 +142,10 @@ flowchart TB
     XTask -.-> DX
     XTask -.-> WG
 
-    class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Fuzz,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness active
+    class Vcore,Fnd,Spec,Macros,Intr,Ref,Primitives,Libs,SelfSS,Drv,Cuda,Wgpu,Spirv,Lower,EmitPtx,EmitNaga,EmitSpv,RefDrv,RT,Aot,Hs,Debug,Bench,Fuzz,Lints,XTask,ConSpec,ConGen,ConEnf,ConRun,TestHarness,MT active
     class FC,FR beta
     class Intg external
-    class MT,DX,WG planned
+    class DX,WG planned
 ```
 
 The older SVG remains in [docs/architecture.svg](docs/architecture.svg), but
@@ -151,7 +155,7 @@ and planned surfaces.
 
 Legend:
 
-- `active`: release-gated surface for the `0.7.1` train.
+- `active`: release-gated surface for the `0.7.2` train.
 - `beta`: implemented and usable but currently excluded from release gate status.
 - `planned`: target architecture work planned in repo docs and roadmap.
 - `external`: separately released integrations and documentation-only references.
@@ -174,92 +178,92 @@ contributions right now are concrete: smaller modules, better conformance
 coverage, CUDA parity tests, frontend bug fixes, benchmark cases that represent
 real workloads, and docs that make rough edges visible instead of hiding them.
 
-## The vyre crates
+<!-- BEGIN GENERATED LANDING CONTRACT -->
+## Workspace and release support
 
-The workspace has 36 crates. 26 of them are published on crates.io and are the
-surface you can depend on. The other 10 are internal to the repository and are
-marked `publish = false`, so they exist only for development and CI.
+Vyre 0.7.2 contains 36 workspace crates. 26 crates are publishable and 10 are repository-internal (`publish = false`). The table is generated from Cargo manifests, `docs/CRATE_OWNERSHIP.toml`, and `docs/CRATE_GUIDES.toml`.
 
-One naming detail to know before you read the table: the directory `vyre-core/`
-builds the package named `vyre`. There is no crate called `vyre-core` on
-crates.io. When a path in this repository says `vyre-core`, the crate it produces
-is `vyre`.
+| Crate | Publication | Status | Role |
+| --- | --- | --- | --- |
+| `vyre` | crates.io | active | Expose the public Vyre API and feature-gated backend selection surface. |
+| `vyre-aot` | crates.io | active | Plan and package ahead-of-time artifacts without owning live backend execution. |
+| `vyre-bench` | repository-only | repository-internal | Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence. |
+| `vyre-conform-enforce` | repository-only | repository-internal | Evaluate conformance results and enforce release certificate policy. |
+| `vyre-conform-generate` | repository-only | repository-internal | Generate deterministic conformance cases from the conformance specification. |
+| `vyre-conform-runner` | repository-only | repository-internal | Execute generated conformance cases across eligible concrete and reference backends. |
+| `vyre-conform-spec` | repository-only | repository-internal | Define conformance case, result, and certificate schemas against the public facade. |
+| `vyre-debug` | crates.io | active | Inspect, explain, and diagnose typed programs, lowering, and product-library composition. |
+| `vyre-driver` | crates.io | active | Define backend-neutral device, capability, dispatch, evidence, and artifact contracts. |
+| `vyre-driver-cuda` | crates.io | active, release path | Own native NVIDIA device acquisition, lowering, dispatch, graphs, and release-path evidence. |
+| `vyre-driver-metal` | crates.io | active on Apple targets | Own native Apple device acquisition, lowering integration, dispatch, and backend evidence. |
+| `vyre-driver-reference` | crates.io | active | Adapt the reference interpreter to the backend contract for deterministic conformance execution. |
+| `vyre-driver-spirv` | crates.io | active | Own SPIR-V backend lowering, dispatch integration, and backend evidence. |
+| `vyre-driver-wgpu` | crates.io | active, portable path | Own portable GPU acquisition, lowering, dispatch, graph execution, and backend evidence. |
+| `vyre-emit-metal` | crates.io | active | Lower neutral programs into native Apple shader source through the shared emitter path. |
+| `vyre-emit-naga` | crates.io | active | Lower neutral programs into the primary text emitter representation and related binary targets. |
+| `vyre-emit-ptx` | crates.io | active | Lower neutral programs into the primary binary backend text artifact. |
+| `vyre-emit-spirv` | crates.io | active | Lower neutral programs into SPIR-V artifacts through the shared emitter path. |
+| `vyre-foundation` | crates.io | active | Own the typed IR, validation, optimizer, serialization, and foundational program contracts. |
+| `vyre-frontend-c` | repository-only | beta | Parse C input and lower supported language constructs into typed Vyre programs. |
+| `vyre-frontend-rust` | repository-only | beta | Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends. |
+| `vyre-grammar-gen` | crates.io | active | Generate host-side grammar tables consumed by frontend and parsing crates. |
+| `vyre-harness` | crates.io | active | Provide reusable backend-neutral harness utilities for executing and comparing programs. |
+| `vyre-intrinsics` | crates.io | active | Own registered hardware-mapped intrinsic contracts and their neutral program builders. |
+| `vyre-libs` | crates.io | active | Own product-facing Tier 3 program compositions built from neutral primitives and contracts. |
+| `vyre-lints` | crates.io | active | Enforce source-level project policies without depending on runtime crates. |
+| `vyre-lower` | crates.io | active | Own backend-neutral lowering helpers and pre-emission transforms. |
+| `vyre-macros` | crates.io | active | Provide compile-time registration and declaration macros without depending on runtime crates. |
+| `vyre-primitives` | crates.io | active | Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes. |
+| `vyre-reference` | crates.io | active | Execute programs with the canonical host oracle and produce semantic witnesses. |
+| `vyre-runtime` | crates.io | active, experimental | Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate. |
+| `vyre-self-substrate` | crates.io | active | Use Vyre primitives to implement scheduler, graph, coverage, and optimization support. |
+| `vyre-spec` | crates.io | active, frozen surface | Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies. |
+| `vyre-test-harness` | repository-only | repository-internal | Provide shared execution and comparison infrastructure for conformance suites. |
+| `vyre-test-support` | repository-only | repository-internal | Provide shared deterministic fixtures and assertions for workspace tests. |
+| `xtask` | repository-only | repository-internal | Generate evidence and enforce repository, release, documentation, and architecture contracts. |
 
-### Published crates
+### Registered operation surface
 
-| Crate | Status | Purpose |
-|-------|--------|---------|
-| `vyre` | active | Public facade over IR construction, lowering, and backend traits. Built from `vyre-core/` |
-| `vyre-foundation` | active | IR storage, serialization, validation, transforms, optimizer substrate |
-| `vyre-spec` | active, frozen surface | Data contracts, stable tags, schema types, operation metadata |
-| `vyre-reference` | active | Pure-Rust CPU interpreter used as the correctness oracle |
-| `vyre-driver` | active | Backend traits, registry, routing, lifecycle, diagnostics |
-| `vyre-driver-cuda` | active, release path | CUDA backend for NVIDIA systems |
-| `vyre-driver-wgpu` | active, portable path | Portable GPU backend through WGPU |
-| `vyre-driver-metal` | active on Apple targets | Native Metal backend. Registers a backend on macOS and iOS; on other targets it compiles and `acquire()` returns an unsupported error |
-| `vyre-driver-spirv` | active | SPIR-V backend surface for Vulkan-style runners |
-| `vyre-driver-reference` | active | Thin backend wrapper around the reference interpreter |
-| `vyre-intrinsics` | active | Hardware-mapped intrinsic operation contracts |
-| `vyre-primitives` | active | Shared graph, text, hash, reduce, matching, math, parsing, fixpoint, and NN substrate |
-| `vyre-libs` | active | Higher-level IR compositions built from intrinsics and primitives |
-| `vyre-self-substrate` | active | Vyre using its own primitives for scheduling, graph, optimization, and coverage work |
-| `vyre-runtime` | active, experimental | Persistent megakernel runtime and Linux `io_uring` streaming integration |
-| `vyre-aot` | active | Ahead-of-time packaging and artifact support |
-| `vyre-harness` | active | Runtime harness utilities |
-| `vyre-macros` | active | Proc-macros for pass and registration ergonomics |
-| `vyre-lower` | active | Lowering helpers shared by emitter crates |
-| `vyre-emit-ptx` | active, CUDA-focused | PTX emitter and NVRTC-backed validation tests |
-| `vyre-emit-naga` | active | Naga and WGSL oriented emitter path |
-| `vyre-emit-spirv` | active | SPIR-V emitter path |
-| `vyre-emit-metal` | active | Metal Shading Language emitter, reached through the Naga path |
-| `vyre-grammar-gen` | active | Grammar generation support for the parsing primitives |
-| `vyre-lints` | active | Project lint and policy checks |
-| `vyre-debug` | active | Debugging and inspection helpers |
+The live operation schema contains 365 operations. Counts come from `docs/generated/OP_SCHEMA.json`; this README does not maintain a second inventory.
 
-### Repository-internal crates
+| Schema tier | Operations | Meaning |
+| --- | ---: | --- |
+| `intrinsic` | 9 | Tier 2 hardware operations |
+| `primitive` | 149 | Tier 2.5 reusable operations |
+| `libs` | 202 | Tier 3 library compositions |
+| `runtime` | 5 | Driver-owned runtime dialect operations |
 
-These are `publish = false`. They are not on crates.io and carry no API
-stability promise:
+### Executable backend evidence
 
-| Crate | Status | Purpose |
-|-------|--------|---------|
-| `vyre-bench` | active | Benchmark harnesses and workload evidence |
-| `vyre-frontend-c` | beta | C frontend pipeline. Useful for development, not clang parity |
-| `vyre-frontend-rust` | beta | Rust frontend pipeline experiments |
-| `vyre-test-support` | active | Shared test fixtures and helpers |
-| `vyre-conform-spec` | active | Conformance specification crate |
-| `vyre-conform-generate` | active | Conformance case generation |
-| `vyre-conform-enforce` | active | Conformance enforcement gates |
-| `vyre-conform-runner` | active | Backend conformance runner |
-| `vyre-test-harness` | active | Test harness support used by the conformance crates |
-| `xtask` | active | Workspace task runner for release, audit, and policy checks |
+The current backend evidence selects `cuda` as the preferred release backend. The following rows come from `release/evidence/backends/backend-matrix.json`.
 
-`vyre-frontend-c` and `vyre-frontend-rust` are marked beta because parser and
-type-frontend parity is still maturing. The `conform` crates and
-`vyre-test-harness` are not release gates yet, because their backpressure and
-corpus coverage are incomplete.
+| Backend | Precedence | Dispatches | Acquired on evidence host |
+| --- | ---: | :---: | :---: |
+| `cuda` | 5 | true | true |
+| `spirv` | 30 | true | true |
+| `wgpu` | 30 | true | true |
+| `cpu-ref` | 900 | true | true |
 
-DXIL and DirectX backends and WebGPU packaging are roadmap targets. No backend
-code, parity evidence, or CI gate for them exists in this repository, so treat
-them as intentions rather than support claims.
+Metal remains active on supported Apple targets. It is absent from this Linux host probe rather than reported as a Linux dispatch backend. DXIL, DirectX, and browser WebGPU packaging remain planned surfaces.
+<!-- END GENERATED LANDING CONTRACT -->
 
-## `0.7.1` Release Execution Contract
+## `0.7.2` Release Execution Contract
 
-The release route is explicit: `0.7.1` is a Vyre platform release, not a
+The release route is explicit: `0.7.2` is a Vyre platform release, not a
 production C compiler release.
 
 | Package | Version | Role |
 | --- | --- | --- |
-| `vyre@0.7.1` | `0.7.1` | Public IR, lowering, optimizer, and backend trait surface |
-| `vyre-driver-cuda@0.7.1` | `0.7.1` | NVIDIA/CUDA fast path for release workloads |
-| `vyre-driver-wgpu@0.7.1` | `0.7.1` | Portable GPU fallback path for non-CUDA systems |
-| `weirflow@0.1.2` | `0.1.2` | Standalone dataflow, witness, and soundness primitives integrated with Vyre |
+| `vyre@0.7.2` | `0.7.2` | Public IR, lowering, optimizer, and backend trait surface |
+| `vyre-driver-cuda@0.7.2` | `0.7.2` | NVIDIA/CUDA fast path for release workloads |
+| `vyre-driver-wgpu@0.7.2` | `0.7.2` | Portable GPU fallback path for non-CUDA systems |
+| `weirflow@0.1.3` | `0.1.3` | Standalone dataflow, witness, and soundness primitives integrated with Vyre |
 
 External integrations exercise the public Vyre surface and provide end-to-end
 feedback for contribution direction. `vyre-frontend-c` and `vyre-frontend-rust` are
 beta/active-development consumers of Vyre.
 They are included to show the intended compiler-front-end direction, but they
-are not the release gate for `0.7.1`, are not advertised as clang-parity, and
+are not the release gate for `0.7.2`, are not advertised as clang-parity, and
 must not be treated as production-ready C compiler components until their own
 corpus, parity, and performance gates are green.
 
@@ -270,19 +274,17 @@ conformance reports, benchmark reports, and documentation checks generated by
 the project tooling. C parser corpus reports are tracked as beta validation for
 `vyrec`, not as a blocker for the Vyre platform release.
 
-## The five-tier rule: where every op lives
+## Operation placement
 
-vyre ops live at exactly one tier. The tier is encoded in the op ID
-prefix and determines stability, size cap, and audit requirements.
-Full rule in [`docs/library-tiers.md`](docs/library-tiers.md).
+An operation ID determines its schema tier. Foundation IR is below the
+registered operation surface. Hardware intrinsics use the `intrinsic` tier,
+reusable primitives use `primitive`, library compositions use `libs`, and
+driver-owned dialect operations use `runtime`. External extension packs remain
+outside the workspace inventory.
 
-| Tier | Crate(s) | What lives here | Size cap |
-| --- | --- | --- | --- |
-| **1** | `vyre-foundation`, `vyre-spec`, `vyre-core` | IR model, wire format, frozen contracts. No ops. | - |
-| **2** | `vyre-intrinsics` | Cat-C hardware-mapped intrinsics: ops that need a dedicated Naga emitter arm + dedicated `vyre-reference` eval arm (subgroup_*, barrier, fma, popcount, bit_reverse, inverse_sqrt). | frozen 9-op surface |
-| **2.5** | `vyre-primitives` | Reusable LEGO substrate shared by multiple Tier-3 dialects: bitset, graph, reduce, predicate, fixpoint, text, matching, math, hash, parsing, nn. | Gate 1 budget |
-| **3** | `vyre-libs` today; domain crates split only when they earn standalone ownership | Every product-facing `fn(...) -> Program` composition: math, hash, logical, nn, matching, rule, text, parsing, security. | no cap |
-| **4** | External community crates | Tier-3-shaped packs outside the core org, registered via extension packs | no cap |
+The generated workspace contract above reports the current count for each tier.
+The architectural dependency and stability rules are defined in
+[`docs/library-tiers.md`](docs/library-tiers.md).
 
 **Op ID tells you the tier**: `vyre-intrinsics::hardware::fma_f32` is T2,
 `vyre-primitives::graph::reachable` is T2.5, `vyre-libs::hash::fnv1a32`
@@ -314,13 +316,13 @@ Every significant surface in vyre has a canonical doc. When onboarding:
 | Architecture and layering | `docs/ARCHITECTURE.md`, `docs/THESIS.md`, `docs/VISION.md` |
 | **Which tier does my op belong to?** | `docs/library-tiers.md` |
 | **Composition chain: how ops stay auditable** | `docs/region-chain.md` |
-| **Source parsers: where frontends live** | `docs/parsing-and-frontends.md` + **`docs/PARSING_EXECUTION_PLAN.md`** (phases, tests) |
+| **Source parsers: where frontends live** | `docs/parsing-and-frontends.md` |
 | Documentation precedence | `docs/DOCUMENTATION_GOVERNANCE.md` |
-| Current release gate | `audits/RELEASE_GATE.md` |
-| Historical plans | `docs/V7_RELEASE_PLAN.md`, `.internals/audits/from-docs-audits/MASTER_PLAN*.md` |
+| Maintainer execution queue | local `BACKLOG.md` (not published) |
+| Current release procedure | `docs/RELEASE.md`, `docs/RELEASE_CHECKLIST.md` |
+| Historical delivery evidence | `CHANGELOG.md`, `docs/release/`, `audits/` |
 | **Ops catalog: full release surface** | `docs/ops-catalog.md` |
-| **Santh-wide Cat‑A building blocks + testing program (roadmap)** | `docs/OP_MASTER_PLAN_BUILDING_BLOCKS_AND_QA.md` |
-| **Execution status + op inventory refresh** | `docs/EXECUTION_STATUS.md`, `docs/generated/OP_INVENTORY.md` |
+| **Execution inventory** | `docs/generated/OP_INVENTORY.md` |
 | Writing a new op (contract + review checklist) | `docs/library-tiers.md` + `docs/region-chain.md`: **no raw WGSL ever; the whole contract is here** |
 | Wire format + release tag reservations | `docs/wire-format.md` |
 | Backend contract (capability queries, lifecycle hooks, sealing) | `vyre-driver/BACKEND_CONTRACT.md` |
@@ -334,10 +336,10 @@ Every significant surface in vyre has a canonical doc. When onboarding:
 | Release playbook (publish order, alpha soak) | `docs/RELEASE.md` |
 | Design RFCs (Region inline, autodiff, quantization, collectives, megakernel) | `docs/rfcs/000*.md` |
 | Persistent megakernel + `io_uring` NVMe streaming (Linux) | `vyre-runtime/README.md` |
-| Testing standard + 6 category skills | `.internals/skills/testing/SKILL.md` |
+| Testing standard and per-crate commands | `docs/testing/` |
 | Per-crate test contract | `<crate>/tests/SKILL.md` |
 | In-flight release-bar gap contracts | `contracts/release.md` |
-| Benchmark baselines | `benches/RESULTS.md` + `docs/BENCHMARKS.md` |
+| Benchmark baselines | `docs/optimization/BENCH_TARGETS.toml` + `release/evidence/benchmarks/` |
 | Public-API snapshots (diff gate) | `<crate>/PUBLIC_API.md` |
 
 ## Quickstart
@@ -551,9 +553,13 @@ using repeated wall-time and CPU-baseline samples per artifact.
 | sparse output compaction | `sparse.compaction.count.1m` | 4,194,308 bytes | 6,436.50x |
 | callgraph reachability | `callgraph.reachability.step.262k` | 5,341,180 bytes | 208.84x |
 
-Primitive element-wise measurements still exist as smoke and lower-bound telemetry in `benches/RESULTS.md`, but they are not the release claim. A release claim must point at compound parsing, dataflow, graph, rule-engine, megakernel, or optimizer workloads with GPU execution evidence and CPU-SOTA baselines.
+Primitive measurements are smoke and lower-bound telemetry, not the release
+claim. Release claims point to generated benchmark evidence for compound
+parsing, dataflow, graph, rule-engine, megakernel, or optimizer workloads.
 
-Auto-registration is handled by link-time `inventory::submit!` registrations. Dialect operation files submit `OpDefRegistration` values, backend crates submit `BackendRegistration` values, and optimizer passes submit `PassRegistration` values. The registries are collected with `inventory::iter` at runtime and sorted where deterministic order matters. Adding a new dialect op, backend, or pass requires a new registration item, not a generated build-scan crate or a central hand-edited list.
+Linked registration uses the three `OpEntry` registries plus
+`OpDefRegistration`, `BackendRegistration`, and `ExtensionRegistration`. The
+canonical operation schema freezes and validates the joined operation view.
 
 Versioning follows the substrate pattern. `vyre-spec` publishes rarely and every release is an event: new data types, never removals, aggressive `#[non_exhaustive]`. `vyre` publishes patch releases frequently for optimizations and new lowerings. Backend crates publish on their own cadence after passing their parity suites. A community contributor can depend on `vyre-spec` alone without linking any backend.
 
@@ -586,7 +592,7 @@ operation may instead appear in the audit's reviewed pure-IR leaf set when no
 lower registered composition unit exists. A leaf still uses only
 backend-neutral IR. It does not gain Category C lowering or host evaluation.
 
-**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.7.1` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
+**Category B: Forbidden CPU coupling.** Cat B is the immune system's reject list. No general runtime interpretation engine, stack-machine evaluator, or host-dispatch substitute may exist in vyre. The `nfa_scan` micro-interpreter is absent from the `0.7.2` release line: those scans are expressed as composed ops in vyre IR and lower to GPU. Any construct that forces the host CPU to step into the execution loop of a GPU program is a Category B violation and is rewritten or deleted.
 
 CI enforces this with tripwire gates that scan for forbidden patterns: `typetag`, `#[ctor]`, `Any::downcast`, dynamic async futures, pub-use globs, fake functions with `todo!()`, and frozen trait signature edits. These patterns break the black-box invariant, so their absence is load-bearing. `inventory::submit!` is the sanctioned link-time registration mechanism; it is not a runtime dispatch path. GPU programs are expected to run on GPU backends. If a backend lacks a Category C hardware intrinsic, it returns `UnsupportedByBackend`; it never substitutes slow host execution. `vyre-reference` is a test oracle, not a runtime path.
 
@@ -599,12 +605,10 @@ degrading the execution contract.
 
 Every Cat C op must pass the parity gate before it ships. The gate runs exhaustive edge cases on the u8 domain, property-based witnesses on the u32 domain, adversarial mutations from the mutation catalog, and backend-oracle parity checks across archetypes. The algebraic laws include commutativity, associativity, identity, self-inverse, distributivity, DeMorgan, and op-specific identities. The engine invariants include deterministic output, atomic linearizability, workgroup invariance, subnormal preservation for strict ops, and declared ULP bounds for approximate float ops.
 
-Performance is part of the contract. The benchmark track in
-`benches/vs_cpu_baseline.rs` compares vyre-dispatched primitives against a
-direct hand-written `wgpu` path and against CPU baselines on the same fixture.
-A Cat C op that loses to the hand-written path is treated as a regression and
-needs investigation before release. An op without a passing parity gate should
-not be presented as supported.
+Performance is part of the contract. `docs/optimization/BENCH_TARGETS.toml`
+defines the target classes, and `release/evidence/benchmarks/` records matched
+GPU and CPU baseline evidence. An operation without current parity and
+performance evidence is not presented as release-supported.
 
 Determinism is achieved via restriction, not elimination. Strict IEEE 754 operations remain as two roundings; the backend cannot fuse them into FMA. Reductions are ordered sequentially or as a canonical binary tree. Subnormals are preserved for strict ops. Transcendentals such as `sin` and `cos` are approximate ops today: the reference path uses Rust `f32` math and the WGSL backend uses shader builtins, so their contract is a declared ULP tolerance rather than correctly rounded results. Approximate and strict never mix in the same certificate. You choose per operation, in the IR, visibly.
 
