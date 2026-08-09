@@ -16,13 +16,16 @@
 
 use std::collections::BTreeSet;
 
+use vyre::scan::{
+    build_regex_dfa_pipeline, pack_haystack_u32, pack_u32_slice, unpack_match_triples,
+    AnchoredWindowValidator, RegionEvidencePipeline,
+};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre::scan::{
-    anchored_window_extract_program, build_regex_dfa_pipeline, pack_haystack_u32, pack_u32_slice,
+use vyre_libs::scan::regex_anchored_window::anchored_window_extract_program;
+use vyre_libs::scan::regex_region_admission::{
     regex_admission_by_region_program, regex_admission_by_region_reference,
-    regex_admission_presence_words, unpack_match_triples, AnchoredWindowValidator,
-    RegionEvidencePipeline,
+    regex_admission_presence_words,
 };
 use vyre_primitives::matching::CompiledDfa;
 
@@ -332,22 +335,10 @@ fn region_evidence_pipeline_both_strategies_match_oracle_on_gpu() {
     );
 
     let fast = pipeline
-        .scan(
-            backend.as_ref(),
-            haystack,
-            &region_starts,
-            region_base,
-            max_matches,
-        )
+        .scan("wgpu", haystack, &region_starts, region_base, max_matches)
         .expect("fast-path scan must dispatch on the GPU");
     let fused = pipeline
-        .scan_fused(
-            backend.as_ref(),
-            haystack,
-            &region_starts,
-            region_base,
-            max_matches,
-        )
+        .scan_fused("wgpu", haystack, &region_starts, region_base, max_matches)
         .expect("single-launch fused scan must dispatch on the GPU");
 
     assert_eq!(

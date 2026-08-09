@@ -32,7 +32,7 @@
 //! Both agree with [`RegionEvidencePipeline::reference_scan`] (the CPU oracle)
 //! bit-for-bit (one bundle definition, three ways to compute it).
 
-use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig};
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::dispatch_io;
@@ -195,9 +195,9 @@ impl RegionEvidencePipeline {
     /// # Errors
     /// Returns [`BackendError`] on dispatch/readback failure or a haystack that
     /// exceeds the `u32` scan ABI.
-    pub fn scan<B: VyreBackend + ?Sized>(
+    pub fn scan(
         &self,
-        backend: &B,
+        backend_id: &str,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
@@ -251,10 +251,7 @@ impl RegionEvidencePipeline {
             ];
             let config = evidence_dispatch_config(haystack_len);
             let outputs = crate::artifact_session::dispatch_registered(
-                &program,
-                backend.id(),
-                &inputs,
-                &config,
+                &program, backend_id, &inputs, &config,
             )?;
             let bytes = dispatch_io::try_output_bytes(&outputs, 0, "presence bitmap")?;
             decode_words(bytes, bitmap_words)
@@ -291,8 +288,7 @@ impl RegionEvidencePipeline {
         let packed_haystack = dispatch_io::pack_haystack_u32(haystack);
         let candidate_bytes = pack_u32_slice(&candidates);
         let zero_count = 0u32;
-        let matches_scratch = vec_zero_bytes(max_matches as usize * 3);
-        let inputs: [&[u8]; 9] = [
+        let inputs: [&[u8]; 8] = [
             &packed_haystack,
             bytemuck::cast_slice(&self.dfa.transitions),
             bytemuck::cast_slice(&self.dfa.output_offsets),
@@ -301,15 +297,10 @@ impl RegionEvidencePipeline {
             bytemuck::cast_slice(std::slice::from_ref(&num_candidates)),
             bytemuck::cast_slice(std::slice::from_ref(&haystack_len)),
             bytemuck::cast_slice(std::slice::from_ref(&zero_count)),
-            &matches_scratch,
         ];
         let config = evidence_dispatch_config(num_candidates);
-        let outputs = crate::artifact_session::dispatch_registered(
-            &program,
-            backend.id(),
-            &inputs,
-            &config,
-        )?;
+        let outputs =
+            crate::artifact_session::dispatch_registered(&program, backend_id, &inputs, &config)?;
         let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "extract match count")?;
         let count = dispatch_io::try_read_u32_prefix(count_bytes, "extract match count")?;
         if count > max_matches {
@@ -347,9 +338,9 @@ impl RegionEvidencePipeline {
     /// # Errors
     /// Returns [`BackendError`] on dispatch/readback failure, a `u32`-ABI
     /// overflow, or a match-buffer overflow (fails closed, no partial set).
-    pub fn scan_fused<B: VyreBackend + ?Sized>(
+    pub fn scan_fused(
         &self,
-        backend: &B,
+        backend_id: &str,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
@@ -397,8 +388,7 @@ impl RegionEvidencePipeline {
         let zero_count = 0u32;
         let presence_scratch = vec_zero_bytes(bitmap_words);
         let admission_scratch = vec_zero_bytes(bitmap_words);
-        let matches_scratch = vec_zero_bytes(max_matches as usize * 3);
-        let inputs: [&[u8]; 13] = [
+        let inputs: [&[u8]; 12] = [
             &packed_haystack,
             bytemuck::cast_slice(&self.dfa.transitions),
             bytemuck::cast_slice(&self.dfa.output_offsets),
@@ -410,16 +400,11 @@ impl RegionEvidencePipeline {
             bytemuck::cast_slice(std::slice::from_ref(&haystack_len)),
             &presence_scratch,
             bytemuck::cast_slice(std::slice::from_ref(&zero_count)),
-            &matches_scratch,
             &admission_scratch,
         ];
         let config = evidence_dispatch_config(haystack_len);
-        let outputs = crate::artifact_session::dispatch_registered(
-            &program,
-            backend.id(),
-            &inputs,
-            &config,
-        )?;
+        let outputs =
+            crate::artifact_session::dispatch_registered(&program, backend_id, &inputs, &config)?;
 
         // Writable buffers, binding order: presence, match_count, matches, admission.
         let presence = decode_words(
