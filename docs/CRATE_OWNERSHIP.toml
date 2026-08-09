@@ -5,7 +5,7 @@ package = "vyre-megakernel"
 path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
-responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy."
+responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy."
 allowed_dependencies = ["vyre-foundation"]
 
 [[crate]]

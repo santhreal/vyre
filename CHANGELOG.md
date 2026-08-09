@@ -38,14 +38,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   compiled artifacts while executable or provenance changes invalidate the key.
   The v2 identity rejects stale v1 records.
 - `vyre-megakernel` now compiles validated `ProgramGraph`, `ExternalFacts`, and
-  explicit `SearchBudget` requests into v3 `Artifact` records. The compiler
+  explicit `SearchBudget` requests into v4 `Artifact` records. The compiler
   explores legal whole-graph fusion schedules, prunes lifecycle,
   synchronization, geometry, and dependency violations with stable reasons,
-  selects the lowest open-model cost, and records exact bounded search work.
-  Typed graph IDs survive compilation, constant identities and symbolic
-  bindings are authenticated, artifact size is bounded, and runtime retention
-  policy is excluded from compiler identity. `ArtifactEnvelope` remains the
-  versioned target-payload attachment.
+  selects the lowest open-model cost, and records exact bounded search work and
+  dependency stages. Registered target compiler facets decode only these
+  selected modules and consume the canonical artifact ABI. Typed graph IDs
+  survive compilation, constant identities and symbolic bindings are
+  authenticated, artifact size is bounded, and runtime retention policy is
+  excluded from compiler identity. `ArtifactEnvelope` remains the versioned
+  target-payload attachment.
 - `vyre-lower::lower_verified` is now the sole production Program-to-descriptor
   boundary. It runs the registered fallible semantic optimizer once, performs
   lower-IR cleanup, and verifies both descriptor states. Target emitters consume

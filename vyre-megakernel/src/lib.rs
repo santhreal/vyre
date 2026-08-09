@@ -24,11 +24,17 @@ pub mod legality;
 mod normalize;
 mod search;
 mod select;
+/// Target compiler facets over compiler-selected modules and canonical ABI.
+pub mod target;
 
 pub use envelope::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
     TargetResourceBinding, TargetResourceMemory, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
     TARGET_PAYLOAD_SCHEMA_VERSION,
+};
+pub use target::{
+    artifact_abi, fuse_selected_module, selected_modules, SelectedModule, TargetCompileError,
+    TargetCompiler,
 };
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -41,11 +47,11 @@ use vyre_foundation::ir::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 3;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 4;
 const ARTIFACT_MAGIC: &[u8; 4] = b"VMK0";
 const ARTIFACT_HEADER_BYTES: usize = 10;
 const ARTIFACT_DIGEST_BYTES: usize = 32;
-const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v3\0";
+const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v4\0";
 const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
 
@@ -508,6 +514,8 @@ pub struct FusionRecord {
     pub id: FusionGroupId,
     /// Typed group members.
     pub members: Vec<ArtifactNodeId>,
+    /// Dependency stage selected for this group.
+    pub stage: u32,
     /// Compiler-derived semantic-legality identities used to form the group.
     pub legality: Vec<Digest>,
 }

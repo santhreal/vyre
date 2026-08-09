@@ -57,6 +57,7 @@ pub(crate) fn plan(
             FusionRecord {
                 id: FusionGroupId(group as u32),
                 members: nodes,
+                stage: stages[group],
                 legality: vec![domain_digest(LEGALITY_DIGEST_DOMAIN, evidence)],
             }
         })

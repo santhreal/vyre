@@ -11,8 +11,8 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyKind, DiagnosticCode,
-    Digest, ExternalFacts, SearchBudget,
+    selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyKind,
+    DiagnosticCode, Digest, ExternalFacts, SearchBudget,
 };
 
 const LIMIT: u64 = 1_000_000;
@@ -303,6 +303,22 @@ fn round_trip_preserves_typed_ids_abi_plan_and_digest() {
         .iter()
         .any(|edge| edge.kind == DependencyKind::Retained));
 }
+/// WHY: every target compiler must receive the same selected modules and dependency stages.
+#[test]
+fn selected_modules_decode_exact_planner_groups() {
+    let artifact = compile(&request(LIMIT)).unwrap();
+    let modules = selected_modules(&artifact).expect("selected modules must decode");
+    assert_eq!(modules.len(), 2);
+    assert_eq!(modules[0].stage, 0);
+    assert_eq!(modules[0].nodes, [ArtifactNodeId(0), ArtifactNodeId(1)]);
+    assert_eq!(modules[0].programs.len(), 2);
+    assert_eq!(modules[1].stage, 1);
+    assert_eq!(modules[1].nodes, [ArtifactNodeId(2)]);
+    assert_eq!(
+        modules[0].programs[0].canonical_wire_bytes().unwrap(),
+        artifact.nodes()[0].program
+    );
+}
 /// WHY: the compiler must select profitable legal fusion while preserving lifecycle boundaries.
 #[test]
 fn planner_fuses_invocation_dataflow_and_prunes_retained_dataflow() {
@@ -510,12 +526,12 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     assert_eq!(error.diagnostic.code, DiagnosticCode::ResourceOverflow);
 }
 
-/// WHY: persisted v2 artifacts must be rejected after the v3 planning cutover.
+/// WHY: persisted v3 artifacts must be rejected after the v4 target-seam cutover.
 #[test]
 fn stale_artifact_version_is_rejected_before_body_decode() {
     let artifact = compile(&request(LIMIT)).unwrap();
     let mut bytes = artifact.to_bytes().unwrap();
-    bytes[4..6].copy_from_slice(&2u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&3u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
     assert_eq!(error.diagnostic.code, DiagnosticCode::VersionSkew);
     assert_eq!(error.diagnostic.path, "artifact.schema_version");
