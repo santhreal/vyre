@@ -164,8 +164,6 @@ pub use runtime::match_result;
 pub use runtime::match_result::ByteRange;
 pub use runtime::perf;
 
-/// Host-side IR engine helpers (prefix arrays, token filters).
-pub mod engine;
 /// Deterministic field framing for content-addressed hashes.
 pub mod hashing;
 /// Legacy lower helpers (transition surface pending driver-tier extraction).
