@@ -22,7 +22,7 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || reduce_count_non_zero("values", "out", 4),
         Some(|| {

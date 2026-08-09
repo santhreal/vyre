@@ -948,7 +948,7 @@ fn motif_all_edges_present(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || motif(ProgramGraphShape::new(4, 4), &[MotifEdge { from: 0, to: 1, kind_mask: 1 }], "witness"),
         Some(|| {

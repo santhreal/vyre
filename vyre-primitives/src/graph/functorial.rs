@@ -142,7 +142,7 @@ pub fn try_functor_apply_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || functor_apply("source_row", "mapping", "target_row", 4),
         Some(|| {

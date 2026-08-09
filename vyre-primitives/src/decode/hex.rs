@@ -151,7 +151,7 @@ pub fn hex_decode_reference_packed(input: &[u8]) -> Vec<u32> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         HEX_DECODE_OP_ID,
         || hex_decode("input", "output", "table", 6),
         Some(|| vec![vec![

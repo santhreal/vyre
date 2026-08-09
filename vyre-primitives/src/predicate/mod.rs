@@ -209,7 +209,7 @@ macro_rules! define_tag_family_predicate {
 
             #[cfg(feature = "inventory-registry")]
             inventory::submit! {
-                crate::harness::OpEntry::new(
+                crate::harness::OpEntry::primitive(
                     OP_ID,
                     || $function("tags", "nodeset", 4),
                     Some(|| {
@@ -319,7 +319,7 @@ macro_rules! define_fixed_forward_edge_predicate {
 
             #[cfg(feature = "inventory-registry")]
             inventory::submit! {
-                crate::harness::OpEntry::new(
+                crate::harness::OpEntry::primitive(
                     OP_ID,
                     || $function(ProgramGraphShape::new(4, $edge_count), "fin", "fout"),
                     Some(|| {

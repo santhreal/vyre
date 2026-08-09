@@ -161,7 +161,7 @@ pub fn reference_byte_histogram(bytes: &[u8]) -> [u32; 256] {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         BYTE_HISTOGRAM_256_OP_ID,
         || byte_histogram_256("bytes", "histogram", 5),
         Some(|| {

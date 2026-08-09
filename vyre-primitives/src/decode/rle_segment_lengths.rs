@@ -434,7 +434,7 @@ fn fixture_u32(words: &[u32]) -> Vec<u8> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || rle_segment_lengths(3),
         Some(|| {

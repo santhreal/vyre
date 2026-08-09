@@ -178,7 +178,7 @@ macro_rules! define_bool_reduce_op {
 
         #[cfg(feature = "inventory-registry")]
         inventory::submit! {
-            crate::harness::OpEntry::new(
+            crate::harness::OpEntry::primitive(
                 OP_ID,
                 || $fn_name("values", "out", 4),
                 Some(|| {
@@ -258,7 +258,7 @@ macro_rules! define_u32_reduce_op {
 
         #[cfg(feature = "inventory-registry")]
         inventory::submit! {
-            crate::harness::OpEntry::new(
+            crate::harness::OpEntry::primitive(
                 OP_ID,
                 || $fn_name("values", "out", 4),
                 Some(|| {

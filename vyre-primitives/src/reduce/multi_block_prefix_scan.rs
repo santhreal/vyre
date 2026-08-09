@@ -107,7 +107,7 @@ pub fn multi_block_prefix_scan_sum_u32(input: &str, output: &str, n: u32) -> Pro
 // arithmetic rather than merely running.
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID_INCLUSIVE_SUM,
         || multi_block_prefix_scan_sum_u32("input", "output", 64),
         Some(|| {

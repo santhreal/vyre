@@ -175,7 +175,7 @@ pub fn try_csr_frontier_degree_sum_cpu(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || csr_frontier_degree_sum(ProgramGraphShape::new(4, 4)),
         Some(|| {

@@ -189,7 +189,7 @@ pub fn pack_params(count: u32, stride: u32, radius: u32) -> Vec<u32> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || conv1d_program(8, 1),
         Some(|| {

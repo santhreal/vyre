@@ -75,7 +75,7 @@ pub fn core_delimiter_match(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || core_delimiter_match("tok_types", "tok_depths", 8, 12, 13),
         Some(|| {

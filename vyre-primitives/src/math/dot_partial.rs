@@ -31,8 +31,20 @@ pub fn dot_partial(
                         Expr::add(
                             Expr::var(accum_var),
                             Expr::mul(
-                                Expr::load(q_buffer, Expr::add(q_base.clone(), Expr::u32(lane))),
-                                Expr::load(k_buffer, Expr::add(k_base.clone(), Expr::u32(lane))),
+                                Expr::cast(
+                                    DataType::F32,
+                                    Expr::load(
+                                        q_buffer,
+                                        Expr::add(q_base.clone(), Expr::u32(lane)),
+                                    ),
+                                ),
+                                Expr::cast(
+                                    DataType::F32,
+                                    Expr::load(
+                                        k_buffer,
+                                        Expr::add(k_base.clone(), Expr::u32(lane)),
+                                    ),
+                                ),
                             ),
                         ),
                     )
@@ -50,8 +62,14 @@ pub fn dot_partial(
             Expr::add(
                 Expr::var(accum_var),
                 Expr::mul(
-                    Expr::load(q_buffer, Expr::add(q_base, Expr::var("dk"))),
-                    Expr::load(k_buffer, Expr::add(k_base, Expr::var("dk"))),
+                    Expr::cast(
+                        DataType::F32,
+                        Expr::load(q_buffer, Expr::add(q_base, Expr::var("dk"))),
+                    ),
+                    Expr::cast(
+                        DataType::F32,
+                        Expr::load(k_buffer, Expr::add(k_base, Expr::var("dk"))),
+                    ),
                 ),
             ),
         )],
@@ -82,7 +100,7 @@ pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) ->
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || dot_partial_program("q", "k", "out", 2),
         Some(|| {

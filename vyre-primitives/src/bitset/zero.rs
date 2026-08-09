@@ -40,7 +40,7 @@ pub fn cpu_ref(target: &mut [u32]) {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || bitset_zero("target", 3),
         Some(|| {

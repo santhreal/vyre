@@ -348,7 +348,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || ziftsieve_literal_copy("input", "output", "seq_start", "seq_len", "seq_off", 5, 2, 3),
         Some(fixture_inputs),

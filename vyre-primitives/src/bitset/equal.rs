@@ -52,7 +52,7 @@ pub fn cpu_ref(lhs: &[u32], rhs: &[u32]) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || bitset_equal("lhs", "rhs", "out", 2),
         Some(|| {

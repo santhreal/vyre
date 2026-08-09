@@ -164,7 +164,7 @@ pub fn reference_planar_rewrite_schedule(candidates: &[u32], h: u32, w: u32, k: 
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || planar_rewrite_schedule("candidates", "chosen", 4, 4, 2),
         Some(|| {

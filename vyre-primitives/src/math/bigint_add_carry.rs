@@ -300,7 +300,7 @@ fn reserve_bigint_output(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || bigint_add_carry(4),
         Some(|| {

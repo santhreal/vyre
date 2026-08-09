@@ -248,7 +248,7 @@ mod regression_tests {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         // AUDIT_2026-04-24 F-SCC-02: fixture differentiates forward
         // from backward so the intersection actually filters. Nodes

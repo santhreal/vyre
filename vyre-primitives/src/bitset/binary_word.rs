@@ -197,7 +197,7 @@ macro_rules! define_bitwise_binary_op {
 
         #[cfg(feature = "inventory-registry")]
         inventory::submit! {
-            crate::harness::OpEntry::new(
+            crate::harness::OpEntry::primitive(
                 OP_ID,
                 || $fn_name("lhs", "rhs", "out", $inventory_words),
                 Some(|| {
@@ -403,7 +403,7 @@ macro_rules! define_bitwise_in_place_op {
 
         #[cfg(feature = "inventory-registry")]
         inventory::submit! {
-            crate::harness::OpEntry::new(
+            crate::harness::OpEntry::primitive(
                 OP_ID,
                 || $fn_name("target", "operand", $inventory_words),
                 Some(|| {

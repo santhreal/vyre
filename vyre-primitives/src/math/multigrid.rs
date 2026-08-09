@@ -360,7 +360,7 @@ pub fn try_jacobi_smooth_step_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || jacobi_smooth_step("a", "b", "x", "omega", "out", 1),
         Some(|| {

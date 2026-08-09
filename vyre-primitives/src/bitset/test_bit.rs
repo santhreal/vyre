@@ -10,7 +10,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 pub const OP_ID: &str = "vyre-primitives::bitset::test_bit";
 
 /// Build a Program: `out_scalar[0] = (buf[bit_idx/32] >> (bit_idx%32)) & 1`,
-/// or `0` when `bit_idx/32 >= words` (out of range), matching [`cpu_ref`].
+/// or `0` when `bit_idx/32 >= words` (out of range), matching `cpu_ref`.
 ///
 /// `words` is the length of `buf` in u32 words; it bounds the load so an
 /// out-of-range `bit_idx` cannot read past the buffer on the GPU.
@@ -65,7 +65,7 @@ pub fn cpu_ref(buf: &[u32], bit_idx: u32) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || bitset_test_bit("buf", 0, "out", 1),
         Some(|| {

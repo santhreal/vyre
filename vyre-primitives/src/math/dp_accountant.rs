@@ -29,12 +29,18 @@
 //! formula assumes that doubling pre-scales α to 2α  -  i.e. the caller
 //! provides `alpha[i]` already scaled, the divide is fixed-point.
 
-use vyre_foundation::ir::{DataType, Expr, Program};
+use std::sync::Arc;
+
+use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::math::gaussian_rdp_step";
 
 /// Emit `out[i] = alpha[i] / (2 * sigma_squared[i])` for `count` lanes.
+///
+/// Every `sigma_squared` lane must be in `1..=u32::MAX / 2`. Values outside
+/// that range trap before division because doubling would be zero or overflow.
 ///
 /// This is the Mironov 2017 closed form for the Rényi divergence at
 /// order α between `N(0, σ²)` and `N(μ, σ²)` (for any μ ≠ 0): it
@@ -52,15 +58,46 @@ pub fn gaussian_rdp_step(alpha: &str, sigma_squared: &str, out: &str, count: u32
         );
     }
 
-    crate::math::u32_binary_map::u32_binary_map_program(
-        OP_ID,
-        alpha,
-        sigma_squared,
-        out,
-        count,
-        |alpha_value, sigma_squared_value| {
-            Expr::div(alpha_value, Expr::mul(Expr::u32(2), sigma_squared_value))
-        },
+    let lane = Expr::InvocationId { axis: 0 };
+    let sigma_value = Expr::load(sigma_squared, lane.clone());
+    let invalid_sigma = Expr::or(
+        Expr::eq(sigma_value.clone(), Expr::u32(0)),
+        Expr::gt(sigma_value.clone(), Expr::u32(u32::MAX / 2)),
+    );
+    let body = vec![Node::if_then(
+        Expr::lt(lane.clone(), Expr::u32(count)),
+        vec![
+            Node::if_then(
+                invalid_sigma,
+                vec![Node::trap(
+                    sigma_value.clone(),
+                    "Fix: gaussian_rdp_step requires every sigma_squared lane to be in 1..=2147483647 so 2 * sigma_squared is non-zero and representable",
+                )],
+            ),
+            Node::store(
+                out,
+                lane.clone(),
+                Expr::div(
+                    Expr::load(alpha, lane),
+                    Expr::mul(Expr::u32(2), sigma_value),
+                ),
+            ),
+        ],
+    )];
+
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(alpha, 0, BufferAccess::ReadOnly, DataType::U32).with_count(count),
+            BufferDecl::storage(sigma_squared, 1, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(count),
+            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::U32).with_count(count),
+        ],
+        [256, 1, 1],
+        vec![Node::Region {
+            generator: Ident::from(OP_ID),
+            source_region: None,
+            body: Arc::new(body),
+        }],
     )
 }
 
@@ -119,7 +156,7 @@ pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || {
             gaussian_rdp_step("alpha", "sigma_sq", "out", 4)

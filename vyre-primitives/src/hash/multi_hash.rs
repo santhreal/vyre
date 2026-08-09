@@ -78,7 +78,7 @@ fn multi_hash_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         MULTI_HASH_OP_ID,
         || multi_hash_program("input", "out", 3),
         Some(|| vec![vec![crate::wire::pack_bytes_as_u32_slice(b"abc")]]),

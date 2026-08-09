@@ -41,13 +41,27 @@ pub fn attention_max_pass_with_bases(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
+    attention_max_pass_bounded(q, k, d, Expr::u32(s), scale_expr, query_base, key_base)
+}
+
+/// Emit a max-score pass whose causal/cache key limit is an expression.
+#[must_use]
+pub fn attention_max_pass_bounded(
+    q: &str,
+    k: &str,
+    d: u32,
+    key_limit: Expr,
+    scale_expr: Expr,
+    query_base: Expr,
+    key_base: Expr,
+) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_MAX_PASS_OP_ID.to_string(),
     };
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
-        Expr::u32(s),
+        key_limit,
         vec![Node::Region {
             generator: Ident::from(DOT_PARTIAL_OP_ID),
             source_region: Some(parent),
@@ -160,13 +174,27 @@ pub fn attention_sum_pass_with_bases(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
+    attention_sum_pass_bounded(q, k, d, Expr::u32(s), scale_expr, query_base, key_base)
+}
+
+/// Emit a normalization-sum pass whose causal/cache key limit is an expression.
+#[must_use]
+pub fn attention_sum_pass_bounded(
+    q: &str,
+    k: &str,
+    d: u32,
+    key_limit: Expr,
+    scale_expr: Expr,
+    query_base: Expr,
+    key_base: Expr,
+) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_SUM_PASS_OP_ID.to_string(),
     };
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
-        Expr::u32(s),
+        key_limit,
         vec![Node::Region {
             generator: Ident::from(DOT_PARTIAL_OP_ID),
             source_region: Some(parent),
@@ -310,6 +338,70 @@ pub fn attention_write_pass_with_bases(
     value_base: Expr,
     output_base: Expr,
 ) -> Vec<Node> {
+    attention_write_pass_bounded(
+        q,
+        k,
+        v,
+        d,
+        Expr::u32(s),
+        scale_expr,
+        out,
+        query_base,
+        key_base,
+        value_base,
+        output_base,
+    )
+}
+
+/// Emit a weighted-value write pass whose causal/cache key limit is an expression.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn attention_write_pass_bounded(
+    q: &str,
+    k: &str,
+    v: &str,
+    d: u32,
+    key_limit: Expr,
+    scale_expr: Expr,
+    out: &str,
+    query_base: Expr,
+    key_base: Expr,
+    value_base: Expr,
+    output_base: Expr,
+) -> Vec<Node> {
+    attention_write_pass_bounded_typed(
+        q,
+        k,
+        v,
+        d,
+        key_limit,
+        scale_expr,
+        out,
+        query_base,
+        key_base,
+        value_base,
+        output_base,
+        DataType::F32,
+    )
+}
+
+/// Emit a typed weighted-value write pass with F32 accumulation.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn attention_write_pass_bounded_typed(
+    q: &str,
+    k: &str,
+    v: &str,
+    d: u32,
+    key_limit: Expr,
+    scale_expr: Expr,
+    out: &str,
+    query_base: Expr,
+    key_base: Expr,
+    value_base: Expr,
+    output_base: Expr,
+    output_dtype: DataType,
+) -> Vec<Node> {
     let parent = GeneratorRef {
         name: ATTENTION_WRITE_PASS_OP_ID.to_string(),
     };
@@ -322,7 +414,7 @@ pub fn attention_write_pass_with_bases(
             Node::loop_for(
                 "j",
                 Expr::u32(0),
-                Expr::u32(s),
+                key_limit,
                 vec![Node::Region {
                     generator: Ident::from(DOT_PARTIAL_OP_ID),
                     source_region: Some(parent),
@@ -358,14 +450,17 @@ pub fn attention_write_pass_with_bases(
                         Node::let_bind(
                             "value",
                             finite_or(
-                                Expr::load(
-                                    v,
-                                    Expr::add(
+                                Expr::cast(
+                                    DataType::F32,
+                                    Expr::load(
+                                        v,
                                         Expr::add(
-                                            value_base,
-                                            Expr::mul(Expr::var("j"), Expr::u32(d)),
+                                            Expr::add(
+                                                value_base,
+                                                Expr::mul(Expr::var("j"), Expr::u32(d)),
+                                            ),
+                                            Expr::var("t"),
                                         ),
-                                        Expr::var("t"),
                                     ),
                                 ),
                                 Expr::f32(0.0),
@@ -384,7 +479,7 @@ pub fn attention_write_pass_with_bases(
             Node::Store {
                 buffer: out.into(),
                 index: Expr::add(output_base, Expr::var("t")),
-                value: flush_tiny(Expr::var("accum")),
+                value: Expr::cast(output_dtype.clone(), flush_tiny(Expr::var("accum"))),
             },
         ],
     )]
@@ -490,7 +585,7 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         ATTENTION_MAX_PASS_OP_ID,
         || attention_max_pass_program("q", "k", "out", 2, 2),
         Some(|| {
@@ -510,7 +605,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         ATTENTION_SUM_PASS_OP_ID,
         || attention_sum_pass_program("q", "k", "max", "out", 2, 2),
         Some(|| {
@@ -531,7 +626,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         ATTENTION_WRITE_PASS_OP_ID,
         || {
             attention_write_pass_program(AttentionWritePassProgramSpec {

@@ -215,7 +215,7 @@ fn radix_pass(src: &[u32], dst: &mut [u32], bits: u32, pass: usize) {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || radix_sort("input", "output", 4, 8),
         Some(|| {

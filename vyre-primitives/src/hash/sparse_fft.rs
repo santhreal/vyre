@@ -66,7 +66,7 @@ pub fn sparse_fft_bin_hash(signal: &str, bins: &str, a: u32, c: u32, b: u32, n: 
 
     let local = Expr::LocalId { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::eq(Expr::WorkgroupId { axis: 0 }, Expr::u32(0)),
+        Expr::is_first_workgroup(),
         vec![Node::loop_for(
             "chunk",
             Expr::u32(0),
@@ -260,7 +260,7 @@ pub fn try_voting_recovery_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || sparse_fft_bin_hash("signal", "bins", 1, 0, 4, 8),
         Some(|| {

@@ -276,7 +276,7 @@ pub fn persistent_bfs_step(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         PERSISTENT_BFS_STEP_OP_ID,
         || persistent_bfs_step(ProgramGraphShape::new(4, 4), "frontier_out", "changed", 0xFFFF_FFFF),
         Some(|| {

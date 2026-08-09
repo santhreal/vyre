@@ -731,7 +731,7 @@ pub fn cpu_ref_batched(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || path_reconstruct("parent", "target", "path_out", "path_len", 4),
         Some(|| {

@@ -48,7 +48,7 @@ pub fn cpu_ref_into(nodes: &[u32], kind: u32, out: &mut Vec<u32>) {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || node_kind_eq("nodes", "nodeset", 4, crate::predicate::node_kind::CALL),
         Some(|| {

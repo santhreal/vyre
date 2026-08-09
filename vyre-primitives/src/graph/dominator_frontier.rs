@@ -838,7 +838,7 @@ fn dominates(dom_offsets: &[u32], dom_targets: &[u32], dominator: u32, node: u32
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || dominator_frontier(4, 4, 4, "idom", "df"),
         Some(|| {

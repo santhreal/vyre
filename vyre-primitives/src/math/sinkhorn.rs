@@ -196,7 +196,7 @@ crate::graph::scratch::define_reserve_graph_capacity!(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || {
             sinkhorn_scale("a", "b", "out", 4)

@@ -223,7 +223,7 @@ pub fn try_amari_alpha_step_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || {
             bhattacharyya_per_element("a", "b", "out", 4)

@@ -326,7 +326,7 @@ pub fn validate_union_find_inputs(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || union_find_program("parent", "edge_a", "edge_b", 4, 2),
         Some(|| {

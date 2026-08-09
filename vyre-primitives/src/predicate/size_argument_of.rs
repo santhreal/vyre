@@ -95,7 +95,7 @@ mod tests {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || size_argument_of(ProgramGraphShape::new(4, 4), "fin", "fout"),
         Some(|| {

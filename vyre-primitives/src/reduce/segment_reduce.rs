@@ -143,7 +143,7 @@ pub fn try_cpu_ref_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || segment_reduce_sum("input", "segment_offsets", "output", 2),
         Some(|| {

@@ -163,7 +163,7 @@ mod non_panic_wrapper_tests {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || stochastic_and_mul("a", "b", "out", 2),
         Some(|| {

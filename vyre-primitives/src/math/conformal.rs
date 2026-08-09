@@ -135,7 +135,7 @@ pub fn predict_interval(y: u32, q_hat: u32) -> (u32, u32) {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || {
             conformal_threshold("scores", "q_hat", 4, 2)

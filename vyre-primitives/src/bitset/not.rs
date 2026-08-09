@@ -61,7 +61,7 @@ pub fn try_cpu_ref_into(input: &[u32], out: &mut Vec<u32>) -> Result<(), String>
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || bitset_not("input", "out", 1),
         Some(|| {

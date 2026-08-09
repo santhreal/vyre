@@ -100,7 +100,7 @@ pub fn try_mp_edge_clip_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || {
             mp_edge_clip("a", "b", "out", 4)

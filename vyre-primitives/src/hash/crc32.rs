@@ -675,7 +675,7 @@ fn crc32_byte_shift_matrix() -> [u32; 32] {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         CRC32_OP_ID,
         || crc32_program("input", "out", 3),
         Some(|| {

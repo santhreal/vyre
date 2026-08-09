@@ -28,8 +28,8 @@ const MATMUL_CONTEXT: FixedMatmulContext = FixedMatmulContext {
 };
 
 /// Sequential composition step. Same shape as
-/// [`crate::math::tensor_network::tn_pair_contract`]; ships under graph
-/// because string diagrams are graphs of morphisms.
+/// `crate::math::tensor_network::tn_pair_contract`; ships under graph because
+/// string diagrams are graphs of morphisms.
 #[must_use]
 pub fn monoidal_compose(f: &str, g: &str, out: &str, a: u32, b: u32, c: u32) -> Program {
     match try_monoidal_compose(f, g, out, a, b, c) {
@@ -123,7 +123,7 @@ pub fn try_monoidal_compose_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || monoidal_compose("f", "g", "out", 2, 2, 2),
         Some(|| {

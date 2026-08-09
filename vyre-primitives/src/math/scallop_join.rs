@@ -287,7 +287,7 @@ pub fn cpu_ref_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || scallop_join("state", "next", "join_rules", "changed", 2, 4),
         Some(|| {

@@ -111,7 +111,7 @@ pub fn cpu_interval_merge(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || interval_merge_program("amin", "amax", "bmin", "bmax", "omin", "omax", 3),
         Some(|| {

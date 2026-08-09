@@ -261,7 +261,7 @@ crate::graph::scratch::define_reserve_graph_capacity!(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         OP_ID,
         || sheaf_laplacian_eigenvalue("r", "v", "l", 4, 1, 4),
         Some(|| {
@@ -288,7 +288,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    crate::harness::OpEntry::primitive(
         POWER_ITERATION_PHASE_OP_ID,
         || {
             Program::wrapped(
