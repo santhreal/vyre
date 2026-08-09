@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-use super::legacy::split_fix;
+use super::adapter::split_fix;
 use super::*;
 
 #[test]
@@ -30,7 +30,7 @@ fn render_inline_cycle() {
     let err = Error::InlineCycle {
         op_id: "foo".to_owned(),
     };
-    let diag = from_legacy_error(&err);
+    let diag = diagnostic_from_error(&err);
     assert_eq!(diag.severity, Severity::Error);
     assert_eq!(diag.code.as_str(), "E-INLINE-CYCLE");
     assert!(diag.location.is_some());
@@ -123,7 +123,7 @@ fn every_error_variant_classifies() {
     ];
 
     for err in samples {
-        let diag = from_legacy_error(&err);
+        let diag = diagnostic_from_error(&err);
         assert!(diag.code.as_str().starts_with("E-"));
         assert!(!diag.message.is_empty());
         assert_eq!(diag.severity, Severity::Error);

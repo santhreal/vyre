@@ -83,20 +83,6 @@ fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>,
     // `is_backend_allocated_output` is the SINGLE cross-backend contract in
     // vyre-foundation, shared verbatim with the reference interpreter, do NOT re-inline
     // it here (drift would make this backend disagree with the interpreter on outputs).
-    let logical_input_count = program
-        .buffers()
-        .iter()
-        .filter(|buffer| {
-            buffer.access() != BufferAccess::Workgroup && !buffer.is_backend_allocated_output()
-        })
-        .count();
-    let legacy_input_count = program
-        .buffers()
-        .iter()
-        .filter(|buffer| buffer.access() != BufferAccess::Workgroup)
-        .count();
-    let legacy_input_mode =
-        inputs.len() == legacy_input_count && inputs.len() != logical_input_count;
     let mut next_input = 0usize;
     let mut values = Vec::new();
     for buffer in program.buffers() {
@@ -104,15 +90,6 @@ fn reference_values(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Value>,
             continue;
         }
         let bytes = if buffer.is_backend_allocated_output() {
-            if legacy_input_mode {
-                let _legacy_initializer = inputs.get(next_input).ok_or_else(|| {
-                    BackendError::new(format!(
-                        "cpu-ref missing legacy output initializer for buffer `{}`. Fix: pass one buffer for every non-workgroup declaration or migrate to logical backend inputs.",
-                        buffer.name()
-                    ))
-                })?;
-                next_input += 1;
-            }
             synthesized_zero_buffer(buffer, "backend-allocated output")?
         } else if let Some(input) = inputs.get(next_input) {
             next_input += 1;

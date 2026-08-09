@@ -56,9 +56,9 @@ fn classify(err: &Error) -> (&'static str, Option<OpLocation>) {
     }
 }
 
-/// Convert the retired foundation catch-all error into the shared diagnostic protocol.
+/// Convert a driver error into the shared diagnostic protocol.
 #[must_use]
-pub fn from_legacy_error(error: &Error) -> Diagnostic {
+pub fn diagnostic_from_error(error: &Error) -> Diagnostic {
     let (code, location) = classify(error);
     let (message, fix) = split_fix(error.to_string());
     let mut diagnostic = Diagnostic::error(code, message);

@@ -173,6 +173,29 @@ fn missing_input_buffer_is_zero_synthesized_for_reference_only_dispatch() {
     assert_eq!(outputs, vec![0u32.to_le_bytes().to_vec()]);
 }
 
+/// WHY: backend-allocated outputs are not host inputs. Accepting an initializer
+/// creates a second submission geometry that can diverge from target backends.
+#[test]
+fn backend_allocated_output_initializer_is_rejected() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
+    );
+
+    let error = CpuRefBackend
+        .dispatch(
+            &program,
+            &[0_u32.to_le_bytes().to_vec()],
+            &DispatchConfig::default(),
+        )
+        .expect_err("backend-allocated output initializers must be rejected");
+    assert!(
+        error.to_string().contains("extra input buffer"),
+        "reference backend must report the non-canonical input: {error}"
+    );
+}
+
 // ---------------------------------------------------------------
 // Two-buffer XOR (the README example)
 // ---------------------------------------------------------------

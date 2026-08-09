@@ -5,8 +5,8 @@
 //! messages). `Diagnostic` is the structured form consumed by IDEs, language
 //! servers, CI annotators, and terminal renderers.
 
-mod legacy;
-pub use legacy::from_legacy_error;
+mod adapter;
+pub use adapter::diagnostic_from_error;
 
 pub use vyre_foundation::diagnostics::{
     Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
