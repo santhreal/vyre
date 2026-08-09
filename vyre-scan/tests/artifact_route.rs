@@ -1,15 +1,12 @@
 //! Production scan compiler, target payload, materialization, and submission contract.
 
-use vyre_driver::backend::registered_backends;
+use vyre_driver::backend::backend_registration;
 use vyre_driver_wgpu as _;
 use vyre_foundation::match_result::Match;
 use vyre_scan::{build_scan_session, ScanArtifactError};
 
 fn wgpu_registration() -> &'static vyre_driver::BackendRegistration {
-    registered_backends()
-        .iter()
-        .copied()
-        .find(|registration| registration.id == "wgpu")
+    backend_registration("wgpu")
         .expect("WGPU compiler and materializer registration must be linked")
 }
 
@@ -34,7 +31,9 @@ fn scan_executes_through_authenticated_artifact_submission() -> Result<(), ScanA
         .scan(haystack, 10_001)
         .expect_err("caller cap above the compiler-owned hit ABI must fail closed");
     assert!(
-        cap_error.to_string().contains("exceeds compiled hit capacity 10000"),
+        cap_error
+            .to_string()
+            .contains("exceeds compiled hit capacity 10000"),
         "unexpected cap error: {cap_error}"
     );
     Ok(())

@@ -22,10 +22,7 @@ pub enum ScanArtifactError {
     /// Whole-program compilation or envelope encoding failed.
     #[error("scan artifact compilation failed: {0}")]
     Compile(String),
-    /// The registered target compiler facet rejected the selected artifact.
-    #[error("scan target compilation failed: {0}")]
-    Target(String),
-    /// A required registered compiler or materializer facet is unavailable.
+    /// Product-side validation or staging failed before artifact submission.
     #[error(transparent)]
     Backend(#[from] BackendError),
     /// Artifact admission, materialization, submission, or readback failed.
@@ -60,17 +57,9 @@ impl ScanArtifactSession {
         )
         .validate()
         .map_err(|error| ScanArtifactError::Compile(error.to_string()))?;
-        let artifact = vyre_megakernel::compile(&request)
-            .map_err(|error| ScanArtifactError::Compile(error.to_string()))?;
-        let artifact_digest = artifact.digest();
-        let compiler = registration.target_compiler()?;
-        let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())
-            .map_err(|error| ScanArtifactError::Target(error.to_string()))?;
-        let payload_digest = envelope.target_payloads()[0].digest();
-        let bytes = envelope
-            .to_bytes()
-            .map_err(|error| ScanArtifactError::Compile(error.to_string()))?;
-        let session = ArtifactSession::from_bytes(registration, &bytes)?;
+        let session = ArtifactSession::compile(registration, &request)?;
+        let artifact_digest = session.artifact()?;
+        let payload_digest = session.payload()?;
         Ok(Self {
             artifact: artifact_digest,
             payload: payload_digest,

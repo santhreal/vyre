@@ -34,9 +34,9 @@ pub use capability::{Backend, Executable, Memory, MemoryRef, Streamable};
 pub use dialect_supported_ops::{dialect_and_language_supported_ops, dialect_only_supported_ops};
 pub use registry::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-    core_supported_ops, registered_backends, registered_backends_by_precedence,
-    registered_backends_by_precedence_slice, BackendCapability, BackendPrecedence,
-    BackendRegistration,
+    backend_registration, core_supported_ops, registered_backends,
+    registered_backends_by_precedence, registered_backends_by_precedence_slice, BackendCapability,
+    BackendPrecedence, BackendRegistration,
 };
 pub use validation::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,

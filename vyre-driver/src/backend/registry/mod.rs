@@ -13,7 +13,8 @@ mod inventory_streams;
 
 pub use acquire::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-    core_supported_ops, registered_backends_by_precedence, registered_backends_by_precedence_slice,
+    backend_registration, core_supported_ops, registered_backends_by_precedence,
+    registered_backends_by_precedence_slice,
 };
 pub use inventory_streams::{
     registered_backends, BackendCapability, BackendPrecedence, BackendRegistration,

@@ -3,7 +3,8 @@ use std::sync::{Mutex, RwLock};
 
 use thiserror::Error;
 use vyre_megakernel::{
-    Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetPayload, TargetPayloadFormat,
+    Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetCompileError, TargetPayload,
+    TargetPayloadFormat, ValidatedCompileRequest,
 };
 
 use crate::pipeline_cache::{PipelineCacheStore, PipelineFingerprint};
@@ -127,6 +128,12 @@ pub enum ArtifactSessionError {
     /// Canonical envelope or target-format admission failed.
     #[error(transparent)]
     Admission(#[from] ArtifactAdmissionError),
+    /// Neutral compilation or target payload construction failed.
+    #[error(transparent)]
+    Compile(#[from] CompileError),
+    /// The registered target compiler rejected the selected artifact.
+    #[error(transparent)]
+    Target(#[from] TargetCompileError),
     /// Registered device materialization or submission failed.
     #[error(transparent)]
     Backend(#[from] BackendError),
@@ -148,13 +155,25 @@ pub struct ArtifactSession {
 }
 
 impl ArtifactSession {
-    /// Authenticate canonical envelope bytes and materialize the exact device format.
-    pub fn from_bytes(
+    /// Compile one validated request, attach the registered target payload, and
+    /// materialize the authenticated artifact.
+    pub fn compile(
         registration: &'static BackendRegistration,
-        envelope_bytes: &[u8],
+        request: &ValidatedCompileRequest,
+    ) -> Result<Self, ArtifactSessionError> {
+        let artifact = vyre_megakernel::compile(request)?;
+        let compiler = registration.target_compiler()?;
+        let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())?;
+        Self::from_envelope(registration, envelope)
+    }
+
+    /// Admit one already-decoded canonical envelope and materialize its exact target bytes.
+    pub fn from_envelope(
+        registration: &'static BackendRegistration,
+        envelope: ArtifactEnvelope,
     ) -> Result<Self, ArtifactSessionError> {
         let materializer = registration.materializer()?;
-        let admitted = admit_artifact(envelope_bytes, materializer.device().target_format())?;
+        let admitted = admit_envelope(envelope, materializer.device().target_format())?;
         let instance = materializer.materialize(admitted.neutral(), admitted.target_payload())?;
         validate_instance(&admitted, materializer.as_ref(), instance.as_ref())?;
         Ok(Self {
@@ -167,6 +186,16 @@ impl ArtifactSession {
         })
     }
 
+    /// Authenticate canonical envelope bytes and materialize the exact device format.
+    pub fn from_bytes(
+        registration: &'static BackendRegistration,
+        envelope_bytes: &[u8],
+    ) -> Result<Self, ArtifactSessionError> {
+        let envelope =
+            ArtifactEnvelope::from_bytes(envelope_bytes).map_err(ArtifactAdmissionError::from)?;
+        Self::from_envelope(registration, envelope)
+    }
+
     /// Neutral artifact identity shared by every session and device generation.
     pub fn artifact(&self) -> Result<Digest, ArtifactSessionError> {
         let state = self
@@ -174,6 +203,14 @@ impl ArtifactSession {
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
         Ok(state.admitted.neutral().digest())
+    }
+    /// Exact authenticated target payload identity materialized by this session.
+    pub fn payload(&self) -> Result<Digest, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(state.admitted.target_payload().digest())
     }
 
     /// Current immutable device generation identity.

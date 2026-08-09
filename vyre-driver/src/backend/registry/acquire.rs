@@ -209,6 +209,19 @@ fn registration_for_id(id: &str) -> Result<Option<&'static BackendRegistration>,
     )?;
     Ok(table.get(id).copied())
 }
+/// Resolve the immutable registration for one linked backend identifier.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] when registry initialization fails or no linked
+/// backend registered `id`.
+pub fn backend_registration(id: &str) -> Result<&'static BackendRegistration, BackendError> {
+    registration_for_id(id)?.ok_or_else(|| {
+        BackendError::new(format!(
+            "backend `{id}` is not linked into this binary. Fix: link the concrete driver crate that registers this backend or choose one of the registered backend ids."
+        ))
+    })
+}
 
 /// Construct the registered backend with the requested stable identifier.
 ///
