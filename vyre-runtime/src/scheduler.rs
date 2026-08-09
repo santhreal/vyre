@@ -5,8 +5,7 @@
 
 use std::ops::Range;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use vyre_driver::{BackendError, VyreBackend};
+use vyre_driver::BackendError;
 
 /// A unit of work assigned to one GPU.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +18,7 @@ pub struct Shard {
 
 /// Dynamic work-stealing scheduler.
 pub struct WorkStealingScheduler {
-    backends: Vec<Arc<dyn VyreBackend>>,
+    backend_ids: Vec<&'static str>,
     /// Atomic work index used by dispatch loops to let fast backends
     /// steal more fine-grained work units. Worker threads call
     /// [`Self::claim_next_unit`] which atomically increments the index;
@@ -31,9 +30,9 @@ pub struct WorkStealingScheduler {
 
 impl WorkStealingScheduler {
     /// Create a scheduler over the live runtime backends available to the process.
-    pub fn new(backends: Vec<Arc<dyn VyreBackend>>) -> Self {
+    pub fn new(backend_ids: Vec<&'static str>) -> Self {
         Self {
-            backends,
+            backend_ids,
             work_index: AtomicUsize::new(0),
         }
     }
@@ -102,7 +101,7 @@ impl WorkStealingScheduler {
         total_len: usize,
         out: &mut Vec<Shard>,
     ) -> Result<(), BackendError> {
-        let n = self.backends.len();
+        let n = self.backend_ids.len();
         out.clear();
         if n == 0 || total_len == 0 {
             return Ok(());
@@ -120,7 +119,7 @@ impl WorkStealingScheduler {
         for i in 0..num_units {
             let end = (start + work_unit_size).min(total_len);
             out.push(Shard {
-                backend_id: self.backends[i % n].id(),
+                backend_id: self.backend_ids[i % n],
                 work_range: start..end,
             });
             start = end;
@@ -157,28 +156,6 @@ fn partition_ranges(total_len: usize, backend_count: usize) -> Vec<Range<usize>>
 #[cfg(test)]
 mod tests {
     use super::{partition_ranges, WorkStealingScheduler};
-    use std::sync::Arc;
-    use vyre_driver::backend::{DispatchConfig, VyreBackend};
-    use vyre_foundation::ir::Program;
-
-    struct TestBackend(&'static str);
-
-    impl vyre_driver::backend::private::Sealed for TestBackend {}
-
-    impl VyreBackend for TestBackend {
-        fn id(&self) -> &'static str {
-            self.0
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-            Ok(Vec::new())
-        }
-    }
 
     #[test]
     fn partition_ranges_produces_fine_grained_units() {
@@ -210,11 +187,7 @@ mod tests {
 
     #[test]
     fn scheduler_partition_into_reuses_output_storage() {
-        let scheduler = WorkStealingScheduler::new(vec![
-            Arc::new(TestBackend("a")),
-            Arc::new(TestBackend("b")),
-            Arc::new(TestBackend("c")),
-        ]);
+        let scheduler = WorkStealingScheduler::new(vec!["a", "b", "c"]);
         let mut shards = Vec::with_capacity(10);
 
         scheduler.partition_into(10, &mut shards);

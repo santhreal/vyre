@@ -7,7 +7,6 @@ mod geometry;
 mod grid;
 #[cfg(feature = "self-substrate-adapters")]
 mod programs;
-mod provenance;
 mod sizing;
 
 pub use barriers::{elide_value_flow_barriers, BarrierElisionReport};
@@ -26,9 +25,6 @@ pub use programs::{
     build_persistent_fixpoint_program, build_scallop_provenance_wide_program,
     build_sinkhorn_clustering_program, build_sinkhorn_full_clustering_program,
 };
-pub use provenance::build_scallop_lineage_with_program_and_scratch;
-#[cfg(feature = "self-substrate-adapters")]
-pub use provenance::build_scallop_lineage_with_scratch;
 pub use sizing::ResidentSizingPolicy;
 
 #[cfg(test)]

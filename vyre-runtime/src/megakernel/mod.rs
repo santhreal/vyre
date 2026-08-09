@@ -65,12 +65,10 @@ pub use mixed_work::{
 #[cfg(feature = "self-substrate-adapters")]
 pub use planner::{
     build_bellman_tn_order_program, build_kfac_autotune_step_program,
-    build_persistent_fixpoint_program, build_scallop_lineage_with_scratch,
-    build_scallop_provenance_wide_program, build_sinkhorn_clustering_program,
-    build_sinkhorn_full_clustering_program,
+    build_persistent_fixpoint_program, build_scallop_provenance_wide_program,
+    build_sinkhorn_clustering_program, build_sinkhorn_full_clustering_program,
 };
 pub use planner::{
-    build_scallop_lineage_with_program_and_scratch, default_worker_groups_from_limits,
     dispatch_grid_for, padded_slot_count, worker_workgroup_size, ResidentGridLimits,
     ResidentGridPlan, ResidentGridRequest, ResidentLaunchGeometry, ResidentQueueCapabilities,
     ResidentQueueConfig, ResidentQueueReport, ResidentQueueTelemetry, ResidentSizingPolicy,
