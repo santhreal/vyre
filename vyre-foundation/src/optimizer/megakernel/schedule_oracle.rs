@@ -1,9 +1,5 @@
 //! Homotopy-based megakernel scheduling oracle.
 
-#![allow(deprecated)]
-
-use crate::cpu_references::{homotopy_euler_predictor_cpu, linear_homotopy_cpu};
-
 /// Produce normalized fusion weights from dispatch costs.
 ///
 /// Lower-cost entries receive higher target weight. The schedule starts
@@ -26,14 +22,16 @@ pub fn schedule_via_homotopy(costs: &[f64], n: u32, steps: u32, dt: f64) -> Vec<
         *value /= total;
     }
     let t = (f64::from(steps) * dt).clamp(0.0, 1.0);
-    let mut state = linear_homotopy_cpu(&uniform, &inverse, t);
+    let mut state: Vec<f64> = uniform
+        .iter()
+        .zip(&inverse)
+        .map(|(&start, &target)| (1.0 - t) * start + t * target)
+        .collect();
+    let step_dt = dt.clamp(0.0, 1.0);
     for _ in 0..steps {
-        let velocity: Vec<f64> = inverse
-            .iter()
-            .zip(state.iter())
-            .map(|(&target, &current)| target - current)
-            .collect();
-        state = homotopy_euler_predictor_cpu(&state, &velocity, dt.clamp(0.0, 1.0));
+        for (current, &target) in state.iter_mut().zip(&inverse) {
+            *current += step_dt * (target - *current);
+        }
     }
     state
 }

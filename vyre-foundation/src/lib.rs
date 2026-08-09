@@ -88,8 +88,6 @@ pub mod ir {
 
 /// CPU reference registration contract.
 pub mod cpu_op;
-/// Foundation-local CPU reference algorithms.
-pub mod cpu_references;
 /// Backend-neutral literal evaluation used by IR optimization and lowering.
 pub(crate) mod ir_eval;
 /// Domain-neutral byte-range result types.

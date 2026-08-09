@@ -1,7 +1,5 @@
 //! String-diagram composition checks for IR rewrite arrows.
 
-use crate::cpu_references::monoidal_compose_cpu;
-
 /// Compose arrows `f: A -> B` and `g: B -> C` as dense matrices.
 #[must_use]
 pub fn compose_ir_arrows(
@@ -11,7 +9,24 @@ pub fn compose_ir_arrows(
     middle_dim: u32,
     target_dim: u32,
 ) -> Vec<f64> {
-    monoidal_compose_cpu(first, second, source_dim, middle_dim, target_dim)
+    let source_dim = source_dim as usize;
+    let middle_dim = middle_dim as usize;
+    let target_dim = target_dim as usize;
+    assert_eq!(first.len(), source_dim * middle_dim);
+    assert_eq!(second.len(), middle_dim * target_dim);
+
+    let mut output = vec![0.0; source_dim * target_dim];
+    for row in 0..source_dim {
+        let output_row = &mut output[row * target_dim..(row + 1) * target_dim];
+        for scan in 0..middle_dim {
+            let first_value = first[row * middle_dim + scan];
+            let second_row = &second[scan * target_dim..(scan + 1) * target_dim];
+            for (cell, &second_value) in output_row.iter_mut().zip(second_row) {
+                *cell += first_value * second_value;
+            }
+        }
+    }
+    output
 }
 
 /// Identity arrow for an `n`-object diagram.

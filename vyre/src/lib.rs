@@ -103,10 +103,6 @@ pub use vyre_spec::soundness;
 /// Public API re-export.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use vyre_foundation::cpu_op;
-/// CPU reference implementations shared across backends.
-/// Public API re-export.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_foundation::cpu_references;
 /// Substrate-neutral memory ordering model.
 /// Public API re-export.
 pub use vyre_foundation::memory_model;

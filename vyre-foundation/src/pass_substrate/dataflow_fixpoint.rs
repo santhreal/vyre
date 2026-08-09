@@ -15,33 +15,11 @@
 //! Same primitive (#1), same Program, four different IR analyses.
 //! Demonstrates the recursion thesis directly.
 
-#![allow(deprecated)]
-
 pub use vyre_spec::Semiring;
-
-/// Multiply matrices over the selected semiring on the CPU.
-///
-/// AUDIT_2026-05-23: Deprecated - CPU reference. Use GPU semiring GEMM primitive.
-#[deprecated(note = "CPU reference. Use GPU semiring GEMM primitive.")]
-#[must_use]
-pub fn semiring_gemm_cpu(
-    left: &[u32],
-    right: &[u32],
-    rows: u32,
-    cols: u32,
-    inner: u32,
-    semiring: Semiring,
-) -> Vec<u32> {
-    let mut output = Vec::new();
-    semiring_gemm_cpu_into(left, right, rows, cols, inner, semiring, &mut output);
-    output
-}
 
 /// Multiply matrices over the selected semiring into caller-owned storage.
 ///
-/// Invalid shapes clear `output`, matching [`semiring_gemm_cpu`]'s empty-vector
-/// rejection contract without forcing wrappers to duplicate overflow and input
-/// sizing checks.
+/// Invalid shapes clear `output`.
 pub fn semiring_gemm_cpu_into(
     left: &[u32],
     right: &[u32],
@@ -297,10 +275,7 @@ mod tests {
         let mut out = Vec::with_capacity(8);
         let ptr = out.as_ptr();
         semiring_gemm_cpu_into(&left, &right, 2, 2, 3, Semiring::Real, &mut out);
-        assert_eq!(
-            out,
-            semiring_gemm_cpu(&left, &right, 2, 2, 3, Semiring::Real)
-        );
+        assert_eq!(out, vec![58, 64, 139, 154]);
         assert_eq!(out.as_ptr(), ptr);
 
         semiring_gemm_cpu_into(&left, &right, 2, 2, u32::MAX, Semiring::Real, &mut out);

@@ -1,13 +1,14 @@
 //! Functorial composition helpers for optimizer pass rows.
 
-#![allow(deprecated)]
-
-use crate::cpu_references::functor_apply_cpu;
-
 /// Apply a pass functor mapping to a row vector.
 #[must_use]
 pub fn apply_pass_functor(values: &[u32], mapping: &[u32], target_size: u32) -> Vec<u32> {
-    functor_apply_cpu(values, mapping, target_size)
+    assert_eq!(values.len(), mapping.len());
+    let mut output = vec![0; target_size as usize];
+    for (&value, &destination) in values.iter().zip(mapping) {
+        output[destination as usize] = value;
+    }
+    output
 }
 
 /// Compose two pass mappings against `values`.
