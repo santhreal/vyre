@@ -127,6 +127,22 @@ pub trait ArtifactMaterializer: Send + Sync {
         })
     }
 
+    /// Upload bytes at one aligned offset into a resident resource.
+    fn upload_resident_at(
+        &self,
+        resource: &super::Resource,
+        offset_bytes: usize,
+        bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        if offset_bytes == 0 {
+            return self.upload_resident(resource, bytes);
+        }
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident ranged upload".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
     /// Release one resource owned by this materializer.
     fn free_resident(&self, _resource: super::Resource) -> Result<(), BackendError> {
         Err(BackendError::UnsupportedFeature {

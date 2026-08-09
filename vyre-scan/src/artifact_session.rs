@@ -150,6 +150,17 @@ impl ScanArtifactSession {
         Ok(self.session.upload_resident(resource, bytes)?)
     }
 
+    pub(crate) fn upload_resident_at(
+        &self,
+        resource: &Resource,
+        offset_bytes: usize,
+        bytes: &[u8],
+    ) -> Result<(), ScanArtifactError> {
+        Ok(self
+            .session
+            .upload_resident_at(resource, offset_bytes, bytes)?)
+    }
+
     pub(crate) fn free_resident(&self, resource: Resource) -> Result<(), ScanArtifactError> {
         Ok(self.session.free_resident(resource)?)
     }

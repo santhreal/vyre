@@ -57,6 +57,20 @@ impl ArtifactMaterializer for CudaMaterializer {
         vyre_driver::VyreBackend::upload_resident(&self.resident, resource, bytes)
     }
 
+    fn upload_resident_at(
+        &self,
+        resource: &vyre_driver::Resource,
+        offset_bytes: usize,
+        bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        vyre_driver::VyreBackend::upload_resident_at(
+            &self.resident,
+            resource,
+            offset_bytes,
+            bytes,
+        )
+    }
+
     fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
         vyre_driver::VyreBackend::free_resident(&self.resident, resource)
     }

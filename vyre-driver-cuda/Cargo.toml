@@ -48,17 +48,10 @@ libc.workspace = true
 
 [dev-dependencies]
 vyre-test-support.workspace = true
-# integration tests/benches assert against these crates' public APIs across a broad
-# op surface (math conv/fft/scan, nn linear-4bit, parsing::c gpu_pipeline, scan/NFA),
-# so the dev-build enables that surface. All dev-only -> gated out of the production
-# lib build keyhog links.
-#   - `full`        : math-* + nn-* (incl nn-linear-4bit for QuantizedLinear4BitSpec)
-#                     + matching-substring/dfa + hash/decode/crypto.
-#   - `c-parser`    : `vyre_libs::parsing::c::preprocess::gpu_pipeline::*` for the
-#                     c_preprocess_{tokenize,filter,macro_expansion,payloads}_cuda tests.
-#   - `matching-nfa`: `ResidentRulePipeline` for the CUDA resident parity test
-#                     (not pulled by `full`).
-vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser", "matching-nfa"] }
+# Integration tests and benchmarks assert against the lower-layer libraries they
+# exercise. The canonical scan product is a direct dev dependency.
+vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser"] }
+vyre-scan.workspace = true
 vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
 serde_json.workspace = true

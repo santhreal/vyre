@@ -334,6 +334,22 @@ impl ArtifactSession {
         Ok(state.materializer.upload_resident(resource, bytes)?)
     }
 
+    /// Upload bytes at one offset into a resource owned by this session's materializer.
+    pub fn upload_resident_at(
+        &self,
+        resource: &Resource,
+        offset_bytes: usize,
+        bytes: &[u8],
+    ) -> Result<(), ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(state
+            .materializer
+            .upload_resident_at(resource, offset_bytes, bytes)?)
+    }
+
     /// Release one resource owned by this session's materializer.
     pub fn free_resident(&self, resource: Resource) -> Result<(), ArtifactSessionError> {
         let state = self

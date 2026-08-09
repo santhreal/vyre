@@ -58,3 +58,23 @@ fn resident_literal_scan_uses_authenticated_artifact_resources(
     session.free()?;
     Ok(())
 }
+
+/// WHY: the general NFA resident route must reuse authenticated artifact state
+/// across submissions and preserve reference scan semantics.
+#[test]
+fn resident_nfa_scan_uses_authenticated_artifact_resources(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let haystack = b"zabcab";
+    let neutral = build_scan_session(&["ab", "bc"], "input", "hits", haystack.len() as u32);
+    let expected = neutral.reference_scan(haystack);
+    let session = neutral.prepare_resident("wgpu", haystack.len() + 16, 10_000)?;
+    let mut actual = Vec::new();
+    let mut scratch = Vec::new();
+
+    session.scan_into(haystack, &mut actual, &mut scratch)?;
+    assert_eq!(actual, expected);
+    session.scan_into(haystack, &mut actual, &mut scratch)?;
+    assert_eq!(actual, expected);
+    session.free()?;
+    Ok(())
+}

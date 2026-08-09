@@ -59,6 +59,7 @@ bincode = { workspace = true }
 
 [dev-dependencies]
 vyre-runtime.workspace = true
+vyre-scan.workspace = true
 vyre-test-support.workspace = true
 vyre-harness = { path = "../vyre-harness" }
 criterion.workspace = true
