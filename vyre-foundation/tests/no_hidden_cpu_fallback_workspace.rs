@@ -26,7 +26,7 @@ const PRODUCTION_SRC_DIRS: &[&str] = &[
 ];
 
 const ALLOWED_FILES: &[&str] = &[
-    "vyre-foundation/src/runtime/cpu_op.rs",
+    "vyre-foundation/src/cpu_op.rs",
     "vyre-foundation/src/execution_plan/fusion/helpers.rs",
     "vyre-foundation/src/ir_inner/model/program/meta.rs",
     "vyre-driver/src/strategy/mod.rs",
