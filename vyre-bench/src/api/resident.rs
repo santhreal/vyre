@@ -3,8 +3,7 @@ use std::sync::Arc;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre::DispatchConfig;
 use vyre_driver::{
-    ArtifactMaterializer, BackendError, CompiledPipeline, OutputBuffers, Resource,
-    TimedDispatchResult,
+    ArtifactMaterializer, BackendError, OutputBuffers, Resource, TimedDispatchResult,
 };
 
 use crate::api::case::{BenchContext, BenchError};
@@ -205,27 +204,26 @@ pub fn transfer_accounting(
     }
 }
 
-/// Dispatch a compiled pipeline through a resident pool when present, otherwise through borrowed host input.
-pub fn dispatch_compiled_timed(
-    compiled: &dyn CompiledPipeline,
+/// Submit one materialized artifact through a resident pool when present.
+pub fn dispatch_artifact_timed(
+    ctx: &BenchContext,
+    program: &Program,
     resident: Option<&mut ResidentInputPool>,
     inputs: &[Vec<u8>],
     config: &DispatchConfig,
 ) -> Result<ResidentDispatch, BenchError> {
     if let Some(resident) = resident {
         let resources = resident.next_set(inputs)?;
-        let timed = compiled
-            .dispatch_persistent_handles_timed(resources, config)
+        let timed = ctx
+            .dispatch_resident_timed(program, resources, config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         return Ok(ResidentDispatch {
             timed,
             resident_used: true,
         });
     }
-
-    let input_refs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    let timed = compiled
-        .dispatch_borrowed_timed(&input_refs, config)
+    let timed = ctx
+        .dispatch_timed(program, inputs, config)
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     Ok(ResidentDispatch {
         timed,
@@ -330,15 +328,6 @@ impl ResidentInputSet {
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
         ctx.dispatch_resident_timed(program, &self.resources, config)
-    }
-
-    /// Dispatch against the uploaded resident resources through a compiled pipeline.
-    pub fn dispatch_compiled_timed(
-        &self,
-        compiled: &dyn CompiledPipeline,
-        config: &DispatchConfig,
-    ) -> Result<TimedDispatchResult, BackendError> {
-        compiled.dispatch_persistent_handles_timed(&self.resources, config)
     }
 
     /// Re-upload a small payload into an existing resident resource.

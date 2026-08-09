@@ -4,11 +4,10 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_compiled_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
+    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
 };
 use std::sync::Arc;
 use std::time::Instant;
-use vyre_driver::CompiledPipeline;
 use vyre_runtime::resident_work_queue::{self, protocol, ResidentWorkItem};
 
 pub struct MegakernelTruth;
@@ -27,7 +26,6 @@ struct MegakernelTruthPrepared {
     work_items: Vec<ResidentWorkItem>,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
-    compiled: Option<Arc<dyn CompiledPipeline>>,
     resident: Option<ResidentInputPool>,
 }
 
@@ -117,7 +115,6 @@ impl BenchCase for MegakernelTruth {
             work_items,
             inputs,
             input_bytes_total,
-            compiled: None,
             resident,
         }))
     }
@@ -142,23 +139,9 @@ impl BenchCase for MegakernelTruth {
         let mut dispatch_config = ctx.dispatch_config.clone();
         dispatch_config.grid_override =
             Some([(WORK_ITEM_COUNT as u32).div_ceil(WORKER_COUNT), 1, 1]);
-        if prepared.compiled.is_none() {
-            let compiled = vyre_driver::pipeline::compile_with_telemetry(
-                Arc::clone(&ctx.preferred_backend),
-                prepared.program.as_ref(),
-                &dispatch_config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
-            .pipeline;
-            prepared.compiled = Some(compiled);
-        }
-        let compiled = prepared.compiled.as_ref().ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "megakernel truth compiled pipeline missing after compile".to_string(),
-            )
-        })?;
-        let dispatch = dispatch_compiled_timed(
-            compiled.as_ref(),
+        let dispatch = dispatch_artifact_timed(
+            ctx,
+            prepared.program.as_ref(),
             prepared.resident.as_mut(),
             &prepared.inputs,
             &dispatch_config,

@@ -16,13 +16,11 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_compiled_timed, input_bytes_total, resident_output_byte_lengths, transfer_accounting,
+    dispatch_artifact_timed, input_bytes_total, resident_output_byte_lengths, transfer_accounting,
     ResidentInputPool,
 };
 use crate::api::suite::SuiteKind;
 use rayon::prelude::*;
-use std::sync::Arc;
-use vyre_driver::CompiledPipeline;
 use vyre_foundation::ir::Program;
 
 const IN_DIM: u32 = 256;
@@ -70,7 +68,6 @@ struct QuantizedLinearPrepared {
     input_bytes_total: u64,
     baseline_output: Vec<u8>,
     baseline_wall_ns: u64,
-    compiled: Option<Arc<dyn CompiledPipeline>>,
     resident: Option<ResidentInputPool>,
 }
 
@@ -170,7 +167,6 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             input_bytes_total,
             baseline_output,
             baseline_wall_ns,
-            compiled: None,
             resident,
         }))
     }
@@ -194,24 +190,9 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
                 )
             })?;
 
-        if prepared.compiled.is_none() {
-            let compiled = vyre_driver::pipeline::compile_with_telemetry(
-                Arc::clone(&ctx.preferred_backend),
-                &prepared.program,
-                &ctx.dispatch_config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
-            .pipeline;
-            prepared.compiled = Some(compiled);
-        }
-        let compiled = prepared.compiled.as_ref().ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "quantized linear compiled pipeline missing after compile".to_string(),
-            )
-        })?;
-
-        let dispatch = dispatch_compiled_timed(
-            compiled.as_ref(),
+        let dispatch = dispatch_artifact_timed(
+            ctx,
+            &prepared.program,
             prepared.resident.as_mut(),
             &prepared.inputs,
             &ctx.dispatch_config,

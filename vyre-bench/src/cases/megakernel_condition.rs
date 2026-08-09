@@ -4,12 +4,11 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_compiled_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
+    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
 };
 use crate::api::suite::SuiteKind;
 use rayon::prelude::*;
 use std::sync::Arc;
-use vyre_driver::CompiledPipeline;
 use vyre_foundation::ir::{Expr, Node};
 use vyre_runtime::resident_work_queue::protocol::{
     ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, STATUS_WORD, TENANT_WORD,
@@ -30,7 +29,6 @@ struct MegakernelConditionPrepared {
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     expected_fired: u32,
-    compiled: Option<Arc<dyn CompiledPipeline>>,
     resident: Option<ResidentInputPool>,
 }
 
@@ -92,10 +90,14 @@ impl BenchCase for MegakernelCondition {
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let mut expected_fired = 0u32;
         let ring_bytes = condition_ring(SLOT_COUNT, &mut expected_fired)?;
-        let debug_bytes = resident_work_queue::encode_empty_debug_log(resident_work_queue::debug::RECORD_CAPACITY)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(resident_work_queue::io::IO_SLOT_COUNT)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let debug_bytes = resident_work_queue::encode_empty_debug_log(
+            resident_work_queue::debug::RECORD_CAPACITY,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
+            resident_work_queue::io::IO_SLOT_COUNT,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
         let resident = ResidentInputPool::upload_optional(
@@ -109,7 +111,6 @@ impl BenchCase for MegakernelCondition {
             inputs,
             input_bytes_total,
             expected_fired,
-            compiled: None,
             resident,
         }))
     }
@@ -133,24 +134,9 @@ impl BenchCase for MegakernelCondition {
         let mut config = ctx.dispatch_config.clone();
         config.grid_override = Some([SLOT_COUNT.div_ceil(WORKGROUP_SIZE), 1, 1]);
 
-        if prepared.compiled.is_none() {
-            let compiled = vyre_driver::pipeline::compile_with_telemetry(
-                Arc::clone(&ctx.preferred_backend),
-                prepared.program.as_ref(),
-                &config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
-            .pipeline;
-            prepared.compiled = Some(compiled);
-        }
-
-        let compiled = prepared.compiled.as_ref().ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "megakernel condition compiled pipeline missing after compile".to_string(),
-            )
-        })?;
-        let dispatch = dispatch_compiled_timed(
-            compiled.as_ref(),
+        let dispatch = dispatch_artifact_timed(
+            ctx,
+            prepared.program.as_ref(),
             prepared.resident.as_mut(),
             &prepared.inputs,
             &config,

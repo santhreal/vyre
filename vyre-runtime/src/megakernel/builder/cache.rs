@@ -1,6 +1,6 @@
 use super::{
-    default_buffers, persistent_body_with_io, prepare_megakernel_program, wrap_megakernel_program,
-    wrap_persistent_megakernel_program,
+    default_buffers, finite_body_with_io, persistent_body_with_io, prepare_megakernel_program,
+    wrap_megakernel_program, wrap_persistent_megakernel_program,
 };
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
@@ -162,7 +162,7 @@ pub(super) fn cached_empty_sharded_once_program_shared(
     let program = wrap_megakernel_program(
         workgroup_size_x,
         slot_count,
-        persistent_body_with_io(workgroup_size_x, &[], false),
+        finite_body_with_io(workgroup_size_x, &[], false),
     );
     let program = Arc::new(program);
     EMPTY_TEMPLATE_CACHE.with(|cache| {
@@ -193,7 +193,7 @@ pub(super) fn cached_empty_sharded_once_control_report_program_shared(
     let program = Arc::new(prepare_megakernel_program(Program::wrapped(
         buffers,
         [workgroup_size_x, 1, 1],
-        persistent_body_with_io(workgroup_size_x, &[], false),
+        finite_body_with_io(workgroup_size_x, &[], false),
     )));
     EMPTY_TEMPLATE_CACHE.with(|cache| {
         cache.borrow_mut().insert(key, Arc::clone(&program));

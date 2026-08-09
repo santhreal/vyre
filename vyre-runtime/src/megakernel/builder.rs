@@ -111,7 +111,7 @@ pub fn build_program_sharded_once_slots(
     wrap_megakernel_program(
         workgroup_size_x,
         slot_count,
-        persistent_body_with_io(workgroup_size_x, opcodes, false),
+        finite_body_with_io(workgroup_size_x, opcodes, false),
     )
 }
 
@@ -159,7 +159,7 @@ pub fn build_program_sharded_once_slots_control_report_shared(
     Arc::new(prepare_megakernel_program(Program::wrapped(
         buffers,
         [workgroup_size_x, 1, 1],
-        persistent_body_with_io(workgroup_size_x, opcodes, false),
+        finite_body_with_io(workgroup_size_x, opcodes, false),
     )))
 }
 
@@ -341,6 +341,24 @@ fn persistent_body_with_io(
     include_io_polling: bool,
 ) -> Vec<Node> {
     let mut body = persistent_lane_prologue(workgroup_size_x);
+    let additional_nodes = if include_io_polling { 3 } else { 2 };
+    if let Some(body_capacity) = body.len().checked_add(additional_nodes) {
+        let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);
+    }
+    body.push(direct_slot_base_binding());
+    body.push(Node::Block(execute_slot_body(opcodes)));
+    if include_io_polling {
+        body.push(Node::Block(process_io_requests()));
+    }
+    body
+}
+
+fn finite_body_with_io(
+    workgroup_size_x: u32,
+    opcodes: &[OpcodeHandler],
+    include_io_polling: bool,
+) -> Vec<Node> {
+    let mut body = vec![Node::let_bind("lane_id", lane_id_expr(workgroup_size_x))];
     let additional_nodes = if include_io_polling { 3 } else { 2 };
     if let Some(body_capacity) = body.len().checked_add(additional_nodes) {
         let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut body, body_capacity);

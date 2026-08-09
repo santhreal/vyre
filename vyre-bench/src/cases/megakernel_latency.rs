@@ -4,14 +4,12 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
-    dispatch_compiled_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
+    dispatch_artifact_timed, input_bytes_total, transfer_accounting, ResidentInputPool,
 };
-use std::sync::Arc;
 use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
 use vyre_driver::specialization::SpecCacheKey;
 use vyre_driver::speculate::SpeculativeVariantKeys;
 use vyre_driver::speculation_substrate::SpeculationVerdict;
-use vyre_driver::CompiledPipeline;
 use vyre_runtime::resident_work_queue::{
     self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
 };
@@ -26,7 +24,6 @@ struct MegakernelLatencyPrepared {
     program: vyre_foundation::ir::Program,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
-    compiled: Option<Arc<dyn CompiledPipeline>>,
     resident: Option<ResidentInputPool>,
 }
 
@@ -71,14 +68,19 @@ impl BenchCase for MegakernelLatency {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
+        let program =
+            resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
         let control_bytes = resident_work_queue::encode_control(false, 1, 0)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let ring_bytes = published_ring(SLOT_COUNT)?;
-        let debug_bytes = resident_work_queue::encode_empty_debug_log(resident_work_queue::debug::RECORD_CAPACITY)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(resident_work_queue::io::IO_SLOT_COUNT)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let debug_bytes = resident_work_queue::encode_empty_debug_log(
+            resident_work_queue::debug::RECORD_CAPACITY,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
+            resident_work_queue::io::IO_SLOT_COUNT,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
         let resident = ResidentInputPool::upload_optional(
@@ -91,7 +93,6 @@ impl BenchCase for MegakernelLatency {
             program,
             inputs,
             input_bytes_total,
-            compiled: None,
             resident,
         }))
     }
@@ -115,23 +116,9 @@ impl BenchCase for MegakernelLatency {
         let mut config = ctx.dispatch_config.clone();
         config.grid_override = Some([1, 1, 1]);
 
-        if prepared.compiled.is_none() {
-            let compiled = vyre_driver::pipeline::compile_with_telemetry(
-                Arc::clone(&ctx.preferred_backend),
-                &prepared.program,
-                &config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
-            .pipeline;
-            prepared.compiled = Some(compiled);
-        }
-        let compiled = prepared.compiled.as_ref().ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "megakernel latency compiled pipeline missing after compile".to_string(),
-            )
-        })?;
-        let dispatch = dispatch_compiled_timed(
-            compiled.as_ref(),
+        let dispatch = dispatch_artifact_timed(
+            ctx,
+            &prepared.program,
             prepared.resident.as_mut(),
             &prepared.inputs,
             &config,
