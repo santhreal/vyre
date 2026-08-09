@@ -2,8 +2,7 @@
 
 use vyre_conform_spec::{
     BundleCertificate, Certificate, ConformanceCase, ConformanceResult, ReplayCapsule,
-    ReplayMinimization, ReplayMismatch, CERTIFICATE_SCHEMA_VERSION,
-    REPLAY_CAPSULE_SCHEMA_VERSION,
+    ReplayMinimization, ReplayMismatch, CERTIFICATE_SCHEMA_VERSION, REPLAY_CAPSULE_SCHEMA_VERSION,
 };
 
 fn replay_capsule() -> ReplayCapsule {
@@ -105,7 +104,7 @@ fn certificate_round_trip_retains_established_bytes() {
     let bytes = serde_json::to_vec(&certificate).expect("certificate must serialize");
     assert_eq!(
         bytes,
-        br#"{"version":"0.4.1","op_id":"primitive.add.u32","wire_format_version":1,"program_blake3":"TBD","witness_set_blake3":"TBD","backend_id":"cpu-ref","backend_version":"0.7.2","laws_verified":["Associative"],"timestamp":"1970-01-01T00:00:00Z","signature_ed25519":"TBD","pubkey":"TBD"}"#
+        br#"{"version":"vyre-conformance-certificate-v2","op_id":"primitive.add.u32","wire_format_version":1,"program_blake3":"TBD","witness_set_blake3":"TBD","backend_id":"cpu-ref","backend_version":"0.7.2","laws_verified":["Associative"],"timestamp":"1970-01-01T00:00:00Z","signature_ed25519":"TBD","pubkey":"TBD"}"#
     );
     let decoded: Certificate =
         serde_json::from_slice(&bytes).expect("certificate must deserialize");
@@ -157,7 +156,7 @@ fn bundle_certificate_version_skew_fails_explicitly() {
 #[test]
 fn replay_version_boundaries_and_adversarial_values_fail_explicitly() {
     let valid = serde_json::to_value(replay_capsule()).expect("replay must serialize");
-    for unsupported in [0_u64, 2, u64::from(u32::MAX)] {
+    for unsupported in [0_u64, 1, 3, u64::from(u32::MAX)] {
         let mut skewed = valid.clone();
         skewed["schema_version"] = unsupported.into();
         let error = serde_json::from_value::<ReplayCapsule>(skewed)
@@ -172,9 +171,11 @@ fn replay_version_boundaries_and_adversarial_values_fail_explicitly() {
 fn adversarial_certificate_version_string_is_not_accepted_as_compatible() {
     let mut value = serde_json::to_value(Certificate::new("op", "ref", "0", vec![]))
         .expect("certificate must serialize");
-    value["version"] = "0.4.1\u{0}suffix".into();
+    value["version"] = "vyre-conformance-certificate-v2\u{0}suffix".into();
 
     let error = serde_json::from_value::<Certificate>(value)
         .expect_err("an embedded-NUL version must not compare equal");
-    assert!(error.to_string().contains("unsupported certificate schema version"));
+    assert!(error
+        .to_string()
+        .contains("unsupported certificate schema version"));
 }

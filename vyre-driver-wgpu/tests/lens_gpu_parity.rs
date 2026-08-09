@@ -6,7 +6,7 @@
 use std::sync::OnceLock;
 
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_test_harness::lens::{self, LensOutcome};
+use vyre_conform::lens::{self, LensOutcome};
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();

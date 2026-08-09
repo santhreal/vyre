@@ -39,7 +39,6 @@ const APPROVED_PARITY_PATHS: &[&str] = &[
     "/vyre-driver-reference/",
     "/conform/",
     "/vyre-conform/",
-    "/vyre-test-harness/",
 ];
 
 /// Scan a source tree for production calls into CPU reference execution.

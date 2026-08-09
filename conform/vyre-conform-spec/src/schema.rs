@@ -8,10 +8,10 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Supported per-operation and bundle certificate schema version.
-pub const CERTIFICATE_SCHEMA_VERSION: &str = "0.4.1";
+pub const CERTIFICATE_SCHEMA_VERSION: &str = "vyre-conformance-certificate-v2";
 
 /// Supported replay-capsule schema version.
-pub const REPLAY_CAPSULE_SCHEMA_VERSION: u32 = 1;
+pub const REPLAY_CAPSULE_SCHEMA_VERSION: u32 = 2;
 
 /// A named conformance input case.
 ///
@@ -319,9 +319,7 @@ fn validate_u32_version(
     }
 }
 
-fn deserialize_certificate_schema_version<'de, D>(
-    deserializer: D,
-) -> Result<String, D::Error>
+fn deserialize_certificate_schema_version<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -338,12 +336,8 @@ where
     D: serde::Deserializer<'de>,
 {
     let version = String::deserialize(deserializer)?;
-    validate_string_version(
-        "bundle certificate",
-        &version,
-        CERTIFICATE_SCHEMA_VERSION,
-    )
-    .map_err(serde::de::Error::custom)?;
+    validate_string_version("bundle certificate", &version, CERTIFICATE_SCHEMA_VERSION)
+        .map_err(serde::de::Error::custom)?;
     Ok(version)
 }
 
@@ -352,11 +346,7 @@ where
     D: serde::Deserializer<'de>,
 {
     let version = u32::deserialize(deserializer)?;
-    validate_u32_version(
-        "replay capsule",
-        version,
-        REPLAY_CAPSULE_SCHEMA_VERSION,
-    )
-    .map_err(serde::de::Error::custom)?;
+    validate_u32_version("replay capsule", version, REPLAY_CAPSULE_SCHEMA_VERSION)
+        .map_err(serde::de::Error::custom)?;
     Ok(version)
 }

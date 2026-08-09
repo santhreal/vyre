@@ -3465,31 +3465,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-conform-enforce"
-version = "0.7.2"
-dependencies = [
- "inventory",
- "toml",
- "vyre",
- "vyre-conform-generate",
- "vyre-conform-spec",
- "vyre-driver",
- "vyre-harness",
- "vyre-intrinsics",
- "vyre-libs",
- "vyre-primitives",
- "vyre-spec",
-]
-
-[[package]]
-name = "vyre-conform-generate"
-version = "0.7.2"
-dependencies = [
- "vyre-conform-spec",
-]
-
-[[package]]
-name = "vyre-conform-runner"
+name = "vyre-conform"
 version = "0.7.2"
 dependencies = [
  "blake3",
@@ -3501,6 +3477,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.19",
+ "toml",
  "vyre",
  "vyre-conform-spec",
  "vyre-driver",
@@ -3509,12 +3486,14 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
+ "vyre-harness",
  "vyre-intrinsics",
  "vyre-libs",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-runtime",
  "vyre-spec",
- "vyre-test-harness",
 ]
 
 [[package]]
@@ -3690,6 +3669,7 @@ dependencies = [
  "tree-sitter",
  "tree-sitter-go",
  "vyre",
+ "vyre-conform",
  "vyre-driver",
  "vyre-emit-metal",
  "vyre-emit-naga",
@@ -3705,7 +3685,6 @@ dependencies = [
  "vyre-runtime",
  "vyre-self-substrate",
  "vyre-spec",
- "vyre-test-harness",
  "vyre-test-support",
  "wgpu",
 ]
@@ -4074,18 +4053,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-primitives",
  "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-test-harness"
-version = "0.7.2"
-dependencies = [
- "vyre-driver",
- "vyre-foundation",
- "vyre-harness",
- "vyre-libs",
- "vyre-reference",
- "vyre-self-substrate",
 ]
 
 [[package]]

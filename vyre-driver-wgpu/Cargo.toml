@@ -92,10 +92,9 @@ vyre-emit-metal = { path = "../vyre-emit-metal" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 # A CPU-reference parity test (`c_ast_expression_support`) compares against vyre-reference.
 vyre-reference = { path = "../vyre-reference" }
-# `lens_gpu_parity` (and other GPU parity tests) use the shared conform harness.
-# PATH-ONLY: vyre-test-harness is publish=false (never on crates.io), so a versioned
-# dev-dep is unsatisfiable at publish. cargo strips path-only dev-deps on publish.
-vyre-test-harness = { path = "../conform/vyre-test-harness" }
+# GPU parity tests consume the canonical conformance library without enabling
+# its optional concrete-backend dependencies.
+vyre-conform = { workspace = true, default-features = false }
 tracing-subscriber.workspace = true
 libc.workspace = true
 # PATH-ONLY (package = vyre-grammar-gen): a versioned dev-dep here would pin a

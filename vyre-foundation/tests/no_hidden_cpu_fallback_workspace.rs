@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const PRODUCTION_SRC_DIRS: &[&str] = &[
-    "vyre-core/src",
+    "vyre/src",
     "vyre-driver/src",
     "vyre-driver-cuda/src",
     "vyre-driver-wgpu/src",

@@ -316,7 +316,7 @@ fn workspace_crates_have_tests_directory_or_are_exempt() {
     // Derived from root Cargo.toml [workspace] members
     let members = [
         "benches/competition",
-        "vyre-core",
+        "vyre",
         "vyre-foundation",
         "vyre-driver",
         "vyre-reference",
@@ -324,10 +324,7 @@ fn workspace_crates_have_tests_directory_or_are_exempt() {
         "vyre-macros",
         "vyre-primitives",
         "conform/vyre-conform-spec",
-        "conform/vyre-conform-generate",
-        "conform/vyre-conform-enforce",
-        "conform/vyre-conform-runner",
-        "conform/vyre-test-harness",
+        "conform/vyre-conform",
         "xtask",
         "vyre-runtime",
         "vyre-libs",
@@ -339,8 +336,6 @@ fn workspace_crates_have_tests_directory_or_are_exempt() {
     let exempt: HashSet<String> = [
         "benches/competition", // benchmark harness, not a library
         "conform/vyre-conform-spec",
-        "conform/vyre-conform-generate",
-        "conform/vyre-test-harness",
         "xtask",        // build utility
         "vyre-harness", // test harness library
     ]
@@ -381,7 +376,7 @@ fn shared_driver_and_runtime_do_not_depend_on_catalog_crates() {
         workspace_root.join("vyre-foundation/Cargo.toml"),
         workspace_root.join("vyre-driver/Cargo.toml"),
         workspace_root.join("vyre-runtime/Cargo.toml"),
-        workspace_root.join("vyre-core/Cargo.toml"),
+        workspace_root.join("vyre/Cargo.toml"),
     ];
     let forbidden = ["vyre-primitives", "vyre-libs", "vyre-intrinsics"];
     let optional_adapters = ["vyre-self-substrate"];
@@ -426,7 +421,7 @@ fn shared_source_does_not_name_concrete_backend_apis() {
         workspace_root.join("vyre-foundation/src"),
         workspace_root.join("vyre-driver/src"),
         workspace_root.join("vyre-runtime/src"),
-        workspace_root.join("vyre-core/src"),
+        workspace_root.join("vyre/src"),
     ];
     let forbidden = [
         "vyre-driver-wgpu",

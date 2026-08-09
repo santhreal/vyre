@@ -10,7 +10,7 @@ fn agent_skills_artifacts_stay_out_of_production_dirs() {
         workspace_root.join("vyre-libs"),
         workspace_root.join("vyre-primitives"),
         workspace_root.join("vyre-runtime"),
-        workspace_root.join("vyre-core"),
+        workspace_root.join("vyre"),
         workspace_root.join("vyre-spec"),
         workspace_root.join("vyre-frontend-c"),
         workspace_root.join("vyre-driver"),
@@ -18,10 +18,8 @@ fn agent_skills_artifacts_stay_out_of_production_dirs() {
         workspace_root.join("vyre-intrinsics"),
         workspace_root.join("vyre-macros"),
         workspace_root.join("vyre-reference"),
-        workspace_root.join("conform/vyre-conform-runner"),
+        workspace_root.join("conform/vyre-conform"),
         workspace_root.join("conform/vyre-conform-spec"),
-        workspace_root.join("conform/vyre-conform-generate"),
-        workspace_root.join("conform/vyre-conform-enforce"),
     ];
 
     let mut found = HashSet::new();

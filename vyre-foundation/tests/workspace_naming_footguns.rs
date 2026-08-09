@@ -38,23 +38,23 @@ fn meta_crate_directory_naming_is_stable() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = manifest.parent().unwrap();
 
-    // vyre-core/ directory hosts the meta-crate named "vyre".
+    // vyre/ directory hosts the meta-crate named "vyre".
     // This is intentional but must remain stable.
-    let core_toml = workspace_root.join("vyre-core/Cargo.toml");
+    let core_toml = workspace_root.join("vyre/Cargo.toml");
     let content = std::fs::read_to_string(&core_toml).unwrap();
     assert!(
         content.contains("name = \"vyre\""),
-        "vyre-core directory must host the meta-crate named 'vyre'"
+        "vyre directory must host the meta-crate named 'vyre'"
     );
 
     // Workspace dependency routing must keep the meta-crate name bound to
-    // the vyre-core directory.
+    // the vyre directory.
     let root_toml = workspace_root.join("Cargo.toml");
     let root_content = std::fs::read_to_string(&root_toml).unwrap();
     assert!(
         root_content.lines().any(
-            |line| line.trim().starts_with("vyre = {") && line.contains("path = \"vyre-core\"")
+            |line| line.trim().starts_with("vyre = {") && line.contains("path = \"vyre\"")
         ),
-        "workspace dependency routing must route 'vyre' to 'vyre-core' directory"
+        "workspace dependency routing must route 'vyre' to 'vyre' directory"
     );
 }

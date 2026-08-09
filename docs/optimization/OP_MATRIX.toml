@@ -50,7 +50,7 @@ approximation_policy = "exact"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "native", wgpu = "native", metal = "native", hyperscan = "native", vectorscan = "native", rust_regex = "native", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -64,7 +64,7 @@ approximation_policy = "none"
 verifier_required = false
 accelerator_only = false
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "unsupported", fpga = "unsupported" }
-proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -78,7 +78,7 @@ approximation_policy = "broader-prefilter-plus-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "host-reference", cuda = "prefilter", wgpu = "prefilter", metal = "prefilter", hyperscan = "prefilter", vectorscan = "prefilter", rust_regex = "unsupported", dpu = "unsupported", fpga = "prefilter" }
-proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -92,7 +92,7 @@ approximation_policy = "hardware-rule-database"
 verifier_required = false
 accelerator_only = true
 backend_routes = { cpu_ref = "unsupported", cuda = "unsupported", wgpu = "unsupported", metal = "unsupported", hyperscan = "unsupported", vectorscan = "unsupported", rust_regex = "unsupported", dpu = "external-accelerator", fpga = "external-accelerator" }
-proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
 bench_targets = []
 
 [[scan_construct]]
@@ -106,7 +106,7 @@ approximation_policy = "whole-match-accelerator-plus-capture-verifier"
 verifier_required = true
 accelerator_only = false
 backend_routes = { cpu_ref = "native", cuda = "verifier", wgpu = "verifier", metal = "verifier", hyperscan = "verifier", vectorscan = "verifier", rust_regex = "native", dpu = "unsupported", fpga = "verifier" }
-proof_gates = ["conform/vyre-conform-enforce/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
+proof_gates = ["conform/vyre-conform/tests/op_matrix_truth.rs", "vyre-libs/tests/scan_conformance_matrix.rs"]
 bench_targets = []
 
 [[op]]
@@ -151,7 +151,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -166,7 +166,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -181,7 +181,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -196,7 +196,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -211,7 +211,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -226,7 +226,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -241,7 +241,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -256,7 +256,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -271,7 +271,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform."
-tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-intrinsics/tests/hardware_conform.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -286,7 +286,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -301,7 +301,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -316,7 +316,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -331,7 +331,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -346,7 +346,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -361,7 +361,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -376,7 +376,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -391,7 +391,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -406,7 +406,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -421,7 +421,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -436,7 +436,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -451,7 +451,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -466,7 +466,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -481,7 +481,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -496,7 +496,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -511,7 +511,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -526,13 +526,13 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::aho_corasick"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::aho_corasick"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
@@ -541,13 +541,13 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::compact_hits"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::compact_hits"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
@@ -556,13 +556,13 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::cooperative_dfa"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::cooperative_dfa"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
@@ -571,13 +571,13 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
 family = "vyre-libs::matching::emit_hit"
 tier = "libs"
-owners = ["vyre-libs/src/matching"]
+owners = ["vyre-libs/src/scan"]
 ops = ["vyre-libs::matching::emit_hit"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
@@ -586,7 +586,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -601,7 +601,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -616,7 +616,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -631,7 +631,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -646,7 +646,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -661,7 +661,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -677,7 +677,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -693,7 +693,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -709,7 +709,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -725,7 +725,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -741,7 +741,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -757,7 +757,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -773,7 +773,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -789,7 +789,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -805,7 +805,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -820,7 +820,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -835,7 +835,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -850,7 +850,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -865,7 +865,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -880,7 +880,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -895,7 +895,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -910,7 +910,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -925,7 +925,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -940,7 +940,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -955,7 +955,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -970,7 +970,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -985,7 +985,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1000,7 +1000,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1015,7 +1015,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1030,7 +1030,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1045,7 +1045,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1060,7 +1060,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1075,7 +1075,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1090,7 +1090,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1105,7 +1105,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1120,7 +1120,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1135,7 +1135,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1150,7 +1150,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1165,7 +1165,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1180,7 +1180,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1195,7 +1195,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1210,7 +1210,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1225,7 +1225,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1240,7 +1240,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1255,7 +1255,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1270,7 +1270,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1285,7 +1285,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1300,7 +1300,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1315,7 +1315,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1330,7 +1330,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1345,7 +1345,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1360,7 +1360,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1375,7 +1375,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1390,7 +1390,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1405,7 +1405,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1420,7 +1420,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1435,7 +1435,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1450,7 +1450,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1465,7 +1465,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1480,7 +1480,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1495,7 +1495,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1510,7 +1510,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1525,7 +1525,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1540,7 +1540,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1555,7 +1555,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1570,7 +1570,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1585,7 +1585,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1600,7 +1600,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1615,7 +1615,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1630,7 +1630,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1645,7 +1645,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1660,7 +1660,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1675,7 +1675,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1690,7 +1690,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1705,7 +1705,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1720,7 +1720,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1735,7 +1735,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1750,7 +1750,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1765,7 +1765,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1780,7 +1780,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1795,7 +1795,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1810,7 +1810,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1825,7 +1825,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1840,7 +1840,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1855,7 +1855,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1870,7 +1870,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1885,7 +1885,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1900,7 +1900,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1915,7 +1915,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1930,7 +1930,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1945,7 +1945,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1960,7 +1960,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1975,7 +1975,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -1990,7 +1990,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2005,7 +2005,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2020,7 +2020,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2035,7 +2035,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2050,7 +2050,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2065,7 +2065,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2080,7 +2080,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2095,7 +2095,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2110,7 +2110,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2125,7 +2125,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2140,7 +2140,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2155,7 +2155,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2170,7 +2170,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2185,7 +2185,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2200,7 +2200,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2215,7 +2215,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2230,7 +2230,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2246,7 +2246,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2262,7 +2262,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2278,7 +2278,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2294,7 +2294,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2310,7 +2310,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2325,7 +2325,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2340,7 +2340,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2355,7 +2355,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2370,7 +2370,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2385,7 +2385,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2400,7 +2400,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2415,7 +2415,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2430,7 +2430,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2445,7 +2445,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2460,7 +2460,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2475,7 +2475,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2490,7 +2490,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2505,7 +2505,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2520,7 +2520,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2535,7 +2535,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2550,7 +2550,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2565,7 +2565,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2580,7 +2580,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2595,7 +2595,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2610,7 +2610,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2625,7 +2625,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2640,7 +2640,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2655,7 +2655,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2670,7 +2670,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2685,7 +2685,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2700,7 +2700,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2715,7 +2715,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2730,7 +2730,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2745,7 +2745,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2760,7 +2760,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2775,7 +2775,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2790,7 +2790,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2805,7 +2805,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2820,7 +2820,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2835,7 +2835,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2850,7 +2850,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2865,7 +2865,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2880,7 +2880,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2895,7 +2895,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2910,7 +2910,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2925,7 +2925,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2940,7 +2940,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2955,7 +2955,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2970,7 +2970,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -2985,7 +2985,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3000,7 +3000,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3015,7 +3015,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3030,7 +3030,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3045,7 +3045,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3060,7 +3060,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3075,7 +3075,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3090,7 +3090,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3105,7 +3105,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3120,7 +3120,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3135,7 +3135,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3150,7 +3150,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3165,7 +3165,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3180,7 +3180,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3195,7 +3195,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3210,7 +3210,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3225,7 +3225,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3240,7 +3240,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3255,7 +3255,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3270,7 +3270,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3285,7 +3285,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3300,7 +3300,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3315,7 +3315,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3330,7 +3330,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3345,7 +3345,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3360,7 +3360,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3375,7 +3375,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3390,7 +3390,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3405,7 +3405,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3420,7 +3420,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3435,7 +3435,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3450,7 +3450,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3465,7 +3465,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3480,7 +3480,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3495,7 +3495,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3510,7 +3510,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3525,7 +3525,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3540,7 +3540,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3555,7 +3555,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3570,7 +3570,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3585,7 +3585,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3600,7 +3600,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3615,7 +3615,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3630,7 +3630,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3645,7 +3645,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3660,7 +3660,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3675,7 +3675,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3690,7 +3690,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3705,7 +3705,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3720,7 +3720,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3735,7 +3735,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3750,7 +3750,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3765,7 +3765,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3780,7 +3780,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3795,7 +3795,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3810,7 +3810,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3825,7 +3825,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3840,7 +3840,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3855,7 +3855,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3870,7 +3870,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3885,7 +3885,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3900,7 +3900,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3915,7 +3915,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3930,7 +3930,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3945,7 +3945,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3960,7 +3960,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3975,7 +3975,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -3990,7 +3990,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4005,7 +4005,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4020,7 +4020,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4035,7 +4035,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4050,7 +4050,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4065,7 +4065,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4080,7 +4080,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4095,7 +4095,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4110,7 +4110,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4125,7 +4125,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4140,7 +4140,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4155,7 +4155,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4170,7 +4170,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4185,7 +4185,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4200,7 +4200,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4215,7 +4215,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4230,7 +4230,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4245,7 +4245,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4260,7 +4260,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4275,7 +4275,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4290,7 +4290,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4305,7 +4305,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4320,7 +4320,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4335,7 +4335,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4350,7 +4350,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4365,7 +4365,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4380,7 +4380,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4395,7 +4395,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4410,7 +4410,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4425,7 +4425,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4440,7 +4440,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4455,7 +4455,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4470,7 +4470,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4485,7 +4485,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4500,7 +4500,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4515,7 +4515,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4530,7 +4530,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4545,7 +4545,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4560,7 +4560,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4575,7 +4575,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4590,7 +4590,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4605,7 +4605,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4620,7 +4620,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4635,7 +4635,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4650,7 +4650,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4665,7 +4665,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4680,7 +4680,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4695,7 +4695,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4710,7 +4710,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4725,7 +4725,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4740,7 +4740,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4755,7 +4755,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4770,7 +4770,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4785,7 +4785,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4800,7 +4800,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4815,7 +4815,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4830,7 +4830,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4845,7 +4845,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4860,7 +4860,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4875,7 +4875,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4890,7 +4890,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4905,7 +4905,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4920,7 +4920,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4935,7 +4935,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4950,7 +4950,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4965,7 +4965,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4980,7 +4980,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -4995,7 +4995,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5010,7 +5010,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5025,7 +5025,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5040,7 +5040,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5055,7 +5055,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5070,7 +5070,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5085,7 +5085,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5100,7 +5100,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5115,7 +5115,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5130,7 +5130,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5145,7 +5145,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5160,7 +5160,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5175,7 +5175,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5190,7 +5190,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5205,7 +5205,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5220,7 +5220,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5235,7 +5235,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5250,7 +5250,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5265,7 +5265,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5280,7 +5280,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5295,7 +5295,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5310,7 +5310,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5325,7 +5325,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5340,7 +5340,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5355,7 +5355,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5370,7 +5370,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5385,7 +5385,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5400,7 +5400,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5415,7 +5415,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5430,7 +5430,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5445,7 +5445,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5460,7 +5460,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5475,7 +5475,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5490,7 +5490,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5505,7 +5505,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5520,7 +5520,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5535,7 +5535,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5550,7 +5550,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5565,7 +5565,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5580,7 +5580,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5595,7 +5595,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5610,7 +5610,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5625,7 +5625,7 @@ cuda = "supported"
 wgpu = "supported"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace."
-tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-primitives/tests/integration.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5640,7 +5640,7 @@ cuda = "experimental"
 wgpu = "experimental"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract."
-tests = ["vyre-driver/src/registry/core_indirect.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-driver/src/registry/core_indirect.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5655,7 +5655,7 @@ cuda = "experimental"
 wgpu = "experimental"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract."
-tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5670,7 +5670,7 @@ cuda = "experimental"
 wgpu = "experimental"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract."
-tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5685,7 +5685,7 @@ cuda = "experimental"
 wgpu = "experimental"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract."
-tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 
 [[op]]
@@ -5700,6 +5700,6 @@ cuda = "experimental"
 wgpu = "experimental"
 spirv = "experimental"
 release_blocking_notes = "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract."
-tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform-enforce/tests/op_matrix_truth.rs"]
+tests = ["vyre-driver/src/registry/io.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
 bench_targets = []
 

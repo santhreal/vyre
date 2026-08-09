@@ -8,45 +8,12 @@ If WGSL emits `7.0`, SPIR-V emits `7.0`, and `vyre-reference` emits
 even by a single bit, the op is non-conformant and no backend is
 allowed to ship.
 
-The four crates in this directory cooperate to enforce that
-guarantee end to end.
+Two crates own the complete route:
 
-## The four crates
-
-```text
-             ┌─────────────────────────────┐
-             │  vyre-conform-spec          │  DataType witness sets
-             │    • U32Witness             │  Composition laws
-             │    • WitnessSet trait       │  (deterministic, fingerprintable)
-             └──────────────┬──────────────┘
-                            │ consumed by
-                            ▼
-             ┌─────────────────────────────┐
-             │  vyre-conform-enforce       │  Runs the op over witnesses
-             │    • LawProver              │  Flags law violations
-             │    • LawVerdict             │  (commutativity, associativity,
-             └──────────────┬──────────────┘   identity, distributivity)
-                            │ counterexamples flow into
-                            ▼
-             ┌─────────────────────────────┐
-             │  vyre-conform-generate      │  Binary-search minimizer
-             │    • CounterexampleMinimizer│  Finds smallest failing input
-             └──────────────┬──────────────┘
-                            │ feeds into
-                            ▼
-             ┌─────────────────────────────┐
-             │  vyre-conform-runner        │  The CI gate
-             │    • Matrix runner          │  Dispatches every op × every
-             │    • Divergence reporter    │  backend × every witness tuple
-             │    • Parity matrix          │  Bundle certificate on green
-             │    • vyre-test-harness dep  │
-             └─────────────────────────────┘
-```
-
-A fifth crate, `vyre-test-harness`, holds the shared CPU/GPU lens
-and fixture loader used by both the runner and any backend crate's
-dev-dependencies. It exists to break the dev/normal cross-link that
-used to couple backend crates to the runner.
+- `vyre-conform-spec`: dependency-light witness, certificate, and replay schemas.
+- `vyre-conform`: production artifact execution, independent reference
+  comparison, law checking, counterexample minimization, certificate issuance,
+  replay, and the thin CLI.
 
 ## Invariants
 
@@ -62,7 +29,7 @@ used to couple backend crates to the runner.
    never loops and never returns a larger counterexample than the
    input.
 4. **No backend ships without a green matrix.** CI blocks publish on
-   `vyre-conform-runner`'s matrix returning zero divergences.
+   `vyre-conform`'s matrix returning zero divergences.
 5. **No exemptions.** The `UniversalDiffExemption` registry has been
    removed. Tolerance for approximate ops is encoded in
    `OpEntry::tolerance()` (e.g. ULP budgets for transcendental kernels).
@@ -71,36 +38,18 @@ used to couple backend crates to the runner.
 
 ## Boundaries
 
-This directory owns:
+This directory owns witness enumeration, certificate and replay schemas,
+production-versus-reference proof execution, law checking, minimization, and
+certificate output.
 
-- The witness enumeration contract and the default `U32Witness`.
-- The law prover that consumes witnesses and op compose functions.
-- The counterexample minimizer.
-- The CI runner that wires everything together and emits a bundle
-  certificate.
-- The shared test harness (lens + fixtures).
-
-It does NOT own:
-
-- The ops themselves (those live in `vyre-foundation`,
-  `vyre-primitives`, `vyre-libs`, `vyre-intrinsics`).
-- The CPU reference evaluator (`vyre-reference`).
-- Backend implementations (`vyre-driver-wgpu`, `vyre-driver-spirv`).
-- The benchmark harness (`vyre-runtime` + criterion harnesses in
-  each crate).
+Operations remain in their semantic owner crates. Reference evaluation remains
+in `vyre-reference`. Concrete target compilation and materialization remain in
+driver crates. Benchmark orchestration remains in `vyre-bench`.
 
 ## Per-crate READMEs
 
-- `vyre-conform-spec/README.md`: witness sets, `WitnessSet` trait,
-  `U32Witness`.
-- `vyre-conform-enforce/README.md`: `LawProver`, `LawVerdict`,
-  algebraic-law checks.
-- `vyre-conform-generate/README.md`: `CounterexampleMinimizer`
-  binary-search shrinker.
-- `vyre-conform-runner/README.md`: the CI runner, parity matrix,
-  and bundle certificate flow.
-- `vyre-test-harness/README.md`: shared lens + fixtures between
-  runner and backend dev-deps.
+- `vyre-conform-spec/README.md`: schema and witness contracts.
+- `vyre-conform/README.md`: proof engine, replay, and CLI.
 
 ## Extension guide: adding a DataType / law / backend to conformance
 
@@ -112,7 +61,7 @@ It does NOT own:
    counterexample tuples that are known to fail for a broken op, and
    assert the prover finds them.
 3. **New backend**: register the backend with `vyre-driver`, then
-   add a matrix row in `vyre-conform-runner`'s parity matrix
+   add a matrix row in `vyre-conform`'s parity matrix
    fixture. The runner will diff your backend's dispatch against the
    CPU reference automatically.
 4. **Tolerance contracts**: for ops whose contracts already permit
@@ -120,8 +69,8 @@ It does NOT own:
    tolerance in the `OpEntry` registration. All other ops must reach
    byte-identity across every backend.
 
-See `vyre-conform-runner/tests/parity_matrix.rs` for the end-to-end
-wiring and `vyre-conform-enforce/src/prover.rs` for the verdict
+See `vyre-conform/tests/parity_matrix.rs` for the end-to-end
+wiring and `vyre-conform/src/prover.rs` for the verdict
 shape.
 
 ## Release evidence

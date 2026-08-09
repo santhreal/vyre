@@ -10,7 +10,7 @@ allowed_dependencies = ["vyre-foundation"]
 
 [[crate]]
 package = "vyre"
-path = "vyre-core"
+path = "vyre"
 owner = "public-facade"
 layer = "facade"
 responsibility = "Expose the public Vyre API and feature-gated backend selection surface."
@@ -137,36 +137,13 @@ responsibility = "Define conformance case, result, and certificate schemas again
 allowed_dependencies = ["vyre-spec"]
 
 [[crate]]
-package = "vyre-conform-generate"
-path = "conform/vyre-conform-generate"
+package = "vyre-conform"
+path = "conform/vyre-conform"
 owner = "conformance"
 layer = "conformance"
-responsibility = "Generate deterministic conformance cases from the conformance specification."
-allowed_dependencies = ["vyre-conform-spec"]
+responsibility = "Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI."
+allowed_dependencies = ["vyre", "vyre-conform-spec", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-wgpu", "vyre-foundation", "vyre-harness", "vyre-intrinsics", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-reference", "vyre-runtime", "vyre-spec"]
 
-[[crate]]
-package = "vyre-conform-enforce"
-path = "conform/vyre-conform-enforce"
-owner = "conformance"
-layer = "conformance"
-responsibility = "Evaluate conformance results and enforce release certificate policy."
-allowed_dependencies = ["vyre", "vyre-conform-generate", "vyre-conform-spec"]
-
-[[crate]]
-package = "vyre-conform-runner"
-path = "conform/vyre-conform-runner"
-owner = "conformance"
-layer = "conformance"
-responsibility = "Execute generated conformance cases across eligible concrete and reference backends."
-allowed_dependencies = ["vyre", "vyre-conform-spec", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-wgpu", "vyre-foundation", "vyre-intrinsics", "vyre-libs", "vyre-primitives", "vyre-reference", "vyre-spec", "vyre-test-harness"]
-
-[[crate]]
-package = "vyre-test-harness"
-path = "conform/vyre-test-harness"
-owner = "conformance"
-layer = "test-tooling"
-responsibility = "Provide shared execution and comparison infrastructure for conformance suites."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-harness", "vyre-libs", "vyre-reference", "vyre-self-substrate"]
 
 [[crate]]
 package = "xtask"

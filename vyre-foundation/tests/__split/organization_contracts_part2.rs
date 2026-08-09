@@ -10,17 +10,17 @@ fn workspace_wildcard_pub_reexports_are_baselined() {
         workspace_root.join("vyre-libs/src"),
         workspace_root.join("vyre-primitives/src"),
         workspace_root.join("vyre-runtime/src"),
-        workspace_root.join("vyre-core/src"),
+        workspace_root.join("vyre/src"),
         workspace_root.join("vyre-spec/src"),
         workspace_root.join("vyre-frontend-c/src"),
-        workspace_root.join("conform/vyre-conform-runner/src"),
+        workspace_root.join("conform/vyre-conform/src"),
     ];
 
-    // ROADMAP HM3: vyre-core's `lower` shim re-exports `vyre-lower`
+    // ROADMAP HM3: vyre's `lower` shim re-exports `vyre-lower`
     // wholesale so external consumers can keep importing through
-    // `vyre_core::lower::*`. The wildcard IS the contract.
+    // `vyre::lower::*`. The wildcard IS the contract.
     let known: HashSet<String> = [
-        "vyre-core/src/lib.rs pub use vyre_lower::*;",
+        "vyre/src/lib.rs pub use vyre_lower::*;",
         "vyre-libs/src/matching/mod.rs pub use crate::scan::*;",
     ]
     .iter()
@@ -87,7 +87,7 @@ fn scheduling_policy_has_single_source_of_truth() {
         workspace_root.join("vyre-runtime/src"),
         workspace_root.join("vyre-libs/src"),
         workspace_root.join("vyre-primitives/src"),
-        workspace_root.join("vyre-core/src"),
+        workspace_root.join("vyre/src"),
     ];
 
     for src in &src_dirs {
