@@ -15,7 +15,7 @@
 //! across adversarial input values for each shape.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering as optimize;
+use vyre_foundation::optimizer as optimize;
 use vyre_reference::value::Value;
 
 fn in_i() -> Expr {
@@ -201,7 +201,8 @@ fn cse_oracle_computes_the_real_value() {
 #[test]
 fn full_optimize_preserves_single_input_dataflow_value() {
     for (name, program) in single_input_programs() {
-        let optimized = optimize::optimize(program.clone());
+        let optimized =
+            optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for &v in PROBES {
             let inputs = [Value::U32(v)];
             let base = vyre_reference::reference_eval(&program, &inputs)
@@ -219,7 +220,8 @@ fn full_optimize_preserves_single_input_dataflow_value() {
 #[test]
 fn full_optimize_preserves_store_forward_value() {
     for (name, program) in scratch_programs() {
-        let optimized = optimize::optimize(program.clone());
+        let optimized =
+            optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for &v in PROBES {
             // [in, scratch] in declaration order; scratch is overwritten before
             // read, so its initial value is irrelevant.

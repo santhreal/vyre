@@ -9,7 +9,7 @@
 //! that inflates the output IR is a performance bug.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 
 fn node_count(nodes: &[Node]) -> usize {
     nodes
@@ -46,7 +46,7 @@ fn optimize_reduces_literal_arithmetic_to_constants() {
     // Program: out[0] = (2 + 3) * (4 - 1)
     // Should fold entirely to out[0] = 15
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -58,7 +58,7 @@ fn optimize_reduces_literal_arithmetic_to_constants() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     // After full pipeline, the nested expr should be a single LitU32(15)
     let has_literal = body.iter().any(|n| match n {
@@ -78,7 +78,7 @@ fn optimize_reduces_literal_arithmetic_to_constants() {
 fn optimize_eliminates_dead_let_bindings() {
     // dead_var is never used → DCE should remove it
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![
             Node::let_bind("dead_var", Expr::add(Expr::u32(1), Expr::u32(2))),
@@ -87,7 +87,7 @@ fn optimize_eliminates_dead_let_bindings() {
     );
 
     let before_count = node_count(body_of(&program));
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let after_count = node_count(body_of(&optimized));
 
     assert!(
@@ -101,7 +101,7 @@ fn optimize_cse_deduplicates_repeated_expressions() {
     // Same expression computed twice should be deduplicated by CSE
     let common_expr = Expr::add(Expr::var("x"), Expr::u32(1));
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![
             Node::let_bind("a", common_expr.clone()),
@@ -114,7 +114,7 @@ fn optimize_cse_deduplicates_repeated_expressions() {
         ],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     // CSE should recognize that "b" has the same value as "a"
     // and the store should reference "a" via both paths or the duplicated
     // let should reference "a" instead of recomputing.
@@ -130,7 +130,7 @@ fn optimize_cse_deduplicates_repeated_expressions() {
 fn optimize_strength_reduces_multiply_by_power_of_two() {
     // x * 8 should become x << 3
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -139,7 +139,7 @@ fn optimize_strength_reduces_multiply_by_power_of_two() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_shift = body.iter().any(|n| match n {
         Node::Store { value, .. } => contains_shl(value),
@@ -167,7 +167,7 @@ fn contains_shl(expr: &Expr) -> bool {
 fn optimize_synthesizes_fma_from_mul_add() {
     // (a * b) + c where c is float should become Fma(a, b, c)
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -176,7 +176,7 @@ fn optimize_synthesizes_fma_from_mul_add() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_fma = body.iter().any(|n| match n {
         Node::Store { value, .. } => contains_fma(value),
@@ -202,7 +202,7 @@ fn contains_fma(expr: &Expr) -> bool {
 #[test]
 fn optimize_collapses_add_zero() {
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -211,7 +211,7 @@ fn optimize_collapses_add_zero() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_identity = body.iter().any(|n| match n {
         Node::Store {
@@ -226,7 +226,7 @@ fn optimize_collapses_add_zero() {
 #[test]
 fn optimize_collapses_mul_one() {
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -235,7 +235,7 @@ fn optimize_collapses_mul_one() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_identity = body.iter().any(|n| match n {
         Node::Store {
@@ -250,7 +250,7 @@ fn optimize_collapses_mul_one() {
 #[test]
 fn optimize_collapses_bitand_zero() {
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -259,7 +259,7 @@ fn optimize_collapses_bitand_zero() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_zero = body.iter().any(|n| match n {
         Node::Store {
@@ -276,7 +276,7 @@ fn optimize_collapses_bitand_zero() {
 #[test]
 fn optimize_is_idempotent() {
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![
             Node::let_bind("a", Expr::add(Expr::u32(1), Expr::u32(2))),
@@ -285,8 +285,8 @@ fn optimize_is_idempotent() {
         ],
     );
 
-    let once = optimize(program);
-    let twice = optimize(once.clone());
+    let once = optimize(program).expect("registered optimizer must converge");
+    let twice = optimize(once.clone()).expect("registered optimizer must converge");
     assert_eq!(
         once, twice,
         "Fix: optimize() must be idempotent  -  running twice must produce the same output."
@@ -323,7 +323,7 @@ fn optimize_complex_kernel_reduces_instruction_count() {
     );
 
     let before = node_count(body_of(&program));
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let after = node_count(body_of(&optimized));
 
     assert!(
@@ -336,7 +336,7 @@ fn optimize_complex_kernel_reduces_instruction_count() {
 fn optimize_select_with_constant_condition_eliminates_branch() {
     // select(true, a, b) → a
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -345,7 +345,7 @@ fn optimize_select_with_constant_condition_eliminates_branch() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_42 = body.iter().any(|n| match n {
         Node::Store {
@@ -364,7 +364,7 @@ fn optimize_select_with_constant_condition_eliminates_branch() {
 fn optimize_double_negation_eliminated() {
     use vyre_foundation::ir::UnOp;
     let program = Program::wrapped(
-        vec![BufferDecl::read_write("out", 0, DataType::U32)],
+        vec![BufferDecl::output("out", 0, DataType::U32)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -379,7 +379,7 @@ fn optimize_double_negation_eliminated() {
         )],
     );
 
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
     let body = body_of(&optimized);
     let has_x = body.iter().any(|n| match n {
         Node::Store {
@@ -398,7 +398,7 @@ fn optimize_preserves_fingerprint_stability() {
     // Same program optimized twice must produce the same fingerprint.
     let make_program = || {
         Program::wrapped(
-            vec![BufferDecl::read_write("out", 0, DataType::U32)],
+            vec![BufferDecl::output("out", 0, DataType::U32)],
             [64, 1, 1],
             vec![
                 Node::let_bind("x", Expr::add(Expr::u32(1), Expr::u32(2))),
@@ -407,8 +407,8 @@ fn optimize_preserves_fingerprint_stability() {
         )
     };
 
-    let a = optimize(make_program());
-    let b = optimize(make_program());
+    let a = optimize(make_program()).expect("registered optimizer must converge");
+    let b = optimize(make_program()).expect("registered optimizer must converge");
     assert_eq!(
         a, b,
         "Fix: optimize() must be deterministic  -  same input must produce same output."

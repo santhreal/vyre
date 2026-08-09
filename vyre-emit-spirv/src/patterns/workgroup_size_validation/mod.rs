@@ -110,10 +110,12 @@ mod tests {
     fn dim_x_over_1024_violates_dim_limit() {
         let report = analyze(&empty_with_dispatch(Dispatch::new(2048, 1, 1)));
         assert!(!report.ok());
-        let has_dim_violation = report
-            .violations
-            .iter()
-            .any(|v| matches!(v, WorkgroupLimitViolation::DimensionExceeded { axis: 0, .. }));
+        let has_dim_violation = report.violations.iter().any(|v| {
+            matches!(
+                v,
+                WorkgroupLimitViolation::DimensionExceeded { axis: 0, .. }
+            )
+        });
         assert!(has_dim_violation);
     }
 
@@ -139,10 +141,12 @@ mod tests {
         // 32x32x2 = 2048  -  within per-dim, over invocations.
         let report = analyze(&empty_with_dispatch(Dispatch::new(32, 32, 2)));
         assert!(!report.ok());
-        let has = report
-            .violations
-            .iter()
-            .any(|v| matches!(v, WorkgroupLimitViolation::InvocationsExceeded { actual: 2048, .. }));
+        let has = report.violations.iter().any(|v| {
+            matches!(
+                v,
+                WorkgroupLimitViolation::InvocationsExceeded { actual: 2048, .. }
+            )
+        });
         assert!(has);
     }
 

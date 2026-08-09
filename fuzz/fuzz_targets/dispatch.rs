@@ -17,7 +17,7 @@ use std::sync::OnceLock;
 use vyre::ir::{BufferAccess, Program};
 use vyre::{validate, DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 
 /// `vyre_foundation::serial::wire::MAX_PROGRAM_BYTES` - reject larger blobs early.
 const MAX_WIRE_BYTES: usize = 64 * 1024 * 1024;
@@ -28,9 +28,7 @@ const MAX_DISPATCH_INPUT_BYTES: usize = 8 * 1024 * 1024;
 static BACKEND: OnceLock<Option<WgpuBackend>> = OnceLock::new();
 
 fn backend() -> Option<&'static WgpuBackend> {
-    BACKEND
-        .get_or_init(|| WgpuBackend::acquire().ok())
-        .as_ref()
+    BACKEND.get_or_init(|| WgpuBackend::acquire().ok()).as_ref()
 }
 
 fn zeroed_dispatch_inputs(program: &Program, max_total: usize) -> Option<Vec<Vec<u8>>> {
@@ -128,6 +126,8 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
 
-    let lowered = optimize(program);
+    let Ok(lowered) = optimize(program) else {
+        return;
+    };
     let _ = backend.dispatch(&lowered, &gpu_inputs, &DispatchConfig::default());
 });

@@ -4,57 +4,41 @@ Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
 
 ## Purpose
 
-`vyre-driver-spirv` is the **SPIR-V emitter shim**. It consumes a
-validated `naga::Module` and emits SPIR-V bytes via `naga::back::spv`.
-Keep this crate thin: it validates, writes, returns bytes.
+`vyre-driver-spirv` is the target adapter and runtime owner for SPIR-V devices.
+`Program` input enters through `vyre_lower::lower_verified`; descriptor
+serialization is delegated to `vyre-emit-spirv`.
 
 ## Critical invariants
 
-- **Byte-identity with naga's reference SPIR-V output** for every
-  module the wgpu backend produces. Any divergence is either a
-  naga bug (upstream report) or a shim misconfiguration.
-- **Rejects invalid modules.** `naga::valid::Validator` runs before
-  every emit; invalid modules return an actionable string error.
-- **No side effects.** Emitter is pure: `fn(module: &Module) ->
-  Result<Vec<u32>, String>`. Same input → same bytes, forever.
+- The adapter never implements a second descriptor-to-SPIR-V writer.
+- Identical `Program` input produces identical SPIR-V words.
+- Invalid programs fail at verified lowering before target serialization.
+- Runtime admission and dispatch errors remain actionable.
 
 ## Adversarial surface
 
-- `naga::Module` with validation errors  -  structured string error,
-  no panic
-- Module with no entry point  -  rejected
-- Module with features the current naga SPIR-V writer doesn't
-  support  -  rejected with a pointer to the missing feature
-
-## Current gaps
-
-- Target SPIR-V version is hardcoded via `spv::Options::default()`.
-  Gap: accept a `SpvVersion` argument so Vulkan 1.2 / 1.3 callers
-  can pick.
-- No differential test against `glslangValidator` or `spirv-val`
-   -  Vulkan SDK validator is the independent oracle.
+- Invalid workgroup geometry.
+- Unsupported neutral descriptor operations.
+- Target payloads rejected during runtime admission.
 
 ## Cross-crate contracts
 
-- Consumes validated `naga::Module` values produced by backend-neutral lowering
-- Produces SPIR-V bytes consumed by: any Vulkan-compute runner
-  (ash, vulkano) outside the santh tree; conform byte-identity
-  tests
+- Consumes `Program` values through `vyre_lower::lower_verified`.
+- Delegates descriptor serialization to `vyre-emit-spirv`.
+- Owns backend registration and Vulkan execution.
 
 ## Bench targets
 
-- `emit_spv`  -  bytes emitted / sec across small / medium / large
-  modules
+- `emit_spv`: adapter throughput across small, medium, and large programs.
 
 ## Fuzz targets
 
-- `emit_spv_fuzz`  -  arbitrary `naga::Module` constructed via
-  proptest → never panic, always return `Result`
+- `emit_spv_fuzz`: arbitrary programs never panic and always return `Result`.
 
 ## What NOT to test here
 
-- Runtime-driver dispatch behavior
-- Naga lowering correctness outside this SPIR-V writer boundary
+- Descriptor-to-SPIR-V construction owned by `vyre-emit-spirv`.
+- Naga writer parity owned by the emitter crate.
 
 ## Running
 

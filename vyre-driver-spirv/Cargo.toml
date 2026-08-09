@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "SPIR-V backend for vyre through naga's SPIR-V writer."
+description = "SPIR-V backend adapter for Vyre."
 readme = "README.md"
 keywords = ["gpu", "compute", "spirv", "vulkan", "vyre"]
 categories = ["hardware-support", "rendering::graphics-api"]
@@ -26,8 +26,7 @@ vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-lower = { workspace = true }
-vyre-emit-naga = { workspace = true }
-naga = { workspace = true, features = ["spv-out"] }
+vyre-emit-spirv = { workspace = true }
 inventory.workspace = true
 ash.workspace = true
 smallvec = { workspace = true }

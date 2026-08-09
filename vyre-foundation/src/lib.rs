@@ -124,7 +124,6 @@ pub mod ir {
     pub use crate::memory_model;
     pub use crate::memory_model::MemoryOrdering;
     pub use crate::optimizer::passes::fusion_cse::{cse, dce};
-    pub use crate::optimizer::pre_lowering::optimize;
     pub use crate::serial::text;
     pub use crate::transform::inline::{
         inline_calls, inline_calls_with_mode, inline_calls_with_resolver, inline_composite_calls,

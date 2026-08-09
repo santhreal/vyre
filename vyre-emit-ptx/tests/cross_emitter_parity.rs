@@ -172,16 +172,19 @@ fn op_corpus() -> Vec<KernelDescriptor> {
 #[test]
 fn every_op_lowers_through_ptx_and_naga() {
     for desc in op_corpus() {
-        let ptx = vyre_emit_ptx::emit_optimized(&desc)
-            .unwrap_or_else(|e| panic!("ptx emit_optimized failed for `{}`: {e:?}", desc.id));
+        let cleaned = vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0;
+        let ptx = vyre_emit_ptx::emit(&cleaned)
+            .unwrap_or_else(|error| panic!("PTX emit failed for `{}`: {error:?}", desc.id));
         assert!(
             ptx.contains(".version"),
             "ptx for `{}` must include a version directive",
             desc.id
         );
 
-        let naga = vyre_emit_naga::emit_optimized(&desc)
-            .unwrap_or_else(|e| panic!("naga emit_optimized failed for `{}`: {e:?}", desc.id));
+        let naga = vyre_emit_naga::emit(&cleaned)
+            .unwrap_or_else(|error| panic!("Naga emit failed for `{}`: {error:?}", desc.id));
         assert!(
             !naga.entry_points.is_empty(),
             "naga module for `{}` must expose an entry point",
@@ -199,7 +202,12 @@ fn ptx_contains_expected_instruction_for_each_op() {
     ];
     for (id, instr) in cases {
         let desc = op_corpus().into_iter().find(|d| d.id == id).unwrap();
-        let ptx = vyre_emit_ptx::emit_optimized(&desc).unwrap();
+        let ptx = vyre_emit_ptx::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
         assert!(
             ptx.contains(instr),
             "PTX for `{}` missing expected instruction `{}`",
@@ -212,8 +220,18 @@ fn ptx_contains_expected_instruction_for_each_op() {
 #[test]
 fn naga_and_ptx_entry_points_share_workgroup_size() {
     for desc in op_corpus() {
-        let naga_module = vyre_emit_naga::emit_optimized(&desc).unwrap();
-        let ptx = vyre_emit_ptx::emit_optimized(&desc).unwrap();
+        let naga_module = vyre_emit_naga::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
+        let ptx = vyre_emit_ptx::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
 
         let entry = &naga_module.entry_points[0];
         assert_eq!(entry.workgroup_size, desc.dispatch.workgroup_size);
@@ -239,7 +257,11 @@ fn ptx_audit_carries_kernel_id() {
 fn optimized_and_raw_ptx_succeed_together() {
     for desc in op_corpus() {
         let raw = vyre_emit_ptx::emit(&desc);
-        let opt = vyre_emit_ptx::emit_optimized(&desc);
+        let opt = vyre_emit_ptx::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        );
         assert_eq!(
             raw.is_ok(),
             opt.is_ok(),
@@ -254,7 +276,12 @@ fn optimized_and_raw_ptx_succeed_together() {
 #[test]
 fn ptx_output_contains_required_directives() {
     for desc in op_corpus() {
-        let ptx = vyre_emit_ptx::emit_optimized(&desc).unwrap();
+        let ptx = vyre_emit_ptx::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
         assert!(
             ptx.contains(".version"),
             "PTX for `{}` missing .version",

@@ -12,13 +12,13 @@
 //! rewritten program and compares observable memory.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+use vyre_foundation::optimizer as optimize;
 use vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission;
 use vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion;
 use vyre_foundation::optimizer::passes::loops::loop_licm::LoopLicm;
 use vyre_foundation::optimizer::passes::loops::loop_software_pipeline::LoopSoftwarePipeline;
 use vyre_foundation::optimizer::passes::loops::loop_strip_mine::LoopStripMine;
 use vyre_foundation::optimizer::passes::loops::loop_unroll::LoopUnroll;
-use vyre_foundation::optimizer::pre_lowering as optimize;
 use vyre_reference::value::Value;
 
 const N: u32 = 8;
@@ -237,7 +237,8 @@ fn reduction_oracle_computes_the_real_sum() {
 #[test]
 fn full_optimize_preserves_every_loop_program_value() {
     for (name, program) in loop_programs() {
-        let optimized = optimize::optimize(program.clone());
+        let optimized =
+            optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for vec in input_vectors() {
             let inputs = [input_value(&vec)];
             let base = vyre_reference::reference_eval(&program, &inputs)

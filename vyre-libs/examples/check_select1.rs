@@ -8,7 +8,8 @@ fn main() {
     let inputs = [to_bytes(&bits), to_bytes(&queries), vec![0u8; 5 * 4]];
 
     let program = vyre_primitives::bitset::select::select1_query("bits", "queries", "out", 4, 5);
-    let optimized = vyre_foundation::optimizer::pre_lowering::optimize(program.clone());
+    let optimized = vyre_foundation::optimizer::optimize(program.clone())
+        .expect("registered optimizer must converge");
 
     let cpu_orig = vyre_reference::reference_eval(
         &program,

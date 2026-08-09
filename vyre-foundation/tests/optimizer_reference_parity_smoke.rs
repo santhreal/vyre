@@ -1,11 +1,10 @@
-//! P0 inventory #34 (seed)  -  `optimizer::pre_lowering::optimize` must preserve
-//! reference semantics for programs in this test corpus.
+//! The registered optimizer must preserve reference semantics for this corpus.
 //!
 //! This is a smoke oracle; property coverage for idempotence and wire stability
 //! lives in `optimizer_idempotence_proptest.rs` (inventories #34–#35, #109).
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering as optimize;
+use vyre_foundation::optimizer as optimize;
 use vyre_reference::value::Value;
 
 fn output_only_store(expr: Expr) -> Program {
@@ -27,12 +26,13 @@ fn optimize_preserves_reference_result_for_arithmetic_store() {
     let base = vyre_reference::reference_eval(&program, &reference_inputs)
         .expect("Fix: unoptimized program must execute on the reference interpreter");
 
-    let optimized = optimize::optimize(program.clone());
+    let optimized =
+        optimize::optimize(program.clone()).expect("registered optimizer must converge");
     let opt = vyre_reference::reference_eval(&optimized, &reference_inputs)
         .expect("Fix: optimized program must execute on the reference interpreter");
 
     assert_eq!(
         base, opt,
-        "Fix: optimizer::pre_lowering::optimize changed observable reference semantics. Inventory P0 #34."
+        "Fix: optimizer::optimize changed observable reference semantics."
     );
 }

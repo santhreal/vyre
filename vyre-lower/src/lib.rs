@@ -20,7 +20,7 @@
 //!
 //! ```text
 //! vyre-foundation Program
-//!         ↓ lower(program)
+//!         ↓ lower_verified(program)
 //! KernelDescriptor (this crate's pub type)
 //!         ↓
 //! emit crate
@@ -41,11 +41,11 @@ pub mod audit;
 pub mod descriptor;
 pub mod emit_adversarial_corpus;
 pub mod error;
-pub mod lower;
+mod lower;
 pub(crate) mod op_properties;
 pub(crate) mod operand_semantics;
 pub mod optimization_corpus;
-pub mod pre_emit;
+mod pre_emit;
 pub mod rewrites;
 pub mod target;
 pub mod verify;
@@ -55,14 +55,10 @@ pub use audit::{
     RecommendationCategory,
 };
 
-/// Full-power entry point: verify the input descriptor, run the
-/// optimization pipeline, verify the optimized output. Returns the
-/// optimized descriptor + stats on success; on failure returns
-/// whichever verify step failed first.
+/// Verify the input descriptor, apply lower-IR cleanup, and verify the output.
 ///
-/// `emit_optimized` in the emit crates only `debug_assert!`s the
-/// output. This entry point promotes both checks to errors that
-/// production callers can route.
+/// Production `Program` callers use [`lower_verified`]. Descriptor-producing
+/// tests and tooling may use this boundary before invoking a pure emitter.
 pub fn verify_then_optimize(
     desc: &KernelDescriptor,
 ) -> Result<(KernelDescriptor, rewrites::OptimizationStats), VerifyFailure> {
@@ -324,8 +320,7 @@ pub use descriptor::{
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
 pub use error::LowerError;
-pub use lower::lower;
-pub use pre_emit::{lower_for_emit, prepare_program_for_emit, LoweredKernel, PreEmitError};
+pub use pre_emit::{lower_verified, LowerVerifiedError, VerifiedLowering};
 pub use target::{
     required_subgroup_capabilities, validate_workgroup_size, EmissionTargetCapabilities,
     SubgroupCapabilities, WorkgroupLimitViolation, WorkgroupLimits,

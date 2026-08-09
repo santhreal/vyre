@@ -3,11 +3,11 @@
 #![allow(deprecated)]
 use proptest::prelude::*;
 use std::collections::BTreeSet;
-use vyre::DispatchConfig;
-use vyre::VyreBackend;
-use vyre_foundation::optimizer::pre_lowering::optimize;
 use vyre::scan::dispatch_io::pack_u32_slice as pack_words;
 use vyre::scan::{compact_hits_with_layout, emit_hit_with_layout};
+use vyre::DispatchConfig;
+use vyre::VyreBackend;
+use vyre_foundation::optimizer::optimize;
 use vyre_reference::value::Value;
 
 fn unpack_words(bytes: &[u8]) -> Vec<u32> {
@@ -228,7 +228,8 @@ fn host_readback_prefix_matches_cursor() {
         "out_cursor",
         3,
         4,
-    ));
+    ))
+    .expect("registered optimizer must converge");
     let wgpu_hits = backend
         .dispatch(
             &emit_program,
@@ -251,7 +252,8 @@ fn host_readback_prefix_matches_cursor() {
     assert_eq!(cursor, 3);
     assert_eq!(overflow, 0);
 
-    let compact_program = optimize(compact_hits_with_layout("out_hits", "out_cursor", 4, 4));
+    let compact_program = optimize(compact_hits_with_layout("out_hits", "out_cursor", 4, 4))
+        .expect("registered optimizer must converge");
     let compact_outputs = backend
         .dispatch(
             &compact_program,

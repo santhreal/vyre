@@ -45,7 +45,9 @@ fn program(body: Vec<Node>) -> Program {
 }
 
 fn emit(program: &Program) -> Result<String, String> {
-    let descriptor = vyre_lower::lower(program).map_err(|error| format!("lower: {error:?}"))?;
+    let descriptor = vyre_lower::lower_verified(program)
+        .map(|lowered| lowered.descriptor)
+        .map_err(|error| format!("lower: {error:?}"))?;
     vyre_emit_ptx::emit_with_options(&descriptor, PtxEmitOptions::default())
         .map_err(|error| format!("{error:?}"))
 }

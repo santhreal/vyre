@@ -87,8 +87,12 @@ fn i32_binop_descriptor(op: BinOp) -> KernelDescriptor {
 #[test]
 fn shr_on_i32_emits_s32_suffix_not_u32() {
     let desc = i32_binop_descriptor(BinOp::Shr);
-    let ptx =
-        vyre_emit_ptx::emit_optimized(&desc).expect("I32 Shr descriptor must emit without error");
+    let ptx = vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .expect("I32 Shr descriptor must emit without error");
 
     assert!(
         ptx.contains("shr.s32"),
@@ -147,8 +151,12 @@ fn shr_on_u32_still_emits_u32_suffix() {
             literals: vec![LiteralValue::U32(1), LiteralValue::U32(0)],
         },
     };
-    let ptx =
-        vyre_emit_ptx::emit_optimized(&desc).expect("U32 Shr descriptor must emit without error");
+    let ptx = vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .expect("U32 Shr descriptor must emit without error");
     assert!(
         ptx.contains("shr.u32"),
         "Shr on U32 operands must still emit `shr.u32`; \
@@ -216,8 +224,12 @@ fn ensure_buffer_length_reg_emits_correct_offset_for_slot_1() {
             literals: vec![LiteralValue::U32(0)],
         },
     };
-    let ptx =
-        vyre_emit_ptx::emit_optimized(&desc).expect("two-slot descriptor must emit without error");
+    let ptx = vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .expect("two-slot descriptor must emit without error");
 
     // slot 0: byte_offset = 0*4+4 = 4  → `[%rd0 + 4]`
     // slot 1: byte_offset = 1*4+4 = 8  → `[%rd0 + 8]`
@@ -286,8 +298,12 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
             literals: vec![LiteralValue::U32(0)],
         },
     };
-    let ptx = vyre_emit_ptx::emit_optimized(&desc)
-        .expect("U64 → F16 store descriptor must emit without error");
+    let ptx = vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .expect("U64 → F16 store descriptor must emit without error");
 
     // The fixed path: single-instruction conversion preserving all 64 bits.
     assert!(

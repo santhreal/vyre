@@ -6,9 +6,9 @@ use vyre_foundation::lower::LoweringError;
 pub(crate) fn validate_and_analyze(
     program: &Program,
 ) -> Result<vyre_lower::KernelDescriptor, LoweringError> {
-    let lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
+    let lowered = vyre_lower::lower_verified(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "canonical pre-emit lowering failed before wgpu emission: {error}. Fix: route Programs through vyre-lower::lower_for_emit and add missing neutral mappings there instead of concrete-driver lowering."
+            "verified lowering failed before wgpu emission: {error}. Fix: route Programs through vyre_lower::lower_verified and add missing neutral mappings there instead of concrete-driver lowering."
         ))
     })?;
     let descriptor = lowered.descriptor;
@@ -27,12 +27,11 @@ pub(crate) fn validate_and_analyze(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
     #[test]
     fn validates_simple_store_program() {
-        let buffer =
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
+        let buffer = BufferDecl::output("out", 0, DataType::U32).with_count(16);
         let program = Program::wrapped(
             vec![buffer],
             [64, 1, 1],
@@ -56,9 +55,7 @@ mod tests {
 
         let error = validate_and_analyze(&program).expect_err("zero dispatch must fail");
 
-        assert!(error
-            .message()
-            .contains("canonical pre-emit lowering failed"));
+        assert!(error.message().contains("verified lowering failed"));
         assert!(error.message().contains("KernelDescriptor"));
         assert!(error.message().contains("Fix:"));
     }

@@ -102,8 +102,11 @@ fn install_registry() {
 #[test]
 fn a_buffer_argument_retargets_the_read_onto_the_callers_table() {
     install_registry();
-    let prepared = vyre_lower::prepare_program_for_emit(&caller())
-        .unwrap_or_else(|error| panic!("buffer-argument op must survive pre-emit: {error}"));
+    let prepared = vyre_lower::lower_verified(&caller())
+        .unwrap_or_else(|error| {
+            panic!("buffer-argument op must survive verified lowering: {error}")
+        })
+        .program;
     let dump = format!("{:?}", prepared.entry());
     assert!(
         !dump.contains("Call {"),

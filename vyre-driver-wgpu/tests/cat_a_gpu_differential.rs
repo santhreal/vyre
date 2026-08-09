@@ -63,7 +63,8 @@ fn run_cpu(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
 /// the `region_inline` pass is what unrolls those wrappers into the
 /// primitive nodes the wgpu backend actually knows how to lower.
 fn lower_for_gpu(program: &Program) -> Program {
-    vyre_foundation::optimizer::pre_lowering::optimize(program.clone())
+    vyre_foundation::optimizer::optimize(program.clone())
+        .expect("registered optimizer must converge")
 }
 
 fn run_gpu(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {

@@ -1,9 +1,6 @@
-//! Cross-emitter parity: every descriptor in the corpus must lower
-//! through `vyre-emit-naga::emit_optimized`,
-//! `vyre-emit-ptx::emit_optimized`, AND
-//! `vyre-emit-spirv::emit_optimized`. Failure in any one means the
-//! substrate-neutral promise of `KernelDescriptor` is broken for that
-//! shape.
+//! Cross-emitter parity: every cleaned descriptor in the corpus must emit
+//! through Naga, PTX, and SPIR-V. Failure in any target breaks the
+//! substrate-neutral `KernelDescriptor` contract.
 //!
 //! Lives in `vyre-emit-spirv` because it depends on both
 //! `vyre-emit-naga` (always) and `vyre-emit-ptx` (added as dev-dep
@@ -199,23 +196,26 @@ fn descriptor_corpus() -> Vec<KernelDescriptor> {
 fn every_descriptor_lowers_through_all_three_emitters() {
     for desc in descriptor_corpus() {
         let id = desc.id.clone();
+        let cleaned = vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0;
 
-        let naga_module = vyre_emit_naga::emit_optimized(&desc)
-            .unwrap_or_else(|e| panic!("naga emit_optimized failed for `{id}`: {e:?}"));
+        let naga_module = vyre_emit_naga::emit(&cleaned)
+            .unwrap_or_else(|error| panic!("Naga emit failed for `{id}`: {error:?}"));
         assert!(
             !naga_module.entry_points.is_empty(),
             "naga module for `{id}` must expose an entry point"
         );
 
-        let ptx = vyre_emit_ptx::emit_optimized(&desc)
-            .unwrap_or_else(|e| panic!("ptx emit_optimized failed for `{id}`: {e:?}"));
+        let ptx = vyre_emit_ptx::emit(&cleaned)
+            .unwrap_or_else(|error| panic!("PTX emit failed for `{id}`: {error:?}"));
         assert!(
             ptx.contains(".version"),
             "ptx for `{id}` must include a version directive"
         );
 
-        let spirv_words = vyre_emit_spirv::emit_optimized(&desc)
-            .unwrap_or_else(|e| panic!("spirv emit_optimized failed for `{id}`: {e:?}"));
+        let spirv_words = vyre_emit_spirv::emit(&cleaned)
+            .unwrap_or_else(|error| panic!("SPIR-V emit failed for `{id}`: {error:?}"));
         assert_eq!(
             spirv_words.first().copied(),
             Some(vyre_emit_spirv::SPIRV_MAGIC),
@@ -229,8 +229,18 @@ fn naga_and_spirv_main_entry_points_match() {
     // Naga and SPIR-V come from the same Naga module; their entry
     // point names + workgroup sizes must be identical.
     for desc in descriptor_corpus() {
-        let naga_module = vyre_emit_naga::emit_optimized(&desc).unwrap();
-        let spirv_words = vyre_emit_spirv::emit_optimized(&desc).unwrap();
+        let naga_module = vyre_emit_naga::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
+        let spirv_words = vyre_emit_spirv::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
 
         // Naga module entry point matches descriptor's dispatch.
         let entry = &naga_module.entry_points[0];
@@ -249,7 +259,12 @@ fn ptx_output_contains_required_directives_for_every_kernel() {
             // PTX skipped on empty kernels  -  nothing to emit.
             continue;
         }
-        let ptx = vyre_emit_ptx::emit_optimized(&desc).unwrap();
+        let ptx = vyre_emit_ptx::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap();
         assert!(
             ptx.contains(".version"),
             "PTX for `{}` missing .version",
@@ -264,20 +279,15 @@ fn ptx_output_contains_required_directives_for_every_kernel() {
 }
 
 #[test]
-fn optimized_emit_succeeds_when_raw_emit_succeeds() {
-    // For each shape, raw `emit` and `emit_optimized` should both
-    // succeed (or both fail with the same error category). Confirms
-    // optimization didn't introduce a shape the emitter can't handle.
+fn shared_cleanup_preserves_naga_emit_acceptance() {
     for desc in descriptor_corpus() {
-        let raw = vyre_emit_naga::emit(&desc);
-        let opt = vyre_emit_naga::emit_optimized(&desc);
-        assert_eq!(
-            raw.is_ok(),
-            opt.is_ok(),
-            "naga divergence on `{}`: raw={:?}, opt={:?}",
-            desc.id,
-            raw.err(),
-            opt.err(),
+        let cleaned = vyre_lower::verify_then_optimize(&desc)
+            .expect("descriptor corpus must pass shared cleanup")
+            .0;
+        assert!(
+            vyre_emit_naga::emit(&cleaned).is_ok(),
+            "cleaned descriptor `{}` must emit through Naga",
+            desc.id
         );
     }
 }

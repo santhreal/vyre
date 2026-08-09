@@ -6,14 +6,18 @@ use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 #[test]
 fn find_dangling_refs_clean_program_returns_empty() {
     let prog = loop_carry_smoke();
-    let desc = vyre_lower::lower(&prog).unwrap();
+    let desc = vyre_lower::lower_verified(&prog)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let danglings = find_dangling_refs(&desc);
     assert!(danglings.is_empty());
 }
 
 #[test]
 fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
-    let mut desc = vyre_lower::lower(&loop_carry_smoke()).unwrap();
+    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
 
     let id_in_child = 999;
     let mut child_body = KernelBody {
@@ -50,7 +54,9 @@ fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
 
 #[test]
 fn find_dangling_refs_matches_verifier_verdict() {
-    let mut desc = vyre_lower::lower(&loop_carry_smoke()).unwrap();
+    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
 
     let id_in_child = 999;
     let mut child_body = KernelBody {
@@ -100,7 +106,9 @@ fn find_dangling_refs_matches_verifier_verdict() {
 
 #[test]
 fn find_dangling_refs_handles_deep_nesting_six_levels() {
-    let mut desc = vyre_lower::lower(&loop_carry_smoke()).unwrap();
+    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
 
     // Level 6 produces 999.
     let mut level6 = KernelBody {
@@ -165,7 +173,9 @@ fn find_dangling_refs_handles_deep_nesting_six_levels() {
 
 #[test]
 fn find_dangling_refs_does_not_flag_completed_child_results() {
-    let mut desc = vyre_lower::lower(&loop_carry_smoke()).unwrap();
+    let mut desc = vyre_lower::lower_verified(&loop_carry_smoke())
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
 
     let id_in_child = 999;
     let mut child_body = KernelBody {

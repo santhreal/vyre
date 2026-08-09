@@ -35,7 +35,12 @@ fn run_all_is_semantics_preserving_for_emitter() {
 
     for case in &cases {
         let raw = vyre_emit_naga::emit(case).expect("raw emit");
-        let opt = vyre_emit_naga::emit_optimized(case).expect("optimized emit");
+        let opt = vyre_emit_naga::emit(
+            &vyre_lower::verify_then_optimize(case)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .expect("optimized emit");
         assert_eq!(raw.entry_points[0].name, opt.entry_points[0].name);
         assert_eq!(
             raw.entry_points[0].workgroup_size,

@@ -389,7 +389,8 @@ fn c_sema_scope_adversarial_fixtures_have_exact_node_scope_mapping() {
             case.name
         );
 
-        let optimized = vyre_foundation::optimizer::pre_lowering::optimize(program.clone());
+        let optimized = vyre_foundation::optimizer::optimize(program.clone())
+            .expect("registered optimizer must converge");
         let gpu_output = backend
             .dispatch(&optimized, &inputs, &DispatchConfig::default())
             .expect("GPU backend must dispatch");

@@ -3,7 +3,7 @@
 #![cfg(feature = "c-parser")]
 
 use vyre::ir::Expr;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::parsing::c::preprocess::expansion::opt_dynamic_macro_expansion;
 
 #[test]
@@ -19,7 +19,8 @@ fn dynamic_macro_expansion_pre_lowering_optimizer_is_idempotent() {
         16,
     );
 
-    let optimized_once = optimize(program);
-    let optimized_twice = optimize(optimized_once.clone());
+    let optimized_once = optimize(program).expect("registered optimizer must converge");
+    let optimized_twice =
+        optimize(optimized_once.clone()).expect("registered optimizer must converge");
     assert_eq!(optimized_once, optimized_twice);
 }

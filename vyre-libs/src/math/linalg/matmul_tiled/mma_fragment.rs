@@ -177,7 +177,7 @@ pub(crate) fn matmul_mma_fragment(
 mod tests {
     use super::*;
     use vyre_foundation::ir::{Expr, Node};
-    use vyre_lower::lower;
+    use vyre_lower::lower_verified;
     use vyre_lower::rewrites::matmul_promote;
 
     #[test]
@@ -242,7 +242,9 @@ mod tests {
             .collect(),
         );
 
-        let desc = lower(&program).expect("Fix: MMA fragment must lower cleanly.");
+        let desc = lower_verified(&program)
+            .map(|lowered| lowered.descriptor)
+            .expect("Fix: MMA fragment must lower cleanly.");
         let fma_count = count_fma_in_body(&desc.body);
         assert_eq!(
             fma_count, 4,
@@ -295,7 +297,9 @@ mod tests {
             .collect(),
         );
 
-        let desc = lower(&program).expect("Fix: MMA fragment must lower cleanly.");
+        let desc = lower_verified(&program)
+            .map(|lowered| lowered.descriptor)
+            .expect("Fix: MMA fragment must lower cleanly.");
         let promoted = matmul_promote(&desc);
         assert!(
             has_matrix_mma(&promoted.body),
@@ -387,7 +391,7 @@ mod tests {
 #[test]
 fn matmul_mma_fragment_descriptor_contains_four_child_fmas() {
     use vyre_foundation::ir::{Expr, Node};
-    use vyre_lower::lower;
+    use vyre_lower::lower_verified;
     let program = vyre_foundation::ir::Program::wrapped(
         vec![],
         [1, 1, 1],
@@ -419,7 +423,9 @@ fn matmul_mma_fragment_descriptor_contains_four_child_fmas() {
         .collect(),
     );
 
-    let desc = lower(&program).expect("Fix: MMA fragment must lower cleanly.");
+    let desc = lower_verified(&program)
+        .map(|lowered| lowered.descriptor)
+        .expect("Fix: MMA fragment must lower cleanly.");
     fn count_fma_in_descriptor_body(body: &vyre_lower::KernelBody) -> usize {
         let mut count = body
             .ops

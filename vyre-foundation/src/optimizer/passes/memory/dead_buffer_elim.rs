@@ -11,7 +11,7 @@ use std::sync::Arc;
     requires = ["fusion"],
     invalidates = ["buffer_layout"],
     phase = "memory",
-    boundary_class = "abi_preserving",
+    boundary_class = "abi_changing",
     cost_model_family = "memory"
 )]
 pub struct DeadBufferElim;

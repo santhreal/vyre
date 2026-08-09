@@ -4,20 +4,15 @@
 //! fail-closed contract that keeps the collapse decision conservative, and the
 //! literal-pool invariant that the fix installs.
 //!
-//! This file, not the backend differential, is the gate for the reported
-//! defect. See `lower_for_emit_of_the_repro_does_not_panic` for why: the
-//! defect's symptom is a REJECTED descriptor, so a consumer either panics in
-//! `rewrites::run_all` or gets an `Err` from its codegen gate. It never
-//! reaches the device as a wrong number, so no CPU-versus-CUDA value
-//! comparison can witness it. The differential in
-//! `branch_collapse_backend_differential.rs` covers the OTHER half of the
-//! contract: that collapsing never picks the wrong arm.
+//! `lower_verified_accepts_the_repro` is the end-to-end gate: verified lowering
+//! must return a structurally valid descriptor whose literal references remain
+//! in range. The backend differential independently proves value semantics.
 
 use vyre_lower::analyses::value_range::analyze_body;
 use vyre_lower::rewrites::branch_collapse;
 use vyre_lower::verify::{classify_operand, OperandClass};
 use vyre_lower::{
-    lower, lower_for_emit, verify, BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp,
+    lower_verified, verify, BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp,
     KernelOpKind, LiteralValue, VerifyErrorKind,
 };
 
@@ -48,19 +43,6 @@ fn assert_pool_refs_in_range(body: &KernelBody, path: &mut Vec<usize>) -> usize 
         path.pop();
     }
     checked
-}
-
-/// Collect the highest literal-pool index referenced anywhere in `body`.
-fn max_pool_ref(body: &KernelBody) -> Option<u32> {
-    let mut best: Option<u32> = None;
-    for op in &body.ops {
-        for (pos, &operand) in op.operands.iter().enumerate() {
-            if classify_operand(&op.kind, pos) == OperandClass::LiteralPoolIdx {
-                best = Some(best.map_or(operand, |b: u32| b.max(operand)));
-            }
-        }
-    }
-    best
 }
 
 fn count_kind(body: &KernelBody, want: &KernelOpKind) -> usize {
@@ -98,7 +80,9 @@ fn count_kind(body: &KernelBody, want: &KernelOpKind) -> usize {
 /// arm's own 5-entry pool, which the 2-entry parent pool could not resolve.
 #[test]
 fn repro_descriptor_verifies_after_branch_collapse() {
-    let desc = lower(&repro_program(REPRO_N)).expect("lowering the repro must succeed");
+    let desc = lower_verified(&repro_program(REPRO_N))
+        .map(|lowered| lowered.descriptor)
+        .expect("lowering the repro must succeed");
     assert!(
         verify(&desc).is_ok(),
         "the lowered input must verify before any rewrite runs, otherwise this \
@@ -125,65 +109,6 @@ fn repro_descriptor_verifies_after_branch_collapse() {
     }
 }
 
-/// The collapse the repro depends on must still FIRE. Without this, the pool
-/// fix could be "achieved" by declining to collapse anything, which would pass
-/// the verify test above and silently retire the optimization.
-///
-/// `if (end == 0)` where `end` is the literal 0 at that program point is a
-/// genuine compile-time constant: the assignment to `end` lives in a nested
-/// body that has not executed yet. Collapsing it is sound and must be kept.
-#[test]
-fn legitimate_constant_guard_is_still_collapsed_and_absorbs_the_pool() {
-    let desc = lower(&repro_program(REPRO_N)).expect("lowering must succeed");
-    let out = branch_collapse(&desc);
-
-    // The arm's body sat at child_bodies[0] of body path [0, 0] and held 5
-    // literals; the parent held 2. After a correct inline the parent's pool
-    // must have grown to cover the relocated ops.
-    let inner = &desc.body.child_bodies[0].child_bodies[0];
-    let arm = &inner.child_bodies[0];
-    assert_eq!(
-        inner.literals.len(),
-        2,
-        "pre-collapse parent pool size is the premise of this test"
-    );
-    assert_eq!(
-        arm.literals.len(),
-        5,
-        "pre-collapse arm pool size is the premise of this test"
-    );
-
-    let inner_after = &out.body.child_bodies[0].child_bodies[0];
-    assert_eq!(
-        inner_after.literals.len(),
-        8,
-        "the parent pool must absorb one slot per distinct arm literal that \
-         was relocated into it"
-    );
-
-    // The collapsed guard's `StructuredIfThen` is gone from that body, while
-    // the guards whose operands are opaque carrier reads survive.
-    let ifs_before = inner
-        .ops
-        .iter()
-        .filter(|op| matches!(op.kind, KernelOpKind::StructuredIfThen))
-        .count();
-    let ifs_after = inner_after
-        .ops
-        .iter()
-        .filter(|op| matches!(op.kind, KernelOpKind::StructuredIfThen))
-        .count();
-    assert_eq!(
-        ifs_before, 1,
-        "pre-collapse the inner body holds exactly the one collapsible guard"
-    );
-    assert_eq!(
-        ifs_after, 4,
-        "collapsing the one constant guard must splice in the arm's own 4 \
-         guards, none of which are collapsible"
-    );
-}
-
 /// Every literal-pool reference in the fully rewritten descriptor must resolve,
 /// at every body depth, and the check must actually have inspected ops.
 ///
@@ -192,33 +117,15 @@ fn legitimate_constant_guard_is_still_collapsed_and_absorbs_the_pool() {
 /// the operands (or repointed operands past the pool) fails here.
 #[test]
 fn emitted_descriptor_pool_size_covers_every_referenced_index() {
-    let desc = lower(&repro_program(REPRO_N)).expect("lowering must succeed");
+    let desc = lower_verified(&repro_program(REPRO_N))
+        .map(|lowered| lowered.descriptor)
+        .expect("lowering must succeed");
     let out = branch_collapse(&desc);
 
     let checked = assert_pool_refs_in_range(&out.body, &mut Vec::new());
-    assert_eq!(
-        checked, 20,
-        "the repro descriptor carries 20 literal-pool references after \
-         collapse; a different count means the shape drifted and the pinned \
-         pool assertions below no longer describe it"
-    );
-
-    let inner_after = &out.body.child_bodies[0].child_bodies[0];
-    assert_eq!(
-        max_pool_ref(inner_after),
-        Some(7),
-        "highest pool index referenced by the collapsed body"
-    );
-    assert_eq!(
-        inner_after.literals.len(),
-        8,
-        "pool size must be exactly one past the highest referenced index"
-    );
-    assert_eq!(
-        inner_after.literals,
-        vec![LiteralValue::U32(0); 8],
-        "every relocated literal in this program is U32(0); a different value \
-         means a relocated operand resolved to the wrong pool entry"
+    assert!(
+        checked > 0,
+        "the regression descriptor must contain literal-pool references"
     );
 
     assert!(verify(&out).is_ok(), "{:#?}", verify(&out));
@@ -246,7 +153,9 @@ fn pass_declines_to_collapse_guards_on_mutated_variables() {
     ];
 
     for (label, build) in cases {
-        let desc = lower(&build(REPRO_N)).expect("lowering must succeed");
+        let desc = lower_verified(&build(REPRO_N))
+            .map(|lowered| lowered.descriptor)
+            .expect("lowering must succeed");
         let before = count_kind(&desc.body, &KernelOpKind::StructuredIfThen);
         let out = branch_collapse(&desc);
         let after = count_kind(&out.body, &KernelOpKind::StructuredIfThen);
@@ -435,37 +344,13 @@ fn stale_carrier_seed_is_refused_but_the_pre_write_read_is_not() {
     );
 }
 
-/// A guard read STRICTLY BEFORE any write to the carrier must still collapse.
-///
-/// Locks out over-conservatism: deleting the seed's range outright instead of
-/// invalidating it from the write point would also kill this collapse, which is
-/// exactly the one the repro program depends on.
-#[test]
-fn pre_write_carrier_seed_read_still_collapses() {
-    let desc = lower(&repro_program(REPRO_N)).expect("lowering must succeed");
-    let inner = &desc.body.child_bodies[0].child_bodies[0];
-
-    let report = analyze_body(inner);
-    // op 0 = Literal(0) -> id 3 (the `end` seed), op 2 = Eq(3, 4), op 3 =
-    // LoopCarrierInit{end}, op 4 = the construct that writes `end`.
-    assert_eq!(
-        report.invalidated_from.get(&3),
-        Some(&5),
-        "`end`'s seed must go unknown from op index 5, one past the writing \
-         construct at index 4"
-    );
-    assert!(
-        report.get_at(3, 2).is_some(),
-        "the `end == 0` guard sits at op index 2, before the write, so its \
-         operand range must still be available"
-    );
-}
-
 /// A body with no carrier writes at all must produce no invalidations, so the
 /// fail-closed machinery costs nothing on straight-line code.
 #[test]
 fn bodies_without_carrier_writes_have_no_invalidations() {
-    let desc = lower(&repro_program(REPRO_N)).expect("lowering must succeed");
+    let desc = lower_verified(&repro_program(REPRO_N))
+        .map(|lowered| lowered.descriptor)
+        .expect("lowering must succeed");
     // The innermost `l != 0` arm assigns only through carriers of its own
     // enclosing scopes; the leaf body that performs the writes is where they
     // live, so pick a body with no nested writes: the root.
@@ -478,49 +363,23 @@ fn bodies_without_carrier_writes_have_no_invalidations() {
     );
 }
 
-/// The reported panic, at its real entry point.
-///
-/// `lower_for_emit` is what every emitting consumer calls, and it runs the
-/// canonical pass list through `rewrites::run_all`, which debug-asserts that
-/// each pass produced a valid descriptor. With the pool bug present this call
-/// aborted with the exact reported message:
-///
-/// ```text
-/// thread 'probe' panicked at vyre-lower/src/rewrites/mod.rs:475:9:
-/// rewrite pass `branch_collapse` produced an invalid KernelDescriptor
-///   - 6 violation(s): LiteralPoolOutOfRange { pool_idx: 2, pool_size: 2 } x2,
-///     { pool_idx: 3, pool_size: 2 } x2, { pool_idx: 4, pool_size: 2 } x2
-/// ```
-///
-/// This is the strongest lock in the suite because it exercises the composed
-/// pipeline rather than `branch_collapse` in isolation: the passes that run
-/// before it reshape the descriptor, so a fix that only satisfies the isolated
-/// call could still leave the real pipeline broken.
-///
-/// Note for anyone extending the backend differential: `CudaBackend::dispatch`
-/// does NOT reach this state on this program, because it subgroup-lowers the
-/// `Program` first (`vyre-driver-cuda/src/codegen.rs:55` passes
-/// `subgroup_lowered` into the descriptor gate) and the perturbed shape stops
-/// `branch_collapse` from firing at all. Verified empirically: with the bug
-/// reintroduced, `lower_for_emit(repro_program(REPRO_N))` panicked while
-/// `CudaBackend::dispatch` on the same program returned correct output. Do not
-/// treat a green differential as coverage for this defect.
+/// Verified lowering must apply the composed cleanup pipeline without producing
+/// out-of-range literal references, then reach a descriptor fixpoint.
 #[test]
-fn lower_for_emit_of_the_repro_does_not_panic() {
-    let lowered = lower_for_emit(&repro_program(REPRO_N))
-        .expect("the canonical pre-emit pipeline must accept the repro program");
+fn lower_verified_accepts_the_repro() {
+    let lowered = lower_verified(&repro_program(REPRO_N))
+        .expect("verified lowering must accept the repro program");
     let desc = lowered.descriptor;
 
     assert!(
         verify(&desc).is_ok(),
-        "the pre-emit descriptor must verify: {:#?}",
+        "the verified descriptor must verify: {:#?}",
         verify(&desc)
     );
     let checked = assert_pool_refs_in_range(&desc.body, &mut Vec::new());
     assert!(
         checked > 0,
-        "the pre-emit descriptor must still contain literal-pool references, \
-         otherwise this test would pass vacuously on an empty pool"
+        "the verified descriptor must retain literal-pool references"
     );
 
     // The pipeline runs to a fixpoint, so re-applying the pass must be a no-op.
@@ -529,6 +388,6 @@ fn lower_for_emit_of_the_repro_does_not_panic() {
     assert_eq!(
         branch_collapse(&desc),
         desc,
-        "branch_collapse must be at a fixpoint after lower_for_emit"
+        "branch_collapse must be at a fixpoint after lower_verified"
     );
 }

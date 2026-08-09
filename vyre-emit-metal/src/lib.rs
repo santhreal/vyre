@@ -189,29 +189,6 @@ pub fn emit_with_options(
     emit_artifact_with_options(desc, options).map(|artifact| artifact.msl)
 }
 
-/// Emit MSL source after the canonical descriptor rewrite stack.
-///
-/// # Errors
-///
-/// Same as [`emit`].
-pub fn emit_optimized(desc: &KernelDescriptor) -> Result<String, EmitError> {
-    emit_optimized_with_stats(desc).map(|(source, _)| source)
-}
-
-/// Emit optimized MSL source and descriptor rewrite statistics.
-///
-/// # Errors
-///
-/// Same as [`emit`].
-pub fn emit_optimized_with_stats(
-    desc: &KernelDescriptor,
-) -> Result<(String, vyre_lower::rewrites::OptimizationStats), EmitError> {
-    let (optimized, stats) = vyre_lower::verify_then_optimize(desc)
-        .map_err(|error| EmitError::NagaValidation(format!("{error:?}")))?;
-    let source = emit(&optimized)?;
-    Ok((source, stats))
-}
-
 /// Emit a structured `native_module` artifact.
 ///
 /// # Errors
@@ -277,33 +254,6 @@ pub fn emit_artifact_json(desc: &KernelDescriptor) -> Result<String, EmitError> 
 /// Same as [`emit_artifact_json`].
 pub fn emit_artifact_bytes(desc: &KernelDescriptor) -> Result<Vec<u8>, EmitError> {
     let mut bytes = emit_artifact_json(desc)?.into_bytes();
-    bytes.push(b'\n');
-    Ok(bytes)
-}
-
-/// Lower a high-level Program through the canonical pre-emit seam and emit a
-/// deterministic JSON `native_module` artifact.
-///
-/// # Errors
-///
-/// Returns [`EmitError`] when pre-emission lowering or artifact emission fails.
-pub fn emit_program_artifact_json(
-    program: &vyre_foundation::ir::Program,
-) -> Result<String, EmitError> {
-    let lowered = vyre_lower::pre_emit::lower_for_emit(program)
-        .map_err(|error| EmitError::PreEmit(error.to_string()))?;
-    emit_artifact_json(&lowered.descriptor)
-}
-
-/// Lower a high-level Program and emit deterministic JSON bytes.
-///
-/// # Errors
-///
-/// Same as [`emit_program_artifact_json`].
-pub fn emit_program_artifact_bytes(
-    program: &vyre_foundation::ir::Program,
-) -> Result<Vec<u8>, EmitError> {
-    let mut bytes = emit_program_artifact_json(program)?.into_bytes();
     bytes.push(b'\n');
     Ok(bytes)
 }
@@ -750,39 +700,6 @@ mod tests {
     }
 
     #[test]
-    fn emit_optimized_returns_stats_and_source() {
-        let desc = KernelDescriptor {
-            id: "dead_add".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(1), LiteralValue::U32(2)],
-            },
-        };
-        let (msl, stats) = emit_optimized_with_stats(&desc).unwrap();
-        assert!(msl.contains("kernel"));
-        assert!(stats.iterations >= 1);
-    }
-
-    #[test]
     fn missing_entry_point_returns_actionable_error() {
         let module = vyre_emit_naga::emit(&empty_kernel()).unwrap();
         let options = MetalEmitOptions {
@@ -853,7 +770,9 @@ mod tests {
     #[test]
     fn trap_sidecar_compare_exchange_emits_msl_helper() {
         let program = Program::wrapped(vec![], [64, 1, 1], vec![Node::trap(Expr::u32(7), "fault")]);
-        let desc = vyre_lower::lower(&program).expect("Fix: trap programs must descriptor-lower");
+        let desc = vyre_lower::lower_verified(&program)
+            .map(|lowered| lowered.descriptor)
+            .expect("Fix: trap programs must descriptor-lower");
         let artifact = emit_artifact(&desc).expect("Fix: trap descriptors must emit Metal MSL");
 
         assert!(

@@ -166,7 +166,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower(&p) {
+            let desc = match vyre_lower::lower_verified(&p).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);
@@ -219,7 +219,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower(&p) {
+            let desc = match vyre_lower::lower_verified(&p).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);
@@ -253,7 +253,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower(&p) {
+            let desc = match vyre_lower::lower_verified(&p).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);
@@ -287,7 +287,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower(&p) {
+            let desc = match vyre_lower::lower_verified(&p).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);
@@ -340,14 +340,14 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc_a = match vyre_lower::lower(&p_a) {
+            let desc_a = match vyre_lower::lower_verified(&p_a).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);
                     exit(2);
                 }
             };
-            let desc_b = match vyre_lower::lower(&p_b) {
+            let desc_b = match vyre_lower::lower_verified(&p_b).map(|lowered| lowered.descriptor) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Lowering failed: {:?}", e);

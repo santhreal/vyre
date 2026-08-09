@@ -3,6 +3,86 @@
 All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ## [Unreleased]
+
+### Added
+
+- `vyre-bench` now keeps command parsing, dashboard generation, and the
+  evolution server behind its default `cli` feature and binary boundary.
+  Library-only consumers can disable default features to omit `clap` and
+  `env_logger` without changing benchmark execution or report APIs.
+- The runtime now reads bounded safetensors headers and sharded indexes without
+  reading tensor payloads, confines shard paths to the checkpoint root, rejects
+  duplicate or unmapped tensors, validates caller-supplied dtype and shape
+  requirements, and streams complete shards against an exact trusted BLAKE3 set
+  before returning an immutable checkpoint identity.
+- The runtime now owns immutable model weights, reusable compiled pipelines,
+  and mutable per-sequence state through one budgeted residency boundary. Cold
+  and warm admission, rollback, cancellation, generation-checked reset,
+  completion, eviction, and manager destruction release resources without
+  exposing stale state.
+- ProgramGraph now composes reusable Programs through canonical typed value
+  identities, explicit consumer and output ports, symbolic or concrete shapes,
+  access and lifetime contracts, and validated retained-value transitions. Its
+  bounded VGR0 v2 wire format embeds existing VIR0 Programs and rejects implicit
+  casts, rank drift, alias conflicts, missing retained inputs, malformed framing,
+  and hostile counts before mutation.
+- ProgramGraph now validates complete compositions and derives canonical
+  topological schedules, inclusive value liveness, and deterministic
+  interval-colored allocation plans. Invocation-local values reuse only
+  nonoverlapping slots, while constants, retained generations, and caller-visible
+  outputs retain dedicated storage.
+- ProgramGraph now derives one versioned, domain-separated BLAKE3 identity from
+  canonical topology and Programs, typed port contracts, artifact schema,
+  validated configuration, exact symbolic bindings, and verified constant
+  identities. Mutable retained contents are excluded, so cache growth reuses
+  compiled artifacts while executable or provenance changes invalidate the key.
+  The v2 identity rejects stale v1 records.
+- `vyre-megakernel` now compiles validated `ProgramGraph`, `ExternalFacts`, and
+  explicit `SearchBudget` requests into v2 `Artifact` and `ArtifactEnvelope`
+  records. Typed graph IDs survive compilation, the compiler owns selected-plan
+  and ABI derivation, constant identities and symbolic bindings are authenticated,
+  artifact size is bounded, and runtime retention policy is excluded from compiler
+  identity.
+- `vyre-lower::lower_verified` is now the sole production Program-to-descriptor
+  boundary. It runs the registered fallible semantic optimizer once, performs
+  lower-IR cleanup, and verifies both descriptor states. Target emitters consume
+  verified descriptors without private optimization pipelines, and
+  `vyre-emit-spirv` is the sole SPIR-V serializer.
+- The neural library now provides gated RMSNorm with float32 accumulation,
+  source-dtype rounding, learned scaling, float32 SiLU gating, and exact
+  last-dimension row isolation. The reference interpreter now executes
+  canonical F16 and BF16 loads, stores, and F32 conversions with
+  round-to-nearest-even semantics while preserving raw element-byte APIs.
+- The neural library now provides last-dimension L2 normalization for grouped
+  query and key heads. It accumulates sum-of-squares in F32, applies epsilon
+  inside the canonical inverse-square-root contract, isolates rows exactly, and
+  converts output once to F32, F16, or BF16.
+- The neural library now executes floating channel-major depthwise causal
+  convolution with exact left padding, masks, bias, SiLU, F16/BF16 conversion,
+  and output truncation. A short-chunk route emits an explicit next-state
+  generation whose outputs and tail match full prefill across arbitrary token
+  partitions and reset.
+- The neural library now executes recurrent gated delta attention with F32 Q/K
+  normalization, grouped heads, scaled queries, exponential decay, sigmoid
+  beta, F32 matrix-state continuation, source-dtype output, and explicit
+  validated prior and next state generations.
+- The neural library now composes F32 query and key normalization,
+  cache-position partial rotary embedding, explicit query-to-KV head grouping,
+  and dynamically bounded causal attention in one typed ProgramGraph. Prompt
+  and cached-decode routes exclude future cache rows and support configurable
+  head ratios, head widths, and rotary dimensions.
+- The neural library now executes a reusable dense gated-MLP ProgramGraph with
+  learned RMSNorm, checkpoint-native output-major gate and up projections, F32
+  SwiGLU math, output-major down projection, and residual addition. F16, BF16,
+  and F32 storage use F32 normalization, projection accumulation, activation,
+  and residual arithmetic with source-dtype boundaries.
+- The neural library now executes chunk-size-64 gated delta prefill with F32
+  cumulative log-decay, a strict lower-triangular solve, initial-state
+  correction, chunk output reconstruction, and explicit final matrix state.
+  F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final
+  structural tile cannot read padding, change state, or appear in truncated
+  output.
+
 ### Fixed
 
 - `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
@@ -10,18 +90,98 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 - Public API checks now discover every committed crate snapshot, parse exact
   package names, use dependency-noise-free output, and reject ordinary snapshot
   updates that remove or change an existing item.
-- Empty QK-gain tensor shapes now declare a zero-byte output range instead of an
-  unknown-size backend allocation, while overflowing positive shapes fail closed
-  with an actionable trap program instead of wrapping their element count.
-- Grouped-query attention now composes the canonical max, normalization-sum, and
-  weighted-write primitives with explicit KV-head bases. Overflowing row or
-  element counts fail with a sharding error before buffer declarations are built.
+- Empty QK-gain tensor shapes now declare a zero-byte output range instead of
+  an unknown-size backend allocation, while overflowing positive shapes fail
+  closed with an actionable trap program instead of wrapping their element
+  count.
+- Grouped-query attention now composes the canonical max, normalization-sum,
+  and weighted-write primitives with explicit KV-head bases. Overflowing row or
+  element counts fail with a sharding error before buffer declarations are
+  built.
 - WGPU resident dispatch now splits `GridSync` programs at launch boundaries
   before compilation, preventing oversized resident fixed-point grids from
   deadlocking inside a software global barrier.
 - The WGPU stream-sharding error is now nameable as
   `engine::multi_gpu::StreamShardError` without changing existing signatures.
-- Workspace documentation now resolves NFA conversion and megakernel table links.
+- Workspace documentation now resolves NFA conversion and megakernel table
+  links.
+- The reduction benchmark now measures atomic-scalar and workgroup-tree sums on
+  the same GPU at 32 and 1,048,576 elements. It verifies both routes exactly,
+  selects the measured winner per size, and records contention and barrier
+  counters. NVIDIA idle clocks no longer invalidate a cold, low-utilization
+  microbenchmark as thermal instability.
+- V055 now accepts a post-barrier loop exit only when its full return path is
+  workgroup-uniform. It derives same-address loads from an acquiring barrier
+  and rejects intervening writes, divergent indices, atomics, and
+  lane-dependent guards. The DCE fixpoint loop therefore removes one redundant
+  barrier per iteration without weakening the unsafe-exit rejection.
+- Public API snapshots now cover every workspace package whose Cargo manifest
+  permits publication, including CUDA and every emitter/runtime library. The
+  manifest-derived gate rejects both missing snapshots and stale snapshots for
+  packages that no longer publish.
+- Removed the unreachable `vyre-bench` dataflow baseline module whose
+  undeclared feature could never be enabled and whose engine dependency does
+  not exist in this workspace. Benchmark feature guards now have a manifest
+  agreement gate, so a hidden undeclared case cannot recur.
+- Regex DFA replay now gives open-ended repetitions an explicit finite policy
+  instead of treating their minimum as a maximum. Whole-buffer variable-length
+  matches derive exact starts from candidate origins, and region evidence
+  returns one longest extent per pattern and origin.
+- Weighted paged-corpus scans now expose per-device timing and byte balance.
+  The physical two-adapter benchmark verifies exact single-device parity and
+  records paired end-to-end speedup, topology, staging overhead, and raw
+  samples.
+- Package readiness now validates unpublished, version-matched release
+  dependencies through local registry patches after Cargo normalizes path
+  dependencies for packaging. Cross-repository `weirflow` archive evidence now
+  records its real files, examples, Rust sources, and file-list digest.
+- Workspace crate ownership now comes from one manifest-checked registry. The
+  tier gate rejects missing crates, undeclared production edges, and stale
+  generated graph or ownership guides, while planned compiler boundaries stay
+  visibly separate from current workspace members.
+- Testing guides are now generated for all 36 workspace members from Cargo
+  features and targets plus maintained hardware, evidence, skip, and failure
+  metadata. The documentation gate rejects missing, orphaned, or stale guides.
+- Every workspace crate README now carries a manifest-backed contract for
+  purpose, boundaries, a runnable example, features, errors, testing, release
+  status, and ownership. Retired 0.4.x package claims and README drift fail the
+  documentation gate.
+- Operation documentation now has one generated JSON authority covering every
+  linked library, primitive, intrinsic, and runtime dialect operation.
+  Schema-derived inventories and subsystem catalogs expose exact tiers,
+  categories, program or dialect signatures, Cargo feature routes, oracles,
+  backend support evidence, algebraic laws, composition chains, and counts.
+- The root README now derives every workspace crate's publication and support
+  status from manifests and maintained metadata. Operation tier counts come
+  from the canonical operation schema, backend claims come from executable
+  backend evidence, and the architecture identifies Metal as Apple-active
+  instead of planned.
+- Architecture guides now use the generated 36-crate dependency graph, joined
+  operation registries, CUDA-first backend evidence, typed cross-program
+  composition, and explicit runtime/compiler/driver megakernel boundaries. The
+  earlier device-bytecode-interpreter RFC is retained as superseded rationale.
+- Documentation coverage now reports measured gates instead of universal
+  completeness. Public guides distinguish generic consumers from named
+  integrations, and the documentation gate rejects missing or gitignored
+  repository inputs hidden in code spans and shell examples.
+- The documentation matrix now covers every indexed public document and
+  workspace crate README. Each row records audience, owner, authority, source
+  artifacts, verification date, executable examples, version coherence, support
+  status, and claim-evidence blockers.
+- Every current public guide is now revalidated for Vyre 0.7.2. Historical
+  architecture, migration, release, operation, and testing documents are
+  explicitly archived or superseded, generated views identify their source, and
+  crate-local paths remain reproducible in a clean checkout.
+- Release operations now use one runbook and one generated checklist derived
+  from release-train versions, repositories, package groups, tags, approval
+  actions, and validated changelog fragments. The guarded launcher pushes
+  candidate tags before publication, final tags afterward, and records
+  completion only after external actions succeed.
+- Command-line documentation now inventories and executes all 12 workspace
+  binaries and 84 subcommands, publishes exact help, exit-code, environment,
+  configuration, hardware, and failure contracts in crate READMEs, and gates
+  drift in documentation CI. The vyre-wgpu demo is documented and exercised on
+  the real GPU lane, while helper --help routes are side-effect free.
 
 ## [0.7.1] - 2026-08-01
 
@@ -1394,13 +1554,14 @@ what makes the widening unsafe, and the fix.
   GPU dispatch parity sample, and adversarial coverage (60 fixtures + proptest).
 
 - **`vyre-runtime`  -  persistent megakernel + `io_uring` NVMe streaming.**
-  The GPU becomes a VIR0 bytecode interpreter that loops forever reading
-  slots the host publishes into a ring. Linux-only NVMe zero-copy via raw
-  `io_uring_setup` + mmap of SQ/CQ rings, with a `uring-cmd-nvme` feature
-  for `IORING_OP_URING_CMD` passthrough (kernel 6.0+). Three-buffer
-  layout (control / ring / debug_log), 256-lane × N-workgroup sharding,
-  opcode extension hook for vendor intrinsics, per-tenant authorization
-  masks, atomic `done_count` counter, and a PRINTF debug channel.
+  Persistent megakernel runtime loops on host-fed ring slots for typed
+  Programs (not a general VIR bytecode interpreter). Linux-only NVMe
+  zero-copy via raw `io_uring_setup` + mmap of SQ/CQ rings, with a
+  `uring-cmd-nvme` feature for `IORING_OP_URING_CMD` passthrough
+  (kernel 6.0+). Three-buffer layout (control / ring / debug_log),
+  256-lane × N-workgroup sharding, opcode extension hook for vendor
+  intrinsics, per-tenant authorization masks, atomic `done_count`
+  counter, and a PRINTF debug channel.
 - **`vyre-libs`  -  Category A composition ecosystem.** Pure-IR
   compositions over `vyre-ops` primitives (`math`, `nn`, `matching`,
   `crypto`). No raw shader source  -  every library function is a
@@ -1429,6 +1590,7 @@ what makes the widening unsafe, and the fix.
   *finite literal*, matching the foundation `simplify_fma` guard (one
   auditable contract via the new `ScalarLiteral::is_finite_numeric`).
   Regression test asserts `Fma(0.0, inf, c)` is not folded.
+
 - **Descriptor LICM hoisted convergent subgroup collectives out of loops**  -
   `SubgroupBallot/Shuffle/Broadcast/Reduce` were classified hoistable. Their
   result depends on the participating-lane set, so lifting one out of a loop
@@ -1437,6 +1599,7 @@ what makes the widening unsafe, and the fix.
   `expr_is_observably_free` gate; `SubgroupLocalId`/`SubgroupSize` stay
   hoistable as per-lane loop-invariant constants. Regression test asserts a
   `subgroupAdd` of a loop-invariant value stays inside the loop.
+
 - **Loop fusion fused across a compare-exchange `expected` cross-loop read**  -
   `collect_vars_in_expr` walked an atomic's `index` and `value` but dropped the
   CAS `expected` operand, so a fusion that reordered a scalar the `expected`

@@ -6,7 +6,7 @@
 //!
 //! Each test:
 //! 1. Builds a vyre `Program` with a specific control-flow shape.
-//! 2. Runs `vyre::optimize` → `vyre_lower::lower_for_emit`.
+//! 2. Runs `vyre_lower::lower_verified`.
 //! 3. Calls `vyre_emit_naga::emit` to produce a `naga::Module`.
 //! 4. Calls `naga::valid::Validator` with all flags + capabilities.
 //! 5. Asserts validation succeeds (no NotInScope, no DanglingResultRef,
@@ -18,10 +18,9 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn assert_emits_clean(prog: Program, label: &str) {
-    // lower_for_emit calls prepare_program_for_emit internally,
-    // which runs the optimizer. Pass the original Program.
-    let lk = vyre_lower::lower_for_emit(&prog)
-        .unwrap_or_else(|e| panic!("{label}: lower_for_emit failed: {e}"));
+    // Verified lowering owns semantic optimization and descriptor cleanup.
+    let lk = vyre_lower::lower_verified(&prog)
+        .unwrap_or_else(|e| panic!("{label}: lower_verified failed: {e}"));
     let module = vyre_emit_naga::emit(&lk.descriptor)
         .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
     let res = naga::valid::Validator::new(
@@ -409,7 +408,7 @@ fn dump_c11_lexer_naga() {
         "out_counts",
         256,
     );
-    let lk = vyre_lower::lower_for_emit(&prog).expect("c11_lexer lower_for_emit must succeed");
+    let lk = vyre_lower::lower_verified(&prog).expect("c11_lexer lower_verified must succeed");
     let module = vyre_emit_naga::emit(&lk.descriptor).expect("c11_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(
         &module,

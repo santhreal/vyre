@@ -1,5 +1,5 @@
 //! Two-dimensional integer oracle differential: (expression shape × runtime
-//! input value). `optimizer::pre_lowering::optimize` must preserve the
+//! input value). `optimizer::optimize` must preserve the
 //! reference-interpreter result of every integer program for EVERY input value,
 //! not merely for one.
 //!
@@ -25,7 +25,7 @@
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering as optimize;
+use vyre_foundation::optimizer as optimize;
 use vyre_reference::value::Value;
 
 /// The single runtime scalar every generated program reads. Keeping the index a
@@ -154,7 +154,8 @@ proptest! {
         rand_val in any::<u32>(),
     ) {
         let program = program_for(expr);
-        let optimized = optimize::optimize(program.clone());
+        let optimized =
+            optimize::optimize(program.clone()).expect("registered optimizer must converge");
         for &v in PROBES {
             assert_parity_at(&program, &optimized, v)?;
         }
@@ -185,7 +186,8 @@ fn optimize_preserves_nested_shift_div_mod_rotate_for_odd_inputs() {
         Expr::rotate_left(inb, Expr::u32(7)),
     );
     let program = program_for(nest);
-    let optimized = optimize::optimize(program.clone());
+    let optimized =
+        optimize::optimize(program.clone()).expect("registered optimizer must converge");
 
     for &v in PROBES {
         let inputs = [Value::U32(v)];

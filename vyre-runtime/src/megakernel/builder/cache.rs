@@ -1,5 +1,5 @@
 use super::{
-    default_buffers, optimize_megakernel_program, persistent_body_with_io, wrap_megakernel_program,
+    default_buffers, persistent_body_with_io, prepare_megakernel_program, wrap_megakernel_program,
     wrap_persistent_megakernel_program,
 };
 use rustc_hash::FxHashMap;
@@ -190,7 +190,7 @@ pub(super) fn cached_empty_sharded_once_control_report_program_shared(
     for buffer in buffers.iter_mut().skip(1) {
         buffer.output_byte_range = Some(0..0);
     }
-    let program = Arc::new(optimize_megakernel_program(Program::wrapped(
+    let program = Arc::new(prepare_megakernel_program(Program::wrapped(
         buffers,
         [workgroup_size_x, 1, 1],
         persistent_body_with_io(workgroup_size_x, &[], false),

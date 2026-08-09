@@ -7,12 +7,12 @@
 
 use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::optimizer as optimize;
 use vyre_foundation::optimizer::passes::{
     autotune::Autotune, const_fold::ConstFold, dead_buffer_elim::DeadBufferElim, fusion::Fusion,
     normalize_atomics::NormalizeAtomicsPass, strength_reduce::StrengthReduce,
     vectorization::Vectorization,
 };
-use vyre_foundation::optimizer::pre_lowering as optimize;
 use vyre_foundation::optimizer::{PassScheduler, ProgramPassKind};
 use vyre_reference::value::Value;
 
@@ -175,17 +175,19 @@ proptest! {
     fn full_optimize_is_idempotent_on_canonical_wire(program in program_strategy()) {
         let ref_original = run_reference(&program)
             .expect("Fix: generated original program must run on the reference interpreter");
-        let once = optimize::optimize(program);
+        let once = optimize::optimize(program).expect("registered optimizer must converge");
         let wire_once = once
             .to_wire()
             .unwrap_or_else(|e| panic!("Fix: optimize output must encode: {e}"));
-        let twice = optimize::optimize(once.clone());
+        let twice =
+            optimize::optimize(once.clone()).expect("registered optimizer must converge");
         let wire_twice = twice
             .to_wire()
             .unwrap_or_else(|e| panic!("Fix: second optimize must encode: {e}"));
         prop_assert_eq!(&wire_once, &wire_twice);
 
-        let thrice = optimize::optimize(twice.clone());
+        let thrice =
+            optimize::optimize(twice.clone()).expect("registered optimizer must converge");
         let wire_thrice = thrice
             .to_wire()
             .unwrap_or_else(|e| panic!("Fix: third optimize must encode: {e}"));
@@ -211,7 +213,7 @@ fn optimize_then_wire_roundtrip_preserves_program_smoke() {
         Expr::mul(Expr::u32(3), Expr::u32(4)),
         Expr::sub(Expr::u32(10), Expr::u32(2)),
     ));
-    let optimized = optimize::optimize(program);
+    let optimized = optimize::optimize(program).expect("registered optimizer must converge");
     let bytes = optimized
         .to_wire()
         .expect("Fix: optimized smoke program must encode");

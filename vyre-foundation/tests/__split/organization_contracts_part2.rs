@@ -320,7 +320,6 @@ fn foundation_inline_test_modules_are_baselined() {
         "src/optimizer/passes/memory/store_to_load_forward.rs",
         "src/optimizer/program_soa.rs",
         "src/optimizer/effect_lattice.rs",
-        "src/optimizer/pre_lowering.rs",
         "src/optimizer/scheduler/mod.rs",
         "src/execution_plan/fusion/helpers.rs",
         "src/execution_plan/memory_budget.rs",

@@ -40,7 +40,7 @@ fn dispatch_and_read_first_word(program: &Program, input_bytes: Vec<u8>) -> u32 
 }
 
 /// Like [`dispatch_and_read_first_word`] but routes the program through
-/// the same `vyre_foundation::optimizer::pre_lowering::optimize` pass
+/// the same `vyre_foundation::optimizer::optimize` pass
 /// that `cat_a_gpu_differential::lower_for_gpu` uses. The catalog
 /// failure cases hit that path; pure direct dispatch does not.
 fn dispatch_and_read_first_word_lowered(program: &Program, input_bytes: Vec<u8>) -> u32 {
@@ -54,7 +54,8 @@ fn dispatch_and_read_first_word_with_lowering(
 ) -> u32 {
     let lowered;
     let prog = if lower {
-        lowered = vyre_foundation::optimizer::pre_lowering::optimize(program.clone());
+        lowered = vyre_foundation::optimizer::optimize(program.clone())
+            .expect("registered optimizer must converge");
         &lowered
     } else {
         program

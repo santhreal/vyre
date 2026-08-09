@@ -3,7 +3,7 @@
 #![cfg(feature = "c-parser")]
 
 use vyre::ir::{Expr, Program};
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::parsing::c::parse::vast::c11_classify_vast_node_kinds;
 
 #[test]
@@ -20,8 +20,9 @@ fn c_vast_classifier_wire_roundtrip_respects_decode_depth_contract() {
 #[test]
 fn c_vast_classifier_optimizer_is_idempotent() {
     let program = c11_classify_vast_node_kinds("vast_nodes", Expr::u32(9), "out_typed_vast_nodes");
-    let optimized_once = optimize(program);
-    let optimized_twice = optimize(optimized_once.clone());
+    let optimized_once = optimize(program).expect("registered optimizer must converge");
+    let optimized_twice =
+        optimize(optimized_once.clone()).expect("registered optimizer must converge");
     assert_eq!(
         optimized_once,
         optimized_twice,

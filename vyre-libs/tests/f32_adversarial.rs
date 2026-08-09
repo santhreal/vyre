@@ -3,8 +3,8 @@
 #![cfg(all(feature = "nn-attention", feature = "nn-norm"))]
 #![allow(deprecated)]
 use proptest::prelude::*;
-use vyre_foundation::ir::Program;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre::ir::Program;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::fixture_catalog::{all_entries, OpEntry};
 use vyre_reference::value::Value;
 
@@ -32,7 +32,7 @@ fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 
 fn harness_path_outputs(entry: &'static OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let program = (entry.build)();
-    let errors = vyre_foundation::ir::validate(&program);
+    let errors = vyre::ir::validate(&program);
     assert!(
         errors.is_empty(),
         "Fix: {} failed validation on adversarial f32 input: {:?}",
@@ -47,8 +47,9 @@ fn harness_path_outputs(entry: &'static OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<
         .unwrap_or_else(|error| panic!("Fix: {} failed wire encode: {error}", entry.id));
     let decoded = Program::from_wire(&wire)
         .unwrap_or_else(|error| panic!("Fix: {} failed wire decode: {error}", entry.id));
-    let optimized_once = optimize(decoded);
-    let optimized_twice = optimize(optimized_once.clone());
+    let optimized_once = optimize(decoded).expect("registered optimizer must converge");
+    let optimized_twice =
+        optimize(optimized_once.clone()).expect("registered optimizer must converge");
     assert_eq!(
         optimized_once, optimized_twice,
         "Fix: {} optimize() must be idempotent on adversarial f32 input",

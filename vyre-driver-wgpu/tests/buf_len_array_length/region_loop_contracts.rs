@@ -84,9 +84,9 @@ fn buf_len_through_three_region_wraps_for_three_elements() {
 }
 
 #[test]
-fn buf_len_through_three_region_wraps_through_pre_lowering_for_one_element() {
+fn buf_len_through_three_region_wraps_through_optimizer_for_one_element() {
     // The cat_a_gpu_differential test path runs every program through
-    // `vyre_foundation::optimizer::pre_lowering::optimize` before
+    // `vyre_foundation::optimizer::optimize` before
     // dispatch. If buf_len works on the flat or shallow-wrapped path
     // but breaks here, the regression lives in the optimizer pipeline
     // (canonicalize → region_inline → const_fold → loop_unroll →
@@ -95,29 +95,29 @@ fn buf_len_through_three_region_wraps_through_pre_lowering_for_one_element() {
     let observed = dispatch_and_read_first_word_lowered(&program, vec![0x99, 0, 0, 0]);
     assert_eq!(
         observed, 1,
-        "Q3: arrayLength after pre_lowering::optimize on a triple-Region-wrapped Program must report 1 for a 4-byte input, got {observed}. \
-         If this fails while the pre-lowering-skipping tests pass, an optimizer pass is folding `Expr::buf_len` to a constant  -  see ROADMAP.md Q3."
+        "Q3: arrayLength after the registered optimizer on a triple-Region-wrapped Program must report 1 for a 4-byte input, got {observed}. \
+         If this fails while the optimizer-skipping tests pass, an optimizer pass is folding `Expr::buf_len` to a constant."
     );
 }
 
 #[test]
-fn buf_len_through_three_region_wraps_through_pre_lowering_for_three_elements() {
+fn buf_len_through_three_region_wraps_through_optimizer_for_three_elements() {
     let program = deep_region_wrapped_buf_len_program();
     let observed =
         dispatch_and_read_first_word_lowered(&program, vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]);
     assert_eq!(
         observed, 3,
-        "Q3: arrayLength after pre_lowering::optimize on a triple-Region-wrapped Program must report 3 for a 12-byte input, got {observed}."
+        "Q3: arrayLength after the registered optimizer on a triple-Region-wrapped Program must report 3 for a 12-byte input, got {observed}."
     );
 }
 
 #[test]
-fn buf_len_loop_bound_survives_pre_lowering() {
+fn buf_len_loop_bound_survives_optimizer() {
     let program = loop_counting_buf_len_program();
     let observed =
         dispatch_and_read_first_word_lowered(&program, vec![1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0]);
     assert_eq!(
         observed, 3,
-        "Q3: a loop bounded by dynamic buf_len(input) must execute once per bound element after pre_lowering, got {observed}."
+        "Q3: a loop bounded by dynamic buf_len(input) must execute once per bound element after optimization, got {observed}."
     );
 }

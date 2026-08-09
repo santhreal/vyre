@@ -13,7 +13,6 @@ mod types;
 
 pub(crate) use vyre_foundation::lower::LoweringError;
 
-
 /// Map a core IR memory kind to the bind-group index used by compatibility
 /// helpers that still inspect Program buffers.
 #[must_use]

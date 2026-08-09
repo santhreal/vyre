@@ -161,7 +161,12 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
     );
 
     for case in emit_adversarial_corpus::success_cases() {
-        let module = vyre_emit_naga::emit_optimized(&case.descriptor).unwrap_or_else(|err| {
+        let module = vyre_emit_naga::emit(
+            &vyre_lower::verify_then_optimize(&case.descriptor)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap_or_else(|err| {
             panic!(
                 "Fix: `{}` ({:?}) must emit through naga: {err:?}",
                 case.id, case.family
@@ -175,8 +180,12 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 #[test]
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
-        let err = vyre_emit_naga::emit_optimized(&case.descriptor)
-            .expect_err("Fix: rejection corpus case must be rejected by naga emit");
+        let err = vyre_emit_naga::emit(
+            &vyre_lower::verify_then_optimize(&case.descriptor)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
         assert!(
             msg.contains(&case.id) || msg.contains("Fix:") || !msg.is_empty(),
@@ -191,7 +200,12 @@ fn dead_identity_chain_optimized_module_is_no_larger_than_raw() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity")
         .expect("corpus must include adv_dead_identity");
     let raw = vyre_emit_naga::emit(&case.descriptor).expect("raw emit");
-    let optimized = vyre_emit_naga::emit_optimized(&case.descriptor).expect("optimized emit");
+    let optimized = vyre_emit_naga::emit(
+        &vyre_lower::verify_then_optimize(&case.descriptor)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .expect("optimized emit");
     assert!(
         optimized.functions.len() <= raw.functions.len(),
         "Fix: dead identity chain should not grow naga function count after rewrite"
@@ -201,7 +215,12 @@ fn dead_identity_chain_optimized_module_is_no_larger_than_raw() {
 #[test]
 fn multi_binding_preserves_distinct_global_types() {
     let case = emit_adversarial_corpus::case_by_id("adv_multi_binding").unwrap();
-    let module = vyre_emit_naga::emit_optimized(&case.descriptor).unwrap();
+    let module = vyre_emit_naga::emit(
+        &vyre_lower::verify_then_optimize(&case.descriptor)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .unwrap();
     let mut scalar_kinds = std::collections::BTreeSet::new();
     for (_, global) in module.global_variables.iter() {
         if let TypeInner::Array { base, .. } = module.types[global.ty].inner {
@@ -234,7 +253,10 @@ proptest! {
         let cases = emit_adversarial_corpus::success_cases();
         prop_assume!(case_index < cases.len());
         let case = &cases[case_index];
-        let module = vyre_emit_naga::emit_optimized(&case.descriptor)
+        let descriptor = vyre_lower::verify_then_optimize(&case.descriptor)
+            .expect("corpus success case must pass descriptor cleanup")
+            .0;
+        let module = vyre_emit_naga::emit(&descriptor)
             .expect("corpus success case must emit");
         validate_module(&module, case.id);
         assert_eq!(case.outcome, EmitOutcome::Success);

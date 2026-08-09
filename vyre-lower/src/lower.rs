@@ -65,7 +65,7 @@ pub(crate) const WORKGROUP_SLOT_BASE: u32 = 1 << 24;
 /// Returns [`LowerError`] when the input references undeclared buffers,
 /// exceeds the supported structured nesting depth, or uses an IR
 /// construct with invalid operands.
-pub fn lower(program: &Program) -> Result<KernelDescriptor, LowerError> {
+pub(crate) fn lower(program: &Program) -> Result<KernelDescriptor, LowerError> {
     let mut ctx = LowerCtx::new(program)?;
     let mut body = empty_body_with_capacity(estimated_root_op_capacity(program));
     ctx.lower_nodes(program.entry(), &mut body, 0)?;
@@ -915,7 +915,7 @@ impl LowerCtx {
             // ask for a descriptor mapping that must never exist: naming a
             // buffer is not an operation a kernel can perform.
             Expr::BufferRef { buffer } => Err(LowerError::UnsupportedConstruct(format!(
-                "reference to buffer `{buffer}` reached lowering. It is only legal as an argument to a composite op, where inlining consumes it. Fix: route this program through `prepare_program_for_emit` so calls are inlined, and check that the op it is passed to is registered with a composition body."
+                "reference to buffer `{buffer}` reached lowering. It is only legal as an argument to a composite op, where composition expansion consumes it. Fix: route this Program through `vyre_lower::lower_verified` and register the callee's composition body."
             ))),
             other => Err(LowerError::UnsupportedConstruct(format!(
                 "expression `{other:?}` has no KernelDescriptor lowering. Fix: add a descriptor op mapping."
@@ -1325,9 +1325,8 @@ fn fingerprint_id(program: &Program) -> String {
     out
 }
 
-/// Public re-export of the binding-construction shape so emitters can
-/// build descriptors in tests without going through `lower()`.
-pub fn binding_slot(
+/// Binding constructor used by descriptor fixtures in this crate.
+pub(crate) fn binding_slot(
     slot: u32,
     name: impl Into<String>,
     element_type: DataType,
@@ -1345,9 +1344,8 @@ pub fn binding_slot(
     }
 }
 
-/// Public helper for a scalar-store op (used by descriptor-building
-/// tests in this crate and by emitter integration tests).
-pub fn store_global(
+/// Scalar-store constructor used by descriptor fixtures in this crate.
+pub(crate) fn store_global(
     slot_operand_id: u32,
     index_operand_id: u32,
     value_operand_id: u32,
@@ -1359,8 +1357,8 @@ pub fn store_global(
     }
 }
 
-/// Public helper for a u32 literal op.
-pub fn literal_u32(literal_pool_index: u32, result_id: u32) -> KernelOp {
+/// U32 literal constructor used by descriptor fixtures in this crate.
+pub(crate) fn literal_u32(literal_pool_index: u32, result_id: u32) -> KernelOp {
     KernelOp {
         kind: KernelOpKind::Literal,
         operands: vec![literal_pool_index],

@@ -88,7 +88,6 @@
 //! This module is the single source of truth for the vyre public API.
 extern crate self as vyre;
 
-
 /// The vyre Program model.
 ///
 /// This module defines `Program`, the frozen, serializable model that every
@@ -115,8 +114,6 @@ pub use vyre_foundation::soundness;
 /// by backend and emitter implementations.
 /// Public API re-export.
 pub mod lower {
-    /// Canonical Program -> KernelDescriptor lowering entry point.
-    pub use vyre_lower::lower::lower;
     pub use vyre_lower::*;
 }
 
@@ -213,19 +210,11 @@ pub use vyre_foundation::match_result::Match;
 /// Domain-neutral byte-range type.
 pub use vyre_foundation::ByteRange;
 
-/// R2: single canonical pre-lowering optimize entry point.
+/// Canonical fallible semantic optimizer entry point.
 ///
-/// Bundles the canonical pre-lowering pipeline so every consumer wires one
-/// function instead of three. Today consumers separately call
-/// `pre_lowering::optimize`, then `vyre_lower::lower`, then a
-/// backend-specific emit. This wrapper keeps the optimization stage  -
-/// the part that's stable across backends  -  behind one symbol so
-/// adding a new substrate row does not require N consumer changes.
-///
-/// The lowering and emit stages remain backend-specific and are
-/// invoked separately by the chosen `VyreBackend`. This function
-/// returns the optimized `Program` ready to hand to any backend's
-/// `dispatch` / `compile` path.
+/// The foundation registered scheduler is the single owner of semantic
+/// optimization. Lowering and emission consume its result through
+/// `vyre_lower::lower_verified`.
 ///
 /// **N9 substrate composition fingerprint cache.** Repeated identical
 /// inputs (same `program.fingerprint()`) skip the substrate stack
@@ -233,11 +222,9 @@ pub use vyre_foundation::ByteRange;
 /// [`OPTIMIZE_CACHE_CAPACITY`] entries, and uses O(1) fingerprint lookup
 /// with FIFO eviction  -  long-running daemons get the cache without
 /// unbounded memory.
-/// On a cache hit, `optimize` clones the cached `Program` instead of
-/// re-running the (canonicalize + region_inline + scheduler fixpoint
-/// + CSE + DCE + phase-4) pipeline. The substrate stack is purely
-/// functional in `Program`, so caching by structural fingerprint is
-/// safe  -  same input bytes, same output bytes.
+/// On a cache hit, `optimize` clones the cached `Program` instead of rerunning
+/// the registered scheduler. The scheduler is purely functional in `Program`,
+/// so caching by structural fingerprint is safe.
 ///
 /// # Example
 ///
@@ -254,11 +241,7 @@ pub fn optimize(program: Program) -> Result<Program, vyre_foundation::optimizer:
     if let Some(cached) = optimize_cache::get(&key) {
         return Ok(cached);
     }
-    // Use try_optimize so scheduler failures (non-convergence, bad pass
-    // metadata) propagate as structured errors rather than silently returning
-    // an un-optimized program. This makes the Err variant of this function's
-    // Result type reachable for the first time.
-    let optimized = vyre_foundation::optimizer::pre_lowering::try_optimize(program)?;
+    let optimized = vyre_foundation::optimizer::optimize(program)?;
     optimize_cache::put(key, &optimized);
     Ok(optimized)
 }

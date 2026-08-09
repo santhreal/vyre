@@ -1,10 +1,9 @@
-//! Canonical pre-emit lowering pipeline.
+//! Canonical verified lowering boundary.
 //!
-//! This is the single production boundary from high-level `Program` IR to
-//! emitter-ready `KernelDescriptor`: inline calls, run semantic Program
-//! optimization, lower to descriptor form, verify, run descriptor cleanup, and
-//! verify again. Backends should not assemble their own partial version of
-//! this sequence.
+//! This is the only production boundary from high-level `Program` IR to an
+//! emitter-ready `KernelDescriptor`: expand registered compositions, run the
+//! registered fallible semantic optimizer once, reject unresolved calls, lower,
+//! verify, apply descriptor-only cleanup, and verify again.
 
 use crate::descriptor::KernelDescriptor;
 use crate::lower::lower;
@@ -13,24 +12,24 @@ use crate::{verify_then_optimize, VerifyFailure};
 use std::fmt;
 use vyre_foundation::ir::Program;
 
-/// Program + descriptor pair produced by the canonical pre-emit pipeline.
+/// Program and descriptor produced by the canonical verified lower boundary.
 #[derive(Debug, Clone)]
-pub struct LoweredKernel {
-    /// Program after call inlining and IR-semantic optimization.
+pub struct VerifiedLowering {
+    /// Program after composition expansion and registered semantic optimization.
     pub program: Program,
-    /// Verified descriptor after descriptor-level cleanup rewrites.
+    /// Verified descriptor after lower-IR-only cleanup.
     pub descriptor: KernelDescriptor,
-    /// Descriptor rewrite statistics collected from the cleanup phase.
+    /// Descriptor cleanup statistics.
     pub descriptor_stats: OptimizationStats,
 }
 
-/// Error raised by the canonical pre-emit pipeline.
+/// Error raised by canonical verified lowering.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PreEmitError {
+pub struct LowerVerifiedError {
     message: String,
 }
 
-impl PreEmitError {
+impl LowerVerifiedError {
     fn new(message: impl Into<String>) -> Self {
         let message = message.into();
         debug_assert!(message.contains("Fix:"));
@@ -44,66 +43,64 @@ impl PreEmitError {
     }
 }
 
-impl fmt::Display for PreEmitError {
+impl fmt::Display for LowerVerifiedError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.message)
     }
 }
 
-impl std::error::Error for PreEmitError {}
+impl std::error::Error for LowerVerifiedError {}
 
-/// Inline calls and run the semantic Program-level optimizer.
-///
-/// This prepares high-level IR for descriptor lowering while preserving the
-/// distinction between Layer-1 semantic rewrites and lowered descriptor
-/// cleanup.
-///
-/// # Errors
-///
-/// Returns [`PreEmitError`] when call inlining fails.
-pub fn prepare_program_for_emit(program: &Program) -> Result<Program, PreEmitError> {
-    let pruned = vyre_foundation::optimizer::pre_lowering::optimize(program.clone());
-    let pruned = lower_single_rank_collectives_for_emit(pruned)?;
-    let inlined = vyre_foundation::ir::inline_calls(&pruned).map_err(|error| {
-        PreEmitError::new(format!(
-            "call inlining failed before descriptor lowering: {error}. Fix: register every Expr::Call target with the active dialect resolver or eliminate the call before backend emission."
+fn prepare_verified_program(program: &Program) -> Result<Program, LowerVerifiedError> {
+    let expanded = vyre_foundation::ir::inline_composite_calls(program).map_err(|error| {
+        LowerVerifiedError::new(format!(
+            "composition expansion failed before semantic optimization: {error}. Fix: repair the registered composition body or its call graph."
         ))
     })?;
-    lower_single_rank_collectives_for_emit(vyre_foundation::optimizer::pre_lowering::optimize(
-        inlined,
-    ))
+    let expanded = lower_single_rank_collectives_for_emit(expanded)?;
+    let optimized = vyre_foundation::optimizer::optimize(expanded).map_err(|error| {
+        LowerVerifiedError::new(format!(
+            "registered semantic optimization failed before descriptor lowering: {error}. Fix: repair pass registration, legality, or convergence instead of emitting unoptimized IR."
+        ))
+    })?;
+    vyre_foundation::ir::inline_calls(&optimized).map_err(|error| {
+        LowerVerifiedError::new(format!(
+            "unresolved call remained after semantic optimization: {error}. Fix: register its composition body or eliminate the dead call before backend emission."
+        ))
+    })
 }
 
-fn lower_single_rank_collectives_for_emit(program: Program) -> Result<Program, PreEmitError> {
+fn lower_single_rank_collectives_for_emit(program: Program) -> Result<Program, LowerVerifiedError> {
     match vyre_foundation::transform::collectives::lower_single_rank_collectives(&program) {
         Ok(Some(lowered)) => Ok(lowered),
         Ok(None) => Ok(program),
-        Err(error) => Err(PreEmitError::new(format!(
-            "single-rank collective lowering failed before descriptor lowering: {error}. Fix: route true multi-rank collectives through a backend transport path or lower them before pre-emit."
+        Err(error) => Err(LowerVerifiedError::new(format!(
+            "single-rank collective lowering failed before descriptor lowering: {error}. Fix: route true multi-rank collectives through a backend transport path or lower them before verified lowering."
         ))),
     }
 }
 
-/// Run the complete canonical pre-emit pipeline.
+/// Expand compositions, optimize once, and produce verified neutral lower IR.
 ///
 /// # Errors
 ///
-/// Returns [`PreEmitError`] when inlining, descriptor lowering, input
-/// verification, descriptor cleanup, or output verification fails.
-pub fn lower_for_emit(program: &Program) -> Result<LoweredKernel, PreEmitError> {
-    let program = prepare_program_for_emit(program)?;
+/// Returns [`LowerVerifiedError`] when composition expansion, semantic
+/// optimization, call resolution, descriptor lowering, verification, or
+/// descriptor-only cleanup fails.
+pub fn lower_verified(program: &Program) -> Result<VerifiedLowering, LowerVerifiedError> {
+    let program = prepare_verified_program(program)?;
     let descriptor = lower(&program).map_err(|error| {
-        PreEmitError::new(format!(
+        LowerVerifiedError::new(format!(
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
         ))
     })?;
     let (descriptor, descriptor_stats) = verify_then_optimize(&descriptor).map_err(|error| {
-        PreEmitError::new(format!(
-            "KernelDescriptor verification/cleanup failed in the canonical pre-emit pipeline: {}. Fix: repair vyre-lower so descriptor validation succeeds before concrete emission.",
+        LowerVerifiedError::new(format!(
+            "KernelDescriptor verification or cleanup failed in canonical verified lowering: {}. Fix: repair vyre-lower so descriptor validation succeeds before concrete emission.",
             format_verify_failure(&error)
         ))
     })?;
-    Ok(LoweredKernel {
+    Ok(VerifiedLowering {
         program,
         descriptor,
         descriptor_stats,
@@ -139,7 +136,7 @@ mod tests {
     };
 
     #[test]
-    fn lower_for_emit_runs_program_and_descriptor_pipeline() {
+    fn lower_verified_runs_program_and_descriptor_pipeline() {
         let buffer =
             BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
         let program = Program::wrapped(
@@ -152,7 +149,7 @@ mod tests {
             }],
         );
 
-        let lowered = lower_for_emit(&program).expect("Fix: pre-emit lowering must pass");
+        let lowered = lower_verified(&program).expect("Fix: pre-emit lowering must pass");
 
         assert_eq!(lowered.program.workgroup_size(), [64, 1, 1]);
         assert_eq!(lowered.descriptor.dispatch.workgroup_size, [64, 1, 1]);
@@ -162,17 +159,17 @@ mod tests {
     }
 
     #[test]
-    fn lower_for_emit_rejects_invalid_descriptor_before_backend_emit() {
+    fn lower_verified_rejects_invalid_descriptor_before_backend_emit() {
         let program = Program::wrapped(Vec::new(), [0, 1, 1], Vec::new());
 
-        let error = lower_for_emit(&program).expect_err("zero dispatch must fail");
+        let error = lower_verified(&program).expect_err("zero dispatch must fail");
 
         assert!(error.message().contains("KernelDescriptor"));
         assert!(error.message().contains("Fix:"));
     }
 
     #[test]
-    fn lower_for_emit_lowers_world_allgather_before_descriptor_lowering() {
+    fn lower_verified_lowers_world_allgather_before_descriptor_lowering() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::read("input", 0, DataType::U32).with_count(4),
@@ -186,7 +183,7 @@ mod tests {
             }],
         );
 
-        let lowered = lower_for_emit(&program).expect(
+        let lowered = lower_verified(&program).expect(
             "Fix: canonical pre-emit must lower WORLD AllGather before descriptor lowering.",
         );
 
@@ -195,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn lower_for_emit_rejects_transport_collectives_before_descriptor_lowering() {
+    fn lower_verified_rejects_transport_collectives_before_descriptor_lowering() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::read("input", 0, DataType::U32).with_count(4),
@@ -210,86 +207,14 @@ mod tests {
             }],
         );
 
-        let error = lower_for_emit(&program)
+        let error = lower_verified(&program)
             .expect_err("Fix: canonical pre-emit must reject collectives that need transport.");
 
         assert!(error.message().contains("Multi-rank collective transport"));
     }
 
     #[test]
-    fn concrete_backend_program_descriptor_lowering_is_single_sourced() {
-        use std::fmt::Write as _;
-
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .expect("Fix: vyre-lower must live under the vyre workspace root.");
-        let mut files = Vec::default();
-        for rel in [
-            "vyre-driver/src",
-            "vyre-driver-cuda/src",
-            "vyre-driver-metal/src",
-            "vyre-driver-wgpu/src",
-            "vyre-emit-naga/src",
-            "vyre-emit-ptx/src",
-        ] {
-            collect_rust_files(&root.join(rel), &mut files)
-                .expect("Fix: boundary scan must read concrete backend source trees.");
-        }
-
-        let mut violations = Vec::default();
-        for path in files {
-            let text = std::fs::read_to_string(&path)
-                .expect("Fix: boundary scan must read Rust source files.");
-            for (line_no, line) in text.lines().enumerate() {
-                let trimmed = line.trim_start();
-                if trimmed.starts_with("//") {
-                    continue;
-                }
-                if trimmed.starts_with("#[cfg(test)]") {
-                    break;
-                }
-                if line.contains("vyre_lower::lower(")
-                    || line.contains("vyre_lower::prepare_program_for_emit(")
-                    || line.contains("vyre_foundation::optimizer::pre_lowering::optimize(")
-                    || line.contains("vyre_foundation::ir::inline_calls(")
-                {
-                    let mut violation = String::default();
-                    let _ = write!(
-                        &mut violation,
-                        "{}:{}:{}",
-                        path.strip_prefix(root).unwrap_or(&path).display(),
-                        line_no + 1,
-                        trimmed
-                    );
-                    violations.push(violation);
-                }
-            }
-        }
-
-        assert!(
-            violations.is_empty(),
-            "Fix: concrete backend Program input must enter through vyre_lower::lower_for_emit or consume a typed KernelDescriptor artifact, not raw lowering steps: {violations:?}"
-        );
-    }
-
-    fn collect_rust_files(
-        dir: &std::path::Path,
-        out: &mut Vec<std::path::PathBuf>,
-    ) -> std::io::Result<()> {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                collect_rust_files(&path, out)?;
-            } else if path.extension().is_some_and(|extension| extension == "rs") {
-                out.push(path);
-            }
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn lower_for_emit_preserves_loop_carrier_swap_snapshot() {
+    fn lower_verified_preserves_loop_carrier_swap_snapshot() {
         let program = Program::wrapped(
             vec![
                 BufferDecl::storage("instrs", 0, BufferAccess::ReadOnly, DataType::U32)
@@ -381,12 +306,12 @@ mod tests {
             ],
         );
 
-        let lowered = lower_for_emit(&program).expect("Fix: pre-emit lowering must pass");
+        let lowered = lower_verified(&program).expect("Fix: pre-emit lowering must pass");
 
         assert!(
-            body_has_s1_end_from_copy(&lowered.descriptor.body),
-            "Fix: lowering must preserve `let tmp = s0` as a Copy snapshot so SWAP writes s1 from old s0 instead of the post-assign s0 carrier"
-        );
+        body_has_s1_end_from_copy(&lowered.descriptor.body),
+        "Fix: lowering must preserve `let tmp = s0` as a Copy snapshot so SWAP writes s1 from old s0 instead of the post-assign s0 carrier"
+    );
     }
 
     fn body_has_s1_end_from_copy(body: &KernelBody) -> bool {

@@ -54,7 +54,9 @@ fn barrier_program(nested: bool) -> Program {
 /// barrier outright, nested or not, and the loop-nesting rule below would never
 /// be reached.
 fn emit(program: &Program) -> Result<String, String> {
-    let descriptor = vyre_lower::lower(program).map_err(|error| format!("lower: {error:?}"))?;
+    let descriptor = vyre_lower::lower_verified(program)
+        .map(|lowered| lowered.descriptor)
+        .map_err(|error| format!("lower: {error:?}"))?;
     let mut options = PtxEmitOptions::default();
     options.cooperative_grid_sync = true;
     vyre_emit_ptx::emit_with_options(&descriptor, options).map_err(|error| format!("{error:?}"))

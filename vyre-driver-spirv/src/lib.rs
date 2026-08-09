@@ -1,18 +1,18 @@
-//! SPIR-V backend for vyre.
+//! SPIR-V backend adapter for Vyre.
 //!
-//! Reuses the shared naga::Module builder family and emits
-//! SPIR-V rather than WGSL. Intended for consumers targeting Vulkan-compatible
-//! compute pipelines (Vulkan 1.0+, Android NDK compute, desktop Vulkan).
+//! Programs enter through `vyre_lower::lower_verified`; the canonical
+//! `vyre-emit-spirv` writer owns descriptor-to-SPIR-V serialization. This crate
+//! owns backend registration and Vulkan execution only.
 //!
 //! ```no_run
 //! use vyre_driver_spirv::SpirvBackend;
-//! // let module: naga::Module = ...;   // built via shared vyre naga emit
-//! // let words: Vec<u32> = SpirvBackend::emit_spv(&module).unwrap();
+//! use vyre_foundation::ir::Program;
+//!
+//! let words = SpirvBackend::program_to_spv(&Program::empty())?;
+//! # Ok::<(), String>(())
 //! ```
 //!
-//! The crate registers a `BackendRegistration` named `"spirv"` via inventory, so
-//! `vyre::backend::registered_backends()` enumerates it alongside every other
-//! linked backend.
+//! The crate registers a `BackendRegistration` named `"spirv"` through inventory.
 
 // Vulkan driver bindings (`ash::vk::*`) are inherently unsafe FFI;
 // every call site is the boundary between safe vyre code and the Vulkan
@@ -23,11 +23,7 @@
 #![deny(rust_2018_idioms)]
 #![deny(missing_docs)]
 
-/// SPIR-V backend implementation. Contains `SpirvBackend` and the
-/// naga::back::spv glue that turns a `vyre::Program` into SPIR-V
-/// bytes.
-/// SpirV element.
-/// SpirV element.
+/// Canonical lowering and emitter adapter.
 pub mod backend;
 /// Vulkan compute dispatch implementation.
 mod vulkan;
@@ -265,7 +261,7 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 
 /// Op-support set for the SPIR-V backend.
 ///
-/// The SPIRV/naga path supports the same core IR ops as every other vyre backend
+/// The SPIR-V path supports the same core IR ops as every other Vyre backend
 /// (arithmetic, bitwise, control-flow, memory, collectives). Using `core_supported_ops`
 /// here keeps the inventory-registered op set consistent with what the router
 /// sees at runtime. A permanently-empty set here would cause the router to skip

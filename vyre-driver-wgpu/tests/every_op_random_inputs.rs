@@ -13,7 +13,7 @@ use std::sync::OnceLock;
 use proptest::test_runner::{Config, TestRunner};
 use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::fixture_catalog::{all_entries, fp_contract};
 use vyre_reference::value::Value;
 
@@ -95,7 +95,7 @@ fn every_op_random_input_stress() {
         };
         let mut runner = TestRunner::new(config);
 
-        let lowered = optimize(program.clone());
+        let lowered = optimize(program.clone()).expect("registered optimizer must converge");
         let mut op_cases = 0u64;
         let mut op_failures = 0usize;
 

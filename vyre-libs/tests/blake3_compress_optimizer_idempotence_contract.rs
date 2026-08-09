@@ -1,13 +1,14 @@
 //! Optimizer idempotence contract for BLAKE3 compression IR.
 
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::hash::blake3_compress;
 
 #[test]
 fn blake3_compress_pre_lowering_optimizer_is_idempotent() {
     let program = blake3_compress("cv_in", "msg", "params", "cv_out");
-    let optimized_once = optimize(program);
-    let optimized_twice = optimize(optimized_once.clone());
+    let optimized_once = optimize(program).expect("registered optimizer must converge");
+    let optimized_twice =
+        optimize(optimized_once.clone()).expect("registered optimizer must converge");
     assert_eq!(
         optimized_once,
         optimized_twice,

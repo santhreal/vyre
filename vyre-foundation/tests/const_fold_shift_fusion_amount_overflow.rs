@@ -12,7 +12,7 @@
 //! `x << 31`.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering as optimize;
+use vyre_foundation::optimizer as optimize;
 use vyre_reference::value::Value;
 
 /// `out[0] = (in[0] << 16) << 16`. `in[0]` is loaded at runtime so const_fold
@@ -46,7 +46,8 @@ fn const_fold_preserves_double_shift_that_overflows_the_width() {
     let base = vyre_reference::reference_eval(&program, &inputs)
         .expect("unoptimized program must run on the reference interpreter");
 
-    let optimized = optimize::optimize(program.clone());
+    let optimized =
+        optimize::optimize(program.clone()).expect("registered optimizer must converge");
     let opt = vyre_reference::reference_eval(&optimized, &inputs)
         .expect("optimized program must run on the reference interpreter");
 

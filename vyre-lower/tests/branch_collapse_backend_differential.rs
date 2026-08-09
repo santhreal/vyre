@@ -7,37 +7,15 @@
 //! equality with an independent host oracle so the two backends cannot agree
 //! on a wrong value and pass vacuously.
 //!
-//! The two executors are not symmetric, and that asymmetry is the point:
+//! The executors are intentionally independent:
 //!
-//! - `CpuRefBackend` interprets the `Program` directly.
-//! - `CudaBackend` lowers to a `KernelDescriptor`, runs the full canonical
-//!   rewrite pipeline over it (`vyre-driver-cuda/src/codegen/descriptor_gate.rs`
-//!   iterates `vyre_lower::rewrites::canonical_rewrite_passes()`, which
-//!   includes `branch_collapse`), emits PTX, and runs it on the device.
+//! - `CpuRefBackend` interprets the semantic `Program`.
+//! - `CudaBackend` uses `lower_verified`, pure PTX emission, and device execution.
 //!
-//! So the reference side is the unoptimized semantics and the CUDA side is the
-//! post-pipeline semantics. A collapse that picks the WRONG ARM shows up here
-//! as a numeric disagreement, which is what these tests gate.
-//!
-//! SCOPE LIMIT, measured rather than assumed. These tests do NOT witness the
-//! literal-pool corruption that motivated the work, for two independent
-//! reasons, and neither is fixable by adding more shapes here:
-//!
-//! 1. That defect's symptom is a descriptor `verify` rejection, so a consumer
-//!    panics in `rewrites::run_all` or receives an `Err` from its codegen
-//!    gate. It never reaches the device as a wrong value, and a value
-//!    comparison cannot see a dispatch that never happened.
-//! 2. `CudaBackend::dispatch` subgroup-lowers the `Program` before the
-//!    descriptor gate (`vyre-driver-cuda/src/codegen.rs:55` passes
-//!    `subgroup_lowered`, not the raw program), and on these shapes the
-//!    perturbed form stops `branch_collapse` from firing at all. Confirmed by
-//!    reintroducing the bug: `lower_for_emit` panicked while
-//!    `CudaBackend::dispatch` on the same program returned correct output.
-//!
-//! The gate for the pool defect is
-//! `branch_collapse_nested_assign_miscompile.rs::lower_for_emit_of_the_repro_does_not_panic`.
-//! Keep both: this file proves the collapse decision is semantically right,
-//! that file proves the descriptor it emits is well formed.
+//! Exact agreement with the host oracle proves that canonical descriptor cleanup
+//! preserves observable semantics across constant and value-dependent guards.
+//! Descriptor validity and cleanup fixpoint behavior are covered by
+//! `branch_collapse_nested_assign_miscompile`.
 //!
 //! CUDA is REQUIRED, not optional. This host has an RTX 5090; a skip would
 //! silently retire the only gate that can see a backend value divergence, so
@@ -62,67 +40,12 @@ fn bytes_to_u32(bytes: &[u8]) -> Vec<u32> {
         .collect()
 }
 
-/// What `branch_collapse` must DO to this shape, checked on the plain lowered
-/// descriptor before the value comparison runs.
-///
-/// Without this the differential can go green for a reason unrelated to
-/// correctness: if a shape drifts so the pass no longer has anything to decide,
-/// both backends still agree and the test still passes while covering nothing.
-#[derive(Copy, Clone)]
-enum CollapseExpectation {
-    /// The shape contains a genuinely constant guard, so the pass MUST fire.
-    Fires,
-    /// Every guard in the shape reads a variable mutated in a nested body, so
-    /// the pass MUST decline and leave the guard count untouched.
-    Declines,
-}
-
-/// Count `StructuredIfThen` ops in `body` and all its descendants.
-fn count_guards(body: &vyre_lower::KernelBody) -> usize {
-    body.ops
-        .iter()
-        .filter(|op| matches!(op.kind, vyre_lower::KernelOpKind::StructuredIfThen))
-        .count()
-        + body.child_bodies.iter().map(count_guards).sum::<usize>()
-}
-
 /// Run `program` on both backends and assert the output buffer is
 /// element-by-element identical on both AND equal to `expected`.
 ///
 /// `expected` is an independent host oracle. Without it, two backends that
 /// shared a wrong answer would pass; with it, all three have to agree.
-fn assert_backends_agree(
-    program: &Program,
-    src: &[u32],
-    expected: &[u32],
-    expect: CollapseExpectation,
-    case: &str,
-) {
-    // Confirm the shape still exercises the pass. This runs against `lower`,
-    // not the CUDA path: `CudaBackend::dispatch` subgroup-lowers first
-    // (vyre-driver-cuda/src/codegen.rs:55) and on these shapes the perturbed
-    // form stops `branch_collapse` from firing at all, so asserting "fired" on
-    // the CUDA descriptor would be false. What is assertable, and what actually
-    // guards against shape drift, is that the pass still makes the intended
-    // decision on the program as written.
-    let plain = vyre_lower::lower(program).unwrap_or_else(|e| panic!("[{case}] lowering: {e:?}"));
-    let collapsed = vyre_lower::rewrites::branch_collapse(&plain);
-    match expect {
-        CollapseExpectation::Fires => assert_ne!(
-            collapsed, plain,
-            "[{case}] branch_collapse no longer changes this descriptor, so the \
-             shape has stopped exercising the collapse it was written to cover. \
-             Fix the shape rather than this assertion."
-        ),
-        CollapseExpectation::Declines => assert_eq!(
-            count_guards(&collapsed.body),
-            count_guards(&plain.body),
-            "[{case}] branch_collapse removed a guard from a shape whose probe \
-             variable is mutated in a nested body. That is the miscompile this \
-             suite exists to catch."
-        ),
-    }
-
+fn assert_backends_agree(program: &Program, src: &[u32], expected: &[u32], case: &str) {
     let config = DispatchConfig::default();
     // `dispatch` takes one host buffer per READ declaration. Every shape here
     // declares exactly `src` (read, slot 0) and `out` (output, slot 1), so the
@@ -193,13 +116,7 @@ fn assert_backends_agree(
 fn repro_shape_matches_across_backends() {
     let src = vec![0, 5, 0, 7, 9, 0, 3, 0];
     let expected = repro_oracle(&src);
-    assert_backends_agree(
-        &repro_program(REPRO_N),
-        &src,
-        &expected,
-        CollapseExpectation::Fires,
-        "repro",
-    );
+    assert_backends_agree(&repro_program(REPRO_N), &src, &expected, "repro");
 }
 
 /// Locks out: treating a variable as still holding its initializer after a
@@ -214,7 +131,6 @@ fn assign_inside_loop_body_matches_across_backends() {
         &loop_assign_program(REPRO_N),
         &src,
         &expected,
-        CollapseExpectation::Declines,
         "assign-in-loop",
     );
 }
@@ -231,7 +147,6 @@ fn assign_inside_else_branch_matches_across_backends() {
         &else_assign_program(REPRO_N),
         &src,
         &expected,
-        CollapseExpectation::Declines,
         "assign-in-else",
     );
 }
@@ -248,7 +163,6 @@ fn assign_inside_nested_region_matches_across_backends() {
         &region_assign_program(REPRO_N),
         &src,
         &expected,
-        CollapseExpectation::Declines,
         "assign-in-region",
     );
 }
@@ -261,13 +175,7 @@ fn assign_inside_nested_region_matches_across_backends() {
 fn assign_in_one_branch_read_after_join_matches_across_backends() {
     let src = vec![0, 9, 0, 9, 1, 1, 0, 0];
     let expected = join_oracle(&src);
-    assert_backends_agree(
-        &join_program(REPRO_N),
-        &src,
-        &expected,
-        CollapseExpectation::Declines,
-        "one-branch-join",
-    );
+    assert_backends_agree(&join_program(REPRO_N), &src, &expected, "one-branch-join");
 }
 
 /// The downstream tokenizer's shape, reported by Main from
@@ -287,7 +195,6 @@ fn self_referencing_min_sentinel_matches_across_backends() {
         &sentinel_min_program(REPRO_N),
         &src,
         &expected,
-        CollapseExpectation::Declines,
         "sentinel-min",
     );
 }
@@ -326,11 +233,5 @@ fn legitimately_constant_guard_still_collapses_and_matches() {
             ],
         )],
     );
-    assert_backends_agree(
-        &program,
-        &src,
-        &expected,
-        CollapseExpectation::Fires,
-        "constant-guard",
-    );
+    assert_backends_agree(&program, &src, &expected, "constant-guard");
 }

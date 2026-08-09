@@ -7,7 +7,7 @@
 //! happens on the first pass and optimize() is idempotent.
 
 use vyre::ir::{Expr, Node};
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_primitives::math::scallop_join_wide::scallop_join_wide;
 
 fn is_trip1(from: &Expr, to: &Expr) -> bool {
@@ -57,8 +57,8 @@ fn count_trip1_loops(nodes: &[Node], free: &mut u32, with_assign: &mut u32) {
 fn scallop_join_wide_optimize_is_idempotent() {
     let program = scallop_join_wide("state", "next", "join_rules", "changed", 2, 2, 4);
 
-    let once = optimize(program.clone());
-    let twice = optimize(once.clone());
+    let once = optimize(program.clone()).expect("registered optimizer must converge");
+    let twice = optimize(once.clone()).expect("registered optimizer must converge");
 
     // The harness invariant: a single optimize() must reach a fixpoint.
     assert_eq!(

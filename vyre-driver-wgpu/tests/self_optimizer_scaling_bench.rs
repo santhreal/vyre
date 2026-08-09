@@ -106,7 +106,7 @@ fn run_cpu_pipeline(p: Program) -> Program {
     // Foundation has multi-step const-fold; the Canonicalize pass's
     // engine runs idempotently. Use the public optimize entry as a
     // proxy for the broader CPU pipeline.
-    let p = vyre_foundation::optimizer::pre_lowering::optimize(p);
+    let p = vyre_foundation::optimizer::optimize(p).expect("registered optimizer must converge");
     cpu_dce(p)
 }
 

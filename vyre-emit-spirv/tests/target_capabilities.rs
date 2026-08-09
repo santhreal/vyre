@@ -18,7 +18,10 @@ fn descriptor(workgroup_size: [u32; 3], ops: Vec<KernelOp>) -> KernelDescriptor 
     }
 }
 
-fn target(workgroup: WorkgroupLimits, subgroup: SubgroupCapabilities) -> EmissionTargetCapabilities {
+fn target(
+    workgroup: WorkgroupLimits,
+    subgroup: SubgroupCapabilities,
+) -> EmissionTargetCapabilities {
     EmissionTargetCapabilities {
         workgroup,
         subgroup,

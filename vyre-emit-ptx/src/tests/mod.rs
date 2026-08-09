@@ -95,7 +95,6 @@ mod barrier;
 mod control_flow;
 mod data_tensor;
 mod memory_vector;
-mod optimized;
 mod preamble;
 mod scalar_ops;
 mod subgroup;

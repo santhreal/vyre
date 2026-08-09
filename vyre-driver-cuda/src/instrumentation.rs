@@ -6,8 +6,6 @@
 
 use std::sync::OnceLock;
 
-pub(crate) const CUDA_CANONICAL_PREEMIT_ENV: &str = "VYRE_CUDA_CANONICAL_PREEMIT";
-pub(crate) const CUDA_DESCRIPTOR_REWRITES_ENV: &str = "VYRE_CUDA_DESCRIPTOR_REWRITES";
 pub(crate) const CUDA_RESIDENT_BORROWED_FALLBACK_ENV: &str = "VYRE_CUDA_RESIDENT_BORROWED_FALLBACK";
 pub(crate) const CUDA_ALLOW_BORROWED_FALLBACK_ENV: &str = "VYRE_CUDA_ALLOW_BORROWED_FALLBACK";
 
@@ -22,17 +20,6 @@ pub(crate) fn cuda_profiler_ranges_enabled() -> bool {
 
 pub(crate) fn cuda_descriptor_audit_enabled() -> bool {
     cached_flag("VYRE_CUDA_DESCRIPTOR_AUDIT", &CUDA_DESCRIPTOR_AUDIT)
-}
-
-pub(crate) fn cuda_canonical_preemit_enabled() -> bool {
-    cached_enabled_default_true(CUDA_CANONICAL_PREEMIT_ENV, &CUDA_CANONICAL_PREEMIT_DISABLED)
-}
-
-pub(crate) fn cuda_descriptor_rewrites_enabled() -> bool {
-    cached_enabled_default_true(
-        CUDA_DESCRIPTOR_REWRITES_ENV,
-        &CUDA_DESCRIPTOR_REWRITES_DISABLED,
-    )
 }
 
 pub(crate) fn cuda_graph_replay_enabled() -> bool {
@@ -61,8 +48,6 @@ static CUDA_STAGE_TRACE: OnceLock<bool> = OnceLock::new();
 static CUDA_NVTX_RANGES: OnceLock<bool> = OnceLock::new();
 static CUDA_PROFILE_RANGES: OnceLock<bool> = OnceLock::new();
 static CUDA_DESCRIPTOR_AUDIT: OnceLock<bool> = OnceLock::new();
-static CUDA_CANONICAL_PREEMIT_DISABLED: OnceLock<bool> = OnceLock::new();
-static CUDA_DESCRIPTOR_REWRITES_DISABLED: OnceLock<bool> = OnceLock::new();
 static CUDA_GRAPH_REPLAY_DISABLED: OnceLock<bool> = OnceLock::new();
 static CUDA_VALIDATE_DISPATCH_DISABLED: OnceLock<bool> = OnceLock::new();
 static CUDA_RESIDENT_BORROWED_FALLBACK_POLICY: OnceLock<ResidentBorrowedFallbackPolicy> =

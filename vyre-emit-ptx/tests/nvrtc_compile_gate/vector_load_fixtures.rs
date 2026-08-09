@@ -82,7 +82,12 @@ pub(crate) fn ptx_for_vector_load_fusion() -> String {
             literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         },
     };
-    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+    vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .unwrap()
 }
 
 pub(crate) fn ptx_for_dynamic_vector_load_fusion() -> String {
@@ -177,5 +182,10 @@ pub(crate) fn ptx_for_dynamic_vector_load_fusion() -> String {
             literals: vec![LiteralValue::U32(4), LiteralValue::U32(1)],
         },
     };
-    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+    vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .unwrap()
 }

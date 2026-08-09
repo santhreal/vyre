@@ -9,7 +9,7 @@
 //! differential (vyre-driver-wgpu cat_a_gpu_differential::diff_universal_registry)
 //! is the end-to-end check.
 
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::math::fft::fft_convolve_circular_complex;
 
 #[test]
@@ -29,7 +29,7 @@ fn fft_convolve_optimizes_without_duplicate_sibling_let() {
 
     // Pre-fix this is where region_inline collapsed two stage-scoped `let
     // u_re_s1_b0_k0` into duplicate siblings.
-    let optimized = optimize(program);
+    let optimized = optimize(program).expect("registered optimizer must converge");
 
     let errors = vyre::ir::validate(&optimized);
     let messages: Vec<String> = errors.iter().map(|e| e.message().to_string()).collect();

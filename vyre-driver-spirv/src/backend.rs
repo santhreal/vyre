@@ -1,14 +1,7 @@
-//! SPIR-V emission via naga::back::spv.
-
-use naga::back::spv;
+//! SPIR-V target adapter over the canonical verified lower boundary and emitter.
 use vyre_foundation::ir::Program;
 
-/// Emit SPIR-V words from a vyre-built naga::Module.
-///
-/// The caller builds the `naga::Module` through the same builder family
-/// that the portable emission path uses (so the kernel body is byte-identical across
-/// substrates up to the back-end writer); this function validates and
-/// writes the SPIR-V blob.
+/// Thin SPIR-V target adapter.
 pub struct SpirvBackend;
 
 impl SpirvBackend {
@@ -21,36 +14,18 @@ impl SpirvBackend {
         Self
     }
 
-    /// Emit SPIR-V words from a validated naga::Module.
+    /// Compile one Program through canonical verified lowering and emission.
     ///
     /// # Errors
-    /// Returns a human diagnostic when the module fails naga validation or
-    /// when the SPIR-V writer rejects a construct.
-    pub fn emit_spv(module: &naga::Module) -> Result<Vec<u32>, String> {
-        let info = naga::valid::Validator::new(
-            naga::valid::ValidationFlags::all(),
-            naga::valid::Capabilities::all(),
-        )
-        .validate(module)
-        .map_err(|e| format!("naga validate failed: {e:?}"))?;
-        let options = spv::Options::default();
-        spv::write_vec(module, &info, &options, None)
-            .map_err(|e| format!("spv write failed: {e:?}"))
-    }
+    ///
+    /// Returns an actionable diagnostic when shared lowering or SPIR-V emission
+    /// rejects the program.
 
-    /// Lower a vyre [`Program`] to SPIR-V words.
-    ///
-    /// The path is `Program → KernelDescriptor → naga::Module → SPIR-V`.
-    /// This is the entry point used by the runtime dispatch path.
-    ///
-    /// # Errors
-    /// Returns a human diagnostic when lowering, validation, or SPIR-V
-    /// writing fails.
     pub fn program_to_spv(program: &Program) -> Result<Vec<u32>, String> {
-        let desc =
-            vyre_lower::lower::lower(program).map_err(|e| format!("vyre lower failed: {e:?}"))?;
-        let module = vyre_emit_naga::emit(&desc).map_err(|e| format!("naga emit failed: {e:?}"))?;
-        Self::emit_spv(&module)
+        let lowered = vyre_lower::lower_verified(program)
+            .map_err(|error| format!("verified lowering failed before SPIR-V emission: {error}"))?;
+        vyre_emit_spirv::emit(&lowered.descriptor)
+            .map_err(|error| format!("SPIR-V emission failed: {error}"))
     }
 
     /// Compute the substrate VSA fingerprint of a vyre Program. Same

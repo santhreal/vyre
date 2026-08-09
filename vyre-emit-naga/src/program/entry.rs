@@ -1,8 +1,8 @@
 //! Compatibility entry points for callers that still hand this crate a
 //! high-level `Program`.
 //!
-//! These functions immediately route through `vyre-lower::lower_for_emit` and
-//! the descriptor emitter. They do not maintain a second Program-to-Naga
+//! These functions route through `vyre_lower::lower_verified` and the
+//! descriptor emitter.
 //! lowering path.
 
 use std::sync::Arc;
@@ -25,10 +25,7 @@ use super::{bind_group_for, LoweringError};
 /// Returns [`LoweringError`] when the IR references unsupported types,
 /// buffers, statements, or expressions, or when Naga validation rejects the
 /// emitted module.
-pub fn emit_module(
-    program: &Program,
-    workgroup_size: [u32; 3],
-) -> Result<Module, LoweringError> {
+pub fn emit_module(program: &Program, workgroup_size: [u32; 3]) -> Result<Module, LoweringError> {
     emit_module_impl(program, workgroup_size, None)
 }
 
@@ -52,7 +49,7 @@ fn emit_module_impl(
     // Fail closed on the ONE IR-validity hazard that otherwise BOTH silently
     // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
     // lowers to integer `a*b+c`, not fused-multiply-add (a Law-10 silent
-    // miscompile). `lower_for_emit` runs dead-code elimination, so an unused
+    // miscompile). `lower_verified` runs dead-code elimination, so an unused
     // such node is stripped before any descriptor-level check could see it
     // the original Program node tree is the only stage that observes it. We
     // deliberately do NOT run full `vyre_foundation::validate` here: every
@@ -90,9 +87,9 @@ fn emit_module_impl(
             )));
         }
     }
-    let mut lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
+    let mut lowered = vyre_lower::lower_verified(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "canonical pre-emit lowering failed before Naga Program compatibility emission: {error}. Fix: route callers through vyre-lower::lower_for_emit and descriptor emit instead of direct Program emission."
+            "verified lowering failed before Naga Program compatibility emission: {error}. Fix: route callers through vyre_lower::lower_verified and descriptor emission."
         ))
     })?;
     lowered.descriptor.dispatch.workgroup_size = workgroup_size;
@@ -134,9 +131,9 @@ pub fn emit_prepared_module_with_capabilities(
 /// Returns a lowering error when call inlining fails or the rewritten program
 /// cannot preserve the backend's buffer-access invariants.
 pub fn prepared_program(program: &Program) -> Result<Program, LoweringError> {
-    let lowered = vyre_lower::lower_for_emit(program).map_err(|error| {
+    let lowered = vyre_lower::lower_verified(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "canonical pre-emit lowering failed before Naga Program compatibility preparation: {error}. Fix: route Program compatibility helpers through vyre-lower::lower_for_emit instead of local inlining or optimizer passes."
+            "verified lowering failed before Naga Program compatibility preparation: {error}. Fix: route Program compatibility helpers through vyre_lower::lower_verified instead of local inlining or optimizer passes."
         ))
     })?;
     let program = lowered.program;

@@ -84,9 +84,7 @@ pub fn validate_workgroup_size(
         }
     }
 
-    let actual = workgroup_size
-        .into_iter()
-        .fold(1_u32, u32::saturating_mul);
+    let actual = workgroup_size.into_iter().fold(1_u32, u32::saturating_mul);
     if actual > limits.max_invocations {
         violations.push(WorkgroupLimitViolation::InvocationsExceeded {
             actual,
@@ -97,9 +95,7 @@ pub fn validate_workgroup_size(
 }
 
 /// Subgroup features required by a descriptor or supported by a target.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SubgroupCapabilities {
     /// Subgroup identity and size builtins.
     pub basic: bool,

@@ -36,8 +36,7 @@ pub fn analyze(desc: &KernelDescriptor) -> SubgroupCapabilityReport {
 mod tests {
     use super::*;
     use vyre_lower::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        LiteralValue,
+        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
     };
 
     fn empty_desc() -> KernelDescriptor {

@@ -61,13 +61,12 @@ pub fn compile_with_resolver(
             .map_err(|error| CompileError::BackendError(format!("{error:?}")))?,
         None => program.clone(),
     };
-    let optimized = vyre_foundation::ir::optimize(inlined);
-    let vsa_fingerprint = vyre_driver::program_vsa_fingerprint(&optimized);
+    let vsa_fingerprint = vyre_driver::program_vsa_fingerprint(&inlined);
 
-    let dispatch = derive_dispatch_grid(&optimized)?;
+    let dispatch = derive_dispatch_grid(&inlined)?;
     let driver_dispatch = vyre_driver::DispatchConfig::default();
     let target_bytes =
-        vyre_driver::aot::emit_aot_target(target.aot_target_id(), &optimized, &driver_dispatch)
+        vyre_driver::aot::emit_aot_target(target.aot_target_id(), &inlined, &driver_dispatch)
             .map_err(|error| match error {
                 vyre_driver::BackendError::UnsupportedFeature { .. } => {
                     CompileError::TargetNotEnabled(target)
@@ -75,7 +74,7 @@ pub fn compile_with_resolver(
                 other => CompileError::BackendError(other.to_string()),
             })?;
 
-    let neutral = compile_neutral_artifact(&optimized)?;
+    let neutral = compile_neutral_artifact(&inlined)?;
     let entry_node = neutral
         .nodes()
         .iter()
@@ -86,7 +85,7 @@ pub fn compile_with_resolver(
                 "canonical single-entry graph did not produce its `main` node".to_string(),
             )
         })?;
-    let bindings = collect_resource_bindings(&optimized, &neutral)?;
+    let bindings = collect_resource_bindings(&inlined, &neutral)?;
     let entry = TargetEntryPoint {
         name: "main".to_string(),
         node: entry_node,

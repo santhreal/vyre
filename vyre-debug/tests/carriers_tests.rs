@@ -7,7 +7,9 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
     let p = loop_carry_smoke();
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let uncarriered = find_uncarriered_assigns(&p, &desc);
     assert!(uncarriered.is_empty());
 }
@@ -27,7 +29,9 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
             ),
         ],
     );
-    let mut desc = vyre_lower::lower(&p).unwrap();
+    let mut desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
 
     // Manually strip LoopCarrier from the descriptor.
     // `LoopCarrierFinal` was consolidated into `LoopCarrier` upstream;
@@ -55,7 +59,9 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
 #[test]
 fn carrier_summary_counts_match_descriptor_walk() {
     let p = vyre_libs::parsing::c::lex::lexer::c11_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let summary = carrier_summary(&desc);
 
     // Walk the descriptor directly and build the ground-truth maps.
@@ -105,7 +111,9 @@ fn carrier_summary_counts_match_descriptor_walk() {
 #[test]
 fn carrier_summary_includes_function_locals() {
     let p = vyre_libs::parsing::c::lex::lexer::c11_lexer("hs", "tt", "ts", "tl", "tc", 4);
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let summary = carrier_summary(&desc);
     assert!(
         summary

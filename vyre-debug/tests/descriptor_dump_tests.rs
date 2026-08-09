@@ -19,7 +19,9 @@ fn minimal_program() -> Program {
 #[test]
 fn dump_descriptor_renders_minimal_program() {
     let p = minimal_program();
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let dump = dump_descriptor(&desc, &DescriptorDumpOptions::default());
     assert!(dump.text.contains("KernelDescriptor"));
     assert!(dump.text.contains("bindings:"));
@@ -46,7 +48,9 @@ fn dump_descriptor_op_counts_match_walk() {
             )],
         )],
     );
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let dump = dump_descriptor(&desc, &DescriptorDumpOptions::default());
 
     // Count ops manually
@@ -76,7 +80,9 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
             Node::let_bind("e", Expr::u32(5)),
         ],
     );
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let dump = dump_descriptor(
         &desc,
         &DescriptorDumpOptions {
@@ -91,7 +97,9 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
 #[test]
 fn dump_descriptor_show_literals_false_omits_literals_section() {
     let p = minimal_program();
-    let desc = vyre_lower::lower(&p).unwrap();
+    let desc = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let dump = dump_descriptor(
         &desc,
         &DescriptorDumpOptions {

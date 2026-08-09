@@ -373,7 +373,9 @@ mod tests {
     #[test]
     fn softmax_lowers_and_emits_sm80_kernel() {
         let program = softmax("input", "output", 4);
-        let descriptor = vyre_lower::lower(&program).unwrap();
+        let descriptor = vyre_lower::lower_verified(&program)
+            .map(|lowered| lowered.descriptor)
+            .unwrap();
         let ptx = vyre_emit_ptx::emit_with_options(
             &descriptor,
             vyre_emit_ptx::PtxEmitOptions {

@@ -20,8 +20,12 @@ fn minimal_program() -> Program {
 #[test]
 fn diff_descriptors_identical_returns_empty_diff() {
     let p = minimal_program();
-    let desc1 = vyre_lower::lower(&p).unwrap();
-    let desc2 = vyre_lower::lower(&p).unwrap();
+    let desc1 = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
+    let desc2 = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     let diff = diff_descriptors(&desc1, &desc2);
     assert!(diff.bindings_dropped.is_empty());
     assert!(diff.bindings_added.is_empty());
@@ -32,7 +36,9 @@ fn diff_descriptors_identical_returns_empty_diff() {
 #[test]
 fn diff_descriptors_after_descriptor_dce_removes_ops() {
     let p = minimal_program();
-    let mut desc_before = vyre_lower::lower(&p).unwrap();
+    let mut desc_before = vyre_lower::lower_verified(&p)
+        .map(|lowered| lowered.descriptor)
+        .unwrap();
     // Add a dead op manually
     desc_before.body.ops.push(vyre_lower::KernelOp {
         result: Some(999),

@@ -33,12 +33,15 @@ use super::*;
 fn optimize_output_is_stable_under_a_poisoned_fact_cache() {
     let warm = {
         let _poison = ProgramFacts::build_cached(&indexed_primer());
-        vyre_foundation::optimizer::pre_lowering::optimize(indexed_target())
+        vyre_foundation::optimizer::optimize(indexed_target())
+            .expect("registered optimizer must converge")
     };
-    let cold =
-        std::thread::spawn(|| vyre_foundation::optimizer::pre_lowering::optimize(indexed_target()))
-            .join()
-            .expect("cold arm must not panic");
+    let cold = std::thread::spawn(|| {
+        vyre_foundation::optimizer::optimize(indexed_target())
+            .expect("registered optimizer must converge")
+    })
+    .join()
+    .expect("cold arm must not panic");
 
     assert_eq!(
         format!("{:?}", warm.entry()),

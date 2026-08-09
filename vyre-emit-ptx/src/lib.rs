@@ -105,52 +105,5 @@ pub fn emit_with_options(
     emitter::emit_text(desc, options)
 }
 
-/// Emit PTX text from a `KernelDescriptor` after running the full
-/// `vyre_lower::rewrites::run_all` optimization pipeline. Recommended
-/// over [`emit`] for production use  -  fewer dead instructions, fewer
-/// redundant loads, lower register pressure.
-pub fn emit_optimized(desc: &KernelDescriptor) -> Result<String, EmitError> {
-    emit_optimized_with_stats(desc).map(|(s, _)| s)
-}
-
-/// Like [`emit_optimized`] but also returns
-/// [`vyre_lower::rewrites::OptimizationStats`].
-pub fn emit_optimized_with_stats(
-    desc: &KernelDescriptor,
-) -> Result<(String, vyre_lower::rewrites::OptimizationStats), EmitError> {
-    let (optimized, stats) = vyre_lower::rewrites::run_all_with_stats(desc);
-    debug_assert!(
-        vyre_lower::verify::verify(&optimized).is_ok(),
-        "rewrite pipeline produced an invalid descriptor  -  see vyre_lower::verify for the contract"
-    );
-    let ptx = emit(&optimized)?;
-    Ok((ptx, stats))
-}
-
-/// Same as [`emit_with_target`] but runs the optimization pipeline
-/// first.
-pub fn emit_optimized_with_target(
-    desc: &KernelDescriptor,
-    target: ComputeCapability,
-) -> Result<String, EmitError> {
-    emit_optimized_with_target_with_stats(desc, target).map(|(s, _)| s)
-}
-
-/// The full-power variant: optimize first AND target a specific
-/// compute capability AND surface OptimizationStats. Combines
-/// [`emit_optimized_with_target`] and [`emit_optimized_with_stats`].
-pub fn emit_optimized_with_target_with_stats(
-    desc: &KernelDescriptor,
-    target: ComputeCapability,
-) -> Result<(String, vyre_lower::rewrites::OptimizationStats), EmitError> {
-    let (optimized, stats) = vyre_lower::rewrites::run_all_with_stats(desc);
-    debug_assert!(
-        vyre_lower::verify::verify(&optimized).is_ok(),
-        "rewrite pipeline produced an invalid descriptor  -  see vyre_lower::verify for the contract"
-    );
-    let ptx = emit_with_target(&optimized, target)?;
-    Ok((ptx, stats))
-}
-
 #[cfg(test)]
 mod tests;

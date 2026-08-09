@@ -98,8 +98,12 @@ fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
         let desc = generated_descriptor(seed.wrapping_mul(0x045d_9f3b));
         let raw = vyre_emit_spirv::emit(&desc)
             .unwrap_or_else(|err| panic!("raw SPIR-V emit failed for {}: {err:?}", desc.id));
-        let optimized = vyre_emit_spirv::emit_optimized(&desc)
-            .unwrap_or_else(|err| panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id));
+        let optimized = vyre_emit_spirv::emit(
+            &vyre_lower::verify_then_optimize(&desc)
+                .expect("verified descriptor cleanup")
+                .0,
+        )
+        .unwrap_or_else(|err| panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id));
 
         assert_eq!(raw[0], vyre_emit_spirv::SPIRV_MAGIC, "{}", desc.id);
         assert_eq!(
@@ -121,10 +125,13 @@ fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
 fn generated_descriptors_bytes_match_word_emission() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed ^ 0xa501_7b1d);
-        let words = vyre_emit_spirv::emit_optimized(&desc)
-            .unwrap_or_else(|err| panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id));
-        let bytes = vyre_emit_spirv::emit_optimized_bytes(&desc)
-            .unwrap_or_else(|err| panic!("optimized byte emit failed for {}: {err:?}", desc.id));
+        let descriptor = vyre_lower::verify_then_optimize(&desc)
+            .unwrap_or_else(|err| panic!("descriptor cleanup failed for {}: {err:?}", desc.id))
+            .0;
+        let words = vyre_emit_spirv::emit(&descriptor)
+            .unwrap_or_else(|err| panic!("SPIR-V emit failed for {}: {err:?}", desc.id));
+        let bytes = vyre_emit_spirv::emit_bytes(&descriptor)
+            .unwrap_or_else(|err| panic!("byte emit failed for {}: {err:?}", desc.id));
 
         assert_eq!(bytes.len(), words.len() * 4, "{}", desc.id);
         assert_eq!(words_from_le_bytes(&bytes), words, "{}", desc.id);
@@ -135,8 +142,10 @@ fn generated_descriptors_bytes_match_word_emission() {
 fn generated_descriptors_return_optimization_stats() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed.rotate_left(7));
-        let (bytes, stats) = vyre_emit_spirv::emit_optimized_bytes_with_stats(&desc)
-            .unwrap_or_else(|err| panic!("stats byte emit failed for {}: {err:?}", desc.id));
+        let (descriptor, stats) = vyre_lower::verify_then_optimize(&desc)
+            .unwrap_or_else(|err| panic!("descriptor cleanup failed for {}: {err:?}", desc.id));
+        let bytes = vyre_emit_spirv::emit_bytes(&descriptor)
+            .unwrap_or_else(|err| panic!("byte emit failed for {}: {err:?}", desc.id));
         assert!(bytes.len() >= 4, "{}", desc.id);
         assert_eq!(
             u32::from_le_bytes(bytes[0..4].try_into().expect("SPIR-V header word")),

@@ -9,7 +9,7 @@
 //! 4. Stability across optimization  -  optimize(P) has a stable fingerprint
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_foundation::optimizer::{fingerprint_program, pipeline_fingerprint_bytes};
 
 // ── Determinism ──────────────────────────────────────────────────────
@@ -168,8 +168,8 @@ fn optimized_program_fingerprint_is_stable() {
         )
     };
 
-    let opt1 = optimize(make());
-    let opt2 = optimize(make());
+    let opt1 = optimize(make()).expect("registered optimizer must converge");
+    let opt2 = optimize(make()).expect("registered optimizer must converge");
     assert_eq!(
         fingerprint_program(&opt1),
         fingerprint_program(&opt2),

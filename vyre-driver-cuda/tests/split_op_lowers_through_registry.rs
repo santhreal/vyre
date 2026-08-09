@@ -105,8 +105,9 @@ fn install_registry() {
 #[test]
 fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
     install_registry();
-    let prepared = vyre_lower::prepare_program_for_emit(&caller())
-        .unwrap_or_else(|error| panic!("split op must survive pre-emit: {error}"));
+    let prepared = vyre_lower::lower_verified(&caller())
+        .unwrap_or_else(|error| panic!("split op must survive verified lowering: {error}"))
+        .program;
     let dump = format!("{:?}", prepared.entry());
     assert!(
         !dump.contains("Call {"),
@@ -119,7 +120,9 @@ fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
 #[test]
 fn the_callees_input_buffer_does_not_leak_into_the_caller() {
     install_registry();
-    let prepared = vyre_lower::prepare_program_for_emit(&caller()).expect("pre-emit");
+    let prepared = vyre_lower::lower_verified(&caller())
+        .expect("verified lowering")
+        .program;
     let dump = format!("{:?}", prepared.entry());
     assert!(
         !dump.contains("\"row\""),

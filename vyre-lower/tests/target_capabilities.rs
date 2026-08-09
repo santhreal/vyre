@@ -23,7 +23,10 @@ fn positive_plain_descriptor_requires_no_subgroup_capability() {
         literals: vec![],
     }));
     assert_eq!(required, SubgroupCapabilities::default());
-    assert_eq!(SubgroupCapabilities::default().first_missing(required), None);
+    assert_eq!(
+        SubgroupCapabilities::default().first_missing(required),
+        None
+    );
 }
 
 #[test]

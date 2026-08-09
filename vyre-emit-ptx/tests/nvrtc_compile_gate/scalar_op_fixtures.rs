@@ -119,5 +119,10 @@ pub(crate) fn ptx_for_op(op_kind: KernelOpKind) -> String {
             literals,
         },
     };
-    vyre_emit_ptx::emit_optimized(&desc).unwrap()
+    vyre_emit_ptx::emit(
+        &vyre_lower::verify_then_optimize(&desc)
+            .expect("verified descriptor cleanup")
+            .0,
+    )
+    .unwrap()
 }

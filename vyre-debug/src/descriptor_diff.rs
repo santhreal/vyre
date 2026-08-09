@@ -98,14 +98,12 @@ pub struct RewriteBisectResult {
     pub rewrite_history: Vec<(String, DescriptorDiff)>,
 }
 
-/// Lower a program and identify the first rewrite that breaks verification.
+/// Apply diagnostic descriptor rewrites after verified lowering and report the
+/// first rewrite that violates descriptor invariants.
 pub fn bisect_rewrites(program: &Program) -> Result<RewriteBisectResult, String> {
-    let lower_result = vyre_lower::lower(program).map_err(|e| format!("{:?}", e))?;
-
-    // We only care about the descriptor, we will extract it or maybe lower_for_emit.
-    // Wait, lower(program) returns KernelDescriptor?
-    // Let me check vyre_lower::lower or lower_for_emit. We'll use vyre_lower::lower.
-    let mut current = lower_result;
+    let mut current = vyre_lower::lower_verified(program)
+        .map(|lowered| lowered.descriptor)
+        .map_err(|error| error.to_string())?;
 
     if let Err(errs) = vyre_lower::verify::verify(&current) {
         return Ok(RewriteBisectResult {

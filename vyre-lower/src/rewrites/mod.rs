@@ -190,13 +190,11 @@ pub use tail_mask::apply_tail_mask;
 pub use unary_idemp::unary_idemp;
 pub use xor_self_zero::xor_self_zero;
 
-/// One substrate-neutral lowered-IR rewrite in the canonical pipeline.
+/// One lower-IR cleanup in the canonical verified lowering pipeline.
 #[derive(Debug, Clone, Copy)]
-pub struct DescriptorRewritePass {
-    /// Stable pass name used in stats, diagnostics, and benchmark attribution.
-    pub name: &'static str,
-    /// Total rewrite function. Returns the input unchanged when it cannot apply.
-    pub rewrite: fn(&crate::KernelDescriptor) -> crate::KernelDescriptor,
+pub(crate) struct DescriptorRewritePass {
+    name: &'static str,
+    rewrite: fn(&crate::KernelDescriptor) -> crate::KernelDescriptor,
 }
 
 impl DescriptorRewritePass {
@@ -206,146 +204,18 @@ impl DescriptorRewritePass {
     }
 }
 
-fn egraph_saturation_pass(desc: &crate::KernelDescriptor) -> crate::KernelDescriptor {
-    egraph_saturation::saturate_algebraic_descriptor(desc).0
-}
-
 const CANONICAL_REWRITE_PASSES: &[DescriptorRewritePass] = &[
-    DescriptorRewritePass {
-        name: "strength_reduce",
-        rewrite: strength_reduce,
-    },
-    DescriptorRewritePass {
-        name: "shift_combine",
-        rewrite: shift_combine,
-    },
-    DescriptorRewritePass {
-        name: "shared_mem_promote",
-        rewrite: shared_mem_promote,
-    },
-    DescriptorRewritePass {
-        name: "bank_conflict_pad",
-        rewrite: bank_conflict_pad,
-    },
-    DescriptorRewritePass {
-        name: "const_buffer_promote",
-        rewrite: const_buffer_promote,
-    },
     DescriptorRewritePass {
         name: "descriptor_const_fold",
         rewrite: descriptor_const_fold,
-    },
-    DescriptorRewritePass {
-        name: "add_combine",
-        rewrite: add_combine,
-    },
-    DescriptorRewritePass {
-        name: "sub_combine",
-        rewrite: sub_combine,
-    },
-    DescriptorRewritePass {
-        name: "mul_combine",
-        rewrite: mul_combine,
-    },
-    DescriptorRewritePass {
-        name: "div_combine",
-        rewrite: div_combine,
-    },
-    DescriptorRewritePass {
-        name: "mod_idemp",
-        rewrite: mod_idemp,
-    },
-    DescriptorRewritePass {
-        name: "add_sub_cancel",
-        rewrite: add_sub_cancel,
-    },
-    DescriptorRewritePass {
-        name: "bitwise_combine",
-        rewrite: bitwise_combine,
-    },
-    DescriptorRewritePass {
-        name: "identity_elim",
-        rewrite: identity_elim,
-    },
-    DescriptorRewritePass {
-        name: "boolean_simplify",
-        rewrite: boolean_simplify,
-    },
-    DescriptorRewritePass {
-        name: "negate_cancel",
-        rewrite: negate_cancel,
-    },
-    DescriptorRewritePass {
-        name: "unary_idemp",
-        rewrite: unary_idemp,
-    },
-    DescriptorRewritePass {
-        name: "select_fold",
-        rewrite: select_fold,
-    },
-    DescriptorRewritePass {
-        name: "min_max_idemp",
-        rewrite: min_max_idemp,
-    },
-    DescriptorRewritePass {
-        name: "bitwise_idemp",
-        rewrite: bitwise_idemp,
     },
     DescriptorRewritePass {
         name: "branch_collapse",
         rewrite: branch_collapse,
     },
     DescriptorRewritePass {
-        name: "loop_fusion",
-        rewrite: loop_fusion,
-    },
-    DescriptorRewritePass {
-        name: "loop_unroll",
-        rewrite: loop_unroll,
-    },
-    DescriptorRewritePass {
-        name: "loop_zero_iter",
-        rewrite: loop_zero_iter,
-    },
-    DescriptorRewritePass {
-        name: "licm",
-        rewrite: licm,
-    },
-    DescriptorRewritePass {
-        name: "load_forwarding",
-        rewrite: load_forwarding,
-    },
-    DescriptorRewritePass {
-        name: "mul_add_to_fma",
-        rewrite: mul_add_to_fma,
-    },
-    DescriptorRewritePass {
-        name: "matmul_promote",
-        rewrite: matmul_promote,
-    },
-    DescriptorRewritePass {
-        name: "descriptor_dce_after_forwarding",
-        rewrite: descriptor_dce,
-    },
-    DescriptorRewritePass {
-        name: "dead_store",
-        rewrite: dead_store,
-    },
-    DescriptorRewritePass {
         name: "descriptor_dce",
         rewrite: descriptor_dce,
-    },
-    DescriptorRewritePass {
-        name: "cmp_normalize",
-        rewrite: cmp_normalize,
-    },
-    DescriptorRewritePass {
-        name: "cmp_self_false",
-        rewrite: cmp_self_false,
-    },
-    DescriptorRewritePass {
-        name: "xor_self_zero",
-        rewrite: xor_self_zero,
     },
     DescriptorRewritePass {
         name: "canonicalize",
@@ -353,34 +223,6 @@ const CANONICAL_REWRITE_PASSES: &[DescriptorRewritePass] = &[
     },
     DescriptorRewritePass {
         name: "descriptor_cse",
-        rewrite: descriptor_cse,
-    },
-    DescriptorRewritePass {
-        name: "egraph_saturation",
-        rewrite: egraph_saturation_pass,
-    },
-    DescriptorRewritePass {
-        name: "descriptor_const_fold_post_saturation",
-        rewrite: descriptor_const_fold,
-    },
-    DescriptorRewritePass {
-        name: "identity_elim_post_saturation",
-        rewrite: identity_elim,
-    },
-    DescriptorRewritePass {
-        name: "descriptor_dce_post_saturation",
-        rewrite: descriptor_dce,
-    },
-    DescriptorRewritePass {
-        name: "cmp_normalize_post_saturation",
-        rewrite: cmp_normalize,
-    },
-    DescriptorRewritePass {
-        name: "canonicalize_post_saturation",
-        rewrite: canonicalize,
-    },
-    DescriptorRewritePass {
-        name: "descriptor_cse_post_saturation",
         rewrite: descriptor_cse,
     },
     DescriptorRewritePass {
@@ -401,9 +243,9 @@ const CANONICAL_REWRITE_PASSES: &[DescriptorRewritePass] = &[
     },
 ];
 
-/// Canonical lowered-IR rewrite pipeline as data, not a second hand-coded compiler.
+/// Return the cleanup sequence owned by verified lowering.
 #[must_use]
-pub const fn canonical_rewrite_passes() -> &'static [DescriptorRewritePass] {
+pub(crate) const fn canonical_rewrite_passes() -> &'static [DescriptorRewritePass] {
     CANONICAL_REWRITE_PASSES
 }
 

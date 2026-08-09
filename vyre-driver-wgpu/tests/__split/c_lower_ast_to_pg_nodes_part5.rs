@@ -33,7 +33,7 @@ fn ast_to_pg_nodes_gpu_dispatch_matches_cpu_for_witness() {
     for (case_idx, vast) in adversarial_vast_cases().into_iter().take(4).enumerate() {
         let node_count = node_count_from_vast(&vast);
         let program = c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(node_count), "out_pg_nodes");
-        let optimized = optimize(program.clone());
+        let optimized = optimize(program.clone()).expect("registered optimizer must converge");
         let expected = run_reference_eval(&program, std::slice::from_ref(&vast));
         let actual = backend
             .dispatch(&optimized, &[vast], &DispatchConfig::default())

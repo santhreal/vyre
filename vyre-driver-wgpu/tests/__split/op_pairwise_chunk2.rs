@@ -104,8 +104,7 @@ fn witness_by_name(prog: &Program, case: &[Vec<u8>]) -> Vec<(String, Vec<u8>)> {
 fn witness_abi_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
+            BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::U32).with_count(1),
             BufferDecl::output("output", 1, DataType::U32).with_count(2),
             BufferDecl::read_write("state", 2, DataType::U32).with_count(1),
         ],
@@ -171,14 +170,10 @@ fn gqa_to_fft_grid_sync_preserves_intermediate_lanes() {
         .find(|entry| entry.id == "vyre-libs::math::fft::fft4_complex")
         .expect("FFT4 registry entry");
     let composition = try_compose(a, b).expect("GQA output must compose with FFT4 input");
-    let inputs = build_fused_inputs(
-        &composition,
-        &entry_cases(a)[0],
-        &entry_cases(b)[0],
-    );
+    let inputs = build_fused_inputs(&composition, &entry_cases(a)[0], &entry_cases(b)[0]);
     let expected = run_reference(a.id, b.id, &composition.program, &inputs);
-    let optimized =
-        vyre_foundation::optimizer::pre_lowering::optimize(composition.program.clone());
+    let optimized = vyre_foundation::optimizer::optimize(composition.program.clone())
+        .expect("registered optimizer must converge");
     let optimized_reference = run_reference(a.id, b.id, &optimized, &inputs);
     let elements = output_elements(&composition.program);
     let tolerance = fp_contract::effective_tolerance(a.id, &composition.program)
@@ -194,7 +189,12 @@ fn gqa_to_fft_grid_sync_preserves_intermediate_lanes() {
     );
     let gpu = run_gpu(&composition.program, &inputs).expect("GridSync GPU dispatch");
     assert_outputs_equal(
-        a.id, "WGPU GridSync split", tolerance, &elements, &expected, &gpu,
+        a.id,
+        "WGPU GridSync split",
+        tolerance,
+        &elements,
+        &expected,
+        &gpu,
     );
 }
 
@@ -211,16 +211,10 @@ fn substring_self_composition_does_not_seed_output_from_downstream_input() {
         try_compose(entry, entry).expect("substring output must compose with substring input");
     let case = &entry_cases(entry)[0];
     let inputs = build_fused_inputs(&composition, case, case);
-    let expected_intermediate =
-        vyre_primitives::wire::pack_u32_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
+    let expected_intermediate = vyre_primitives::wire::pack_u32_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
     let expected_final = vec![0u8; 32];
 
-    let reference = run_reference(
-        entry.id,
-        entry.id,
-        &composition.program,
-        &inputs,
-    );
+    let reference = run_reference(entry.id, entry.id, &composition.program, &inputs);
     assert_eq!(
         reference,
         vec![expected_intermediate.clone(), expected_final.clone()]
@@ -263,14 +257,13 @@ fn attention_to_cross_entropy_discards_legacy_output_placeholder() {
         .expect("wired attention output declaration");
     assert_eq!(wired.count(), 8);
     assert_eq!(wired.output_byte_range(), None);
-    let optimized =
-        vyre_foundation::optimizer::pre_lowering::optimize(composition.program.clone());
+    let optimized = vyre_foundation::optimizer::optimize(composition.program.clone())
+        .expect("registered optimizer must converge");
     let optimized_wired = optimized
         .buffer(&composition.wired_name)
         .expect("optimized wired attention output declaration");
     assert_eq!(optimized_wired.count(), 8);
     assert_eq!(optimized_wired.output_byte_range(), None);
-
 
     let gpu = run_gpu(&composition.program, &inputs).expect("attention GridSync GPU dispatch");
     assert_eq!(gpu[0].len(), reference[0].len());
@@ -331,11 +324,9 @@ fn fft_to_cross_entropy_uses_largest_output_for_dispatch_grid() {
     );
     let reference = run_reference(fft.id, cross_entropy.id, &composition.program, &inputs);
     let gpu = run_gpu(&composition.program, &inputs).expect("multi-output WGPU dispatch");
-    let tolerance = fp_contract::effective_tolerance(fft.id, &composition.program)
-        .max(fp_contract::effective_tolerance(
-            cross_entropy.id,
-            &composition.program,
-        ));
+    let tolerance = fp_contract::effective_tolerance(fft.id, &composition.program).max(
+        fp_contract::effective_tolerance(cross_entropy.id, &composition.program),
+    );
 
     assert_outputs_equal(
         fft.id,
@@ -459,7 +450,8 @@ fn run_reference(op_a: &str, op_b: &str, program: &Program, inputs: &[Vec<u8>]) 
 
 fn run_gpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
     let backend = gpu();
-    let lowered = vyre_foundation::optimizer::pre_lowering::optimize(program.clone());
+    let lowered = vyre_foundation::optimizer::optimize(program.clone())
+        .expect("registered optimizer must converge");
     backend
         .dispatch(&lowered, inputs, &DispatchConfig::default())
         .map_err(|e| format!("GPU dispatch error: {e}"))
@@ -878,9 +870,9 @@ fn runtime_sized_input_witness_must_match_upstream_extent() {
     let b = entry_named("vyre-libs::parsing::ast_shunting_yard");
 
     let reason = match try_compose(a, b) {
-        Ok(_) => panic!(
-            "a four-lane producer must not feed a runtime-sized 64 Ki-lane parser input"
-        ),
+        Ok(_) => {
+            panic!("a four-lane producer must not feed a runtime-sized 64 Ki-lane parser input")
+        }
         Err(reason) => reason,
     };
 

@@ -16,11 +16,13 @@ use vyre_debug::{
     dump_wgsl_with_lines, find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke,
     DescriptorDumpOptions,
 };
-use vyre_lower::lower;
+use vyre_lower::lower_verified;
 
 fn lowered_smoke() -> (vyre_foundation::ir::Program, vyre_lower::KernelDescriptor) {
     let program = loop_carry_smoke();
-    let desc = lower(&program).expect("smoke fixture must lower cleanly");
+    let desc = lower_verified(&program)
+        .map(|lowered| lowered.descriptor)
+        .expect("smoke fixture must lower cleanly");
     (program, desc)
 }
 

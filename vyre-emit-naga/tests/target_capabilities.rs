@@ -18,7 +18,10 @@ fn descriptor(workgroup_size: [u32; 3], ops: Vec<KernelOp>) -> KernelDescriptor 
     }
 }
 
-fn target(workgroup: WorkgroupLimits, subgroup: SubgroupCapabilities) -> EmissionTargetCapabilities {
+fn target(
+    workgroup: WorkgroupLimits,
+    subgroup: SubgroupCapabilities,
+) -> EmissionTargetCapabilities {
     EmissionTargetCapabilities {
         workgroup,
         subgroup,
@@ -63,7 +66,10 @@ fn negative_unsupported_subgroup_capability_has_stable_error() {
         ),
     )
     .expect_err("missing subgroup support must reject emission");
-    assert_eq!(err.to_string(), "unsupported emission capability `subgroup.basic`");
+    assert_eq!(
+        err.to_string(),
+        "unsupported emission capability `subgroup.basic`"
+    );
 }
 
 #[test]

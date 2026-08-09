@@ -203,8 +203,13 @@ fn emit_target(
             "Fix: PTX artifact emission requires the CUDA backend crate to provide an emitter before --to secondary_text can be used."
                 .to_string(),
         ),
-        Target::Metal => vyre_emit_metal::emit_program_artifact_bytes(canonical)
-            .map_err(|error| format!("Fix: Metal native_module emission failed: {error}")),
+        Target::Metal => {
+            let descriptor = vyre_lower::lower_verified(canonical)
+                .map_err(|error| format!("Fix: Metal verified lowering failed: {error}"))?
+                .descriptor;
+            vyre_emit_metal::emit_artifact_bytes(&descriptor)
+                .map_err(|error| format!("Fix: Metal native_module emission failed: {error}"))
+        }
         Target::Hlsl => Err(
             "Fix: HLSL artifact emission requires a DXC backend emitter before --to hlsl can be used."
                 .to_string(),

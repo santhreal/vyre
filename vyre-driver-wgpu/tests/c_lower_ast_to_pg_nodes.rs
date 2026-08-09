@@ -13,7 +13,7 @@ use vyre::ir::{Expr, Program};
 use vyre::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::fixture_catalog::{all_entries, OpEntry};
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;

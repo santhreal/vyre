@@ -1,25 +1,11 @@
-//! SPIR-V emitter contracts without depending on another concrete driver.
+//! SPIR-V driver contracts through canonical verified lowering and emission.
 
 use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
 use vyre_driver_spirv::SpirvBackend;
-
-fn minimal_compute_module() -> naga::Module {
-    naga::front::wgsl::parse_str(
-        r#"
-@group(0) @binding(0)
-var<storage, read_write> out: array<u32>;
-
-@compute @workgroup_size(64, 1, 1)
-fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-    out[gid.x] = gid.x + 1u;
-}
-"#,
-    )
-    .expect("Fix: minimal SPIR-V emitter fixture must parse as WGSL")
-}
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     assert!(
@@ -59,22 +45,37 @@ fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     }
 }
 
-#[test]
-fn valid_naga_module_emits_valid_spirv() {
-    let module = minimal_compute_module();
-    let words = SpirvBackend::emit_spv(&module)
-        .unwrap_or_else(|error| panic!("Fix: emit minimal compute SPIR-V: {error}"));
-    assert_spirv_structural_invariants("minimal_compute_module", &words);
+fn program() -> Program {
+    Program::wrapped(
+        vec![BufferDecl::storage(
+            "out",
+            0,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )],
+        [64, 1, 1],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
+    )
 }
 
 #[test]
-fn emission_is_deterministic_for_identical_modules() {
-    let first = SpirvBackend::emit_spv(&minimal_compute_module())
-        .expect("Fix: first minimal compute SPIR-V emission must succeed");
-    let second = SpirvBackend::emit_spv(&minimal_compute_module())
-        .expect("Fix: second minimal compute SPIR-V emission must succeed");
+fn program_compilation_uses_one_deterministic_spirv_writer() {
+    let first = SpirvBackend::program_to_spv(&program())
+        .expect("Fix: canonical Program must compile to SPIR-V");
+    let second = SpirvBackend::program_to_spv(&program())
+        .expect("Fix: identical Program must compile to SPIR-V");
     assert_eq!(
         first, second,
-        "Fix: SPIR-V emission must be deterministic for identical modules"
+        "Fix: identical Program must emit identical SPIR-V"
     );
+    assert_spirv_structural_invariants("canonical_program", &first);
+}
+
+#[test]
+fn invalid_program_fails_before_spirv_emission() {
+    let invalid = Program::wrapped(Vec::new(), [0, 1, 1], Vec::new());
+    let error = SpirvBackend::program_to_spv(&invalid)
+        .expect_err("Fix: invalid workgroup geometry must fail verified lowering");
+    assert!(error.contains("verified lowering failed"));
+    assert!(error.contains("Fix:"));
 }

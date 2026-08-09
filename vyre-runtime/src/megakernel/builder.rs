@@ -156,7 +156,7 @@ pub fn build_program_sharded_once_slots_control_report_shared(
     for buffer in buffers.iter_mut().skip(1) {
         buffer.output_byte_range = Some(0..0);
     }
-    Arc::new(optimize_megakernel_program(Program::wrapped(
+    Arc::new(prepare_megakernel_program(Program::wrapped(
         buffers,
         [workgroup_size_x, 1, 1],
         persistent_body_with_io(workgroup_size_x, opcodes, false),
@@ -193,7 +193,7 @@ pub fn build_program_sharded_with_io_polling(
 /// complete. The `arg0` field of the slot is the consumer's opaque
 /// resource identifier; vyre does not interpret it.
 #[must_use]
-#[cfg(any(test, feature = "legacy-infallible"))]
+#[cfg(test)]
 pub fn build_program_with_self_loading_miss_handler(
     workgroup_size_x: u32,
     slot_count: u32,
@@ -205,7 +205,7 @@ pub fn build_program_with_self_loading_miss_handler(
     }
 }
 
-/// Fallible variant of `build_program_with_self_loading_miss_handler` (gated behind the `legacy-infallible` feature).
+/// Fallible variant of `build_program_with_self_loading_miss_handler` (test-only panic shim exists; production uses this fallible entry).
 pub fn try_build_program_with_self_loading_miss_handler(
     workgroup_size_x: u32,
     slot_count: u32,
@@ -266,7 +266,7 @@ fn wrap_persistent_megakernel_program_with_buffers(
     workgroup_size_x: u32,
     body: Vec<Node>,
 ) -> Program {
-    optimize_megakernel_program(Program::wrapped(
+    prepare_megakernel_program(Program::wrapped(
         buffers,
         [workgroup_size_x, 1, 1],
         vec![Node::forever(body)],
@@ -274,19 +274,17 @@ fn wrap_persistent_megakernel_program_with_buffers(
 }
 
 fn wrap_megakernel_program(workgroup_size_x: u32, slot_count: u32, body: Vec<Node>) -> Program {
-    optimize_megakernel_program(Program::wrapped(
+    prepare_megakernel_program(Program::wrapped(
         default_buffers(slot_count),
         [workgroup_size_x, 1, 1],
         body,
     ))
 }
 
-fn optimize_megakernel_program(program: Program) -> Program {
-    // Barrier elision is infallible (its working buffers are sized by the bounded
-    // IR node count), so there is no staging-failure fallback that could silently
-    // ship the un-elided program (the pass always runs (Law 10)).
-    let (program, _) = super::planner::elide_value_flow_barriers(program);
-    vyre_foundation::optimizer::pre_lowering::optimize(program)
+fn prepare_megakernel_program(program: Program) -> Program {
+    // Barrier elision is infallible because its working buffers are bounded by
+    // the IR node count. Semantic optimization runs once in `lower_verified`.
+    super::planner::elide_value_flow_barriers(program).0
 }
 
 /// Reserve sizes for the megakernel's four host-visible buffers. All

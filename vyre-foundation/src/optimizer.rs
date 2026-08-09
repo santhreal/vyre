@@ -115,10 +115,6 @@ pub mod pass_selection;
 pub mod passes;
 /// Backend-neutral planar rewrite batching used by optimizer passes.
 pub mod planar_batch;
-/// Pre-lowering optimization pipeline  -  stable composed `optimize(program)`
-/// entry every backend calls before lowering. Replaces the old
-/// `transform::optimize` facade after audit cleanup T7 (2026-05-01).
-pub mod pre_lowering;
 /// Columnar / SoA fact view of a `Program` that hot
 /// optimizer passes can opt into. Built once via
 /// `ProgramFacts::build(&program)` and then queried in O(1) hash
@@ -807,16 +803,18 @@ pub fn registered_pass_registrations(
 /// Returns [`OptimizerError`] when requirements cannot be satisfied or when
 /// the pass pipeline oscillates past the configured iteration cap.
 pub fn optimize(program: Program) -> Result<Program, OptimizerError> {
-    // Cache the default scheduler so the box-per-pass instantiation
-    // (~120 boxed `ProgramPassKind`s, plus FxHashMap pass_index construction
-    // and topological execution_order vector) only runs once per process.
-    // PassScheduler::run takes &self and is stateless across runs, so a
-    // single instance is safe to share across optimize() invocations.
-    static DEFAULT_SCHEDULER: LazyLock<Result<PassScheduler, OptimizerError>> =
-        LazyLock::new(PassScheduler::try_default);
-    match &*DEFAULT_SCHEDULER {
+    static RELEASE_SCHEDULER: LazyLock<Result<PassScheduler, OptimizerError>> =
+        LazyLock::new(|| {
+            let passes = registered_passes_for_profile(OptimizerProfile::Release)?;
+            Ok(PassScheduler::try_with_passes(passes)?
+                .with_cost_monotone_enforcement(true)
+                .with_effect_handler_enforcement(true)
+                .with_linear_type_enforcement(true)
+                .with_shape_predicate_enforcement(true))
+        });
+    match &*RELEASE_SCHEDULER {
         Ok(scheduler) => scheduler.run(program),
-        Err(err) => Err(err.clone()),
+        Err(error) => Err(error.clone()),
     }
 }
 

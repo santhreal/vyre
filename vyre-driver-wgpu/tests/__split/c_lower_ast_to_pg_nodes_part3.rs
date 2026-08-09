@@ -113,7 +113,7 @@ fn nested_function_pointer_array_prototype_gpu_lowers_like_cpu() {
         Expr::u32(node_count_from_vast(&typed_vast)),
         "pg_nodes",
     );
-    let optimized = optimize(program.clone());
+    let optimized = optimize(program.clone()).expect("registered optimizer must converge");
     let expected = run_reference_eval(&program, std::slice::from_ref(&typed_vast));
     let actual = backend
         .dispatch(&optimized, &[typed_vast], &DispatchConfig::default())
@@ -124,4 +124,3 @@ fn nested_function_pointer_array_prototype_gpu_lowers_like_cpu() {
         "Fix: GPU PG lowering must match CPU for nested callback declarators"
     );
 }
-

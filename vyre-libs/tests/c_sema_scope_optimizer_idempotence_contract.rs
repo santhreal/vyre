@@ -3,7 +3,7 @@
 #![cfg(feature = "c-parser")]
 
 use vyre::ir::Expr;
-use vyre_foundation::optimizer::pre_lowering::optimize;
+use vyre_foundation::optimizer::optimize;
 use vyre_libs::parsing::c::sema::registry::c_sema_scope;
 
 #[test]
@@ -18,8 +18,9 @@ fn c_sema_scope_pre_lowering_optimizer_is_idempotent() {
         "out_scope_tree",
     );
 
-    let optimized_once = optimize(program);
-    let optimized_twice = optimize(optimized_once.clone());
+    let optimized_once = optimize(program).expect("registered optimizer must converge");
+    let optimized_twice =
+        optimize(optimized_once.clone()).expect("registered optimizer must converge");
     assert_eq!(
         optimized_once,
         optimized_twice,
