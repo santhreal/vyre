@@ -9,7 +9,7 @@ use vyre::scan::{
     scan_paged_fused, scan_paged_fused_on, scan_sharded_fused_weighted_timed, GpuLiteralSet,
     PagedScanResult, ScanTarget, ShardedScanTiming,
 };
-use vyre_driver::{capture_git_info_at, source_fingerprint, source_tree_fingerprint_at};
+use vyre_bench::probes::{capture_git_info_at, source_fingerprint, source_tree_fingerprint_at};
 use vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor;
 use vyre_driver_wgpu::WgpuBackend;
 

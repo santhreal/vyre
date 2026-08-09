@@ -3,7 +3,7 @@
 use std::{fs, path::Path, process::Command};
 
 use tempfile::TempDir;
-use vyre_driver::source_tree_fingerprint_at;
+use vyre_bench::probes::source_tree_fingerprint_at;
 
 fn workspace() -> TempDir {
     let workspace = tempfile::tempdir().expect("Fix: create source fingerprint workspace.");

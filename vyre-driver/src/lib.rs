@@ -77,8 +77,6 @@ pub mod diagnostics;
 pub mod dispatch_policy;
 /// Backend-neutral dispatch-shape comparison helpers.
 pub mod dispatch_shape;
-/// Backend-neutral evidence bundles and source provenance.
-pub mod evidence;
 /// Device-profile-aware extraction cost helpers (ROADMAP A7).
 pub mod extraction_cost;
 /// Backend-neutral fixpoint-iteration resolution.
@@ -226,11 +224,6 @@ pub use dispatch_shape::{
     dispatch_configs_share_launch_shape,
 };
 pub use error::Error;
-pub use evidence::{
-    capture_git_info, capture_git_info_at, source_fingerprint, source_tree_fingerprint,
-    source_tree_fingerprint_at, DispatchTimingEvidence, EvidenceArtifact, EvidenceBundle,
-    ReplayEvidence, SourceProvenance,
-};
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use pipeline::{

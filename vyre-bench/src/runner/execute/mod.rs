@@ -253,7 +253,7 @@ pub fn execute_suite(
             .find_map(|case| case.backend_id.as_ref().cloned())
     });
 
-    let source_provenance = vyre_driver::SourceProvenance::capture_current();
+    let source_provenance = crate::probes::SourceProvenance::capture_current();
     let git = source_provenance.git.clone();
     let source_fingerprint = source_provenance.source_fingerprint;
     let source_tree_fingerprint = source_provenance.source_tree_fingerprint;

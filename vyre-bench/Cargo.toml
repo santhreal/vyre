@@ -68,6 +68,7 @@ proptest = { workspace = true }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 syn.workspace = true
+tempfile.workspace = true
 
 [[bin]]
 name = "vyre-bench"
