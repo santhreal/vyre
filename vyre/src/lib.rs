@@ -197,4 +197,4 @@ pub use ir::{validate, InterpCtx, NodeId, NodeStorage, OpId, Program, Value};
 pub use vyre_foundation::match_result::Match;
 
 /// Domain-neutral byte-range type.
-pub use vyre_foundation::ByteRange;
+pub use vyre_foundation::match_result::ByteRange;
