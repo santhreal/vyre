@@ -27,15 +27,6 @@ crate to depend on.
 Minimal  -  the shim has no decode surface. Tests focus on API
 surface stability.
 
-## Current gaps
-
-- No `public_api` snapshot test today  -  every refactor risks
-  accidentally renaming a re-exported type. Gap: add
-  `cargo-public-api` integration test that fails when the surface
-  changes without a `PUBLIC_API.md` diff.
-- Every doctest in the README must compile and run as a test in
-  `integration.rs`; gap test lists missing coverage.
-
 ## Cross-crate contracts
 
 This crate is the integration point. Every cross-crate test here

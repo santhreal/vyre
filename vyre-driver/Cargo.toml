@@ -72,7 +72,7 @@ workspace = true
 [dev-dependencies]
 vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs
-vyre = { path = "../vyre-core", default-features = false }
+vyre = { path = "../vyre", default-features = false }
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 vyre-reference = { path = "../vyre-reference" }
 tempfile.workspace = true

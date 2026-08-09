@@ -34,6 +34,6 @@ clap = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs
-vyre = { path = "../vyre-core", default-features = false }
+vyre = { path = "../vyre", default-features = false }
 vyre-foundation = { path = "../vyre-foundation" }
 tempfile = { workspace = true }

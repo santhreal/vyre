@@ -77,7 +77,7 @@ vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "c-parse
 # order, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
 # cargo strips path-only dev-deps from the published manifest; the local test build
 # still links it through the path.
-vyre = { path = "../vyre-core", default-features = false }
+vyre = { path = "../vyre", default-features = false }
 # A handful of tests reach `vyre_primitives::wire::pack_u32_iter` directly (the
 # facade doesn't re-export the wire POD helpers). Also dropped in the 0.6.2 refactor.
 vyre-primitives = { path = "../vyre-primitives", features = ["inventory-registry", "parsing", "hash"], default-features = false }

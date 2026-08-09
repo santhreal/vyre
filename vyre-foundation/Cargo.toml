@@ -56,7 +56,7 @@ vyre-reference = { path = "../vyre-reference" }
 # as the public boundary they assert against. `vyre` (the vyre-core package)
 # depends on vyre-foundation, so this is a dev-dependency CYCLE, which cargo
 # permits because dev-deps are excluded from the normal build graph.
-vyre = { path = "../vyre-core", default-features = false }
+vyre = { path = "../vyre", default-features = false }
 proptest.workspace = true
 criterion.workspace = true
 vyre-test-support.workspace = true

@@ -13,4 +13,4 @@ vyre = "0.4.2"
 [workspace]
 
 [patch.crates-io]
-vyre = { path = "../../vyre-core" }
+vyre = { path = "../../vyre" }

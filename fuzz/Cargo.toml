@@ -10,7 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-vyre = { path = "../vyre-core", default-features = false }
+vyre = { path = "../vyre", default-features = false }
 vyre-foundation = { path = "../vyre-foundation" }
 vyre-driver-wgpu = { path = "../vyre-driver-wgpu" }
 

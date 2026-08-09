@@ -4,7 +4,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "vyre-core",
+    "vyre",
     "vyre-foundation",
     "vyre-megakernel",
     "vyre-driver",
@@ -197,7 +197,7 @@ private_intra_doc_links = "warn"
 # version (the `version` is required so a published crate can resolve its
 # workspace siblings from crates.io after publication).
 [workspace.dependencies]
-vyre = { version = "0.7.2", path = "vyre-core", default-features = false }
+vyre = { version = "0.7.2", path = "vyre", default-features = false }
 vyre-foundation = { version = "0.7.2", path = "vyre-foundation" }
 vyre-megakernel = { version = "0.7.2", path = "vyre-megakernel" }
 vyre-driver = { version = "0.7.2", path = "vyre-driver" }
