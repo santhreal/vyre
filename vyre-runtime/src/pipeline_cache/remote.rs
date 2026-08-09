@@ -126,7 +126,7 @@ fn remote_metadata_allows(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_program;
+    use crate::pipeline_cache::test_helpers::tiny_artifact;
 
     #[test]
     fn remote_cache_owns_reusable_http_agent() {
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn remote_cache_metadata_accepts_matching_fingerprint_source_and_device() {
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         let fp_hex = fp.hex();
         let expectation = RemoteMetadataExpectation {
             expected_source_provenance: Some("git:abc123"),
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn remote_cache_metadata_rejects_stale_source_device_and_fingerprint() {
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         let fp_hex = fp.hex();
         let mut other = fp;
         other.0[0] ^= 0xFF;

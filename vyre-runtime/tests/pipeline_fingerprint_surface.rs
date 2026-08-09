@@ -1,84 +1,85 @@
-//! Surface tests for `PipelineFingerprint`.
-//!
-//! Fingerprints must be deterministic, hex-encodable, and stable for
-//! cache key generation.
+//! Pipeline-cache fingerprints are exact authenticated artifact identities.
 
-use vyre::ir::{BufferDecl, DataType, Node, Program};
+use std::collections::BTreeMap;
+
+use vyre::ir::{
+    BufferDecl, DataType, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+};
+use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
 use vyre_runtime::pipeline_cache::PipelineFingerprint;
 
+fn artifact(program: Program) -> vyre_megakernel::Artifact {
+    let mut graph = ProgramGraph::new();
+    for buffer in program.buffers() {
+        graph
+            .add_external_value(
+                buffer.name(),
+                ValueContract {
+                    dtype: buffer.element(),
+                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                    access: buffer.access(),
+                    lifetime: ValueLifetime::Invocation,
+                },
+            )
+            .unwrap();
+    }
+    graph
+        .add_node("main", program, Vec::new(), Vec::new())
+        .unwrap();
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 0, 0, 1),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+    compile(&request).unwrap()
+}
+
 #[test]
-fn fingerprint_of_empty_program_is_32_bytes() {
-    let prog = Program::empty();
-    let fp = PipelineFingerprint::of(&prog);
-    assert_eq!(fp.0.len(), 32);
+fn fingerprint_is_the_neutral_artifact_digest() {
+    let artifact = artifact(Program::empty());
+    let fingerprint = PipelineFingerprint::of(&artifact);
+    assert_eq!(fingerprint.0, artifact.digest().0);
+    assert_eq!(fingerprint.hex().len(), 64);
 }
 
 #[test]
 fn fingerprint_is_deterministic() {
-    let prog = Program::wrapped(
+    let artifact = artifact(Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::Return],
+    ));
+    assert_eq!(
+        PipelineFingerprint::of(&artifact),
+        PipelineFingerprint::of(&artifact)
     );
-    let a = PipelineFingerprint::of(&prog);
-    let b = PipelineFingerprint::of(&prog);
-    assert_eq!(a.0, b.0);
 }
 
 #[test]
-fn fingerprint_changes_when_buffers_change() {
-    let prog_a = Program::wrapped(
+fn distinct_artifacts_have_distinct_fingerprints() {
+    let first = artifact(Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::Return],
-    );
-    let prog_b = Program::wrapped(
+    ));
+    let second = artifact(Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(2)],
         [1, 1, 1],
         vec![Node::Return],
+    ));
+    assert_ne!(
+        PipelineFingerprint::of(&first),
+        PipelineFingerprint::of(&second)
     );
-    let a = PipelineFingerprint::of(&prog_a);
-    let b = PipelineFingerprint::of(&prog_b);
-    assert_ne!(a.0, b.0);
 }
 
 #[test]
-fn fingerprint_changes_when_nodes_change() {
-    let prog_a = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::Return],
-    );
-    let prog_b = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::barrier(), Node::Return],
-    );
-    let a = PipelineFingerprint::of(&prog_a);
-    let b = PipelineFingerprint::of(&prog_b);
-    assert_ne!(a.0, b.0);
-}
-
-#[test]
-fn fingerprint_hex_is_64_chars() {
-    let prog = Program::empty();
-    let fp = PipelineFingerprint::of(&prog);
-    let hex = fp.hex();
-    assert_eq!(hex.len(), 64);
-}
-
-#[test]
-fn fingerprint_hex_is_lowercase_hex() {
-    let prog = Program::empty();
-    let fp = PipelineFingerprint::of(&prog);
-    let hex = fp.hex();
-    assert!(hex.chars().all(|c| c.is_ascii_hexdigit()));
-}
-
-#[test]
-fn fingerprint_hex_is_deterministic() {
-    let prog = Program::empty();
-    let a = PipelineFingerprint::of(&prog).hex();
-    let b = PipelineFingerprint::of(&prog).hex();
-    assert_eq!(a, b);
+fn fingerprint_hex_is_lowercase() {
+    let hex = PipelineFingerprint::of(&artifact(Program::empty())).hex();
+    assert!(hex
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)));
 }

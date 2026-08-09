@@ -405,12 +405,12 @@ impl PipelineCacheStore for InMemoryPipelineCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_program;
+    use crate::pipeline_cache::test_helpers::tiny_artifact;
 
     #[test]
     fn in_memory_cache_roundtrip() {
         let cache = InMemoryPipelineCache::new();
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         assert!(cache.get(&fp).is_none());
         cache.put(fp, b"target-bytes".to_vec());
         assert_eq!(cache.get(&fp).unwrap(), b"target-bytes".to_vec());

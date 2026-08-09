@@ -373,7 +373,7 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::{tiny_program, unique_u64};
+    use crate::pipeline_cache::test_helpers::{tiny_artifact, unique_u64};
 
     #[test]
     fn persistent_alias_disk_cache_persists_across_store_reopen() {
@@ -382,7 +382,7 @@ mod tests {
             std::process::id(),
             unique_u64()
         ));
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
 
         let first = DiskCache::new(&root)
             .expect("Fix: test must create disk cache directory; restore temp-dir access.");
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn disk_cache_persists_across_store_reopen() {
         let temp = tempfile::TempDir::new().expect("Fix: tempdir required for disk cache test");
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         {
             let cache = DiskCache::new(temp.path())
                 .expect("Fix: disk cache test must create isolated cache root");
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn disk_cache_flush_is_explicit_durability_boundary() {
         let temp = tempfile::TempDir::new().expect("Fix: tempdir required for disk cache test");
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         let cache = DiskCache::new(temp.path())
             .expect("Fix: disk cache test must create isolated cache root");
         cache.put(fp, b"driver-pipeline-blob".to_vec());
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn disk_cache_durability_report_tracks_pending_flush_boundary() {
         let temp = tempfile::tempdir().expect("Fix: create temp disk cache root");
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         let cache = DiskCache::new(temp.path()).expect("Fix: create disk cache");
 
         assert_eq!(

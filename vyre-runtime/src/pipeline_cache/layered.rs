@@ -156,14 +156,14 @@ impl PipelineCacheStore for LayeredPipelineCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::tiny_program;
+    use crate::pipeline_cache::test_helpers::tiny_artifact;
     use crate::pipeline_cache::InMemoryPipelineCache;
 
     #[test]
     fn layered_cache_prefers_first_hit() {
         let fast = Arc::new(InMemoryPipelineCache::new());
         let slow = Arc::new(InMemoryPipelineCache::new());
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         slow.put(fp, b"fallback".to_vec());
         let cache = LayeredPipelineCache::new(vec![fast.clone(), slow]);
         // Miss in fast, hit in slow.
@@ -177,7 +177,7 @@ mod tests {
     fn layered_cache_metrics_aggregate_layers() {
         let fast = Arc::new(InMemoryPipelineCache::new());
         let slow = Arc::new(InMemoryPipelineCache::new());
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         slow.put(fp, b"slow".to_vec());
         let cache = LayeredPipelineCache::new(vec![fast, slow]);
 
@@ -192,7 +192,7 @@ mod tests {
     fn layered_cache_promotes_lower_layer_hit_to_faster_layers_with_report() {
         let fast = Arc::new(InMemoryPipelineCache::new());
         let slow = Arc::new(InMemoryPipelineCache::new());
-        let fp = PipelineFingerprint::of(&tiny_program());
+        let fp = PipelineFingerprint::of(&tiny_artifact());
         slow.put(fp, b"fallback".to_vec());
         let cache = LayeredPipelineCache::new(vec![fast.clone(), slow]);
 
