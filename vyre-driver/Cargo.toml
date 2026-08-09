@@ -46,6 +46,7 @@ self-substrate-adapters = [
 
 [dependencies]
 vyre-foundation = { workspace = true }
+vyre-megakernel = { workspace = true }
 vyre-self-substrate = { workspace = true, optional = true }
 vyre-spec.workspace = true
 vyre-intrinsics.workspace = true

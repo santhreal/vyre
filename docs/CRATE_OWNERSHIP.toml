@@ -29,8 +29,8 @@ package = "vyre-driver"
 path = "vyre-driver"
 owner = "backend-contract"
 layer = "backend-neutral"
-responsibility = "Define backend-neutral device, capability, dispatch, evidence, and artifact contracts."
-allowed_dependencies = ["vyre-foundation", "vyre-intrinsics", "vyre-macros", "vyre-self-substrate", "vyre-spec"]
+responsibility = "Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts."
+allowed_dependencies = ["vyre-foundation", "vyre-intrinsics", "vyre-macros", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
 
 [[crate]]
 package = "vyre-harness"

@@ -276,6 +276,8 @@ inventory::submit! {
         id: SPIRV_BACKEND_ID,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
+        target_compiler: None,
+        materializer: None,
     }
 }
 

@@ -210,6 +210,8 @@ inventory::submit! {
             Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
         }),
         supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
+        target_compiler: None,
+        materializer: None,
     }
 }
 

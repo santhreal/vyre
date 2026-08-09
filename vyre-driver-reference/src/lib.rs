@@ -162,6 +162,8 @@ inventory::submit! {
         id: CPU_REF_BACKEND_ID,
         factory: acquire_cpu_ref,
         supported_ops: core_supported_ops,
+        target_compiler: None,
+        materializer: None,
     }
 }
 

@@ -55,6 +55,8 @@ inventory::submit! {
         id: METAL_BACKEND_ID,
         factory: acquire,
         supported_ops: vyre_driver::backend::core_supported_ops,
+        target_compiler: None,
+        materializer: None,
     }
 }
 

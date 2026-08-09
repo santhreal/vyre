@@ -1137,6 +1137,8 @@ inventory::submit! {
         id: CUDA_BACKEND_ID,
         factory: cuda_factory,
         supported_ops: cuda_supported_ops,
+        target_compiler: None,
+        materializer: None,
     }
 }
 

@@ -203,11 +203,12 @@ pub use aot::{emit_aot_target, registered_aot_emitters, AotEmitter, AotTargetId}
 pub use backend::{
     borrowed_input_slices, default_dispatch_with_device_buffers,
     replace_output_buffers_preserving_slots, validate_buffer_ownership,
-    validate_program_for_backend, BackendError, BackendRegistration, CompiledPipeline,
-    DeviceBuffer, DispatchConfig, Executable, HostShimBuffer, Memory, MemoryRef, OutputBuffers,
-    PendingDispatch, ResidentDispatchStep, ResidentHandle, ResidentOwner, ResidentReadRange,
-    ResidentSequenceTiming, Resource, TimedDispatchResult, TypedDispatchExt, VyreBackend,
-    DEVICE_BUFFER_FEATURE,
+    validate_program_for_backend, ArtifactInstance, ArtifactMaterializer, BackendError,
+    BackendRegistration, BindingSet, BoundResource, CompiledPipeline, Completion, Device,
+    DeviceBuffer, DeviceIdentity, DispatchConfig, Executable, HostShimBuffer, Memory, MemoryRef,
+    OutputBuffers, PendingDispatch, ResidentDispatchStep, ResidentHandle, ResidentOwner,
+    ResidentReadRange, ResidentSequenceTiming, Resource, Submission, TimedDispatchResult,
+    TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
     binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,

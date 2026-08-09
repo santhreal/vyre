@@ -8,6 +8,7 @@
 //! The trait signature is frozen under the five-year stability contract from
 //! `ARCHITECTURE.md`.
 
+mod artifact_lifecycle;
 mod capability;
 mod dialect_supported_ops;
 pub mod lowering;
@@ -25,6 +26,10 @@ mod resource;
 mod typed_dispatch;
 mod vyre_backend;
 
+pub use artifact_lifecycle::{
+    ArtifactInstance, ArtifactMaterializer, BindingSet, BoundResource, Completion, Device,
+    DeviceIdentity, Submission,
+};
 pub use capability::{Backend, Executable, Memory, MemoryRef, Streamable};
 pub use dialect_supported_ops::{dialect_and_language_supported_ops, dialect_only_supported_ops};
 pub use registry::{

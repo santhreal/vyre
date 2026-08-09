@@ -48,6 +48,11 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   authenticated, artifact size is bounded, and runtime retention policy is
   excluded from compiler identity. `ArtifactEnvelope` remains the versioned
   target-payload attachment.
+- Backend registrations now expose separate target-compiler and
+  artifact-materializer factories. `Device`, `ArtifactInstance`, `BindingSet`,
+  `Submission`, and `Completion` carry immutable artifact, payload, device
+  generation, binding, and readback identities. Missing native facets fail
+  explicitly instead of receiving a raw `Program` passthrough.
 - `vyre-lower::lower_verified` is now the sole production Program-to-descriptor
   boundary. It runs the registered fallible semantic optimizer once, performs
   lower-IR cleanup, and verifies both descriptor states. Target emitters consume

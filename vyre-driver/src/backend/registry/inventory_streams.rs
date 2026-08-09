@@ -5,7 +5,8 @@ use std::collections::HashSet;
 use vyre_foundation::ir::OpId;
 
 use super::grid_sync_split::wrap_grid_sync_split;
-use crate::backend::{BackendError, VyreBackend};
+use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
+use vyre_megakernel::TargetCompiler;
 
 /// One backend constructor contributed by a linked backend crate.
 ///
@@ -24,6 +25,10 @@ pub struct BackendRegistration {
     pub factory: fn() -> Result<Box<dyn VyreBackend>, BackendError>,
     /// Operation ids supported by this backend.
     pub supported_ops: fn() -> &'static HashSet<OpId>,
+    /// Pure compiler facet for this backend's immutable target payload.
+    pub target_compiler: Option<fn() -> Result<Box<dyn TargetCompiler>, BackendError>>,
+    /// Device acquisition and immutable payload materialization facet.
+    pub materializer: Option<fn() -> Result<Box<dyn ArtifactMaterializer>, BackendError>>,
 }
 
 impl BackendRegistration {
@@ -39,6 +44,34 @@ impl BackendRegistration {
     /// initialize on this host.
     pub fn acquire(&self) -> Result<Box<dyn VyreBackend>, BackendError> {
         (self.factory)().map(wrap_grid_sync_split)
+    }
+
+    /// Acquire this backend's pure target compiler facet.
+    ///
+    /// # Errors
+    ///
+    /// Returns an explicit unsupported-feature error when the linked backend
+    /// does not provide native target compilation.
+    pub fn target_compiler(&self) -> Result<Box<dyn TargetCompiler>, BackendError> {
+        self.target_compiler
+            .ok_or_else(|| BackendError::UnsupportedFeature {
+                name: "registered target compiler; Fix: link a backend crate that registers native artifact compilation instead of passing a raw Program".to_string(),
+                backend: self.id.to_string(),
+            })?()
+    }
+
+    /// Acquire this backend's device materializer facet.
+    ///
+    /// # Errors
+    ///
+    /// Returns an explicit unsupported-feature error when no native
+    /// materializer is registered, or the concrete device acquisition error.
+    pub fn materializer(&self) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
+        self.materializer
+            .ok_or_else(|| BackendError::UnsupportedFeature {
+                name: "registered artifact materializer; Fix: link the backend's native materializer instead of recompiling a raw Program at dispatch".to_string(),
+                backend: self.id.to_string(),
+            })?()
     }
 }
 
