@@ -15,10 +15,12 @@
 ))]
 
 use vyre::ir::{BufferAccess, MemoryKind, Program};
-use vyre_libs::hash::fnv1a32;
-use vyre_libs::math::{broadcast, dot, matmul, scan_prefix_sum};
-use vyre_libs::nn::{linear, relu};
 use vyre::scan::substring_search;
+use vyre_libs::hash::fnv1a32;
+use vyre_libs::math::broadcast::broadcast;
+use vyre_libs::math::linalg::{dot, matmul};
+use vyre_libs::math::scan::scan_prefix_sum;
+use vyre_libs::nn::{linear, relu};
 
 fn assert_valid(p: &Program) {
     let errors = vyre::ir::validate(p);

@@ -4,7 +4,7 @@ use super::*;
 fn semiring_min_plus_mul_zero_is_identity() {
     let a = [42u32, 100, 0, u32::MAX];
     let zero = [0u32; 4];
-    let program = vyre_libs::math::semiring_min_plus_mul("a", "zero", "out", 4);
+    let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "zero", "out", 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -25,7 +25,7 @@ fn semiring_min_plus_mul_zero_is_identity() {
 fn semiring_min_plus_mul_saturates_at_max() {
     let a = [u32::MAX - 5u32];
     let b = [10u32];
-    let program = vyre_libs::math::semiring_min_plus_mul("a", "b", "out", 1);
+    let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -43,8 +43,8 @@ fn semiring_min_plus_mul_saturates_at_max() {
 fn semiring_min_plus_mul_commutative() {
     let a = [17u32, 99];
     let b = [3u32, 50];
-    let p1 = vyre_libs::math::semiring_min_plus_mul("a", "b", "out", 2);
-    let p2 = vyre_libs::math::semiring_min_plus_mul("b", "a", "out", 2);
+    let p1 = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 2);
+    let p2 = vyre_libs::math::algebra::semiring_min_plus_mul("b", "a", "out", 2);
 
     let o1 = vyre_reference::reference_eval(
         &p1,
@@ -76,7 +76,7 @@ fn semiring_min_plus_mul_commutative() {
 fn semiring_min_plus_mul_size_one() {
     let a = [5u32];
     let b = [7u32];
-    let program = vyre_libs::math::semiring_min_plus_mul("a", "b", "out", 1);
+    let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -95,7 +95,7 @@ fn semiring_min_plus_mul_large_size() {
     let n = 128u32;
     let a = vec![1u32; n as usize];
     let b = vec![2u32; n as usize];
-    let program = vyre_libs::math::semiring_min_plus_mul("a", "b", "out", n);
+    let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", n);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -114,7 +114,7 @@ fn semiring_min_plus_mul_large_size() {
 
 #[test]
 fn try_semiring_min_plus_mul_rejects_aliased_out() {
-    let err = vyre_libs::math::try_semiring_min_plus_mul("a", "b", "a", 4).unwrap_err();
+    let err = vyre_libs::math::algebra::try_semiring_min_plus_mul("a", "b", "a", 4).unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing out with a must be rejected: {err}"
@@ -136,7 +136,7 @@ fn bool_semiring_matmul_specific_values() {
         1, 0, //
         0, 0,
     ];
-    let program = vyre_libs::math::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
+    let program = vyre_libs::math::algebra::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -162,7 +162,8 @@ fn bool_semiring_matmul_composes_two_hop_reachability() {
         0, 0, 0, 1, //
         0, 0, 0, 0,
     ];
-    let program = vyre_libs::math::bool_semiring_matmul("frontier", "adjacency", "out", 4, 4, 4);
+    let program =
+        vyre_libs::math::algebra::bool_semiring_matmul("frontier", "adjacency", "out", 4, 4, 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -187,7 +188,8 @@ fn bool_semiring_matmul_composes_two_hop_reachability() {
 
 #[test]
 fn try_bool_semiring_matmul_rejects_aliased_names() {
-    let err = vyre_libs::math::try_bool_semiring_matmul("a", "b", "a", 2, 2, 2).unwrap_err();
+    let err =
+        vyre_libs::math::algebra::try_bool_semiring_matmul("a", "b", "a", 2, 2, 2).unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing output with input must be rejected: {err}"
@@ -196,8 +198,9 @@ fn try_bool_semiring_matmul_rejects_aliased_names() {
 
 #[test]
 fn try_bool_semiring_matmul_rejects_output_shape_overflow() {
-    let err = vyre_libs::math::try_bool_semiring_matmul("a", "b", "out", 1 << 20, 1, 1 << 20)
-        .unwrap_err();
+    let err =
+        vyre_libs::math::algebra::try_bool_semiring_matmul("a", "b", "out", 1 << 20, 1, 1 << 20)
+            .unwrap_err();
     assert!(
         err.to_string().contains("overflows"),
         "overflowing output matrix shape must be rejected: {err}"
@@ -221,7 +224,7 @@ fn sketch_mix_specific_values() {
     };
 
     let input = [1u32, 2, 3, 4];
-    let program = vyre_libs::math::sketch_mix("input", "out", 4);
+    let program = vyre_libs::math::algebra::sketch_mix("input", "out", 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 16])],
@@ -235,7 +238,7 @@ fn sketch_mix_specific_values() {
 #[test]
 fn sketch_mix_zero_input() {
     let input = [0u32];
-    let program = vyre_libs::math::sketch_mix("input", "out", 1);
+    let program = vyre_libs::math::algebra::sketch_mix("input", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 4])],
@@ -262,7 +265,7 @@ fn sketch_mix_zero_input() {
 fn sketch_mix_large_size() {
     let n = 64u32;
     let input: Vec<u32> = (0..n).collect();
-    let program = vyre_libs::math::sketch_mix("input", "out", n);
+    let program = vyre_libs::math::algebra::sketch_mix("input", "out", n);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -288,7 +291,7 @@ fn sketch_mix_large_size() {
 #[test]
 fn sketch_mix_max_u32() {
     let input = [u32::MAX];
-    let program = vyre_libs::math::sketch_mix("input", "out", 1);
+    let program = vyre_libs::math::algebra::sketch_mix("input", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[Value::from(u32_bytes(&input)), Value::from(vec![0u8; 4])],
@@ -314,7 +317,7 @@ fn sketch_mix_max_u32() {
 fn sketch_mix_diffusion_neighbours_differ() {
     let n = 16u32;
     let input: Vec<u32> = (0..n).collect();
-    let program = vyre_libs::math::sketch_mix("input", "out", n);
+    let program = vyre_libs::math::algebra::sketch_mix("input", "out", n);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -337,7 +340,7 @@ fn sketch_mix_diffusion_neighbours_differ() {
 
 #[test]
 fn try_sketch_mix_rejects_aliased_in_out() {
-    let err = vyre_libs::math::try_sketch_mix("x", "x", 4).unwrap_err();
+    let err = vyre_libs::math::algebra::try_sketch_mix("x", "x", 4).unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing input and output must be rejected: {err}"
@@ -357,7 +360,7 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
     let c = [0xAAAA_5555u32];
 
     // LHS: a | (b & c)
-    let p_bc = vyre_libs::math::lattice_meet("b", "c", "bc", 1);
+    let p_bc = vyre_libs::math::algebra::lattice_meet("b", "c", "bc", 1);
     let o_bc = vyre_reference::reference_eval(
         &p_bc,
         &[
@@ -367,7 +370,7 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
         ],
     )
     .unwrap();
-    let p_lhs = vyre_libs::math::lattice_join("a", "bc", "out", 1);
+    let p_lhs = vyre_libs::math::algebra::lattice_join("a", "bc", "out", 1);
     let o_lhs = vyre_reference::reference_eval(
         &p_lhs,
         &[
@@ -379,7 +382,7 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
     .unwrap();
 
     // RHS: (a | b) & (a | c)
-    let p_ab = vyre_libs::math::lattice_join("a", "b", "ab", 1);
+    let p_ab = vyre_libs::math::algebra::lattice_join("a", "b", "ab", 1);
     let o_ab = vyre_reference::reference_eval(
         &p_ab,
         &[
@@ -389,7 +392,7 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
         ],
     )
     .unwrap();
-    let p_ac = vyre_libs::math::lattice_join("a", "c", "ac", 1);
+    let p_ac = vyre_libs::math::algebra::lattice_join("a", "c", "ac", 1);
     let o_ac = vyre_reference::reference_eval(
         &p_ac,
         &[
@@ -399,7 +402,7 @@ fn lattice_join_meet_distributivity_holds_for_bitsets() {
         ],
     )
     .unwrap();
-    let p_rhs = vyre_libs::math::lattice_meet("ab", "ac", "out", 1);
+    let p_rhs = vyre_libs::math::algebra::lattice_meet("ab", "ac", "out", 1);
     let o_rhs = vyre_reference::reference_eval(
         &p_rhs,
         &[

@@ -59,7 +59,7 @@ fn contains_branch(nodes: &[Node]) -> bool {
 /// output cells, which clears the threshold and builds the real loop.
 #[test]
 fn bool_semiring_inner_loop_is_branchless() {
-    let program = vyre_libs::math::bool_semiring_matmul("a", "b", "out", 16, 8, 8);
+    let program = vyre_libs::math::algebra::bool_semiring_matmul("a", "b", "out", 16, 8, 8);
     let body = bool_mm_loop_body(program.entry()).expect("bool_mm_k loop must exist");
     assert!(
         !contains_branch(body),
@@ -76,7 +76,7 @@ fn bool_semiring_inner_loop_is_branchless() {
 /// blind spot that let the test above sit red.
 #[test]
 fn bool_semiring_small_shapes_unroll_without_a_loop() {
-    let program = vyre_libs::math::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
+    let program = vyre_libs::math::algebra::bool_semiring_matmul("a", "b", "out", 2, 3, 2);
     assert!(
         bool_mm_loop_body(program.entry()).is_none(),
         "2 x 3 x 2 is below the 64-cell unroll threshold, so it must emit no bool_mm_k loop"

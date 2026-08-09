@@ -17,7 +17,7 @@ use vyre_reference::value::Value;
 #[test]
 fn rank_superblocks_all_zeros_yields_zero_prefixes() {
     let bits = [0u32; 8];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 8, 2);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 8, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -37,7 +37,7 @@ fn rank_superblocks_all_zeros_yields_zero_prefixes() {
 #[test]
 fn rank_superblocks_all_ones_yields_linear_prefixes() {
     let bits = [0xFFFF_FFFFu32; 4];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 4, 2);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 4, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -57,7 +57,7 @@ fn rank_superblocks_all_ones_yields_linear_prefixes() {
 #[test]
 fn rank_superblocks_single_word() {
     let bits = [0b1011u32];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 1, 1);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 1, 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -76,7 +76,7 @@ fn rank_superblocks_partial_final_block() {
     // 5 words, block size 2 words -> blocks at words 0,2,4 plus sentinel
     // = superblocks[0..=3] (0, count(words 0-1), count(words 0-3), total)
     let bits = [0b1111u32, 0b1111, 0b1111, 0b1111, 0b1111];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 5, 2);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 5, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[Value::from(u32_bytes(&bits)), Value::from(vec![0u8; 4 * 4])],
@@ -94,7 +94,7 @@ fn rank_superblocks_partial_final_block() {
 #[test]
 fn rank_superblocks_block_size_equal_word_count() {
     let bits = [0xFFFF_0000u32, 0x0000_FFFF, 0x1234_5678];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 3, 3);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 3, 3);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -111,7 +111,7 @@ fn rank_superblocks_block_size_equal_word_count() {
 #[test]
 fn rank_superblocks_block_size_one() {
     let bits = [0b1u32, 0b11, 0b111, 0b1111];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 4, 1);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 4, 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -137,7 +137,7 @@ fn rank_query_at_bit_zero() {
     let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
     let superblocks = [0u32, 4, 20]; // from the harness fixture
     let queries = [0u32];
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 4, 1, 2);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 4, 1, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -158,7 +158,7 @@ fn rank_query_at_bit_one() {
     let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
     let superblocks = [0u32, 4, 20];
     let queries = [1u32];
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 4, 1, 2);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 4, 1, 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -179,7 +179,7 @@ fn rank_query_cross_word_boundary_31_32() {
     let bits = [0xFFFF_FFFFu32, 0x0000_0001u32];
     let superblocks = [0u32, 32, 33];
     let queries = [31u32, 32u32];
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 2, 2, 1);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 2, 2, 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -201,7 +201,7 @@ fn rank_query_at_last_bit() {
     let bits = [0xFFFF_FFFFu32; 2];
     let superblocks = [0u32, 32, 64];
     let queries = [63u32];
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 2, 1, 1);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 2, 1, 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -221,8 +221,15 @@ fn rank_query_all_ones_monotonic() {
     let bits = [0xFFFF_FFFFu32; 4];
     let superblocks = [0u32, 64, 128];
     let queries: Vec<u32> = (0..=127).step_by(4).collect();
-    let program =
-        vyre_libs::math::rank1_query("bits", "sb", "q", "out", 4, queries.len() as u32, 2);
+    let program = vyre_libs::math::succinct::rank1_query(
+        "bits",
+        "sb",
+        "q",
+        "out",
+        4,
+        queries.len() as u32,
+        2,
+    );
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -247,7 +254,7 @@ fn rank_query_all_ones_monotonic() {
 fn rank_query_all_zeros_always_zero() {
     let bits = [0u32; 8];
     // Need to build superblocks first
-    let sb_program = vyre_libs::math::rank1_superblocks("bits", "sb", 8, 2);
+    let sb_program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 8, 2);
     let sb_outputs = vyre_reference::reference_eval(
         &sb_program,
         &[Value::from(u32_bytes(&bits)), Value::from(vec![0u8; 5 * 4])],
@@ -256,8 +263,15 @@ fn rank_query_all_zeros_always_zero() {
     let superblocks = decode_u32_words(&sb_outputs[0].to_bytes());
 
     let queries = [0u32, 1, 31, 32, 63, 64, 127, 128, 255];
-    let program =
-        vyre_libs::math::rank1_query("bits", "sb", "q", "out", 8, queries.len() as u32, 2);
+    let program = vyre_libs::math::succinct::rank1_query(
+        "bits",
+        "sb",
+        "q",
+        "out",
+        8,
+        queries.len() as u32,
+        2,
+    );
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -279,7 +293,7 @@ fn rank_query_all_zeros_always_zero() {
 #[test]
 fn rank_query_sparse_bits() {
     let bits = [0b1u32, 0, 0, 0x8000_0000]; // bits 0 and 127 set
-    let sb_program = vyre_libs::math::rank1_superblocks("bits", "sb", 4, 2);
+    let sb_program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 4, 2);
     let sb_outputs = vyre_reference::reference_eval(
         &sb_program,
         &[Value::from(u32_bytes(&bits)), Value::from(vec![0u8; 3 * 4])],
@@ -288,8 +302,15 @@ fn rank_query_sparse_bits() {
     let superblocks = decode_u32_words(&sb_outputs[0].to_bytes());
 
     let queries = [0u32, 1, 64, 127];
-    let program =
-        vyre_libs::math::rank1_query("bits", "sb", "q", "out", 4, queries.len() as u32, 2);
+    let program = vyre_libs::math::succinct::rank1_query(
+        "bits",
+        "sb",
+        "q",
+        "out",
+        4,
+        queries.len() as u32,
+        2,
+    );
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -311,14 +332,14 @@ fn rank_query_sparse_bits() {
 
 #[test]
 fn rank_builders_reject_zero_block_words() {
-    let err = vyre_libs::math::try_rank1_superblocks("bits", "sb", 1, 0)
+    let err = vyre_libs::math::succinct::try_rank1_superblocks("bits", "sb", 1, 0)
         .expect_err("zero block size must be rejected");
     assert_eq!(
         err.to_string(),
         "Fix: rank superblock size must be at least one u32 word"
     );
 
-    let err = vyre_libs::math::try_rank1_query("bits", "sb", "q", "out", 1, 1, 0)
+    let err = vyre_libs::math::succinct::try_rank1_query("bits", "sb", "q", "out", 1, 1, 0)
         .expect_err("zero block size in query must be rejected");
     assert_eq!(
         err.to_string(),
@@ -328,7 +349,7 @@ fn rank_builders_reject_zero_block_words() {
 
 #[test]
 fn rank_query_traps_out_of_bounds() {
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 1, 1, 1);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 1, 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[
@@ -349,7 +370,7 @@ fn rank_query_traps_out_of_bounds() {
 
 #[test]
 fn rank_query_traps_far_out_of_bounds() {
-    let program = vyre_libs::math::rank1_query("bits", "sb", "q", "out", 2, 1, 1);
+    let program = vyre_libs::math::succinct::rank1_query("bits", "sb", "q", "out", 2, 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[
@@ -375,7 +396,8 @@ fn rank_query_traps_far_out_of_bounds() {
 fn select_query_specific_sparse_positions() {
     let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
     let queries = [1u32, 2, 3, 4, 5, 20];
-    let program = vyre_libs::math::select1_query("bits", "q", "out", 4, queries.len() as u32);
+    let program =
+        vyre_libs::math::succinct::select1_query("bits", "q", "out", 4, queries.len() as u32);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -397,7 +419,8 @@ fn select_query_specific_sparse_positions() {
 fn select_query_all_ones_is_rank_minus_one() {
     let bits = [0xFFFF_FFFFu32; 2];
     let queries = [1u32, 2, 31, 32, 33, 64];
-    let program = vyre_libs::math::select1_query("bits", "q", "out", 2, queries.len() as u32);
+    let program =
+        vyre_libs::math::succinct::select1_query("bits", "q", "out", 2, queries.len() as u32);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -416,7 +439,7 @@ fn select_query_all_ones_is_rank_minus_one() {
 
 #[test]
 fn select_query_traps_zero_rank() {
-    let program = vyre_libs::math::select1_query("bits", "q", "out", 1, 1);
+    let program = vyre_libs::math::succinct::select1_query("bits", "q", "out", 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[
@@ -435,7 +458,7 @@ fn select_query_traps_zero_rank() {
 
 #[test]
 fn select_query_traps_rank_past_total_popcount() {
-    let program = vyre_libs::math::select1_query("bits", "q", "out", 1, 1);
+    let program = vyre_libs::math::succinct::select1_query("bits", "q", "out", 1, 1);
     let result = vyre_reference::reference_eval(
         &program,
         &[
@@ -455,7 +478,7 @@ fn select_query_traps_rank_past_total_popcount() {
 #[test]
 fn rank_metadata_remains_monotone_with_select1_available() {
     let bits = [0b1010_1010u32, 0x5555_5555, 0x0F0F_0F0F, 0xFF00_FF00];
-    let program = vyre_libs::math::rank1_superblocks("bits", "sb", 4, 1);
+    let program = vyre_libs::math::succinct::rank1_superblocks("bits", "sb", 4, 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[Value::from(u32_bytes(&bits)), Value::from(vec![0u8; 5 * 4])],

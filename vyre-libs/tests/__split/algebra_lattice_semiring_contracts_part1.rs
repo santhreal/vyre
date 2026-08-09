@@ -4,7 +4,7 @@ use super::*;
 fn lattice_join_specific_values() {
     let a = [0x0000_FFFFu32, 0xAAAA_AAAA, 0x0000_0000, 0xFFFF_FFFF];
     let b = [0xFFFF_0000u32, 0x5555_5555, 0x0000_0000, 0x0000_0000];
-    let program = vyre_libs::math::lattice_join("a", "b", "out", 4);
+    let program = vyre_libs::math::algebra::lattice_join("a", "b", "out", 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -25,8 +25,8 @@ fn lattice_join_specific_values() {
 fn lattice_join_commutative() {
     let a = [0x1234_5678u32, 0x9ABC_DEF0];
     let b = [0x0F0F_0F0Fu32, 0xF0F0_F0F0];
-    let p1 = vyre_libs::math::lattice_join("a", "b", "out", 2);
-    let p2 = vyre_libs::math::lattice_join("b", "a", "out", 2);
+    let p1 = vyre_libs::math::algebra::lattice_join("a", "b", "out", 2);
+    let p2 = vyre_libs::math::algebra::lattice_join("b", "a", "out", 2);
 
     let o1 = vyre_reference::reference_eval(
         &p1,
@@ -61,8 +61,8 @@ fn lattice_join_associative() {
     let z = [0x1111_1111u32];
 
     // (x | y) | z
-    let p_xy = vyre_libs::math::lattice_join("x", "y", "xy", 1);
-    let p_xyz = vyre_libs::math::lattice_join("xy", "z", "out", 1);
+    let p_xy = vyre_libs::math::algebra::lattice_join("x", "y", "xy", 1);
+    let p_xyz = vyre_libs::math::algebra::lattice_join("xy", "z", "out", 1);
 
     let o_xy = vyre_reference::reference_eval(
         &p_xy,
@@ -84,7 +84,7 @@ fn lattice_join_associative() {
     .unwrap();
 
     // x | (y | z)
-    let p_yz = vyre_libs::math::lattice_join("y", "z", "yz", 1);
+    let p_yz = vyre_libs::math::algebra::lattice_join("y", "z", "yz", 1);
     let o_yz = vyre_reference::reference_eval(
         &p_yz,
         &[
@@ -94,7 +94,7 @@ fn lattice_join_associative() {
         ],
     )
     .unwrap();
-    let p_xyz2 = vyre_libs::math::lattice_join("x", "yz", "out", 1);
+    let p_xyz2 = vyre_libs::math::algebra::lattice_join("x", "yz", "out", 1);
     let o_xyz2 = vyre_reference::reference_eval(
         &p_xyz2,
         &[
@@ -116,7 +116,7 @@ fn lattice_join_associative() {
 fn lattice_join_identity_all_zeros() {
     let a = [0xDEAD_BEEFu32, 0xCAFE_BABE];
     let zero = [0u32, 0];
-    let program = vyre_libs::math::lattice_join("a", "zero", "out", 2);
+    let program = vyre_libs::math::algebra::lattice_join("a", "zero", "out", 2);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -137,7 +137,7 @@ fn lattice_join_identity_all_zeros() {
 fn lattice_join_size_one() {
     let a = [0b1010u32];
     let b = [0b0101u32];
-    let program = vyre_libs::math::lattice_join("a", "b", "out", 1);
+    let program = vyre_libs::math::algebra::lattice_join("a", "b", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -155,7 +155,7 @@ fn lattice_join_size_one() {
 fn lattice_join_all_ones_absorbs() {
     let a = [0x1234_5678u32];
     let ones = [0xFFFF_FFFFu32];
-    let program = vyre_libs::math::lattice_join("a", "ones", "out", 1);
+    let program = vyre_libs::math::algebra::lattice_join("a", "ones", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -174,7 +174,7 @@ fn lattice_join_large_size_power_of_two() {
     let n = 256u32;
     let a = vec![0x5555_5555u32; n as usize];
     let b = vec![0xAAAA_AAAAu32; n as usize];
-    let program = vyre_libs::math::lattice_join("a", "b", "out", n);
+    let program = vyre_libs::math::algebra::lattice_join("a", "b", "out", n);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -191,7 +191,7 @@ fn lattice_join_large_size_power_of_two() {
 
 #[test]
 fn try_lattice_join_rejects_aliased_names() {
-    let err = vyre_libs::math::try_lattice_join("a", "a", "out", 4).unwrap_err();
+    let err = vyre_libs::math::algebra::try_lattice_join("a", "a", "out", 4).unwrap_err();
     assert!(
         err.to_string().contains("alias") || err.to_string().contains("name"),
         "aliasing a and b must be rejected: {err}"
@@ -206,7 +206,7 @@ fn try_lattice_join_rejects_aliased_names() {
 fn lattice_meet_specific_values() {
     let a = [0x0000_FFFFu32, 0xAAAA_AAAA, 0x0000_0000, 0xFFFF_FFFF];
     let b = [0xFFFF_0000u32, 0x5555_5555, 0x0000_0000, 0x0000_0000];
-    let program = vyre_libs::math::lattice_meet("a", "b", "out", 4);
+    let program = vyre_libs::math::algebra::lattice_meet("a", "b", "out", 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -227,8 +227,8 @@ fn lattice_meet_specific_values() {
 fn lattice_meet_commutative() {
     let a = [0x1234_5678u32];
     let b = [0x0F0F_0F0Fu32];
-    let p1 = vyre_libs::math::lattice_meet("a", "b", "out", 1);
-    let p2 = vyre_libs::math::lattice_meet("b", "a", "out", 1);
+    let p1 = vyre_libs::math::algebra::lattice_meet("a", "b", "out", 1);
+    let p2 = vyre_libs::math::algebra::lattice_meet("b", "a", "out", 1);
 
     let o1 = vyre_reference::reference_eval(
         &p1,
@@ -258,7 +258,7 @@ fn lattice_meet_associative() {
     let y = [0x0F0F_0F0Fu32];
     let z = [0x1111_1111u32];
 
-    let p_xy = vyre_libs::math::lattice_meet("x", "y", "xy", 1);
+    let p_xy = vyre_libs::math::algebra::lattice_meet("x", "y", "xy", 1);
     let o_xy = vyre_reference::reference_eval(
         &p_xy,
         &[
@@ -268,7 +268,7 @@ fn lattice_meet_associative() {
         ],
     )
     .unwrap();
-    let p_xyz = vyre_libs::math::lattice_meet("xy", "z", "out", 1);
+    let p_xyz = vyre_libs::math::algebra::lattice_meet("xy", "z", "out", 1);
     let o_xyz = vyre_reference::reference_eval(
         &p_xyz,
         &[
@@ -279,7 +279,7 @@ fn lattice_meet_associative() {
     )
     .unwrap();
 
-    let p_yz = vyre_libs::math::lattice_meet("y", "z", "yz", 1);
+    let p_yz = vyre_libs::math::algebra::lattice_meet("y", "z", "yz", 1);
     let o_yz = vyre_reference::reference_eval(
         &p_yz,
         &[
@@ -289,7 +289,7 @@ fn lattice_meet_associative() {
         ],
     )
     .unwrap();
-    let p_xyz2 = vyre_libs::math::lattice_meet("x", "yz", "out", 1);
+    let p_xyz2 = vyre_libs::math::algebra::lattice_meet("x", "yz", "out", 1);
     let o_xyz2 = vyre_reference::reference_eval(
         &p_xyz2,
         &[
@@ -311,7 +311,7 @@ fn lattice_meet_associative() {
 fn lattice_meet_identity_all_ones() {
     let a = [0xDEAD_BEEFu32];
     let ones = [0xFFFF_FFFFu32];
-    let program = vyre_libs::math::lattice_meet("a", "ones", "out", 1);
+    let program = vyre_libs::math::algebra::lattice_meet("a", "ones", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -329,7 +329,7 @@ fn lattice_meet_identity_all_ones() {
 fn lattice_meet_all_zeros_annihilates() {
     let a = [0xFFFF_FFFFu32];
     let zero = [0u32];
-    let program = vyre_libs::math::lattice_meet("a", "zero", "out", 1);
+    let program = vyre_libs::math::algebra::lattice_meet("a", "zero", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -346,7 +346,7 @@ fn lattice_meet_all_zeros_annihilates() {
 #[test]
 fn lattice_meet_idempotent() {
     let a = [0xA5A5_A5A5u32];
-    let program = vyre_libs::math::lattice_meet("a", "b", "out", 1);
+    let program = vyre_libs::math::algebra::lattice_meet("a", "b", "out", 1);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -366,7 +366,7 @@ fn lattice_join_meet_absorption() {
     let b = [0x5A5A_5A5Au32];
 
     // a | (a & b) == a
-    let p_meet = vyre_libs::math::lattice_meet("a", "b", "m", 1);
+    let p_meet = vyre_libs::math::algebra::lattice_meet("a", "b", "m", 1);
     let o_meet = vyre_reference::reference_eval(
         &p_meet,
         &[
@@ -376,7 +376,7 @@ fn lattice_join_meet_absorption() {
         ],
     )
     .unwrap();
-    let p_join = vyre_libs::math::lattice_join("a", "m", "out", 1);
+    let p_join = vyre_libs::math::algebra::lattice_join("a", "m", "out", 1);
     let o_out = vyre_reference::reference_eval(
         &p_join,
         &[
@@ -398,7 +398,7 @@ fn lattice_join_meet_absorption() {
 fn semiring_min_plus_mul_basic() {
     let a = [10u32, 20, u32::MAX, u32::MAX - 1];
     let b = [1u32, 2, 3, 4];
-    let program = vyre_libs::math::semiring_min_plus_mul("a", "b", "out", 4);
+    let program = vyre_libs::math::algebra::semiring_min_plus_mul("a", "b", "out", 4);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -414,4 +414,3 @@ fn semiring_min_plus_mul_basic() {
         vec![11, 22, u32::MAX, u32::MAX]
     );
 }
-

@@ -10,7 +10,7 @@ mod common;
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, Program};
 use vyre::DispatchConfig;
-use vyre_libs::math::scan_prefix_sum;
+use vyre_libs::math::scan::scan_prefix_sum;
 
 fn scan_inputs_for_program(program: &Program, input: &[u32]) -> Vec<Vec<u8>> {
     program

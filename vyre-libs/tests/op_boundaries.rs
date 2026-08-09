@@ -40,7 +40,7 @@ fn relu_boundaries_do_not_panic() {
 fn broadcast_boundaries_do_not_panic() {
     for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
         assert_no_panic("broadcast", || {
-            let _ = vyre_libs::math::broadcast("src", "dst", n);
+            let _ = vyre_libs::math::broadcast::broadcast("src", "dst", n);
         });
     }
 }
@@ -49,7 +49,7 @@ fn broadcast_boundaries_do_not_panic() {
 fn scan_prefix_sum_boundaries_do_not_panic() {
     for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
         assert_no_panic("scan_prefix_sum", || {
-            let _ = vyre_libs::math::scan_prefix_sum("input", "output", n);
+            let _ = vyre_libs::math::scan::scan_prefix_sum("input", "output", n);
         });
     }
 }
@@ -110,7 +110,7 @@ fn attention_zero_returns_actionable_error() {
 
 #[test]
 fn dot_zero_returns_actionable_error() {
-    let error = vyre_libs::math::dot("lhs", "rhs", "out", 0).unwrap_err();
+    let error = vyre_libs::math::linalg::dot("lhs", "rhs", "out", 0).unwrap_err();
     assert!(
         error.contains("dot") || error.contains("empty"),
         "Fix: dot n=0 error must mention the op and be actionable: {error}"

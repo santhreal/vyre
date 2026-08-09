@@ -85,7 +85,10 @@ pub(crate) fn invalid_program(
         [1, 1, 1],
         vec![region::wrap_anonymous(
             op_id,
-            vec![vyre_foundation::ir::Node::trap(vyre_foundation::ir::Expr::u32(0), message)],
+            vec![vyre_foundation::ir::Node::trap(
+                vyre_foundation::ir::Expr::u32(0),
+                message,
+            )],
         )],
     )
 }
@@ -117,10 +120,6 @@ pub mod buffer_names;
 pub mod descriptor;
 
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
-
-
-#[cfg(feature = "math-linalg")]
-pub use math::{matmul_bias_tiled, matmul_tiled, MatmulBias, MatmulBiasTiled, MatmulTiled};
 
 /// Neutral program fixtures consumed by upper conformance harnesses.
 #[doc(hidden)]
@@ -158,7 +157,6 @@ pub mod nn;
 ))]
 pub mod scan;
 
-
 /// Decode / decompression compositions  -  base64, hex, DEFLATE (stored),
 /// more coming. Pairs with `vyre-libs::matching::dfa` in the fused
 /// decode→scan pipeline (Innovation I.1).
@@ -184,7 +182,6 @@ pub mod representation;
 /// lexer driver, LR(1) table walker. Grammar tables are generated
 /// host-side by `downstream analyzer-grammar-gen` and loaded as ReadOnly buffers.
 pub mod parsing;
-
 
 /// Packed AST walks (`ast_walk_*` catalog ops).
 pub mod graph;
@@ -279,13 +276,12 @@ pub(crate) mod test_migration;
 /// Test support components for vyre-libs.
 pub mod test_support;
 
-
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API
 /// plus the types it returns.
 pub mod prelude {
-    pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
     pub use vyre_foundation::ir::model::expr::GeneratorRef;
+    pub use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
     // P2.1 / P2.2: the typed-tensor API + shared builder primitives.
     // Every Cat-A op ships with a TensorRef-accepting builder; the
@@ -309,20 +305,22 @@ pub mod prelude {
     pub use crate::hash::fnv1a32;
     #[cfg(feature = "logical")]
     pub use crate::logical::{and, nand, nor, or, xor};
-    #[cfg(feature = "math-broadcast")]
-    pub use crate::math::broadcast;
-    #[cfg(feature = "math-scan")]
-    pub use crate::math::scan_prefix_sum;
     #[cfg(feature = "math-algebra")]
-    pub use crate::math::{
+    pub use crate::math::algebra::{
         bool_semiring_matmul, lattice_join, lattice_meet, semiring_min_plus_mul, sketch_mix,
         try_bool_semiring_matmul, try_lattice_join, try_lattice_meet, try_semiring_min_plus_mul,
         try_sketch_mix,
     };
+    #[cfg(feature = "math-broadcast")]
+    pub use crate::math::broadcast::broadcast;
     #[cfg(feature = "math-linalg")]
-    pub use crate::math::{dot, matmul, matmul_tiled, Matmul, MatmulTiled};
+    pub use crate::math::linalg::{dot, matmul, matmul_tiled, Matmul, MatmulTiled};
+    #[cfg(feature = "math-scan")]
+    pub use crate::math::scan::scan_prefix_sum;
     #[cfg(feature = "math-succinct")]
-    pub use crate::math::{rank1_query, rank1_superblocks, try_rank1_query, try_rank1_superblocks};
+    pub use crate::math::succinct::{
+        rank1_query, rank1_superblocks, try_rank1_query, try_rank1_superblocks,
+    };
     #[cfg(feature = "nn-linear")]
     pub use crate::nn::linear;
     #[cfg(feature = "nn-activation")]
@@ -336,4 +334,3 @@ pub mod prelude {
     #[cfg(feature = "matching-dfa")]
     pub use crate::scan::{aho_corasick, dfa_compile, CompiledDfa, DfaCompileError};
 }
-

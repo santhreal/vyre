@@ -2,9 +2,9 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::math::linalg::MatmulBiasTiled;
 use crate::region::{tag_program, wrap};
 use crate::tensor_ref::TensorRef;
-use crate::MatmulBiasTiled;
 
 use super::builder::linear;
 

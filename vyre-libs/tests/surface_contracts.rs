@@ -221,7 +221,7 @@ fn contract_substring_real_byte_compare() {
 
 #[test]
 fn contract_math_matmul_tiled_exists() {
-    use vyre_libs::math::matmul_tiled;
+    use vyre_libs::math::linalg::matmul_tiled;
     let p = matmul_tiled("a", "b", "c", 64, 64, 64, 16);
     // Three caller bindings, unchanged, plus the two cooperative tiles the
     // kernel stages `a` and `b` through. The old count of 3 predated tiling.

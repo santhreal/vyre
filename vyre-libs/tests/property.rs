@@ -11,7 +11,9 @@
 use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_libs::hash::fnv1a32;
-use vyre_libs::math::{broadcast, dot, matmul, scan_prefix_sum};
+use vyre_libs::math::broadcast::broadcast;
+use vyre_libs::math::linalg::{dot, matmul};
+use vyre_libs::math::scan::scan_prefix_sum;
 
 fn has_single_region(program: &Program) -> bool {
     matches!(program.entry().first(), Some(vyre::ir::Node::Region { .. }))

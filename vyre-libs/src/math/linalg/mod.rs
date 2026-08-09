@@ -9,8 +9,7 @@ pub use dot::{dot, Dot};
 pub use matmul::{matmul, matmul_bias, Matmul, MatmulBias};
 pub use matmul_strassen::{matmul_strassen_2x2, matmul_strassen_one_level};
 
-// H1 Strassen base case re-export at the math root for parity with
-// existing dot/matmul exports.
+// Keep the tiled builders on the linear-algebra sub-dialect surface.
 pub use matmul_tiled::{matmul_bias_tiled, matmul_tiled, MatmulBiasTiled, MatmulTiled};
 #[cfg(feature = "nn-linear-4bit")]
 pub(crate) use matmul_tiled::{

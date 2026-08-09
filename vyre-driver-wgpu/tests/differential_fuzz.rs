@@ -53,7 +53,7 @@ proptest! {
         lhs in prop::collection::vec(any::<u32>(), 1..32),
         rhs_seed in any::<u64>(),
     ) {
-        use vyre_libs::math::dot;
+        use vyre_libs::math::linalg::dot;
         let rhs: Vec<u32> = (0..lhs.len())
             .map(|i| ((rhs_seed.wrapping_mul(i as u64 + 1) ^ 0xdead_beef) as u32))
             .collect();
@@ -86,7 +86,7 @@ proptest! {
 
     #[test]
     fn differential_scan_prefix_sum(input in prop::collection::vec(any::<u32>(), 1..64)) {
-        use vyre_libs::math::scan_prefix_sum;
+        use vyre_libs::math::scan::scan_prefix_sum;
         let n = input.len() as u32;
         let program = scan_prefix_sum("input", "output", n);
         let outputs = run(

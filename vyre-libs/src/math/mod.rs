@@ -11,9 +11,6 @@
 //! - `broadcast`  -  broadcast
 //! - `succinct`  -  rank/select bitvector metadata
 //!
-//! The flat-name re-exports (`vyre_libs::math::dot`, etc.) are kept
-//! for back-compat so external consumers pinning against the flat
-//! surface continue to resolve.
 
 #[cfg(feature = "math-linalg")]
 pub mod linalg;
@@ -94,26 +91,3 @@ pub use reduce_mean::reduce_mean;
 pub use reduce_variance::reduce_variance;
 pub use square::square;
 pub use welford::welford_sum_of_squares;
-
-// Flat re-exports  -  keep callers that pin against `vyre_libs::math::dot`
-// (and siblings) working across the nested-tree reshape.
-#[cfg(feature = "math-algebra")]
-pub use algebra::{
-    bool_semiring_matmul, lattice_join, lattice_meet, semiring_min_plus_mul, sketch_mix,
-    try_bool_semiring_matmul, try_lattice_join, try_lattice_meet, try_semiring_min_plus_mul,
-    try_sketch_mix,
-};
-#[cfg(feature = "math-broadcast")]
-pub use broadcast::broadcast;
-#[cfg(feature = "math-linalg")]
-pub use linalg::{
-    dot, matmul, matmul_bias, matmul_bias_tiled, matmul_tiled, Dot, Matmul, MatmulBias,
-    MatmulBiasTiled, MatmulTiled,
-};
-#[cfg(feature = "math-scan")]
-pub use scan::scan_prefix_sum;
-#[cfg(feature = "math-succinct")]
-pub use succinct::{
-    rank1_query, rank1_superblocks, select1_query, try_rank1_query, try_rank1_superblocks,
-    try_select1_query,
-};

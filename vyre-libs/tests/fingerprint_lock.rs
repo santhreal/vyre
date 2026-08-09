@@ -51,7 +51,7 @@ fn assert_fingerprint(op: &str, program: &Program, expected_hex: &str) {
 #[cfg(feature = "math-linalg")]
 #[test]
 fn fp_dot() {
-    use vyre_libs::math::dot;
+    use vyre_libs::math::linalg::dot;
     let p = dot("a", "b", "c", 4).unwrap();
     let fp = fingerprint(&p);
     // Print the fingerprint so CI can audit; actual lock is the
@@ -72,7 +72,7 @@ fn fp_dot() {
 #[cfg(feature = "math-linalg")]
 #[test]
 fn fp_matmul() {
-    use vyre_libs::math::matmul;
+    use vyre_libs::math::linalg::matmul;
     let p = matmul("a", "b", "out", 4, 8, 16);
     let p2 = matmul("a", "b", "out", 4, 8, 16);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -81,7 +81,7 @@ fn fp_matmul() {
 #[cfg(feature = "math-linalg")]
 #[test]
 fn fp_matmul_tiled() {
-    use vyre_libs::math::matmul_tiled;
+    use vyre_libs::math::linalg::matmul_tiled;
     let p = matmul_tiled("a", "b", "out", 4, 8, 16, 4);
     let p2 = matmul_tiled("a", "b", "out", 4, 8, 16, 4);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -90,7 +90,7 @@ fn fp_matmul_tiled() {
 #[cfg(feature = "math-scan")]
 #[test]
 fn fp_scan_prefix_sum() {
-    use vyre_libs::math::scan_prefix_sum;
+    use vyre_libs::math::scan::scan_prefix_sum;
     let p = scan_prefix_sum("a", "b", 64);
     let p2 = scan_prefix_sum("a", "b", 64);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -99,7 +99,7 @@ fn fp_scan_prefix_sum() {
 #[cfg(feature = "math-broadcast")]
 #[test]
 fn fp_broadcast() {
-    use vyre_libs::math::broadcast;
+    use vyre_libs::math::broadcast::broadcast;
     let p = broadcast("src", "dst", 4);
     let p2 = broadcast("src", "dst", 4);
     assert_eq!(fingerprint(&p), fingerprint(&p2));

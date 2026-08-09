@@ -95,7 +95,7 @@ fn cat_a_substring_search_matches_cpu_reference() {
 
 #[test]
 fn cat_a_dot_matches_cpu_reference() {
-    use vyre_libs::math::dot;
+    use vyre_libs::math::linalg::dot;
 
     let witnesses: &[(Vec<u32>, Vec<u32>, u32)] = &[
         (
@@ -173,7 +173,7 @@ fn cat_a_aho_corasick_matches_cpu_reference() {
 
 #[test]
 fn cat_a_scan_prefix_sum_matches_cpu_reference() {
-    use vyre_libs::math::scan_prefix_sum;
+    use vyre_libs::math::scan::scan_prefix_sum;
 
     let witnesses: &[(Vec<u32>, Vec<u32>)] = &[
         (vec![1, 2, 3, 4], vec![1, 3, 6, 10]),

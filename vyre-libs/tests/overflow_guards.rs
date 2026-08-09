@@ -8,7 +8,7 @@
 
 #![cfg(all(feature = "math-linalg", feature = "nn-attention"))]
 
-use vyre_libs::math::{matmul, matmul_tiled, Matmul, MatmulTiled};
+use vyre_libs::math::linalg::{matmul, matmul_tiled, Matmul, MatmulTiled};
 use vyre_libs::nn::{attention, Attention};
 use vyre_libs::tensor_ref::TensorRef;
 
