@@ -23,6 +23,8 @@ extern crate self as vyre;
 
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
+/// Canonical semantic operation registration and target facet views.
+pub mod operation;
 
 pub mod ir {
     //! The vyre intermediate representation.
