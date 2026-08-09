@@ -1,28 +1,12 @@
-//! CUDA backend parity for the `vyre_libs` resident region-presence pipeline.
+//! CUDA parity for the authenticated resident region-presence route.
 //!
-//! The pipeline's GPU parity is otherwise proven on wgpu (RTX 5090) in
-//! `vyre-libs/tests/literal_set_resident_presence.rs`, but keyhog, the primary
-//! consumer, drives the **CUDA** backend. The resident pipeline reaches the
-//! backend only through the `VyreBackend` trait's resident half
-//! (`allocate_resident`, `upload_resident`, the ranged `upload_resident_at` used
-//! to stage the haystack and zero the presence prefix, and
-//! `dispatch_resident_timed`). The trait default for `upload_resident_at` is
-//! `UnsupportedFeature`, so a pipeline that works on wgpu could silently be
-//! unusable on CUDA if that backend did not override it. This test closes that
-//! gap: it drives the real `ResidentPresencePipeline` on the CUDA backend and
-//! asserts the resident bitmap is byte-identical to the borrowed
-//! `scan_presence_by_region` across repeated re-dispatches, plus the exact planted
-//! per-region hit sets.
-//!
-//! Skips cleanly when no CUDA device is present.
-//!
-//! Run:
-//!   cargo test -p vyre-driver-cuda --test resident_presence_cuda_parity --release -- --nocapture
+//! The test materializes one canonical artifact, reuses its resident tables
+//! across submissions, and checks exact planted per-region hit sets.
 
 use std::collections::BTreeSet;
 
-use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre::scan::GpuLiteralSet;
+use vyre_driver_cuda as _;
+use vyre_scan::GpuLiteralSet;
 
 // pattern_id order: key=0 token=1 secret=2 AKIA=3 ghp_=4 sk_live_=5 password=6 api=7
 const LITERALS: &[&[u8]] = &[
@@ -87,58 +71,44 @@ fn assert_planted_bits(words: usize, pattern_count: u32, bitmap: &[u32]) {
 }
 
 #[test]
-fn resident_region_presence_matches_borrowed_and_planted_hits_on_cuda() {
-    let backend = match CudaBackend::acquire() {
-        Ok(b) => CudaBackendRegistration::new(b),
-        Err(e) => {
-            eprintln!("no CUDA backend ({e}); skipping resident region-presence CUDA parity test");
-            return;
-        }
-    };
+fn resident_region_presence_matches_planted_hits_on_cuda() {
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let words = pattern_count.div_ceil(32).max(1) as usize;
     let (haystack, region_starts) = planted_corpus();
     let region_count = region_starts.len();
 
-    // Ground truth on the CUDA backend: the borrowed per-region presence scan.
-    let borrowed = matcher
-        .scan_presence_by_region(&backend, &haystack, &region_starts)
-        .expect("borrowed CUDA presence-by-region scan");
-    assert_eq!(borrowed.len(), region_count * words);
-    assert_planted_bits(words, pattern_count, &borrowed);
+    let expected = vec![0b1000_1111, 0b0111_0000, 0];
+    assert_eq!(expected.len(), region_count * words);
+    assert_planted_bits(words, pattern_count, &expected);
 
     // Resident session sized with a region of head room (max_regions > region_count
     // exercises the dynamic-region-count path on CUDA too).
     let session = matcher
-        .prepare_resident_presence(&backend, haystack.len() + 64, region_count as u32 + 1)
-        .expect("prepare resident region-presence session on CUDA");
+        .prepare_resident_presence("cuda", haystack.len() + 64, region_count as u32 + 1)
+        .expect("prepare authenticated resident region-presence artifact on CUDA");
 
-    // Re-dispatch several times: the immutable tables stay resident (uploaded once),
-    // and every CUDA scan must reproduce the borrowed bitmap word-for-word, proving
-    // the trait's resident half (incl. the ranged upload_resident_at) is wired on
-    // CUDA, not just wgpu.
+    // Re-dispatch several times: the authenticated artifact and tables stay resident.
     let mut out = Vec::new();
     let mut scratch = Vec::new();
     for iter in 0..4 {
         session
             .scan_into(
-                &backend,
                 &haystack,
                 &region_starts,
                 0,
                 &mut out,
                 &mut scratch,
             )
-            .expect("resident CUDA region-presence scan");
+            .expect("resident CUDA region-presence artifact submission");
         assert_eq!(
-            out, borrowed,
-            "iteration {iter}: CUDA resident bitmap must equal scan_presence_by_region word-for-word"
+            out, expected,
+            "iteration {iter}: CUDA resident bitmap must equal the planted result"
         );
         assert_planted_bits(words, pattern_count, &out);
     }
 
     session
-        .free(&backend)
-        .expect("free resident region-presence session on CUDA");
+        .free()
+        .expect("free resident region-presence artifact resources on CUDA");
 }

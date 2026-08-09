@@ -250,8 +250,12 @@ impl RegionEvidencePipeline {
                 &vec_zero_bytes(bitmap_words),
             ];
             let config = evidence_dispatch_config(haystack_len);
-            let outputs =
-                crate::artifact_session::dispatch_registered(&program, backend.id(), &inputs)?;
+            let outputs = crate::artifact_session::dispatch_registered(
+                &program,
+                backend.id(),
+                &inputs,
+                &config,
+            )?;
             let bytes = dispatch_io::try_output_bytes(&outputs, 0, "presence bitmap")?;
             decode_words(bytes, bitmap_words)
         };
@@ -300,8 +304,12 @@ impl RegionEvidencePipeline {
             &matches_scratch,
         ];
         let config = evidence_dispatch_config(num_candidates);
-        let outputs =
-            crate::artifact_session::dispatch_registered(&program, backend.id(), &inputs)?;
+        let outputs = crate::artifact_session::dispatch_registered(
+            &program,
+            backend.id(),
+            &inputs,
+            &config,
+        )?;
         let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "extract match count")?;
         let count = dispatch_io::try_read_u32_prefix(count_bytes, "extract match count")?;
         if count > max_matches {
@@ -406,8 +414,12 @@ impl RegionEvidencePipeline {
             &admission_scratch,
         ];
         let config = evidence_dispatch_config(haystack_len);
-        let outputs =
-            crate::artifact_session::dispatch_registered(&program, backend.id(), &inputs)?;
+        let outputs = crate::artifact_session::dispatch_registered(
+            &program,
+            backend.id(),
+            &inputs,
+            &config,
+        )?;
 
         // Writable buffers, binding order: presence, match_count, matches, admission.
         let presence = decode_words(

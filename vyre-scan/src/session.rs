@@ -139,14 +139,24 @@ impl MaterializedScanSession {
         let haystack_len_bytes = haystack_len.to_le_bytes();
         let max_scan_bytes_bytes = max_scan_bytes.to_le_bytes();
 
-        let completion = self.artifact.submit([
-            (input_name, scratch.haystack_bytes.as_slice()),
-            ("nfa_transition", transition_bytes.as_ref()),
-            ("nfa_epsilon", epsilon_bytes.as_ref()),
-            (hit_name, scratch.hit_bytes.as_slice()),
-            ("nfa_haystack_len", haystack_len_bytes.as_slice()),
-            ("nfa_max_scan_bytes", max_scan_bytes_bytes.as_slice()),
-        ])?;
+        let grid = dispatch_io::candidate_start_dispatch_config(haystack_len)
+            .grid_override
+            .ok_or_else(|| {
+                vyre_driver::BackendError::new(
+                    "materialized NFA scan geometry omitted its invocation grid",
+                )
+            })?;
+        let completion = self.artifact.submit(
+            [
+                (input_name, scratch.haystack_bytes.as_slice()),
+                ("nfa_transition", transition_bytes.as_ref()),
+                ("nfa_epsilon", epsilon_bytes.as_ref()),
+                (hit_name, scratch.hit_bytes.as_slice()),
+                ("nfa_haystack_len", haystack_len_bytes.as_slice()),
+                ("nfa_max_scan_bytes", max_scan_bytes_bytes.as_slice()),
+            ],
+            grid,
+        )?;
         let hit_bytes = self.artifact.completion_value(&completion, hit_name)?;
         let count = dispatch_io::try_read_u32_prefix(hit_bytes, "scan artifact hit buffer")?;
         dispatch_io::try_unpack_match_triples_capped_into(

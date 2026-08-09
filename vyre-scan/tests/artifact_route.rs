@@ -78,3 +78,22 @@ fn resident_nfa_scan_uses_authenticated_artifact_resources(
     session.free()?;
     Ok(())
 }
+
+/// WHY: region-presence resources and executable state must share one authenticated
+/// materializer generation across repeated submissions.
+#[test]
+fn resident_presence_uses_authenticated_artifact_resources(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let haystack = b"abxxbc";
+    let matcher = GpuLiteralSet::compile(&[b"ab".as_slice(), b"bc".as_slice()]);
+    let session = matcher.prepare_resident_presence("wgpu", haystack.len() + 16, 2)?;
+    let mut actual = Vec::new();
+    let mut scratch = Vec::new();
+
+    session.scan_into(haystack, &[0, 4], 0, &mut actual, &mut scratch)?;
+    assert_eq!(actual, vec![1, 2]);
+    session.scan_into(haystack, &[0, 4], 0, &mut actual, &mut scratch)?;
+    assert_eq!(actual, vec![1, 2]);
+    session.free()?;
+    Ok(())
+}

@@ -98,9 +98,18 @@ impl ArtifactMaterializer for CudaMaterializer {
                 "target module count must equal the compiler-selected fusion-group count",
             ));
         }
-        let config = DispatchConfig::default();
+        if payload.entries().len() != selected.len() {
+            return Err(invalid_module(
+                "target entry count must equal the compiler-selected fusion-group count",
+            ));
+        }
         let mut modules = Vec::with_capacity(selected.len());
-        for (image, selected) in bundle.modules.into_iter().zip(selected) {
+        for ((image, selected), entry) in bundle
+            .modules
+            .into_iter()
+            .zip(selected)
+            .zip(payload.entries())
+        {
             if image.group != selected.group || image.stage != selected.stage {
                 return Err(invalid_module(
                     "target module group/stage identity must match the neutral selected plan",
@@ -119,6 +128,14 @@ impl ArtifactMaterializer for CudaMaterializer {
                     "PTX target module does not define `.visible .entry main`",
                 ));
             }
+            if entry.name != image.entry_point {
+                return Err(invalid_module(
+                    "target entry metadata must name the emitted PTX entry point",
+                ));
+            }
+            let mut config = DispatchConfig::default();
+            config.grid_override = Some(entry.grid_size);
+            config.dispatch_grid = Some(entry.grid_size);
             let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
             let prepared = self.backend.prepare_static_dispatch(&program, &config)?;
             let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
@@ -132,7 +149,11 @@ impl ArtifactMaterializer for CudaMaterializer {
                 &config,
                 prepared,
             )?);
-            modules.push(CudaExecutableModule { program, pipeline });
+            modules.push(CudaExecutableModule {
+                program,
+                pipeline,
+                config,
+            });
         }
         Ok(Box::new(CudaArtifactInstance {
             artifact: artifact.digest(),
@@ -163,6 +184,7 @@ impl ArtifactMaterializer for CudaMaterializer {
 struct CudaExecutableModule {
     program: Arc<Program>,
     pipeline: Arc<CudaCompiledPipeline>,
+    config: DispatchConfig,
 }
 
 struct CudaArtifactInstance {
@@ -196,6 +218,7 @@ impl ArtifactInstance for CudaArtifactInstance {
                         .to_string(),
             });
         }
+        let invocation_grid = bindings.invocation_grid();
         let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         let mut resident_state = BTreeMap::<ArtifactValueId, vyre_driver::Resource>::new();
         for (value, resource) in bindings.resources() {
@@ -214,9 +237,9 @@ impl ArtifactInstance for CudaArtifactInstance {
             ));
         }
         let result = if resident_state.is_empty() {
-            self.execute(host_state)
+            self.execute(host_state, invocation_grid)
         } else {
-            self.execute_resident(resident_state)
+            self.execute_resident(resident_state, invocation_grid)
         };
         Ok(Box::new(ReadySubmission {
             result: Some(result),
@@ -228,11 +251,16 @@ impl CudaArtifactInstance {
     fn execute(
         &self,
         mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        let config = DispatchConfig::default();
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
         for module in &self.modules {
+            let mut config = module.config.clone();
+            if let Some(grid) = invocation_grid {
+                config.grid_override = Some(grid);
+                config.dispatch_grid = Some(grid);
+            }
             let plan = BindingPlan::build(&module.program)?;
             let input_count = plan
                 .bindings
@@ -292,6 +320,7 @@ impl CudaArtifactInstance {
     fn execute_resident(
         &self,
         resources: BTreeMap<ArtifactValueId, vyre_driver::Resource>,
+        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         if self.modules.len() != 1 {
             return Err(BackendError::UnsupportedFeature {
@@ -318,7 +347,7 @@ impl CudaArtifactInstance {
         }
         let dispatched = module
             .pipeline
-            .dispatch_persistent_handles_timed(&ordered, &DispatchConfig::default())?;
+            .dispatch_artifact_resident_timed(&ordered, invocation_grid)?;
         let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         for binding in &plan.bindings {
             let Some(output_index) = binding.output_index else {

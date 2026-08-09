@@ -106,9 +106,18 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 "target module count must equal the compiler-selected fusion-group count",
             ));
         }
-        let config = DispatchConfig::default();
+        if payload.entries().len() != selected.len() {
+            return Err(invalid_module(
+                "target entry count must equal the compiler-selected fusion-group count",
+            ));
+        }
         let mut modules = Vec::with_capacity(selected.len());
-        for (image, selected) in bundle.modules.into_iter().zip(selected) {
+        for ((image, selected), entry) in bundle
+            .modules
+            .into_iter()
+            .zip(selected)
+            .zip(payload.entries())
+        {
             if image.group != selected.group || image.stage != selected.stage {
                 return Err(invalid_module(
                     "target module group/stage identity must match the neutral selected plan",
@@ -131,6 +140,14 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     "WGSL target module does not define compute entry point `main`",
                 ));
             }
+            if entry.name != image.entry_point {
+                return Err(invalid_module(
+                    "target entry metadata must name the emitted WGSL entry point",
+                ));
+            }
+            let mut config = DispatchConfig::default();
+            config.grid_override = Some(entry.grid_size);
+            config.dispatch_grid = Some(entry.grid_size);
             let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
             let binding_plan = BindingPlan::build(&program)?;
             let input_slots = target
@@ -176,6 +193,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 pipeline,
                 input_slots,
                 resident_slots,
+                config,
             });
         }
         Ok(Box::new(WgpuArtifactInstance {
@@ -215,6 +233,7 @@ struct WgpuExecutableModule {
     pipeline: Arc<WgpuPipeline>,
     input_slots: Vec<ArtifactInputSlot>,
     resident_slots: Vec<String>,
+    config: DispatchConfig,
 }
 
 struct WgpuArtifactInstance {
@@ -248,6 +267,7 @@ impl ArtifactInstance for WgpuArtifactInstance {
         if bindings.artifact() != self.artifact {
             return Err(invalid_module("bindings name a different neutral artifact"));
         }
+        let invocation_grid = bindings.invocation_grid();
         let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         let mut resident_state = BTreeMap::<ArtifactValueId, vyre_driver::Resource>::new();
         for (value, resource) in bindings.resources() {
@@ -266,9 +286,9 @@ impl ArtifactInstance for WgpuArtifactInstance {
             ));
         }
         let result = if resident_state.is_empty() {
-            self.execute(host_state)
+            self.execute(host_state, invocation_grid)
         } else {
-            self.execute_resident(resident_state)
+            self.execute_resident(resident_state, invocation_grid)
         };
         Ok(Box::new(ReadySubmission {
             result: Some(result),
@@ -280,11 +300,16 @@ impl WgpuArtifactInstance {
     fn execute(
         &self,
         mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
-        let config = DispatchConfig::default();
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
         for module in &self.modules {
+            let mut config = module.config.clone();
+            if let Some(grid) = invocation_grid {
+                config.grid_override = Some(grid);
+                config.dispatch_grid = Some(grid);
+            }
             let plan = BindingPlan::build(&module.program)?;
             let mut inputs = Vec::with_capacity(module.input_slots.len());
             for slot in &module.input_slots {
@@ -367,6 +392,7 @@ impl WgpuArtifactInstance {
     fn execute_resident(
         &self,
         resources: BTreeMap<ArtifactValueId, vyre_driver::Resource>,
+        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         if self.modules.len() != 1 {
             return Err(BackendError::UnsupportedFeature {
@@ -386,9 +412,14 @@ impl WgpuArtifactInstance {
             })?;
             ordered.push(resource.clone());
         }
+        let mut config = module.config.clone();
+        if let Some(grid) = invocation_grid {
+            config.grid_override = Some(grid);
+            config.dispatch_grid = Some(grid);
+        }
         let dispatched = module
             .pipeline
-            .dispatch_persistent_handles_timed(&ordered, &DispatchConfig::default())?;
+            .dispatch_persistent_handles_timed(&ordered, &config)?;
         let plan = BindingPlan::build(&module.program)?;
         let mut output_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         for binding in &plan.bindings {

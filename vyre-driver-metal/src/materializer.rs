@@ -71,8 +71,18 @@ mod native {
                     "target module count must equal the compiler-selected fusion-group count",
                 ));
             }
+            if payload.entries().len() != selected.len() {
+                return Err(invalid_module(
+                    "target entry count must equal the compiler-selected fusion-group count",
+                ));
+            }
             let mut modules = Vec::with_capacity(selected.len());
-            for (image, selected) in bundle.modules.into_iter().zip(selected) {
+            for ((image, selected), entry) in bundle
+                .modules
+                .into_iter()
+                .zip(selected)
+                .zip(payload.entries())
+            {
                 if image.group != selected.group || image.stage != selected.stage {
                     return Err(invalid_module(
                         "target module group/stage identity must match the neutral selected plan",
@@ -87,6 +97,14 @@ mod native {
                         "module bundle and Metal artifact entry points disagree",
                     ));
                 }
+                if entry.name != image.entry_point {
+                    return Err(invalid_module(
+                        "target entry metadata must name the emitted Metal entry point",
+                    ));
+                }
+                let mut config = DispatchConfig::default();
+                config.grid_override = Some(entry.grid_size);
+                config.dispatch_grid = Some(entry.grid_size);
                 let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
                 if target.workgroup_size != program.workgroup_size {
                     return Err(invalid_module(
@@ -94,7 +112,11 @@ mod native {
                     ));
                 }
                 let module = self.backend.materialize_target_module(target)?;
-                modules.push(MetalExecutableModule { program, module });
+                modules.push(MetalExecutableModule {
+                    program,
+                    module,
+                    config,
+                });
             }
             Ok(Box::new(MetalArtifactInstance {
                 artifact: artifact.digest(),
@@ -126,6 +148,7 @@ mod native {
     struct MetalExecutableModule {
         program: Arc<Program>,
         module: MetalTargetModule,
+        config: DispatchConfig,
     }
 
     struct MetalArtifactInstance {
@@ -156,6 +179,7 @@ mod native {
             if bindings.artifact() != self.artifact {
                 return Err(invalid_module("bindings name a different neutral artifact"));
             }
+            let invocation_grid = bindings.invocation_grid();
             let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
             for (value, resource) in bindings.resources() {
                 match resource {
@@ -171,7 +195,7 @@ mod native {
                 }
             }
             Ok(Box::new(ReadySubmission {
-                result: Some(self.execute(state)),
+                result: Some(self.execute(state, invocation_grid)),
             }))
         }
     }
@@ -180,9 +204,14 @@ mod native {
         fn execute(
             &self,
             mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+            invocation_grid: Option<[u32; 3]>,
         ) -> Result<Completion, BackendError> {
-            let config = DispatchConfig::default();
             for executable in &self.modules {
+                let mut config = executable.config.clone();
+                if let Some(grid) = invocation_grid {
+                    config.grid_override = Some(grid);
+                    config.dispatch_grid = Some(grid);
+                }
                 let plan = BindingPlan::build(&executable.program)?;
                 let input_count = plan
                     .bindings

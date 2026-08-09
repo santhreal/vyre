@@ -28,7 +28,7 @@
 use std::time::Instant;
 
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre::scan::GpuLiteralSet;
+use vyre_scan::GpuLiteralSet;
 
 const HAYSTACK_BYTES: usize = 8 * 1024 * 1024;
 const ITERS: usize = 20;
@@ -151,8 +151,8 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
 
     // --- Resident path timing (tables uploaded once; per-scan transfer = haystack). ---
     let session = matcher
-        .prepare_resident_presence(&backend, haystack.len() + 64, 2)
-        .expect("prepare resident region-presence session on CUDA");
+        .prepare_resident_presence("cuda", haystack.len() + 64, 2)
+        .expect("prepare authenticated resident region-presence artifact on CUDA");
     let mut out = Vec::new();
     let mut scratch = Vec::new();
     let mut resident_call_ms = Vec::with_capacity(ITERS);
@@ -163,14 +163,13 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
         let t = Instant::now();
         let timed = session
             .scan_into_timed(
-                &backend,
                 &haystack,
                 &region_starts,
                 0,
                 &mut out,
                 &mut scratch,
             )
-            .expect("resident timed scan");
+            .expect("resident timed artifact submission");
         let call_ms = t.elapsed().as_secs_f64() * 1e3;
         assert_eq!(out, borrowed_bitmap, "resident bitmap must equal borrowed");
         resident_call_ms.push(call_ms);
@@ -185,7 +184,7 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
     if !resident_kernel_ms.is_empty() {
         resident_kernel_ms.remove(0);
     }
-    session.free(&backend).expect("free resident session");
+    session.free().expect("free resident artifact resources");
 
     let borrowed_med = median(borrowed_wall_ms);
     let res_call_med = median(resident_call_ms);

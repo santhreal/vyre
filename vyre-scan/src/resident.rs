@@ -202,9 +202,14 @@ impl ResidentScanSession {
             (self.resource_names[4].as_str(), &self.haystack_len_buf),
             (self.resource_names[5].as_str(), &self.max_scan_bytes_buf),
         ];
+        let grid = dispatch_io::candidate_start_dispatch_config(haystack_len)
+            .grid_override
+            .ok_or_else(|| {
+                BackendError::new("resident NFA scan geometry omitted its invocation grid")
+            })?;
         let timed = self
             .artifact
-            .submit_resident_timed(&resources)
+            .submit_resident_timed(&resources, grid)
             .map_err(crate::artifact_session::as_backend_error)?;
         let hit_bytes =
             dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentScanSession hit buffer")?;

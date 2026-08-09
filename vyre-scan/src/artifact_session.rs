@@ -6,7 +6,7 @@ use std::time::Instant;
 use thiserror::Error;
 use vyre_driver::{
     BackendError, BackendRegistration, BindingSet, BoundResource, Completion, DeviceIdentity,
-    Resource, Submission, TimedDispatchResult,
+    DispatchConfig, Resource, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
@@ -90,8 +90,10 @@ impl ScanArtifactSession {
     pub fn submit<'a>(
         &self,
         resources: impl IntoIterator<Item = (&'a str, &'a [u8])>,
+        invocation_grid: [u32; 3],
     ) -> Result<Completion, ScanArtifactError> {
         let mut bindings: BindingSet = self.session.bindings()?;
+        bindings.set_invocation_grid(invocation_grid)?;
         for (name, bytes) in resources {
             let value = self.session.resource(name)?;
             bindings.insert(value, BoundResource::Host(bytes.to_vec()));
@@ -99,17 +101,26 @@ impl ScanArtifactSession {
         Ok(self.session.submit_and_wait(bindings)?)
     }
     /// Submit host buffers in canonical ABI order and return writable values in ABI order.
-    pub fn submit_ordered(&self, inputs: &[&[u8]]) -> Result<Vec<Vec<u8>>, ScanArtifactError> {
-        let completion = self.session.submit_host_inputs(inputs)?;
+    pub fn submit_ordered(
+        &self,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, ScanArtifactError> {
+        let mut bindings = self.session.host_bindings(inputs)?;
+        apply_invocation_grid(&mut bindings, config)?;
+        let completion = self.session.submit_and_wait(bindings)?;
         Ok(self.session.ordered_outputs(&completion)?)
     }
     /// Submit host buffers in canonical ABI order and return submission timing.
     pub fn submit_ordered_timed(
         &self,
         inputs: &[&[u8]],
+        config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, ScanArtifactError> {
         let start = Instant::now();
-        let completion = self.session.submit_host_inputs(inputs)?;
+        let mut bindings = self.session.host_bindings(inputs)?;
+        apply_invocation_grid(&mut bindings, config)?;
+        let completion = self.session.submit_and_wait(bindings)?;
         let outputs = self.session.ordered_outputs(&completion)?;
         Ok(TimedDispatchResult {
             outputs,
@@ -168,9 +179,11 @@ impl ScanArtifactSession {
     pub(crate) fn submit_resident_timed(
         &self,
         resources: &[(&str, &Resource)],
+        invocation_grid: [u32; 3],
     ) -> Result<TimedDispatchResult, ScanArtifactError> {
         let start = Instant::now();
         let mut bindings = self.session.bindings()?;
+        bindings.set_invocation_grid(invocation_grid)?;
         for (name, resource) in resources {
             let value = self.session.resource(name)?;
             bindings.insert(value, BoundResource::Resident((*resource).clone()));
@@ -187,6 +200,16 @@ impl ScanArtifactSession {
     }
 }
 
+fn apply_invocation_grid(
+    bindings: &mut BindingSet,
+    config: &DispatchConfig,
+) -> Result<(), BackendError> {
+    if let Some(grid) = config.dispatch_grid.or(config.grid_override) {
+        bindings.set_invocation_grid(grid)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn as_backend_error(error: ScanArtifactError) -> BackendError {
     BackendError::new(error.to_string())
 }
@@ -194,12 +217,13 @@ pub(crate) fn dispatch_registered(
     program: &Program,
     backend_id: &str,
     inputs: &[&[u8]],
+    config: &DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     session
-        .submit_ordered(inputs)
+        .submit_ordered(inputs, config)
         .map_err(|error| BackendError::new(error.to_string()))
 }
 
@@ -207,12 +231,13 @@ pub(crate) fn dispatch_registered_timed(
     program: &Program,
     backend_id: &str,
     inputs: &[&[u8]],
+    config: &DispatchConfig,
 ) -> Result<TimedDispatchResult, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     session
-        .submit_ordered_timed(inputs)
+        .submit_ordered_timed(inputs, config)
         .map_err(|error| BackendError::new(error.to_string()))
 }
 
@@ -243,15 +268,17 @@ pub(crate) fn dispatch_registered_async(
     program: &Program,
     backend_id: &str,
     inputs: &[Vec<u8>],
+    config: &DispatchConfig,
 ) -> Result<ArtifactPendingDispatch, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    let bindings = session
+    let mut bindings = session
         .session
         .host_bindings(&borrowed)
         .map_err(|error| BackendError::new(error.to_string()))?;
+    apply_invocation_grid(&mut bindings, config)?;
     let submission = session
         .session
         .submit(bindings)

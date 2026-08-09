@@ -65,8 +65,19 @@ impl ArtifactMaterializer for SpirvMaterializer {
                 fix: "Fix: target module count must equal the compiler-selected fusion-group count. Recompile the payload from this artifact.".to_string(),
             });
         }
+        if payload.entries().len() != selected.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: target entry count must equal the compiler-selected fusion-group count."
+                    .to_string(),
+            });
+        }
         let mut modules = Vec::with_capacity(selected.len());
-        for (image, selected) in bundle.modules.into_iter().zip(selected) {
+        for ((image, selected), entry) in bundle
+            .modules
+            .into_iter()
+            .zip(selected)
+            .zip(payload.entries())
+        {
             if image.group != selected.group || image.stage != selected.stage {
                 return Err(BackendError::InvalidProgram {
                     fix: "Fix: target module group/stage identity must match the neutral selected plan. Recompile the payload.".to_string(),
@@ -88,9 +99,19 @@ impl ArtifactMaterializer for SpirvMaterializer {
                         .to_string(),
                 });
             }
+            if entry.name != image.entry_point {
+                return Err(BackendError::InvalidProgram {
+                    fix: "Fix: target entry metadata must name the emitted SPIR-V entry point."
+                        .to_string(),
+                });
+            }
+            let mut config = DispatchConfig::default();
+            config.grid_override = Some(entry.grid_size);
+            config.dispatch_grid = Some(entry.grid_size);
             modules.push(SpirvExecutableModule {
                 program: fuse_selected_module(&selected).map_err(compile_error)?,
                 words,
+                config,
             });
         }
         Ok(Box::new(SpirvArtifactInstance {
@@ -123,6 +144,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
 struct SpirvExecutableModule {
     program: Program,
     words: Vec<u32>,
+    config: DispatchConfig,
 }
 
 struct SpirvArtifactInstance {
@@ -157,6 +179,7 @@ impl ArtifactInstance for SpirvArtifactInstance {
                         .to_string(),
             });
         }
+        let invocation_grid = bindings.invocation_grid();
         let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         for (value, resource) in bindings.resources() {
             match resource {
@@ -171,7 +194,7 @@ impl ArtifactInstance for SpirvArtifactInstance {
                 }
             }
         }
-        let result = self.execute(state);
+        let result = self.execute(state, invocation_grid);
         Ok(Box::new(ReadySubmission {
             result: Some(result),
         }))
@@ -182,8 +205,14 @@ impl SpirvArtifactInstance {
     fn execute(
         &self,
         mut state: BTreeMap<ArtifactValueId, Vec<u8>>,
+        invocation_grid: Option<[u32; 3]>,
     ) -> Result<Completion, BackendError> {
         for module in &self.modules {
+            let mut config = module.config.clone();
+            if let Some(grid) = invocation_grid {
+                config.grid_override = Some(grid);
+                config.dispatch_grid = Some(grid);
+            }
             let plan = BindingPlan::build(&module.program)?;
             let input_count = plan
                 .bindings
@@ -224,7 +253,7 @@ impl SpirvArtifactInstance {
                     &module.program,
                     &module.words,
                     &inputs,
-                    &DispatchConfig::default(),
+                    &config,
                 )
             }?;
             for binding in &plan.bindings {

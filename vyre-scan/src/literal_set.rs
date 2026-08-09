@@ -504,6 +504,7 @@ pub struct ResidentLiteralScan {
     haystack_capacity: usize,
     /// Match cap this session's `matches` buffer was sized for.
     max_matches: u32,
+    workgroup_x: u32,
 }
 // `Resource` handles and `ScanArtifactSession` are `Send + Sync`.
 const _: () = {
@@ -560,6 +561,7 @@ impl GpuLiteralSet {
         use crate::dispatch_io;
 
         let program = self.program_for_match_capacity(max_matches)?.into_owned();
+        let workgroup_x = program.workgroup_size[0];
         let registration = vyre_driver::backend::backend_registration(backend_id)?;
         let artifact =
             crate::artifact_session::ScanArtifactSession::compile(&program, registration)
@@ -614,6 +616,7 @@ impl GpuLiteralSet {
             matches_buf,
             haystack_capacity,
             max_matches,
+            workgroup_x,
         })
     }
 }
@@ -700,9 +703,16 @@ impl ResidentLiteralScan {
             ("matches", &self.matches_buf),
         ];
 
+        let grid = dispatch_io::byte_scan_dispatch_config(haystack_len, self.workgroup_x)
+            .grid_override
+            .ok_or_else(|| {
+                vyre_driver::BackendError::new(
+                    "resident literal scan geometry omitted its invocation grid",
+                )
+            })?;
         let timed = self
             .artifact
-            .submit_resident_timed(&resources)
+            .submit_resident_timed(&resources, grid)
             .map_err(crate::artifact_session::as_backend_error)?;
 
         // Output ordering = read_write then output by binding: match_count(6) ->
@@ -1921,6 +1931,7 @@ impl GpuLiteralSet {
             &prepared.program,
             backend.id(),
             &borrowed,
+            &prepared.dispatch_config,
         )?;
         prepared.decode_outputs_into(&timed.outputs, matches)?;
         Ok(timed)
@@ -1957,6 +1968,7 @@ impl GpuLiteralSet {
             &prepared.program,
             backend.id(),
             &prepared.inputs,
+            &prepared.dispatch_config,
         )?;
         Ok(PendingMatches { pending, prepared })
     }
@@ -2423,8 +2435,12 @@ impl GpuLiteralSet {
         ]
         .into_iter()
         .collect();
-        let outputs =
-            crate::artifact_session::dispatch_registered(&program, backend.id(), &borrowed_inputs)?;
+        let outputs = crate::artifact_session::dispatch_registered(
+            &program,
+            backend.id(),
+            &borrowed_inputs,
+            &config,
+        )?;
         // `presence` is the only read-write/output buffer, so it is outputs[0].
         let presence_bytes = dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence")?;
         Ok(decode_presence_words(presence_bytes, presence_words))
@@ -2532,8 +2548,12 @@ impl GpuLiteralSet {
         ]
         .into_iter()
         .collect();
-        let outputs =
-            crate::artifact_session::dispatch_registered(&program, backend.id(), &borrowed_inputs)?;
+        let outputs = crate::artifact_session::dispatch_registered(
+            &program,
+            backend.id(),
+            &borrowed_inputs,
+            &config,
+        )?;
         let presence_bytes =
             dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence_by_region")?;
         Ok(decode_presence_words(presence_bytes, total_words))
@@ -2572,8 +2592,12 @@ impl GpuLiteralSet {
         let (program, inputs, config, total_words, _haystack_len) =
             self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
         let borrowed: smallvec::SmallVec<[&[u8]; 12]> = inputs.iter().map(Vec::as_slice).collect();
-        let timed =
-            crate::artifact_session::dispatch_registered_timed(&program, backend.id(), &borrowed)?;
+        let timed = crate::artifact_session::dispatch_registered_timed(
+            &program,
+            backend.id(),
+            &borrowed,
+            &config,
+        )?;
         let presence_bytes = dispatch_io::try_output_bytes(
             &timed.outputs,
             0,
@@ -2619,8 +2643,12 @@ impl GpuLiteralSet {
     ) -> Result<PendingPresenceByRegion, vyre_driver::BackendError> {
         let (program, inputs, config, total_words, _haystack_len) =
             self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
-        let pending =
-            crate::artifact_session::dispatch_registered_async(&program, backend.id(), &inputs)?;
+        let pending = crate::artifact_session::dispatch_registered_async(
+            &program,
+            backend.id(),
+            &inputs,
+            &config,
+        )?;
         Ok(PendingPresenceByRegion {
             pending,
             total_words,
@@ -2851,8 +2879,12 @@ impl GpuLiteralSet {
 
         let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
         let borrowed: smallvec::SmallVec<[&[u8]; 10]> = inputs.iter().map(Vec::as_slice).collect();
-        let timed =
-            crate::artifact_session::dispatch_registered_timed(&program, backend.id(), &borrowed)?;
+        let timed = crate::artifact_session::dispatch_registered_timed(
+            &program,
+            backend.id(),
+            &borrowed,
+            &config,
+        )?;
         let presence_bytes =
             dispatch_io::try_output_bytes(&timed.outputs, 0, "literal_set presence timed")?;
         let presence = decode_presence_words(presence_bytes, presence_words);
@@ -2885,8 +2917,12 @@ impl GpuLiteralSet {
         haystack: &[u8],
     ) -> Result<PendingPresence, vyre_driver::BackendError> {
         let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
-        let pending =
-            crate::artifact_session::dispatch_registered_async(&program, backend.id(), &inputs)?;
+        let pending = crate::artifact_session::dispatch_registered_async(
+            &program,
+            backend.id(),
+            &inputs,
+            &config,
+        )?;
         Ok(PendingPresence {
             pending,
             presence_words,
@@ -3139,8 +3175,12 @@ impl GpuLiteralSet {
         ]
         .into_iter()
         .collect();
-        let outputs =
-            crate::artifact_session::dispatch_registered(&program, backend.id(), &borrowed_inputs)?;
+        let outputs = crate::artifact_session::dispatch_registered(
+            &program,
+            backend.id(),
+            &borrowed_inputs,
+            &config,
+        )?;
 
         // Output ordering = read_write + output buffers by binding:
         // presence(6) -> outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2].
@@ -3281,8 +3321,12 @@ impl GpuLiteralSet {
                 max_matches,
             )?;
         let borrowed: smallvec::SmallVec<[&[u8]; 13]> = inputs.iter().map(Vec::as_slice).collect();
-        let timed =
-            crate::artifact_session::dispatch_registered_timed(&program, backend.id(), &borrowed)?;
+        let timed = crate::artifact_session::dispatch_registered_timed(
+            &program,
+            backend.id(),
+            &borrowed,
+            &config,
+        )?;
 
         // Output ordering = read_write + output buffers by binding:
         // presence(6) -> outputs[0], match_count(12) -> outputs[1], matches(13) -> outputs[2].
@@ -3351,8 +3395,12 @@ impl GpuLiteralSet {
                 region_base,
                 max_matches,
             )?;
-        let pending =
-            crate::artifact_session::dispatch_registered_async(&program, backend.id(), &inputs)?;
+        let pending = crate::artifact_session::dispatch_registered_async(
+            &program,
+            backend.id(),
+            &inputs,
+            &config,
+        )?;
         Ok(PendingFusedRegion {
             pending,
             total_words,
@@ -3429,6 +3477,7 @@ impl GpuLiteralSet {
             dispatch_program,
             backend.id(),
             &borrowed_inputs,
+            &config,
         )
     }
 
@@ -3464,6 +3513,7 @@ impl GpuLiteralSet {
             dispatch_program,
             backend.id(),
             &borrowed_inputs,
+            &config,
         )
     }
 
@@ -3549,6 +3599,7 @@ impl GpuLiteralSet {
             count_program,
             backend.id(),
             &borrowed_inputs,
+            &config,
         )?;
         decode_literal_set_count_outputs(&outputs)
     }
