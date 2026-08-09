@@ -8,8 +8,6 @@
 pub mod buffer_layouts;
 /// Monotone forward dataflow analysis to a fixed point on GPU.
 pub mod dataflow_fixpoint;
-/// Dominator tree construction for control-flow analysis.
-pub mod dominator_tree;
 /// Bounded table-driven recursive-descent parsing primitive.
 pub mod recursive_descent;
 /// Inventory-based target-text source provider (assets live in driver crates).

@@ -1,31 +1,8 @@
-//! `dominator_tree`  -  Tier-3 shim.
+//! One-step predecessor query over dominance and block-membership edges.
 //!
-//! The [`dominator_tree`](fn@dominator_tree) primitive is tagged with
-//! ``Soundness::MayOver``:
-//! it computes reverse reachability over dominance edges (set union of
-//! dominance-tree ancestors), which over-approximates true dominators.
-//! Callers that need exact strict dominance must use `cpu_dominator_sets`,
-//! the CPU reference oracle implementing the Cooper-Harvey-Kennedy 2001
-//! iterative dataflow algorithm (set intersection of predecessor dominator
-//! sets). Rules with a zero-false-positive precision contract MUST compose
-//! against `cpu_dominator_sets` rather than [`dominator_tree`].
-//!
-//! AUDIT_2026-04-24 F-DT-02 (honest status): true dominator computation is
-//! the intersection of predecessor dominator sets
-//! (Cooper-Harvey-Kennedy / Lengauer-Tarjan), NOT a fixpoint over
-//! reverse reachability  -  intersection and union are different
-//! lattice operators and the distinction matters for correctness.
-//! The present primitive emits `csr_backward_traverse` over
-//! DOMINANCE edges, which computes reverse reachability (the set
-//! of dominance-tree ancestors, unioned across predecessors). That
-//! matches current reverse-reachability composition consumers but is
-//! technically a stronger (over-approximating) predicate than
-//! "dominates." Callers depending on strict dominator semantics
-//! should use `cpu_dominator_sets` or compose the intersection in generic query dialect
-//! directly. This note is load-bearing: security rules that consume
-//! this op today are using it as reverse reachability and will
-//! keep working; any new rule that needs strict dominance must
-//! flag the dependency explicitly.
+//! This operation performs one reverse CSR traversal. It does not compute a
+//! dominator tree or a transitive dominance closure. Exact strict-dominance
+//! checks use the independent `cpu_dominator_sets` test oracle.
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse;
@@ -34,30 +11,23 @@ use vyre_primitives::predicate::edge_kind;
 
 use crate::region::{reparent_program_children, wrap_anonymous};
 
-const OP_ID: &str = "vyre-libs::security::dominator_tree";
+const OP_ID: &str = "vyre-libs::security::dominance_predecessors";
 
-/// Build one reverse-traversal step along dominance edges.
+/// Build one reverse-traversal step along dominance and block-membership edges.
 ///
-/// # Soundness
-///
-/// This composition is ``Soundness::MayOver``:
-/// it returns the set of nodes that can reach `n` via dominance edges,
-/// i.e. an over-approximation of true dominators. Rules that require
-/// zero false positives must gate on `cpu_dominator_sets` instead.
+/// The output contains the input frontier and its immediate matching
+/// predecessors. It makes no transitive or strict-dominance claim.
 #[must_use]
-pub fn dominator_tree(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
+pub fn dominance_predecessors(
+    shape: ProgramGraphShape,
+    frontier_in: &str,
+    frontier_out: &str,
+) -> Program {
     crate::security::assert_security_inputs(
         OP_ID,
         shape.node_count,
         &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
     );
-    // Traverse DOMINANCE (block-entry idom chain) UNION BLOCK_MEMBER
-    // (block-entry ↔ contained-node, bidirectional). The idom edges
-    // alone connect only block-entry nodes; BLOCK_MEMBER lets a backward
-    // step reach a call/argument operand node from its block entry and
-    // vice-versa, so `dominates($a, $b)` evaluates block-level dominance
-    // on arbitrary expression operands rather than the empty frontier
-    // those operands form against idom-only edges.
     let primitive = csr_backward_traverse(
         shape,
         frontier_in,
@@ -76,17 +46,8 @@ pub fn dominator_tree(shape: ProgramGraphShape, frontier_in: &str, frontier_out:
 
 /// CPU reference oracle for strict dominator sets.
 ///
-/// Implements the iterative dataflow algorithm from Cooper, Harvey &
-/// Kennedy (2001):
-///
-/// 1. `Dom(entry) = {entry}`; `Dom(other) = ALL_NODES`.
-/// 2. Iterate over nodes in reverse postorder, computing  
-///    `Dom(n) = {n} ∪ ⋂_{p ∈ preds(n)} Dom(p)` until fixpoint.
-/// 3. Return `Vec<Vec<u32>>` where index `n` is the sorted dominator set.
-///
-/// This is an ``Exact``
-/// reference; rules that require zero false positives MUST compose
-/// against this oracle rather than the GPU [`dominator_tree`] shim.
+/// Implements the iterative Cooper-Harvey-Kennedy dataflow algorithm and
+/// returns the sorted dominator set for each node.
 #[must_use]
 #[cfg(test)]
 pub(crate) fn cpu_dominator_sets(
@@ -106,7 +67,7 @@ inventory::submit! {
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: Some(|| dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout")),
+        build: Some(|| dominance_predecessors(ProgramGraphShape::new(4, 4), "fin", "fout")),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             // Diamond dominance tree: 0 dominates 1 and 2; both dominate 3.
@@ -195,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn dominator_tree_backward_step_reaches_ancestors() {
+    fn dominance_predecessor_step_reaches_immediate_ancestors() {
         let (node_count, offsets, targets, masks) = diamond_dominance_tree();
         let frontier_in = vec![0b1000]; // {3}
         let out = cpu_ref(
@@ -210,27 +171,26 @@ mod tests {
     }
 
     #[test]
-    fn dominator_tree_program_emits_frontier_buffers() {
-        let p = dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout");
+    fn dominance_predecessors_emit_frontier_buffers() {
+        let p = dominance_predecessors(ProgramGraphShape::new(4, 4), "fin", "fout");
         let names: Vec<&str> = p.buffers().iter().map(|b| b.name()).collect();
         assert!(names.contains(&"fin"));
         assert!(names.contains(&"fout"));
     }
 
     #[test]
-    fn dominator_tree_soundness_is_mayover() {
-        // The GPU dominator_tree shim is documented as MayOver (reverse reachability).
+    fn dominance_predecessors_use_precise_operation_identity() {
         use vyre_foundation::ir::Node;
-        let p = dominator_tree(ProgramGraphShape::new(2, 1), "fin", "fout");
+        let p = dominance_predecessors(ProgramGraphShape::new(2, 1), "fin", "fout");
         let [Node::Region { generator, .. }] = p.entry() else {
-            panic!("dominator_tree must emit one wrapped region");
+            panic!("dominance_predecessors must emit one wrapped region");
         };
         assert_eq!(generator.as_str(), OP_ID);
     }
 
     #[test]
-    fn dominator_tree_gpu_over_approximates_strict_dominators_on_diamond() {
-        let p = dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout");
+    fn dominance_predecessors_do_not_claim_strict_dominance() {
+        let p = dominance_predecessors(ProgramGraphShape::new(4, 4), "fin", "fout");
         let to_bytes = vyre_primitives::wire::pack_u32_slice;
         let inputs = vec![
             to_bytes(&[0, 0, 0, 0]),    // pg_nodes
@@ -258,48 +218,32 @@ mod tests {
 
         // Adversarial test for the documented soundness gap.
         //
-        // `dominator_tree` is implemented as one
-        // `csr_backward_traverse` step over DOMINANCE edges from the
-        // input frontier. That is a *single-hop predecessor query*,
-        // not the dominator closure: starting from `{3}` it returns
-        // `{3} ∪ pred_DOMINANCE(3)` (immediate predecessors only),
-        // never reaching `{0}` which sits two hops back through the
-        // diamond. So the shim is neither strictly dominator-equal
-        // (under-includes  -  misses 0) nor a strict super-set
-        // over-approximation. The doc says `Soundness::MayOver` but
-        // the underlying primitive is one-step, not closure.
-        //
-        // This adversarial test pins the current behaviour so any
-        // change to the substrate (e.g. wiring in a fixpoint closure
-        // or migrating to a downstream dataflow engine's strict dominator solver) must update
-        // this test deliberately. Rules that need true dominators
-        // route through `cpu_dominator_sets` (Lengauer-Tarjan).
+        // This operation is one `csr_backward_traverse` step over matching
+        // edges. Starting from `{3}` yields the seed plus immediate
+        // predecessors `{1, 2}` and never reaches `{0}` two hops away.
         let one_hop_predecessors_of_3: u32 = 0b1110; // {1, 2, 3}: self + immediate DOMINANCE preds
         assert_eq!(
             gpu_out, one_hop_predecessors_of_3,
-            "dominator_tree single-step shim returned {gpu_out:b}; expected \
-             {one_hop_predecessors_of_3:b} (immediate DOMINANCE predecessors of node 3). \
-             True strict dominators are {true_dom_bitset:b}  -  the shim does NOT \
-             compute these and rules requiring strict dominators must use \
-             cpu_dominator_sets instead."
+            "dominance_predecessors returned {gpu_out:b}; expected \
+             {one_hop_predecessors_of_3:b} (seed plus immediate predecessors). \
+             Strict dominators are {true_dom_bitset:b}."
         );
         assert_ne!(
             gpu_out, true_dom_bitset,
-            "dominator_tree shim must visibly differ from strict dominators \
-             on the diamond  -  equality here would mean the substrate \
-             silently became a closure and the doc/tests need updating."
+            "one-step dominance predecessors must differ from strict dominators \
+             on the diamond"
         );
     }
 
     #[test]
     #[should_panic(expected = "node_count must be positive")]
-    fn dominator_tree_zero_node_count_should_panic() {
-        let _ = dominator_tree(ProgramGraphShape::new(0, 0), "fin", "fout");
+    fn dominance_predecessors_reject_zero_node_count() {
+        let _ = dominance_predecessors(ProgramGraphShape::new(0, 0), "fin", "fout");
     }
 
     #[test]
     #[should_panic(expected = "empty buffer name")]
-    fn dominator_tree_empty_buffer_name_should_panic() {
-        let _ = dominator_tree(ProgramGraphShape::new(4, 4), "", "fout");
+    fn dominance_predecessors_reject_empty_buffer_name() {
+        let _ = dominance_predecessors(ProgramGraphShape::new(4, 4), "", "fout");
     }
 }

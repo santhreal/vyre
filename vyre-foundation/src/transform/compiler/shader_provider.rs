@@ -1,9 +1,8 @@
 //! Inventory-backed indirection for compiler-primitive shader sources.
 //!
-//! Law B forbids concrete target asset files under `vyre-foundation`. The
-//! six compiler primitives (dataflow_fixpoint, dominator_tree,
-//! recursive_descent, string_interner, typed_arena, visitor_walk) still
-//! have GPU kernels, but those kernel assets live in concrete driver crates.
+//! Law B forbids concrete target asset files under `vyre-foundation`. The five
+//! compiler primitives declared here retain target-owned GPU kernels in
+//! concrete driver crates.
 //!
 //! This module declares the `CompilerPrimitiveShader` inventory
 //! record and a fallback-free resolver. Driver crates submit records
@@ -18,7 +17,7 @@
 /// `include_str!` lives inside the driver crate that actually ships the
 /// asset.
 pub struct CompilerPrimitiveShader {
-    /// Stable compiler-primitive identifier, e.g. `"dominator_tree"`.
+    /// Stable compiler-primitive identifier, e.g. `"dataflow_fixpoint"`.
     pub op: &'static str,
     /// Emits the source string backing this primitive's GPU kernel.
     pub source: fn() -> &'static str,

@@ -184,7 +184,7 @@ define_bitset_and_security_op!(
     }
 );
 mod catalog;
-pub mod dominator_tree;
+pub mod dominance_predecessors;
 pub mod facts;
 pub(crate) mod flow_composition;
 pub mod flows_to;
@@ -327,7 +327,7 @@ pub use aliases_dataflow::{aliases_dataflow, try_aliases_dataflow};
 pub use auth_check_dominates::auth_check_dominates;
 pub use bounded_by_comparison::bounded_by_comparison;
 pub use buffer_size_check::buffer_size_check;
-pub use dominator_tree::dominator_tree;
+pub use dominance_predecessors::dominance_predecessors;
 pub use facts::{
     AnalysisFact, AnalysisFactColumns, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan,
     FactId, FactKind, FindingProofBundle, FindingProofStep,
