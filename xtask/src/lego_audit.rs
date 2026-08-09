@@ -827,11 +827,8 @@ fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
 /// imports, aliases, globs, and `pub use` are audited consistently without
 /// relying on line-oriented grep.
 ///
-/// CRITIQUE_VISION_ALIGNMENT_2026-04-23 V5 was precisely this category:
-/// `security-analysis-consumer::emit` reached into
-/// `vyre_libs::security::topology::match_order` for generic byte-range
-/// ordering. V5's hoist into `vyre_libs::range_ordering` and this
-/// automated check keep that coupling from returning.
+/// Generic byte-range ordering lives in `vyre_libs::range_ordering`; Tier 3
+/// dialects must not regain private sibling dependencies.
 fn check_4_cross_dialect_reachthrough() -> usize {
     println!("[4/10] Cross-dialect reach-through (Tier 3 dialects must not import private items from sibling Tier 3 dialects)");
     let libs_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

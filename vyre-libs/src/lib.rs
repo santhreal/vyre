@@ -96,10 +96,7 @@ pub(crate) fn invalid_program(
 /// Region builder  -  the shared helper every composition routes through.
 pub mod region;
 
-/// Domain-neutral byte-range ordering predicates. Previously lived inside
-/// `vyre-libs::security::topology`; hoisted out so non-security callers
-/// (a downstream analyzer's `Before`/`After` predicates, future dialects) do not pull the
-/// security dialect through the import graph. See CRITIQUE_VISION_ALIGNMENT_2026-04-23 V5.
+/// Domain-neutral byte-range ordering predicates.
 pub mod range_ordering;
 
 /// `TensorRef`  -  typed buffer-argument wrapper used by every Cat-A

@@ -8,18 +8,8 @@
 //! vyre IR: forward / backward reachability, dominator walks, and
 //! taint propagation with sanitizer masking.
 //!
-//! ## Module re-export rule
-//!
-//! Every `pub mod foo` in this file re-exports its primary entry
-//! point as `pub use foo::foo;` at parent, alphabetized below.
-//! Callers reach a primitive by `vyre_libs::security::foo(...)`
-//! without learning the file layout. The single intentional
-//! exception is `topology::match_order`  -  per
-//! AUDIT_CLAUDE_2026-04-24 F7, the `match_order` symbol must be
-//! imported from `vyre_libs::range_ordering::match_order`; the
-//! `#[deprecated]` shim in `topology.rs` is a soft-landing for
-//! out-of-tree callers and is intentionally NOT re-exported here
-//! so its deprecation warning fires.
+//! Every public operation is re-exported at this module root. Callers do not
+//! depend on the internal file layout.
 //!
 //! `flow_composition` is `pub(crate)` because its helpers
 //! (`fuse_security_flow`, `dataflow_hit_program`,
@@ -68,9 +58,9 @@ macro_rules! define_bitset_and_security_op {
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
             pub struct $marker;
 
-            impl vyre_foundation::soundness::SoundnessTagged for $marker {
-                fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-                    vyre_foundation::soundness::Soundness::Exact
+            impl vyre_spec::soundness::SoundnessTagged for $marker {
+                fn soundness(&self) -> vyre_spec::soundness::Soundness {
+                    vyre_spec::soundness::Soundness::Exact
                 }
             }
 
@@ -130,9 +120,9 @@ macro_rules! define_bitset_and_not_security_op {
             #[doc = concat!("Soundness marker for [`", stringify!($function), "`].")]
             pub struct $marker;
 
-            impl vyre_foundation::soundness::SoundnessTagged for $marker {
-                fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-                    vyre_foundation::soundness::Soundness::Exact
+            impl vyre_spec::soundness::SoundnessTagged for $marker {
+                fn soundness(&self) -> vyre_spec::soundness::Soundness {
+                    vyre_spec::soundness::Soundness::Exact
                 }
             }
 
@@ -291,7 +281,6 @@ define_bitset_and_security_op!(
 pub mod taint_flow;
 pub mod taint_kill;
 pub mod taint_pollution;
-pub mod topology;
 define_bitset_and_not_security_op!(
     unchecked_return,
     unchecked_return,

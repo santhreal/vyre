@@ -1,22 +1,8 @@
-//! Byte-range ordering predicates  -  substrate-neutral coordination helpers.
+//! Domain-neutral byte-range ordering predicates.
 //!
-//! CRITIQUE_VISION_ALIGNMENT_2026-04-23 V5: these helpers generate IR
-//! that decides `∃ (a ∈ A, b ∈ B)` relations between two tagged byte-range
-//! streams (A "ends before" B starts, A "contains" B, etc.). None of it
-//! knows about security, rules, malware, or any other domain  -  it is
-//! generic coordination between enumerated byte ranges. Previously it
-//! lived inside `vyre-libs::security::topology`, which gravitationally
-//! pulled the security dialect into every source-query dialect compile path even when
-//! the author's program had nothing to do with security.
-//!
-//! Callers: `downstream analyzer::emit` for `Before`/`After` predicates;
-//! any future dialect that enumerates `(tag, start, end)` ranges and
-//! asks relational questions about them.
-//!
-//! The helpers still read from the conventional `counts` / `offsets` /
-//! `lengths` buffer naming scheme. A future pass can parameterise the
-//! buffer names to fully decouple from that convention; today the
-//! convention is source-query dialect's scanner output contract.
+//! These helpers build IR for relations between tagged byte-range streams.
+//! They use the scanner output contract's `counts`, `offsets`, and `lengths`
+//! buffer names.
 
 use vyre_foundation::ir::{Expr, Node};
 
