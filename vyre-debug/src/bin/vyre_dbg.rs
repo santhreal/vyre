@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::exit;
 use vyre_debug::{
     bisect_rewrites, carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl,
-    find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke,
+    find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke, ArtifactReport,
     DescriptorDumpOptions,
 };
 use vyre_foundation::ir::Expr;
@@ -20,6 +20,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    ArtifactReport {
+        #[arg(long)]
+        envelope: String,
+    },
     DumpDescriptor {
         #[arg(long)]
         prog: String,
@@ -158,6 +162,23 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::ArtifactReport { envelope } => {
+            let bytes = match std::fs::read(&envelope) {
+                Ok(bytes) => bytes,
+                Err(error) => {
+                    eprintln!("Failed to read artifact envelope {envelope}: {error}");
+                    exit(2);
+                }
+            };
+            let report = match ArtifactReport::from_bytes(&bytes) {
+                Ok(report) => report,
+                Err(error) => {
+                    eprintln!("Invalid artifact envelope {envelope}: {error}");
+                    exit(2);
+                }
+            };
+            print_json_or_exit(&report, "artifact report");
+        }
         Commands::DumpDescriptor { prog, num_tokens } => {
             let p = match get_program(&prog, num_tokens) {
                 Ok(p) => p,

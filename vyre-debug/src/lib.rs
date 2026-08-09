@@ -18,6 +18,8 @@
 )]
 //! Inspection and diagnostic helpers for Vyre IR and lowered kernel descriptors.
 ///
+/// Canonical compiler artifact and selected-plan diagnostics.
+pub mod artifact_report;
 /// Loop-carrier diagnostics.
 pub mod carriers;
 /// Dangling descriptor-reference diagnostics.
@@ -39,6 +41,7 @@ pub mod source_walker;
 /// WGSL emission and source-line mapping.
 pub mod wgsl;
 
+pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};
 pub use dangling::{find_dangling_refs, DanglingRef};
 pub use descriptor_diff::{bisect_rewrites, diff_descriptors, DescriptorDiff, RewriteBisectResult};
