@@ -1,6 +1,6 @@
-use vyre_foundation::ir::Program;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 use vyre_foundation::ir::DataType;
+use vyre_foundation::ir::Program;
 use vyre_primitives::bitset::and::bitset_and;
 #[cfg(test)]
 use vyre_primitives::bitset::and::cpu_ref as bitset_and_cpu_ref;
@@ -114,7 +114,7 @@ pub(crate) fn fuse_security_flow(op_id: &'static str, parts: &[Program], output:
     let fused = match fuse_programs(parts) {
         Ok(fused) => fused,
         Err(error) => {
-            return crate::builder::invalid_output_program(
+            return crate::builder::invalid_builder_trap_program(
                 op_id,
                 output,
                 DataType::U32,
@@ -227,7 +227,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
     let mut parts = Vec::new();
     let traverse_source = if let Some(sanitizer_buf) = options.sanitizer_buf {
         let Some(clean_buf) = options.clean_buf else {
-            return crate::builder::invalid_output_program(
+            return crate::builder::invalid_builder_trap_program(
                 options.op_id,
                 options.reach_buf,
                 DataType::U32,
@@ -263,7 +263,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
     parts.push(traverse);
     let hit_source = if let Some(sanitizer_buf) = options.sanitizer_buf {
         let Some(alive_buf) = options.alive_buf else {
-            return crate::builder::invalid_output_program(
+            return crate::builder::invalid_builder_trap_program(
                 options.op_id,
                 options.reach_buf,
                 DataType::U32,
@@ -281,7 +281,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
         options.reach_buf
     };
     let Some(sink_buf) = options.sink_buf else {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             options.op_id,
             options.reach_buf,
             DataType::U32,
@@ -289,7 +289,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
         );
     };
     let Some(hits_buf) = options.hits_buf else {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             options.op_id,
             options.reach_buf,
             DataType::U32,
@@ -297,7 +297,7 @@ pub(crate) fn security_flow_program(options: SecurityFlowOptions<'_>) -> Program
         );
     };
     let Some(out_scalar_buf) = options.out_scalar_buf else {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             options.op_id,
             options.reach_buf,
             DataType::U32,

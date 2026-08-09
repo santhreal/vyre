@@ -364,7 +364,7 @@ mod fallible_pack_wrapper_tests {
     };
 
     #[test]
-    fn compatibility_wrappers_match_fallible_packers() {
+    fn convenience_wrappers_match_fallible_packers() {
         let words = [0x0102_0304_u32, 0xaabb_ccdd];
         let mut compat_words = Vec::new();
         let mut fallible_words = Vec::new();
@@ -414,7 +414,7 @@ mod fallible_pack_wrapper_tests {
 
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: wire packing compatibility wrappers must not panic in production code."
+            "Fix: wire packing convenience wrappers must not panic in production code."
         );
     }
 }

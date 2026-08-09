@@ -24,7 +24,7 @@ const SKETCH_MIX_OP_ID: &str = "vyre-libs::math::algebra::sketch_mix";
 #[must_use]
 pub fn lattice_join(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_lattice_join(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             JOIN_OP_ID,
             out,
             DataType::U32,
@@ -51,7 +51,7 @@ pub fn try_lattice_join(a: &str, b: &str, out: &str, size: u32) -> Result<Progra
 #[must_use]
 pub fn lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_lattice_meet(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             MEET_OP_ID,
             out,
             DataType::U32,
@@ -80,7 +80,7 @@ pub fn try_lattice_meet(a: &str, b: &str, out: &str, size: u32) -> Result<Progra
 #[must_use]
 pub fn semiring_min_plus_mul(a: &str, b: &str, out: &str, size: u32) -> Program {
     try_semiring_min_plus_mul(a, b, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             MINPLUS_MUL_OP_ID,
             out,
             DataType::U32,
@@ -125,7 +125,7 @@ pub fn bool_semiring_matmul(
     cols: u32,
 ) -> Program {
     try_bool_semiring_matmul(a, b, out, rows, inner, cols).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             BOOL_MATMUL_OP_ID,
             out,
             DataType::U32,
@@ -310,7 +310,7 @@ pub fn try_bool_semiring_matmul(
 #[must_use]
 pub fn sketch_mix(input: &str, out: &str, size: u32) -> Program {
     try_sketch_mix(input, out, size).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             SKETCH_MIX_OP_ID,
             out,
             DataType::U32,

@@ -53,12 +53,6 @@ pub fn inflate_stored_block(input: &str, output: &str, input_len: u32) -> Progra
     )
 }
 
-/// Compatibility alias for the stored-block-only DEFLATE builder.
-#[must_use]
-pub fn inflate(input: &str, output: &str, input_len: u32) -> Program {
-    inflate_stored_block(input, output, input_len)
-}
-
 /// Build one GPU program that inflates a stored DEFLATE block and then scans
 /// the inflated bytes with the Aho-Corasick transition table, without a host
 /// readback between stages.
@@ -211,28 +205,6 @@ pub fn inflate_stored_block_buffered_then_aho_corasick(
         ],
         INFLATE_STORED_WORKGROUP_SIZE,
         vec![wrap_anonymous(FUSED_SCAN_OP_ID, entry)],
-    )
-}
-
-/// Compatibility alias for the stored-block-only fused decode→scan builder.
-#[must_use]
-pub fn inflate_then_aho_corasick(
-    input: &str,
-    decoded: &str,
-    transitions: &str,
-    accept: &str,
-    matches: &str,
-    input_len: u32,
-    state_count: u32,
-) -> Program {
-    inflate_stored_block_then_aho_corasick(
-        input,
-        decoded,
-        transitions,
-        accept,
-        matches,
-        input_len,
-        state_count,
     )
 }
 

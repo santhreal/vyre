@@ -83,7 +83,7 @@ pub fn aliases_dataflow(
         out_buf,
     )
     .unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             out_buf,
             DataType::U32,

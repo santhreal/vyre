@@ -282,7 +282,7 @@ pub fn attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Progra
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             out,
             DataType::F32,
@@ -295,7 +295,7 @@ pub fn attention(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Progra
 #[must_use]
 pub fn attention_reference(q: &str, k: &str, v: &str, out: &str, s: u32, d: u32) -> Program {
     try_attention_reference(q, k, v, out, s, d).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             REFERENCE_OP_ID,
             out,
             DataType::F32,

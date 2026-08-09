@@ -5,6 +5,7 @@
 //! replaying the whole prefix independently.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 
 use crate::region::wrap_anonymous;
 
@@ -31,8 +32,8 @@ fn transition_expr(transitions: &str, state: Expr, byte: Expr) -> Expr {
     )
 }
 
-fn fixture_case() -> (Vec<u32>, super::CompiledDfa, Vec<u32>) {
-    let compiled = super::dfa_compile(&[b"a"]);
+fn fixture_case() -> (Vec<u32>, CompiledDfa, Vec<u32>) {
+    let compiled = dfa_compile(&[b"a"]);
     let input = b"banana"
         .iter()
         .map(|&byte| u32::from(byte))
@@ -254,7 +255,7 @@ mod tests {
     use super::*;
 
     fn compile_patterns(patterns: &[&[u8]]) -> (Vec<u32>, Vec<u32>, u32) {
-        let compiled = super::super::dfa_compile(patterns);
+        let compiled = dfa_compile(patterns);
         (compiled.transitions, compiled.accept, compiled.state_count)
     }
 

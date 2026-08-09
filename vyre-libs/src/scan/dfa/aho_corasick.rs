@@ -129,12 +129,12 @@ inventory::submit! {
         id: "vyre-libs::matching::aho_corasick",
         build: Some(|| {
             let patterns: [&[u8]; 1] = [b"abra"];
-            let compiled = crate::scan::dfa::dfa_compile(&patterns);
+            let compiled = vyre_primitives::matching::dfa_compile(&patterns);
             aho_corasick_bounded("haystack", "transitions", "accept", "matches", 11, compiled.accept.len() as u32, compiled.max_pattern_len)
         }),
         test_inputs: Some(|| {
             let patterns: [&[u8]; 1] = [b"abra"];
-            let compiled = crate::scan::dfa::dfa_compile(&patterns);
+            let compiled = vyre_primitives::matching::dfa_compile(&patterns);
             let haystack = b"abracadabra";
 
             vec![vec![

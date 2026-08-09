@@ -50,7 +50,7 @@ pub fn flash_attention_2(
     tile_size: u32,
 ) -> Program {
     if seq_len == 0 || head_dim == 0 || tile_size == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             OP_ID,
             out,
             DataType::F32,
@@ -60,7 +60,7 @@ pub fn flash_attention_2(
     let plan = match plan_flash_attention_tiled(seq_len, head_dim, tile_size) {
         Ok(plan) => plan,
         Err(error) => {
-            return crate::builder::invalid_output_program(OP_ID, out, DataType::F32, error);
+            return crate::builder::invalid_builder_trap_program(OP_ID, out, DataType::F32, error);
         }
     };
     let scale_expr = Expr::f32(1.0f32 / (head_dim as f32).sqrt());
@@ -207,7 +207,7 @@ pub fn flash_attention_2_reference(
     head_dim: u32,
 ) -> Program {
     if seq_len == 0 || head_dim == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             REFERENCE_OP_ID,
             out,
             DataType::F32,
@@ -218,7 +218,7 @@ pub fn flash_attention_2_reference(
     let elements = match seq_len.checked_mul(head_dim) {
         Some(e) => e,
         None => {
-            return crate::builder::invalid_output_program(
+            return crate::builder::invalid_builder_trap_program(
                 REFERENCE_OP_ID,
                 out,
                 DataType::F32,

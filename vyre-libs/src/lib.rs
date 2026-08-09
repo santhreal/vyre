@@ -304,8 +304,8 @@ pub mod prelude {
     pub use crate::nn::{attention, softmax, Attention, Softmax};
     #[cfg(feature = "nn-norm")]
     pub use crate::nn::{layer_norm, LayerNorm};
+    #[cfg(feature = "matching-dfa")]
+    pub use crate::scan::aho_corasick;
     #[cfg(feature = "matching-substring")]
     pub use crate::scan::substring_search;
-    #[cfg(feature = "matching-dfa")]
-    pub use crate::scan::{aho_corasick, dfa_compile, CompiledDfa, DfaCompileError};
 }

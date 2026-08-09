@@ -5,8 +5,8 @@
 //! This module prevents every hash wrapper from rebuilding the same region and
 //! buffer declaration skeleton.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::buffer_names::scoped_generic_name;
 
@@ -43,12 +43,6 @@ impl HashWrapperSpec {
             scoped_input_buffer(self.family_prefix, input),
             scoped_output_buffer(self.family_prefix, out),
         )
-    }
-
-    /// Scope a conventional output with op-specific legacy aliases.
-    #[must_use]
-    pub(crate) fn scoped_output_buffer_with_aliases(&self, out: &str, aliases: &[&str]) -> String {
-        scoped_output_buffer_with_aliases(self.family_prefix, out, aliases)
     }
 
     /// Wrap a primitive hash program with a fixed input count.
@@ -96,15 +90,6 @@ pub(crate) fn scoped_input_buffer(family_prefix: &str, name: &str) -> String {
 /// Scope a conventional hash output buffer name under `family_prefix`.
 pub(crate) fn scoped_output_buffer(family_prefix: &str, name: &str) -> String {
     scoped_generic_name(family_prefix, "out", name, &["out", "output"])
-}
-
-/// Scope a hash output buffer with op-specific legacy aliases.
-pub(crate) fn scoped_output_buffer_with_aliases(
-    family_prefix: &str,
-    name: &str,
-    aliases: &[&str],
-) -> String {
-    scoped_generic_name(family_prefix, "out", name, aliases)
 }
 
 /// Wrap a primitive hash program with optional static input length and an

@@ -30,7 +30,7 @@ pub fn cross_entropy(
     vocab_size: u32,
 ) -> Program {
     try_cross_entropy(logits, targets, loss_out, n, vocab_size).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             loss_out,
             DataType::F32,

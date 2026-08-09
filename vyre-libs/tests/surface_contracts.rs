@@ -101,14 +101,6 @@ fn contract_nn_attention_small_shapes_unroll_directly() {
 }
 
 #[test]
-fn contract_matching_dfa_compile_exists() {
-    use vyre::scan::dfa_compile;
-    let dfa = dfa_compile(&[b"foo", b"bar"]);
-    assert!(dfa.state_count >= 1);
-    assert_eq!(dfa.transitions.len(), (dfa.state_count as usize) * 256);
-}
-
-#[test]
 fn contract_matching_aho_corasick_exists() {
     use vyre::scan::aho_corasick;
     let p = aho_corasick("haystack", "transitions", "accept", "matches", 16, 8);

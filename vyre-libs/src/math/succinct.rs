@@ -65,7 +65,7 @@ pub fn rank1_superblocks(
     block_words: u32,
 ) -> Program {
     try_rank1_superblocks(bits, superblocks, word_count, block_words).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             RANK_SUPERBLOCKS_OP_ID,
             superblocks,
             DataType::U32,
@@ -168,7 +168,7 @@ pub fn rank1_query(
         block_words,
     )
     .unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             RANK_QUERY_OP_ID,
             out,
             DataType::U32,
@@ -290,7 +290,7 @@ pub fn select1_query(
     query_count: u32,
 ) -> Program {
     try_select1_query(bits, k_indices, out, word_count, query_count).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             SELECT_QUERY_OP_ID,
             out,
             DataType::U32,

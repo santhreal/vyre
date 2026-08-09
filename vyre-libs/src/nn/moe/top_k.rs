@@ -17,7 +17,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 #[must_use]
 pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
     if k == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             "vyre-libs::nn::top_k",
             output_indices,
             DataType::U32,

@@ -117,37 +117,31 @@ fn build_partial_rope_at_offset(
     activation_dtype: DataType,
 ) -> Program {
     if num_heads == 0 || seq_len == 0 || head_dim == 0 {
-        return crate::builder::invalid_output_program(
-            OP_ID,
-            output,
-            activation_dtype.clone(),
-            format!(
-                "Fix: partial_rope requires positive num_heads, seq_len, and head_dim; got num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
-            ),
-        );
+        return crate::builder::invalid_builder_trap_program(OP_ID,
+        output,
+        activation_dtype.clone(),
+        format!(
+            "Fix: partial_rope requires positive num_heads, seq_len, and head_dim; got num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
+        ),);
     }
     if rope_dims > head_dim || rope_dims % 2 != 0 {
-        return crate::builder::invalid_output_program(
-            OP_ID,
-            output,
-            activation_dtype.clone(),
-            format!(
-                "Fix: partial_rope requires an even rope_dims <= head_dim; got rope_dims={rope_dims}, head_dim={head_dim}."
-            ),
-        );
+        return crate::builder::invalid_builder_trap_program(OP_ID,
+        output,
+        activation_dtype.clone(),
+        format!(
+            "Fix: partial_rope requires an even rope_dims <= head_dim; got rope_dims={rope_dims}, head_dim={head_dim}."
+        ),);
     }
     if position_offset
         .checked_add(seq_len)
         .is_none_or(|end| end > table_seq_len)
     {
-        return crate::builder::invalid_output_program(
-            OP_ID,
-            output,
-            activation_dtype.clone(),
-            format!(
-                "Fix: partial_rope position range offset={position_offset}, seq_len={seq_len} exceeds table_seq_len={table_seq_len}."
-            ),
-        );
+        return crate::builder::invalid_builder_trap_program(OP_ID,
+        output,
+        activation_dtype.clone(),
+        format!(
+            "Fix: partial_rope position range offset={position_offset}, seq_len={seq_len} exceeds table_seq_len={table_seq_len}."
+        ),);
     }
     let total = match num_heads
         .checked_mul(seq_len)
@@ -155,28 +149,24 @@ fn build_partial_rope_at_offset(
     {
         Some(total) => total,
         None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                output,
-                activation_dtype.clone(),
-                format!(
-                    "Fix: partial_rope total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
-                ),
-            );
+            return crate::builder::invalid_builder_trap_program(OP_ID,
+            output,
+            activation_dtype.clone(),
+            format!(
+                "Fix: partial_rope total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
+            ),);
         }
     };
     let half_rope = rope_dims / 2;
     let table_count = match table_seq_len.checked_mul(half_rope) {
         Some(count) => count,
         None => {
-            return crate::builder::invalid_output_program(
-                OP_ID,
-                output,
-                activation_dtype.clone(),
-                format!(
-                    "Fix: partial_rope table element count overflows u32 for table_seq_len={table_seq_len}, rope_dims={rope_dims}."
-                ),
-            );
+            return crate::builder::invalid_builder_trap_program(OP_ID,
+            output,
+            activation_dtype.clone(),
+            format!(
+                "Fix: partial_rope table element count overflows u32 for table_seq_len={table_seq_len}, rope_dims={rope_dims}."
+            ),);
         }
     };
 

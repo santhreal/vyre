@@ -121,7 +121,7 @@ pub fn softmax(input: &str, output: &str, n: u32) -> Program {
     Softmax::new(TensorRef::f32_1d(input, n), TensorRef::f32_1d(output, n))
         .build()
         .unwrap_or_else(|err| {
-            crate::builder::invalid_output_program(
+            crate::builder::invalid_builder_trap_program(
                 OP_ID,
                 output,
                 DataType::F32,
@@ -134,7 +134,7 @@ pub fn softmax(input: &str, output: &str, n: u32) -> Program {
 #[must_use]
 pub fn softmax_reference(input: &str, output: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             REFERENCE_OP_ID,
             output,
             DataType::F32,

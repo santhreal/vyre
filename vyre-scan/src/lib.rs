@@ -5,16 +5,19 @@ pub use vyre_libs::scan::{
     aho_corasick, build_regex_dfa_pipeline, build_regex_dfa_pipeline_with_policy,
     build_regex_dfa_pipeline_with_policy_ext, build_regex_dfa_shards,
     build_regex_dfa_shards_unanchored, build_regex_dfa_unanchored, compile_regex_set,
-    compile_regex_set_with_policy, dfa_compile, dfa_compile_with_budget, fuse_programs,
-    fuse_programs_vec, regex_construct_diagnostic_code, substring_search, AnchoredWindowValidator,
-    CaptureMode, CaptureModeContract, CompiledDfa, CompiledRegexSet, DfaCompileError, FusionError,
-    PostProcessError, PostProcessedMatch, RegexCompileError, RegexConstruct, RegexDfaError,
-    RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy, RegionTriple,
-    ScanProgram, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+    compile_regex_set_with_policy, fuse_programs, fuse_programs_vec,
+    regex_construct_diagnostic_code, substring_search, AnchoredWindowValidator, CaptureMode,
+    CaptureModeContract, CompiledRegexSet, FusionError, PostProcessError, PostProcessedMatch,
+    RegexCompileError, RegexConstruct, RegexDfaError, RegexDfaPipeline, RegexDfaShard,
+    RegexPatternExtent, RegexReplayPolicy, RegionTriple, ScanProgram,
+    DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
 pub use vyre_libs::scan::{
     builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,
     regex_anchored_window, regex_compile, regex_dfa, regex_region_admission, substring,
+};
+pub use vyre_primitives::matching::{
+    dfa_compile, dfa_compile_with_budget, CompiledDfa, DfaCompileError,
 };
 
 pub mod artifact_session;

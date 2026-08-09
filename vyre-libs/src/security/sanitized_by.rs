@@ -67,7 +67,7 @@ pub fn sanitized_by(
         crate::security::flows_to::FLOWS_TO_MASK,
     );
     let fused = fuse_programs(&[clean, traverse]).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             frontier_out,
             DataType::U32,

@@ -603,7 +603,7 @@ impl ScanSession {
         let input_len = r.read_u32().map_err(PipelineWireError::WireFraming)?;
 
         let program_bytes = r.read_section().map_err(PipelineWireError::WireFraming)?;
-        let program = vyre_foundation::ir::Program::from_bytes(program_bytes)
+        let program = vyre_foundation::ir::Program::from_wire(program_bytes)
             .map_err(|e| PipelineWireError::InvalidProgram(format!("{e}")))?;
 
         let transition_table = r.read_words().map_err(PipelineWireError::WireFraming)?;

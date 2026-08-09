@@ -31,7 +31,7 @@ pub fn linear_gradient(
     stops: &[ColorStop],
 ) -> Program {
     try_linear_gradient(output, width, height, angle_deg, stops).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             output,
             DataType::U32,

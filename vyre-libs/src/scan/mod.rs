@@ -31,10 +31,7 @@ pub mod regex_dfa;
 pub mod regex_region_admission;
 
 #[cfg(feature = "matching-dfa")]
-pub use dfa::{
-    aho_corasick, dfa_compile, dfa_compile_with_budget, CompiledDfa, DfaCompileError,
-    DEFAULT_DFA_BUDGET_BYTES,
-};
+pub use dfa::aho_corasick;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use fused_region_evidence::{
     fused_region_evidence_program, fused_region_evidence_reference, FusedRegionEvidence,

@@ -296,7 +296,12 @@ pub fn matmul(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32) -> Program {
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(OP_ID, out, DataType::U32, format!("Fix: {err}"))
+        crate::builder::invalid_builder_trap_program(
+            OP_ID,
+            out,
+            DataType::U32,
+            format!("Fix: {err}"),
+        )
     })
 }
 
@@ -311,7 +316,7 @@ pub fn matmul_bias(a: &str, b: &str, bias: &str, out: &str, m: u32, k: u32, n: u
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID_BIAS,
             out,
             DataType::U32,

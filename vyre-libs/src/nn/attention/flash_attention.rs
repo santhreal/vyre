@@ -274,7 +274,7 @@ inventory::submit! {
         id: "vyre-libs::nn::flash_attention",
         build: Some(|| {
             flash_attention("q", "k", "v", "out", 9, 1).unwrap_or_else(|error| {
-                crate::builder::invalid_output_program(
+                crate::builder::invalid_builder_trap_program(
                     "vyre-libs::nn::flash_attention",
                     "out",
                     DataType::F32,

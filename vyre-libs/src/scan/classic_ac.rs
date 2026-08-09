@@ -15,7 +15,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte;
-use crate::scan::dfa::{dfa_compile, CompiledDfa};
+use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 
 #[path = "classic_ac/bounded_ranges.rs"]
 mod bounded_ranges;

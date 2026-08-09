@@ -21,7 +21,7 @@ pub fn rms_norm_linear(
     eps: f32,
 ) -> Program {
     try_rms_norm_linear(input, w, b, out, n, in_dim, out_dim, eps).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             "vyre-libs::nn::rms_norm_linear",
             out,
             DataType::F32,

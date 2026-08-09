@@ -120,7 +120,7 @@ mod non_panic_wrapper_tests {
     };
 
     #[test]
-    fn compatibility_cpu_wrappers_match_fallible_reference() {
+    fn convenience_cpu_wrappers_match_fallible_reference() {
         let a = [0xF0F0_F0F0, 0xAAAA_AAAA];
         let b = [0xFF00_00FF, 0x5555_FFFF];
         let mut compat = Vec::with_capacity(4);
@@ -135,7 +135,7 @@ mod non_panic_wrapper_tests {
     }
 
     #[test]
-    fn compatibility_encoder_wrappers_match_fallible_encoder() {
+    fn convenience_encoder_wrappers_match_fallible_encoder() {
         let mut compat = Vec::with_capacity(8);
         let mut fallible = Vec::with_capacity(8);
 
@@ -156,7 +156,7 @@ mod non_panic_wrapper_tests {
 
         assert!(
             !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: stochastic bitstream compatibility wrappers must not panic in production."
+            "Fix: stochastic bitstream convenience wrappers must not panic in production."
         );
     }
 }

@@ -64,7 +64,6 @@
 use crate::parsing::c::lex::tokens::{TOK_PP_ELIF, TOK_PP_IF};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-mod abi;
 mod apply;
 mod builtin_calls;
 mod byte_load;
@@ -73,14 +72,14 @@ mod stack;
 #[cfg(test)]
 mod tests;
 
+use super::gpu_if_expression_abi::{
+    BINDING_DIRECTIVE_KINDS, BINDING_DIRECTIVE_VALUES, BINDING_MACRO_NAMES_PACKED,
+    BINDING_MACRO_OFFSETS, BINDING_MACRO_VALUES, BINDING_SOURCE, BINDING_TOK_LENS,
+    BINDING_TOK_STARTS, OP_ID, STACK_DEPTH,
+};
 use super::gpu_source_bytes::{
     safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
     SourceByteLayout,
-};
-pub use abi::{
-    BINDING_DIRECTIVE_KINDS, BINDING_DIRECTIVE_VALUES, BINDING_MACRO_NAMES_PACKED,
-    BINDING_MACRO_OFFSETS, BINDING_MACRO_VALUES, BINDING_SOURCE, BINDING_TOK_LENS,
-    BINDING_TOK_STARTS, MAX_IDENT_LEN, MAX_PAYLOAD_BYTES, OP_ID, STACK_DEPTH,
 };
 use apply::apply_top_op;
 use builtin_calls::{ident_hash_equals, push_has_builtin_call_parser};

@@ -11,7 +11,6 @@ use crate::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-use crate::dfa::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
 use crate::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
@@ -19,6 +18,7 @@ use vyre_driver::{DispatchConfig, Resource, Submission};
 use vyre_foundation::ir::Program;
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
+use vyre_primitives::matching::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
 
 type PresenceByRegionDispatch = (Program, Vec<Vec<u8>>, DispatchConfig, usize, u32);
 type PresenceDispatch = (Program, Vec<Vec<u8>>, DispatchConfig, usize);
@@ -4123,7 +4123,7 @@ impl GpuLiteralSet {
     /// Caller-side cache invalidation: the dispatch `Program` already
     /// includes vyre's IR wire version inside its own framing, so a stale
     /// current-version cache surfaces as `LiteralSetWireError::
-    /// InvalidProgram` from `Program::from_bytes` (or as a bad magic /
+    /// InvalidProgram` from `Program::from_wire` (or as a bad magic /
     /// version on this outer envelope). Legacy literal-compare and bounded-DFA
     /// blobs are migrated by decoding their DFA/pattern sections and
     /// rebuilding the current suffix-prefiltered bounded-DFA dispatch program.
@@ -4176,7 +4176,7 @@ impl GpuLiteralSet {
 
         let program_bytes = r.read_section().map_err(LiteralSetWireError::WireFraming)?;
         if wire_version == LITERAL_SET_WIRE_VERSION {
-            Program::from_bytes(program_bytes)
+            Program::from_wire(program_bytes)
                 .map_err(|e| LiteralSetWireError::InvalidProgram(format!("{e}")))?;
         }
 

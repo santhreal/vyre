@@ -54,7 +54,7 @@ pub const OP_ID: &str = "vyre-libs::matching::nfa_scan";
 #[allow(clippy::vec_init_then_push)]
 pub fn nfa_scan(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> Program {
     try_nfa_scan(patterns, input_buf, hit_buf, input_len).unwrap_or_else(|error| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             hit_buf,
             DataType::U32,

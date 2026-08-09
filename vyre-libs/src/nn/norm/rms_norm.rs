@@ -34,7 +34,12 @@ pub fn rms_norm_reference(input: &str, output: &str, n: u32, eps: f32) -> Progra
 }
 
 fn invalid_rms_program(op_id: &'static str, output: &str) -> Program {
-    crate::builder::invalid_output_program(op_id, output, DataType::F32, EMPTY_RMS_FIX.to_string())
+    crate::builder::invalid_builder_trap_program(
+        op_id,
+        output,
+        DataType::F32,
+        EMPTY_RMS_FIX.to_string(),
+    )
 }
 
 fn rms_norm_tiled_program(input: &str, output: &str, n: u32, eps: f32) -> Program {

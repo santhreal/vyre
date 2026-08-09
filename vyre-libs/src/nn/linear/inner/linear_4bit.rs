@@ -1256,7 +1256,7 @@ inventory::submit! {
         id: "vyre-libs::nn::linear_4bit",
         build: Some(|| {
             linear_4bit("x", "w", "b", "out", 8, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_output_program(
+                crate::builder::invalid_builder_trap_program(
                     "vyre-libs::nn::linear_4bit",
                     "out",
                     DataType::F32,
@@ -1293,7 +1293,7 @@ inventory::submit! {
         build: Some(|| {
             linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)
                 .unwrap_or_else(|error| {
-                    crate::builder::invalid_output_program(
+                    crate::builder::invalid_builder_trap_program(
                         "vyre-libs::nn::linear_4bit_affine_grouped",
                         "out",
                         DataType::F32,

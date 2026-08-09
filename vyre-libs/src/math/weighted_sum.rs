@@ -80,7 +80,7 @@ inventory::submit! {
         id: OP_ID,
         build: Some(|| {
             weighted_sum_fma_f32("weights", "values", "output", 4).unwrap_or_else(|error| {
-                crate::builder::invalid_output_program(
+                crate::builder::invalid_builder_trap_program(
                     OP_ID,
                     "output",
                     DataType::F32,

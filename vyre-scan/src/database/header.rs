@@ -14,7 +14,7 @@ use vyre_foundation::serial::wire::{
 /// Four-byte magic identifying a versioned scan database header (`VSDH`).
 pub const SCAN_DATABASE_HEADER_MAGIC: &[u8; 4] = b"VSDH";
 /// Current scan database header wire version.
-pub const SCAN_DATABASE_HEADER_VERSION: u32 = 1;
+pub const SCAN_DATABASE_HEADER_VERSION: u32 = 2;
 /// Upper bound on table sections accepted from an untrusted header.
 pub const MAX_SCAN_DATABASE_SECTIONS: usize = 4_096;
 /// Upper bound on unsupported-feature diagnostics accepted from a header.
@@ -429,14 +429,10 @@ pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, S
         });
     }
 
-    let compatibility = if reader.position == bytes.len() {
-        legacy_compatibility_record(&unsupported_features)
-    } else {
-        ScanDatabaseCompatibilityRecord {
-            construct_tier_digest: reader.u64()?,
-            dialect_digest: reader.u64()?,
-            reader_compatibility: ScanDatabaseReaderCompatibility::from_tag(reader.u8()?)?,
-        }
+    let compatibility = ScanDatabaseCompatibilityRecord {
+        construct_tier_digest: reader.u64()?,
+        dialect_digest: reader.u64()?,
+        reader_compatibility: ScanDatabaseReaderCompatibility::from_tag(reader.u8()?)?,
     };
 
     if reader.position != bytes.len() {
@@ -497,20 +493,6 @@ pub fn decode_scan_database_header_with_compatibility(
 
 fn put_u64(out: &mut Vec<u8>, value: u64) {
     out.extend_from_slice(&value.to_le_bytes());
-}
-
-fn legacy_compatibility_record(
-    unsupported_features: &[UnsupportedScanFeature],
-) -> ScanDatabaseCompatibilityRecord {
-    ScanDatabaseCompatibilityRecord {
-        construct_tier_digest: 0,
-        dialect_digest: 0,
-        reader_compatibility: if unsupported_features.is_empty() {
-            ScanDatabaseReaderCompatibility::Compatible
-        } else {
-            ScanDatabaseReaderCompatibility::RequiresVerifier
-        },
-    }
 }
 
 #[cfg(test)]
@@ -623,24 +605,22 @@ mod tests {
         assert!(error.contains("reader compatibility"));
     }
 
+    /// WHY: version 1 did not authenticate the compatibility fields. Serving a
+    /// stale header can apply tables compiled for a different construct or dialect.
     #[test]
-    fn scan_database_header_decodes_legacy_headers_with_conservative_compatibility() {
+    fn scan_database_header_rejects_legacy_schema_version() {
         let mut legacy_bytes = encode_scan_database_header(&header()).unwrap();
-        legacy_bytes.truncate(legacy_bytes.len() - 17);
-        let decoded = decode_compatible_scan_database_header(
+        legacy_bytes[4..8].copy_from_slice(&1_u32.to_le_bytes());
+
+        let error = decode_compatible_scan_database_header(
             &legacy_bytes,
             "vyre-scan-compiler-test-v1",
             ScanDatabaseMode::Streaming,
         )
-        .unwrap();
+        .expect_err("version 1 headers must be rebuilt");
 
-        assert_eq!(decoded.compatibility.construct_tier_digest, 0);
-        assert_eq!(decoded.compatibility.dialect_digest, 0);
-        assert_eq!(
-            decoded.compatibility.reader_compatibility,
-            ScanDatabaseReaderCompatibility::RequiresVerifier
-        );
-        assert_eq!(decoded.unsupported_feature_count(), 1);
+        assert!(error.contains("version 1 is unsupported"));
+        assert!(error.contains("expected 2"));
     }
 
     #[test]

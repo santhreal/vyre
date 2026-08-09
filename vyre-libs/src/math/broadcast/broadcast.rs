@@ -13,7 +13,7 @@ use crate::region::wrap_anonymous;
 #[must_use]
 pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             "vyre-libs::math::broadcast",
             dst,
             DataType::U32,

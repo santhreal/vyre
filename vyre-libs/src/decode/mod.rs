@@ -22,9 +22,8 @@ pub use hex::{
     hex_decode, hex_decode_table, hex_decode_then_aho_corasick, HEX_DECODE_TABLE_BUFFER,
 };
 pub use inflate::{
-    inflate, inflate_stored_block, inflate_stored_block_buffered_then_aho_corasick,
+    inflate_stored_block, inflate_stored_block_buffered_then_aho_corasick,
     inflate_stored_block_then_aho_corasick, inflate_stored_block_tiled_then_aho_corasick,
-    inflate_then_aho_corasick,
 };
 pub use ziftsieve::ziftsieve_gpu;
 #[cfg(any(test, feature = "cpu-parity"))]

@@ -19,7 +19,7 @@ const OP_ID: &str = "vyre-libs::math::scan_prefix_sum";
 #[must_use]
 pub fn scan_prefix_sum(input: &str, output: &str, n: u32) -> Program {
     if n == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             OP_ID,
             output,
             vyre_foundation::ir::DataType::U32,

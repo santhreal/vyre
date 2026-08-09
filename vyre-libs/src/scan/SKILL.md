@@ -1,17 +1,22 @@
-# vyre-libs::matching SKILL
+# vyre-libs::scan SKILL
 
-Byte/text scan primitives  -  substring search, DFA / Aho–Corasick. One ingredient inside larger vyre programs.
-The DFA compilation produces a transition table as a u32 buffer; the
-runtime Program walks the table one byte per step.
+Byte/text scan primitives: substring search, DFA / Aho-Corasick, NFA /
+regex pipelines. One ingredient inside larger vyre programs.
+DFA compilation produces a transition table as a u32 buffer; the runtime
+Program walks the table one byte per step.
 
-## Coverage targets
+## Coverage (shipped)
 
-- `substring_search`  -  single-pattern brute-force match, one
-  invocation per haystack offset.
-- `aho_corasick`  -  multi-pattern scanner consuming a pre-built DFA.
-- `dfa_compile` / `dfa_compile_with_budget`  -  CPU-side Aho-Corasick
-  transition-table builder with size-budget enforcement.
-- Future: `regex_compile`, `hyperscan_compat`, `simd_fixed_match`.
+- `substring_search` (`matching-substring`): single-pattern brute-force
+  match, one invocation per haystack offset.
+- `aho_corasick` / `cooperative_dfa_scan` / `dfa_compile` /
+  `dfa_compile_with_budget` (`matching-dfa`): multi-pattern scanners and
+  CPU-side Aho-Corasick table builders with size-budget enforcement.
+- `RulePipeline` / `mega_scan` / NFA tables (`matching-nfa`).
+- `compile_regex_set` / `regex_compile` / `RegexDfaPipeline` and related
+  admission helpers (`matching-regex`, often combined with DFA features).
+- Hit packing, post-process, and fused-region evidence helpers on the
+  always-on scan surface (`API_INDEX` in `mod.rs`).
 
 ## Witness sources
 
@@ -19,10 +24,9 @@ runtime Program walks the table one byte per step.
   needle-larger-than-haystack, all-zeros, Unicode multi-byte). See
   `tests/cat_a_conform.rs` and `tests/aho_corasick_kat.rs`.
 - Aho-Corasick: the 1975 paper's "ushers / he she his hers" example,
-  20 hand-picked regression vectors, and the `aho-corasick` crate's
-  test corpus.
-- DFA budget: `tests/matching::dfa_compile::tests` exercises the
-  `DfaCompileError::TooLarge` path.
+  hand-picked regression vectors, and the `aho-corasick` crate corpus.
+- DFA budget: `tests` under the DFA compile path exercise
+  `DfaCompileError::TooLarge`.
 
 ## Benchmark targets (criterion)
 
@@ -40,7 +44,6 @@ budget witness corpus.
 
 ## Overflow contract
 
-The substring-search length guard (`needle_len <= haystack_len ∧
-i + needle_len <= haystack_len`) is overflow-safe; see
-`tests/cat_a_conform.rs::cat_a_substring_edge_cases` for the
-needle-larger-than-haystack case.
+The substring-search length guard (`needle_len <= haystack_len` and
+`i + needle_len <= haystack_len`) is overflow-safe; see
+`tests/cat_a_conform.rs` edge cases for needle-larger-than-haystack.

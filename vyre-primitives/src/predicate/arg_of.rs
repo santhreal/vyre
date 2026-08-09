@@ -5,9 +5,8 @@
 //!
 //! Slot-precise variants restrict the traversal to a single argument
 //! slot via the per-slot CALL_ARG_N edge subkind the walker stamps.
-//! `arg_of_unspecified` (legacy alias) returns every CALL_ARG
-//! predecessor regardless of position  -  recall-safe but
-//! precision-loose.
+//! `arg_of` returns every `CALL_ARG` predecessor regardless of position. This
+//! form is recall-safe but precision-loose.
 
 use vyre_foundation::ir::Program;
 
@@ -49,7 +48,7 @@ pub fn arg_of(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -
     backward_edge_program(OP_ID, shape, frontier_in, frontier_out, edge_kind::CALL_ARG)
 }
 
-/// CPU reference for the legacy unspecified-slot form.
+/// CPU reference for the unspecified-slot form.
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref(
@@ -69,7 +68,7 @@ pub fn cpu_ref(
     )
 }
 
-/// CPU reference for the legacy unspecified-slot form using caller-owned output storage.
+/// CPU reference for the unspecified-slot form using caller-owned output storage.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn cpu_ref_into(
     node_count: u32,

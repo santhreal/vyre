@@ -368,7 +368,7 @@ pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
     )
     .build()
     .unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(
+        crate::builder::invalid_builder_trap_program(
             OP_ID,
             output,
             DataType::F32,

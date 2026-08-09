@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use vyre::ir::{validate, BufferAccess, Node, Program};
 use vyre_foundation::composition::mark_self_exclusive_region;
-use vyre_libs::decode::{base64_decode, hex_decode, inflate};
+use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
 use vyre_libs::hash::{adler32, crc32, fnv1a64};
 use vyre_libs::parsing::core::delimiter::core_delimiter_match;
 
@@ -56,7 +56,7 @@ fn fused_decode_programs_keep_generic_buffers_disjoint() {
     let combined = combine_programs(&[
         base64_decode("input", "decoded", 16),
         hex_decode("input", "decoded", 16),
-        inflate("input", "decoded", 16),
+        inflate_stored_block("input", "decoded", 16),
     ]);
 
     assert_unique_buffer_names(&combined);

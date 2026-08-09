@@ -10,7 +10,7 @@ use vyre_primitives::hash::multi_hash::{multi_hash_program, MULTI_HASH_OP_ID};
 #[cfg(test)]
 use crate::buffer_names::fixed_name;
 
-use super::wrap::{scoped_input_buffer, HashWrapperSpec};
+use super::wrap::HashWrapperSpec;
 
 const OP_ID: &str = "vyre-libs::hash::multi_hash";
 const FAMILY_PREFIX: &str = "hash_multi";
@@ -23,28 +23,10 @@ const SPEC: HashWrapperSpec = HashWrapperSpec::new(OP_ID, MULTI_HASH_OP_ID, FAMI
 /// one ABI-legal output buffer:
 /// `out[0] = crc32`, `out[1] = fnv1a32`, `out[2] = adler32`.
 #[must_use]
-pub fn multi_hash(
-    input: &str,
-    out_crc32: &str,
-    out_fnv1a32: &str,
-    out_adler32: &str,
-    n: u32,
-) -> Program {
-    let input = scoped_input_buffer(FAMILY_PREFIX, input);
-    let out_crc32 = SPEC.scoped_output_buffer_with_aliases(
-        out_crc32,
-        &[
-            "out",
-            "output",
-            "crc32",
-            "out_crc32",
-            "multi_hash",
-            "out_multi_hash",
-        ],
-    );
-    let _legacy_output_names = (out_fnv1a32, out_adler32);
-    let primitive = multi_hash_program(&input, &out_crc32, n);
-    SPEC.wrap_static_count(&input, &out_crc32, n, primitive)
+pub fn multi_hash(input: &str, out: &str, n: u32) -> Program {
+    let (input, out) = SPEC.scoped_standard_buffers(input, out);
+    let primitive = multi_hash_program(&input, &out, n);
+    SPEC.wrap_static_count(&input, &out, n, primitive)
 }
 
 inventory::submit! {
@@ -55,7 +37,7 @@ inventory::submit! {
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: Some(|| multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 3)),
+        build: Some(|| multi_hash("input", "out", 3)),
         test_inputs: Some(|| {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes]]
@@ -77,7 +59,7 @@ mod tests {
 
     fn run_multi(bytes: &[u8]) -> (u32, u32, u32) {
         let n = bytes.len().max(1) as u32;
-        let program = multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", n);
+        let program = multi_hash("input", "out", n);
         let mut input_bytes = pack_bytes_as_u32(bytes);
         input_bytes.resize(n as usize * 4, 0);
         let inputs = vec![Value::Bytes(input_bytes.into())];
@@ -182,7 +164,7 @@ mod tests {
 
     #[test]
     fn crc_lane_ignores_high_input_bits_like_primitive_crc32() {
-        let program = multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 1);
+        let program = multi_hash("input", "out", 1);
         let inputs = vec![Value::Bytes(0xFFFF_FF61u32.to_le_bytes().to_vec().into())];
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .expect("Fix: multi_hash must run on high-bit-polluted u32 byte slots.");
@@ -195,7 +177,7 @@ mod tests {
 
     #[test]
     fn generated_crc_lane_masks_high_bits_for_polluted_u32_slots() {
-        let program = multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 4);
+        let program = multi_hash("input", "out", 4);
         for seed in 0u32..64 {
             let logical = [
                 seed as u8,
@@ -243,7 +225,7 @@ mod tests {
 
     #[test]
     fn generic_default_names_are_family_scoped() {
-        let program = multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 4);
+        let program = multi_hash("input", "out", 4);
         assert_eq!(
             program.buffers()[0].name(),
             fixed_name(FAMILY_PREFIX, "input")
@@ -256,7 +238,7 @@ mod tests {
 
     #[test]
     fn declares_single_packed_output_buffer_for_backend_abi() {
-        let program = multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 4);
+        let program = multi_hash("input", "out", 4);
         assert_eq!(
             program.buffers().len(),
             2,

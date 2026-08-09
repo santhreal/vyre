@@ -79,7 +79,12 @@ where
     F: Fn(Expr) -> Expr,
 {
     try_u32_elementwise_unary(op_id, input, out, size, op).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(op_id, out, DataType::U32, format!("Fix: {err}"))
+        crate::builder::invalid_builder_trap_program(
+            op_id,
+            out,
+            DataType::U32,
+            format!("Fix: {err}"),
+        )
     })
 }
 
@@ -119,6 +124,11 @@ where
     F: Fn(Expr, Expr) -> Expr,
 {
     try_u32_elementwise_binary(op_id, a, b, out, size, op).unwrap_or_else(|err| {
-        crate::builder::invalid_output_program(op_id, out, DataType::U32, format!("Fix: {err}"))
+        crate::builder::invalid_builder_trap_program(
+            op_id,
+            out,
+            DataType::U32,
+            format!("Fix: {err}"),
+        )
     })
 }

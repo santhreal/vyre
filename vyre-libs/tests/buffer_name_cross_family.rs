@@ -18,7 +18,7 @@
 use std::collections::HashSet;
 
 #[cfg(all(feature = "hash", feature = "decode"))]
-use vyre_libs::decode::{base64_decode, hex_decode, inflate};
+use vyre_libs::decode::{base64_decode, hex_decode, inflate_stored_block};
 #[cfg(feature = "hash")]
 use vyre_libs::hash::{adler32, blake3_compress, crc32, fnv1a32, fnv1a64};
 
@@ -45,7 +45,10 @@ fn cat_a_hash_and_decode_family_buffer_names_are_globally_unique() {
         ),
         ("base64_decode", base64_decode("input", "output", 64)),
         ("hex_decode", hex_decode("input", "output", 64)),
-        ("inflate", inflate("input", "output", 64)),
+        (
+            "inflate_stored_block",
+            inflate_stored_block("input", "output", 64),
+        ),
     ];
 
     let mut seen: HashSet<String> = HashSet::new();

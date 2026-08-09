@@ -159,19 +159,6 @@ impl Program {
         decode::from_wire(bytes).map_err(wire_err)
     }
 
-    /// Deserialize an IR program from bytes.
-    ///
-    /// This compatibility wrapper preserves the pre-`from_wire` API name.
-    ///
-    /// # Errors
-    ///
-    /// Returns the same actionable decode errors as [`Program::from_wire`].
-    #[inline]
-    #[must_use]
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, crate::error::Error> {
-        Self::from_wire(bytes)
-    }
-
     /// Stable content hash of this Program, used as a cache identity.
     ///
     /// Computed as BLAKE3 of the canonical wire-format encoding. This is the

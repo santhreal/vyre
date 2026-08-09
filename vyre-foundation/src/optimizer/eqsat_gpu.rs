@@ -775,16 +775,6 @@ impl GpuEGraphSnapshot {
             },
         })
     }
-
-    /// Compatibility wrapper for [`Self::try_pack_device_image`].
-    ///
-    /// Returns an empty image when the snapshot cannot be represented by the
-    /// current 32-bit GPU column ABI. Call [`Self::try_pack_device_image`] when
-    /// the exact overflow reason must be surfaced to the operator.
-    #[must_use]
-    pub fn pack_device_image(&self) -> GpuEGraphDeviceImage {
-        self.try_pack_device_image().unwrap_or_default()
-    }
 }
 
 /// Report returned after applying discovered equivalences to an `EGraph`.

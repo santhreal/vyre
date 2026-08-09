@@ -17,8 +17,8 @@
 //! this). Every Cat-A op exposes its builder as `<Op>Builder::new(...)`
 //! and delegates defaults through `BuildOptions::default()`.
 
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
@@ -357,13 +357,12 @@ fn child_region(parent_op_id: &'static str, child_op_id: &'static str, body: Vec
     )
 }
 
-/// Build a scalar-output trap program for invalid Cat-A builder inputs.
+/// Build an explicit trap program for an invalid infallible builder input.
 ///
-/// This keeps public compatibility wrappers infallible without panicking on
-/// user-controlled names or shapes. Typed builders should still return
-/// `Result`; this helper is for legacy `fn foo(...) -> Program` surfaces.
-#[allow(dead_code)]
-pub(crate) fn invalid_output_program(
+/// The trap preserves the builder's `Program` contract while making the invalid
+/// input observable at execution. Fallible builders return their validation
+/// error before this boundary.
+pub(crate) fn invalid_builder_trap_program(
     op_id: &'static str,
     output: &str,
     data_type: DataType,
@@ -434,15 +433,27 @@ where
 
     let n = a_count;
     let body = vec![
-        vyre_foundation::ir::Node::let_bind("idx", vyre_foundation::ir::Expr::InvocationId { axis: 0 }),
+        vyre_foundation::ir::Node::let_bind(
+            "idx",
+            vyre_foundation::ir::Expr::InvocationId { axis: 0 },
+        ),
         vyre_foundation::ir::Node::if_then(
-            vyre_foundation::ir::Expr::lt(vyre_foundation::ir::Expr::var("idx"), vyre_foundation::ir::Expr::u32(n)),
+            vyre_foundation::ir::Expr::lt(
+                vyre_foundation::ir::Expr::var("idx"),
+                vyre_foundation::ir::Expr::u32(n),
+            ),
             vec![vyre_foundation::ir::Node::store(
                 out.name_str(),
                 vyre_foundation::ir::Expr::var("idx"),
                 f(
-                    vyre_foundation::ir::Expr::load(a.name_str(), vyre_foundation::ir::Expr::var("idx")),
-                    vyre_foundation::ir::Expr::load(b.name_str(), vyre_foundation::ir::Expr::var("idx")),
+                    vyre_foundation::ir::Expr::load(
+                        a.name_str(),
+                        vyre_foundation::ir::Expr::var("idx"),
+                    ),
+                    vyre_foundation::ir::Expr::load(
+                        b.name_str(),
+                        vyre_foundation::ir::Expr::var("idx"),
+                    ),
                 ),
             )],
         ),
@@ -466,7 +477,12 @@ where
                 vyre_foundation::ir::DataType::U32,
             )
             .with_count(n),
-            vyre_foundation::ir::BufferDecl::output(out.name_str(), 2, vyre_foundation::ir::DataType::U32).with_count(n),
+            vyre_foundation::ir::BufferDecl::output(
+                out.name_str(),
+                2,
+                vyre_foundation::ir::DataType::U32,
+            )
+            .with_count(n),
         ],
         group,
         vec![crate::region::wrap_anonymous(op_id, body)],
@@ -508,9 +524,15 @@ where
         }
     })?;
     let body = vec![
-        vyre_foundation::ir::Node::let_bind("idx", vyre_foundation::ir::Expr::InvocationId { axis: 0 }),
+        vyre_foundation::ir::Node::let_bind(
+            "idx",
+            vyre_foundation::ir::Expr::InvocationId { axis: 0 },
+        ),
         vyre_foundation::ir::Node::if_then(
-            vyre_foundation::ir::Expr::lt(vyre_foundation::ir::Expr::var("idx"), vyre_foundation::ir::Expr::u32(n)),
+            vyre_foundation::ir::Expr::lt(
+                vyre_foundation::ir::Expr::var("idx"),
+                vyre_foundation::ir::Expr::u32(n),
+            ),
             vec![vyre_foundation::ir::Node::store(
                 out.name_str(),
                 vyre_foundation::ir::Expr::var("idx"),
@@ -533,7 +555,12 @@ where
                 vyre_foundation::ir::DataType::U32,
             )
             .with_count(n),
-            vyre_foundation::ir::BufferDecl::output(out.name_str(), 1, vyre_foundation::ir::DataType::U32).with_count(n),
+            vyre_foundation::ir::BufferDecl::output(
+                out.name_str(),
+                1,
+                vyre_foundation::ir::DataType::U32,
+            )
+            .with_count(n),
         ],
         group,
         vec![crate::region::wrap_anonymous(op_id, body)],
@@ -600,8 +627,13 @@ mod tests {
         let program = build_indexed_map(
             "vyre-libs::test::indexed_map_user",
             vec![
-                BufferDecl::storage("input", 0, vyre_foundation::ir::BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(4),
+                BufferDecl::storage(
+                    "input",
+                    0,
+                    vyre_foundation::ir::BufferAccess::ReadOnly,
+                    DataType::U32,
+                )
+                .with_count(4),
                 BufferDecl::output("output", 1, DataType::U32).with_count(4),
             ],
             "output",

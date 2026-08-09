@@ -30,7 +30,7 @@ pub fn softmax_top_k(
     k: u32,
 ) -> Program {
     if k == 0 {
-        return crate::builder::invalid_output_program(
+        return crate::builder::invalid_builder_trap_program(
             "vyre-libs::nn::softmax_top_k",
             out_indices,
             DataType::U32,

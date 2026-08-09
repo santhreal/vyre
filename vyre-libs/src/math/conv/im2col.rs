@@ -110,7 +110,7 @@ inventory::submit! {
         id: OP_ID,
         build: Some(|| {
             im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {
-                crate::builder::invalid_output_program(
+                crate::builder::invalid_builder_trap_program(
                     OP_ID,
                     "output",
                     DataType::F32,
