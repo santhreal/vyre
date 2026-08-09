@@ -53,9 +53,9 @@ pub(crate) fn cpu_ref(frontier_in: &[u32], kill_set: &[u32]) -> Vec<u32> {
 /// Marker type for the taint_kill dataflow primitive.
 pub struct TaintKill;
 
-impl vyre_foundation::soundness::SoundnessTagged for TaintKill {
-    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-        vyre_foundation::soundness::Soundness::Exact
+impl vyre_spec::soundness::SoundnessTagged for TaintKill {
+    fn soundness(&self) -> vyre_spec::soundness::Soundness {
+        vyre_spec::soundness::Soundness::Exact
     }
 }
 

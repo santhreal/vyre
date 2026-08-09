@@ -70,6 +70,8 @@ pub mod expr_variant;
 /// Dialect extension descriptor  -  marks non-core ops carried by extensions.
 /// Specification element.
 pub mod extension;
+/// Versioned cross-engine fact headers for analysis interchange.
+pub mod fact_schema;
 /// Floating-point type subset (F16/F32/F64) with associated properties.
 /// Specification element.
 pub mod float_type;
@@ -117,6 +119,8 @@ pub mod op_signature;
 pub mod pg_node_kind;
 /// Canonical semiring selector for dataflow and algebraic kernels.
 pub mod semiring;
+/// Soundness markers and precision contracts for cross-engine analysis data.
+pub mod soundness;
 /// Subgroup (warp) reduction operator enum  -  add/mul/min/max/and/or/xor.
 /// Specification element.
 pub mod subgroup_reduce_op;

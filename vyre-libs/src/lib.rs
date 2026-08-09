@@ -201,15 +201,6 @@ pub mod security;
 #[cfg(feature = "visual")]
 pub mod visual;
 
-/// Compatibility facade for GPU dataflow compositions.
-/// This path remains for older `vyre-libs::dataflow::*` consumers and must
-/// not grow a parallel dataflow implementation tree.
-pub mod dataflow;
-
-pub use dataflow::{
-    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
-    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness, SoundnessTagged,
-};
 #[cfg(any(
     feature = "math-linalg",
     feature = "math-scan",

@@ -184,12 +184,6 @@ pub mod execution_plan;
 pub mod error;
 pub use error::{Error, Result};
 
-/// Soundness lattice for dataflow primitives. Canonical home  -  dataflow
-/// engines and composition crates consume from here per the LEGO discipline
-/// (consumers always
-/// calls vyre, vyre never calls anything else).
-pub mod soundness;
-
 /// Test utilities shared across optimizer and transform test suites.
 /// `pub(crate)` because they are an internal contract  -  no consumer
 /// outside vyre-foundation should depend on these helpers.

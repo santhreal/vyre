@@ -1,21 +1,32 @@
-//! Compatibility facade for shared dataflow soundness contracts.
+//! Versioned cross-engine fact headers for analysis interchange.
 //!
-//! `vyre-libs::dataflow` remains as a stable import path for older consumers,
-//! but platform crates must not re-export downstream analysis engines. Concrete
-//! IFDS, SSA, reaching-definition, callgraph, slicing, range, and related
-//! analyses live in their owning engine crates and consume these shared
-//! contracts from `vyre-foundation`.
+//! Concrete analysis engines own their fact bodies. This module owns the
+//! stable header shared by security, borrow-checking, and external engines.
 
+use crate::soundness::Soundness;
 use serde::{Deserialize, Serialize};
-
-pub use vyre_foundation::soundness::{
-    validate_dynamic_pipeline, validate_dynamic_primitive, validate_pipeline, validate_primitive,
-    DynamicPrimitiveSoundness, DynamicSoundnessViolation, PrecisionContract, PrimitiveSoundness,
-    Soundness, SoundnessTagged, SoundnessViolation,
-};
 
 /// Shared fact-schema version for security, borrowck, and external/Vyre bridges.
 pub const SHARED_FACT_SCHEMA_VERSION: u16 = 1;
+
+/// Rejection returned when a fact header uses a non-current schema version.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UnsupportedFactSchemaVersion {
+    /// Version carried by the rejected header.
+    pub found: u16,
+}
+
+impl core::fmt::Display for UnsupportedFactSchemaVersion {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            formatter,
+            "unsupported shared fact schema version {}; expected {}",
+            self.found, SHARED_FACT_SCHEMA_VERSION
+        )
+    }
+}
+
+impl std::error::Error for UnsupportedFactSchemaVersion {}
 
 /// Cross-engine fact families accepted by the shared dataflow schema.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -113,6 +124,22 @@ impl SharedFactHeader {
             start_byte: 0,
             end_byte: 0,
             soundness,
+        }
+    }
+
+    /// Reject stale or unknown fact-schema versions before consuming a header.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`UnsupportedFactSchemaVersion`] unless this header carries the
+    /// current [`SHARED_FACT_SCHEMA_VERSION`].
+    pub const fn validate_schema_version(&self) -> Result<(), UnsupportedFactSchemaVersion> {
+        if self.schema_version == SHARED_FACT_SCHEMA_VERSION {
+            Ok(())
+        } else {
+            Err(UnsupportedFactSchemaVersion {
+                found: self.schema_version,
+            })
         }
     }
 
@@ -282,5 +309,35 @@ mod tests {
             header.wire_header(),
             "schema=v1;producer=external-dataflow;kind=witness;fact_id=13;subject=21;object=34;aux=55;file=0;start=0;end=0;soundness=Exact"
         );
+    }
+
+    /// WHY: decoded facts must not silently reinterpret stale or future schema
+    /// versions. This covers version admission, not fact-body semantics.
+    #[test]
+    fn rejects_every_non_current_schema_version_class() {
+        let mut header =
+            SharedFactHeader::new("test", SharedFactKind::Source, 1, 2, Soundness::Exact);
+
+        for rejected in [
+            SHARED_FACT_SCHEMA_VERSION - 1,
+            SHARED_FACT_SCHEMA_VERSION + 1,
+            u16::MAX,
+        ] {
+            header.schema_version = rejected;
+            let error = header
+                .validate_schema_version()
+                .expect_err("non-current fact schema version must be rejected");
+            assert_eq!(error.found, rejected);
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "unsupported shared fact schema version {rejected}; expected {}",
+                    SHARED_FACT_SCHEMA_VERSION
+                )
+            );
+        }
+
+        header.schema_version = SHARED_FACT_SCHEMA_VERSION;
+        assert_eq!(header.validate_schema_version(), Ok(()));
     }
 }

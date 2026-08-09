@@ -19,15 +19,13 @@ use external_dataflow_engine::reachability_witness::{ExtractedPath, ExtractedSta
 use vyre_libs::security::facts::{
     FindingProofBundle, FindingProofStep, SourceToSinkFindingRequest,
 };
-use vyre_libs::{
-    dataflow::{DynamicPrimitiveSoundness, PrecisionContract, Soundness},
-    security::{
-        route_security_taint_through_external_ifds, security_witness_path_from_external_path,
-        AnalysisFact, AnalysisFactTable, AnalysisSourceSpan, ExternalIfdsSecurityBuffers, FactId,
-        FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
-    },
+use vyre_libs::security::{
+    route_security_taint_through_external_ifds, security_witness_path_from_external_path,
+    AnalysisFact, AnalysisFactTable, AnalysisSourceSpan, ExternalIfdsSecurityBuffers, FactId,
+    FactKind, EXTERNAL_IFDS_SECURITY_BACKEND_ID,
 };
 use vyre_primitives::predicate::edge_kind;
+use vyre_spec::soundness::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
 
 #[test]
 fn source_to_sink_query_dispatches_through_external_ifds_and_returns_witness_seed() {
@@ -53,7 +51,7 @@ fn source_to_sink_query_dispatches_through_external_ifds_and_returns_witness_see
         query_id: "security.source_to_sink".to_string(),
         backend_id: "planner".to_string(),
         evidence_digest: "evidence:external-ifds".to_string(),
-        precision_contract: vyre_libs::dataflow::PrecisionContract::ZeroFalsePositive,
+        precision_contract: PrecisionContract::ZeroFalsePositive,
         source_fact_id: FactId(1),
         sink_fact_id: FactId(2),
         path_fact_ids: Vec::new(),

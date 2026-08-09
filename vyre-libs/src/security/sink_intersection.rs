@@ -75,9 +75,9 @@ pub(crate) fn cpu_ref(query_set: &[u32], sink_set: &[u32]) -> u32 {
 
 /// Soundness marker for [`sink_intersection`].
 pub struct SinkIntersection;
-impl vyre_foundation::soundness::SoundnessTagged for SinkIntersection {
-    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-        vyre_foundation::soundness::Soundness::Exact
+impl vyre_spec::soundness::SoundnessTagged for SinkIntersection {
+    fn soundness(&self) -> vyre_spec::soundness::Soundness {
+        vyre_spec::soundness::Soundness::Exact
     }
 }
 

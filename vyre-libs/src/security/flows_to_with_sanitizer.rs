@@ -18,16 +18,23 @@
 //! buffers. Centralising it here lets the rule write one `lhs`-shaped
 //! predicate that the optimizer fuses, caches, and CSEs across rules.
 //!
-//! Soundness: [`Exact`](vyre_foundation::soundness::Soundness::Exact)
+//! Soundness: [`Exact`](vyre_spec::soundness::Soundness::Exact)
 //! when iterated to fixpoint with the same sanitizer mask supplied
 //! at every step. One step alone is
-//! [`MayOver`](vyre_foundation::soundness::Soundness::MayOver)  -  the
+//! [`MayOver`](vyre_spec::soundness::Soundness::MayOver)  -  the
 //! caller is responsible for the fixpoint loop, which is the same
 //! contract every other reachability primitive in this module honours.
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
+use vyre_spec::{
+    fact_schema::SharedFactKind,
+    soundness::{DynamicPrimitiveSoundness, Soundness},
+};
+
+#[cfg(test)]
+use vyre_spec::soundness::{validate_dynamic_pipeline, PrecisionContract};
 
 #[cfg(test)]
 use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref;
@@ -62,11 +69,11 @@ pub struct SanitizedFlowSoundnessContract {
     /// Stable primitive id to place in finding evidence.
     pub op_id: &'static str,
     /// Soundness marker for this mode.
-    pub soundness: crate::dataflow::Soundness,
+    pub soundness: Soundness,
     /// Whether the result is bounded by an explicit sanitizer mask.
     pub sanitizer_filter: bool,
     /// Shared fact kind the external engine should use when writing this result.
-    pub external_fact_kind: crate::dataflow::SharedFactKind,
+    pub external_fact_kind: SharedFactKind,
     /// Stable external role string for blackboard/fact consumers.
     pub external_role: &'static str,
 }
@@ -78,7 +85,7 @@ pub struct SanitizedFlowContractViolation {
     /// Rejected execution mode.
     pub mode: SanitizedFlowExecutionMode,
     /// Soundness marker that made the mode invalid for final proof evidence.
-    pub soundness: crate::dataflow::Soundness,
+    pub soundness: Soundness,
     /// Operator-facing fix direction.
     pub fix: &'static str,
 }
@@ -103,8 +110,8 @@ impl SanitizedFlowExecutionMode {
 impl SanitizedFlowSoundnessContract {
     /// Convert this contract into serializable primitive evidence for findings.
     #[must_use]
-    pub fn primitive_soundness(&self) -> crate::dataflow::DynamicPrimitiveSoundness {
-        let evidence = crate::dataflow::DynamicPrimitiveSoundness::new(self.op_id, self.soundness);
+    pub fn primitive_soundness(&self) -> DynamicPrimitiveSoundness {
+        let evidence = DynamicPrimitiveSoundness::new(self.op_id, self.soundness);
         if self.sanitizer_filter {
             evidence.with_sanitizer_filter()
         } else {
@@ -122,17 +129,17 @@ pub const fn sanitized_flow_soundness_contract(
         SanitizedFlowExecutionMode::OneStep => SanitizedFlowSoundnessContract {
             mode,
             op_id: OP_ID,
-            soundness: crate::dataflow::Soundness::MayOver,
+            soundness: Soundness::MayOver,
             sanitizer_filter: true,
-            external_fact_kind: crate::dataflow::SharedFactKind::Taint,
+            external_fact_kind: SharedFactKind::Taint,
             external_role: "external.flow.one_step.sanitizer_gated",
         },
         SanitizedFlowExecutionMode::FixpointConverged { .. } => SanitizedFlowSoundnessContract {
             mode,
             op_id: FIXPOINT_OP_ID,
-            soundness: crate::dataflow::Soundness::Exact,
+            soundness: Soundness::Exact,
             sanitizer_filter: false,
-            external_fact_kind: crate::dataflow::SharedFactKind::Witness,
+            external_fact_kind: SharedFactKind::Witness,
             external_role: "external.flow.fixpoint_converged.sanitizer_gated",
         },
     }
@@ -170,7 +177,7 @@ pub fn sanitized_flow_final_soundness_contract(
 /// fixpoint.
 pub fn sanitized_flow_final_finding_soundness(
     mode: SanitizedFlowExecutionMode,
-) -> Result<crate::dataflow::DynamicPrimitiveSoundness, SanitizedFlowContractViolation> {
+) -> Result<DynamicPrimitiveSoundness, SanitizedFlowContractViolation> {
     sanitized_flow_final_soundness_contract(mode).map(|contract| contract.primitive_soundness())
 }
 
@@ -282,7 +289,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dataflow::{PrecisionContract, Soundness};
     use crate::security::facts::{
         finding_from_sanitized_source_to_sink_query, AnalysisFact, AnalysisFactTable,
         AnalysisSourceSpan, FactId, FactKind, SourceToSinkFindingRequest,
@@ -301,10 +307,7 @@ mod tests {
         assert_eq!(one_step.op_id, OP_ID);
         assert_eq!(one_step.soundness, Soundness::MayOver);
         assert!(one_step.sanitizer_filter);
-        assert_eq!(
-            one_step.external_fact_kind,
-            crate::dataflow::SharedFactKind::Taint
-        );
+        assert_eq!(one_step.external_fact_kind, SharedFactKind::Taint);
         assert_eq!(
             one_step.external_role,
             "external.flow.one_step.sanitizer_gated"
@@ -314,10 +317,7 @@ mod tests {
         assert_eq!(fixpoint.op_id, FIXPOINT_OP_ID);
         assert_eq!(fixpoint.soundness, Soundness::Exact);
         assert!(!fixpoint.sanitizer_filter);
-        assert_eq!(
-            fixpoint.external_fact_kind,
-            crate::dataflow::SharedFactKind::Witness
-        );
+        assert_eq!(fixpoint.external_fact_kind, SharedFactKind::Witness);
         assert_eq!(
             fixpoint.external_role,
             "external.flow.fixpoint_converged.sanitizer_gated"
@@ -346,11 +346,9 @@ mod tests {
         assert_eq!(evidence.soundness, Soundness::Exact);
         assert!(!evidence.sanitizer_filter);
 
-        let soundness = crate::dataflow::validate_dynamic_pipeline(
-            PrecisionContract::ZeroFalsePositive,
-            &[evidence],
-        )
-        .expect("Fix: exact fixpoint evidence must satisfy zero-FP finding contracts");
+        let soundness =
+            validate_dynamic_pipeline(PrecisionContract::ZeroFalsePositive, &[evidence])
+                .expect("Fix: exact fixpoint evidence must satisfy zero-FP finding contracts");
 
         assert_eq!(soundness, Soundness::Exact);
     }

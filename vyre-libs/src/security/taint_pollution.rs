@@ -57,9 +57,9 @@ pub(crate) fn cpu_ref(
 
 /// Soundness marker for [`taint_pollution`].
 pub struct TaintPollution;
-impl vyre_foundation::soundness::SoundnessTagged for TaintPollution {
-    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-        vyre_foundation::soundness::Soundness::MayOver
+impl vyre_spec::soundness::SoundnessTagged for TaintPollution {
+    fn soundness(&self) -> vyre_spec::soundness::Soundness {
+        vyre_spec::soundness::Soundness::MayOver
     }
 }
 

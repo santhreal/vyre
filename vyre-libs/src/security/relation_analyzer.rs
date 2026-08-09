@@ -8,7 +8,7 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
-use crate::PrecisionContract;
+use vyre_spec::soundness::PrecisionContract;
 
 use super::facts::{
     finding_from_sanitized_source_to_sink_query, AnalysisFact, AnalysisFactError,
@@ -441,8 +441,8 @@ pub fn generated_relation_finding_fact_ids(findings: &[FindingProofBundle]) -> V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dataflow::PrecisionContract;
     use crate::security::{AnalysisSourceSpan, FactId};
+    use vyre_spec::soundness::PrecisionContract;
 
     fn span(byte: u32) -> AnalysisSourceSpan {
         AnalysisSourceSpan::byte_range(1, byte, byte + 1)

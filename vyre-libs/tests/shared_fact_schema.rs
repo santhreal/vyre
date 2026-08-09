@@ -1,6 +1,9 @@
 //! Shared fact-schema contract tests for security and external headers.
 
-use vyre_libs::dataflow::{SharedFactHeader, SharedFactKind, Soundness};
+use vyre_spec::{
+    fact_schema::{SharedFactHeader, SharedFactKind},
+    soundness::Soundness,
+};
 
 #[cfg(feature = "security")]
 use vyre_libs::security::{AnalysisFact, AnalysisSourceSpan, FactId, FactKind};
@@ -21,7 +24,6 @@ fn c_security_fact_maps_to_exact_shared_header() {
         "schema=v1;producer=c-c11;kind=source;fact_id=1;subject=42;object=-;aux=-;file=7;start=100;end=120;soundness=Exact"
     );
 }
-
 
 #[test]
 fn external_witness_header_is_exact_shared_schema() {

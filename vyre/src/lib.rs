@@ -92,11 +92,9 @@
 /// Public API re-export.
 pub use vyre_foundation::ir;
 
-/// Soundness lattice for dataflow primitives. Canonical home is
-/// `vyre-foundation`; re-exported here so vyre-libs (and any downstream
-/// consumer) reaches it via `vyre::soundness`. Per the LEGO discipline,
-/// vyre never imports from domain dataflow crates  -  this is the originating definition.
-pub use vyre_foundation::soundness;
+/// Soundness markers and precision contracts from the frozen specification.
+/// Public API re-export.
+pub use vyre_spec::soundness;
 
 // Layer 1 and Layer 2 operation specifications live in vyre-libs.
 // The crate root remains the single stable import surface for consumers.

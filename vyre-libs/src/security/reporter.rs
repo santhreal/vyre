@@ -315,7 +315,7 @@ pub enum SecurityReporterError {
 
 #[cfg(test)]
 mod tests {
-    use crate::dataflow::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
+    use vyre_spec::soundness::{DynamicPrimitiveSoundness, PrecisionContract, Soundness};
 
     use super::*;
     use crate::security::{AnalysisSourceSpan, FactId};

@@ -85,9 +85,9 @@ pub(crate) fn cpu_ref(
 
 /// Soundness marker for [`integer_overflow_arith`].
 pub struct IntegerOverflowArith;
-impl vyre_foundation::soundness::SoundnessTagged for IntegerOverflowArith {
-    fn soundness(&self) -> vyre_foundation::soundness::Soundness {
-        vyre_foundation::soundness::Soundness::Exact
+impl vyre_spec::soundness::SoundnessTagged for IntegerOverflowArith {
+    fn soundness(&self) -> vyre_spec::soundness::Soundness {
+        vyre_spec::soundness::Soundness::Exact
     }
 }
 

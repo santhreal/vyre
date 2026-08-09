@@ -1,8 +1,6 @@
 //! Integration contracts for soundness lattice and pipeline precision policy.
 
-use vyre_foundation::soundness::{
-    validate_pipeline, PrecisionContract, PrimitiveSoundness, Soundness,
-};
+use vyre_spec::soundness::{validate_pipeline, PrecisionContract, PrimitiveSoundness, Soundness};
 
 #[test]
 fn may_over_join_must_under_is_may_over() {

@@ -4,18 +4,15 @@
 //! whose marker is [`crate::soundness::Soundness::Exact`], or [`crate::soundness::Soundness::MayOver`]
 //! primitives gated by an explicit sanitizer filter downstream.
 //!
-//! Lives in `vyre-foundation` because soundness is a primitive lattice
-//! over IR-level analyses; dataflow engines and composition crates both
-//! consume it. Per the LEGO discipline (consumers call vyre, vyre never calls
-//! consumers) the canonical definition must live in vyre.
+//! Lives in `vyre-spec` because soundness markers cross engine and product
+//! boundaries as frozen analysis data.
 
 /// Soundness regime of a dataflow primitive.
 ///
 /// Rules with zero-FP precision contracts MUST only compose primitives
 /// whose marker is `Exact`, or `MayOver` primitives gated by an explicit
 /// sanitizer filter downstream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Soundness {
     /// Over-approximates: may report taint where none exists. Safe for
     /// recall-driven rules paired with a downstream filter.
@@ -35,8 +32,7 @@ pub enum Soundness {
 /// every `MayOver` analysis; it must either stay `Exact` end to end or
 /// prove that a downstream sanitizer filter bounds the over-approximate
 /// primitive before the result escapes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PrecisionContract {
     /// Results must not contain false positives.
     ZeroFalsePositive,
@@ -47,8 +43,7 @@ pub enum PrecisionContract {
 }
 
 /// Soundness evidence for one primitive in a composed pipeline.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct PrimitiveSoundness {
     /// Stable primitive id, normally the `vyre_harness::OpEntry::id`.
     pub op_id: &'static str,
@@ -61,8 +56,7 @@ pub struct PrimitiveSoundness {
 
 /// Serializable soundness evidence for one primitive in a finding or release
 /// artifact.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct DynamicPrimitiveSoundness {
     /// Stable primitive id, normally the `vyre_harness::OpEntry::id`.
     pub op_id: String,
@@ -113,8 +107,7 @@ impl DynamicPrimitiveSoundness {
 }
 
 /// Mechanical rejection reason for an invalid soundness composition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct SoundnessViolation {
     /// Primitive that violates the requested consumer contract.
     pub op_id: &'static str,
@@ -127,8 +120,7 @@ pub struct SoundnessViolation {
 }
 
 /// Mechanical rejection reason for an invalid dynamic soundness composition.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct DynamicSoundnessViolation {
     /// Primitive that violates the requested consumer contract.
     pub op_id: String,

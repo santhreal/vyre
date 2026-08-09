@@ -13,13 +13,11 @@ use external_dataflow_engine::{
     reachability_witness::{ExtractedPath, PathSeed},
 };
 use vyre_foundation::ir::Program;
+use vyre_spec::soundness::{DynamicPrimitiveSoundness, Soundness};
 
-use crate::{
-    security::facts::{
-        AnalysisFact, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind,
-        FindingProofBundle, SourceToSinkFindingRequest,
-    },
-    DynamicPrimitiveSoundness, Soundness,
+use crate::security::facts::{
+    AnalysisFact, AnalysisFactError, AnalysisFactTable, AnalysisSourceSpan, FactId, FactKind,
+    FindingProofBundle, SourceToSinkFindingRequest,
 };
 
 /// Backend id used when Vyre security routes taint through external IFDS.

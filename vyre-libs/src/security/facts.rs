@@ -11,9 +11,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use vyre_foundation::hashing::update_length_delimited_field as hash_field;
 
-use crate::{
-    validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
-    PrecisionContract, SharedFactHeader, SharedFactKind, Soundness,
+use vyre_spec::{
+    fact_schema::{SharedFactHeader, SharedFactKind},
+    soundness::{
+        validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
+        PrecisionContract, Soundness,
+    },
 };
 
 /// Stable fact identifier.

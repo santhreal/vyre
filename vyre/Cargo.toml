@@ -17,6 +17,7 @@ exclude = ["**/SKILL.md"]
 [dependencies]
 vyre-driver.workspace = true
 vyre-foundation.workspace = true
+vyre-spec.workspace = true
 vyre-megakernel.workspace = true
 vyre-runtime.workspace = true
 vyre-libs = { workspace = true, features = ["full", "c-parser", "matching-regex"] }
