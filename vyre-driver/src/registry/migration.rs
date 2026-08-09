@@ -27,10 +27,9 @@
 //! * Chain resolution stops at the highest version reachable. An
 //!   absent further migration is a terminal state, not an error.
 
-use std::borrow::Cow;
 use std::sync::OnceLock;
 
-use crate::diagnostics::{Diagnostic, OpLocation, Severity};
+use crate::diagnostics::{Diagnostic, OpLocation};
 use rustc_hash::FxHashMap;
 
 /// Semantic version triple used for op versioning.
@@ -383,18 +382,15 @@ impl MigrationRegistry {
 /// and migration note attached as the suggested fix.
 #[must_use]
 pub fn deprecation_diagnostic(dep: &Deprecation) -> Diagnostic {
-    let message = format!(
-        "op `{}` is deprecated since version {}",
-        dep.op_id, dep.deprecated_since
-    );
-    Diagnostic {
-        severity: Severity::Warning,
-        code: crate::diagnostics::DiagnosticCode::new("W-OP-DEPRECATED"),
-        message: Cow::Owned(message),
-        location: Some(OpLocation::op(dep.op_id.to_owned())),
-        suggested_fix: Some(Cow::Borrowed(dep.note)),
-        doc_url: None,
-    }
+    Diagnostic::warning(
+        "W-OP-DEPRECATED",
+        format!(
+            "op `{}` is deprecated since version {}",
+            dep.op_id, dep.deprecated_since
+        ),
+    )
+    .with_location(OpLocation::op(dep.op_id.to_owned()))
+    .with_fix(dep.note)
 }
 
 #[cfg(test)]
@@ -522,7 +518,7 @@ mod tests {
         let reg = MigrationRegistry::global();
         let dep = reg.deprecation("test.op_dep").unwrap();
         let diag = deprecation_diagnostic(dep);
-        assert_eq!(diag.severity, Severity::Warning);
+        assert_eq!(diag.severity, crate::diagnostics::Severity::Warning);
         assert_eq!(diag.code.as_str(), "W-OP-DEPRECATED");
         assert!(diag.message.contains("test.op_dep"));
         assert!(diag

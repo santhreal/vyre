@@ -30,14 +30,14 @@ fn render_inline_cycle() {
     let err = Error::InlineCycle {
         op_id: "foo".to_owned(),
     };
-    let diag = Diagnostic::from(&err);
+    let diag = from_legacy_error(&err);
     assert_eq!(diag.severity, Severity::Error);
     assert_eq!(diag.code.as_str(), "E-INLINE-CYCLE");
     assert!(diag.location.is_some());
     assert_eq!(diag.location.as_ref().unwrap().op_id.as_ref(), "foo");
     assert!(diag.suggested_fix.is_some());
     let rendered = diag.render_human();
-    assert!(rendered.starts_with("error[E-INLINE-CYCLE]:"));
+    assert!(rendered.starts_with("error[E-INLINE-CYCLE](Validate):"));
     assert!(rendered.contains("op `foo`"));
     assert!(rendered.contains("help:"));
 }
@@ -123,7 +123,7 @@ fn every_error_variant_classifies() {
     ];
 
     for err in samples {
-        let diag = Diagnostic::from(&err);
+        let diag = from_legacy_error(&err);
         assert!(diag.code.as_str().starts_with("E-"));
         assert!(!diag.message.is_empty());
         assert_eq!(diag.severity, Severity::Error);
@@ -136,11 +136,13 @@ fn every_error_variant_classifies() {
 fn warning_and_note_constructors() {
     let w = Diagnostic::warning("W-DEPRECATED", "x is deprecated");
     assert_eq!(w.severity, Severity::Warning);
-    assert!(w.render_human().starts_with("warning[W-DEPRECATED]:"));
+    assert!(w
+        .render_human()
+        .starts_with("warning[W-DEPRECATED](Validate):"));
 
     let n = Diagnostic::note("N-INFO", "fyi");
     assert_eq!(n.severity, Severity::Note);
-    assert!(n.render_human().starts_with("note[N-INFO]:"));
+    assert!(n.render_human().starts_with("note[N-INFO](Validate):"));
 }
 
 #[test]

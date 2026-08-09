@@ -24,7 +24,7 @@
 //! as part of A-C7b and the Gemini C perf blitz) can adopt the
 //! ctx-based path without breaking the registry.
 
-use crate::diagnostics::{Diagnostic, OpLocation};
+use crate::diagnostics::{Diagnostic, DiagnosticStage, OpLocation};
 use rustc_hash::FxHashMap;
 
 /// The subset of device info passes read.
@@ -236,27 +236,43 @@ pub struct PassCtx<'a> {
 pub fn scheduling_error_to_diagnostic(err: &crate::optimizer::PassSchedulingError) -> Diagnostic {
     use crate::optimizer::PassSchedulingError as E;
     match err {
-        E::UnknownRequire { pass, missing } => Diagnostic::error(format!(
-            "OPTSCHED001: pass `{pass}` requires unknown pass `{missing}`. Fix: register `{missing}` or drop the requirement."
-        ))
+        E::UnknownRequire { pass, missing } => Diagnostic::error(
+            "OPTSCHED001",
+            format!("pass `{pass}` requires unknown pass `{missing}`"),
+        )
+        .with_stage(DiagnosticStage::Optimize)
+        .with_fix(format!("register `{missing}` or drop the requirement"))
         .with_location(OpLocation::op(pass.to_string())),
-        E::Cycle { pass_ids, fix } => Diagnostic::error(format!(
-            "OPTSCHED002: cycle among passes {pass_ids:?}. Fix: {fix}"
-        )),
-        E::DuplicateId { id } => Diagnostic::error(format!(
-            "OPTSCHED003: duplicate pass id `{id}`. Fix: assign every pass a unique stable id."
-        )),
-        E::OrderViolation { pass, requirement } => Diagnostic::error(format!(
-            "OPTSCHED004: pass `{pass}` is scheduled before required pass `{requirement}`. Fix: move `{requirement}` earlier or remove the stale requirement."
+        E::Cycle { pass_ids, fix } => {
+            Diagnostic::error("OPTSCHED002", format!("cycle among passes {pass_ids:?}"))
+                .with_stage(DiagnosticStage::Optimize)
+                .with_fix(*fix)
+        }
+        E::DuplicateId { id } => {
+            Diagnostic::error("OPTSCHED003", format!("duplicate pass id `{id}`"))
+                .with_stage(DiagnosticStage::Optimize)
+                .with_fix("assign every pass a unique stable id")
+        }
+        E::OrderViolation { pass, requirement } => Diagnostic::error(
+            "OPTSCHED004",
+            format!("pass `{pass}` is scheduled before required pass `{requirement}`"),
+        )
+        .with_stage(DiagnosticStage::Optimize)
+        .with_fix(format!(
+            "move `{requirement}` earlier or remove the stale requirement"
         ))
         .with_location(OpLocation::op(pass.to_string())),
         E::StorageReserveFailed {
             context,
             requested,
             message,
-        } => Diagnostic::error(format!(
-            "OPTSCHED005: scheduler could not reserve {requested} {context} slot(s): {message}. Fix: reduce the pass set or schedule it in shards."
-        )),
+        } => Diagnostic::error(
+            "OPTSCHED005",
+            format!("scheduler could not reserve {requested} {context} slot(s)"),
+        )
+        .with_stage(DiagnosticStage::Optimize)
+        .with_cause("allocation", message.clone())
+        .with_fix("reduce the pass set or schedule it in shards"),
     }
 }
 

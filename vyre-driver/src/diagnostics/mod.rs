@@ -6,10 +6,11 @@
 //! servers, CI annotators, and terminal renderers.
 
 mod legacy;
-mod serde_cow;
-mod types;
+pub use legacy::from_legacy_error;
 
-pub use types::{Diagnostic, DiagnosticCode, OpLocation, Severity};
+pub use vyre_foundation::diagnostics::{
+    Diagnostic, DiagnosticCause, DiagnosticCode, DiagnosticStage, OpLocation, RetryClass, Severity,
+};
 
 #[cfg(test)]
 mod tests;

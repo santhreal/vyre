@@ -21,60 +21,8 @@
 
 extern crate self as vyre;
 
-/// Structured optimizer diagnostics surfaced to IDEs and CI annotators.
-///
-/// Lightweight diagnostic type used by foundation optimizer passes.
-///
-/// Drivers embed these into their richer diagnostic surface; foundation
-/// only needs a human-readable message plus an optional pass/op location
-/// so that pass-scheduling errors can be rendered without pulling in
-/// driver-tier dependencies.
-pub mod diagnostics {
-
-    /// Error-level diagnostic with an optional location hint.
-    #[derive(Debug, Clone)]
-    pub struct Diagnostic {
-        /// Human-readable diagnostic message.
-        pub message: String,
-        /// Optional op/pass location the diagnostic refers to.
-        pub location: Option<OpLocation>,
-    }
-
-    impl Diagnostic {
-        /// Build an error-level diagnostic with no location.
-        #[must_use]
-        pub fn error(msg: impl Into<String>) -> Self {
-            Self {
-                message: msg.into(),
-                location: None,
-            }
-        }
-
-        /// Attach an op/pass location to this diagnostic.
-        #[must_use]
-        pub fn with_location(mut self, loc: OpLocation) -> Self {
-            self.location = Some(loc);
-            self
-        }
-    }
-
-    /// Location handle pointing at a specific pass or op id.
-    #[derive(Debug, Clone)]
-    pub struct OpLocation {
-        /// Stable pass or op identifier.
-        pub op_id: String,
-    }
-
-    impl OpLocation {
-        /// Construct a location hint from an op id.
-        #[must_use]
-        pub fn op(op_id: impl Into<String>) -> Self {
-            Self {
-                op_id: op_id.into(),
-            }
-        }
-    }
-}
+/// Shared structured diagnostic protocol.
+pub mod diagnostics;
 
 pub mod ir {
     //! The vyre intermediate representation.

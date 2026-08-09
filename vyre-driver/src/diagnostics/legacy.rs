@@ -56,23 +56,17 @@ fn classify(err: &Error) -> (&'static str, Option<OpLocation>) {
     }
 }
 
-impl From<&Error> for Diagnostic {
-    fn from(err: &Error) -> Self {
-        let (code, location) = classify(err);
-        let (message, fix) = split_fix(err.to_string());
-        let mut diag = Diagnostic::error(code, message);
-        if let Some(fix) = fix {
-            diag = diag.with_fix(fix);
-        }
-        if let Some(loc) = location {
-            diag = diag.with_location(loc);
-        }
-        diag
+/// Convert the retired foundation catch-all error into the shared diagnostic protocol.
+#[must_use]
+pub fn from_legacy_error(error: &Error) -> Diagnostic {
+    let (code, location) = classify(error);
+    let (message, fix) = split_fix(error.to_string());
+    let mut diagnostic = Diagnostic::error(code, message);
+    if let Some(fix) = fix {
+        diagnostic = diagnostic.with_fix(fix);
     }
-}
-
-impl From<Error> for Diagnostic {
-    fn from(err: Error) -> Self {
-        Diagnostic::from(&err)
+    if let Some(location) = location {
+        diagnostic = diagnostic.with_location(location);
     }
+    diagnostic
 }
