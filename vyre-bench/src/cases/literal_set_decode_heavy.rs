@@ -23,9 +23,9 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
+use vyre::scan::GpuLiteralSet;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 /// A consumer-shaped corpus, tiled densely so the scan produces many thousands of
 /// matches and the host readback/decode is the load-bearing cost.
@@ -100,22 +100,22 @@ fn run_decode_heavy(
     // Resident session: the seven immutable tables upload ONCE here, so the timed
     // loop below re-stages only the haystack + counter reset, the residual cost is
     // the dense match write-out + readback + decode.
-    let session = engine.prepare_resident_scan(backend, corpus.len() + 64, max_matches)?;
+    let session = engine.prepare_resident_scan(backend.id(), corpus.len() + 64, max_matches)?;
     let mut matches = Vec::new();
     let mut scratch = Vec::new();
 
     // Warm the resident buffers/queues so the timed loop measures steady state.
-    session.scan_into(backend, corpus, &mut matches, &mut scratch)?;
+    session.scan_into(corpus, &mut matches, &mut scratch)?;
 
     let mut device_ns = None;
     let start = Instant::now();
     for _ in 0..iters {
-        let timed = session.scan_into_timed(backend, corpus, &mut matches, &mut scratch)?;
+        let timed = session.scan_into_timed(corpus, &mut matches, &mut scratch)?;
         device_ns = timed.device_ns;
     }
     let wall_ns = clamp_ns(start.elapsed());
 
-    session.free(backend)?;
+    session.free()?;
 
     Ok(DecodeHeavyMeasurement {
         wall_ns,

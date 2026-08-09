@@ -19,6 +19,15 @@ pub(crate) struct ResolvedPersistentResources {
 }
 
 impl WgpuPipeline {
+    pub(crate) fn persistent_resource_names(&self) -> impl Iterator<Item = &str> {
+        self.buffer_bindings
+            .iter()
+            .filter(|info| {
+                info.kind != vyre_foundation::ir::MemoryKind::Shared && !info.internal_trap
+            })
+            .map(|info| info.name.as_ref())
+    }
+
     pub(crate) fn resolve_persistent_resources(
         &self,
         resources: &[vyre_driver::Resource],
@@ -44,10 +53,13 @@ impl WgpuPipeline {
         let binding_capacity = self.buffer_bindings.len();
         let mut inputs =
             SmallVec::<[crate::buffer::GpuBufferHandle; 8]>::with_capacity(binding_capacity);
-        let mut outputs =
-            SmallVec::<[crate::buffer::GpuBufferHandle; 8]>::with_capacity(binding_capacity);
-        let mut output_resources =
-            SmallVec::<[vyre_driver::Resource; 8]>::with_capacity(self.output_bindings.len());
+        let mut resolved_outputs = SmallVec::<
+            [(
+                u32,
+                crate::buffer::GpuBufferHandle,
+                Option<vyre_driver::Resource>,
+            ); 8],
+        >::with_capacity(self.output_bindings.len());
         let mut resource_index = 0usize;
 
         for info in self.buffer_bindings.iter() {
@@ -67,10 +79,10 @@ impl WgpuPipeline {
             resource_index += 1;
             let handle = self.resolve_persistent_resource(info, resource, queue)?;
             if info.is_output {
-                if return_resource_outputs {
+                let output_resource = if return_resource_outputs {
                     match resource {
                         vyre_driver::Resource::Resident(id) => {
-                            output_resources.push(vyre_driver::Resource::Resident(*id));
+                            Some(vyre_driver::Resource::Resident(*id))
                         }
                         vyre_driver::Resource::Borrowed(_) => {
                             return Err(BackendError::new(format!(
@@ -79,8 +91,10 @@ impl WgpuPipeline {
                             )));
                         }
                     }
-                }
-                outputs.push(handle);
+                } else {
+                    None
+                };
+                resolved_outputs.push((info.binding, handle, output_resource));
             } else {
                 inputs.push(handle);
             }
@@ -91,6 +105,27 @@ impl WgpuPipeline {
                 "persistent handle dispatch received {} resources but consumed {resource_index}. Fix: pass resources in public non-shared BufferDecl order without extra handles.",
                 resources.len()
             )));
+        }
+
+        let mut outputs =
+            SmallVec::<[crate::buffer::GpuBufferHandle; 8]>::with_capacity(resolved_outputs.len());
+        let mut output_resources =
+            SmallVec::<[vyre_driver::Resource; 8]>::with_capacity(resolved_outputs.len());
+        for output in self.output_bindings.iter() {
+            let index = resolved_outputs
+                .iter()
+                .position(|(binding, _, _)| *binding == output.binding)
+                .ok_or_else(|| {
+                    BackendError::new(format!(
+                        "persistent resource resolution omitted output binding {} (`{}`). Fix: keep descriptor output classification aligned with Program output layouts.",
+                        output.binding, output.name
+                    ))
+                })?;
+            let (_, handle, resource) = resolved_outputs.remove(index);
+            outputs.push(handle);
+            if let Some(resource) = resource {
+                output_resources.push(resource);
+            }
         }
 
         Ok(ResolvedPersistentResources {

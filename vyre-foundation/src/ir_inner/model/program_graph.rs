@@ -237,10 +237,14 @@ impl ProgramGraph {
                     dtype: buffer.element(),
                     shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
                     access: buffer.access(),
-                    lifetime: match buffer.access() {
-                        BufferAccess::WriteOnly => ValueLifetime::Output,
-                        BufferAccess::ReadWrite => ValueLifetime::Retained,
-                        _ => ValueLifetime::Invocation,
+                    lifetime: if buffer.is_output() {
+                        ValueLifetime::Output
+                    } else {
+                        match buffer.access() {
+                            BufferAccess::WriteOnly => ValueLifetime::Output,
+                            BufferAccess::ReadWrite => ValueLifetime::Retained,
+                            _ => ValueLifetime::Invocation,
+                        }
                     },
                 },
             )?;

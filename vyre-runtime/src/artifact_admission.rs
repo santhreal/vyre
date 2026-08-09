@@ -388,17 +388,19 @@ impl ArtifactSession {
             .state
             .read()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let mut resources = state
-            .admitted
-            .neutral()
+        let artifact = state.admitted.neutral();
+        let mut resources = artifact
             .abi()
             .resources
             .iter()
-            .filter(|resource| {
-                matches!(
-                    resource.access,
-                    AbiAccess::ReadOnly | AbiAccess::ReadWrite | AbiAccess::Uniform
-                )
+            .filter(|resource| match resource.access {
+                AbiAccess::ReadOnly | AbiAccess::Uniform => true,
+                AbiAccess::ReadWrite => artifact
+                    .resources()
+                    .iter()
+                    .find(|record| record.value == resource.value)
+                    .is_none_or(|record| record.lifetime != ResourceLifetime::Output),
+                AbiAccess::WriteOnly => false,
             })
             .collect::<Vec<_>>();
         resources.sort_unstable_by_key(|resource| resource.slot);

@@ -153,10 +153,15 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 Arc::clone(&self.backend.pipeline_cache),
                 Arc::clone(&self.backend.bind_group_layout_cache),
             )?;
+            let resident_slots = pipeline
+                .persistent_resource_names()
+                .map(str::to_owned)
+                .collect();
             modules.push(WgpuExecutableModule {
                 program,
                 pipeline,
                 input_slots,
+                resident_slots,
             });
         }
         Ok(Box::new(WgpuArtifactInstance {
@@ -164,7 +169,6 @@ impl ArtifactMaterializer for WgpuMaterializer {
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
             lost: Arc::clone(&self.descriptor.lost),
-            backend: self.backend.clone(),
             modules,
             values: artifact
                 .resources()
@@ -196,6 +200,7 @@ struct WgpuExecutableModule {
     program: Arc<Program>,
     pipeline: Arc<WgpuPipeline>,
     input_slots: Vec<ArtifactInputSlot>,
+    resident_slots: Vec<String>,
 }
 
 struct WgpuArtifactInstance {
@@ -204,7 +209,6 @@ struct WgpuArtifactInstance {
     device: DeviceIdentity,
     lost: Arc<AtomicBool>,
     modules: Vec<WgpuExecutableModule>,
-    backend: WgpuBackend,
     values: BTreeMap<String, ArtifactValueId>,
     outputs: BTreeSet<ArtifactValueId>,
     retained: BTreeSet<ArtifactValueId>,
@@ -357,23 +361,20 @@ impl WgpuArtifactInstance {
             });
         }
         let module = &self.modules[0];
-        let mut ordered = Vec::with_capacity(module.input_slots.len());
-        for slot in &module.input_slots {
-            let value = self.value_for_buffer(&slot.name)?;
+        let mut ordered = Vec::with_capacity(module.resident_slots.len());
+        for name in &module.resident_slots {
+            let value = self.value_for_buffer(name)?;
             let resource = resources.get(&value).ok_or_else(|| {
                 invalid_module(&format!(
-                    "canonical artifact value {} for resident target binding `{}` is unbound",
-                    value.0, slot.name
+                    "canonical artifact value {} for resident target binding `{name}` is unbound",
+                    value.0
                 ))
             })?;
             ordered.push(resource.clone());
         }
-        let dispatched = crate::resident_dispatch::dispatch_resident_timed(
-            &self.backend,
-            &module.program,
-            &ordered,
-            &DispatchConfig::default(),
-        )?;
+        let dispatched = module
+            .pipeline
+            .dispatch_persistent_handles_timed(&ordered, &DispatchConfig::default())?;
         let plan = BindingPlan::build(&module.program)?;
         let mut output_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
         for binding in &plan.bindings {

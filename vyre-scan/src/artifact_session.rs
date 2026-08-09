@@ -6,7 +6,7 @@ use std::time::Instant;
 use thiserror::Error;
 use vyre_driver::{
     BackendError, BackendRegistration, BindingSet, BoundResource, Completion, DeviceIdentity,
-    Submission, TimedDispatchResult,
+    Resource, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
@@ -138,6 +138,46 @@ impl ScanArtifactSession {
                 ))
             })
     }
+    pub(crate) fn allocate_resident(&self, byte_len: usize) -> Result<Resource, ScanArtifactError> {
+        Ok(self.session.allocate_resident(byte_len)?)
+    }
+
+    pub(crate) fn upload_resident(
+        &self,
+        resource: &Resource,
+        bytes: &[u8],
+    ) -> Result<(), ScanArtifactError> {
+        Ok(self.session.upload_resident(resource, bytes)?)
+    }
+
+    pub(crate) fn free_resident(&self, resource: Resource) -> Result<(), ScanArtifactError> {
+        Ok(self.session.free_resident(resource)?)
+    }
+
+    pub(crate) fn submit_resident_timed(
+        &self,
+        resources: &[(&str, &Resource)],
+    ) -> Result<TimedDispatchResult, ScanArtifactError> {
+        let start = Instant::now();
+        let mut bindings = self.session.bindings()?;
+        for (name, resource) in resources {
+            let value = self.session.resource(name)?;
+            bindings.insert(value, BoundResource::Resident((*resource).clone()));
+        }
+        let completion = self.session.submit_and_wait(bindings)?;
+        let outputs = self.session.ordered_outputs(&completion)?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            device_ns: completion.device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
+    }
+}
+
+pub(crate) fn as_backend_error(error: ScanArtifactError) -> BackendError {
+    BackendError::new(error.to_string())
 }
 pub(crate) fn dispatch_registered(
     program: &Program,

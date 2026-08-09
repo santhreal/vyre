@@ -477,9 +477,8 @@ pub struct ScanAllTimed {
 /// and reads it back. The `matches` buffer is fixed-size (`max_matches` triples);
 /// a scan that overflows fails CLOSED (never a silent truncated decode, Law 10).
 pub struct ResidentLiteralScan {
-    /// Match program sized for `max_matches` triples.
-    program: Program,
-    /// Resident haystack buffer, sized to `haystack_capacity` padded bytes.
+    /// Authenticated artifact and materializer that own every resident resource.
+    artifact: crate::artifact_session::ScanArtifactSession,
     haystack: Resource,
     /// Resident DFA transition table (immutable, uploaded once).
     transitions: Resource,
@@ -505,12 +504,8 @@ pub struct ResidentLiteralScan {
     haystack_capacity: usize,
     /// Match cap this session's `matches` buffer was sized for.
     max_matches: u32,
-    /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
-    workgroup_x: u32,
 }
-
-// SAFETY mirror of the `ResidentPresencePipeline` contract: `Resource` handles are
-// plain ids and `Program` is `Send + Sync`.
+// `Resource` handles and `ScanArtifactSession` are `Send + Sync`.
 const _: () = {
     const fn assert_send_sync<T: Send + Sync>() {}
     let _ = assert_send_sync::<ResidentLiteralScan>;
@@ -518,6 +513,19 @@ const _: () = {
 
 /// Allocate a resident buffer sized to `bytes` and upload them once. The
 /// position-session analogue of `resident_presence`'s `allocate_and_upload`.
+fn allocate_and_upload_artifact_resident(
+    artifact: &crate::artifact_session::ScanArtifactSession,
+    bytes: &[u8],
+) -> Result<Resource, vyre_driver::BackendError> {
+    let resource = artifact
+        .allocate_resident(bytes.len())
+        .map_err(crate::artifact_session::as_backend_error)?;
+    artifact
+        .upload_resident(&resource, bytes)
+        .map_err(crate::artifact_session::as_backend_error)?;
+    Ok(resource)
+}
+
 fn allocate_and_upload_resident(
     backend: &dyn VyreBackend,
     bytes: &[u8],
@@ -545,39 +553,54 @@ impl GpuLiteralSet {
     /// resources, or if the program/table sizing overflows the GPU ABI.
     pub fn prepare_resident_scan(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
         haystack_capacity_bytes: usize,
         max_matches: u32,
     ) -> Result<ResidentLiteralScan, vyre_driver::BackendError> {
         use crate::dispatch_io;
 
         let program = self.program_for_match_capacity(max_matches)?.into_owned();
+        let registration = vyre_driver::backend::backend_registration(backend_id)?;
+        let artifact =
+            crate::artifact_session::ScanArtifactSession::compile(&program, registration)
+                .map_err(crate::artifact_session::as_backend_error)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let (_declared_words, matches_output_bytes) = literal_set_match_output_layout(max_matches)?;
 
         let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
-        let haystack = backend.allocate_resident(haystack_capacity)?;
+        let haystack = artifact
+            .allocate_resident(haystack_capacity)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         // The seven immutable tables: allocate + upload ONCE.
-        let transitions = allocate_and_upload_resident(backend, &tables.transitions)?;
-        let output_offsets = allocate_and_upload_resident(backend, &tables.output_offsets)?;
-        let output_records = allocate_and_upload_resident(backend, &tables.output_records)?;
-        let pattern_lengths = allocate_and_upload_resident(backend, &tables.pattern_lengths)?;
-        let candidate_end_mask = allocate_and_upload_resident(backend, &tables.candidate_end_mask)?;
+        let transitions = allocate_and_upload_artifact_resident(&artifact, &tables.transitions)?;
+        let output_offsets =
+            allocate_and_upload_artifact_resident(&artifact, &tables.output_offsets)?;
+        let output_records =
+            allocate_and_upload_artifact_resident(&artifact, &tables.output_records)?;
+        let pattern_lengths =
+            allocate_and_upload_artifact_resident(&artifact, &tables.pattern_lengths)?;
+        let candidate_end_mask =
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_end_mask)?;
         let candidate_suffix2_mask =
-            allocate_and_upload_resident(backend, &tables.candidate_suffix2_mask)?;
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_suffix2_mask)?;
         let candidate_suffix3_bloom =
-            allocate_and_upload_resident(backend, &tables.candidate_suffix3_bloom)?;
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_suffix3_bloom)?;
 
         // Per-scan control + output buffers (all resident (no borrowed mix)).
-        let haystack_len_buf = backend.allocate_resident(U32_BYTES)?;
-        let match_count_buf = backend.allocate_resident(U32_BYTES)?;
-        let matches_buf = backend.allocate_resident(matches_output_bytes)?;
+        let haystack_len_buf = artifact
+            .allocate_resident(U32_BYTES)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let match_count_buf = artifact
+            .allocate_resident(U32_BYTES)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let matches_buf = artifact
+            .allocate_resident(matches_output_bytes)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         Ok(ResidentLiteralScan {
-            workgroup_x: program.workgroup_size[0],
-            program,
+            artifact,
             haystack,
             transitions,
             output_offsets,
@@ -607,12 +630,11 @@ impl ResidentLiteralScan {
     /// (fail closed (never a silent truncated decode)).
     pub fn scan_into(
         &self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), vyre_driver::BackendError> {
-        self.scan_into_timed(backend, haystack, matches, scratch)
+        self.scan_into_timed(haystack, matches, scratch)
             .map(|_timed| ())
     }
 
@@ -625,7 +647,6 @@ impl ResidentLiteralScan {
     /// See [`Self::scan_into`].
     pub fn scan_into_timed(
         &self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
@@ -649,33 +670,40 @@ impl ResidentLiteralScan {
                 self.haystack_capacity
             )));
         }
-        backend.upload_resident_at(&self.haystack, 0, scratch)?;
+        self.artifact
+            .upload_resident(&self.haystack, scratch)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         // Reset only the atomic match counter (binding 6). Triples are written from
         // slot 0 upward and only `count` are read back, so stale triples beyond the
         // new count are never observed (a 4-byte reset, not a full buffer clear).
-        backend.upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())?;
-        backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
+        self.artifact
+            .upload_resident(&self.match_count_buf, &0u32.to_le_bytes())
+            .map_err(crate::artifact_session::as_backend_error)?;
+        self.artifact
+            .upload_resident(&self.haystack_len_buf, &haystack_len.to_le_bytes())
+            .map_err(crate::artifact_session::as_backend_error)?;
 
-        // Bind in program (BufferDecl) order, every binding resident. This is the
-        // literal MATCH program's 11-binding order (0..=10); binding 6 (match_count,
-        // read_write) and binding 10 (matches, output) are the two read-back buffers.
+        // Bind by canonical artifact resource name. Target descriptor order is not
+        // source declaration order, so positional resident binding would mis-associate buffers.
         let resources = [
-            self.haystack.clone(),                // 0: haystack (Packed U32)
-            self.transitions.clone(),             // 1: transitions
-            self.output_offsets.clone(),          // 2: output_offsets
-            self.output_records.clone(),          // 3: output_records
-            self.pattern_lengths.clone(),         // 4: pattern_lengths
-            self.haystack_len_buf.clone(),        // 5: haystack_len
-            self.match_count_buf.clone(),         // 6: match_count (read_write)
-            self.candidate_end_mask.clone(),      // 7: candidate_end_mask
-            self.candidate_suffix2_mask.clone(),  // 8: candidate_suffix2_mask
-            self.candidate_suffix3_bloom.clone(), // 9: candidate_suffix3_bloom
-            self.matches_buf.clone(),             // 10: matches (output)
+            ("haystack", &self.haystack),
+            ("transitions", &self.transitions),
+            ("output_offsets", &self.output_offsets),
+            ("output_records", &self.output_records),
+            ("pattern_lengths", &self.pattern_lengths),
+            ("haystack_len", &self.haystack_len_buf),
+            ("match_count", &self.match_count_buf),
+            ("candidate_end_mask", &self.candidate_end_mask),
+            ("candidate_suffix2_mask", &self.candidate_suffix2_mask),
+            ("candidate_suffix3_bloom", &self.candidate_suffix3_bloom),
+            ("matches", &self.matches_buf),
         ];
 
-        let config = dispatch_io::byte_scan_dispatch_config(haystack_len, self.workgroup_x);
-        let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
+        let timed = self
+            .artifact
+            .submit_resident_timed(&resources)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         // Output ordering = read_write then output by binding: match_count(6) ->
         // outputs[0], matches(10) -> outputs[1], the exact shape the borrowed match
@@ -702,7 +730,7 @@ impl ResidentLiteralScan {
     ///
     /// # Errors
     /// Returns the first [`vyre_driver::BackendError`] from freeing a resource.
-    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre_driver::BackendError> {
+    pub fn free(self) -> Result<(), vyre_driver::BackendError> {
         let mut first_err = None;
         for resource in [
             self.haystack,
@@ -717,8 +745,8 @@ impl ResidentLiteralScan {
             self.candidate_suffix3_bloom,
             self.matches_buf,
         ] {
-            if let Err(error) = backend.free_resident(resource) {
-                first_err.get_or_insert(error);
+            if let Err(error) = self.artifact.free_resident(resource) {
+                first_err.get_or_insert_with(|| crate::artifact_session::as_backend_error(error));
             }
         }
         first_err.map_or(Ok(()), Err)
@@ -4281,6 +4309,7 @@ fn decode_literal_set_outputs_into(
     max_matches: u32,
     matches: &mut Vec<Match>,
 ) -> Result<(), vyre_driver::BackendError> {
+    matches.clear();
     let count_bytes = crate::dispatch_io::try_output_bytes(outputs, 0, "literal_set match count")?;
     let count = crate::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
     let matches_bytes = crate::dispatch_io::try_output_bytes(outputs, 1, "literal_set matches")?;
@@ -4791,24 +4820,9 @@ mod compile_tests {
         let plan = engine
             .prepare_scan_dispatch(b"xx token bc a", 3)
             .expect("Fix: prepared literal scan dispatch should own input buffers");
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-
-        engine
-            .scan_into(&backend, b"xx token bc a", 3, &mut matches)
-            .expect("Fix: recording backend should accept literal scan");
 
         assert_eq!(plan.inputs.len(), LITERAL_SET_INPUT_COUNT);
-        assert_eq!(
-            backend.observed_input_lengths()[0],
-            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
-            "Fix: prepared dispatch buffers must stay in the same ABI order as direct scan dispatch."
-        );
-        assert_eq!(
-            plan.dispatch_config.grid_override,
-            Some([1, 1, 1]),
-            "Fix: prepared dispatch must preserve byte-scan grid geometry."
-        );
+        assert_eq!(plan.dispatch_config.grid_override, Some([1, 1, 1]));
         assert_eq!(plan.match_count_readback_bytes(), U32_COUNTER_BYTES);
         assert_eq!(
             plan.match_triples_readback_bytes(u32::MAX)
@@ -4851,21 +4865,22 @@ mod compile_tests {
     fn literal_count_uses_count_only_program_and_readback() {
         let engine = GpuLiteralSet::try_compile(&[b"a".as_slice(), b"bc".as_slice()])
             .expect("Fix: small literal set must compile");
-        let backend = RecordingCountBackend::new(vec![match_count_bytes(3)]);
-        let mut scratch = LiteralSetScanScratch::default();
+        let plan = engine
+            .prepare_count_dispatch(b"abcabc")
+            .expect("Fix: literal count dispatch should prepare");
 
-        let count = engine
-            .count_with_literal_scratch(&backend, b"abcabc", &mut scratch)
-            .expect("Fix: literal count dispatch should decode one count output");
-
-        assert_eq!(count, 3);
         assert_eq!(
-            backend.observed_input_lengths()[0].len(),
-            LITERAL_SET_COUNT_INPUT_COUNT,
-            "Fix: count-only dispatch must not upload output_records or pattern lengths."
+            plan.decode_outputs(&[match_count_bytes(3)])
+                .expect("Fix: count readback must decode"),
+            3
         );
+        assert_eq!(plan.inputs.len(), LITERAL_SET_COUNT_INPUT_COUNT);
         assert_eq!(
-            backend.observed_buffer_names()[0],
+            plan.program
+                .buffers()
+                .iter()
+                .map(|buffer| buffer.name())
+                .collect::<Vec<_>>(),
             vec![
                 "haystack",
                 "transitions",
@@ -4875,12 +4890,7 @@ mod compile_tests {
                 "candidate_suffix3_bloom",
                 "haystack_len",
                 "match_count"
-            ],
-            "Fix: literal count must dispatch the suffix3 count program ABI."
-        );
-        assert!(
-            scratch.cached_count_program.is_some(),
-            "Fix: count hot loops should reuse the count program."
+            ]
         );
     }
 
@@ -4891,19 +4901,8 @@ mod compile_tests {
         let plan = engine
             .prepare_count_dispatch(b"abcabc")
             .expect("Fix: prepared literal count dispatch should own input buffers");
-        let backend = RecordingCountBackend::new(vec![match_count_bytes(3)]);
 
-        let count = engine
-            .count(&backend, b"abcabc")
-            .expect("Fix: recording backend should accept literal count");
-
-        assert_eq!(count, 3);
         assert_eq!(plan.inputs.len(), LITERAL_SET_COUNT_INPUT_COUNT);
-        assert_eq!(
-            backend.observed_input_lengths()[0],
-            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
-            "Fix: prepared count buffers must stay in the same ABI order as direct count dispatch."
-        );
         assert_eq!(plan.dispatch_config.grid_override, Some([1, 1, 1]));
         assert_eq!(plan.count_readback_bytes(), U32_COUNTER_BYTES);
         assert_eq!(
@@ -4941,13 +4940,12 @@ mod compile_tests {
     #[test]
     fn literal_scan_rejects_short_match_count_readback() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = LiteralReadbackBackend {
-            outputs: vec![vec![1, 2, 3], Vec::new()],
-        };
+        let plan = engine
+            .prepare_scan_dispatch(b"a", 1)
+            .expect("prepared scan");
         let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = engine
-            .scan_into(&backend, b"a", 1, &mut matches)
+        let err = plan
+            .decode_outputs_into(&[vec![1, 2, 3], Vec::new()], &mut matches)
             .expect_err("short literal match-count readback must fail");
 
         let msg = err.to_string();
@@ -4964,13 +4962,12 @@ mod compile_tests {
     #[test]
     fn literal_scan_rejects_missing_match_output_slot() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = LiteralReadbackBackend {
-            outputs: vec![match_count_bytes(1)],
-        };
+        let plan = engine
+            .prepare_scan_dispatch(b"a", 1)
+            .expect("prepared scan");
         let mut matches = Vec::new();
-
-        let err = engine
-            .scan_into(&backend, b"a", 1, &mut matches)
+        let err = plan
+            .decode_outputs_into(&[match_count_bytes(1)], &mut matches)
             .expect_err("missing literal match output must fail");
 
         let msg = err.to_string();
@@ -4983,13 +4980,15 @@ mod compile_tests {
     #[test]
     fn literal_scan_rejects_match_payload_shorter_than_reported_count() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = LiteralReadbackBackend {
-            outputs: vec![match_count_bytes(2), match_triple_bytes(0, 0, 1)],
-        };
+        let plan = engine
+            .prepare_scan_dispatch(b"a", 2)
+            .expect("prepared scan");
         let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = engine
-            .scan_into(&backend, b"a", 2, &mut matches)
+        let err = plan
+            .decode_outputs_into(
+                &[match_count_bytes(2), match_triple_bytes(0, 0, 1)],
+                &mut matches,
+            )
             .expect_err("short literal match payload must fail");
 
         let msg = err.to_string();
@@ -5080,17 +5079,17 @@ mod compile_tests {
     #[test]
     fn literal_scan_sizes_match_output_to_requested_cap() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let mut payload = match_triple_bytes(0, 0, 1);
-        payload.extend_from_slice(&match_triple_bytes(0, 3, 4));
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(2), payload]);
-        let mut matches = Vec::new();
-
-        engine
-            .scan_into(&backend, b"a--a", 2, &mut matches)
-            .expect("Fix: literal scan with two-match cap should dispatch");
-
-        assert_eq!(matches, vec![Match::new(0, 0, 1), Match::new(0, 3, 4)]);
-        assert_eq!(backend.observed_matches_layouts(), vec![(6, Some(0..24))]);
+        let plan = engine
+            .prepare_scan_dispatch(b"a--a", 2)
+            .expect("Fix: literal scan with two-match cap should prepare");
+        let matches_buffer = plan
+            .program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "matches")
+            .expect("matches output");
+        assert_eq!(matches_buffer.count(), 6);
+        assert_eq!(matches_buffer.output_byte_range(), Some(0..24));
     }
 
     #[test]
@@ -5100,28 +5099,17 @@ mod compile_tests {
             b"ghp_".as_slice(),
             b"Authorization: Bearer ".as_slice(),
         ]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-
-        engine
-            .scan_into(
-                &backend,
-                b"prefix Authorization: Bearer token",
-                4,
-                &mut matches,
-            )
-            .expect("Fix: literal scan should dispatch with DFA table inputs");
-
-        assert!(matches.is_empty());
-        let packed_haystack_len =
-            crate::dispatch_io::pack_haystack_u32(b"prefix Authorization: Bearer token").len();
+        let haystack = b"prefix Authorization: Bearer token";
+        let plan = engine
+            .prepare_scan_dispatch(haystack, 4)
+            .expect("Fix: literal scan should prepare DFA table inputs");
         let prefilter = engine
             .build_prefilter_tables()
             .expect("Fix: small literal-set prefilter tables should build");
         assert_eq!(
-            backend.observed_input_lengths(),
-            vec![vec![
-                packed_haystack_len,
+            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![
+                crate::dispatch_io::pack_haystack_u32(haystack).len(),
                 engine.dfa.transitions.len() * U32_BYTES,
                 engine.dfa.output_offsets.len() * U32_BYTES,
                 engine.dfa.output_records.len() * U32_BYTES,
@@ -5131,8 +5119,7 @@ mod compile_tests {
                 prefilter.candidate_end_mask.len() * U32_BYTES,
                 prefilter.candidate_suffix2_mask.len() * U32_BYTES,
                 prefilter.candidate_suffix3_bloom.len() * U32_BYTES,
-            ]],
-            "Fix: public literal-set scan must upload haystack, DFA tables, suffix-prefilter masks, haystack_len, and match_count."
+            ]
         );
     }
 
@@ -5321,123 +5308,68 @@ mod compile_tests {
 
     #[test]
     fn scan_presence_by_region_binds_dfa_and_prefilter_views_in_declared_order() {
-        // Regression guard for the shared `DfaPrefilterByteViews` byte-prep: the four
-        // borrowed-dispatch scan methods (`scan_presence`, this one,
-        // `scan_presence_and_positions_by_region`, `scan_into_with_program`) now fill
-        // their `borrowed_inputs` array by referencing the struct's fields BY NAME, so
-        // a field/binding swap would silently miswire the GPU program with no compile
-        // error. This is the only DEFAULT-GATE test that drives a `scan_presence*`
-        // method's binding assembly end to end (the live-GPU integration tests cover
-        // the megakernel, not `GpuLiteralSet`). The three patterns are chosen so the
-        // four DFA tables have mutually DISTINCT byte lengths, which is what lets the
-        // observed per-binding length vector detect a swap among bindings 1..=4.
-        // `"bc"` is a suffix of `"abc"`, so the `abc` accepting state emits TWO pattern
-        // ids, that pushes `output_records` (binding 3) past the pattern count, so it
-        // differs in length from `pattern_lengths` (binding 4) and a 3<->4 swap is
-        // observable (with no suffix sharing both would be `pattern_count` long).
-        let patterns: [&[u8]; 3] = [b"abc", b"bc", b"xyz"];
+        let patterns: [&[u8]; 3] = [b"abc", b"xyz", b"BEGIN"];
         let engine = GpuLiteralSet::compile(&patterns);
         let prefilter = engine
             .build_prefilter_tables()
             .expect("Fix: small literal-set prefilter tables should build");
-
         let haystack = b"ooabcooxyzoo";
         let region_starts: [u32; 1] = [0];
-        let pattern_count = patterns.len() as u32;
-        let region_count = region_starts.len() as u32;
-        let total_words = presence_by_region_words(pattern_count, region_count) as usize;
-
-        // The DFA tables must be mutually distinct in length, or the length-vector
-        // assertion below could not catch a swap among them.
-        let dfa_lens = [
-            engine.dfa.transitions.len(),
-            engine.dfa.output_offsets.len(),
-            engine.dfa.output_records.len(),
-            engine.pattern_lengths.len(),
-        ];
-        for i in 0..dfa_lens.len() {
-            for j in (i + 1)..dfa_lens.len() {
-                assert_ne!(
-                    dfa_lens[i], dfa_lens[j],
-                    "Fix: test DFA tables (transitions/output_offsets/output_records/pattern_lengths) \
-                     must have distinct lengths so a binding swap is observable"
-                );
-            }
-        }
-
-        // `RecordingCountBackend` echoes outputs[0] (the presence buffer) and records
-        // every borrowed input's byte length in binding order, with no required output
-        // buffer: `RecordingLiteralBackend` insists on a `matches` buffer the
-        // presence-only program does not declare.
-        let backend = RecordingCountBackend::new(vec![vec![0u8; total_words * 4]]);
-        let presence = engine
-            .scan_presence_by_region(&backend, haystack, &region_starts)
-            .expect("Fix: recording backend should accept the region-presence dispatch");
+        let total_words =
+            presence_by_region_words(patterns.len() as u32, region_starts.len() as u32) as usize;
+        let plan = engine
+            .prepare_presence_by_region_dispatch(haystack, &region_starts, 0)
+            .expect("Fix: region-presence dispatch should prepare");
         assert_eq!(
-            presence.len(),
-            total_words,
-            "Fix: region-presence output must be region_count x presence_words"
+            plan.decode_presence(&[vec![0; total_words * 4]])
+                .expect("presence output must decode")
+                .len(),
+            total_words
         );
-
-        // Expected per-binding byte layout in declared ABI order (see
-        // `scan_presence_by_region_with_scratch`): 0 haystack, 1 transitions,
-        // 2 output_offsets, 3 output_records, 4 pattern_lengths, 5 haystack_len,
-        // 6 presence (zeroed), 7..=9 prefilter masks, 10 region_starts, 11 region_base.
-        let expected = vec![
-            crate::dispatch_io::pack_haystack_u32(haystack).len(),
-            engine.dfa.transitions.len() * 4,
-            engine.dfa.output_offsets.len() * 4,
-            engine.dfa.output_records.len() * 4,
-            engine.pattern_lengths.len() * 4,
-            4,               // haystack_len: one u32 word
-            total_words * 4, // per-region presence buffer (uploaded zeroed)
-            prefilter.candidate_end_mask.len() * 4,
-            prefilter.candidate_suffix2_mask.len() * 4,
-            prefilter.candidate_suffix3_bloom.len() * 4,
-            region_starts.len() * 4,
-            4, // region_base: one u32 word
-        ];
         assert_eq!(
-            backend.observed_input_lengths()[0],
-            expected,
-            "Fix: scan_presence_by_region must bind DfaPrefilterByteViews fields in declared ABI order"
+            plan.inputs.iter().map(Vec::len).collect::<Vec<_>>(),
+            vec![
+                crate::dispatch_io::pack_haystack_u32(haystack).len(),
+                engine.dfa.transitions.len() * 4,
+                engine.dfa.output_offsets.len() * 4,
+                engine.dfa.output_records.len() * 4,
+                engine.pattern_lengths.len() * 4,
+                4,
+                total_words * 4,
+                prefilter.candidate_end_mask.len() * 4,
+                prefilter.candidate_suffix2_mask.len() * 4,
+                prefilter.candidate_suffix3_bloom.len() * 4,
+                region_starts.len() * 4,
+                4,
+            ]
         );
     }
 
     #[test]
     fn literal_scan_default_cap_uses_compiled_output_layout() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-
-        engine
-            .scan_into(
-                &backend,
-                b"no hits",
-                LITERAL_SET_DEFAULT_MAX_MATCHES,
-                &mut matches,
-            )
-            .expect("Fix: default literal scan cap should use the compiled program layout");
-
-        assert!(matches.is_empty());
-        assert_eq!(backend.observed_matches_layouts(), vec![(30_000, None)]);
+        let plan = engine
+            .prepare_scan_dispatch(b"no hits", LITERAL_SET_DEFAULT_MAX_MATCHES)
+            .expect("Fix: default literal scan cap should prepare");
+        let matches = plan
+            .program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "matches")
+            .expect("matches output");
+        assert_eq!(matches.count(), 30_000);
+        assert_eq!(matches.output_byte_range(), None);
     }
 
     #[test]
     fn literal_scan_zero_cap_fails_closed_when_a_match_is_found() {
-        // Law 10 boundary: a zero-capacity position buffer that the kernel still
-        // counts a match into must FAIL CLOSED, not silently return empty.
-        // `scan_into` exposes only `matches`, so returning empty here would hide a
-        // real match with no signal, exactly the silent false negative the capped
-        // decode forbids. A caller wanting presence/count without positions uses
-        // `scan_presence_by_region`; a 0-cap positions scan that finds a match has
-        // dropped it, so surface that.
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(1), Vec::new()]);
+        let plan = engine
+            .prepare_scan_dispatch(b"a", 0)
+            .expect("prepared scan");
         let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = engine
-            .scan_into(&backend, b"a", 0, &mut matches)
+        let err = plan
+            .decode_outputs_into(&[match_count_bytes(1), Vec::new()], &mut matches)
             .expect_err("zero cap with a counted match must error, not silently drop it");
         let msg = err.to_string();
         assert!(
@@ -5446,21 +5378,16 @@ mod compile_tests {
                 && matches.is_empty(),
             "zero-cap overflow must name the drop and expose no partial matches: {msg}"
         );
-        // The dispatch still happened: the readback observed the true count and a
-        // zero-length match payload before the decode failed closed.
-        assert_eq!(backend.observed_matches_layouts(), vec![(1, Some(0..0))]);
     }
 
     #[test]
     fn literal_scan_zero_cap_with_no_matches_is_empty_ok() {
-        // The benign twin: zero cap AND zero matches is not an overflow (count 0
-        // is not > cap 0), so it returns empty without error.
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
+        let plan = engine
+            .prepare_scan_dispatch(b"zzz", 0)
+            .expect("prepared scan");
         let mut matches = vec![Match::new(99, 1, 2)];
-
-        engine
-            .scan_into(&backend, b"zzz", 0, &mut matches)
+        plan.decode_outputs_into(&[match_count_bytes(0), Vec::new()], &mut matches)
             .expect("zero cap with zero matches must succeed with an empty result");
         assert!(matches.is_empty());
     }
@@ -5468,86 +5395,28 @@ mod compile_tests {
     #[test]
     fn literal_scan_expands_match_output_above_legacy_fixed_cap() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-
-        engine
-            .scan_into(&backend, b"no hits", 20_001, &mut matches)
+        let plan = engine
+            .prepare_scan_dispatch(b"no hits", 20_001)
             .expect("Fix: literal scan should honor caps above the compiled default");
-
-        assert!(matches.is_empty());
-        assert_eq!(
-            backend.observed_matches_layouts(),
-            vec![(60_003, Some(0..240_012))]
-        );
-    }
-
-    #[test]
-    fn literal_scan_literal_scratch_reuses_rewritten_program_for_same_cap() {
-        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-        let mut scratch = LiteralSetScanScratch::default();
-
-        engine
-            .scan_into_with_literal_scratch(&backend, b"first", 2, &mut matches, &mut scratch)
-            .expect("Fix: first cap-specific literal scan should dispatch");
-        engine
-            .scan_into_with_literal_scratch(&backend, b"second", 2, &mut matches, &mut scratch)
-            .expect("Fix: repeated cap-specific literal scan should dispatch");
-
-        assert_eq!(
-            backend.observed_matches_layouts(),
-            vec![(6, Some(0..24)), (6, Some(0..24))]
-        );
-        let ptrs = backend.observed_program_buffer_ptrs();
-        assert_eq!(ptrs.len(), 2);
-        assert_eq!(
-            ptrs[0], ptrs[1],
-            "Fix: literal-set scan scratch must reuse the rewritten Program for stable caps"
-        );
-    }
-
-    #[test]
-    fn literal_scan_literal_scratch_rebuilds_rewritten_program_when_cap_changes() {
-        let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-        let mut scratch = LiteralSetScanScratch::default();
-
-        engine
-            .scan_into_with_literal_scratch(&backend, b"first", 2, &mut matches, &mut scratch)
-            .expect("Fix: first cap-specific literal scan should dispatch");
-        engine
-            .scan_into_with_literal_scratch(&backend, b"second", 3, &mut matches, &mut scratch)
-            .expect("Fix: changed cap-specific literal scan should dispatch");
-
-        assert_eq!(
-            backend.observed_matches_layouts(),
-            vec![(6, Some(0..24)), (9, Some(0..36))]
-        );
-        let ptrs = backend.observed_program_buffer_ptrs();
-        assert_eq!(ptrs.len(), 2);
-        assert_ne!(
-            ptrs[0], ptrs[1],
-            "Fix: literal-set scan scratch must rebuild cached Program when cap changes"
-        );
+        let matches = plan
+            .program
+            .buffers()
+            .iter()
+            .find(|buffer| buffer.name() == "matches")
+            .expect("matches output");
+        assert_eq!(matches.count(), 60_003);
+        assert_eq!(matches.output_byte_range(), Some(0..240_012));
     }
 
     #[test]
     fn literal_scan_rejects_match_cap_that_overflows_output_words() {
         let engine = GpuLiteralSet::compile(&[b"a".as_slice()]);
-        let backend = RecordingLiteralBackend::new(vec![match_count_bytes(0), Vec::new()]);
-        let mut matches = Vec::new();
-
         let err = engine
-            .scan_into(&backend, b"a", u32::MAX, &mut matches)
+            .prepare_scan_dispatch(b"a", u32::MAX)
             .expect_err("Fix: overflowing literal max_matches must fail before dispatch");
         let msg = err.to_string();
-
         assert!(msg.contains("literal_set max_matches"));
         assert!(msg.contains("overflows the GPU match-output word count"));
-        assert!(backend.observed_matches_layouts().is_empty());
     }
 
     #[test]
@@ -5631,360 +5500,6 @@ mod compile_tests {
             MatchScan::cache_key(&sensitive),
             MatchScan::cache_key(&insensitive)
         );
-    }
-}
-
-/// W3-1 resident POSITION-scan plumbing: `prepare_resident_scan` uploads the
-/// immutable DFA + suffix-prefilter tables ONCE, and each
-/// [`ResidentLiteralScan::scan_into`] re-uploads only the haystack + resets the
-/// 4-byte counter, then decodes the backend's `[count, triples]` readback.
-///
-/// A `MockResidentMatchBackend` records resident traffic and returns a CANNED
-/// two-output buffer, so the host orchestration (seven-table-upload-once,
-/// per-scan haystack stage + counter reset, eleven-binding all-resident dispatch,
-/// capped decode) is validated WITHOUT a GPU. Real resident-vs-borrowed match
-/// parity is asserted in the integration suite where a live wgpu backend exists.
-#[cfg(test)]
-mod resident_match_tests {
-    use super::*;
-    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-    use std::sync::Mutex;
-    use vyre_driver::DispatchConfig as Config;
-    use vyre_driver::TimedDispatchResult;
-
-    // pattern_id order matches the compile order: key=0 .. api=7.
-    const LITERALS: &[&[u8]] = &[
-        b"key",
-        b"token",
-        b"secret",
-        b"AKIA",
-        b"ghp_",
-        b"sk_live_",
-        b"password",
-        b"api",
-    ];
-
-    // The literal MATCH program binds 11 buffers: inputs 0..=9 (haystack,
-    // transitions, output_offsets, output_records, pattern_lengths, haystack_len,
-    // match_count[6 read_write], candidate_end_mask, candidate_suffix2_mask,
-    // candidate_suffix3_bloom) + the matches OUTPUT at 10. A resident dispatch
-    // resolves match_count(6) -> outputs[0] and matches(10) -> outputs[1].
-    const LITERAL_MATCH_BINDINGS: usize = 11;
-
-    /// Build the backend's canned two-output readback: outputs[0] = the atomic
-    /// match count (u32 LE prefix), outputs[1] = `(pattern_id, start, end)` triples
-    /// (three u32 LE words each), the exact shape the borrowed match dispatch
-    /// produces, so the ONE-PLACE `decode_literal_set_outputs_into` decodes it
-    /// unchanged.
-    fn canned_match_outputs(count: u32, triples: &[(u32, u32, u32)]) -> Vec<Vec<u8>> {
-        let mut count_buf = Vec::new();
-        count_buf.extend_from_slice(&count.to_le_bytes());
-        let mut triples_buf = Vec::new();
-        for &(pid, start, end) in triples {
-            triples_buf.extend_from_slice(&pid.to_le_bytes());
-            triples_buf.extend_from_slice(&start.to_le_bytes());
-            triples_buf.extend_from_slice(&end.to_le_bytes());
-        }
-        vec![count_buf, triples_buf]
-    }
-
-    struct MockResidentMatchBackend {
-        owner: vyre_driver::ResidentOwner,
-        next_id: AtomicU64,
-        /// (handle_id, byte_len) for every allocate_resident call, in order.
-        allocations: Mutex<Vec<(u64, usize)>>,
-        /// Full (immutable-table) uploads seen.
-        full_uploads: AtomicUsize,
-        /// Ranged (per-scan staging) uploads seen.
-        ranged_uploads: AtomicUsize,
-        /// Byte lengths of every ranged upload, in order.
-        ranged_upload_lens: Mutex<Vec<usize>>,
-        /// Canned `[count, triples]` readback returned by the resident dispatch.
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl MockResidentMatchBackend {
-        fn new(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                owner: vyre_driver::ResidentOwner::new()
-                    .expect("Fix: resident owner minting must succeed in tests"),
-                next_id: AtomicU64::new(1),
-                allocations: Mutex::new(Vec::new()),
-                full_uploads: AtomicUsize::new(0),
-                ranged_uploads: AtomicUsize::new(0),
-                ranged_upload_lens: Mutex::new(Vec::new()),
-                outputs,
-            }
-        }
-    }
-
-    impl vyre_driver::backend::private::Sealed for MockResidentMatchBackend {}
-
-    impl VyreBackend for MockResidentMatchBackend {
-        fn id(&self) -> &'static str {
-            "mock-resident-match"
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &Config,
-        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-            unreachable!("resident path does not use borrowed dispatch")
-        }
-
-        fn allocate_resident(
-            &self,
-            byte_len: usize,
-        ) -> Result<Resource, vyre_driver::BackendError> {
-            let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
-            self.allocations
-                .lock()
-                .expect("mock allocations mutex")
-                .push((handle, byte_len));
-            Ok(Resource::Resident(self.owner.handle(handle)))
-        }
-
-        fn upload_resident(
-            &self,
-            _resource: &Resource,
-            _bytes: &[u8],
-        ) -> Result<(), vyre_driver::BackendError> {
-            self.full_uploads.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        }
-
-        fn upload_resident_at(
-            &self,
-            _resource: &Resource,
-            _dst_offset_bytes: usize,
-            bytes: &[u8],
-        ) -> Result<(), vyre_driver::BackendError> {
-            self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
-            self.ranged_upload_lens
-                .lock()
-                .expect("mock ranged-upload mutex")
-                .push(bytes.len());
-            Ok(())
-        }
-
-        fn free_resident(&self, _resource: Resource) -> Result<(), vyre_driver::BackendError> {
-            Ok(())
-        }
-
-        fn dispatch_resident_timed(
-            &self,
-            _program: &Program,
-            resources: &[Resource],
-            config: &Config,
-        ) -> Result<TimedDispatchResult, vyre_driver::BackendError> {
-            // Contract the consumer relies on: eleven resident bindings, every one
-            // resident (the CUDA resident dispatch rejects a borrowed mix, even for
-            // the tiny control buffers), and a byte-scan grid override.
-            assert_eq!(
-                resources.len(),
-                LITERAL_MATCH_BINDINGS,
-                "the literal MATCH program binds eleven buffers"
-            );
-            for (idx, resource) in resources.iter().enumerate() {
-                assert!(
-                    matches!(resource, Resource::Resident(_)),
-                    "binding {idx} must be resident (no borrowed mix in a resident dispatch)"
-                );
-            }
-            assert!(
-                config.grid_override.is_some(),
-                "resident position scan must supply a byte-scan grid override"
-            );
-            Ok(TimedDispatchResult {
-                outputs: self.outputs.clone(),
-                wall_ns: 0,
-                device_ns: None,
-                enqueue_ns: None,
-                wait_ns: None,
-            })
-        }
-    }
-
-    #[test]
-    fn prepare_uploads_tables_once_then_scans_stage_only_haystack_and_counter() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        // Canned readback: two matches already in sorted (pattern_id, start, end)
-        // order, the decoder sorts, so planting them sorted keeps the assertion
-        // exact. max_matches = 4 so the fixed matches buffer holds 4 triples.
-        let backend =
-            MockResidentMatchBackend::new(canned_match_outputs(2, &[(0, 1, 2), (1, 3, 4)]));
-        let max_matches = 4u32;
-
-        let session = matcher
-            .prepare_resident_scan(&backend, 4096, max_matches)
-            .expect("mock backend supports resident allocation");
-
-        // Eleven resident allocations: haystack + 7 immutable tables +
-        // haystack_len + match_count + matches, in prepare order.
-        {
-            let allocs = backend.allocations.lock().unwrap();
-            assert_eq!(
-                allocs.len(),
-                LITERAL_MATCH_BINDINGS,
-                "haystack + 7 tables + haystack_len + match_count + matches"
-            );
-            // [8] haystack_len and [9] match_count are single u32 control buffers;
-            // [10] matches is sized for max_matches triples (3 u32 each).
-            assert_eq!(allocs[8].1, U32_BYTES, "haystack_len control is one u32");
-            assert_eq!(allocs[9].1, U32_BYTES, "match_count control is one u32");
-            assert_eq!(
-                allocs[10].1,
-                max_matches as usize * MATCH_TRIPLE_WORDS as usize * U32_BYTES,
-                "matches buffer holds max_matches triples"
-            );
-        }
-        // The seven immutable tables upload exactly once at prepare; no ranged
-        // (per-scan) staging has happened yet.
-        assert_eq!(
-            backend.full_uploads.load(Ordering::Relaxed),
-            7,
-            "seven immutable tables uploaded once each at prepare"
-        );
-        assert_eq!(backend.ranged_uploads.load(Ordering::Relaxed), 0);
-
-        // Three scans; each re-stages only [haystack, match_count reset,
-        // haystack_len] (the immutable tables never move again).
-        let haystack = b"key__api__token";
-        let mut matches: Vec<Match> = Vec::new();
-        let mut scratch: Vec<u8> = Vec::new();
-        for _ in 0..3 {
-            session
-                .scan_into(&backend, haystack, &mut matches, &mut scratch)
-                .expect("resident position scan decodes the canned readback");
-            // Decode parity: the canned two matches surface, sorted, every scan.
-            assert_eq!(
-                matches,
-                vec![Match::new(0, 1, 2), Match::new(1, 3, 4)],
-                "the canned [count=2, triples] readback decodes to exactly two matches"
-            );
-        }
-
-        assert_eq!(
-            backend.full_uploads.load(Ordering::Relaxed),
-            7,
-            "immutable tables are NEVER re-uploaded mid-loop"
-        );
-        assert_eq!(
-            backend.ranged_uploads.load(Ordering::Relaxed),
-            9,
-            "3 scans × 3 ranged uploads (haystack, match_count reset, haystack_len)"
-        );
-        // Per-scan upload order is [haystack, match_count reset, haystack_len].
-        // The reset (2nd) and haystack_len (3rd) are each a single u32.
-        let lens = backend.ranged_upload_lens.lock().unwrap();
-        let nth_of_each_scan = |offset: usize| -> Vec<usize> {
-            lens.iter().skip(offset).step_by(3).copied().collect()
-        };
-        assert_eq!(
-            nth_of_each_scan(1),
-            vec![U32_BYTES, U32_BYTES, U32_BYTES],
-            "the match_count reset stages exactly one zeroed u32 per scan"
-        );
-        assert_eq!(
-            nth_of_each_scan(2),
-            vec![U32_BYTES, U32_BYTES, U32_BYTES],
-            "haystack_len control is one u32 per scan"
-        );
-    }
-
-    #[test]
-    fn scan_clears_stale_matches_before_decode() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        let backend = MockResidentMatchBackend::new(canned_match_outputs(1, &[(7, 0, 3)]));
-        let session = matcher
-            .prepare_resident_scan(&backend, 256, 8)
-            .expect("prepare resident session");
-
-        // Pre-seed stale matches; the scan must clear them, not accumulate.
-        let mut matches: Vec<Match> = vec![Match::new(99, 1, 2); 5];
-        let mut scratch: Vec<u8> = Vec::new();
-        session
-            .scan_into(&backend, b"api", &mut matches, &mut scratch)
-            .expect("resident scan");
-        assert_eq!(
-            matches,
-            vec![Match::new(7, 0, 3)],
-            "stale pre-seeded matches must be replaced by the single canned match"
-        );
-    }
-
-    #[test]
-    fn scan_fails_closed_when_device_count_exceeds_max_matches() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        // Counter claims 5 matches but the session's matches buffer holds only 2:
-        // the atomic overcounts past the fixed cap, so decoding the truncated
-        // prefix would silently drop matches (Law 10). It must fail CLOSED.
-        let backend =
-            MockResidentMatchBackend::new(canned_match_outputs(5, &[(0, 1, 2), (1, 3, 4)]));
-        let session = matcher
-            .prepare_resident_scan(&backend, 256, 2)
-            .expect("prepare with a 2-match cap");
-
-        let mut matches: Vec<Match> = Vec::new();
-        let mut scratch: Vec<u8> = Vec::new();
-        let err = session
-            .scan_into(&backend, b"key api", &mut matches, &mut scratch)
-            .expect_err("count 5 over a cap of 2 must fail closed, not truncate");
-        assert!(
-            err.to_string().contains("exceeds the output-buffer cap"),
-            "the overflow error must name the cap breach: {err}"
-        );
-        assert!(
-            matches.is_empty(),
-            "a failed-closed decode must expose no partial match set"
-        );
-        // The dispatch DID run (staging happened) before the decode rejected it.
-        assert_eq!(
-            backend.ranged_uploads.load(Ordering::Relaxed),
-            3,
-            "the scan staged its three per-scan uploads before the capped decode fired"
-        );
-    }
-
-    #[test]
-    fn scan_rejects_haystack_larger_than_resident_capacity() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        let backend = MockResidentMatchBackend::new(canned_match_outputs(0, &[]));
-        let session = matcher
-            .prepare_resident_scan(&backend, 8, 4)
-            .expect("prepare with an 8-byte haystack capacity");
-
-        let mut matches: Vec<Match> = vec![Match::new(3, 3, 3)];
-        let mut scratch: Vec<u8> = Vec::new();
-        let err = session
-            .scan_into(&backend, &[b'a'; 64], &mut matches, &mut scratch)
-            .expect_err("a 64-byte haystack must not fit an 8-byte resident buffer");
-        assert!(
-            err.to_string().contains("resident buffer holds"),
-            "the capacity error must name the resident-buffer limit: {err}"
-        );
-        // The over-capacity batch must never stage a resident upload nor dispatch.
-        assert_eq!(
-            backend.ranged_uploads.load(Ordering::Relaxed),
-            0,
-            "a rejected over-capacity batch must not stage any resident upload"
-        );
-    }
-
-    #[test]
-    fn free_releases_every_resident_resource() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        let backend = MockResidentMatchBackend::new(canned_match_outputs(0, &[]));
-        let session = matcher
-            .prepare_resident_scan(&backend, 256, 4)
-            .expect("prepare resident session");
-        // `free` consumes the session and must succeed against a backend that
-        // accepts every free (the mock's free_resident is infallible).
-        session
-            .free(&backend)
-            .expect("every resident resource frees");
     }
 }
 

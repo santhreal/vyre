@@ -366,7 +366,17 @@ impl WgpuPipeline {
                 continue;
             }
             let handle = if info.is_output {
-                let handle = *item.outputs.get(output_index).ok_or_else(|| {
+                let layout_index = self
+                    .output_bindings
+                    .iter()
+                    .position(|output| output.binding == info.binding)
+                    .ok_or_else(|| {
+                        BackendError::new(format!(
+                            "persistent dispatch has no output layout for binding {} (`{}`). Fix: keep descriptor outputs aligned with Program output identities.",
+                            info.binding, info.name
+                        ))
+                    })?;
+                let handle = *item.outputs.get(layout_index).ok_or_else(|| {
                     BackendError::new(format!(
                         "persistent dispatch missing output handle for binding {} (`{}`). Fix: pass one output handle per output BufferDecl.",
                         info.binding, info.name

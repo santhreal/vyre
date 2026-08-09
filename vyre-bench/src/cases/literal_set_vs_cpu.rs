@@ -27,9 +27,9 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
+use vyre::scan::GpuLiteralSet;
 use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 /// A consumer-shaped mixed corpus, large enough that the GPU's staging (upload +
 /// readback) is a real fraction of wall time, so the comparison is honestly
@@ -104,18 +104,18 @@ fn run_vs_cpu(
     iters: usize,
 ) -> Result<VsCpuMeasurement, vyre::BackendError> {
     // vyre: resident tables (uploaded once), then a timed re-dispatch loop.
-    let session = engine.prepare_resident_scan(backend, corpus.len() + 64, max_matches)?;
+    let session = engine.prepare_resident_scan(backend.id(), corpus.len() + 64, max_matches)?;
     let mut vyre_matches = Vec::new();
     let mut scratch = Vec::new();
-    session.scan_into(backend, corpus, &mut vyre_matches, &mut scratch)?; // warm
+    session.scan_into(corpus, &mut vyre_matches, &mut scratch)?; // warm
     let mut vyre_device_ns = None;
     let vyre_start = Instant::now();
     for _ in 0..iters {
-        let timed = session.scan_into_timed(backend, corpus, &mut vyre_matches, &mut scratch)?;
+        let timed = session.scan_into_timed(corpus, &mut vyre_matches, &mut scratch)?;
         vyre_device_ns = timed.device_ns;
     }
     let vyre_wall_ns = clamp_ns(vyre_start.elapsed());
-    session.free(backend)?;
+    session.free()?;
 
     // aho-corasick: warm once, then a timed collect loop (the automaton itself is
     // built once in prepare, analogous to vyre's one-time matcher compile).

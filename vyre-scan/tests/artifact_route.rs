@@ -3,7 +3,7 @@
 use vyre_driver::backend::backend_registration;
 use vyre_driver_wgpu as _;
 use vyre_foundation::match_result::Match;
-use vyre_scan::{build_scan_session, ScanArtifactError};
+use vyre_scan::{build_scan_session, GpuLiteralSet, ScanArtifactError};
 
 fn wgpu_registration() -> &'static vyre_driver::BackendRegistration {
     backend_registration("wgpu")
@@ -36,5 +36,25 @@ fn scan_executes_through_authenticated_artifact_submission() -> Result<(), ScanA
             .contains("exceeds compiled hit capacity 10000"),
         "unexpected cap error: {cap_error}"
     );
+    Ok(())
+}
+
+/// WHY: resident scan resources must be owned, uploaded, submitted, and freed by the
+/// same authenticated artifact materializer generation rather than a raw backend pipeline.
+#[test]
+fn resident_literal_scan_uses_authenticated_artifact_resources(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let haystack = b"zabcab";
+    let matcher = GpuLiteralSet::compile(&[b"ab".as_slice(), b"bc".as_slice()]);
+    let expected = matcher.reference_scan(haystack);
+    let session = matcher.prepare_resident_scan("wgpu", haystack.len() + 16, 16)?;
+    let mut actual = vec![Match::new(99, 0, 0)];
+    let mut scratch = Vec::new();
+
+    session.scan_into(haystack, &mut actual, &mut scratch)?;
+    assert_eq!(actual, expected);
+    session.scan_into(haystack, &mut actual, &mut scratch)?;
+    assert_eq!(actual, expected);
+    session.free()?;
     Ok(())
 }
