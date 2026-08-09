@@ -18,9 +18,9 @@
 mod presence_corpus;
 
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
+use vyre::scan::GpuLiteralSet;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
@@ -65,7 +65,7 @@ fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
     // proves the dynamic-region-count path).
     let session = matcher
         .prepare_resident_fused_scan(
-            backend.as_ref(),
+            "wgpu",
             haystack.len() + 64,
             region_count as u32 + 2,
             max_matches,
@@ -83,7 +83,6 @@ fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
     for iter in 0..4 {
         session
             .scan_into(
-                backend.as_ref(),
                 &haystack,
                 &region_starts,
                 0,
@@ -108,9 +107,7 @@ fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
         assert_planted_bits(words, pattern_count, &out);
     }
 
-    session
-        .free(backend.as_ref())
-        .expect("free resident fused session");
+    session.free().expect("free resident fused session");
 }
 
 #[test]
@@ -132,7 +129,7 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
 
     let session = matcher
         .prepare_resident_fused_scan(
-            backend.as_ref(),
+            "wgpu",
             haystack.len() + 64,
             region_starts.len() as u32,
             max_matches,
@@ -161,7 +158,6 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
     let mut scratch: Vec<u8> = Vec::new();
     session
         .scan_into(
-            backend.as_ref(),
             first_file,
             &single_region_start,
             0,
@@ -185,7 +181,7 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
         "single region -> exactly `words` presence u32s"
     );
 
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }
 
 #[test]
@@ -200,13 +196,7 @@ fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_tr
     let matcher = GpuLiteralSet::compile(&[b"a".as_slice(), b"aa".as_slice(), b"z".as_slice()]);
     let haystack = vec![b'a'; 1 << 16];
     let session = matcher
-        .prepare_resident_fused_scan_positioned_from(
-            backend.as_ref(),
-            haystack.len(),
-            1,
-            1 << 16,
-            1,
-        )
+        .prepare_resident_fused_scan_positioned_from("wgpu", haystack.len(), 1, 1 << 16, 1)
         .expect("prepare filtered resident fused session");
 
     let mut presence = Vec::new();
@@ -214,7 +204,6 @@ fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_tr
     let mut scratch = Vec::new();
     session
         .scan_into(
-            backend.as_ref(),
             &haystack,
             &[0],
             0,
@@ -227,5 +216,5 @@ fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_tr
     assert_eq!(presence, vec![0b011]);
     assert_eq!(matches.len(), haystack.len() - 1);
     assert!(matches.iter().all(|matched| matched.pattern_id == 1));
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }
