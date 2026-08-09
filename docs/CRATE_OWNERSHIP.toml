@@ -14,7 +14,7 @@ path = "vyre"
 owner = "public-facade"
 layer = "facade"
 responsibility = "Expose the public Vyre API and feature-gated backend selection surface."
-allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives"]
+allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-runtime", "vyre-scan", "vyre-spec"]
 
 [[crate]]
 package = "vyre-foundation"
@@ -30,7 +30,7 @@ path = "vyre-driver"
 owner = "backend-contract"
 layer = "backend-neutral"
 responsibility = "Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts."
-allowed_dependencies = ["vyre-foundation", "vyre-intrinsics", "vyre-macros", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
+allowed_dependencies = ["vyre-foundation", "vyre-macros", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
 
 [[crate]]
 package = "vyre-harness"
@@ -151,7 +151,7 @@ path = "xtask"
 owner = "release-tooling"
 layer = "tooling"
 responsibility = "Generate evidence and enforce repository, release, documentation, and architecture contracts."
-allowed_dependencies = ["vyre", "vyre-bench", "vyre-driver", "vyre-driver-cuda", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-metal", "vyre-foundation", "vyre-frontend-c", "vyre-harness", "vyre-intrinsics", "vyre-libs", "vyre-lints", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-spec"]
+allowed_dependencies = ["vyre", "vyre-bench", "vyre-driver", "vyre-driver-cuda", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-metal", "vyre-foundation", "vyre-harness", "vyre-intrinsics", "vyre-libs", "vyre-lints", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-spec"]
 
 [[crate]]
 package = "vyre-runtime"
@@ -160,6 +160,14 @@ owner = "runtime"
 layer = "runtime"
 responsibility = "Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate."
 allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-self-substrate"]
+
+[[crate]]
+package = "vyre-scan"
+path = "vyre-scan"
+owner = "scan-product"
+layer = "runtime"
+responsibility = "Own scan compilation, database codecs, artifact sessions, paging, residency, execution, and readback."
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-runtime"]
 
 [[crate]]
 package = "vyre-libs"
@@ -263,7 +271,7 @@ path = "vyre-debug"
 owner = "debugging"
 layer = "tooling"
 responsibility = "Inspect, explain, and diagnose typed programs, lowering, and product-library composition."
-allowed_dependencies = ["vyre", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives"]
+allowed_dependencies = ["vyre", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives", "vyre-scan"]
 
 [[crate]]
 package = "vyre-grammar-gen"

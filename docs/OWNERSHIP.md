@@ -22,10 +22,10 @@ to its canonical owner before implementing it in a concrete backend.
 
 Expose the public Vyre API and feature-gated backend selection surface.
 
-- Path: `vyre-core`
+- Path: `vyre`
 - Owner: `public-facade`
 - Layer: `facade`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec`
 
 ### `vyre-aot`
 
@@ -34,7 +34,7 @@ Plan and package ahead-of-time artifacts without owning live backend execution.
 - Path: `vyre-aot`
 - Owner: `aot-artifacts`
 - Layer: `packaging`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-primitives`, `vyre-spec`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`
 
 ### `vyre-bench`
 
@@ -45,32 +45,14 @@ Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark ev
 - Layer: `tooling`
 - Allowed internal production dependencies: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
 
-### `vyre-conform-enforce`
+### `vyre-conform`
 
-Evaluate conformance results and enforce release certificate policy.
+Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI.
 
-- Path: `conform/vyre-conform-enforce`
+- Path: `conform/vyre-conform`
 - Owner: `conformance`
 - Layer: `conformance`
-- Allowed internal production dependencies: `vyre`, `vyre-conform-generate`, `vyre-conform-spec`
-
-### `vyre-conform-generate`
-
-Generate deterministic conformance cases from the conformance specification.
-
-- Path: `conform/vyre-conform-generate`
-- Owner: `conformance`
-- Layer: `conformance`
-- Allowed internal production dependencies: `vyre-conform-spec`
-
-### `vyre-conform-runner`
-
-Execute generated conformance cases across eligible concrete and reference backends.
-
-- Path: `conform/vyre-conform-runner`
-- Owner: `conformance`
-- Layer: `conformance`
-- Allowed internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `vyre-test-harness`
+- Allowed internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
 
 ### `vyre-conform-spec`
 
@@ -88,34 +70,34 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 - Path: `vyre-debug`
 - Owner: `debugging`
 - Layer: `tooling`
-- Allowed internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`
+- Allowed internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-scan`
 
 ### `vyre-driver`
 
-Define backend-neutral device, capability, dispatch, evidence, and artifact contracts.
+Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts.
 
 - Path: `vyre-driver`
 - Owner: `backend-contract`
 - Layer: `backend-neutral`
-- Allowed internal production dependencies: `vyre-foundation`, `vyre-intrinsics`, `vyre-macros`, `vyre-self-substrate`, `vyre-spec`
+- Allowed internal production dependencies: `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
 
 ### `vyre-driver-cuda`
 
-Own native NVIDIA device acquisition, lowering, dispatch, graphs, and release-path evidence.
+Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence.
 
 - Path: `vyre-driver-cuda`
 - Owner: `cuda-driver`
 - Layer: `concrete-backend`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-self-substrate`, `vyre-spec`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
 
 ### `vyre-driver-metal`
 
-Own native Apple device acquisition, lowering integration, dispatch, and backend evidence.
+Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence.
 
 - Path: `vyre-driver-metal`
 - Owner: `metal-driver`
 - Layer: `concrete-backend`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`
 
 ### `vyre-driver-reference`
 
@@ -128,21 +110,21 @@ Adapt the reference interpreter to the backend contract for deterministic confor
 
 ### `vyre-driver-spirv`
 
-Own SPIR-V backend lowering, dispatch integration, and backend evidence.
+Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence.
 
 - Path: `vyre-driver-spirv`
 - Owner: `spirv-driver`
 - Layer: `concrete-backend`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-spec`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`
 
 ### `vyre-driver-wgpu`
 
-Own portable GPU acquisition, lowering, dispatch, graph execution, and backend evidence.
+Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence.
 
 - Path: `vyre-driver-wgpu`
 - Owner: `portable-driver`
 - Layer: `concrete-backend`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-self-substrate`, `vyre-spec`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`
 
 ### `vyre-emit-metal`
 
@@ -272,7 +254,7 @@ Provide compile-time registration and declaration macros without depending on ru
 
 ### `vyre-megakernel`
 
-Compile validated typed Program graphs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.
+Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy.
 
 - Path: `vyre-megakernel`
 - Owner: `megakernel-compiler`
@@ -304,7 +286,16 @@ Own backend-neutral execution planning, persistent runtime contracts, caches, te
 - Path: `vyre-runtime`
 - Owner: `runtime`
 - Layer: `runtime`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-self-substrate`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-self-substrate`
+
+### `vyre-scan`
+
+Own scan compilation, database codecs, artifact sessions, paging, residency, execution, and readback.
+
+- Path: `vyre-scan`
+- Owner: `scan-product`
+- Layer: `runtime`
+- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`
 
 ### `vyre-self-substrate`
 
@@ -324,15 +315,6 @@ Own stable schemas, operation definitions, and compatibility contracts without r
 - Layer: `foundation`
 - Allowed internal production dependencies: None
 
-### `vyre-test-harness`
-
-Provide shared execution and comparison infrastructure for conformance suites.
-
-- Path: `conform/vyre-test-harness`
-- Owner: `conformance`
-- Layer: `test-tooling`
-- Allowed internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-harness`, `vyre-libs`, `vyre-reference`, `vyre-self-substrate`
-
 ### `vyre-test-support`
 
 Provide shared deterministic fixtures and assertions for workspace tests.
@@ -349,7 +331,7 @@ Generate evidence and enforce repository, release, documentation, and architectu
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Allowed internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-frontend-c`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Allowed internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
 
 ## Planned ownership
 

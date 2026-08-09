@@ -6,7 +6,7 @@ a manifest, then regenerate this file. `check-tier-deps` rejects drift.
 
 ## Current workspace
 
-The workspace contains 37 crates. An arrow points from a crate to
+The workspace contains 35 crates. An arrow points from a crate to
 an internal production dependency. Development dependencies are excluded because
 they do not define the shipped dependency DAG.
 
@@ -15,199 +15,202 @@ graph TD
   C0["vyre"]
   C1["vyre-aot"]
   C2["vyre-bench"]
-  C3["vyre-conform-enforce"]
-  C4["vyre-conform-generate"]
-  C5["vyre-conform-runner"]
-  C6["vyre-conform-spec"]
-  C7["vyre-debug"]
-  C8["vyre-driver"]
-  C9["vyre-driver-cuda"]
-  C10["vyre-driver-metal"]
-  C11["vyre-driver-reference"]
-  C12["vyre-driver-spirv"]
-  C13["vyre-driver-wgpu"]
-  C14["vyre-emit-metal"]
-  C15["vyre-emit-naga"]
-  C16["vyre-emit-ptx"]
-  C17["vyre-emit-spirv"]
-  C18["vyre-foundation"]
-  C19["vyre-frontend-c"]
-  C20["vyre-frontend-rust"]
-  C21["vyre-grammar-gen"]
-  C22["vyre-harness"]
-  C23["vyre-intrinsics"]
-  C24["vyre-libs"]
-  C25["vyre-lints"]
-  C26["vyre-lower"]
-  C27["vyre-macros"]
-  C28["vyre-megakernel"]
-  C29["vyre-primitives"]
-  C30["vyre-reference"]
-  C31["vyre-runtime"]
-  C32["vyre-self-substrate"]
-  C33["vyre-spec"]
-  C34["vyre-test-harness"]
-  C35["vyre-test-support"]
-  C36["xtask"]
-  C0 --> C8
-  C0 --> C9
-  C0 --> C13
-  C0 --> C18
-  C0 --> C24
+  C3["vyre-conform"]
+  C4["vyre-conform-spec"]
+  C5["vyre-debug"]
+  C6["vyre-driver"]
+  C7["vyre-driver-cuda"]
+  C8["vyre-driver-metal"]
+  C9["vyre-driver-reference"]
+  C10["vyre-driver-spirv"]
+  C11["vyre-driver-wgpu"]
+  C12["vyre-emit-metal"]
+  C13["vyre-emit-naga"]
+  C14["vyre-emit-ptx"]
+  C15["vyre-emit-spirv"]
+  C16["vyre-foundation"]
+  C17["vyre-frontend-c"]
+  C18["vyre-frontend-rust"]
+  C19["vyre-grammar-gen"]
+  C20["vyre-harness"]
+  C21["vyre-intrinsics"]
+  C22["vyre-libs"]
+  C23["vyre-lints"]
+  C24["vyre-lower"]
+  C25["vyre-macros"]
+  C26["vyre-megakernel"]
+  C27["vyre-primitives"]
+  C28["vyre-reference"]
+  C29["vyre-runtime"]
+  C30["vyre-scan"]
+  C31["vyre-self-substrate"]
+  C32["vyre-spec"]
+  C33["vyre-test-support"]
+  C34["xtask"]
+  C0 --> C6
+  C0 --> C7
+  C0 --> C11
+  C0 --> C16
+  C0 --> C22
   C0 --> C26
+  C0 --> C27
   C0 --> C29
-  C1 --> C8
-  C1 --> C18
-  C1 --> C29
-  C1 --> C33
+  C0 --> C30
+  C0 --> C32
+  C1 --> C6
+  C1 --> C16
+  C1 --> C26
+  C1 --> C27
+  C1 --> C32
   C2 --> C0
+  C2 --> C6
+  C2 --> C7
   C2 --> C8
   C2 --> C9
   C2 --> C10
   C2 --> C11
-  C2 --> C12
-  C2 --> C13
+  C2 --> C14
   C2 --> C16
+  C2 --> C17
   C2 --> C18
-  C2 --> C19
-  C2 --> C20
-  C2 --> C23
+  C2 --> C21
+  C2 --> C22
   C2 --> C24
-  C2 --> C26
+  C2 --> C27
+  C2 --> C28
   C2 --> C29
-  C2 --> C30
-  C2 --> C31
-  C2 --> C33
+  C2 --> C32
   C3 --> C0
   C3 --> C4
   C3 --> C6
-  C4 --> C6
+  C3 --> C7
+  C3 --> C8
+  C3 --> C9
+  C3 --> C11
+  C3 --> C16
+  C3 --> C20
+  C3 --> C21
+  C3 --> C22
+  C3 --> C26
+  C3 --> C27
+  C3 --> C28
+  C3 --> C29
+  C3 --> C32
+  C4 --> C32
   C5 --> C0
-  C5 --> C6
-  C5 --> C8
-  C5 --> C9
-  C5 --> C10
-  C5 --> C11
   C5 --> C13
-  C5 --> C18
-  C5 --> C23
+  C5 --> C16
+  C5 --> C22
   C5 --> C24
-  C5 --> C29
+  C5 --> C27
   C5 --> C30
-  C5 --> C33
-  C5 --> C34
-  C6 --> C33
-  C7 --> C0
-  C7 --> C15
-  C7 --> C18
+  C6 --> C16
+  C6 --> C25
+  C6 --> C26
+  C6 --> C31
+  C6 --> C32
+  C7 --> C6
+  C7 --> C14
+  C7 --> C16
   C7 --> C24
   C7 --> C26
-  C7 --> C29
-  C8 --> C18
-  C8 --> C23
-  C8 --> C27
-  C8 --> C32
-  C8 --> C33
-  C9 --> C8
+  C7 --> C31
+  C7 --> C32
+  C8 --> C6
+  C8 --> C12
+  C8 --> C16
+  C8 --> C24
+  C8 --> C26
+  C9 --> C6
   C9 --> C16
-  C9 --> C18
-  C9 --> C26
-  C9 --> C32
-  C9 --> C33
-  C10 --> C8
-  C10 --> C14
-  C10 --> C18
+  C9 --> C28
+  C10 --> C6
+  C10 --> C15
+  C10 --> C16
+  C10 --> C24
   C10 --> C26
-  C11 --> C8
-  C11 --> C18
-  C11 --> C30
-  C12 --> C8
-  C12 --> C15
-  C12 --> C18
-  C12 --> C26
-  C12 --> C33
-  C13 --> C8
-  C13 --> C15
-  C13 --> C18
-  C13 --> C26
-  C13 --> C32
-  C13 --> C33
-  C14 --> C15
-  C14 --> C18
-  C14 --> C26
-  C15 --> C18
-  C15 --> C26
-  C16 --> C18
-  C16 --> C26
-  C17 --> C15
-  C17 --> C26
-  C18 --> C27
-  C18 --> C33
-  C19 --> C18
-  C20 --> C18
-  C22 --> C0
-  C22 --> C18
-  C23 --> C18
-  C23 --> C29
-  C24 --> C18
-  C24 --> C29
-  C24 --> C33
-  C26 --> C18
-  C28 --> C18
-  C29 --> C18
-  C29 --> C33
-  C30 --> C18
+  C10 --> C32
+  C11 --> C6
+  C11 --> C13
+  C11 --> C16
+  C11 --> C24
+  C11 --> C26
+  C11 --> C31
+  C11 --> C32
+  C12 --> C13
+  C12 --> C16
+  C12 --> C24
+  C13 --> C16
+  C13 --> C24
+  C14 --> C16
+  C14 --> C24
+  C15 --> C13
+  C15 --> C24
+  C16 --> C25
+  C16 --> C32
+  C17 --> C16
+  C18 --> C16
+  C20 --> C0
+  C20 --> C16
+  C21 --> C16
+  C21 --> C27
+  C22 --> C16
+  C22 --> C27
+  C22 --> C32
+  C24 --> C16
+  C26 --> C16
+  C27 --> C16
+  C27 --> C32
+  C28 --> C16
+  C28 --> C27
+  C28 --> C32
+  C29 --> C6
+  C29 --> C16
+  C29 --> C26
+  C29 --> C31
+  C30 --> C6
+  C30 --> C16
+  C30 --> C22
+  C30 --> C26
+  C30 --> C27
   C30 --> C29
-  C30 --> C33
-  C31 --> C8
-  C31 --> C18
-  C31 --> C32
-  C32 --> C18
-  C32 --> C29
-  C34 --> C8
-  C34 --> C18
+  C31 --> C16
+  C31 --> C27
+  C34 --> C0
+  C34 --> C2
+  C34 --> C6
+  C34 --> C7
+  C34 --> C9
+  C34 --> C10
+  C34 --> C11
+  C34 --> C12
+  C34 --> C16
+  C34 --> C20
+  C34 --> C21
   C34 --> C22
+  C34 --> C23
   C34 --> C24
-  C34 --> C30
+  C34 --> C27
+  C34 --> C28
   C34 --> C32
-  C36 --> C0
-  C36 --> C2
-  C36 --> C8
-  C36 --> C9
-  C36 --> C11
-  C36 --> C12
-  C36 --> C13
-  C36 --> C14
-  C36 --> C18
-  C36 --> C19
-  C36 --> C22
-  C36 --> C23
-  C36 --> C24
-  C36 --> C25
-  C36 --> C26
-  C36 --> C29
-  C36 --> C30
-  C36 --> C33
 ```
 
 ## Current ownership and edges
 
 | Crate | Path | Owner | Layer | Internal production dependencies |
 | --- | --- | --- | --- | --- |
-| `vyre` | `vyre-core` | `public-facade` | `facade` | `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives` |
-| `vyre-aot` | `vyre-aot` | `aot-artifacts` | `packaging` | `vyre-driver`, `vyre-foundation`, `vyre-primitives`, `vyre-spec` |
+| `vyre` | `vyre` | `public-facade` | `facade` | `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec` |
+| `vyre-aot` | `vyre-aot` | `aot-artifacts` | `packaging` | `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec` |
 | `vyre-bench` | `vyre-bench` | `benchmarks` | `tooling` | `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
-| `vyre-conform-enforce` | `conform/vyre-conform-enforce` | `conformance` | `conformance` | `vyre`, `vyre-conform-generate`, `vyre-conform-spec` |
-| `vyre-conform-generate` | `conform/vyre-conform-generate` | `conformance` | `conformance` | `vyre-conform-spec` |
-| `vyre-conform-runner` | `conform/vyre-conform-runner` | `conformance` | `conformance` | `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-primitives`, `vyre-reference`, `vyre-spec`, `vyre-test-harness` |
+| `vyre-conform` | `conform/vyre-conform` | `conformance` | `conformance` | `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
 | `vyre-conform-spec` | `conform/vyre-conform-spec` | `conformance` | `conformance` | `vyre-spec` |
-| `vyre-debug` | `vyre-debug` | `debugging` | `tooling` | `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives` |
-| `vyre-driver` | `vyre-driver` | `backend-contract` | `backend-neutral` | `vyre-foundation`, `vyre-intrinsics`, `vyre-macros`, `vyre-self-substrate`, `vyre-spec` |
-| `vyre-driver-cuda` | `vyre-driver-cuda` | `cuda-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-self-substrate`, `vyre-spec` |
-| `vyre-driver-metal` | `vyre-driver-metal` | `metal-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower` |
+| `vyre-debug` | `vyre-debug` | `debugging` | `tooling` | `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-scan` |
+| `vyre-driver` | `vyre-driver` | `backend-contract` | `backend-neutral` | `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec` |
+| `vyre-driver-cuda` | `vyre-driver-cuda` | `cuda-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec` |
+| `vyre-driver-metal` | `vyre-driver-metal` | `metal-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-metal`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel` |
 | `vyre-driver-reference` | `vyre-driver-reference` | `reference-driver` | `concrete-backend` | `vyre-driver`, `vyre-foundation`, `vyre-reference` |
-| `vyre-driver-spirv` | `vyre-driver-spirv` | `spirv-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-spec` |
-| `vyre-driver-wgpu` | `vyre-driver-wgpu` | `portable-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-self-substrate`, `vyre-spec` |
+| `vyre-driver-spirv` | `vyre-driver-spirv` | `spirv-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec` |
+| `vyre-driver-wgpu` | `vyre-driver-wgpu` | `portable-driver` | `concrete-backend` | `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec` |
 | `vyre-emit-metal` | `vyre-emit-metal` | `metal-emitter` | `emitter` | `vyre-emit-naga`, `vyre-foundation`, `vyre-lower` |
 | `vyre-emit-naga` | `vyre-emit-naga` | `primary-text-emitter` | `emitter` | `vyre-foundation`, `vyre-lower` |
 | `vyre-emit-ptx` | `vyre-emit-ptx` | `primary-binary-emitter` | `emitter` | `vyre-foundation`, `vyre-lower` |
@@ -225,12 +228,12 @@ graph TD
 | `vyre-megakernel` | `vyre-megakernel` | `megakernel-compiler` | `compiler-boundary` | `vyre-foundation` |
 | `vyre-primitives` | `vyre-primitives` | `primitive-library` | `primitives` | `vyre-foundation`, `vyre-spec` |
 | `vyre-reference` | `vyre-reference` | `reference-semantics` | `semantics` | `vyre-foundation`, `vyre-primitives`, `vyre-spec` |
-| `vyre-runtime` | `vyre-runtime` | `runtime` | `runtime` | `vyre-driver`, `vyre-foundation`, `vyre-self-substrate` |
+| `vyre-runtime` | `vyre-runtime` | `runtime` | `runtime` | `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-self-substrate` |
+| `vyre-scan` | `vyre-scan` | `scan-product` | `runtime` | `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime` |
 | `vyre-self-substrate` | `vyre-self-substrate` | `self-substrate` | `scheduler` | `vyre-foundation`, `vyre-primitives` |
 | `vyre-spec` | `vyre-spec` | `specification` | `foundation` | None |
-| `vyre-test-harness` | `conform/vyre-test-harness` | `conformance` | `test-tooling` | `vyre-driver`, `vyre-foundation`, `vyre-harness`, `vyre-libs`, `vyre-reference`, `vyre-self-substrate` |
 | `vyre-test-support` | `vyre-test-support` | `test-support` | `test-tooling` | None |
-| `xtask` | `xtask` | `release-tooling` | `tooling` | `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-frontend-c`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec` |
+| `xtask` | `xtask` | `release-tooling` | `tooling` | `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec` |
 
 ## Planned compiler boundary
 
