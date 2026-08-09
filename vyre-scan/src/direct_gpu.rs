@@ -6,7 +6,6 @@
 //! literal-set engine.
 
 use crate::literal_set::GpuLiteralSet;
-use vyre_driver::VyreBackend;
 use vyre_foundation::ir::Program;
 pub use vyre_foundation::match_result::Match;
 
@@ -45,19 +44,28 @@ impl DirectGpuScanner {
         self.literal_set.reference_scan(haystack)
     }
 
-    /// Dispatch the direct packed-byte matcher through a concrete backend.
+    /// Dispatch the direct matcher through a registered artifact target.
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] when the backend cannot dispatch or read
-    /// back the compiled matcher.
-    pub fn scan<B: VyreBackend + ?Sized>(
+    /// Returns [`vyre_driver::BackendError`] when compilation, materialization,
+    /// submission, readback, or resident cleanup fails.
+    pub fn scan(
         &self,
-        backend: &B,
+        backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
     ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-        self.literal_set.scan(backend, haystack, max_matches)
+        let session =
+            self.literal_set
+                .prepare_resident_scan(backend_id, haystack.len(), max_matches)?;
+        let mut matches = Vec::new();
+        let mut scratch = Vec::new();
+        let scan_result = session.scan_into(haystack, &mut matches, &mut scratch);
+        let free_result = session.free();
+        scan_result?;
+        free_result?;
+        Ok(matches)
     }
 }
 

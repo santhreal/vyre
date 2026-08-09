@@ -18,7 +18,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
@@ -81,17 +80,14 @@ impl ScanResult {
     }
 }
 
-/// GPU + Reference scan operations exposed by every matcher in this crate.
-/// Object-safe (`dyn MatchScan` is valid) so consumers can hold a heap-
-/// allocated trait object and swap engines at runtime.
+/// Artifact execution and reference scan operations exposed by scan matchers.
+/// Object-safe (`dyn MatchScan` is valid) so consumers can swap engines at runtime.
 pub trait MatchScan {
-    /// GPU dispatch through a concrete backend, returning up to
-    /// `max_matches` matches. Engines pre-allocate the hit buffer at
-    /// `max_matches * 3 + 1` u32 slots; setting this too low silently
-    /// truncates results.
+    /// Compile, materialize, and submit through a registered backend target,
+    /// failing closed when `max_matches` cannot hold the complete result.
     fn scan(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
     ) -> Result<Vec<Match>, vyre_driver::BackendError>;
@@ -300,11 +296,18 @@ use crate::literal_set::{GpuLiteralSet, LiteralSetWireError};
 impl MatchScan for GpuLiteralSet {
     fn scan(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
     ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-        GpuLiteralSet::scan(self, backend, haystack, max_matches)
+        let session = self.prepare_resident_scan(backend_id, haystack.len(), max_matches)?;
+        let mut matches = Vec::new();
+        let mut scratch = Vec::new();
+        let scan_result = session.scan_into(haystack, &mut matches, &mut scratch);
+        let free_result = session.free();
+        scan_result?;
+        free_result?;
+        Ok(matches)
     }
 
     fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
@@ -349,11 +352,11 @@ mod direct_gpu_impls {
     impl MatchScan for DirectGpuScanner {
         fn scan(
             &self,
-            backend: &dyn VyreBackend,
+            backend_id: &str,
             haystack: &[u8],
             max_matches: u32,
         ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-            DirectGpuScanner::scan(self, backend, haystack, max_matches)
+            DirectGpuScanner::scan(self, backend_id, haystack, max_matches)
         }
 
         fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {

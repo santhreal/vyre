@@ -3,7 +3,9 @@
 use vyre_driver::backend::backend_registration;
 use vyre_driver_wgpu as _;
 use vyre_foundation::match_result::Match;
-use vyre_scan::{build_scan_session, GpuLiteralSet, ScanArtifactError};
+use vyre_scan::{
+    build_scan_session, DirectGpuScanner, GpuLiteralSet, MatchScan, Pipeline, ScanArtifactError,
+};
 
 fn wgpu_registration() -> &'static vyre_driver::BackendRegistration {
     backend_registration("wgpu")
@@ -123,5 +125,29 @@ fn resident_fused_scan_uses_authenticated_artifact_resources(
         assert_eq!(matches, vec![Match::new(0, 0, 2), Match::new(1, 4, 6)]);
     }
     session.free()?;
+    Ok(())
+}
+
+/// WHY: public engine and post-processing facades must preserve the artifact-only
+/// execution boundary instead of accepting a raw backend dispatcher.
+#[test]
+fn public_scan_facades_submit_registered_artifacts() -> Result<(), Box<dyn std::error::Error>> {
+    let haystack = b"zabc";
+    let expected = vec![Match::new(0, 1, 4), Match::new(1, 2, 4)];
+
+    let direct = DirectGpuScanner::compile(&[b"abc".as_slice(), b"bc".as_slice()]);
+    assert_eq!(direct.scan("wgpu", haystack, 8)?, expected);
+
+    let matcher = GpuLiteralSet::compile(&[b"abc".as_slice(), b"bc".as_slice()]);
+    let dynamic: &dyn MatchScan = &matcher;
+    assert_eq!(dynamic.scan("wgpu", haystack, 8)?, expected);
+
+    let pipeline =
+        Pipeline::with_post_process(matcher, vyre_scan::post_process::try_reference_post_process);
+    let processed = pipeline.scan_processed("wgpu", haystack, 8)?;
+    assert_eq!(processed.len(), expected.len());
+    assert_eq!(processed[0].pattern_id, 0);
+    assert_eq!(processed[1].pattern_id, 1);
+
     Ok(())
 }

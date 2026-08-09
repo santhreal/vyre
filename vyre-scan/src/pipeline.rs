@@ -12,7 +12,7 @@ use crate::engine::MatchScan;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::post_process::try_reference_post_process;
 use crate::post_process::{PostProcessError, PostProcessedMatch};
-use vyre_driver::{BackendError, VyreBackend};
+use vyre_driver::BackendError;
 use vyre_foundation::match_result::Match;
 
 /// Function pointer for the post-processing stage. Stored as an `fn`
@@ -89,19 +89,18 @@ impl<E: MatchScan> Pipeline<E> {
         (self.post_process)(&raw, haystack).map_err(|error| BackendError::new(error.to_string()))
     }
 
-    /// Full GPU dispatch + post-process. Mirrors `MatchScan::scan` and
-    /// then runs the post-processor on the host before returning.
+    /// Full artifact submission plus post-processing.
     ///
     /// # Errors
-    /// Returns the `MatchScan::scan` error verbatim, or wraps a
+    /// Returns the [`MatchScan::scan`] error verbatim, or wraps a
     /// post-processing contract violation in [`BackendError`].
     pub fn scan_processed(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
     ) -> Result<Vec<PostProcessedMatch>, BackendError> {
-        let raw = self.engine.scan(backend, haystack, max_matches)?;
+        let raw = self.engine.scan(backend_id, haystack, max_matches)?;
         (self.post_process)(&raw, haystack).map_err(|error| BackendError::new(error.to_string()))
     }
 }
