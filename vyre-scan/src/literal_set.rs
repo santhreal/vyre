@@ -4107,7 +4107,7 @@ impl GpuLiteralSet {
 
     /// Serialize this matcher into a self-describing binary blob suitable
     /// for on-disk caching. Composed from the existing layer-1 wire
-    /// formats: `Program::to_bytes` for the dispatch IR and
+    /// formats: `Program::to_wire` for the dispatch IR and
     /// `CompiledDfa::to_bytes` for the transition tables. The pattern
     /// arrays are packed as raw little-endian `u32` words.
     ///
@@ -4127,15 +4127,20 @@ impl GpuLiteralSet {
     /// version on this outer envelope). Legacy literal-compare and bounded-DFA
     /// blobs are migrated by decoding their DFA/pattern sections and
     /// rebuilding the current suffix-prefiltered bounded-DFA dispatch program.
-    /// # Errors
-    /// Returns [`LiteralSetWireError::WireFraming`] if any section
-    /// exceeds the envelope's `u32` length-prefix capacity.
+    /// Returns [`LiteralSetWireError::InvalidProgram`] when the dispatch IR
+    /// cannot be represented in the stable program wire format, or
+    /// [`LiteralSetWireError::WireFraming`] if an outer section exceeds the
+    /// envelope's `u32` length-prefix capacity.
     pub fn to_bytes(&self) -> Result<Vec<u8>, LiteralSetWireError> {
         let mut w = vyre_foundation::serial::envelope::WireWriter::new(
             LITERAL_SET_WIRE_MAGIC,
             LITERAL_SET_WIRE_VERSION,
         );
-        w.write_section(&self.program.to_bytes())
+        let program_bytes = self
+            .program
+            .to_wire()
+            .map_err(|error| LiteralSetWireError::InvalidProgram(error.to_string()))?;
+        w.write_section(&program_bytes)
             .map_err(LiteralSetWireError::WireFraming)?;
         let dfa_bytes = self
             .dfa
@@ -4500,6 +4505,32 @@ fn literal_set_match_output_layout(
 #[cfg(test)]
 mod compile_tests {
     use super::*;
+
+    /// WHY: every cache envelope must propagate nested program encoding
+    /// failures rather than substituting an ambiguous empty section.
+    #[test]
+    fn literal_set_wire_propagates_program_encoding_errors() {
+        let mut matcher = GpuLiteralSet::compile(&[b"a"]);
+        let oversized_name = "x".repeat(vyre_foundation::serial::wire::MAX_STRING_LEN + 1);
+        matcher.program = Program::wrapped(
+            vec![vyre_foundation::ir::BufferDecl::storage(
+                &oversized_name,
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            )],
+            [1, 1, 1],
+            vec![],
+        );
+
+        let error = matcher
+            .to_bytes()
+            .expect_err("an unencodable nested Program must reject the literal set");
+        assert!(
+            matches!(error, LiteralSetWireError::InvalidProgram(_)),
+            "nested Program encoding failures must retain their typed boundary: {error}"
+        );
+    }
 
     /// ONE-PLACE lock: the candidate-end-byte and candidate-suffix2 masks have
     /// TWO independent derivations, the pattern-derived builders here

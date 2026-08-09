@@ -119,29 +119,6 @@ impl Program {
         encode::to_wire_into(self, dst).map_err(wire_err)
     }
 
-    /// Serialize this IR program into bytes.
-    ///
-    /// This compatibility wrapper preserves the pre-`to_wire` API name.
-    ///
-    /// On an encoding error, an empty vector is returned after logging the
-    /// failure. Use [`Program::to_wire`] when the caller needs to handle the
-    /// error explicitly.
-    #[must_use]
-    #[inline]
-    pub fn to_bytes(&self) -> Vec<u8> {
-        match self.to_wire() {
-            Ok(bytes) => bytes,
-            Err(error) => {
-                tracing::error!(
-                    error = %error,
-                    "Program::to_bytes: wire encoding failed; returning empty bytes. \
-                     Fix: call Program::to_wire and handle the validation error explicitly."
-                );
-                Vec::new()
-            }
-        }
-    }
-
     /// Deserialize an IR program from the stable `VYRE` IR wire format.
     ///
     /// # Errors
@@ -243,25 +220,7 @@ pub fn append_node_list_fingerprint(buf: &mut Vec<u8>, nodes: &[Node]) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-
-    #[test]
-    #[inline]
-    pub(crate) fn to_bytes_returns_empty_on_wire_error() {
-        let long_name = "x".repeat(MAX_STRING_LEN + 1);
-        let program = Program::wrapped(
-            vec![BufferDecl::storage(
-                &long_name,
-                0,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )],
-            [1, 1, 1],
-            vec![],
-        );
-        assert!(program.to_wire().is_err());
-        assert!(program.to_bytes().is_empty());
-    }
+    use crate::ir::{BufferDecl, DataType, Node, Program};
 
     /// EDGE-001 regression: `MAX_DECODE_DEPTH` covers **both** Node and Expr
     /// recursion through the same counter. A blob that nests statement

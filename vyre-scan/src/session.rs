@@ -497,7 +497,7 @@ impl ScanSession {
     /// Sections, in order:
     ///   - `u32`     : `plan.num_states`
     ///   - `u32`     : `plan.input_len`
-    ///   - section 0 : vyre `Program::to_bytes` payload
+    ///   - section 0 : vyre `Program::to_wire` payload
     ///   - words 1   : `transition_table` (lane-major)
     ///   - words 2   : `epsilon_table` (lane-major)
     ///   - words 3   : `plan.accept_states` flattened as
@@ -506,9 +506,10 @@ impl ScanSession {
     ///   - words 5   : accept anchor flags, one bitset word per accept
     ///                 (`bit0=start`, `bit1=end`)
     ///
-    /// # Errors
-    /// Returns [`PipelineWireError::WireFraming`] if any section
-    /// exceeds the envelope's `u32` length-prefix capacity.
+    /// Returns [`PipelineWireError::InvalidProgram`] when the dispatch IR
+    /// cannot be represented in the stable program wire format, or
+    /// [`PipelineWireError::WireFraming`] if an outer section exceeds the
+    /// envelope's `u32` length-prefix capacity.
     pub fn to_bytes(&self) -> Result<Vec<u8>, PipelineWireError> {
         let mut w = vyre_foundation::serial::envelope::WireWriter::new(
             PIPELINE_WIRE_MAGIC,
@@ -516,7 +517,12 @@ impl ScanSession {
         );
         w.write_u32(self.compiled.plan.num_states);
         w.write_u32(self.compiled.plan.input_len);
-        w.write_section(&self.compiled.program.to_bytes())
+        let program_bytes = self
+            .compiled
+            .program
+            .to_wire()
+            .map_err(|error| PipelineWireError::InvalidProgram(error.to_string()))?;
+        w.write_section(&program_bytes)
             .map_err(PipelineWireError::WireFraming)?;
         w.write_words(&self.compiled.transition_table)
             .map_err(PipelineWireError::WireFraming)?;
@@ -726,6 +732,32 @@ mod tests {
         assert_eq!(
             decoded.reference_scan(b"zabc"),
             vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]
+        );
+    }
+
+    /// WHY: nested program encoding must fail closed instead of emitting an
+    /// empty section that can be mistaken for a valid cached pipeline.
+    #[test]
+    fn pipeline_wire_propagates_program_encoding_errors() {
+        let mut pipe = build(&["ab"], "input", "hits", 16);
+        let oversized_name = "x".repeat(vyre_foundation::serial::wire::MAX_STRING_LEN + 1);
+        pipe.compiled.program = vyre_foundation::ir::Program::wrapped(
+            vec![vyre_foundation::ir::BufferDecl::storage(
+                &oversized_name,
+                0,
+                vyre_foundation::ir::BufferAccess::ReadOnly,
+                vyre_foundation::ir::DataType::U32,
+            )],
+            [1, 1, 1],
+            vec![],
+        );
+
+        let error = pipe
+            .to_bytes()
+            .expect_err("an unencodable nested Program must reject the pipeline");
+        assert!(
+            matches!(error, PipelineWireError::InvalidProgram(_)),
+            "nested Program encoding failures must retain their typed boundary: {error}"
         );
     }
 
