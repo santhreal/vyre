@@ -20,11 +20,9 @@
 
 use std::path::Path;
 
-use vyre::VyreBackend;
-use vyre_driver_reference::CpuRefBackend;
+use vyre::scan::GpuLiteralSet;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 /// The demo pattern set, a handful of secret-shaped literals a consumer might
 /// hunt for. In a real consumer these come from a rule catalog (Tier-B data).
@@ -79,13 +77,11 @@ fn main() {
     let words_per_region = pattern_count.div_ceil(32).max(1) as usize;
     let max_matches = 4_096u32;
 
-    // 3. Prefer the GPU resident fast path; fall back LOUDLY to the CPU reference
-    //    backend's portable one-shot scan when no GPU is present.
+    // 3. Run the registered GPU artifact route.
     match WgpuBackend::shared() {
-        Ok(backend) => {
+        Ok(_backend) => {
             println!("\n== GPU resident fused fast path (RTX-class device) ==");
             run_resident_fused(
-                backend.as_ref(),
                 &matcher,
                 &haystack,
                 &region_starts,
@@ -95,10 +91,7 @@ fn main() {
             );
         }
         Err(error) => {
-            eprintln!(
-                "\n!! no GPU backend available ({error}).\n!! The resident-table fast path is device-only; running the portable\n!! `scan_all` on the CPU reference backend instead (this path re-uploads\n!! tables and has no per-region presence (it is the fallback, not the fast path))."
-            );
-            run_portable_scan_all(&CpuRefBackend, &matcher, &haystack);
+            eprintln!("GPU backend unavailable: {error}");
         }
     }
 }
@@ -125,7 +118,6 @@ fn coalesce_regions(files: &[Vec<u8>]) -> (Vec<u8>, Vec<u32>) {
 /// The GPU fast path: one resident fused session, one dispatch producing BOTH
 /// outputs, timing left on.
 fn run_resident_fused(
-    backend: &dyn VyreBackend,
     matcher: &GpuLiteralSet,
     haystack: &[u8],
     region_starts: &[u32],
@@ -134,7 +126,7 @@ fn run_resident_fused(
     max_matches: u32,
 ) {
     let session = match matcher.prepare_resident_fused_scan(
-        backend,
+        "wgpu",
         haystack.len() + 64,
         region_starts.len() as u32,
         max_matches,
@@ -150,7 +142,6 @@ fn run_resident_fused(
     let mut matches = Vec::new();
     let mut scratch = Vec::new();
     let timed = match session.scan_into_timed(
-        backend,
         haystack,
         region_starts,
         0,
@@ -161,7 +152,7 @@ fn run_resident_fused(
         Ok(timed) => timed,
         Err(error) => {
             eprintln!("resident fused scan failed: {error}");
-            let _ = session.free(backend);
+            let _ = session.free();
             return;
         }
     };
@@ -184,18 +175,8 @@ fn run_resident_fused(
         ),
     }
 
-    if let Err(error) = session.free(backend) {
+    if let Err(error) = session.free() {
         eprintln!("free session failed: {error}");
-    }
-}
-
-/// The portable fallback: `scan_all` returns every match with no cap tuning and no
-/// host paging. It works on any backend (no resident buffers), but re-uploads the
-/// tables per call and has no per-region presence output.
-fn run_portable_scan_all(backend: &dyn VyreBackend, matcher: &GpuLiteralSet, haystack: &[u8]) {
-    match matcher.scan_all(backend, haystack) {
-        Ok(matches) => print_matches(&matches),
-        Err(error) => eprintln!("scan_all failed: {error}"),
     }
 }
 

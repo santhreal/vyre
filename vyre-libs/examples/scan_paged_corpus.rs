@@ -22,21 +22,13 @@
 //!   cargo run -p vyre-libs --example scan_paged_corpus -- /path/to/tree 65536
 //!                                                          ^dir       ^window budget bytes
 //!
-//! With no GPU backend the resident paged path is unavailable (resident buffers
-//! are device-only). The example says so LOUDLY and falls back to the portable
-//! `scan_paged_fused_async` on the CPU reference backend, which reads every file
-//! into memory (surrendering the bounded-RSS disk-ingress property) but still
-//! produces the same global match set. A stated fallback, never a silent degrade
-//! (Law 10).
+//! The resident paged path requires a registered target compiler and
+//! materializer. Missing GPU support is reported as an error.
 
 use std::path::{Path, PathBuf};
 
-use vyre_driver_reference::CpuRefBackend;
+use vyre::scan::{scan_paths_paged_prefetched, GlobalMatch, GpuLiteralSet, PagedScanResult};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre::scan::{
-    scan_paged_fused_async, scan_paths_paged_prefetched, GlobalMatch, GpuLiteralSet,
-    PagedScanResult,
-};
 
 /// The demo pattern set, a handful of secret-shaped literals. In a real consumer
 /// these come from a rule catalog (Tier-B data).
@@ -112,7 +104,7 @@ fn main() {
             );
             match scan_paths_paged_prefetched(
                 &matcher,
-                backend.as_ref(),
+                "wgpu",
                 &path_refs,
                 window_budget,
                 max_matches,
@@ -122,25 +114,7 @@ fn main() {
             }
         }
         Err(error) => {
-            eprintln!(
-                "!! no GPU backend available ({error}).\n!! The resident paged path is device-only; reading every file into memory\n!! and running the portable `scan_paged_fused_async` on the CPU reference\n!! backend instead (this surrenders the bounded-RSS disk-ingress property\n!! but yields the same global match set (the fallback, not the fast path))."
-            );
-            match read_all_into_memory(&paths) {
-                Ok(files) => {
-                    let borrowed: Vec<&[u8]> = files.iter().map(Vec::as_slice).collect();
-                    match scan_paged_fused_async(
-                        &matcher,
-                        &CpuRefBackend,
-                        &borrowed,
-                        window_budget,
-                        max_matches,
-                    ) {
-                        Ok(result) => report(&result, words_per_region),
-                        Err(error) => eprintln!("scan_paged_fused_async failed: {error}"),
-                    }
-                }
-                Err(error) => eprintln!("could not read corpus into memory: {error}"),
-            }
+            eprintln!("GPU backend unavailable: {error}");
         }
     }
 }
@@ -212,10 +186,6 @@ fn read_regular_file_paths(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     }
     paths.sort();
     Ok(paths)
-}
-
-fn read_all_into_memory(paths: &[PathBuf]) -> std::io::Result<Vec<Vec<u8>>> {
-    paths.iter().map(std::fs::read).collect()
 }
 
 /// A temp directory holding the built-in corpus; deleted when dropped. Kept alive
