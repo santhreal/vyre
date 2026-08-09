@@ -209,15 +209,15 @@ impl DialectRegistry {
 
     pub(crate) fn from_inventory() -> Self {
         let registration_count = inventory::iter::<super::dialect::OpDefRegistration>().count();
-        let intrinsic_count = vyre_intrinsics::harness::all_entries().count();
+        let canonical_count = super::intrinsic_adapter::canonical_op_definitions().count();
         let extern_defs = Self::extern_defs();
         let total_defs = registration_count
-            .saturating_add(intrinsic_count)
+            .saturating_add(canonical_count)
             .saturating_add(extern_defs.len());
         let mut defs = Vec::new();
         let _ = vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut defs, total_defs);
         defs.extend(inventory::iter::<super::dialect::OpDefRegistration>().map(|reg| (reg.op)()));
-        defs.extend(super::intrinsic_adapter::intrinsic_op_definitions());
+        defs.extend(super::intrinsic_adapter::canonical_op_definitions());
         defs.extend(extern_defs);
         defs.sort_unstable_by(|left, right| left.id.cmp(right.id));
         Self::validate_no_duplicates(defs.iter()).unwrap_or_else(|error| {

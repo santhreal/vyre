@@ -26,8 +26,8 @@
 //! validates. Execution succeeds only when a backend that supports
 //! the `io` dialect is registered.
 
-use crate::OpDefRegistration;
-use crate::{Category, OpDef, Signature, TypedParam};
+use crate::{Category, Signature, TypedParam};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 const OP_DMA_FROM_NVME: &str = "io.dma_from_nvme";
 const OP_WRITE_BACK_TO_NVME: &str = "io.write_back_to_nvme";
@@ -101,51 +101,33 @@ const SIG_UNMAP: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: OP_DMA_FROM_NVME,
-        dialect: "io",
-        category: Category::Intrinsic,
-        signature: SIG_DMA_FROM_NVME,
-        lowerings: crate::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(OP_DMA_FROM_NVME, OperationTier::Runtime, None, None, None)
+        .with_signature(SIG_DMA_FROM_NVME)
+        .with_category("io")
 }
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: OP_WRITE_BACK_TO_NVME,
-        dialect: "io",
-        category: Category::Intrinsic,
-        signature: SIG_WRITE_BACK_TO_NVME,
-        lowerings: crate::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(
+        OP_WRITE_BACK_TO_NVME,
+        OperationTier::Runtime,
+        None,
+        None,
+        None,
+    )
+    .with_signature(SIG_WRITE_BACK_TO_NVME)
+    .with_category("io")
 }
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: OP_ZEROCOPY_MAP,
-        dialect: "io",
-        category: Category::Intrinsic,
-        signature: SIG_ZEROCOPY_MAP,
-        lowerings: crate::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(OP_ZEROCOPY_MAP, OperationTier::Runtime, None, None, None)
+        .with_signature(SIG_ZEROCOPY_MAP)
+        .with_category("mem")
 }
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: OP_UNMAP,
-        dialect: "io",
-        category: Category::Intrinsic,
-        signature: SIG_UNMAP,
-        lowerings: crate::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(OP_UNMAP, OperationTier::Runtime, None, None, None)
+        .with_signature(SIG_UNMAP)
+        .with_category("mem")
 }
 
 #[cfg(test)]
@@ -165,13 +147,9 @@ mod tests {
             OP_UNMAP,
         ] {
             let id = reg.intern_op(op);
-            let def = reg
-                .lookup(id)
-                .ok_or_else(|| {
-                    format!(
-                        "Fix: op `{op}` must register via inventory::submit!(OpDefRegistration{{...}}); restore the registration in this dialect."
-                    )
-                })?;
+            let def = reg.lookup(id).ok_or_else(|| {
+                format!("Fix: op `{op}` must have one canonical OperationRegistration.")
+            })?;
             assert_eq!(def.id, op);
             assert_eq!(def.category, Category::Intrinsic);
         }

@@ -1,77 +1,41 @@
-//! DialectRegistry-sourced op-support set.
+//! Canonical semantic-operation support sets.
 //!
-//! Returns the set of every op id registered in the live
-//! `DialectRegistry`. Backends that opt into the dialect dispatch
-//! path use this in their `supported_ops()` implementation so that
-//! `validate_program` no longer requires a parallel `OpDefRegistration`
-//! registration.
-//!
-//! The legacy [`default_supported_ops`](super::validation::default_supported_ops)
-//! returns only the frozen language-level op ids (`vyre.node.*`,
-//! `vyre.lit_u32`, etc.). A backend that supports the full dialect
-//! stdlib calls [`dialect_and_language_supported_ops`] which
-//! unions the two sources.
+//! Backends that consume semantic regions derive their advertised operation IDs
+//! from the foundation-owned registry. Language-level node IDs remain a separate
+//! frozen IR vocabulary and are unioned only by
+//! [`dialect_and_language_supported_ops`].
 
 use std::collections::HashSet;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, LazyLock};
 
-use crate::OpDefRegistration;
 use vyre_foundation::ir::OpId;
+use vyre_foundation::operation::OperationRegistry;
 
-/// The union of every dialect-registered op id and the frozen
-/// language-level ops.
-///
-/// Computed once, cached. Includes the language-level set so that
-/// consumers don't have to merge two sources themselves.
+/// The union of every canonical semantic operation id and frozen language-level
+/// IR operation id. The set is computed once and reused by all consumers.
 #[must_use]
 pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
-    static OPS: OnceLock<HashSet<OpId>> = OnceLock::new();
-    OPS.get_or_init(|| {
+    static OPS: LazyLock<HashSet<OpId>> = LazyLock::new(|| {
         let language_ops = super::validation::default_supported_ops();
-        let registrations = inventory::iter::<OpDefRegistration>.into_iter();
-        let inventory_bound = registrations
-            .size_hint()
-            .1
-            .unwrap_or_else(|| registrations.size_hint().0);
-        let reserve = language_ops.len().saturating_add(inventory_bound);
-        let mut set = HashSet::new();
-        set.reserve(reserve);
+        let semantic_ops = dialect_only_supported_ops();
+        let mut set = HashSet::with_capacity(language_ops.len().saturating_add(semantic_ops.len()));
         set.extend(language_ops.iter().cloned());
-        for reg in registrations {
-            let def = (reg.op)();
-            set.insert(Arc::<str>::from(def.id));
-        }
+        set.extend(semantic_ops.iter().cloned());
         set
-    })
+    });
+    &OPS
 }
 
-/// Just the dialect-registered ids (without language-level ops).
-///
-/// # Runtime cost
-///
-/// First call walks the link-time inventory once and freezes the result;
-/// every subsequent call is a single atomic load returning a `&'static`
-/// reference to the cached set. The prior uncached design allocated a new
-/// `HashSet` per call.
+/// Canonical semantic operation ids without language-level IR node ids.
 #[must_use]
 pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
-    static OPS: OnceLock<HashSet<OpId>> = OnceLock::new();
-    OPS.get_or_init(|| {
-        // HOT-PATH-OK: inventory::iter runs once on first access; result frozen
-        // for all subsequent lookups. See docs/inventory-contract.md.
-        let registrations = inventory::iter::<OpDefRegistration>.into_iter();
-        let reserve = registrations
-            .size_hint()
-            .1
-            .unwrap_or_else(|| registrations.size_hint().0);
-        let mut set = HashSet::new();
-        set.reserve(reserve);
-        for reg in registrations {
-            let def = (reg.op)();
-            set.insert(Arc::<str>::from(def.id));
-        }
-        set
-    })
+    static OPS: LazyLock<HashSet<OpId>> = LazyLock::new(|| {
+        OperationRegistry::global()
+            .iter()
+            .map(|registration| Arc::<str>::from(registration.id))
+            .collect()
+    });
+    &OPS
 }
 
 #[cfg(test)]

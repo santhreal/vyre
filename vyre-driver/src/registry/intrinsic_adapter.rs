@@ -1,13 +1,14 @@
-//! Driver-facing adapter for the neutral intrinsic catalog.
+//! Driver projection for canonical semantic operation registrations.
 //!
-//! Intrinsic identity, signatures, builders, semantics, and fixtures remain
-//! owned by `vyre-intrinsics`. This module only projects canonical catalog
-//! entries into driver `OpDef` records and verifies concrete lowering records
-//! against that same source.
+//! Foundation owns identity, signatures, builders, effects, fixtures, and
+//! tolerance policy. The driver projects signed intrinsic and runtime entries
+//! into its lowering lookup without defining another semantic registry.
 
 use thiserror::Error;
 use vyre_foundation::dialect_lookup::{Category, LoweringTable, OpDef};
-use vyre_intrinsics::harness::{all_entries, OpEntry};
+use vyre_foundation::operation::{
+    OperationRegistration as OpEntry, OperationRegistry, OperationTier,
+};
 
 /// Failure while joining a backend lowering definition to the intrinsic catalog.
 #[derive(Debug, Clone, Eq, PartialEq, Error)]
@@ -30,19 +31,27 @@ pub enum IntrinsicRegistrationError {
     },
 }
 
-/// Project every canonical intrinsic into the shared driver definition schema.
-///
-/// No driver crate owns or repeats an intrinsic descriptor. The returned
-/// definitions clone the neutral `Signature` directly from the catalog entry
-/// and retain its canonical builder as the reference-interpreter path.
-pub(crate) fn intrinsic_op_definitions() -> impl Iterator<Item = OpDef> {
-    all_entries().map(op_definition)
+/// Project signed intrinsic and runtime operations into driver lookup records.
+pub(crate) fn canonical_op_definitions() -> impl Iterator<Item = OpDef> {
+    OperationRegistry::global()
+        .iter()
+        .filter(|entry| {
+            matches!(
+                entry.tier,
+                OperationTier::Intrinsic | OperationTier::Runtime
+            ) && entry.signature.is_some()
+        })
+        .map(op_definition)
 }
 
 fn op_definition(entry: &'static OpEntry) -> OpDef {
     OpDef {
         id: entry.id,
-        dialect: "intrinsic",
+        dialect: match entry.tier {
+            OperationTier::Intrinsic => "intrinsic",
+            OperationTier::Runtime => entry.category.unwrap_or("runtime"),
+            _ => unreachable!("only intrinsic and runtime entries are projected"),
+        },
         category: Category::Intrinsic,
         signature: entry
             .signature
@@ -62,8 +71,9 @@ fn op_definition(entry: &'static OpEntry) -> OpDef {
 pub fn validate_intrinsic_lowering(
     lowering: &OpDef,
 ) -> Result<&'static OpEntry, IntrinsicRegistrationError> {
-    let entry = all_entries()
-        .find(|entry| entry.id == lowering.id)
+    let entry = OperationRegistry::global()
+        .get(lowering.id)
+        .filter(|entry| entry.tier == OperationTier::Intrinsic)
         .ok_or(IntrinsicRegistrationError::UnknownId { id: lowering.id })?;
     if entry.signature.as_ref() != Some(&lowering.signature) {
         return Err(IntrinsicRegistrationError::SignatureMismatch { id: lowering.id });

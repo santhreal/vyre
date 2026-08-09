@@ -17,8 +17,9 @@
 //! support via `supports_indirect_dispatch: true` in its
 //! `AdapterCaps` (see `vyre_foundation::optimizer::ctx::AdapterCaps`).
 
-use crate::OpDefRegistration;
-use crate::{Category, OpDef, Signature, TypedParam};
+use crate::Category;
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 const OP_ID: &str = "core.indirect_dispatch";
 
@@ -33,15 +34,9 @@ const SIG: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: OP_ID,
-        dialect: "core",
-        category: Category::Intrinsic,
-        signature: SIG,
-        lowerings: vyre_foundation::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(OP_ID, OperationTier::Runtime, None, None, None)
+        .with_signature(SIG)
+        .with_category("core")
 }
 
 /// Stable op id for `core.indirect_dispatch`.
@@ -60,7 +55,7 @@ mod tests {
         let id = reg.intern_op(OP_ID);
         let def = reg
             .lookup(id)
-            .expect("Fix: core.indirect_dispatch must register via inventory::submit!; restore the OpDefRegistration block in this file.");
+            .expect("Fix: core.indirect_dispatch must have one canonical OperationRegistration.");
         assert_eq!(def.dialect, "core");
         assert_eq!(def.category, Category::Intrinsic);
     }
