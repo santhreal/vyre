@@ -1,62 +1,56 @@
-# Documentation coverage contract
+# Documentation coverage
 
-Closes #33 (A.9 docs  -  every user-facing surface answers every question).
+Applies to Vyre 0.7.2.
 
-## The promise
+Documentation coverage is measured, not assumed. A file existing on disk does
+not prove that its claims match the current code or release train.
 
-Every public surface in vyre + consumer answers three questions without the reader leaving that surface:
+## Measured surfaces
 
-1. **What does this do?**  -  one-paragraph summary, the "elevator pitch" for the item.
-2. **How do I use it?**  -  a minimal compiling example inside the rustdoc (`cargo test --doc` keeps these honest).
-3. **What goes wrong and how do I fix it?**  -  every `# Errors` section names the error shape + the `Fix:` hint embedded in the error itself.
+| Surface | Authority | Gate | What the result proves |
+| --- | --- | --- | --- |
+| Navigation and lifecycle | [`DOCS.toml`](DOCS.toml) | `python3 scripts/docs_manifest.py --check` | Every Markdown page has one lifecycle row, every active page is reachable once, inactive pages are excluded, and generated pages name one source. |
+| Crate ownership | Cargo metadata and [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml) | `python3 scripts/crate_ownership.py --check` | Every workspace package has one owner and allowed production dependency set. |
+| Crate testing guides | Cargo targets plus [`testing/TESTING.toml`](testing/TESTING.toml) | `python3 scripts/testing_guides.py --check` | Every workspace package has current commands, hardware requirements, evidence outputs, skip rules, and failure semantics. |
+| Public API snapshots | Publishable workspace manifests | `bash scripts/check_public_api_snapshot.sh` | Snapshot files exactly match the publishable package set. |
+| Markdown links | Active Markdown pages | `bash scripts/check_docs_links.sh` | Active Markdown link targets exist and are publishable. |
+| Path-like references | Active Markdown pages | `python3 scripts/check_docs_references.py` | Explicit repository paths used as inputs exist and are publishable. |
 
-This contract is machine-checkable: a CI gate asserts each public item has all three sections before the crate can tag a release (see #77 P7.4 CI enforcement gates, landed 0.6).
+These gates measure different facts. A clean link gate does not prove a support
+claim, and a current API snapshot does not prove that an example executes.
 
-## Layers
+## Documentation authorities
 
-| Layer | Authority | Lives in |
-|---|---|---|
-| Vision | `docs/VISION.md`  -  the north-star architecture brief. | `libs/performance/matching/vyre/docs/VISION.md` |
-| Architecture | `docs/ARCHITECTURE.md`  -  how the pieces fit today. | `libs/performance/matching/vyre/docs/ARCHITECTURE.md` |
-| Tier rule | `docs/library-tiers.md` + `docs/primitives-tier.md` | same tree |
-| Region chain | `docs/region-chain.md`  -  composition invariant. | same tree |
-| Gate closure | `docs/GATE_CLOSURE.md`  -  the five release gates. | same tree |
-| Benchmarks | `libs/tools/consumer/docs/BENCHMARK.md`  -  the ≥1000× methodology. | consumer tree |
-| Error codes | `libs/tools/consumer/docs/error-codes.md` + `docs/error-codes.md` | per-crate |
-| Severity taxonomy | `libs/tools/consumer/docs/SEVERITY_TAXONOMY.md` | consumer tree |
-| Per-op references | per-op rustdoc + `cargo xtask print-composition <op_id>` |
+| Question | Authority |
+| --- | --- |
+| What is the executable lifecycle? | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Which crate owns a responsibility or dependency edge? | [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml) |
+| Where does an operation live? | The foundation operation registry and its generated schema |
+| How do you add an operation or backend? | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| What is the wire format? | [`docs/wire-format.md`](wire-format.md) |
+| What is the memory model? | [`docs/memory-model.md`](memory-model.md) |
+| Which error does a Vyre surface return? | [`docs/error-codes.md`](error-codes.md) and the owning crate's rustdoc |
+| How do you run a crate's tests? | The generated guide under [`docs/testing/`](testing/) |
+| How do you run release benchmarks? | [`docs/PERF.md`](PERF.md), [`vyre-bench/README.md`](../vyre-bench/README.md), and the benchmark target registry |
+| When can a release tag ship? | [`docs/RELEASE.md`](RELEASE.md) and the generated release evidence |
+| How does a generic downstream analyzer integrate? | [`docs/consumer-integration.md`](consumer-integration.md) |
+| Which named external integration is documented? | [`docs/consumer-showcase.md`](consumer-showcase.md) |
 
-## Per-question coverage
+No local contract depends on an unpublished consumer tree. A named external
+integration owns its own product documentation, support status, benchmarks, and
+severity policy.
 
-| Question | Where answered |
-|---|---|
-| What is vyre? | `docs/VISION.md` §"The missing stack". |
-| What is consumer? | `consumer/README.md` §`consumer`. |
-| How do I run consumer? | `consumer/README.md` §Install. |
-| How do I write a SURGE rule? | `consumer/AUTHORING.md`. |
-| How do I configure consumer? | `consumer/CONFIGURATION.md`. |
-| Why this architecture? | `docs/VISION.md` §"After Effects architecture" + `docs/ARCHITECTURE.md`. |
-| Where does op X live? | `cargo xtask print-composition <op_id>`, matches `docs/library-tiers.md` rule. |
-| How do I add an op? | per-tier rustdoc on `vyre-libs`, `vyre-primitives`, `vyre-intrinsics`. |
-| How do I add a backend? | `vyre-driver/README.md`. |
-| What's the wire format? | `docs/wire-format.md`. |
-| What's the memory model? | `docs/memory-model.md`. |
-| How do I verify a conformance cert? | `vyre-conform-runner verify` + `verify_cert_signature_hex` for the cryptographic half (CONFORM C1). |
-| How do I run benchmarks? | `libs/tools/consumer/docs/BENCHMARK.md`. |
-| When can a release tag ship? | `docs/GATE_CLOSURE.md`  -  when all five gates go green. |
-| What if a benchmark fails? | `docs/GATE_CLOSURE.md` §"E.2 yank protocol". |
+## Public item contract
 
-## Contribution checklist for new public items
+When you add a public item:
 
-Reviewers enforce the following before merging any new `pub` item:
+1. Write a summary that states what the item does.
+2. Add a compiling example that exercises observable behavior.
+3. Document every error condition for a fallible function.
+4. Name the owning tier and canonical sibling for a registered operation.
+5. Prove a Tier 3 composition chain reaches registered lower-tier operations.
+6. Regenerate the public API snapshot and corpus documentation evidence.
 
-- [ ] `///` summary paragraph  -  "what does this do".
-- [ ] `/// # Examples` block with a compiling snippet.
-- [ ] `/// # Errors` block for every fallible fn, naming the error kinds by variant.
-- [ ] For types added to a dialect, rustdoc names the Tier and points at the nearest registered sibling for context.
-- [ ] For ops added to a Tier-3 dialect, `print-composition` renders a Region chain that bottoms at Tier-2 leaves (VISION V7 test enforces).
-
-## Open items
-
-- Continuous coverage sweeps track `cargo doc --all` warnings; any new `missing_docs` landing on a `pub` item blocks merge via the crate-level `#![warn(missing_docs)]` toggle.
-- The VISION.md ↔ code delta audit runs every session (CRITIQUE_VISION_ALIGNMENT_2026-04-23 is the inaugural record); drift in this doc is itself a finding.
+`missing_docs` is necessary but not sufficient. The documentation matrix must
+also connect the claim to current manifests, executable examples, and release
+evidence.
