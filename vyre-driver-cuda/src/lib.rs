@@ -53,6 +53,7 @@ pub mod jit_cache;
 pub mod kernel_failure_diagnostics;
 /// Adjacent-stage CUDA launch fusion planning.
 pub mod launch_fusion;
+mod materializer;
 /// Bounded CUDA megakernel plan cache keyed by graph, analysis, device, and
 /// runtime pressure buckets.
 pub mod megakernel_plan_cache;
@@ -1139,7 +1140,7 @@ inventory::submit! {
         factory: cuda_factory,
         supported_ops: cuda_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: None,
+        materializer: Some(materializer::materializer_factory),
     }
 }
 

@@ -79,12 +79,53 @@ fn cuda_compiled_pipeline_identity_key(
 }
 
 impl CudaCompiledPipeline {
-    /// Construct a compiled CUDA pipeline.
+    /// Construct a pipeline from compiler-generated PTX.
     pub(crate) fn new(
         backend: CudaBackend,
         program: Arc<Program>,
         ptx_src: Arc<str>,
         ptx_source_key: PtxSourceCacheKey,
+        module_key: ModuleCacheKey,
+        config: &DispatchConfig,
+        prepared: CudaDispatchPlan,
+    ) -> Result<Self, BackendError> {
+        Self::new_with_source_identity(
+            backend,
+            program,
+            ptx_src,
+            *ptx_source_key.as_bytes(),
+            module_key,
+            config,
+            prepared,
+        )
+    }
+
+    /// Construct a pipeline from authenticated immutable target PTX.
+    pub(crate) fn new_from_target_payload(
+        backend: CudaBackend,
+        program: Arc<Program>,
+        ptx_src: Arc<str>,
+        module_key: ModuleCacheKey,
+        config: &DispatchConfig,
+        prepared: CudaDispatchPlan,
+    ) -> Result<Self, BackendError> {
+        let source_identity = *blake3::hash(ptx_src.as_bytes()).as_bytes();
+        Self::new_with_source_identity(
+            backend,
+            program,
+            ptx_src,
+            source_identity,
+            module_key,
+            config,
+            prepared,
+        )
+    }
+
+    fn new_with_source_identity(
+        backend: CudaBackend,
+        program: Arc<Program>,
+        ptx_src: Arc<str>,
+        source_identity: [u8; 32],
         module_key: ModuleCacheKey,
         config: &DispatchConfig,
         prepared: CudaDispatchPlan,
@@ -99,11 +140,8 @@ impl CudaCompiledPipeline {
                 program.entry_op_id.as_deref().unwrap_or("<anonymous>")
             );
         }
-        let digest = cuda_compiled_pipeline_identity_key(
-            ptx_source_key.as_bytes(),
-            &module_key.0,
-            &prepared.launch,
-        )?;
+        let digest =
+            cuda_compiled_pipeline_identity_key(&source_identity, &module_key.0, &prepared.launch)?;
         if trace {
             tracing::debug!(
                 "[cuda-pipeline] +{}ms digest ready",
