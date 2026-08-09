@@ -192,7 +192,6 @@ pub(crate) struct CachedArtifactSessions {
 }
 
 pub struct BenchContext {
-    pub backends: Vec<Box<dyn VyreBackend>>,
     pub preferred_backend: Arc<dyn VyreBackend>,
     pub preferred_registration: &'static BackendRegistration,
     pub materializer: Arc<dyn vyre_driver::ArtifactMaterializer>,

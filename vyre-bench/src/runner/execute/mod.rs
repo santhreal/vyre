@@ -169,7 +169,6 @@ pub fn execute_suite(
         }
 
         let mut ctx = BenchContext {
-            backends: vec![],
             preferred_backend,
             preferred_registration,
             materializer,
@@ -449,7 +448,6 @@ pub fn evaluate_candidate_headless(
     );
 
     let mut ctx = BenchContext {
-        backends: vec![],
         preferred_backend,
         preferred_registration,
         materializer,
