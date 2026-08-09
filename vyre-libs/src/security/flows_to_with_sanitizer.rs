@@ -29,7 +29,7 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 use vyre_spec::{
-    fact_schema::SharedFactKind,
+    analysis::AnalysisFactKind,
     soundness::{DynamicPrimitiveSoundness, Soundness},
 };
 
@@ -73,7 +73,7 @@ pub struct SanitizedFlowSoundnessContract {
     /// Whether the result is bounded by an explicit sanitizer mask.
     pub sanitizer_filter: bool,
     /// Shared fact kind the external engine should use when writing this result.
-    pub external_fact_kind: SharedFactKind,
+    pub external_fact_kind: AnalysisFactKind,
     /// Stable external role string for blackboard/fact consumers.
     pub external_role: &'static str,
 }
@@ -131,7 +131,7 @@ pub const fn sanitized_flow_soundness_contract(
             op_id: OP_ID,
             soundness: Soundness::MayOver,
             sanitizer_filter: true,
-            external_fact_kind: SharedFactKind::Taint,
+            external_fact_kind: AnalysisFactKind::Taint,
             external_role: "external.flow.one_step.sanitizer_gated",
         },
         SanitizedFlowExecutionMode::FixpointConverged { .. } => SanitizedFlowSoundnessContract {
@@ -139,7 +139,7 @@ pub const fn sanitized_flow_soundness_contract(
             op_id: FIXPOINT_OP_ID,
             soundness: Soundness::Exact,
             sanitizer_filter: false,
-            external_fact_kind: SharedFactKind::Witness,
+            external_fact_kind: AnalysisFactKind::Witness,
             external_role: "external.flow.fixpoint_converged.sanitizer_gated",
         },
     }
@@ -307,7 +307,7 @@ mod tests {
         assert_eq!(one_step.op_id, OP_ID);
         assert_eq!(one_step.soundness, Soundness::MayOver);
         assert!(one_step.sanitizer_filter);
-        assert_eq!(one_step.external_fact_kind, SharedFactKind::Taint);
+        assert_eq!(one_step.external_fact_kind, AnalysisFactKind::Taint);
         assert_eq!(
             one_step.external_role,
             "external.flow.one_step.sanitizer_gated"
@@ -317,7 +317,7 @@ mod tests {
         assert_eq!(fixpoint.op_id, FIXPOINT_OP_ID);
         assert_eq!(fixpoint.soundness, Soundness::Exact);
         assert!(!fixpoint.sanitizer_filter);
-        assert_eq!(fixpoint.external_fact_kind, SharedFactKind::Witness);
+        assert_eq!(fixpoint.external_fact_kind, AnalysisFactKind::Witness);
         assert_eq!(
             fixpoint.external_role,
             "external.flow.fixpoint_converged.sanitizer_gated"

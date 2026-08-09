@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use vyre_foundation::hashing::update_length_delimited_field as hash_field;
 
 use vyre_spec::{
-    fact_schema::{SharedFactHeader, SharedFactKind},
+    analysis::{AnalysisFactKind, AnalysisFactRecord},
     soundness::{
         validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
         PrecisionContract, Soundness,
@@ -209,36 +209,36 @@ impl AnalysisFact {
         Ok(())
     }
 
-    /// Convert this security fact into the shared dataflow fact header.
+    /// Convert this security fact into the structural interchange record.
     #[must_use]
-    pub fn shared_header(&self, producer: &str) -> SharedFactHeader {
-        let mut header = SharedFactHeader::new(
+    pub fn analysis_record(&self, producer: &str) -> AnalysisFactRecord {
+        let mut record = AnalysisFactRecord::new(
             producer,
-            shared_kind_for_security_fact(self.kind),
+            analysis_kind_for_security_fact(self.kind),
             self.id.0,
             self.subject,
             Soundness::Exact,
         )
         .with_span(self.span.file_id, self.span.start_byte, self.span.end_byte);
         if let Some(object) = self.object {
-            header = header.with_object(object);
+            record = record.with_object(object);
         }
-        header
+        record
     }
 }
 
-fn shared_kind_for_security_fact(kind: FactKind) -> SharedFactKind {
+fn analysis_kind_for_security_fact(kind: FactKind) -> AnalysisFactKind {
     match kind {
-        FactKind::Source => SharedFactKind::Source,
-        FactKind::Sink => SharedFactKind::Sink,
-        FactKind::Sanitizer => SharedFactKind::Sanitizer,
-        FactKind::Dataflow => SharedFactKind::Taint,
-        FactKind::Edge | FactKind::Call | FactKind::Control => SharedFactKind::GraphEdge,
-        FactKind::Auth => SharedFactKind::Dominance,
-        FactKind::Lifetime => SharedFactKind::BorrowOrigin,
-        FactKind::Provenance => SharedFactKind::Witness,
-        FactKind::Type => SharedFactKind::Range,
-        FactKind::Node | FactKind::Symbol | FactKind::Concurrency => SharedFactKind::Taint,
+        FactKind::Source => AnalysisFactKind::Source,
+        FactKind::Sink => AnalysisFactKind::Sink,
+        FactKind::Sanitizer => AnalysisFactKind::Sanitizer,
+        FactKind::Dataflow => AnalysisFactKind::Taint,
+        FactKind::Edge | FactKind::Call | FactKind::Control => AnalysisFactKind::GraphEdge,
+        FactKind::Auth => AnalysisFactKind::Dominance,
+        FactKind::Lifetime => AnalysisFactKind::BorrowOrigin,
+        FactKind::Provenance => AnalysisFactKind::Witness,
+        FactKind::Type => AnalysisFactKind::Range,
+        FactKind::Node | FactKind::Symbol | FactKind::Concurrency => AnalysisFactKind::Taint,
     }
 }
 

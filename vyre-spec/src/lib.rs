@@ -30,6 +30,8 @@ pub mod algebraic_law;
 pub mod all_algebraic_laws;
 #[macro_use]
 mod op_wire;
+/// Versioned cross-engine analysis fact records.
+pub mod analysis;
 /// Atomic operation enum  -  the bounded set of read-modify-write primitives.
 /// Specification element.
 pub mod atomic_op;
@@ -70,8 +72,6 @@ pub mod expr_variant;
 /// Dialect extension descriptor  -  marks non-core ops carried by extensions.
 /// Specification element.
 pub mod extension;
-/// Versioned cross-engine fact headers for analysis interchange.
-pub mod fact_schema;
 /// Floating-point type subset (F16/F32/F64) with associated properties.
 /// Specification element.
 pub mod float_type;
