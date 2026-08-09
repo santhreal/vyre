@@ -1,32 +1,31 @@
 use vyre_foundation::ir::Program;
 
-/// Execution callback supplied by an upper integration layer.
+/// Raw-program execution oracle for C frontend parity and conformance.
 ///
-/// This crate defines the neutral programs; it does not implement adapters for
-/// a facade, driver, or runtime backend.
-pub trait GpuDispatcher {
-    /// Run `program` with `inputs`; return one `Vec<u8>` per output buffer.
+/// Production execution must compile the frontend output through the canonical
+/// artifact lifecycle. This seam exists only to compare frontend stage programs
+/// against independent reference or target oracles.
+pub trait ProgramOracle {
+    /// Run `program` with owned inputs and return one buffer per output.
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String>;
 
     /// Run `program` with borrowed input buffers.
     ///
-    /// The default stages the borrowed slices for callbacks that implement only
-    /// the owned path. Upper execution adapters may override this method.
+    /// The default stages the borrowed slices for oracles that implement only
+    /// the owned path.
     fn dispatch_borrowed(
         &self,
         program: &Program,
         inputs: &[&[u8]],
     ) -> Result<Vec<Vec<u8>>, String> {
-        let owned: Vec<Vec<u8>> = inputs.iter().map(|s| s.to_vec()).collect();
-        GpuDispatcher::dispatch(self, program, &owned)
+        let owned: Vec<Vec<u8>> = inputs.iter().map(|slice| slice.to_vec()).collect();
+        ProgramOracle::dispatch(self, program, &owned)
     }
 
-    /// Run `program` with borrowed input buffers and write backend outputs into
-    /// caller-owned slots.
+    /// Run `program` with borrowed inputs and write outputs into caller-owned slots.
     ///
-    /// The default delegates to [`GpuDispatcher::dispatch_borrowed`] and moves
-    /// each returned buffer into `outputs`, preserving existing slot allocations
-    /// where possible.
+    /// The default moves each returned buffer into `outputs`, preserving existing
+    /// slot allocations where possible.
     fn dispatch_borrowed_into(
         &self,
         program: &Program,
@@ -38,15 +37,15 @@ pub trait GpuDispatcher {
         Ok(())
     }
 
-    /// Whether this dispatcher requires write-only/output buffers to be supplied
-    /// as input values. Real GPU backends allocate declared outputs themselves;
-    /// the reference interpreter consumes one value per non-workgroup buffer and
-    /// therefore needs zero-initialized output buffers supplied explicitly.
+    /// Whether the oracle requires declared output buffers as input values.
+    ///
+    /// Target oracles allocate declared outputs themselves. The reference
+    /// interpreter consumes one value per non-workgroup buffer and requires
+    /// zero-initialized output buffers explicitly.
     fn requires_output_inputs(&self) -> bool {
         false
     }
 }
-
 
 fn replace_outputs_preserving_slots(outputs: &mut Vec<Vec<u8>>, result: Vec<Vec<u8>>) {
     let mut incoming = result.into_iter();

@@ -7,7 +7,7 @@ use smallvec::SmallVec;
 
 use super::macro_events::{stable_macro_symbol_id, MacroEvent, MacroEventKind};
 use super::tokenization::gpu_tokenize_without_directive_metadata;
-use super::{ClassifiedTokens, GpuDispatcher, MacroDef};
+use super::{ClassifiedTokens, MacroDef, ProgramOracle};
 
 type MacroBucket<'a> = SmallVec<[&'a MacroDef; 2]>;
 

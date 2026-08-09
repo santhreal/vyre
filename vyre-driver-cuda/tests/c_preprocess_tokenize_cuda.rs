@@ -13,13 +13,13 @@ use vyre::ir::Program;
 use vyre::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
-    gpu_tokenize_and_classify, ClassifiedTokens, GpuDispatcher,
+    gpu_tokenize_and_classify, ClassifiedTokens, ProgramOracle,
 };
 use vyre_reference::value::Value;
 
 struct RefDispatcher;
 
-impl GpuDispatcher for RefDispatcher {
+impl ProgramOracle for RefDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
@@ -34,7 +34,7 @@ impl GpuDispatcher for RefDispatcher {
 
 struct CudaTokenizeDispatcher<'a>(&'a CudaBackend);
 
-impl GpuDispatcher for CudaTokenizeDispatcher<'_> {
+impl ProgramOracle for CudaTokenizeDispatcher<'_> {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         self.0
             .dispatch(program, inputs, &DispatchConfig::default())

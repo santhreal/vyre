@@ -15,7 +15,7 @@ use super::segments::{
 use super::token_provenance::{
     record_direct_token_provenance, record_macro_token_provenance, TokenProvenanceEvent,
 };
-use super::{ClassifiedTokens, GpuDispatcher, MacroDef};
+use super::{ClassifiedTokens, MacroDef, ProgramOracle};
 use super::{MacroEvent, MacroExpansionEvent};
 
 #[path = "macro_expansion/cache_key.rs"]

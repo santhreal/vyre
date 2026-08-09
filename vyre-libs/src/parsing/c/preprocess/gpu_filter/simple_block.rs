@@ -8,7 +8,7 @@ use super::full_comment::gpu_filter_full_comment_state;
 use super::host::read_output_u32;
 use super::scratch::prepare_filter_scratch;
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
+use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 
 #[derive(Default)]
 pub(super) struct SimpleBlockScratch {
@@ -22,7 +22,7 @@ pub(super) struct SimpleBlockScratch {
 }
 
 pub(super) fn gpu_filter_simple_block_comments(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     bytes_in: &[u8],
     n_bucket: u32,

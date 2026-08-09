@@ -8,7 +8,7 @@ use vyre_foundation::execution_plan::fusion::fuse_programs;
 
 use super::buffers::{bucket_pow2, pack_u32_words_into, unpack_u32_words_exact_into};
 use super::tokenization::reject_invalid_if_expression_values;
-use super::{ClassifiedTokens, GpuDispatcher};
+use super::{ClassifiedTokens, ProgramOracle};
 
 /// Parsed payload for one directive row.
 ///
@@ -161,7 +161,7 @@ fn reserve_directive_vec<T>(
 /// # Errors
 /// Returns the dispatcher error verbatim if any stage fails.
 pub fn gpu_extract_directive_payloads(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     classified: &ClassifiedTokens,
     defined_macros: &[&[u8]],
 ) -> Result<Vec<DirectivePayload>, String> {
@@ -170,7 +170,7 @@ pub fn gpu_extract_directive_payloads(
 }
 
 pub(super) fn gpu_extract_directive_payloads_for_driver_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     classified: &ClassifiedTokens,
     scratch: &mut DirectiveExtractionScratch,
 ) -> Result<Vec<DirectivePayload>, String> {
@@ -178,7 +178,7 @@ pub(super) fn gpu_extract_directive_payloads_for_driver_with_scratch(
 }
 
 fn gpu_extract_directive_payloads_impl(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     classified: &ClassifiedTokens,
     defined_macros: &[&[u8]],
     evaluate_condition_values: bool,
@@ -608,7 +608,7 @@ mod tests {
 
     struct NoDispatch;
 
-    impl GpuDispatcher for NoDispatch {
+    impl ProgramOracle for NoDispatch {
         fn dispatch(
             &self,
             _program: &Program,

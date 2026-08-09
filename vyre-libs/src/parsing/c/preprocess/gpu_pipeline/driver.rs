@@ -42,13 +42,13 @@ use super::include_acceleration::IncludeAccelerationState;
 use super::live_state::{replace_live_macro_indexed, LiveConditionalScratch};
 use super::tokenization::TokenizationScratch;
 use super::{
-    ConditionalEvent, GpuDispatcher, HeaderReuseEvent, IncludeAccelerationEvent, IncludeEvent,
-    IncludeLoader, MacroDef, MacroEvent, MacroExpansionEvent, PreprocessedSource,
+    ConditionalEvent, HeaderReuseEvent, IncludeAccelerationEvent, IncludeEvent, IncludeLoader,
+    MacroDef, MacroEvent, MacroExpansionEvent, PreprocessedSource, ProgramOracle,
     TokenProvenanceEvent, MAX_INCLUDE_DEPTH,
 };
 
 pub(super) fn preprocess_translation_unit(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     loader: &dyn IncludeLoader,
     tu_path: &Path,
     source: &[u8],
@@ -60,7 +60,7 @@ pub(super) fn preprocess_translation_unit(
 }
 
 struct PreprocessRun<'a> {
-    dispatcher: &'a dyn GpuDispatcher,
+    dispatcher: &'a dyn ProgramOracle,
     loader: &'a dyn IncludeLoader,
     macros: Vec<MacroDef>,
     macro_index: HashMap<Vec<u8>, usize>,
@@ -86,7 +86,7 @@ struct PreprocessRun<'a> {
 
 impl<'a> PreprocessRun<'a> {
     fn try_new(
-        dispatcher: &'a dyn GpuDispatcher,
+        dispatcher: &'a dyn ProgramOracle,
         loader: &'a dyn IncludeLoader,
         cli_macros: &[MacroDef],
     ) -> Result<Self, String> {

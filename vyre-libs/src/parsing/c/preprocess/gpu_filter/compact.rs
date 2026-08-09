@@ -3,7 +3,7 @@ use super::host::read_output_u32;
 use super::program_helpers::byte_compact_program;
 use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
+use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 
 #[derive(Default)]
 pub(super) struct CommentCompactScratch {
@@ -25,7 +25,7 @@ impl CommentCompactScratch {
 }
 
 pub(super) fn compact_comment_filtered_bytes(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     stage: &str,
     raw: &[u8],
     bytes_in: &[u8],

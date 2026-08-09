@@ -6,7 +6,7 @@ use super::line_programs::{
 };
 use super::scratch::{write_fill_bytes, write_zero_bytes};
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
+use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 
 #[derive(Default)]
 pub(super) struct SimpleLineScratch {
@@ -41,7 +41,7 @@ impl SimpleLineScratch {
 }
 
 pub(super) fn gpu_filter_simple_line_comments(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     bytes_in: &[u8],
     n_bucket: u32,

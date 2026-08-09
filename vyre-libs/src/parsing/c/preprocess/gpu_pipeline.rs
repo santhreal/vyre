@@ -116,7 +116,7 @@ fn classified_token_bytes_opt(classified: &ClassifiedTokens, idx: usize) -> Opti
 pub use buffers::bucket_pow2;
 pub use conditional_events::{ConditionalEvent, ConditionalEventKind, ConditionalEventResidency};
 pub use directives::{gpu_extract_directive_payloads, DirectivePayload};
-pub use dispatch::GpuDispatcher;
+pub use dispatch::ProgramOracle;
 pub use expansion_events::MacroExpansionEvent;
 pub use header_reuse::{HeaderReuseEvent, HeaderReuseKey};
 pub use include_acceleration::{IncludeAccelerationEvent, IncludeAccelerationKind};
@@ -129,7 +129,7 @@ pub use types::{IncludeLoader, MacroDef, PreprocessedSource, MAX_INCLUDE_DEPTH};
 /// Drive the GPU preprocessor over a translation unit and recursively expand
 /// active includes through `loader`.
 pub fn gpu_preprocess_translation_unit(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     loader: &dyn IncludeLoader,
     tu_path: &std::path::Path,
     source: &[u8],

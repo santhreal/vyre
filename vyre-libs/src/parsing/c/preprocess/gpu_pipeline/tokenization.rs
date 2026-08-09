@@ -2,7 +2,7 @@ use super::buffers::{
     bucket_pow2, checked_gpu_u32, pack_u32_words_into, read_u32_scalar_exact,
     reserve_gpu_staging_bytes, u32_word_byte_len, unpack_u32_words_prefix_exact,
 };
-use super::dispatch::GpuDispatcher;
+use super::dispatch::ProgramOracle;
 use super::scan::{inclusive_prefix_scan_u32_into, PrefixScanScratch};
 use crate::parsing::c::lex::lexer::{
     c11_compact_sparse_tokens, c11_compact_sparse_tokens_output,
@@ -182,7 +182,7 @@ pub(super) fn reject_invalid_if_expression_values(
 /// # Errors
 /// Returns the dispatcher error verbatim if any stage fails.
 pub fn gpu_tokenize_and_classify(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
 ) -> Result<ClassifiedTokens, String> {
     let mut scratch = TokenizationScratch::default();
@@ -190,7 +190,7 @@ pub fn gpu_tokenize_and_classify(
 }
 
 pub(super) fn gpu_tokenize_and_classify_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     scratch: &mut TokenizationScratch,
 ) -> Result<ClassifiedTokens, String> {
@@ -267,7 +267,7 @@ pub(super) fn gpu_tokenize_and_classify_with_scratch(
 }
 
 pub(super) fn gpu_tokenize_without_directive_metadata(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
 ) -> Result<ClassifiedTokens, String> {
     let mut scratch = TokenizationScratch::default();
@@ -275,7 +275,7 @@ pub(super) fn gpu_tokenize_without_directive_metadata(
 }
 
 pub(super) fn gpu_tokenize_without_directive_metadata_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     scratch: &mut TokenizationScratch,
 ) -> Result<ClassifiedTokens, String> {
@@ -303,7 +303,7 @@ pub(super) fn gpu_tokenize_without_directive_metadata_with_scratch(
 type SparseTokens = (Vec<u32>, Vec<u32>, Vec<u32>);
 
 fn sparse_tokenize(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     n_bytes: u32,
     scratch: &mut TokenizationScratch,
@@ -467,7 +467,7 @@ mod tests {
 
     struct SparsePathSentinel;
 
-    impl GpuDispatcher for SparsePathSentinel {
+    impl ProgramOracle for SparsePathSentinel {
         fn dispatch(
             &self,
             _program: &Program,

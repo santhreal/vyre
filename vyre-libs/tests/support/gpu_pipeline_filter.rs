@@ -1,6 +1,6 @@
 use vyre::ir::{DataType, Program};
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
-    gpu_filter_source_bytes, FilteredBytes, GpuDispatcher,
+    gpu_filter_source_bytes, FilteredBytes, ProgramOracle,
 };
 use vyre_reference::value::Value;
 
@@ -9,7 +9,7 @@ use vyre_reference::value::Value;
 /// each output `Value` is converted back to `Vec<u8>`.
 struct RefDispatcher;
 
-impl GpuDispatcher for RefDispatcher {
+impl ProgramOracle for RefDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
@@ -42,7 +42,7 @@ impl CountingDispatcher {
     }
 }
 
-impl GpuDispatcher for CountingDispatcher {
+impl ProgramOracle for CountingDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         self.calls.set(self.calls.get() + 1);
         self.op_ids.borrow_mut().push(

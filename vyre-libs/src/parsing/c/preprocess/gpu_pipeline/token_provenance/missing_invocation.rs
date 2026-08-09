@@ -1,7 +1,7 @@
 use super::*;
 
 pub(crate) fn record_missing_invocation_provenance(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     file_path: &std::path::Path,
     include_stack: &[std::path::PathBuf],
     macros_by_name: &HashMap<&[u8], MacroBucket<'_>>,

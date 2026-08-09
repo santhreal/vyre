@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use vyre::ir::{BufferAccess, DataType, Program};
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
-    gpu_preprocess_translation_unit, GpuDispatcher, IncludeEventResidency, IncludeLoader, MacroDef,
+    gpu_preprocess_translation_unit, IncludeEventResidency, IncludeLoader, MacroDef, ProgramOracle,
 };
 
 #[path = "gpu_pipeline_driver_roundtrip/conditionals.rs"]
@@ -23,7 +23,7 @@ mod macros;
 use vyre_reference::value::Value;
 
 struct RefDispatcher;
-impl GpuDispatcher for RefDispatcher {
+impl ProgramOracle for RefDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
@@ -64,7 +64,7 @@ impl CountingDispatcher {
     }
 }
 
-impl GpuDispatcher for CountingDispatcher {
+impl ProgramOracle for CountingDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         self.dispatches.set(self.dispatches.get() + 1);
         if program
@@ -89,9 +89,9 @@ impl GpuDispatcher for CountingDispatcher {
                     .ok_or_else(|| format!("missing materialized macro input slot {name}"))?;
                 let len = inputs.get(input_index).map(Vec::len).ok_or_else(|| {
                     format!(
-                        "missing materialized macro input {name} at slot {input_index}; got {} inputs",
-                        inputs.len()
-                    )
+                    "missing materialized macro input {name} at slot {input_index}; got {} inputs",
+                    inputs.len()
+                )
                 })?;
                 self.macro_byte_arena_input_lens
                     .borrow_mut()

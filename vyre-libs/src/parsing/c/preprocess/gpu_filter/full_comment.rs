@@ -4,7 +4,7 @@ use super::program_helpers::{byte_compact_program, combine_keep_mask_program};
 use super::scratch::{copy_output_bytes, write_zero_bytes};
 use super::FilteredBytes;
 use crate::parsing::c::preprocess::gpu_comment_strip_mask::gpu_comment_strip_mask;
-use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
+use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 use vyre_primitives::parsing::line_splice_classify::line_splice_classify;
 
 #[derive(Default)]
@@ -47,7 +47,7 @@ impl FullCommentScratch {
 }
 
 pub(super) fn gpu_filter_full_comment_state(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     bytes_in: &[u8],
     n_bucket: u32,

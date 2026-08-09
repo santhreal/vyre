@@ -12,7 +12,7 @@ const REPLACEMENT_TOKEN_CACHE_LABELS: ByteLruPanicLabels = ByteLruPanicLabels {
 };
 
 pub(crate) fn cached_replacement_tokens(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     mac: &MacroDef,
     symbol_id: [u8; 16],
 ) -> Result<std::sync::Arc<ClassifiedTokens>, String> {

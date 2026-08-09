@@ -2,7 +2,7 @@ use super::flush::flush_active_macro_segment_inner;
 use super::*;
 
 pub(crate) fn flush_macro_segment_ranges(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     file_path: &std::path::Path,
     include_stack: &[std::path::PathBuf],
     parent_classified: &ClassifiedTokens,

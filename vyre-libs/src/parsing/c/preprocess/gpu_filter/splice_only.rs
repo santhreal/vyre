@@ -6,7 +6,7 @@ use super::program_helpers::{
 };
 use super::scratch::{prepare_filter_scratch, write_zero_bytes};
 use super::FilteredBytes;
-use crate::parsing::c::preprocess::gpu_pipeline::GpuDispatcher;
+use crate::parsing::c::preprocess::gpu_pipeline::ProgramOracle;
 use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_primitives::parsing::line_splice_classify::line_splice_classify_u8;
 
@@ -30,7 +30,7 @@ impl SpliceOnlyScratch {
 }
 
 pub(super) fn line_splices_can_create_comment(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     bytes_in: &[u8],
     n_bucket: u32,
     n_real_buf: &[u8],
@@ -64,7 +64,7 @@ pub(super) fn line_splices_can_create_comment(
 }
 
 pub(super) fn gpu_filter_line_splices(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     bytes_in: &[u8],
     n_bucket: u32,

@@ -12,7 +12,7 @@ use super::buffers::{
 };
 use super::live_conditional_cache::{LiveConditionalCache, LiveConditionalCacheKey};
 use super::macro_values;
-use super::{GpuDispatcher, MacroDef};
+use super::{MacroDef, ProgramOracle};
 
 fn live_ifdef_program() -> std::sync::Arc<vyre_foundation::ir::Program> {
     static CACHE: OnceLock<std::sync::Arc<vyre_foundation::ir::Program>> = OnceLock::new();
@@ -320,7 +320,7 @@ mod live_macro_tests {
 /// Re-evaluate an `#ifdef` / `#ifndef` row against the live macro table with
 /// the same GPU kernel used by the batched directive extraction pass.
 pub(super) fn recompute_ifdef_truth_gpu_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     row_bytes: &[u8],
     directive_kind: u32,
     negated: bool,
@@ -380,7 +380,7 @@ pub(super) struct IfdefTruthRow<'a> {
 }
 
 pub(super) fn recompute_ifdef_truths_gpu_with_scratch<'a>(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     rows: &[IfdefTruthRow<'_>],
     macro_buffers: &LiveMacroNameBuffers,
     scratch: &'a mut LiveConditionalScratch,
@@ -493,7 +493,7 @@ pub(super) fn recompute_ifdef_truths_gpu_with_scratch<'a>(
 /// GPU expression evaluator. Malformed expressions retain the kernel contract:
 /// the emitted value is `0`.
 pub(super) fn recompute_if_expr_truth_gpu_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     row_bytes: &[u8],
     directive_kind: u32,
     _macros: &[MacroDef],

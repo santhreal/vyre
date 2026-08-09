@@ -1,7 +1,7 @@
 use super::*;
 
 pub(crate) fn flush_active_macro_segment(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     file_path: &std::path::Path,
     include_stack: &[std::path::PathBuf],
     parent_classified: &ClassifiedTokens,
@@ -32,7 +32,7 @@ pub(crate) fn flush_active_macro_segment(
 }
 
 pub(crate) fn flush_active_macro_segment_inner(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     file_path: &std::path::Path,
     include_stack: &[std::path::PathBuf],
     parent_classified: &ClassifiedTokens,

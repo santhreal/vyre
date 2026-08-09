@@ -2,7 +2,7 @@ use super::*;
 
 /// Records provenance for a segment after GPU macro materialization.
 pub(crate) fn record_macro_token_provenance(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     file_path: &std::path::Path,
     include_stack: &[std::path::PathBuf],
     macros: &[MacroDef],

@@ -3,7 +3,7 @@ use vyre_primitives::reduce::multi_block_prefix_scan::{
     multi_block_prefix_scan_sum_u32, pass_a_local_scan, pass_c_broadcast_offsets, BLOCK_LANES,
 };
 
-use super::GpuDispatcher;
+use super::ProgramOracle;
 
 #[derive(Default)]
 pub(super) struct PrefixScanScratch {
@@ -58,7 +58,7 @@ fn prefix_scan_product_word_bytes(
 }
 
 pub(super) fn inclusive_prefix_scan_u32_into(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     input_words_le: &[u8],
     n: u32,
     scratch: &mut PrefixScanScratch,
@@ -97,7 +97,7 @@ pub(super) fn inclusive_prefix_scan_u32_into(
 }
 
 fn inclusive_prefix_scan_u32_large_into(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     input_words_le: &[u8],
     n: u32,
     scratch: &mut PrefixScanScratch,

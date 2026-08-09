@@ -10,13 +10,13 @@ use common::with_live_backend;
 use vyre::ir::Program;
 use vyre::DispatchConfig;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
-    gpu_preprocess_translation_unit, GpuDispatcher, IncludeLoader,
+    gpu_preprocess_translation_unit, IncludeLoader, ProgramOracle,
 };
 use vyre_reference::value::Value;
 
 struct RefDispatcher;
 
-impl GpuDispatcher for RefDispatcher {
+impl ProgramOracle for RefDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
@@ -45,7 +45,7 @@ impl IncludeLoader for EmptyLoader {
 
 struct CudaPreprocessDispatcher<'a>(&'a vyre_driver_cuda::CudaBackend);
 
-impl GpuDispatcher for CudaPreprocessDispatcher<'_> {
+impl ProgramOracle for CudaPreprocessDispatcher<'_> {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         self.0
             .dispatch(program, inputs, &DispatchConfig::default())

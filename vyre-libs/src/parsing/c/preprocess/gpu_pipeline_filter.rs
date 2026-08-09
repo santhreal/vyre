@@ -1,4 +1,4 @@
-use super::{buffers::checked_gpu_u32, scan::PrefixScanScratch, GpuDispatcher};
+use super::{buffers::checked_gpu_u32, scan::PrefixScanScratch, ProgramOracle};
 use crate::parsing::c::preprocess::gpu_pipeline::bucket_pow2;
 
 #[path = "gpu_filter/block_programs.rs"]
@@ -63,7 +63,7 @@ impl FilterScratch {
 
 /// Orchestrate the GPU byte-filter stages over raw C source bytes.
 pub fn gpu_filter_source_bytes(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
 ) -> Result<FilteredBytes, String> {
     let mut scratch = FilterScratch::default();
@@ -71,7 +71,7 @@ pub fn gpu_filter_source_bytes(
 }
 
 pub(super) fn gpu_filter_source_bytes_with_scratch(
-    dispatcher: &dyn GpuDispatcher,
+    dispatcher: &dyn ProgramOracle,
     raw: &[u8],
     scratch: &mut FilterScratch,
 ) -> Result<FilteredBytes, String> {

@@ -9,12 +9,12 @@ use vyre_libs::parsing::c::lex::tokens::{
     TOK_PP_DEFINE, TOK_PP_ELIF, TOK_PP_ELSE, TOK_PP_ENDIF, TOK_PP_IF, TOK_PP_IFDEF, TOK_PP_IFNDEF,
     TOK_PP_INCLUDE, TOK_PP_PRAGMA, TOK_PP_UNDEF, TOK_PREPROC,
 };
-use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_tokenize_and_classify, GpuDispatcher};
+use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_tokenize_and_classify, ProgramOracle};
 use vyre_reference::value::Value;
 
 struct RefDispatcher;
 
-impl GpuDispatcher for RefDispatcher {
+impl ProgramOracle for RefDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
         let outputs = vyre_reference::reference_eval(program, &values)
@@ -43,7 +43,7 @@ impl CountingDispatcher {
     }
 }
 
-impl GpuDispatcher for CountingDispatcher {
+impl ProgramOracle for CountingDispatcher {
     fn dispatch(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
         self.haystack_elements.borrow_mut().extend(
             program
