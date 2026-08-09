@@ -3,10 +3,11 @@
 use std::collections::BTreeMap;
 
 use vyre_driver::{BackendError, BackendRegistration, Completion, DeviceIdentity};
+use vyre_foundation::diagnostics::RetryClass;
 use vyre_megakernel::{ArtifactValueId, Digest};
 
 use crate::artifact_admission::{ArtifactSession, ArtifactSessionError, RetainedArtifactSession};
-use crate::recovery::{classify_backend_error, RecoveryClass};
+use crate::recovery::classify_backend_error;
 
 /// Host-visible resident work-queue state.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -139,7 +140,7 @@ impl PersistentExecutor {
     ///
     /// Returns the original backend failure for every non-device-loss class.
     pub fn recover(&self, failure: BackendError) -> Result<DeviceIdentity, ArtifactSessionError> {
-        if classify_backend_error(&failure) != RecoveryClass::DeviceLoss {
+        if classify_backend_error(&failure) != RetryClass::NewDevice {
             return Err(failure.into());
         }
         self.session.rematerialize()

@@ -47,9 +47,10 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::recovery::{classify_backend_error, RecoveryClass};
+use crate::recovery::classify_backend_error;
 use crate::PipelineError;
 use vyre_driver::backend::BackendError;
+use vyre_foundation::diagnostics::RetryClass;
 
 const LOG_MAGIC: &[u8; 8] = b"VRRL0001";
 const LOG_VERSION: u32 = 1;
@@ -131,12 +132,12 @@ impl ReplayFailureClass {
         }
     }
 
-    const fn from_recovery_class(class: RecoveryClass) -> Self {
+    const fn from_retry_class(class: RetryClass) -> Self {
         match class {
-            RecoveryClass::DeviceLoss => Self::DeviceLoss,
-            RecoveryClass::TransientResource => Self::TransientQueue,
-            RecoveryClass::Permanent => Self::ProgramBug,
-            RecoveryClass::Unclassified => Self::Unclassified,
+            RetryClass::NewDevice => Self::DeviceLoss,
+            RetryClass::SameDevice => Self::TransientQueue,
+            RetryClass::Never | RetryClass::RecompileSource => Self::ProgramBug,
+            _ => Self::Unclassified,
         }
     }
 }
@@ -160,7 +161,7 @@ impl ReplayFailureEvidence {
     pub fn from_backend_error(slot_status: u32, error: &BackendError, output_bytes: &[u8]) -> Self {
         Self {
             slot_status,
-            failure_class: ReplayFailureClass::from_recovery_class(classify_backend_error(error)),
+            failure_class: ReplayFailureClass::from_retry_class(classify_backend_error(error)),
             backend_error_code: error.code().stable_id(),
             output_digest: output_digest(output_bytes),
         }

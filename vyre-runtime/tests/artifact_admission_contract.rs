@@ -21,8 +21,8 @@ use vyre_megakernel::{
 use vyre_runtime::{
     admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
     recover_artifact_session, ArtifactAdmissionError, ArtifactSession, InMemoryPipelineCache,
-    PersistentExecutor, PipelineCacheStore, PipelineFingerprint, RecoveryClass, ResidentQueueState,
-    RetainedArtifactSession,
+    PersistentExecutor, PipelineCacheStore, PipelineFingerprint, ResidentQueueState,
+    RetainedArtifactSession, RetryClass,
 };
 
 const FRAME_HEADER_BYTES: usize = 10;
@@ -743,7 +743,7 @@ fn artifact_recovery_requires_structured_device_loss() {
         generation: first_device.generation,
         message: "fault injection".to_string(),
     };
-    assert_eq!(classify_backend_error(&failure), RecoveryClass::DeviceLoss);
+    assert_eq!(classify_backend_error(&failure), RetryClass::NewDevice);
     let recovered = recover_artifact_session(&session, failure).unwrap();
     assert!(recovered.generation > first_device.generation);
     assert_eq!(session.artifact().unwrap(), neutral.digest());
@@ -751,6 +751,21 @@ fn artifact_recovery_requires_structured_device_loss() {
     let permanent = BackendError::InvalidProgram {
         fix: "Fix: reject malformed test bindings.".to_string(),
     };
+    assert_eq!(classify_backend_error(&permanent), RetryClass::Never);
+    let transient = BackendError::DeviceOutOfMemory {
+        requested: 4096,
+        available: 1024,
+    };
+    assert_eq!(classify_backend_error(&transient), RetryClass::SameDevice);
+    let poisoned = BackendError::PoisonedLock {
+        lock_error: "fixture poison".to_string(),
+    };
+    assert_eq!(classify_backend_error(&poisoned), RetryClass::SameDevice);
+    let unclassified = BackendError::DispatchFailed {
+        code: None,
+        message: "fixture dispatch failure".to_string(),
+    };
+    assert_eq!(classify_backend_error(&unclassified), RetryClass::Never);
     let error = recover_artifact_session(&session, permanent).unwrap_err();
     assert!(matches!(
         error,

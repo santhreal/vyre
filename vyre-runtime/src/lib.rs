@@ -156,7 +156,8 @@ pub use artifact_admission::{
     ArtifactAdmissionError, ArtifactSession, ArtifactSessionError, RetainedArtifactSession,
 };
 pub use persistent_executor::{PersistentExecutor, ResidentQueueCompletion, ResidentQueueState};
-pub use recovery::{classify_backend_error, recover_artifact_session, RecoveryClass};
+pub use recovery::{classify_backend_error, recover_artifact_session};
+pub use vyre_foundation::diagnostics::RetryClass;
 
 /// Linux io_uring integration. Compiled out on macOS / Windows.
 #[cfg(target_os = "linux")]

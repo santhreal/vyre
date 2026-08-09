@@ -2,34 +2,25 @@
 
 use vyre_driver::backend::ErrorCode;
 use vyre_driver::{BackendError, DeviceIdentity};
+use vyre_foundation::diagnostics::RetryClass;
 
 use crate::artifact_admission::{ArtifactSession, ArtifactSessionError};
 
-/// Stable runtime retry class derived from machine-readable backend errors.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RecoveryClass {
-    /// The acquired device generation is invalid and requires rematerialization.
-    DeviceLoss,
-    /// Resource pressure may be retried without changing the artifact instance.
-    TransientResource,
-    /// Compilation, artifact, or capability failure cannot be retried unchanged.
-    Permanent,
-    /// The backend has not supplied a structured recovery class.
-    Unclassified,
-}
+/// Classify a backend failure into the shared workflow retry protocol.
 
 /// Classify a backend failure without parsing human-readable text.
 #[must_use]
-pub fn classify_backend_error(error: &BackendError) -> RecoveryClass {
+pub fn classify_backend_error(error: &BackendError) -> RetryClass {
     match error.code() {
-        ErrorCode::DeviceLost => RecoveryClass::DeviceLoss,
-        ErrorCode::DeviceOutOfMemory | ErrorCode::PoisonedLock => RecoveryClass::TransientResource,
+        ErrorCode::DeviceLost => RetryClass::NewDevice,
+        ErrorCode::DeviceOutOfMemory | ErrorCode::PoisonedLock => RetryClass::SameDevice,
         ErrorCode::UnsupportedFeature
         | ErrorCode::KernelCompileFailed
         | ErrorCode::InvalidProgram
-        | ErrorCode::CooperativeResidencyExceeded => RecoveryClass::Permanent,
-        ErrorCode::DispatchFailed | ErrorCode::Unknown => RecoveryClass::Unclassified,
-        _ => RecoveryClass::Unclassified,
+        | ErrorCode::CooperativeResidencyExceeded
+        | ErrorCode::DispatchFailed
+        | ErrorCode::Unknown => RetryClass::Never,
+        _ => RetryClass::Never,
     }
 }
 
@@ -45,7 +36,7 @@ pub fn recover_artifact_session(
     session: &ArtifactSession,
     failure: BackendError,
 ) -> Result<DeviceIdentity, ArtifactSessionError> {
-    if classify_backend_error(&failure) != RecoveryClass::DeviceLoss {
+    if classify_backend_error(&failure) != RetryClass::NewDevice {
         return Err(failure.into());
     }
     session.rematerialize()

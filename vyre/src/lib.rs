@@ -128,7 +128,7 @@ pub use vyre_megakernel::{
 /// Authenticated artifact admission, materialization, submission, and recovery.
 pub use vyre_runtime::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
-    PersistentExecutor, RecoveryClass, RetainedArtifactSession,
+    PersistentExecutor, RetainedArtifactSession, RetryClass,
 };
 
 /// Canonical scan compilation, session, paging, residency, and readback owner.
