@@ -217,16 +217,13 @@ fn trait_resident_async_dispatch_preserves_output_and_rejects_nonresident_bindin
 /// position evidence and reject malformed region controls before submission.
 #[test]
 fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
-    let backend = CudaBackendRegistration::new(
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
-    );
     let matcher = GpuLiteralSet::compile(&[b"token"]);
     let mut session = matcher
-        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .prepare_resident_fused_scan("cuda", 64, 2, 8)
         .expect("Fix: resident fused async session preparation failed.");
     let mut scratch = Vec::new();
 
-    let error = match session.scan_async(&backend, b"token", &[1], 0, &mut scratch) {
+    let error = match session.scan_async(b"token", &[1], 0, &mut scratch) {
         Ok(_) => panic!("Fix: malformed region controls must fail before async submission."),
         Err(error) => error,
     };
@@ -236,9 +233,9 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
     );
 
     let pending = session
-        .scan_async(&backend, b"xx token yy", &[0], 0, &mut scratch)
+        .scan_async(b"xx token yy", &[0], 0, &mut scratch)
         .expect("Fix: resident fused async submission failed.");
-    let concurrent_error = match session.scan_async(&backend, b"token", &[0], 0, &mut scratch) {
+    let concurrent_error = match session.scan_async(b"token", &[0], 0, &mut scratch) {
         Ok(_) => panic!(
             "Fix: one resident session must reject reuse until its pending result is retired."
         ),
@@ -268,7 +265,7 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
         "Fix: resident fused async positions diverged from the literal-set contract."
     );
     let second = session
-        .scan_async(&backend, b"token", &[0], 0, &mut scratch)
+        .scan_async(b"token", &[0], 0, &mut scratch)
         .expect("Fix: awaiting must release the resident session for reuse.");
     second
         .await_into(&mut presence, &mut matches)
@@ -277,17 +274,17 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
     assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
 
     session
-        .free(&backend)
+        .free()
         .expect("Fix: resident fused async session resources failed to free.");
 
     let mut busy_session = matcher
-        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .prepare_resident_fused_scan("cuda", 64, 2, 8)
         .expect("Fix: busy resident fused session preparation failed.");
     let busy_pending = busy_session
-        .scan_async(&backend, b"token", &[0], 0, &mut scratch)
+        .scan_async(b"token", &[0], 0, &mut scratch)
         .expect("Fix: busy resident fused async submission failed.");
     let free_error = busy_session
-        .free(&backend)
+        .free()
         .expect_err("Fix: in-flight resident resources must never be freed.");
     assert!(
         free_error
@@ -304,24 +301,21 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
 /// immutable matcher tables or violating exact result order.
 #[test]
 fn resident_fused_fork_dispatches_two_slots_concurrently() {
-    let backend = CudaBackendRegistration::new(
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host."),
-    );
     let matcher = GpuLiteralSet::compile(&[b"token"]);
     let mut first = matcher
-        .prepare_resident_fused_scan(&backend, 64, 2, 8)
+        .prepare_resident_fused_scan("cuda", 64, 2, 8)
         .expect("Fix: primary resident fused session preparation failed.");
     let mut second = first
-        .fork_independent(&backend)
+        .fork_independent()
         .expect("Fix: independent resident fused IO slot allocation failed.");
     let mut first_scratch = Vec::new();
     let mut second_scratch = Vec::new();
 
     let first_pending = first
-        .scan_async(&backend, b"xx token", &[0], 0, &mut first_scratch)
+        .scan_async(b"xx token", &[0], 0, &mut first_scratch)
         .expect("Fix: first resident fused slot submission failed.");
     let second_pending = second
-        .scan_async(&backend, b"token yy", &[0], 0, &mut second_scratch)
+        .scan_async(b"token yy", &[0], 0, &mut second_scratch)
         .expect("Fix: second resident fused slot must submit while the first remains pending.");
 
     let mut presence = Vec::new();
@@ -339,9 +333,9 @@ fn resident_fused_fork_dispatches_two_slots_concurrently() {
     assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
 
     first
-        .free(&backend)
+        .free()
         .expect("Fix: primary shared-table session cleanup failed.");
     second
-        .free(&backend)
+        .free()
         .expect("Fix: final shared-table session cleanup failed.");
 }
