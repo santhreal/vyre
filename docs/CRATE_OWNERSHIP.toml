@@ -61,8 +61,8 @@ package = "vyre-driver-spirv"
 path = "vyre-driver-spirv"
 owner = "spirv-driver"
 layer = "concrete-backend"
-responsibility = "Own SPIR-V backend lowering, dispatch integration, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-spec"]
+responsibility = "Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-spirv", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-spec"]
 
 [[crate]]
 package = "vyre-driver-cuda"

@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 
@@ -19,6 +20,68 @@ pub struct SelectedModule {
     pub programs: Vec<Program>,
 }
 
+/// Canonical target-module bundle schema carried inside one target payload.
+pub const TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16 = 1;
+
+/// One generated target module corresponding to one selected fusion group.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TargetModuleImage {
+    /// Stable selected fusion group.
+    pub group: FusionGroupId,
+    /// Dependency stage of this module.
+    pub stage: u32,
+    /// Target entry-point name.
+    pub entry_point: String,
+    /// Immutable target-native module bytes.
+    pub bytes: Vec<u8>,
+}
+
+/// Canonical ordered target modules for one neutral artifact.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TargetModuleBundle {
+    /// Bundle schema.
+    pub schema_version: u16,
+    /// Modules ordered by dependency stage and fusion-group identity.
+    pub modules: Vec<TargetModuleImage>,
+}
+
+impl TargetModuleBundle {
+    /// Construct and canonically order target modules.
+    #[must_use]
+    pub fn new(mut modules: Vec<TargetModuleImage>) -> Self {
+        modules.sort_by_key(|module| (module.stage, module.group));
+        Self {
+            schema_version: TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            modules,
+        }
+    }
+
+    /// Encode canonical target-module bytes.
+    pub fn to_bytes(&self) -> Result<Vec<u8>, TargetCompileError> {
+        serde_json::to_vec(self)
+            .map_err(|error| TargetCompileError::ModuleBundle(error.to_string()))
+    }
+
+    /// Decode and validate canonical target-module bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, TargetCompileError> {
+        let bundle: Self = serde_json::from_slice(bytes)
+            .map_err(|error| TargetCompileError::ModuleBundle(error.to_string()))?;
+        if bundle.schema_version != TARGET_MODULE_BUNDLE_SCHEMA_VERSION {
+            return Err(TargetCompileError::ModuleBundle(format!(
+                "schema {} is unsupported; expected {}",
+                bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
+            )));
+        }
+        let canonical = bundle.to_bytes()?;
+        if canonical != bytes {
+            return Err(TargetCompileError::ModuleBundle(
+                "module bundle is not in canonical stage/group order".to_string(),
+            ));
+        }
+        Ok(bundle)
+    }
+}
+
 /// Failure produced by a registered target compiler facet.
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -32,6 +95,9 @@ pub enum TargetCompileError {
     /// Verified target lowering or emission failed.
     #[error("target emission failed: {0}")]
     Emission(String),
+    /// Canonical target-module bundle encoding or decoding failed.
+    #[error("target module bundle failed: {0}")]
+    ModuleBundle(String),
     /// The emitted payload violated the canonical payload contract.
     #[error("target payload construction failed: {0}")]
     Payload(#[from] CompileError),

@@ -25,6 +25,7 @@
 
 /// Canonical lowering and emitter adapter.
 pub mod backend;
+mod target_compiler;
 /// Vulkan compute dispatch implementation.
 mod vulkan;
 /// The SPIR-V `VyreBackend` implementation.
@@ -276,7 +277,7 @@ inventory::submit! {
         id: SPIRV_BACKEND_ID,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
-        target_compiler: None,
+        target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: None,
     }
 }

@@ -1,11 +1,16 @@
 //! SPIR-V driver contracts through canonical verified lowering and emission.
 
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
 use vyre_driver_spirv::SpirvBackend;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
+    ValueLifetime,
+};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
 
 fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     assert!(
@@ -58,6 +63,33 @@ fn program() -> Program {
     )
 }
 
+fn artifact() -> vyre_megakernel::Artifact {
+    let mut graph = ProgramGraph::new();
+    graph
+        .add_external_value(
+            "out",
+            ValueContract {
+                dtype: DataType::U32,
+                shape: vec![ShapeDim::Known(1)],
+                access: BufferAccess::ReadWrite,
+                lifetime: ValueLifetime::Invocation,
+            },
+        )
+        .unwrap();
+    graph
+        .add_node("main", program(), Vec::new(), Vec::new())
+        .unwrap();
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 0, 0, 1),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+    vyre_megakernel::compile(&request).unwrap()
+}
+
 #[test]
 fn program_compilation_uses_one_deterministic_spirv_writer() {
     let first = SpirvBackend::program_to_spv(&program())
@@ -69,6 +101,27 @@ fn program_compilation_uses_one_deterministic_spirv_writer() {
         "Fix: identical Program must emit identical SPIR-V"
     );
     assert_spirv_structural_invariants("canonical_program", &first);
+}
+
+/// WHY: inventory discovery must compile immutable selected modules, never caller Programs.
+#[test]
+fn registered_target_compiler_emits_spirv_module_bundle() {
+    let registration = vyre_driver::backend::registered_backends()
+        .iter()
+        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
+        .expect("SPIR-V registration must be force-linked");
+    let compiler = registration
+        .target_compiler()
+        .expect("SPIR-V target compiler must be registered");
+    let artifact = artifact();
+    let payload = compiler.compile(&artifact).expect("artifact must compile");
+    let bundle = TargetModuleBundle::from_bytes(payload.bytes()).expect("bundle must decode");
+    assert_eq!(bundle.modules.len(), 1);
+    assert_eq!(
+        &bundle.modules[0].bytes[..4],
+        &0x0723_0203_u32.to_le_bytes()
+    );
+    assert_eq!(payload.neutral_artifact(), artifact.digest());
 }
 
 #[test]

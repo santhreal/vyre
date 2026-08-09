@@ -34,7 +34,7 @@ pub use envelope::{
 };
 pub use target::{
     artifact_abi, fuse_selected_module, selected_modules, SelectedModule, TargetCompileError,
-    TargetCompiler,
+    TargetCompiler, TargetModuleBundle, TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
 
 use std::collections::{BTreeMap, BTreeSet};

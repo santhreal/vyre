@@ -53,6 +53,9 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `Submission`, and `Completion` carry immutable artifact, payload, device
   generation, binding, and readback identities. Missing native facets fail
   explicitly instead of receiving a raw `Program` passthrough.
+  SPIR-V now registers the first pure facet: it decodes compiler-selected
+  fusion groups, forms one verified Program per group, emits each through the
+  sole SPIR-V writer, and packages canonical stage-ordered module bytes.
 - `vyre-lower::lower_verified` is now the sole production Program-to-descriptor
   boundary. It runs the registered fallible semantic optimizer once, performs
   lower-IR cleanup, and verifies both descriptor states. Target emitters consume
