@@ -61,7 +61,10 @@ fn a_writable_cache_directory_publishes_the_engine() {
         GpuLiteralSet::compile(&[b"test".as_slice()])
     });
     assert_eq!(compiles, 1);
-    assert!(path.is_file(), "the cache file must be published at {path:?}");
+    assert!(
+        path.is_file(),
+        "the cache file must be published at {path:?}"
+    );
 
     // And a second call reads it back instead of recompiling.
     let mut recompiles = 0;
@@ -314,10 +317,10 @@ fn scan_through_dyn_ref() {
     let engine = GpuLiteralSet::compile(&[b"abc".as_slice()]);
     let dyn_ref: &dyn MatchScan = &engine;
 
-    let backend = vyre_driver_wgpu::WgpuBackend::new()
+    let _backend = vyre_driver_wgpu::WgpuBackend::new()
         .expect("Fix: scan_through_dyn_ref requires a live GPU");
     let matches = dyn_ref
-        .scan(&backend, b"zabc", 10_000)
+        .scan("wgpu", b"zabc", 10_000)
         .expect("scan through &dyn MatchScan must succeed");
     assert_eq!(matches, vec![Match::new(0, 1, 4)]);
 }
@@ -350,10 +353,10 @@ fn rule_pipeline_scan_through_dyn_ref() {
     let engine = build_rule_pipeline(&["abc", "bc"], "input", "hits", 4);
     let dyn_ref: &dyn MatchScan = &engine;
 
-    let backend = vyre_driver_wgpu::WgpuBackend::new()
+    let _backend = vyre_driver_wgpu::WgpuBackend::new()
         .expect("Fix: rule_pipeline_scan_through_dyn_ref requires a live GPU");
     let matches = dyn_ref
-        .scan(&backend, b"zabc", 10_000)
+        .scan("wgpu", b"zabc", 10_000)
         .expect("scan through &dyn MatchScan must succeed");
     assert!(
         matches.contains(&Match::new(0, 1, 4)),
