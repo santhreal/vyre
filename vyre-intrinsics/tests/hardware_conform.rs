@@ -10,7 +10,9 @@ use vyre_intrinsics::harness::{all_entries, OpEntry};
 use vyre_reference::value::Value;
 
 fn run_cpu(entry: &OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .expect("Fix: registered hardware intrinsic must provide a neutral builder");
     let values: Vec<Value> = inputs
         .iter()
         .map(|b| Value::Bytes(b.clone().into()))

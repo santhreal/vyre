@@ -5,12 +5,11 @@
 //! Driver registration is intentionally absent: the shared driver consumes
 //! this catalog and adapts entries into its own registration contract.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
-use thiserror::Error;
 use vyre_foundation::dialect_lookup::{AttrSchema, Signature, TypedParam};
-use vyre_foundation::ir::Program;
+use vyre_foundation::operation::{OperationRegistry, OperationTier};
 
 pub type Fixture = Vec<Vec<u8>>;
 pub type Fixtures = Vec<Fixture>;
@@ -128,98 +127,40 @@ impl OpShape {
     }
 }
 
-#[non_exhaustive]
-pub struct OpEntry {
-    pub id: &'static str,
-    pub signature: Signature,
-    pub build: fn() -> Program,
-    pub test_inputs: Option<InputsFn>,
-    pub expected_output: Option<ExpectedFn>,
-    pub category: Option<&'static str>,
-    pub shape: Option<OpShape>,
+/// Canonical semantic intrinsic registration.
+pub use vyre_foundation::operation::OperationRegistration as OpEntry;
+
+/// Intrinsic-specific conformance geometry keyed by canonical operation identity.
+pub struct IntrinsicFacet {
+    /// Canonical semantic operation identifier.
+    pub operation_id: &'static str,
+    /// Fixture and lane geometry.
+    pub shape: OpShape,
 }
 
-impl OpEntry {
-    #[must_use]
-    pub const fn new(
-        id: &'static str,
-        signature: Signature,
-        build: fn() -> Program,
-        test_inputs: Option<InputsFn>,
-        expected_output: Option<ExpectedFn>,
-    ) -> Self {
-        Self {
-            id,
-            signature,
-            build,
-            test_inputs,
-            expected_output,
-            category: None,
-            shape: None,
-        }
+inventory::collect!(IntrinsicFacet);
+
+static FACETS: LazyLock<BTreeMap<&'static str, &'static IntrinsicFacet>> = LazyLock::new(|| {
+    let mut facets = BTreeMap::new();
+    for facet in inventory::iter::<IntrinsicFacet> {
+        assert!(
+            facets.insert(facet.operation_id, facet).is_none(),
+            "duplicate intrinsic facet `{}`; keep one facet per canonical operation",
+            facet.operation_id
+        );
     }
-
-    #[must_use]
-    pub const fn with_category(mut self, category: &'static str) -> Self {
-        self.category = Some(category);
-        self
-    }
-
-    #[must_use]
-    pub const fn with_shape(mut self, shape: OpShape) -> Self {
-        self.shape = Some(shape);
-        self
-    }
-
-    #[must_use]
-    pub const fn category(&self) -> Option<&'static str> {
-        self.category
-    }
-
-    #[must_use]
-    pub const fn shape(&self) -> Option<OpShape> {
-        self.shape
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Error)]
-pub enum RegistryError {
-    #[error(
-        "duplicate intrinsic id `{id}` with the same signature; keep exactly one canonical owner"
-    )]
-    DuplicateId { id: &'static str },
-    #[error(
-        "intrinsic id `{id}` was registered with mismatched signatures; use the canonical signature from its owning entry"
-    )]
-    SignatureMismatch { id: &'static str },
-}
-
-pub fn validate_entries<'a>(
-    entries: impl IntoIterator<Item = &'a OpEntry>,
-) -> Result<(), RegistryError> {
-    let mut signatures: HashMap<&'static str, &'a Signature> = HashMap::new();
-    for entry in entries {
-        if let Some(first) = signatures.insert(entry.id, &entry.signature) {
-            return if first == &entry.signature {
-                Err(RegistryError::DuplicateId { id: entry.id })
-            } else {
-                Err(RegistryError::SignatureMismatch { id: entry.id })
-            };
-        }
-    }
-    Ok(())
-}
-
-inventory::collect!(OpEntry);
-
-static ENTRIES: LazyLock<Vec<&'static OpEntry>> = LazyLock::new(|| {
-    let mut entries = inventory::iter::<OpEntry>.into_iter().collect::<Vec<_>>();
-    validate_entries(entries.iter().copied())
-        .unwrap_or_else(|error| panic!("invalid intrinsic catalog: {error}"));
-    entries.sort_unstable_by_key(|entry| entry.id);
-    entries
+    facets
 });
 
-pub fn all_entries() -> impl ExactSizeIterator<Item = &'static OpEntry> {
-    ENTRIES.iter().copied()
+/// Resolve intrinsic-specific conformance geometry.
+#[must_use]
+pub fn intrinsic_facet(operation_id: &str) -> Option<&'static IntrinsicFacet> {
+    FACETS.get(operation_id).copied()
+}
+
+/// Iterate canonical hardware-facing semantic intrinsic registrations.
+pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
+    OperationRegistry::global()
+        .iter()
+        .filter(|entry| entry.tier == OperationTier::Intrinsic)
 }

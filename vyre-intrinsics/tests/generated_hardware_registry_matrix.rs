@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_intrinsics::harness::{all_entries, HardwareSemantic, OpEntry, OpShape};
+use vyre_intrinsics::harness::{all_entries, intrinsic_facet, HardwareSemantic, OpEntry, OpShape};
 use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]
@@ -63,7 +63,9 @@ fn hardware_entries() -> BTreeMap<&'static str, &'static OpEntry> {
 }
 
 fn run_cpu(entry: &OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .expect("Fix: registered hardware intrinsic must provide a neutral builder");
     let values = inputs
         .iter()
         .map(|bytes| Value::Bytes(bytes.clone().into()))
@@ -97,9 +99,9 @@ fn generated_hardware_registry_shapes_match_declared_surface() {
         let entry = entries
             .get(expected.id)
             .unwrap_or_else(|| panic!("missing hardware registry entry {}", expected.id));
-        let shape = entry
-            .shape()
-            .unwrap_or_else(|| panic!("missing OpShape for {}", expected.id));
+        let shape = intrinsic_facet(entry.id)
+            .unwrap_or_else(|| panic!("missing OpShape for {}", expected.id))
+            .shape;
         assert_eq!(entry.category(), Some("hardware"), "{}", expected.id);
         assert_eq!(shape, expected.shape, "{}", expected.id);
         assert_eq!(shape.lane_bytes, 4, "{}", expected.id);
@@ -159,7 +161,9 @@ fn generated_hardware_registry_is_stable_across_thousands_of_lookup_paths() {
         let entry = entries
             .get(expected.id)
             .unwrap_or_else(|| panic!("missing hardware registry entry {}", expected.id));
-        let shape = entry.shape().expect("hardware entry must expose OpShape");
+        let shape = intrinsic_facet(entry.id)
+            .expect("hardware entry must expose OpShape")
+            .shape;
         let fixture_inputs = (entry.test_inputs.expect("hardware test inputs required"))();
         let fixture_expected = (entry
             .expected_output

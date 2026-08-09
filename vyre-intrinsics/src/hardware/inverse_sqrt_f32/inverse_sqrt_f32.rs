@@ -79,17 +79,27 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 inventory::submit! {
     crate::harness::OpEntry {
         id: OP_ID,
-        signature: crate::harness::F32_UNARY_SIGNATURE,
-        build: || inverse_sqrt_f32("input", "out", 4),
+        semantic_version: 1,
+        signature: Some(crate::harness::F32_UNARY_SIGNATURE),
+        tier: vyre_foundation::operation::OperationTier::Intrinsic,
+        category: Some("hardware"),
+        build: Some(|| inverse_sqrt_f32("input", "out", 4)),
         test_inputs: Some(test_inputs),
         expected_output: Some(expected_output),
-        category: Some("hardware"),
-        shape: Some(crate::harness::OpShape::new(
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+    }
+}
+
+inventory::submit! {
+    crate::harness::IntrinsicFacet {
+        operation_id: OP_ID,
+        shape: crate::harness::OpShape::new(
             1,
             1,
             4,
             crate::harness::HardwareSemantic::InverseSqrtF32,
-        )),
+        ),
     }
 }
 

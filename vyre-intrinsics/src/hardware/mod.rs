@@ -55,17 +55,27 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             inventory::submit! {
                 crate::harness::OpEntry {
                     id: OP_ID,
-                    signature: crate::harness::U32_UNARY_SIGNATURE,
-                    build: || $function("input", "out", 4),
+                    semantic_version: 1,
+                    signature: Some(crate::harness::U32_UNARY_SIGNATURE),
+                    tier: vyre_foundation::operation::OperationTier::Intrinsic,
+                    category: Some("hardware"),
+                    build: Some(|| $function("input", "out", 4)),
                     test_inputs: Some(test_inputs),
                     expected_output: Some(expected_output),
-                    category: Some("hardware"),
-                    shape: Some(crate::harness::OpShape::new(
-                        1,
-                        1,
-                        4,
-                        crate::harness::HardwareSemantic::UnaryU32Map,
-                    )),
+                    laws: &[],
+                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+                }
+            }
+
+            inventory::submit! {
+                crate::harness::IntrinsicFacet {
+                    operation_id: OP_ID,
+                    shape: crate::harness::OpShape::new(
+                                    1,
+                                    1,
+                                    4,
+                                    crate::harness::HardwareSemantic::UnaryU32Map,
+                                ),
                 }
             }
 
@@ -151,17 +161,27 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             inventory::submit! {
                 crate::harness::OpEntry {
                     id: OP_ID,
-                    signature: crate::harness::U32_UNARY_SIGNATURE,
-                    build: || $function("input", "out", 4),
+                    semantic_version: 1,
+                    signature: Some(crate::harness::U32_UNARY_SIGNATURE),
+                    tier: vyre_foundation::operation::OperationTier::Intrinsic,
+                    category: Some("hardware"),
+                    build: Some(|| $function("input", "out", 4)),
                     test_inputs: Some(test_inputs),
                     expected_output: Some(expected_output),
-                    category: Some("hardware"),
-                    shape: Some(crate::harness::OpShape::new(
-                        1,
-                        1,
-                        4,
-                        crate::harness::HardwareSemantic::BarrierIdentityU32,
-                    )),
+                    laws: &[],
+                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+                }
+            }
+
+            inventory::submit! {
+                crate::harness::IntrinsicFacet {
+                    operation_id: OP_ID,
+                    shape: crate::harness::OpShape::new(
+                                    1,
+                                    1,
+                                    4,
+                                    crate::harness::HardwareSemantic::BarrierIdentityU32,
+                                ),
                 }
             }
 
