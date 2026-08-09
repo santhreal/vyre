@@ -1,9 +1,6 @@
 #![allow(unsafe_code)]
 
-//! Benchmark runner library surface for the vyre engine.
-//!
-//! Provides the core CLI parse hooks, registry integration,
-//! regression monitoring, and release matrices.
+#![doc = include_str!("../ARCHITECTURE.md")]
 
 #[cfg(not(target_os = "macos"))]
 use vyre_driver_cuda as _;
@@ -45,12 +42,6 @@ pub mod api;
 /// Reference test cases and standard regression suites.
 #[allow(missing_docs)]
 pub mod cases;
-/// Command-line interface definition and argument parsing.
-#[allow(missing_docs)]
-pub mod cli;
-/// Evolutionary solver benchmarks and auto-tuners.
-#[allow(missing_docs)]
-pub mod evolve;
 /// Target device capability and telemetry probes.
 #[allow(missing_docs)]
 pub mod probes;

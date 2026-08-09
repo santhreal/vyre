@@ -35,7 +35,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-clap = { workspace = true }
+clap = { workspace = true, optional = true }
 toml = { workspace = true }
 inventory = { workspace = true }
 regex = { workspace = true }
@@ -48,7 +48,7 @@ rayon = { workspace = true }
 wide = { workspace = true }
 anyhow = { workspace = true }
 rand.workspace = true
-env_logger = { workspace = true }
+env_logger = { workspace = true, optional = true }
 rusqlite = { workspace = true }
 core_affinity = { workspace = true }
 tree-sitter = { workspace = true }
@@ -58,7 +58,8 @@ tree-sitter-c = { workspace = true }
 vyre-driver-cuda = { workspace = true }
 
 [features]
-default = []
+default = ["cli"]
+cli = ["dep:clap", "dep:env_logger"]
 
 [dev-dependencies]
 vyre-test-support.workspace = true
@@ -67,6 +68,11 @@ proptest = { workspace = true }
 vyre-emit-naga = { path = "../vyre-emit-naga" }
 vyre-emit-spirv = { path = "../vyre-emit-spirv" }
 syn.workspace = true
+
+[[bin]]
+name = "vyre-bench"
+path = "src/main.rs"
+required-features = ["cli"]
 
 [[bench]]
 name = "release"

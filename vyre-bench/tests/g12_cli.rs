@@ -1,29 +1,50 @@
-//! G12  -  CLI audit capabilities.
-//!
-//! Verifies that the CLI can be invoked programmatically and produces
-//! expected output for the `list` and `run` subcommands.
+//! CLI audit capabilities through the shipped binary.
+
+use std::process::{Command, Output};
+
+fn run_benchmark_cli(args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_vyre-bench"))
+        .args(args)
+        .output()
+        .expect("vyre-bench binary must launch")
+}
 
 #[test]
-fn test_cli_list_produces_output() {
-    let result = vyre_bench::cli::run_cli_with(["vyre-bench", "list", "--format", "table"]);
+fn list_emits_registered_case_metadata_as_json() {
+    let output = run_benchmark_cli(&["list", "--format", "json"]);
     assert!(
-        matches!(result, Ok(())),
-        "CLI list command should succeed: {:?}",
-        result.err()
+        output.status.success(),
+        "list failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let cases: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("list output must be JSON");
+    let cases = cases
+        .as_array()
+        .expect("list output must be a JSON array of benchmark cases");
+    assert!(
+        cases.iter().all(|case| {
+            case.get("id").and_then(serde_json::Value::as_str).is_some()
+                && case.get("name").and_then(serde_json::Value::as_str).is_some()
+        }),
+        "every listed case must carry its registry identity"
     );
 }
 
 #[test]
-fn test_cli_snapshot_diff_requires_commit() {
-    // snapshot-diff with a non-existent commit should bail
-    let result = vyre_bench::cli::run_cli_with([
-        "vyre-bench",
+fn snapshot_diff_reports_a_missing_baseline() {
+    let output = run_benchmark_cli(&[
         "snapshot-diff",
         "--base",
         "0000000000000000000000000000000000000000",
     ]);
+    assert!(!output.status.success(), "missing baseline must fail");
     assert!(
-        result.is_err(),
-        "snapshot-diff should fail for non-existent commit"
+        String::from_utf8_lossy(&output.stderr).contains(
+            "snapshot for commit `0000000000000000000000000000000000000000` not found in snapshots/"
+        ),
+        "failure must identify the missing baseline and expected directory: {}",
+        String::from_utf8_lossy(&output.stderr)
     );
 }

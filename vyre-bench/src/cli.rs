@@ -13,6 +13,8 @@ mod cli_bundle;
 mod cli_compare;
 #[path = "cli/dashboard.rs"]
 mod cli_dashboard;
+#[path = "cli/evolve_server.rs"]
+mod cli_evolve_server;
 #[path = "cli/registry.rs"]
 mod cli_registry;
 #[path = "cli/report_io.rs"]
@@ -281,7 +283,7 @@ where
                 crate::release_matrix::enforce_release_matrix(&matrix)?;
             }
         }
-        Commands::EvolveServer => crate::evolve::server::run_evolve_server()?,
+        Commands::EvolveServer => cli_evolve_server::run_evolve_server()?,
     }
     Ok(())
 }
