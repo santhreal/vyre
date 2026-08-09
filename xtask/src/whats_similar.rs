@@ -824,10 +824,6 @@ mod tests {
             implementation_family_id("vyre-libs::nn::softmax")
         );
         assert_eq!(
-            implementation_family_id("vyre-libs::parsing::c11_gnu_inline_asm_pass"),
-            implementation_family_id("vyre-libs::parsing::opt_stack_layout_generation")
-        );
-        assert_eq!(
             implementation_family_id("vyre-libs::parsing::c_sema_scope.scope"),
             implementation_family_id("vyre-libs::parsing::c_sema_scope.identifier_intern")
         );

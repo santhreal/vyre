@@ -1,4 +1,5 @@
 //! C11 pipeline modules  -  lex / preprocess / parse / pipeline.
+pub(crate) mod atomic_collect;
 
 /// DFA lexer pipeline (lexer, tokens, keywords).
 pub mod lex;

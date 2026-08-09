@@ -186,17 +186,6 @@ pub mod parsing;
 /// Packed AST walks (`ast_walk_*` catalog ops).
 pub mod graph;
 
-/// GPU-native compiler middle-end (CFG and ELF emission helpers) for the C pipeline.
-#[cfg(feature = "c-parser")]
-pub mod compiler;
-
-#[cfg(feature = "c-parser")]
-pub use compiler::{
-    cfg::c11_build_cfg_and_gotos, object_writer::opt_lower_elf,
-    regalloc::opt_x86_64_register_allocation, stack_layout::opt_stack_layout_generation,
-    types_layout::c11_compute_alignments,
-};
-
 /// Security / taint compositions for static program analysis.
 /// Every op registers via `inventory::submit!` and lives under a
 /// stable op id. The implementations compose graph and dataflow
@@ -217,8 +206,6 @@ pub mod visual;
 /// not grow a parallel dataflow implementation tree.
 pub mod dataflow;
 
-#[cfg(feature = "c-parser")]
-pub(crate) use compiler::atomic_collect::atomic_collect_u32;
 pub use dataflow::{
     validate_dynamic_pipeline, DynamicPrimitiveSoundness, DynamicSoundnessViolation,
     PrecisionContract, SharedFactHeader, SharedFactKind, Soundness, SoundnessTagged,

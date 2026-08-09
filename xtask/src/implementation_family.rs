@@ -111,9 +111,8 @@ pub(crate) fn implementation_family_id(op_id: &str) -> Option<&'static str> {
         "vyre-libs::nn::rms_norm" | "vyre-libs::nn::softmax" => {
             Some("vyre-libs::builder::strided_writeback_child")
         }
-        "vyre-libs::parsing::c11_gnu_inline_asm_pass"
-        | "vyre-libs::parsing::opt_stack_layout_generation" => {
-            Some("vyre-libs::compiler::atomic_collect_u32")
+        "vyre-libs::parsing::c11_gnu_inline_asm_pass" => {
+            Some("vyre-libs::parsing::c::atomic_collect_u32")
         }
         "vyre-libs::parsing::c_sema_scope.scope"
         | "vyre-libs::parsing::c_sema_scope.scope.brace"
