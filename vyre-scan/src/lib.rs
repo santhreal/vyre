@@ -1,5 +1,6 @@
 //! Execution adapters for substrate-neutral scan artifacts from `vyre-libs`.
 
+pub use vyre_libs::scan::build_scan_program;
 pub use vyre_libs::scan::{
     aho_corasick, build_regex_dfa_pipeline, build_regex_dfa_pipeline_with_policy,
     build_regex_dfa_pipeline_with_policy_ext, build_regex_dfa_shards,
@@ -9,7 +10,7 @@ pub use vyre_libs::scan::{
     ApiKind, CaptureMode, CaptureModeContract, CompiledDfa, CompiledRegexSet, DfaCompileError,
     FusionError, PostProcessError, PostProcessedMatch, RegexCompileError, RegexConstruct,
     RegexDfaError, RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy,
-    RegionTriple, API_INDEX, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+    RegionTriple, ScanProgram, API_INDEX, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
 pub use vyre_libs::scan::{
     builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,
@@ -20,12 +21,12 @@ pub mod direct_gpu;
 pub mod dispatch_io;
 pub mod engine;
 pub mod literal_set;
-pub mod mega_scan;
 pub mod paged_corpus;
 pub mod pipeline;
 pub mod region_evidence_pipeline;
 pub mod resident;
 pub mod resident_presence;
+pub mod session;
 
 pub use direct_gpu::DirectGpuScanner;
 pub use dispatch_io::{
@@ -47,7 +48,6 @@ pub use literal_set::{
     LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX,
     LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,
 };
-pub use mega_scan::{build as build_rule_pipeline, PipelineWireError, RulePipeline};
 pub use paged_corpus::{
     scan_paged_fused, scan_paged_fused_async, scan_paged_fused_timed, scan_paths_paged,
     scan_paths_paged_prefetched, scan_pattern_sharded, scan_sharded_fused,
@@ -56,5 +56,6 @@ pub use paged_corpus::{
 };
 pub use pipeline::{Pipeline, PostProcessFn};
 pub use region_evidence_pipeline::{RegionEvidenceError, RegionEvidencePipeline};
-pub use resident::ResidentRulePipeline;
+pub use resident::ResidentScanSession;
 pub use resident_presence::ResidentPresencePipeline;
+pub use session::{build as build_scan_session, PipelineWireError, ScanSession};

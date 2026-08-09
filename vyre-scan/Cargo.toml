@@ -1,0 +1,36 @@
+[package]
+name = "vyre-scan"
+version = "0.7.2"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Canonical scan program compilation, artifact sessions, paging, residency, and readback for Vyre"
+readme = "README.md"
+keywords = ["gpu", "scan", "matching", "vyre"]
+categories = ["algorithms", "hardware-support"]
+
+[lints]
+workspace = true
+
+[dependencies]
+vyre-driver.workspace = true
+vyre-foundation.workspace = true
+vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
+vyre-primitives.workspace = true
+bytemuck.workspace = true
+smallvec.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+vyre-driver-reference.workspace = true
+vyre-driver-wgpu.workspace = true
+vyre-reference.workspace = true
+proptest.workspace = true
+tempfile.workspace = true
+
+[features]
+default = []
+cpu-parity = []

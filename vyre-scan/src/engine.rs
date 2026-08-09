@@ -1,7 +1,7 @@
 //! Common abstractions over the matching engines in `vyre-libs`.
 //!
 //! Every concrete engine in this crate (`GpuLiteralSet`, `DirectGpuScanner`,
-//! `RulePipeline`, future ones for parsers / taint flow / anomaly scoring)
+//! `ScanSession`, future ones for parsers / taint flow / anomaly scoring)
 //! ships the same shape of public API:
 //!
 //!   1. A `compile(...)` constructor that takes some pattern set.
@@ -38,7 +38,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
@@ -114,7 +114,7 @@ pub trait MatchScan {
         backend: &dyn VyreBackend,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError>;
+    ) -> Result<Vec<Match>, vyre_driver::BackendError>;
 
     /// Reference oracle scan. Used by the cross-layer parity tests in
     /// `vyre-conform`; engines that lack a meaningful CPU stepper
@@ -137,9 +137,9 @@ pub trait MatchScan {
     /// route through the panicking infallible wrapper).
     ///
     /// # Errors
-    /// Engine-specific [`vyre::BackendError`] when the CPU oracle cannot honor
+    /// Engine-specific [`vyre_driver::BackendError`] when the CPU oracle cannot honor
     /// the same `u32` match ABI the GPU path uses for this haystack.
-    fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre::BackendError> {
+    fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre_driver::BackendError> {
         Ok(self.reference_scan(haystack))
     }
 
@@ -315,7 +315,7 @@ where
 
 // ---- Concrete impls for the engines this crate ships ----
 
-use crate::scan::literal_set::{GpuLiteralSet, LiteralSetWireError};
+use crate::literal_set::{GpuLiteralSet, LiteralSetWireError};
 
 impl MatchScan for GpuLiteralSet {
     fn scan(
@@ -323,7 +323,7 @@ impl MatchScan for GpuLiteralSet {
         backend: &dyn VyreBackend,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         GpuLiteralSet::scan(self, backend, haystack, max_matches)
     }
 
@@ -364,7 +364,7 @@ impl MatchEngineCache for GpuLiteralSet {
 
 mod direct_gpu_impls {
     use super::*;
-    use crate::scan::direct_gpu::DirectGpuScanner;
+    use crate::direct_gpu::DirectGpuScanner;
 
     impl MatchScan for DirectGpuScanner {
         fn scan(
@@ -372,7 +372,7 @@ mod direct_gpu_impls {
             backend: &dyn VyreBackend,
             haystack: &[u8],
             max_matches: u32,
-        ) -> Result<Vec<Match>, vyre::BackendError> {
+        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
             DirectGpuScanner::scan(self, backend, haystack, max_matches)
         }
 
@@ -390,27 +390,30 @@ mod direct_gpu_impls {
 
 mod rule_pipeline_impls {
     use super::*;
-    use crate::scan::mega_scan::{PipelineWireError, RulePipeline};
+    use crate::session::{PipelineWireError, ScanSession};
 
-    impl MatchScan for RulePipeline {
+    impl MatchScan for ScanSession {
         fn scan(
             &self,
             backend: &dyn VyreBackend,
             haystack: &[u8],
             max_matches: u32,
-        ) -> Result<Vec<Match>, vyre::BackendError> {
-            RulePipeline::scan(self, backend, haystack, max_matches)
+        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+            ScanSession::scan(self, backend, haystack, max_matches)
         }
 
         fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
-            RulePipeline::reference_scan(self, haystack)
+            ScanSession::reference_scan(self, haystack)
         }
 
-        fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre::BackendError> {
+        fn try_reference_scan(
+            &self,
+            haystack: &[u8],
+        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
             // Forward to the inherent fallible scan, NOT the default, the
             // default would call the panicking infallible `reference_scan`,
             // turning a recoverable >u32 haystack into an abort.
-            RulePipeline::try_reference_scan(self, haystack)
+            ScanSession::try_reference_scan(self, haystack)
         }
 
         fn cache_key(&self) -> String {
@@ -418,30 +421,30 @@ mod rule_pipeline_impls {
             // `GpuLiteralSet::cache_key` implementation for why
             // `DefaultHasher` is the wrong choice here (per-process
             // SipHash seed defeats persistent caching).
-            let header = [self.plan.num_states, self.plan.input_len];
+            let header = [self.compiled.plan.num_states, self.compiled.plan.input_len];
             let h = fnv1a64_word_slices([
                 header.as_slice(),
-                self.transition_table.as_slice(),
-                self.epsilon_table.as_slice(),
+                self.compiled.transition_table.as_slice(),
+                self.compiled.epsilon_table.as_slice(),
             ]);
             format!("pipe-{h:016x}")
         }
     }
 
-    impl MatchEngineCache for RulePipeline {
+    impl MatchEngineCache for ScanSession {
         type WireError = PipelineWireError;
         const WIRE_MAGIC: [u8; 4] = *b"VRPL";
-        // Tracks `mega_scan::PIPELINE_WIRE_VERSION` (V4 adds the
+        // Tracks `session::PIPELINE_WIRE_VERSION` (V4 adds the
         // per-workgroup max-scan-bytes uniform buffer to the encoded
         // Program; V3 added the runtime-haystack-len buffer).
         const WIRE_VERSION: u32 = 4;
 
         fn to_bytes(&self) -> Result<Vec<u8>, Self::WireError> {
-            RulePipeline::to_bytes(self)
+            ScanSession::to_bytes(self)
         }
 
         fn from_bytes(bytes: &[u8]) -> Result<Self, Self::WireError> {
-            RulePipeline::from_bytes(bytes)
+            ScanSession::from_bytes(bytes)
         }
     }
 }
@@ -464,7 +467,7 @@ pub(crate) fn fnv1a64_word_slices<const N: usize>(slices: [&[u32]; N]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::literal_set::GpuLiteralSet;
+    use crate::literal_set::GpuLiteralSet;
 
     #[test]
     fn cache_key_changes_when_patterns_change() {

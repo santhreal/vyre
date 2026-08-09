@@ -3374,19 +3374,19 @@ checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 name = "vyre"
 version = "0.7.2"
 dependencies = [
- "blake3",
  "bytemuck",
  "proptest",
  "smallvec",
- "toml",
  "tracing",
  "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
+ "vyre-megakernel",
  "vyre-primitives",
+ "vyre-runtime",
+ "vyre-scan",
  "vyre-test-support",
 ]
 
@@ -4025,13 +4025,30 @@ dependencies = [
  "thiserror 2.0.19",
  "tracing",
  "ureq",
- "vyre",
  "vyre-driver",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-self-substrate",
  "vyre-test-support",
+]
+
+[[package]]
+name = "vyre-scan"
+version = "0.7.2"
+dependencies = [
+ "bytemuck",
+ "proptest",
+ "smallvec",
+ "tempfile",
+ "tracing",
+ "vyre-driver",
+ "vyre-driver-reference",
+ "vyre-driver-wgpu",
+ "vyre-foundation",
+ "vyre-libs",
+ "vyre-primitives",
+ "vyre-reference",
 ]
 
 [[package]]

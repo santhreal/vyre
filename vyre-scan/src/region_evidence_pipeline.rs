@@ -1,7 +1,7 @@
 //! Region-evidence pipeline, plan W2-2, line 158: the successor to the (now
-//! vestigial) `mega_scan::RulePipeline`.
+//! vestigial) `session::ScanSession`.
 //!
-//! `RulePipeline` was the NFA-subgroup integrator, but the coalesced-batch consumer
+//! `ScanSession` was the NFA-subgroup integrator, but the coalesced-batch consumer
 //! collapsed the mega-scan backend onto region-presence and never used
 //! the full multimatch path. This is what that consumer actually needs: ONE type,
 //! ONE call, returning the complete **phase-1 evidence bundle**: the three
@@ -22,7 +22,7 @@
 //! fused-kernel occupancy collapse.
 //!
 //! [`RegionEvidencePipeline::scan_fused`] is the **single-launch capability**
-//! (plan line 153): ONE dispatch of [`crate::scan::fused_region_evidence`]
+//! (plan line 153): ONE dispatch of [`crate::fused_region_evidence`]
 //! producing all three families. It exists because 153 asks for a single launch,
 //! but it is a correctness primitive, NOT the fast path, fusing the third family
 //! into one kernel is measured ~20x slower (occupancy collapse; see that module's
@@ -32,18 +32,18 @@
 //! Both agree with [`RegionEvidencePipeline::reference_scan`] (the CPU oracle)
 //! bit-for-bit (one bundle definition, three ways to compute it).
 
-use vyre::{BackendError, DispatchConfig, VyreBackend};
+use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_primitives::matching::CompiledDfa;
 
-use crate::scan::dispatch_io;
-use crate::scan::fused_region_evidence::{
+use crate::dispatch_io;
+use crate::fused_region_evidence::{
     fused_region_evidence_program, fused_region_evidence_reference, FusedRegionEvidence,
 };
-use crate::scan::regex_anchored_window::anchored_window_extract_program;
-use crate::scan::regex_region_admission::{
+use crate::regex_anchored_window::anchored_window_extract_program;
+use crate::regex_region_admission::{
     regex_admission_by_region_program, regex_admission_presence_words,
 };
-use crate::scan::{pack_u32_slice, unpack_match_triples};
+use crate::{pack_u32_slice, unpack_match_triples};
 
 /// The workgroup size every phase-1 evidence program declares
 /// (`Program::wrapped(.., [128, 1, 1], ..)`). One global invocation per haystack
@@ -462,7 +462,7 @@ fn decode_words(bytes: &[u8], word_count: usize) -> Vec<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::regex_dfa::build_regex_dfa_pipeline;
+    use crate::regex_dfa::build_regex_dfa_pipeline;
 
     fn dfa_for(patterns: &[&str]) -> CompiledDfa {
         build_regex_dfa_pipeline(patterns, 4096, 16_384)

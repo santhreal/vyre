@@ -2,7 +2,7 @@
 //!
 //! Composed entirely from `vyre-libs` LEGO blocks.
 
-use crate::scan::classic_ac::{
+use crate::classic_ac::{
     ascii_case_variants, build_ac_bounded_count_suffix3_prefilter_program,
     classic_ac_candidate_suffix3_bloom_words_ci, presence_bitmap_words, presence_by_region_words,
     try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
@@ -11,14 +11,14 @@ use crate::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program, CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
-use crate::scan::dfa::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
-use crate::scan::dispatch_io::ScanDispatchScratch;
+use crate::dfa::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
+use crate::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
-use vyre::backend::PendingDispatch;
-use vyre::ir::Program;
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::backend::PendingDispatch;
 use vyre_driver::Resource;
+use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_foundation::ir::Program;
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
 
@@ -205,24 +205,24 @@ impl LiteralSetPreparedScan {
     /// used by [`GpuLiteralSet::scan`].
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] when byte-size arithmetic overflows.
+    /// Returns [`vyre_driver::BackendError`] when byte-size arithmetic overflows.
     pub fn match_triples_readback_bytes(
         &self,
         match_count: u32,
-    ) -> Result<usize, vyre::BackendError> {
+    ) -> Result<usize, vyre_driver::BackendError> {
         literal_set_match_triple_bytes(match_count.min(self.max_matches))
     }
 
     /// Decode scan outputs into caller-owned match storage.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] when output buffers are missing,
+    /// Returns [`vyre_driver::BackendError`] when output buffers are missing,
     /// malformed, or too short for the reported match count.
     pub fn decode_outputs_into(
         &self,
         outputs: &[Vec<u8>],
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         decode_literal_set_outputs_into(outputs, self.max_matches, matches)
     }
 }
@@ -256,9 +256,9 @@ impl LiteralSetPreparedCount {
     /// Decode the count output from either borrowed or resident dispatch.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] when the output slot is missing or too
+    /// Returns [`vyre_driver::BackendError`] when the output slot is missing or too
     /// short for one `u32` counter.
-    pub fn decode_outputs(&self, outputs: &[Vec<u8>]) -> Result<u32, vyre::BackendError> {
+    pub fn decode_outputs(&self, outputs: &[Vec<u8>]) -> Result<u32, vyre_driver::BackendError> {
         decode_literal_set_count_outputs(outputs)
     }
 }
@@ -307,9 +307,12 @@ impl LiteralSetPreparedPresenceByRegion {
     /// `outputs[0]` is the presence-resource readback.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] when the output slot is missing or too short.
-    pub fn decode_presence(&self, outputs: &[Vec<u8>]) -> Result<Vec<u32>, vyre::BackendError> {
-        let presence_bytes = crate::scan::dispatch_io::try_output_bytes(
+    /// Returns [`vyre_driver::BackendError`] when the output slot is missing or too short.
+    pub fn decode_presence(
+        &self,
+        outputs: &[Vec<u8>],
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
+        let presence_bytes = crate::dispatch_io::try_output_bytes(
             outputs,
             0,
             "literal_set prepared presence_by_region",
@@ -344,7 +347,7 @@ struct PresenceImmutableTableBytes {
 
 /// IMMUTABLE region-presence tables (corpus-invariant) plus a `max_regions`-sized
 /// program, produced by [`GpuLiteralSet::resident_presence_tables`] and consumed
-/// by [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline).
+/// by [`ResidentPresencePipeline`](crate::resident_presence::ResidentPresencePipeline).
 ///
 /// Every field here is a function of the compiled matcher alone, none depends on
 /// the haystack or region layout, so a resident session uploads them once and
@@ -430,7 +433,7 @@ impl<'a> DfaPrefilterByteViews<'a> {
         pattern_lengths: &'a [u32],
         prefilter: &'a LiteralSetPrefilterTables,
     ) -> Self {
-        use crate::scan::dispatch_io::u32_words_as_le_bytes;
+        use crate::dispatch_io::u32_words_as_le_bytes;
         Self {
             transitions: u32_words_as_le_bytes(&dfa.transitions),
             output_offsets: u32_words_as_le_bytes(&dfa.output_offsets),
@@ -464,7 +467,7 @@ pub struct ScanAllTimed {
 /// prefilter tables into backend resources ONCE, then re-dispatches the
 /// `(pattern_id, start, end)` match scan across a corpus re-uploading only the
 /// per-file haystack (and resetting the 4-byte match counter), the position-scan
-/// sibling of [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline), eliminating the multi-MiB per-scan
+/// sibling of [`ResidentPresencePipeline`](crate::resident_presence::ResidentPresencePipeline), eliminating the multi-MiB per-scan
 /// table re-upload the borrowed [`GpuLiteralSet::scan_into`] path repeats on every
 /// file.
 ///
@@ -518,7 +521,7 @@ const _: () = {
 fn allocate_and_upload_resident(
     backend: &dyn VyreBackend,
     bytes: &[u8],
-) -> Result<Resource, vyre::BackendError> {
+) -> Result<Resource, vyre_driver::BackendError> {
     let resource = backend.allocate_resident(bytes.len())?;
     backend.upload_resident(&resource, bytes)?;
     Ok(resource)
@@ -538,15 +541,15 @@ impl GpuLiteralSet {
     /// [`Self::scan_all`] instead.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if the backend cannot allocate/upload resident
+    /// Returns [`vyre_driver::BackendError`] if the backend cannot allocate/upload resident
     /// resources, or if the program/table sizing overflows the GPU ABI.
     pub fn prepare_resident_scan(
         &self,
         backend: &dyn VyreBackend,
         haystack_capacity_bytes: usize,
         max_matches: u32,
-    ) -> Result<ResidentLiteralScan, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<ResidentLiteralScan, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let program = self.program_for_match_capacity(max_matches)?.into_owned();
         let prefilter_tables = self.build_prefilter_tables()?;
@@ -599,7 +602,7 @@ impl ResidentLiteralScan {
     /// reuses the packed-haystack staging across scans.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure, if `haystack`
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure, if `haystack`
     /// exceeds the resident capacity, or if the match count exceeds `max_matches`
     /// (fail closed (never a silent truncated decode)).
     pub fn scan_into(
@@ -608,7 +611,7 @@ impl ResidentLiteralScan {
         haystack: &[u8],
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.scan_into_timed(backend, haystack, matches, scratch)
             .map(|_timed| ())
     }
@@ -616,7 +619,7 @@ impl ResidentLiteralScan {
     /// [`Self::scan_into`] returning the backend-owned dispatch timing
     /// ([`vyre_driver::TimedDispatchResult`]) so a consumer can attribute the
     /// resident scan's GPU-kernel time separately from host staging/readback
-    /// matching [`ResidentPresencePipeline::scan_into_timed`](crate::scan::resident_presence::ResidentPresencePipeline::scan_into_timed).
+    /// matching [`ResidentPresencePipeline::scan_into_timed`](crate::resident_presence::ResidentPresencePipeline::scan_into_timed).
     ///
     /// # Errors
     /// See [`Self::scan_into`].
@@ -626,8 +629,8 @@ impl ResidentLiteralScan {
         haystack: &[u8],
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let haystack_len = dispatch_io::scan_guard(
@@ -640,7 +643,7 @@ impl ResidentLiteralScan {
         // bounds its cursor with haystack_len so the stale tail is never read).
         dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
         if scratch.len() > self.haystack_capacity {
-            return Err(vyre::BackendError::new(format!(
+            return Err(vyre_driver::BackendError::new(format!(
                 "ResidentLiteralScan haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident_scan or shard the haystack.",
                 scratch.len(),
                 self.haystack_capacity
@@ -698,8 +701,8 @@ impl ResidentLiteralScan {
     /// returns the first error; the session is consumed.
     ///
     /// # Errors
-    /// Returns the first [`vyre::BackendError`] from freeing a resource.
-    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre::BackendError> {
+    /// Returns the first [`vyre_driver::BackendError`] from freeing a resource.
+    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre_driver::BackendError> {
         let mut first_err = None;
         for resource in [
             self.haystack,
@@ -737,7 +740,7 @@ struct ResidentFusedSharedResources {
 /// ([`GpuLiteralSet::scan_presence_and_positions_by_region`]).
 ///
 /// Construct with [`GpuLiteralSet::prepare_resident_fused_scan`]. It is the
-/// fusion of [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline) (the per-region presence bitmap +
+/// fusion of [`ResidentPresencePipeline`](crate::resident_presence::ResidentPresencePipeline) (the per-region presence bitmap +
 /// region controls) and [`ResidentLiteralScan`] (the positioned match output):
 /// one all-resident dispatch of the fused program produces BOTH the per-region
 /// presence bitmap AND the `(pattern_id, start, end)` triples, uploading the
@@ -834,26 +837,26 @@ impl PendingResidentFusedRegion {
     /// caller-owned buffers.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on device/readback failure, malformed
+    /// Returns [`vyre_driver::BackendError`] on device/readback failure, malformed
     /// output, or match-count overflow.
     pub fn await_into(
         self,
         out: &mut Vec<u32>,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.await_into_timed(out, matches).map(|_| ())
     }
 
     /// Wait for readback, decode outputs, and return backend-owned timing.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on device/readback failure, malformed
+    /// Returns [`vyre_driver::BackendError`] on device/readback failure, malformed
     /// output, match-count overflow, or invalid backend timing.
     pub fn await_into_timed(
         self,
         out: &mut Vec<u32>,
         matches: &mut Vec<Match>,
-    ) -> Result<ResidentFusedTiming, vyre::BackendError> {
+    ) -> Result<ResidentFusedTiming, vyre_driver::BackendError> {
         out.clear();
         matches.clear();
         let timed = self.pending.await_timed_result()?;
@@ -894,7 +897,7 @@ impl GpuLiteralSet {
     /// `max_matches` matches fails CLOSED at scan time (never a silent partial).
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if `max_regions` is zero, if the backend
+    /// Returns [`vyre_driver::BackendError`] if `max_regions` is zero, if the backend
     /// cannot allocate/upload resident resources, or if the program/table sizing
     /// overflows the GPU ABI.
     pub fn prepare_resident_fused_scan(
@@ -903,7 +906,7 @@ impl GpuLiteralSet {
         haystack_capacity_bytes: usize,
         max_regions: u32,
         max_matches: u32,
-    ) -> Result<ResidentFusedRegionScan, vyre::BackendError> {
+    ) -> Result<ResidentFusedRegionScan, vyre_driver::BackendError> {
         self.prepare_resident_fused_scan_positioned_from(
             backend,
             haystack_capacity_bytes,
@@ -923,7 +926,7 @@ impl GpuLiteralSet {
     /// admission rows consume no triple capacity or readback bandwidth.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] under the same conditions as
+    /// Returns [`vyre_driver::BackendError`] under the same conditions as
     /// [`Self::prepare_resident_fused_scan`], or when the positioned boundary
     /// exceeds the compiled pattern count.
     pub fn prepare_resident_fused_scan_positioned_from(
@@ -933,16 +936,16 @@ impl GpuLiteralSet {
         max_regions: u32,
         max_matches: u32,
         first_positioned_pattern_id: u32,
-    ) -> Result<ResidentFusedRegionScan, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<ResidentFusedRegionScan, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set fused resident scan: pattern count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         if max_regions == 0 {
-            return Err(vyre::BackendError::new(
+            return Err(vyre_driver::BackendError::new(
                 "literal_set resident fused scan: max_regions must be >= 1 (it sizes the resident presence buffer and the kernel's region binary-search width). Fix: pass the largest coalesced-batch file count the session will scan.".to_string(),
             ));
         }
@@ -954,7 +957,7 @@ impl GpuLiteralSet {
                 max_matches,
                 first_positioned_pattern_id,
             )
-            .map_err(vyre::BackendError::new)?;
+            .map_err(vyre_driver::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let presence_words = presence_bitmap_words(pattern_count);
@@ -978,13 +981,13 @@ impl GpuLiteralSet {
         let presence_capacity_words = (max_regions as usize)
             .checked_mul(presence_words as usize)
             .ok_or_else(|| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "resident fused scan capacity {max_regions} regions × {presence_words} words/region overflows host usize. Fix: lower max_regions or shard the pattern set."
                 ))
             })?;
         let presence_capacity_bytes =
             presence_capacity_words.checked_mul(U32_BYTES).ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "resident fused scan presence-buffer byte capacity overflows host usize. Fix: lower max_regions or shard the pattern set.".to_string(),
                 )
             })?;
@@ -994,7 +997,7 @@ impl GpuLiteralSet {
         let haystack_len_buf = backend.allocate_resident(U32_BYTES)?;
         let region_starts_capacity_bytes =
             (max_regions as usize).checked_mul(U32_BYTES).ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "resident fused scan region-starts byte capacity overflows host usize. Fix: lower max_regions.".to_string(),
                 )
             })?;
@@ -1040,20 +1043,23 @@ impl ResidentFusedRegionScan {
     /// sibling session is released.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if any mutable resident allocation fails.
-    pub fn fork_independent(&self, backend: &dyn VyreBackend) -> Result<Self, vyre::BackendError> {
+    /// Returns [`vyre_driver::BackendError`] if any mutable resident allocation fails.
+    pub fn fork_independent(
+        &self,
+        backend: &dyn VyreBackend,
+    ) -> Result<Self, vyre_driver::BackendError> {
         let presence_capacity_bytes = (self.max_regions as usize)
             .checked_mul(self.presence_words as usize)
             .and_then(|words| words.checked_mul(U32_BYTES))
             .ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "resident fused fork presence-buffer byte capacity overflows host usize. Fix: lower max_regions or shard the pattern set.",
                 )
             })?;
         let region_starts_capacity_bytes = (self.max_regions as usize)
             .checked_mul(U32_BYTES)
             .ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "resident fused fork region-starts byte capacity overflows host usize. Fix: lower max_regions.",
                 )
             })?;
@@ -1069,7 +1075,7 @@ impl ResidentFusedRegionScan {
         ];
         let mut resources = Vec::new();
         resources.try_reserve_exact(sizes.len()).map_err(|error| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "resident fused fork resource ledger allocation failed: {error}"
             ))
         })?;
@@ -1084,7 +1090,7 @@ impl ResidentFusedRegionScan {
                         }
                     }
                     return Err(match cleanup_error {
-                        Some(cleanup_error) => vyre::BackendError::new(format!(
+                        Some(cleanup_error) => vyre_driver::BackendError::new(format!(
                             "{error}; resident fused fork rollback also failed: {cleanup_error}"
                         )),
                         None => error,
@@ -1104,7 +1110,7 @@ impl ResidentFusedRegionScan {
             for resource in resources {
                 let _ = backend.free_resident(resource);
             }
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "resident fused fork allocated an invalid resource count. Fix: keep the mutable resource layout synchronized with its allocation sizes.",
             )
         })?;
@@ -1134,7 +1140,7 @@ impl ResidentFusedRegionScan {
     /// scans.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure, if
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure, if
     /// `region_starts` is empty / does not begin at 0, if `region_count` exceeds
     /// `max_regions`, if `haystack` exceeds the resident capacity, or if the match
     /// count exceeds `max_matches` (fail closed (never a silent truncated decode)).
@@ -1148,7 +1154,7 @@ impl ResidentFusedRegionScan {
         out: &mut Vec<u32>,
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.scan_into_timed(
             backend,
             haystack,
@@ -1169,7 +1175,7 @@ impl ResidentFusedRegionScan {
     /// so another independent session is required to overlap the next upload.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] under the same validation and staging
+    /// Returns [`vyre_driver::BackendError`] under the same validation and staging
     /// conditions as [`Self::scan_into`], or when asynchronous submission fails.
     #[allow(clippy::too_many_arguments)]
     pub fn scan_async(
@@ -1179,7 +1185,7 @@ impl ResidentFusedRegionScan {
         region_starts: &[u32],
         region_base: u32,
         scratch: &mut Vec<u8>,
-    ) -> Result<PendingResidentFusedRegion, vyre::BackendError> {
+    ) -> Result<PendingResidentFusedRegion, vyre_driver::BackendError> {
         let in_flight = self.begin_dispatch()?;
         let dispatch =
             self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
@@ -1197,7 +1203,7 @@ impl ResidentFusedRegionScan {
         })
     }
 
-    fn begin_dispatch(&self) -> Result<ResidentFusedInFlightGuard, vyre::BackendError> {
+    fn begin_dispatch(&self) -> Result<ResidentFusedInFlightGuard, vyre_driver::BackendError> {
         self.in_flight
             .compare_exchange(
                 false,
@@ -1206,7 +1212,7 @@ impl ResidentFusedRegionScan {
                 std::sync::atomic::Ordering::Relaxed,
             )
             .map_err(|_| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "ResidentFusedRegionScan already has a dispatch in flight. Fix: await the pending result before reusing this resident session, or prepare another session for pipelining.".to_string(),
                 )
             })?;
@@ -1231,7 +1237,7 @@ impl ResidentFusedRegionScan {
         out: &mut Vec<u32>,
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let _in_flight = self.begin_dispatch()?;
         out.clear();
         matches.clear();
@@ -1260,26 +1266,26 @@ impl ResidentFusedRegionScan {
         region_starts: &[u32],
         region_base: u32,
         scratch: &mut Vec<u8>,
-    ) -> Result<ResidentFusedDispatch, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<ResidentFusedDispatch, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let region_count = u32::try_from(region_starts.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "resident fused scan: region count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         if region_count == 0 {
-            return Err(vyre::BackendError::new(
+            return Err(vyre_driver::BackendError::new(
                 "resident fused scan: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0.".to_string(),
             ));
         }
         if region_starts[0] != 0 {
-            return Err(vyre::BackendError::new(
+            return Err(vyre_driver::BackendError::new(
                 "resident fused scan: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0.".to_string(),
             ));
         }
         if region_count > self.max_regions {
-            return Err(vyre::BackendError::new(format!(
+            return Err(vyre_driver::BackendError::new(format!(
                 "resident fused scan batch has {region_count} regions but the session was prepared for at most {}. Fix: raise max_regions in prepare_resident_fused_scan, or dispatch this batch through the per-batch-sized borrowed GpuLiteralSet::scan_presence_and_positions_by_region.",
                 self.max_regions
             )));
@@ -1292,7 +1298,7 @@ impl ResidentFusedRegionScan {
         )?;
         dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
         if scratch.len() > self.haystack_capacity {
-            return Err(vyre::BackendError::new(format!(
+            return Err(vyre_driver::BackendError::new(format!(
                 "ResidentFusedRegionScan haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident_fused_scan or shard the haystack.",
                 scratch.len(),
                 self.haystack_capacity
@@ -1303,12 +1309,12 @@ impl ResidentFusedRegionScan {
         let used_words = (region_count as usize)
             .checked_mul(self.presence_words as usize)
             .ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "resident fused scan used-word count overflows host usize. Fix: lower the region count or shard the pattern set.".to_string(),
                 )
             })?;
         let reset_bytes = used_words.checked_mul(U32_BYTES).ok_or_else(|| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "resident fused scan presence-reset byte count overflows host usize. Fix: lower the region count or shard the pattern set.".to_string(),
             )
         })?;
@@ -1379,10 +1385,10 @@ impl ResidentFusedRegionScan {
     ///
     /// # Errors
     /// Returns an error without recycling any resource while a dispatch remains
-    /// in flight, or the first [`vyre::BackendError`] from freeing a resource.
-    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre::BackendError> {
+    /// in flight, or the first [`vyre_driver::BackendError`] from freeing a resource.
+    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre_driver::BackendError> {
         if self.in_flight.load(std::sync::atomic::Ordering::Acquire) {
-            return Err(vyre::BackendError::new(
+            return Err(vyre_driver::BackendError::new(
                 "ResidentFusedRegionScan cannot be freed while a dispatch is in flight. Fix: await the pending result before freeing this resident session.",
             ));
         }
@@ -1426,8 +1432,8 @@ fn decode_resident_fused_outputs(
     max_matches: u32,
     out: &mut Vec<u32>,
     matches: &mut Vec<Match>,
-) -> Result<(), vyre::BackendError> {
-    use crate::scan::dispatch_io;
+) -> Result<(), vyre_driver::BackendError> {
+    use crate::dispatch_io;
 
     let presence_bytes =
         dispatch_io::try_output_bytes(outputs, 0, "ResidentFusedRegionScan presence buffer")?;
@@ -1435,7 +1441,7 @@ fn decode_resident_fused_outputs(
     if out.len() != used_words {
         let returned = out.len();
         out.clear();
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "ResidentFusedRegionScan presence readback returned {returned} u32 word(s) but the {region_count}-region scan needs {used_words}. Fix: ensure the backend reads back the full binding-6 presence resource."
         )));
     }
@@ -1476,7 +1482,7 @@ impl PendingPresenceByRegion {
     /// Non-blocking readiness probe. `true` means [`Self::await_words`] will not
     /// block the caller thread. Backends that cannot probe without cost report
     /// `true` unconditionally (the caller then blocks inside `await_words`). See
-    /// [`vyre::backend::PendingDispatch::is_ready`].
+    /// [`vyre_driver::backend::PendingDispatch::is_ready`].
     #[must_use]
     pub fn is_ready(&self) -> bool {
         self.pending.is_ready()
@@ -1489,10 +1495,10 @@ impl PendingPresenceByRegion {
     /// region `r`). Calling this when [`Self::is_ready`] is `true` does not block.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure.
-    pub fn await_words(self) -> Result<Vec<u32>, vyre::BackendError> {
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure.
+    pub fn await_words(self) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let outputs = self.pending.await_result()?;
-        let presence_bytes = crate::scan::dispatch_io::try_output_bytes(
+        let presence_bytes = crate::dispatch_io::try_output_bytes(
             &outputs,
             0,
             "literal_set presence_by_region async",
@@ -1519,7 +1525,7 @@ pub struct PendingPresence {
 
 impl PendingPresence {
     /// Non-blocking readiness probe. `true` means [`Self::await_words`] will not
-    /// block the caller thread. See [`vyre::backend::PendingDispatch::is_ready`].
+    /// block the caller thread. See [`vyre_driver::backend::PendingDispatch::is_ready`].
     #[must_use]
     pub fn is_ready(&self) -> bool {
         self.pending.is_ready()
@@ -1532,11 +1538,11 @@ impl PendingPresence {
     /// [`Self::is_ready`] is `true` does not block.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure.
-    pub fn await_words(self) -> Result<Vec<u32>, vyre::BackendError> {
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure.
+    pub fn await_words(self) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let outputs = self.pending.await_result()?;
         let presence_bytes =
-            crate::scan::dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence async")?;
+            crate::dispatch_io::try_output_bytes(&outputs, 0, "literal_set presence async")?;
         Ok(decode_presence_words(presence_bytes, self.presence_words))
     }
 }
@@ -1559,7 +1565,7 @@ pub struct PendingMatches {
 
 impl PendingMatches {
     /// Non-blocking readiness probe. `true` means [`Self::await_into`] will not
-    /// block the caller thread. See [`vyre::backend::PendingDispatch::is_ready`].
+    /// block the caller thread. See [`vyre_driver::backend::PendingDispatch::is_ready`].
     #[must_use]
     pub fn is_ready(&self) -> bool {
         self.pending.is_ready()
@@ -1572,9 +1578,9 @@ impl PendingMatches {
     /// Law 10). Calling this when [`Self::is_ready`] is `true` does not block.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure or match-count
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure or match-count
     /// overflow.
-    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<(), vyre::BackendError> {
+    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<(), vyre_driver::BackendError> {
         matches.clear();
         let outputs = self.pending.await_result()?;
         self.prepared.decode_outputs_into(&outputs, matches)
@@ -1584,7 +1590,7 @@ impl PendingMatches {
     ///
     /// # Errors
     /// See [`Self::await_into`].
-    pub fn await_matches(self) -> Result<Vec<Match>, vyre::BackendError> {
+    pub fn await_matches(self) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.await_into(&mut matches)?;
         Ok(matches)
@@ -1610,7 +1616,7 @@ pub struct PendingFusedRegion {
 
 impl PendingFusedRegion {
     /// Non-blocking readiness probe. See
-    /// [`vyre::backend::PendingDispatch::is_ready`].
+    /// [`vyre_driver::backend::PendingDispatch::is_ready`].
     #[must_use]
     pub fn is_ready(&self) -> bool {
         self.pending.is_ready()
@@ -1625,10 +1631,13 @@ impl PendingFusedRegion {
     /// `true` does not block.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure or match-count
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure or match-count
     /// overflow.
-    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<Vec<u32>, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    pub fn await_into(
+        self,
+        matches: &mut Vec<Match>,
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
+        use crate::dispatch_io;
         matches.clear();
         let outputs = self.pending.await_result()?;
         // presence(6)->outputs[0], match_count(12)->outputs[1], matches(13)->outputs[2].
@@ -1818,13 +1827,13 @@ impl GpuLiteralSet {
     /// GPU scan dispatch.
     ///
     /// # Errors
-    /// Returns `vyre::BackendError` if dispatch or readback fails.
+    /// Returns `vyre_driver::BackendError` if dispatch or readback fails.
     pub fn scan<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_into(backend, haystack, max_matches, &mut matches)?;
         Ok(matches)
@@ -1837,14 +1846,14 @@ impl GpuLiteralSet {
     /// match [`Self::scan`].
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch or readback fails.
+    /// Returns [`vyre_driver::BackendError`] if dispatch or readback fails.
     pub fn scan_into<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_into_with_scratch(backend, haystack, max_matches, matches, &mut scratch)
     }
@@ -1875,7 +1884,7 @@ impl GpuLiteralSet {
         haystack: &[u8],
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         matches.clear();
         let prepared = self.prepare_scan_dispatch(haystack, max_matches)?;
         let borrowed: smallvec::SmallVec<[&[u8]; 8]> =
@@ -1914,7 +1923,7 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<PendingMatches, vyre::BackendError> {
+    ) -> Result<PendingMatches, vyre_driver::BackendError> {
         let prepared = self.prepare_scan_dispatch(haystack, max_matches)?;
         let pending = backend.dispatch_async(
             &prepared.program,
@@ -1955,14 +1964,14 @@ impl GpuLiteralSet {
     /// [`Self::prepare_resident_scan`] path for a hot corpus loop.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch or readback fails, or if the
+    /// Returns [`vyre_driver::BackendError`] if dispatch or readback fails, or if the
     /// true match count exceeds the u32 GPU match-output ABI (fail closed with
     /// the exact count and the fix, never a truncated decode).
     pub fn scan_all<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_all_into(backend, haystack, &mut matches)?;
         Ok(matches)
@@ -1977,7 +1986,7 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_all_into_with_scratch(backend, haystack, matches, &mut scratch)
     }
@@ -1996,8 +2005,8 @@ impl GpuLiteralSet {
         haystack: &[u8],
         matches: &mut Vec<Match>,
         scratch: &mut ScanDispatchScratch,
-    ) -> Result<(), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let haystack_len =
@@ -2028,7 +2037,7 @@ impl GpuLiteralSet {
                 return decode_literal_set_outputs_into(&outputs, capacity, matches);
             }
             if attempt == 1 {
-                return Err(vyre::BackendError::new(format!(
+                return Err(vyre_driver::BackendError::new(format!(
                     "literal_set scan_all recount instability: resized to exact device count {capacity} yet the re-dispatch reported {count}. Fix: this indicates a nondeterministic backend match counter; the scan cannot be completed without silent truncation."
                 )));
             }
@@ -2039,7 +2048,7 @@ impl GpuLiteralSet {
             capacity = count;
         }
         // Unreachable: the loop returns on both branches within two attempts.
-        Err(vyre::BackendError::new(
+        Err(vyre_driver::BackendError::new(
             "literal_set scan_all exhausted its bounded auto-resize attempts without a decode. Fix: report this as a vyre bug, the count/capacity invariant was violated.",
         ))
     }
@@ -2071,8 +2080,8 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         matches: &mut Vec<Match>,
-    ) -> Result<ScanAllTimed, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<ScanAllTimed, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let haystack_len =
@@ -2102,13 +2111,13 @@ impl GpuLiteralSet {
                 });
             }
             if attempt == 1 {
-                return Err(vyre::BackendError::new(format!(
+                return Err(vyre_driver::BackendError::new(format!(
                     "literal_set scan_all_timed recount instability: resized to exact device count {capacity} yet the re-dispatch reported {count}. Fix: this indicates a nondeterministic backend match counter; the scan cannot be completed without silent truncation."
                 )));
             }
             capacity = count;
         }
-        Err(vyre::BackendError::new(
+        Err(vyre_driver::BackendError::new(
             "literal_set scan_all_timed exhausted its bounded auto-resize attempts without a decode. Fix: report this as a vyre bug, the count/capacity invariant was violated.",
         ))
     }
@@ -2120,13 +2129,13 @@ impl GpuLiteralSet {
     /// suffix-prefiltered bounded DFA count kernel and reads one `u32`.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] if dispatch, readback, scan-boundary
     /// validation, or host staging allocation fails.
     pub fn count<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
-    ) -> Result<u32, vyre::BackendError> {
+    ) -> Result<u32, vyre_driver::BackendError> {
         let mut scratch = LiteralSetScanScratch::default();
         self.count_with_literal_scratch(backend, haystack, &mut scratch)
     }
@@ -2141,7 +2150,7 @@ impl GpuLiteralSet {
     /// suffix-prefilter tables and cap-specific program layout.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] if dispatch, readback, scan-boundary
     /// validation, or host staging allocation fails.
     pub fn scan_into_with_scratch<B: VyreBackend + ?Sized>(
         &self,
@@ -2150,7 +2159,7 @@ impl GpuLiteralSet {
         max_matches: u32,
         matches: &mut Vec<Match>,
         scratch: &mut ScanDispatchScratch,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         let dispatch_program = self.program_for_match_capacity(max_matches)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         self.scan_into_with_program(
@@ -2172,13 +2181,13 @@ impl GpuLiteralSet {
     /// inputs.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if match-capacity sizing or
+    /// Returns [`vyre_driver::BackendError`] if match-capacity sizing or
     /// suffix-prefilter staging fails.
     pub fn prepare_literal_scratch(
         &self,
         max_matches: u32,
         scratch: &mut LiteralSetScanScratch,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.program_for_match_capacity_cached(max_matches, &mut scratch.cached_program)?;
         self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
         Ok(())
@@ -2190,11 +2199,11 @@ impl GpuLiteralSet {
     /// outside the timed count path without preparing match-list output state.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if suffix-prefilter staging fails.
+    /// Returns [`vyre_driver::BackendError`] if suffix-prefilter staging fails.
     pub fn prepare_count_scratch(
         &self,
         scratch: &mut LiteralSetScanScratch,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.count_program_cached(&mut scratch.cached_count_program)?;
         self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
         Ok(())
@@ -2210,14 +2219,14 @@ impl GpuLiteralSet {
     /// scans of the same haystack.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if scan-boundary validation,
+    /// Returns [`vyre_driver::BackendError`] if scan-boundary validation,
     /// cap-specific program sizing, suffix-prefilter staging, or input-buffer
     /// allocation fails.
     pub fn prepare_scan_dispatch(
         &self,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<LiteralSetPreparedScan, vyre::BackendError> {
+    ) -> Result<LiteralSetPreparedScan, vyre_driver::BackendError> {
         let dispatch_program = self.program_for_match_capacity(max_matches)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         self.prepare_scan_dispatch_with_program(
@@ -2236,12 +2245,12 @@ impl GpuLiteralSet {
     /// [`LITERAL_SET_COUNT_RESOURCE_INDEX`] for one `u32` result.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if scan-boundary validation,
+    /// Returns [`vyre_driver::BackendError`] if scan-boundary validation,
     /// suffix-prefilter staging, or input-buffer allocation fails.
     pub fn prepare_count_dispatch(
         &self,
         haystack: &[u8],
-    ) -> Result<LiteralSetPreparedCount, vyre::BackendError> {
+    ) -> Result<LiteralSetPreparedCount, vyre_driver::BackendError> {
         let count_program = self.count_program();
         let prefilter_tables = self.build_prefilter_tables()?;
         self.prepare_count_dispatch_with_program(haystack, &count_program, &prefilter_tables)
@@ -2255,7 +2264,7 @@ impl GpuLiteralSet {
     /// `Program`.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] if dispatch, readback, scan-boundary
     /// validation, host staging allocation, or cap-specific program sizing
     /// fails.
     pub fn scan_into_with_literal_scratch<B: VyreBackend + ?Sized>(
@@ -2265,7 +2274,7 @@ impl GpuLiteralSet {
         max_matches: u32,
         matches: &mut Vec<Match>,
         scratch: &mut LiteralSetScanScratch,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         let cached_program = &mut scratch.cached_program;
         let dispatch_program =
             self.program_for_match_capacity_cached(max_matches, cached_program)?;
@@ -2287,14 +2296,14 @@ impl GpuLiteralSet {
     /// dispatch `Program` across repeated scans.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] if dispatch, readback, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] if dispatch, readback, scan-boundary
     /// validation, or host staging allocation fails.
     pub fn count_with_literal_scratch<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
         scratch: &mut LiteralSetScanScratch,
-    ) -> Result<u32, vyre::BackendError> {
+    ) -> Result<u32, vyre_driver::BackendError> {
         let count_program = self.count_program_cached(&mut scratch.cached_count_program)?;
         let prefilter_tables = self.prefilter_tables_cached(&mut scratch.cached_prefilter)?;
         self.count_with_program(
@@ -2321,13 +2330,13 @@ impl GpuLiteralSet {
     /// `atomic_or`. Inputs 0-5 / 7-9 are byte-identical to [`Self::scan`].
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure, scan-boundary
     /// validation, or a pattern count exceeding the u32 GPU ABI.
     pub fn scan_presence<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
-    ) -> Result<Vec<u32>, vyre::BackendError> {
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_presence_with_scratch(backend, haystack, &mut scratch)
     }
@@ -2342,18 +2351,18 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         scratch: &mut ScanDispatchScratch,
-    ) -> Result<Vec<u32>, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set presence: pattern count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         let presence_words = presence_bitmap_words(pattern_count) as usize;
         let program =
             try_build_ac_bounded_ranges_suffix3_presence_program(&self.dfa, pattern_count)
-                .map_err(vyre::BackendError::new)?;
+                .map_err(vyre_driver::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
 
         let haystack_len = dispatch_io::scan_guard(
@@ -2411,7 +2420,7 @@ impl GpuLiteralSet {
     /// so the end-position attribution the kernel performs equals start attribution.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure, scan-boundary
     /// validation, an empty or non-zero-based `region_starts`, or a pattern/region
     /// count exceeding the u32 GPU ABI.
     pub fn scan_presence_by_region<B: VyreBackend + ?Sized>(
@@ -2419,7 +2428,7 @@ impl GpuLiteralSet {
         backend: &B,
         haystack: &[u8],
         region_starts: &[u32],
-    ) -> Result<Vec<u32>, vyre::BackendError> {
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_presence_by_region_with_scratch(backend, haystack, region_starts, 0, &mut scratch)
     }
@@ -2443,8 +2452,8 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         scratch: &mut ScanDispatchScratch,
-    ) -> Result<Vec<u32>, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let (pattern_count, region_count) = validate_region_starts(
             region_starts,
@@ -2457,7 +2466,7 @@ impl GpuLiteralSet {
             pattern_count,
             region_count,
         )
-        .map_err(vyre::BackendError::new)?;
+        .map_err(vyre_driver::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
 
         let haystack_len = dispatch_io::scan_guard(
@@ -2527,8 +2536,8 @@ impl GpuLiteralSet {
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
-    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let (program, inputs, config, total_words, _haystack_len) =
             self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
@@ -2554,7 +2563,7 @@ impl GpuLiteralSet {
     /// scan executes while the caller does host work; on a backend that cannot
     /// (the synchronous default in [`VyreBackend::dispatch_async`]) the handle is
     /// trivially ready and this is equivalent, same bitmap, no overlap, no silent
-    /// change of result. See [`vyre::backend::PendingDispatch`].
+    /// change of result. See [`vyre_driver::backend::PendingDispatch`].
     ///
     /// Unlike the synchronous entry there is NO `scratch` parameter: the async
     /// dispatch ABI is `&[Vec<u8>]`, so inputs are built into OWNED buffers that
@@ -2576,7 +2585,7 @@ impl GpuLiteralSet {
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
-    ) -> Result<PendingPresenceByRegion, vyre::BackendError> {
+    ) -> Result<PendingPresenceByRegion, vyre_driver::BackendError> {
         let (program, inputs, config, total_words, _haystack_len) =
             self.build_presence_by_region_dispatch(haystack, region_starts, region_base)?;
         let pending = backend.dispatch_async(&program, &inputs, &config)?;
@@ -2609,7 +2618,7 @@ impl GpuLiteralSet {
     fn presence_immutable_table_bytes(
         &self,
         prefilter: &LiteralSetPrefilterTables,
-    ) -> Result<PresenceImmutableTableBytes, vyre::BackendError> {
+    ) -> Result<PresenceImmutableTableBytes, vyre_driver::BackendError> {
         Ok(PresenceImmutableTableBytes {
             transitions: copy_u32_words_as_le_bytes(&self.dfa.transitions, "transition table")?,
             output_offsets: copy_u32_words_as_le_bytes(
@@ -2662,8 +2671,8 @@ impl GpuLiteralSet {
         guard_ctx: &'static str,
         total_words: usize,
         total_binding_count: usize,
-    ) -> Result<(u32, Vec<Vec<u8>>), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(u32, Vec<Vec<u8>>), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let prefilter_tables = self.build_prefilter_tables()?;
         let haystack_len =
@@ -2678,7 +2687,7 @@ impl GpuLiteralSet {
         let mut inputs: Vec<Vec<u8>> = Vec::new();
         vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut inputs, total_binding_count)
             .map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set presence ({guard_ctx}) could not reserve {total_binding_count} input buffer slot(s): {source}. Fix: shard the literal set or haystack before dispatch."
                 ))
             })?;
@@ -2704,8 +2713,8 @@ impl GpuLiteralSet {
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
-    ) -> Result<PresenceByRegionDispatch, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<PresenceByRegionDispatch, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let (pattern_count, region_count) = validate_region_starts(
             region_starts,
@@ -2718,7 +2727,7 @@ impl GpuLiteralSet {
             pattern_count,
             region_count,
         )
-        .map_err(vyre::BackendError::new)?;
+        .map_err(vyre_driver::BackendError::new)?;
 
         // Bindings 0..=9 (the ONE-PLACE common staging), reserved for all 12.
         const PRESENCE_BY_REGION_INPUT_COUNT: usize = 12;
@@ -2756,18 +2765,18 @@ impl GpuLiteralSet {
     fn build_presence_dispatch(
         &self,
         haystack: &[u8],
-    ) -> Result<PresenceDispatch, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<PresenceDispatch, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set presence: pattern count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         let presence_words = presence_bitmap_words(pattern_count) as usize;
         let program =
             try_build_ac_bounded_ranges_suffix3_presence_program(&self.dfa, pattern_count)
-                .map_err(vyre::BackendError::new)?;
+                .map_err(vyre_driver::BackendError::new)?;
 
         // The global-presence program is EXACTLY the 0..=9 common staging, no tail
         // bindings (so it reserves and fills all 10 through the shared owner).
@@ -2805,8 +2814,8 @@ impl GpuLiteralSet {
         &self,
         backend: &B,
         haystack: &[u8],
-    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
         let borrowed: smallvec::SmallVec<[&[u8]; 10]> = inputs.iter().map(Vec::as_slice).collect();
@@ -2841,7 +2850,7 @@ impl GpuLiteralSet {
         &self,
         backend: &B,
         haystack: &[u8],
-    ) -> Result<PendingPresence, vyre::BackendError> {
+    ) -> Result<PendingPresence, vyre_driver::BackendError> {
         let (program, inputs, config, presence_words) = self.build_presence_dispatch(haystack)?;
         let pending = backend.dispatch_async(&program, &inputs, &config)?;
         Ok(PendingPresence {
@@ -2869,9 +2878,9 @@ impl GpuLiteralSet {
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
-    ) -> Result<LiteralSetPreparedPresenceByRegion, vyre::BackendError> {
+    ) -> Result<LiteralSetPreparedPresenceByRegion, vyre_driver::BackendError> {
         let region_count = u32::try_from(region_starts.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set region-presence: region count exceeds u32 GPU ABI".to_string(),
             )
         })?;
@@ -2880,12 +2889,12 @@ impl GpuLiteralSet {
         let presence_output_bytes = total_words.saturating_mul(U32_BYTES);
         let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
             let len = u64::try_from(input.len()).map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set prepared region-presence input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
                 ))
             })?;
             sum.checked_add(len).ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "literal_set prepared region-presence input byte total overflowed u64. Fix: shard the scan before dispatch.",
                 )
             })
@@ -2904,7 +2913,7 @@ impl GpuLiteralSet {
 
     /// Extract the IMMUTABLE region-presence tables, everything that does NOT
     /// change across the files of a corpus, plus a `max_regions`-sized program,
-    /// for [`ResidentPresencePipeline`](crate::scan::resident_presence::ResidentPresencePipeline)
+    /// for [`ResidentPresencePipeline`](crate::resident_presence::ResidentPresencePipeline)
     /// to upload into backend-resident resources ONCE.
     ///
     /// The borrowed / async / prepared presence paths re-encode and re-upload the
@@ -2914,7 +2923,7 @@ impl GpuLiteralSet {
     /// layout, so a resident session uploads them once and re-dispatches across a
     /// corpus, transferring only the per-file haystack and the binding-6 presence
     /// reset. This is the presence sibling of
-    /// [`RulePipeline::prepare_resident`](crate::scan::mega_scan::RulePipeline::prepare_resident)'s
+    /// [`ScanSession::prepare_resident`](crate::session::ScanSession::prepare_resident)'s
     /// table extraction.
     ///
     /// The returned [`program`](ResidentPresenceTables::program) is sized for
@@ -2928,20 +2937,20 @@ impl GpuLiteralSet {
     /// instead of aborting on OOM.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] when `max_regions` is zero, the pattern
+    /// Returns [`vyre_driver::BackendError`] when `max_regions` is zero, the pattern
     /// count exceeds the u32 GPU ABI, the presence program cannot be built, or any
     /// table allocation fails.
     pub(crate) fn resident_presence_tables(
         &self,
         max_regions: u32,
-    ) -> Result<ResidentPresenceTables, vyre::BackendError> {
+    ) -> Result<ResidentPresenceTables, vyre_driver::BackendError> {
         let pattern_count = u32::try_from(self.pattern_lengths.len()).map_err(|_| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set region-presence: pattern count exceeds u32 GPU ABI".to_string(),
             )
         })?;
         if max_regions == 0 {
-            return Err(vyre::BackendError::new(
+            return Err(vyre_driver::BackendError::new(
                 "literal_set resident region-presence: max_regions must be >= 1 (it sizes the resident presence buffer and the kernel's region binary-search width). Fix: pass the largest coalesced-batch file count the session will scan.".to_string(),
             ));
         }
@@ -2950,7 +2959,7 @@ impl GpuLiteralSet {
             pattern_count,
             max_regions,
         )
-        .map_err(vyre::BackendError::new)?;
+        .map_err(vyre_driver::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let presence_words = presence_bitmap_words(pattern_count);
@@ -2984,7 +2993,7 @@ impl GpuLiteralSet {
         region_base: u32,
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<Vec<u32>, vyre::BackendError> {
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_presence_and_positions_by_region_with_scratch(
             backend,
@@ -3027,7 +3036,7 @@ impl GpuLiteralSet {
     /// fused path). Proof + numbers: `tests/literal_set_presence_and_positions_gpu.rs`.
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch/readback failure, scan-boundary
+    /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure, scan-boundary
     /// validation, an empty or non-zero-based `region_starts`, or a pattern/region
     /// count exceeding the u32 GPU ABI.
     #[allow(clippy::too_many_arguments)]
@@ -3040,8 +3049,8 @@ impl GpuLiteralSet {
         max_matches: u32,
         matches: &mut Vec<Match>,
         scratch: &mut ScanDispatchScratch,
-    ) -> Result<Vec<u32>, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<Vec<u32>, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let (pattern_count, region_count) = validate_region_starts(
@@ -3056,7 +3065,7 @@ impl GpuLiteralSet {
             region_count,
             max_matches,
         )
-        .map_err(vyre::BackendError::new)?;
+        .map_err(vyre_driver::BackendError::new)?;
         let prefilter_tables = self.build_prefilter_tables()?;
 
         let haystack_len = dispatch_io::scan_guard(
@@ -3159,8 +3168,8 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-    ) -> Result<PresenceDispatch, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<PresenceDispatch, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let (pattern_count, region_count) = validate_region_starts(
             region_starts,
@@ -3174,7 +3183,7 @@ impl GpuLiteralSet {
             region_count,
             max_matches,
         )
-        .map_err(vyre::BackendError::new)?;
+        .map_err(vyre_driver::BackendError::new)?;
 
         // Bindings 0..=9 (the ONE-PLACE common staging), reserved for all 13. The
         // matches output (binding 13) is a backend-allocated `BufferDecl::output`,
@@ -3225,8 +3234,8 @@ impl GpuLiteralSet {
         region_base: u32,
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let (program, inputs, config, total_words) = self
@@ -3298,7 +3307,7 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-    ) -> Result<PendingFusedRegion, vyre::BackendError> {
+    ) -> Result<PendingFusedRegion, vyre_driver::BackendError> {
         let (program, inputs, config, total_words) = self
             .build_presence_and_positions_by_region_dispatch(
                 haystack,
@@ -3324,8 +3333,8 @@ impl GpuLiteralSet {
         scratch: &mut ScanDispatchScratch,
         dispatch_program: &Program,
         prefilter_tables: &LiteralSetPrefilterTables,
-    ) -> Result<(), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<(), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let haystack_len =
@@ -3360,8 +3369,8 @@ impl GpuLiteralSet {
         haystack_len: u32,
         views: &DfaPrefilterByteViews<'_>,
         dispatch_program: &Program,
-    ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
@@ -3394,8 +3403,8 @@ impl GpuLiteralSet {
         haystack_len: u32,
         views: &DfaPrefilterByteViews<'_>,
         dispatch_program: &Program,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let haystack_len_word = [haystack_len];
         let haystack_len_bytes = dispatch_io::u32_words_as_le_bytes(&haystack_len_word);
@@ -3450,8 +3459,8 @@ impl GpuLiteralSet {
         scratch: &mut ScanDispatchScratch,
         count_program: &Program,
         prefilter_tables: &LiteralSetPrefilterTables,
-    ) -> Result<u32, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<u32, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let haystack_len =
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
@@ -3501,8 +3510,8 @@ impl GpuLiteralSet {
         max_matches: u32,
         dispatch_program: &Program,
         prefilter_tables: &LiteralSetPrefilterTables,
-    ) -> Result<LiteralSetPreparedScan, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<LiteralSetPreparedScan, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let haystack_len =
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
@@ -3513,7 +3522,7 @@ impl GpuLiteralSet {
             LITERAL_SET_INPUT_COUNT,
         )
         .map_err(|source| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set prepared scan could not reserve {LITERAL_SET_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before preparing resident dispatch."
             ))
         })?;
@@ -3554,12 +3563,12 @@ impl GpuLiteralSet {
 
         let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
             let len = u64::try_from(input.len()).map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set prepared scan input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
                 ))
             })?;
             sum.checked_add(len).ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "literal_set prepared scan input byte total overflowed u64. Fix: shard the scan before dispatch.",
                 )
             })
@@ -3584,8 +3593,8 @@ impl GpuLiteralSet {
         haystack: &[u8],
         count_program: &Program,
         prefilter_tables: &LiteralSetPrefilterTables,
-    ) -> Result<LiteralSetPreparedCount, vyre::BackendError> {
-        use crate::scan::dispatch_io;
+    ) -> Result<LiteralSetPreparedCount, vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         let haystack_len =
             dispatch_io::scan_guard(haystack, "literal_set", dispatch_io::DEFAULT_MAX_SCAN_BYTES)?;
@@ -3595,7 +3604,7 @@ impl GpuLiteralSet {
             LITERAL_SET_COUNT_INPUT_COUNT,
         )
         .map_err(|source| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set prepared count could not reserve {LITERAL_SET_COUNT_INPUT_COUNT} input buffer slot(s): {source}. Fix: shard the literal set or haystack before preparing resident dispatch."
             ))
         })?;
@@ -3628,12 +3637,12 @@ impl GpuLiteralSet {
 
         let encoded_input_bytes = inputs.iter().try_fold(0_u64, |sum, input| {
             let len = u64::try_from(input.len()).map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set prepared count input byte length does not fit u64: {source}. Fix: shard the scan before dispatch."
                 ))
             })?;
             sum.checked_add(len).ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "literal_set prepared count input byte total overflowed u64. Fix: shard the scan before dispatch.",
                 )
             })
@@ -3654,7 +3663,7 @@ impl GpuLiteralSet {
     fn prefilter_tables_cached<'a>(
         &'a self,
         cached_prefilter: &'a mut Option<LiteralSetPrefilterTables>,
-    ) -> Result<&'a LiteralSetPrefilterTables, vyre::BackendError> {
+    ) -> Result<&'a LiteralSetPrefilterTables, vyre_driver::BackendError> {
         let pattern_fingerprint = self.pattern_fingerprint();
         let reuse_cached = cached_prefilter
             .as_ref()
@@ -3664,20 +3673,22 @@ impl GpuLiteralSet {
                 Some(self.build_prefilter_tables_with_fingerprint(pattern_fingerprint)?);
         }
         cached_prefilter.as_ref().ok_or_else(|| {
-            vyre::BackendError::new(
+            vyre_driver::BackendError::new(
                 "literal_set failed to retain cached suffix-prefilter tables. Fix: retry with generic ScanDispatchScratch.",
             )
         })
     }
 
-    fn build_prefilter_tables(&self) -> Result<LiteralSetPrefilterTables, vyre::BackendError> {
+    fn build_prefilter_tables(
+        &self,
+    ) -> Result<LiteralSetPrefilterTables, vyre_driver::BackendError> {
         self.build_prefilter_tables_with_fingerprint(self.pattern_fingerprint())
     }
 
     fn count_program_cached<'a>(
         &'a self,
         cached_count_program: &'a mut Option<CachedLiteralSetCountProgram>,
-    ) -> Result<&'a Program, vyre::BackendError> {
+    ) -> Result<&'a Program, vyre_driver::BackendError> {
         let pattern_fingerprint = self.pattern_fingerprint();
         let reuse_cached = cached_count_program
             .as_ref()
@@ -3692,7 +3703,7 @@ impl GpuLiteralSet {
             .as_ref()
             .map(|cached| &cached.program)
             .ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "literal_set failed to retain the cached count program. Fix: retry without reusable scratch.",
                 )
             })
@@ -3705,7 +3716,7 @@ impl GpuLiteralSet {
     fn build_prefilter_tables_with_fingerprint(
         &self,
         pattern_fingerprint: u64,
-    ) -> Result<LiteralSetPrefilterTables, vyre::BackendError> {
+    ) -> Result<LiteralSetPrefilterTables, vyre_driver::BackendError> {
         let pattern_vectors = self.materialize_pattern_bytes()?;
         let pattern_refs = pattern_vectors
             .iter()
@@ -3725,9 +3736,9 @@ impl GpuLiteralSet {
         })
     }
 
-    fn materialize_pattern_bytes(&self) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+    fn materialize_pattern_bytes(&self) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
         if self.pattern_offsets.len() != self.pattern_lengths.len() {
-            return Err(vyre::BackendError::new(format!(
+            return Err(vyre_driver::BackendError::new(format!(
                 "literal_set pattern metadata is malformed: {} offsets for {} lengths. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
                 self.pattern_offsets.len(),
                 self.pattern_lengths.len()
@@ -3740,7 +3751,7 @@ impl GpuLiteralSet {
             self.pattern_lengths.len(),
         )
         .map_err(|source| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set could not reserve {} decoded pattern slot(s): {source}. Fix: shard the pattern set before dispatch.",
                 self.pattern_lengths.len()
             ))
@@ -3753,22 +3764,22 @@ impl GpuLiteralSet {
             .enumerate()
         {
             let start = usize::try_from(offset).map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set pattern {pattern_index} offset {offset} cannot fit host usize: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
                 ))
             })?;
             let len = usize::try_from(len).map_err(|source| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set pattern {pattern_index} length {len} cannot fit host usize: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
                 ))
             })?;
             let end = start.checked_add(len).ok_or_else(|| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set pattern {pattern_index} byte range overflows host usize. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
                 ))
             })?;
             let words = self.pattern_bytes.get(start..end).ok_or_else(|| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "literal_set pattern {pattern_index} byte range {start}..{end} exceeds packed pattern byte table length {}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
                     self.pattern_bytes.len()
                 ))
@@ -3776,14 +3787,14 @@ impl GpuLiteralSet {
             let mut pattern = Vec::new();
             vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut pattern, words.len())
                 .map_err(|source| {
-                    vyre::BackendError::new(format!(
+                    vyre_driver::BackendError::new(format!(
                         "literal_set could not reserve {} byte(s) for pattern {pattern_index}: {source}. Fix: shard the pattern set before dispatch.",
                         words.len()
                     ))
                 })?;
             for (byte_index, &word) in words.iter().enumerate() {
                 let byte = u8::try_from(word).map_err(|source| {
-                    vyre::BackendError::new(format!(
+                    vyre_driver::BackendError::new(format!(
                         "literal_set pattern {pattern_index} byte {byte_index} has non-byte word {word}: {source}. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch."
                     ))
                 })?;
@@ -3808,7 +3819,7 @@ impl GpuLiteralSet {
         // matcher share identical pattern bytes but build DIFFERENT prefilter
         // masks; without it their cached tables collide.
         let case_word = [u32::from(self.case_insensitive)];
-        crate::scan::engine::fnv1a64_word_slices([
+        crate::engine::fnv1a64_word_slices([
             self.pattern_offsets.as_slice(),
             self.pattern_lengths.as_slice(),
             self.pattern_bytes.as_slice(),
@@ -3820,7 +3831,7 @@ impl GpuLiteralSet {
         &'a self,
         max_matches: u32,
         cached_program: &'a mut Option<CachedLiteralSetProgram>,
-    ) -> Result<&'a Program, vyre::BackendError> {
+    ) -> Result<&'a Program, vyre_driver::BackendError> {
         let (declared_words, readback_bytes) = literal_set_match_output_layout(max_matches)?;
         if self.compiled_matches_output_satisfies(declared_words, readback_bytes)? {
             return Ok(&self.program);
@@ -3841,7 +3852,7 @@ impl GpuLiteralSet {
 
         match cached_program.as_ref() {
             Some(cached) => Ok(&cached.program),
-            None => Err(vyre::BackendError::new(
+            None => Err(vyre_driver::BackendError::new(
                 "literal_set failed to retain the cached match-capacity program. Fix: retry with generic ScanDispatchScratch.",
             )),
         }
@@ -3850,7 +3861,7 @@ impl GpuLiteralSet {
     fn program_for_match_capacity(
         &self,
         max_matches: u32,
-    ) -> Result<Cow<'_, Program>, vyre::BackendError> {
+    ) -> Result<Cow<'_, Program>, vyre_driver::BackendError> {
         let (declared_words, readback_bytes) = literal_set_match_output_layout(max_matches)?;
         if self.compiled_matches_output_satisfies(declared_words, readback_bytes)? {
             return Ok(Cow::Borrowed(&self.program));
@@ -3866,14 +3877,14 @@ impl GpuLiteralSet {
         &self,
         declared_words: u32,
         readback_bytes: usize,
-    ) -> Result<bool, vyre::BackendError> {
+    ) -> Result<bool, vyre_driver::BackendError> {
         let matches_output = self
             .program
             .buffers()
             .iter()
             .find(|buffer| buffer.name() == "matches" && buffer.is_output())
             .ok_or_else(|| {
-                vyre::BackendError::new(
+                vyre_driver::BackendError::new(
                     "literal_set program is missing its matches output buffer. Fix: rebuild the literal set with GpuLiteralSet::try_compile before dispatch.",
                 )
             })?;
@@ -4148,19 +4159,20 @@ fn validate_region_starts(
     region_starts: &[u32],
     pattern_lengths: &[u32],
     ctx: &str,
-) -> Result<(u32, u32), vyre::BackendError> {
+) -> Result<(u32, u32), vyre_driver::BackendError> {
     let pattern_count = u32::try_from(pattern_lengths.len()).map_err(|_| {
-        vyre::BackendError::new(format!("{ctx}: pattern count exceeds u32 GPU ABI"))
+        vyre_driver::BackendError::new(format!("{ctx}: pattern count exceeds u32 GPU ABI"))
     })?;
-    let region_count = u32::try_from(region_starts.len())
-        .map_err(|_| vyre::BackendError::new(format!("{ctx}: region count exceeds u32 GPU ABI")))?;
+    let region_count = u32::try_from(region_starts.len()).map_err(|_| {
+        vyre_driver::BackendError::new(format!("{ctx}: region count exceeds u32 GPU ABI"))
+    })?;
     if region_count == 0 {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "{ctx}: region_starts must be non-empty. Fix: pass one start offset per coalesced file, beginning with 0."
         )));
     }
     if region_starts[0] != 0 {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "{ctx}: region_starts[0] must be 0 (the kernel binary-search lower bound). Fix: the first coalesced file must start at offset 0."
         )));
     }
@@ -4171,9 +4183,9 @@ fn validate_region_starts(
 /// through the fail-closed `try_reserve` path, matching the owned/prepared
 /// contract (an OOM here returns `BackendError`, never aborts the process).
 /// The single owner for every presence-buffer allocation.
-fn zeroed_presence_bytes(words: usize) -> Result<Vec<u8>, vyre::BackendError> {
+fn zeroed_presence_bytes(words: usize) -> Result<Vec<u8>, vyre_driver::BackendError> {
     let byte_len = words.checked_mul(U32_BYTES).ok_or_else(|| {
-        vyre::BackendError::new(
+        vyre_driver::BackendError::new(
             "literal_set region-presence output byte length overflowed host usize. Fix: shard the literal set or corpus before dispatch."
                 .to_string(),
         )
@@ -4181,7 +4193,7 @@ fn zeroed_presence_bytes(words: usize) -> Result<Vec<u8>, vyre::BackendError> {
     let mut bytes = Vec::new();
     vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(
         |source| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set region-presence could not reserve {byte_len} byte(s) for the presence output: {source}. Fix: shard the literal set or corpus before dispatch."
             ))
         },
@@ -4193,16 +4205,16 @@ fn zeroed_presence_bytes(words: usize) -> Result<Vec<u8>, vyre::BackendError> {
 fn copy_u32_words_as_le_bytes(
     words: &[u32],
     field: &'static str,
-) -> Result<Vec<u8>, vyre::BackendError> {
+) -> Result<Vec<u8>, vyre_driver::BackendError> {
     let byte_len = words.len().checked_mul(U32_BYTES).ok_or_else(|| {
-        vyre::BackendError::new(format!(
+        vyre_driver::BackendError::new(format!(
             "literal_set prepared scan {field} byte length overflowed host usize. Fix: shard the literal set before preparing resident dispatch."
         ))
     })?;
     let mut bytes = Vec::new();
     vyre_foundation::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(
         |source| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set prepared scan could not reserve {byte_len} byte(s) for {field}: {source}. Fix: shard the literal set before preparing resident dispatch."
             ))
         },
@@ -4247,18 +4259,15 @@ fn decode_literal_set_outputs_into(
     outputs: &[Vec<u8>],
     max_matches: u32,
     matches: &mut Vec<Match>,
-) -> Result<(), vyre::BackendError> {
-    let count_bytes =
-        crate::scan::dispatch_io::try_output_bytes(outputs, 0, "literal_set match count")?;
-    let count =
-        crate::scan::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
-    let matches_bytes =
-        crate::scan::dispatch_io::try_output_bytes(outputs, 1, "literal_set matches")?;
+) -> Result<(), vyre_driver::BackendError> {
+    let count_bytes = crate::dispatch_io::try_output_bytes(outputs, 0, "literal_set match count")?;
+    let count = crate::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set match count")?;
+    let matches_bytes = crate::dispatch_io::try_output_bytes(outputs, 1, "literal_set matches")?;
 
     // The kernel's atomic match counter overcounts past the fixed cap, so a
     // count over `max_matches` means matches were dropped: fail closed instead
     // of silently decoding the truncated prefix (Law 10).
-    crate::scan::dispatch_io::try_unpack_match_triples_capped_into(
+    crate::dispatch_io::try_unpack_match_triples_capped_into(
         matches_bytes,
         count,
         max_matches,
@@ -4267,14 +4276,14 @@ fn decode_literal_set_outputs_into(
     )
 }
 
-fn decode_literal_set_count_outputs(outputs: &[Vec<u8>]) -> Result<u32, vyre::BackendError> {
-    let count_bytes = crate::scan::dispatch_io::try_output_bytes(outputs, 0, "literal_set count")?;
-    crate::scan::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set count")
+fn decode_literal_set_count_outputs(outputs: &[Vec<u8>]) -> Result<u32, vyre_driver::BackendError> {
+    let count_bytes = crate::dispatch_io::try_output_bytes(outputs, 0, "literal_set count")?;
+    crate::dispatch_io::try_read_u32_prefix(count_bytes, "literal_set count")
 }
 
-fn literal_set_match_triple_bytes(count: u32) -> Result<usize, vyre::BackendError> {
+fn literal_set_match_triple_bytes(count: u32) -> Result<usize, vyre_driver::BackendError> {
     let words = count.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
-        vyre::BackendError::new(format!(
+        vyre_driver::BackendError::new(format!(
             "literal_set match count {count} overflows the GPU match-output word count. Fix: lower max_matches or split the scan before dispatch."
         ))
     })?;
@@ -4282,15 +4291,17 @@ fn literal_set_match_triple_bytes(count: u32) -> Result<usize, vyre::BackendErro
         .ok()
         .and_then(|words| words.checked_mul(U32_BYTES))
         .ok_or_else(|| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "literal_set match count {count} overflows host match-output byte sizing. Fix: lower max_matches or split the scan before dispatch."
             ))
         })
 }
 
-fn literal_set_match_output_layout(max_matches: u32) -> Result<(u32, usize), vyre::BackendError> {
+fn literal_set_match_output_layout(
+    max_matches: u32,
+) -> Result<(u32, usize), vyre_driver::BackendError> {
     let words = max_matches.checked_mul(MATCH_TRIPLE_WORDS).ok_or_else(|| {
-        vyre::BackendError::new(format!(
+        vyre_driver::BackendError::new(format!(
             "literal_set max_matches={max_matches} overflows the GPU match-output word count. Fix: lower max_matches or split the scan before dispatch."
         ))
     })?;
@@ -4315,7 +4326,7 @@ mod compile_tests {
     /// the case-SENSITIVE forms against the DFA the same patterns compile to.)
     #[test]
     fn candidate_masks_pattern_derived_equals_dfa_derived() {
-        use crate::scan::classic_ac::{
+        use crate::classic_ac::{
             classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         };
 
@@ -4372,7 +4383,7 @@ mod compile_tests {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl vyre::backend::private::Sealed for LiteralReadbackBackend {}
+    impl vyre_driver::backend::private::Sealed for LiteralReadbackBackend {}
 
     impl VyreBackend for LiteralReadbackBackend {
         fn id(&self) -> &'static str {
@@ -4383,8 +4394,8 @@ mod compile_tests {
             &self,
             _program: &Program,
             _inputs: &[Vec<u8>],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             Ok(self.outputs.clone())
         }
 
@@ -4392,8 +4403,8 @@ mod compile_tests {
             &self,
             _program: &Program,
             _inputs: &[&[u8]],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             Ok(self.outputs.clone())
         }
     }
@@ -4441,7 +4452,7 @@ mod compile_tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for RecordingLiteralBackend {}
+    impl vyre_driver::backend::private::Sealed for RecordingLiteralBackend {}
 
     impl VyreBackend for RecordingLiteralBackend {
         fn id(&self) -> &'static str {
@@ -4452,8 +4463,8 @@ mod compile_tests {
             &self,
             program: &Program,
             inputs: &[Vec<u8>],
-            config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
             self.dispatch_borrowed(program, &borrowed, config)
         }
@@ -4462,24 +4473,26 @@ mod compile_tests {
             &self,
             program: &Program,
             inputs: &[&[u8]],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             let matches = program
                 .buffers()
                 .iter()
                 .find(|buffer| buffer.name() == "matches")
-                .ok_or_else(|| vyre::BackendError::new("test program omitted matches buffer"))?;
+                .ok_or_else(|| {
+                    vyre_driver::BackendError::new("test program omitted matches buffer")
+                })?;
             self.observed_matches_layouts
                 .lock()
-                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .map_err(|_| vyre_driver::BackendError::new("test observation mutex poisoned"))?
                 .push((matches.count, matches.output_byte_range()));
             self.observed_program_buffer_ptrs
                 .lock()
-                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .map_err(|_| vyre_driver::BackendError::new("test observation mutex poisoned"))?
                 .push(program.buffers().as_ptr() as usize);
             self.observed_input_lengths
                 .lock()
-                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .map_err(|_| vyre_driver::BackendError::new("test observation mutex poisoned"))?
                 .push(inputs.iter().map(|input| input.len()).collect());
             Ok(self.outputs.clone())
         }
@@ -4516,7 +4529,7 @@ mod compile_tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for RecordingCountBackend {}
+    impl vyre_driver::backend::private::Sealed for RecordingCountBackend {}
 
     impl VyreBackend for RecordingCountBackend {
         fn id(&self) -> &'static str {
@@ -4527,8 +4540,8 @@ mod compile_tests {
             &self,
             program: &Program,
             inputs: &[Vec<u8>],
-            config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
             self.dispatch_borrowed(program, &borrowed, config)
         }
@@ -4537,15 +4550,15 @@ mod compile_tests {
             &self,
             program: &Program,
             inputs: &[&[u8]],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             self.observed_input_lengths
                 .lock()
-                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .map_err(|_| vyre_driver::BackendError::new("test observation mutex poisoned"))?
                 .push(inputs.iter().map(|input| input.len()).collect());
             self.observed_buffer_names
                 .lock()
-                .map_err(|_| vyre::BackendError::new("test observation mutex poisoned"))?
+                .map_err(|_| vyre_driver::BackendError::new("test observation mutex poisoned"))?
                 .push(
                     program
                         .buffers()
@@ -5080,8 +5093,7 @@ mod compile_tests {
 
         assert!(matches.is_empty());
         let packed_haystack_len =
-            crate::scan::dispatch_io::pack_haystack_u32(b"prefix Authorization: Bearer token")
-                .len();
+            crate::dispatch_io::pack_haystack_u32(b"prefix Authorization: Bearer token").len();
         let prefilter = engine
             .build_prefilter_tables()
             .expect("Fix: small literal-set prefilter tables should build");
@@ -5112,32 +5124,30 @@ mod compile_tests {
             .build_prefilter_tables()
             .expect("Fix: small literal-set prefilter tables should build");
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_haystack_u32(
-                haystack,
-            )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_haystack_u32(haystack)),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.transitions,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.output_offsets,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.output_records,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.pattern_lengths,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&[
                 haystack.len() as u32,
             ])),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0])),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&[0])),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_end_mask,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_suffix2_mask,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_suffix3_bloom,
             )),
         ];
@@ -5183,43 +5193,39 @@ mod compile_tests {
         // Inputs in binding order (read-write buffers passed zeroed; the matches
         // output at binding 13 is backend-allocated and not passed).
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_haystack_u32(
-                haystack,
-            )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_haystack_u32(haystack)),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.transitions,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.output_offsets,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.dfa.output_records,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &engine.pattern_lengths,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&[
                 haystack.len() as u32,
             ])),
             // 6: per-region presence, zeroed.
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &vec![0u32; total_presence_words],
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_end_mask,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_suffix2_mask,
             )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(
                 &prefilter.candidate_suffix3_bloom,
             )),
             // 10: region_starts, 11: region_base (0), 12: match_count (zeroed).
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(
-                &region_starts,
-            )),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0u32])),
-            vyre_reference::value::Value::from(crate::scan::dispatch_io::pack_u32_slice(&[0u32])),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&region_starts)),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&[0u32])),
+            vyre_reference::value::Value::from(crate::dispatch_io::pack_u32_slice(&[0u32])),
         ];
 
         let program = try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
@@ -5357,7 +5363,7 @@ mod compile_tests {
         // 2 output_offsets, 3 output_records, 4 pattern_lengths, 5 haystack_len,
         // 6 presence (zeroed), 7..=9 prefilter masks, 10 region_starts, 11 region_base.
         let expected = vec![
-            crate::scan::dispatch_io::pack_haystack_u32(haystack).len(),
+            crate::dispatch_io::pack_haystack_u32(haystack).len(),
             engine.dfa.transitions.len() * 4,
             engine.dfa.output_offsets.len() * 4,
             engine.dfa.output_records.len() * 4,
@@ -5569,7 +5575,7 @@ mod compile_tests {
     /// key, or two distinct pattern sets could round to the same filename.
     #[test]
     fn cache_key_is_the_pattern_fingerprint_rendered() {
-        use crate::scan::engine::MatchScan;
+        use crate::engine::MatchScan;
         let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice(), b"ghp_".as_slice()]);
         let key = MatchScan::cache_key(&engine);
         assert_eq!(format!("lit-{:016x}", engine.pattern_fingerprint()), key);
@@ -5592,7 +5598,7 @@ mod compile_tests {
     /// had dropped this word, which is how the drift was found.
     #[test]
     fn case_insensitivity_changes_the_fingerprint_and_the_cache_key() {
-        use crate::scan::engine::MatchScan;
+        use crate::engine::MatchScan;
         let sensitive = GpuLiteralSet::compile(&[b"AKIA".as_slice()]);
         let insensitive = GpuLiteralSet::compile_case_insensitive(&[b"AKIA".as_slice()]);
         assert_ne!(
@@ -5622,7 +5628,7 @@ mod resident_match_tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::sync::Mutex;
-    use vyre::DispatchConfig as Config;
+    use vyre_driver::DispatchConfig as Config;
     use vyre_driver::TimedDispatchResult;
 
     // pattern_id order matches the compile order: key=0 .. api=7.
@@ -5691,7 +5697,7 @@ mod resident_match_tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for MockResidentMatchBackend {}
+    impl vyre_driver::backend::private::Sealed for MockResidentMatchBackend {}
 
     impl VyreBackend for MockResidentMatchBackend {
         fn id(&self) -> &'static str {
@@ -5703,11 +5709,14 @@ mod resident_match_tests {
             _program: &Program,
             _inputs: &[Vec<u8>],
             _config: &Config,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             unreachable!("resident path does not use borrowed dispatch")
         }
 
-        fn allocate_resident(&self, byte_len: usize) -> Result<Resource, vyre::BackendError> {
+        fn allocate_resident(
+            &self,
+            byte_len: usize,
+        ) -> Result<Resource, vyre_driver::BackendError> {
             let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
             self.allocations
                 .lock()
@@ -5720,7 +5729,7 @@ mod resident_match_tests {
             &self,
             _resource: &Resource,
             _bytes: &[u8],
-        ) -> Result<(), vyre::BackendError> {
+        ) -> Result<(), vyre_driver::BackendError> {
             self.full_uploads.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }
@@ -5730,7 +5739,7 @@ mod resident_match_tests {
             _resource: &Resource,
             _dst_offset_bytes: usize,
             bytes: &[u8],
-        ) -> Result<(), vyre::BackendError> {
+        ) -> Result<(), vyre_driver::BackendError> {
             self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
             self.ranged_upload_lens
                 .lock()
@@ -5739,7 +5748,7 @@ mod resident_match_tests {
             Ok(())
         }
 
-        fn free_resident(&self, _resource: Resource) -> Result<(), vyre::BackendError> {
+        fn free_resident(&self, _resource: Resource) -> Result<(), vyre_driver::BackendError> {
             Ok(())
         }
 
@@ -5748,7 +5757,7 @@ mod resident_match_tests {
             _program: &Program,
             resources: &[Resource],
             config: &Config,
-        ) -> Result<TimedDispatchResult, vyre::BackendError> {
+        ) -> Result<TimedDispatchResult, vyre_driver::BackendError> {
             // Contract the consumer relies on: eleven resident bindings, every one
             // resident (the CUDA resident dispatch rejects a borrowed mix, even for
             // the tiny control buffers), and a byte-scan grid override.
@@ -5972,7 +5981,7 @@ mod resident_fused_tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::sync::Mutex;
-    use vyre::DispatchConfig as Config;
+    use vyre_driver::DispatchConfig as Config;
     use vyre_driver::TimedDispatchResult;
 
     const LITERALS: &[&[u8]] = &[
@@ -6037,7 +6046,7 @@ mod resident_fused_tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for MockResidentFusedBackend {}
+    impl vyre_driver::backend::private::Sealed for MockResidentFusedBackend {}
 
     impl VyreBackend for MockResidentFusedBackend {
         fn id(&self) -> &'static str {
@@ -6049,11 +6058,14 @@ mod resident_fused_tests {
             _program: &Program,
             _inputs: &[Vec<u8>],
             _config: &Config,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             unreachable!("resident path does not use borrowed dispatch")
         }
 
-        fn allocate_resident(&self, byte_len: usize) -> Result<Resource, vyre::BackendError> {
+        fn allocate_resident(
+            &self,
+            byte_len: usize,
+        ) -> Result<Resource, vyre_driver::BackendError> {
             let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
             self.allocations
                 .lock()
@@ -6066,7 +6078,7 @@ mod resident_fused_tests {
             &self,
             _resource: &Resource,
             _bytes: &[u8],
-        ) -> Result<(), vyre::BackendError> {
+        ) -> Result<(), vyre_driver::BackendError> {
             self.full_uploads.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }
@@ -6076,12 +6088,12 @@ mod resident_fused_tests {
             _resource: &Resource,
             _dst_offset_bytes: usize,
             _bytes: &[u8],
-        ) -> Result<(), vyre::BackendError> {
+        ) -> Result<(), vyre_driver::BackendError> {
             self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }
 
-        fn free_resident(&self, _resource: Resource) -> Result<(), vyre::BackendError> {
+        fn free_resident(&self, _resource: Resource) -> Result<(), vyre_driver::BackendError> {
             Ok(())
         }
 
@@ -6090,7 +6102,7 @@ mod resident_fused_tests {
             _program: &Program,
             resources: &[Resource],
             config: &Config,
-        ) -> Result<TimedDispatchResult, vyre::BackendError> {
+        ) -> Result<TimedDispatchResult, vyre_driver::BackendError> {
             assert_eq!(
                 resources.len(),
                 FUSED_BINDINGS,

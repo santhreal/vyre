@@ -82,7 +82,6 @@
 //! immutable artifact through [`compiler`], and materializes its authenticated
 //! target payload through [`ArtifactSession`]. Raw `Program` dispatch remains
 //! available only in explicit reference and conformance adapters.
-extern crate self as vyre;
 
 /// The vyre Program model.
 ///
@@ -135,8 +134,8 @@ pub use vyre_runtime::{
 /// Execution adapter for neutral C preprocessing programs.
 pub mod c;
 
-/// Execution adapters for neutral scan programs and immutable matcher artifacts.
-pub mod scan;
+/// Canonical scan compilation, session, paging, residency, and readback owner.
+pub use vyre_scan as scan;
 
 /// Distribution-aware runtime algorithm selection.
 /// Public API re-export.

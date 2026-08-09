@@ -8,11 +8,11 @@
 //! parameterising over the engine while pinning the post-processor
 //! preserves byte-for-byte cross-consumer equivalence.
 
-use crate::scan::engine::MatchScan;
+use crate::engine::MatchScan;
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::scan::post_process::try_reference_post_process;
-use crate::scan::post_process::{PostProcessError, PostProcessedMatch};
-use vyre::{BackendError, VyreBackend};
+use crate::post_process::try_reference_post_process;
+use crate::post_process::{PostProcessError, PostProcessedMatch};
+use vyre_driver::{BackendError, VyreBackend};
 use vyre_foundation::match_result::Match;
 
 /// Function pointer for the post-processing stage. Stored as an `fn`
@@ -25,7 +25,7 @@ pub type PostProcessFn = fn(&[Match], &[u8]) -> Result<Vec<PostProcessedMatch>, 
 /// inject a custom one.
 pub struct Pipeline<E> {
     /// Underlying scan engine. Anything that implements `MatchScan`
-    /// composes  -  `GpuLiteralSet`, `RulePipeline`, future custom
+    /// composes  -  `GpuLiteralSet`, `ScanSession`, future custom
     /// scanners.
     pub engine: E,
     /// Post-processing function. Defaults to `try_reference_post_process`.

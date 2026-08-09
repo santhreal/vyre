@@ -1,8 +1,8 @@
-//! Resident-buffer dispatch for [`RulePipeline`] (the regex/NFA mega-scan path).
+//! Resident-buffer dispatch for [`ScanSession`] (the regex/NFA mega-scan path).
 //!
 //! # Why this exists
 //!
-//! [`RulePipeline::scan`](crate::scan::mega_scan::RulePipeline::scan) issues every
+//! [`ScanSession::scan`](crate::session::ScanSession::scan) issues every
 //! dispatch through `dispatch_borrowed`, which re-creates GPU buffers and
 //! **re-uploads the lane-major NFA transition table on every call**. That table
 //! is `num_states × 256 × LANES_PER_SUBGROUP` u32s, tens of MiB for a large
@@ -11,17 +11,17 @@
 //! pays that multi-MiB host→device transfer once per batch even though only the
 //! haystack and the hit buffer actually change.
 //!
-//! [`ResidentRulePipeline`] uploads the transition and epsilon tables **once**
+//! [`ResidentScanSession`] uploads the transition and epsilon tables **once**
 //! into backend-resident resources and keeps them resident for the lifetime of
-//! the session. Each [`scan`](ResidentRulePipeline::scan_into) then transfers
+//! the session. Each [`scan`](ResidentScanSession::scan_into) then transfers
 //! only the haystack (a ranged upload into the resident haystack buffer), a
 //! 4-byte hit-counter reset, and the two 4-byte control values (haystack length
 //! and the per-workgroup scan bound), dispatches against the resident tables, and
 //! decodes the hit buffer, the per-scan transfer drops from `O(tables + haystack)`
 //! to `O(haystack)`. This is the regex-path counterpart of
-//! [`GpuLiteralSet::prepare_scan_dispatch`](crate::scan::literal_set::GpuLiteralSet::prepare_scan_dispatch).
+//! [`GpuLiteralSet::prepare_scan_dispatch`](crate::literal_set::GpuLiteralSet::prepare_scan_dispatch).
 //!
-//! The match wire format is byte-identical to [`RulePipeline::scan`] (slot 0 =
+//! The match wire format is byte-identical to [`ScanSession::scan`] (slot 0 =
 //! atomic counter, then `(pattern_id, start, end)` triples), so a consumer can
 //! swap the borrowed path for a resident session without changing any
 //! post-processing, proven by the host-orchestration unit test below and the
@@ -33,22 +33,22 @@
 //! Resident dispatch requires a backend that implements the resident half of
 //! the [`vyre_driver::VyreBackend`] contract (`allocate_resident`, `upload_resident*`,
 //! `dispatch_resident_timed`). The wgpu and CUDA backends do; the CPU reference
-//! does not. [`RulePipeline::prepare_resident`] returns the backend's
+//! does not. [`ScanSession::prepare_resident`] returns the backend's
 //! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
 //! (fail closed, or a loud/recorded fallback), never degrade silently.
 
-use vyre::{BackendError, DispatchConfig, VyreBackend};
 use vyre_driver::Resource;
+use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
 
 use super::dispatch_io;
-use super::mega_scan::{hit_buffer_byte_len, RulePipeline};
+use super::session::{hit_buffer_byte_len, ScanSession};
 
-/// A [`RulePipeline`] with its immutable NFA tables uploaded into
+/// A [`ScanSession`] with its immutable NFA tables uploaded into
 /// backend-resident resources, ready for repeated low-overhead scans.
 ///
-/// Construct with [`RulePipeline::prepare_resident`]. The session owns four
+/// Construct with [`ScanSession::prepare_resident`]. The session owns four
 /// resident resources (haystack, transition table, epsilon table, hit buffer);
 /// call [`free`](Self::free) to release them, or drop the session and let the
 /// backend reclaim them when its device context is torn down.
@@ -57,7 +57,7 @@ use super::mega_scan::{hit_buffer_byte_len, RulePipeline};
 /// mutation happens through the borrowed `backend`, so a single session can be
 /// shared across scan threads (each thread supplies its own packing scratch).
 #[derive(Debug)]
-pub struct ResidentRulePipeline {
+pub struct ResidentScanSession {
     /// The pipeline's compiled GPU program (cheap to hold; the heavy tables are
     /// resident, not in this clone).
     program: Program,
@@ -79,22 +79,22 @@ pub struct ResidentRulePipeline {
     max_matches: u32,
 }
 
-// SAFETY mirror of the `RulePipeline`/`GpuLiteralSet` contract: `Resource`
+// SAFETY mirror of the `ScanSession`/`GpuLiteralSet` contract: `Resource`
 // handles are plain ids and `Program` is `Send + Sync`.
 const _: () = {
     const fn assert_send_sync<T: Send + Sync>() {}
-    let _ = assert_send_sync::<ResidentRulePipeline>;
+    let _ = assert_send_sync::<ResidentScanSession>;
 };
 
-impl RulePipeline {
+impl ScanSession {
     /// Upload this pipeline's immutable NFA tables into backend-resident
-    /// resources and return a [`ResidentRulePipeline`] for repeated scans.
+    /// resources and return a [`ResidentScanSession`] for repeated scans.
     ///
     /// `haystack_capacity_bytes` is the largest haystack the session will scan
     /// (e.g. the consumer's coalesced-batch cap); the resident haystack buffer
     /// is allocated once at that padded size and every scan uploads only its
     /// real bytes. `max_matches` sizes the resident hit buffer and caps decoded
-    /// matches, exactly as in [`RulePipeline::scan`].
+    /// matches, exactly as in [`ScanSession::scan`].
     ///
     /// # Errors
     ///
@@ -107,7 +107,7 @@ impl RulePipeline {
         backend: &dyn VyreBackend,
         haystack_capacity_bytes: usize,
         max_matches: u32,
-    ) -> Result<ResidentRulePipeline, BackendError> {
+    ) -> Result<ResidentScanSession, BackendError> {
         let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
 
         // Fail closed early if the resident haystack would be SMALLER than the NFA
@@ -122,12 +122,18 @@ impl RulePipeline {
         // it here, portably, at prepare time. Reuses `BufferDecl::static_byte_len`,
         // the exact source CUDA checks against, so a runtime-sized input
         // (`count == 0` → `Ok(None)`) correctly imposes no requirement.
-        if let Some(input_decl) = self.program.buffers().iter().find(|decl| decl.binding == 0) {
+        if let Some(input_decl) = self
+            .compiled
+            .program
+            .buffers()
+            .iter()
+            .find(|decl| decl.binding == 0)
+        {
             if let Some(required_bytes) = input_decl.static_byte_len().map_err(BackendError::new)? {
                 if haystack_capacity < required_bytes {
                     return Err(BackendError::new(format!(
-                        "ResidentRulePipeline::prepare_resident: the NFA program's input buffer (binding 0) statically declares {required_bytes} byte(s) (input_len = {input_len}), but the requested resident haystack capacity is only {haystack_capacity} padded byte(s). A resident dispatch binds this buffer to the program input; the CUDA backend requires the resident buffer to be at least the static decl, so this would fail at dispatch with a confusing late error (wgpu would silently tolerate it). Fix: pass haystack_capacity_bytes >= {input_len} to prepare_resident, or rebuild the RulePipeline (build / build_rule_pipeline) with a smaller input_len.",
-                        input_len = self.plan.input_len,
+                        "ResidentScanSession::prepare_resident: the NFA program's input buffer (binding 0) statically declares {required_bytes} byte(s) (input_len = {input_len}), but the requested resident haystack capacity is only {haystack_capacity} padded byte(s). A resident dispatch binds this buffer to the program input; the CUDA backend requires the resident buffer to be at least the static decl, so this would fail at dispatch with a confusing late error (wgpu would silently tolerate it). Fix: pass haystack_capacity_bytes >= {input_len} to prepare_resident, or rebuild the ScanSession (build / build_scan_session) with a smaller input_len.",
+                        input_len = self.compiled.plan.input_len,
                     )));
                 }
             }
@@ -135,11 +141,11 @@ impl RulePipeline {
 
         let haystack = backend.allocate_resident(haystack_capacity)?;
 
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.transition_table);
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.transition_table);
         let transition = backend.allocate_resident(transition_bytes.len())?;
         backend.upload_resident(&transition, transition_bytes.as_ref())?;
 
-        let epsilon_bytes = dispatch_io::u32_words_as_le_bytes(&self.epsilon_table);
+        let epsilon_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.epsilon_table);
         let epsilon = backend.allocate_resident(epsilon_bytes.len())?;
         backend.upload_resident(&epsilon, epsilon_bytes.as_ref())?;
 
@@ -155,8 +161,8 @@ impl RulePipeline {
         let haystack_len_buf = backend.allocate_resident(control_byte_len)?;
         let max_scan_bytes_buf = backend.allocate_resident(control_byte_len)?;
 
-        Ok(ResidentRulePipeline {
-            program: self.program.clone(),
+        Ok(ResidentScanSession {
+            program: self.compiled.program.clone(),
             haystack,
             transition,
             epsilon,
@@ -169,16 +175,16 @@ impl RulePipeline {
     }
 }
 
-impl ResidentRulePipeline {
+impl ResidentScanSession {
     /// Scan `haystack` against the resident pipeline, decoding matches into
-    /// caller-owned `matches`. Equivalent to [`RulePipeline::scan`] but with the
+    /// caller-owned `matches`. Equivalent to [`ScanSession::scan`] but with the
     /// NFA tables already resident (no per-scan table transfer).
     ///
     /// `scratch` reuses the packed-haystack staging buffer across calls; pass a
     /// per-thread `Vec` that lives as long as the scan loop.
     ///
     /// Walks every workgroup to end-of-haystack (`max_scan_bytes = u32::MAX`),
-    /// matching [`RulePipeline::scan`]. Use [`scan_bounded_into`](Self::scan_bounded_into)
+    /// matching [`ScanSession::scan`]. Use [`scan_bounded_into`](Self::scan_bounded_into)
     /// to cap per-workgroup work to the longest possible match length.
     ///
     /// # Errors
@@ -194,7 +200,7 @@ impl ResidentRulePipeline {
         self.scan_bounded_into(backend, haystack, u32::MAX, matches, scratch)
     }
 
-    /// Per-workgroup-bounded resident scan. See [`RulePipeline::scan_bounded`]
+    /// Per-workgroup-bounded resident scan. See [`ScanSession::scan_bounded`]
     /// for the bound's semantics (O(N × max_scan_bytes) instead of O(N²)).
     ///
     /// # Errors
@@ -210,7 +216,7 @@ impl ResidentRulePipeline {
         matches.clear();
         let haystack_len = dispatch_io::scan_guard(
             haystack,
-            "ResidentRulePipeline::scan",
+            "ResidentScanSession::scan",
             dispatch_io::DEFAULT_MAX_SCAN_BYTES,
         )?;
 
@@ -220,7 +226,7 @@ impl ResidentRulePipeline {
         dispatch_io::pack_haystack_u32_into(haystack, scratch)?;
         if scratch.len() > self.haystack_capacity {
             return Err(BackendError::new(format!(
-                "ResidentRulePipeline haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident or shard the haystack.",
+                "ResidentScanSession haystack is {} packed byte(s) but the resident buffer holds {}. Fix: raise haystack_capacity_bytes in prepare_resident or shard the haystack.",
                 scratch.len(),
                 self.haystack_capacity
             )));
@@ -265,10 +271,10 @@ impl ResidentRulePipeline {
         let timed = backend.dispatch_resident_timed(&self.program, &resources, &config)?;
 
         // The hit buffer is the program's only ReadWrite storage, returned at
-        // output index 0 (identical decode to `RulePipeline::scan`).
+        // output index 0 (identical decode to `ScanSession::scan`).
         let hit_bytes =
-            dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentRulePipeline hit buffer")?;
-        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ResidentRulePipeline hit buffer")?;
+            dispatch_io::try_output_bytes(&timed.outputs, 0, "ResidentScanSession hit buffer")?;
+        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ResidentScanSession hit buffer")?;
         // Truncation guard: the resident hit buffer is fixed-size, so a batch
         // that overflows `max_matches` would silently drop matches (a false
         // negative). The shared capped decode surfaces it as an error so the
@@ -278,7 +284,7 @@ impl ResidentRulePipeline {
             &hit_bytes[4..],
             count,
             self.max_matches,
-            "ResidentRulePipeline hit buffer",
+            "ResidentScanSession hit buffer",
             matches,
         )
     }
@@ -327,7 +333,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::sync::Mutex;
-    use vyre::DispatchConfig as Config;
+    use vyre_driver::DispatchConfig as Config;
     use vyre_driver::TimedDispatchResult;
     use vyre_foundation::ir::Program;
 
@@ -364,7 +370,7 @@ mod tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for MockResidentBackend {}
+    impl vyre_driver::backend::private::Sealed for MockResidentBackend {}
 
     impl VyreBackend for MockResidentBackend {
         fn id(&self) -> &'static str {
@@ -452,7 +458,7 @@ mod tests {
 
     #[test]
     fn prepare_resident_uploads_tables_once_then_scans_transfer_only_haystack() {
-        let pipeline = super::super::mega_scan::build(&["ab", "cd"], "input", "hits", 4096);
+        let pipeline = super::super::session::build(&["ab", "cd"], "input", "hits", 4096);
         let canned = hit_buffer_with(&[(0, 1, 3), (1, 5, 7)]);
         let backend = MockResidentBackend::new(canned);
 
@@ -495,7 +501,7 @@ mod tests {
 
     #[test]
     fn scan_rejects_truncating_hit_count_instead_of_dropping_matches() {
-        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 64);
+        let pipeline = super::super::session::build(&["ab"], "input", "hits", 64);
         // Canned counter says 9 hits but the session was sized for 4, decoding
         // would silently drop 5. The guard must error so the caller degrades.
         let mut canned = 9u32.to_le_bytes().to_vec();
@@ -524,7 +530,7 @@ mod tests {
         // Build the program's static input decl to match the resident capacity (16
         // bytes) so the prepare-time decl guard passes; the scan-time guard below is
         // what this test exercises (a 64-byte haystack into a 16-byte buffer).
-        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 16);
+        let pipeline = super::super::session::build(&["ab"], "input", "hits", 16);
         let backend = MockResidentBackend::new(hit_buffer_with(&[]));
         let session = pipeline
             .prepare_resident(&backend, 16, 8)
@@ -548,7 +554,7 @@ mod tests {
         // buffer smaller than that static decl; wgpu silently tolerates it. The
         // prepare-time guard turns that dev-passes / prod-fails divergence into one
         // portable, actionable error BEFORE any allocation.
-        let pipeline = super::super::mega_scan::build(&["ab"], "input", "hits", 64);
+        let pipeline = super::super::session::build(&["ab"], "input", "hits", 64);
         let backend = MockResidentBackend::new(hit_buffer_with(&[]));
 
         // Under-capacity (16 < 64): must fail closed at prepare time, naming the

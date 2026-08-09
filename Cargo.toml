@@ -34,6 +34,7 @@ members = [
     "xtask",
     "vyre-runtime",
     "vyre-libs",
+    "vyre-scan",
     "vyre-intrinsics",
     "vyre-aot",
     "vyre-frontend-c",
@@ -214,6 +215,7 @@ vyre-primitives = { version = "0.7.2", path = "vyre-primitives", default-feature
 vyre-test-support = { path = "vyre-test-support" }
 vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
 vyre-libs = { version = "0.7.2", path = "vyre-libs" }
+vyre-scan = { version = "0.7.2", path = "vyre-scan" }
 vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
 vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }

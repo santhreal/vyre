@@ -13,7 +13,7 @@
 //! would either bloat the literal path or fork the construction code.
 //! The lego-block fix is a SECOND construction module that emits the
 //! SAME output shape, so every downstream component (`nfa_scan`
-//! Program, `mega_scan::build`, `RulePipeline`) works unmodified.
+//! Program, `scan_program::build`, `ScanProgram`) works unmodified.
 //!
 //! # Supported regex subset
 //!
@@ -445,7 +445,7 @@ impl std::error::Error for RegexCompileError {}
 
 /// Output of [`compile_regex_set`]  -  same triple shape as the literal
 /// `nfa::compile` returns plus the GPU side-tables `nfa::nfa_scan`
-/// expects, so consumers can plug this into `RulePipeline` without
+/// expects, so consumers can plug this into `ScanProgram` without
 /// changing the dispatch path.
 #[derive(Debug, Clone)]
 pub struct CompiledRegexSet {
@@ -899,19 +899,19 @@ fn compile_regex_set_inner(
     })
 }
 
-/// Build a [`crate::scan::RulePipeline`] directly from regex
+/// Build a [`crate::scan::ScanProgram`] directly from regex
 /// sources. Convenience for consumers who don't need the
 /// `CompiledRegexSet` intermediate. `input_len` matches the contract
-/// of `mega_scan::build` (haystack byte count the dispatch will scan).
+/// of `scan_program::build` (haystack byte count the dispatch will scan).
 ///
 /// # Errors
 /// Forwards [`RegexCompileError`].
-pub fn build_rule_pipeline_from_regex(
+pub fn build_scan_program_from_regex(
     patterns: &[&str],
     input_buf: &str,
     hit_buf: &str,
     input_len: u32,
-) -> Result<crate::scan::RulePipeline, RegexCompileError> {
+) -> Result<crate::scan::ScanProgram, RegexCompileError> {
     let compiled = compile_regex_set(patterns)?;
     let has_epsilon = compiled.epsilon_table.iter().any(|word| *word != 0);
     let program = crate::scan::nfa::nfa_scan_with_plan(
@@ -925,7 +925,7 @@ pub fn build_rule_pipeline_from_regex(
         states: compiled.plan.num_states as usize,
         cap: STATE_CAP,
     })?;
-    Ok(crate::scan::RulePipeline {
+    Ok(crate::scan::ScanProgram {
         program,
         transition_table: compiled.transition_table,
         epsilon_table: compiled.epsilon_table,
@@ -1618,7 +1618,7 @@ mod tests {
     #[test]
     fn regex_pipeline_uses_compiled_plan_instead_of_literal_source_plan() {
         let compiled = compile_regex_set(&["a|bc"]).unwrap();
-        let pipeline = build_rule_pipeline_from_regex(&["a|bc"], "input", "hits", 64).unwrap();
+        let pipeline = build_scan_program_from_regex(&["a|bc"], "input", "hits", 64).unwrap();
 
         assert_eq!(pipeline.plan.num_states, compiled.plan.num_states);
         assert_eq!(

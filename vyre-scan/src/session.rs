@@ -1,6 +1,6 @@
 //! Mega-scan integrator.
 //!
-//! Fuses the G-stack innovations into one `RulePipeline` that program-analysis consumer
+//! Fuses the G-stack innovations into one `ScanSession` that program-analysis consumer
 //! dispatches. Right now the integrator wires G1 (subgroup-cooperative
 //! NFA scan) end-to-end. As G2-G10 land their composition hooks here,
 //! keeping one authoritative entry point for every scan configuration.
@@ -12,14 +12,16 @@
 //! work queues, etc.). Attempting to wire those inside program-analysis consumer would
 //! push backend-specific knowledge into the language compiler  -
 //! exactly the coupling vyre's layer boundaries exist to prevent.
-//! `RulePipeline::new` holds the composition rules; callers hand in
+//! `ScanSession::new` holds the composition rules; callers hand in
 //! patterns + input, the integrator returns a ready-to-dispatch
 //! `Program` plus the host-side bit-tables the Program expects to
 //! find at its declared storage buffers.
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
+#[cfg(test)]
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::Match;
+use vyre_libs::scan::ScanProgram;
 
 use super::nfa;
 
@@ -27,28 +29,17 @@ const NFA_LANES: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 
 /// A ready-to-dispatch pipeline produced by the integrator.
 #[derive(Debug, Clone)]
-pub struct RulePipeline {
-    /// GPU-resident Program. Dispatch with the pattern plan's
-    /// workgroup configuration.
-    pub program: Program,
-    /// Lane-major transition table, sized
-    /// `num_states × 256 × LANES_PER_SUBGROUP` u32s. Upload to the
-    /// `nfa_transition` storage buffer.
-    pub transition_table: Vec<u32>,
-    /// Lane-major epsilon table, sized
-    /// `num_states × LANES_PER_SUBGROUP` u32s. Upload to the
-    /// `nfa_epsilon` storage buffer.
-    pub epsilon_table: Vec<u32>,
-    /// Compiled NFA plan (accept states, num_states, input length).
-    pub plan: nfa::NfaPlan,
+pub struct ScanSession {
+    /// Substrate-neutral program and immutable scan tables.
+    pub compiled: ScanProgram,
 }
 
-impl RulePipeline {
+impl ScanSession {
     /// Dispatch this pipeline against `haystack` using the provided
     /// `backend`, returning up to `max_matches` matches.
     ///
     /// This is the regex-multimatch counterpart of
-    /// [`crate::scan::GpuLiteralSet::scan`]  -  same backend trait,
+    /// [`crate::GpuLiteralSet::scan`]  -  same backend trait,
     /// same hit-buffer encoding (slot 0 = atomic counter, then triples
     /// of `(pattern_id, start, end)`), so callers can swap the two
     /// matchers without changing post-processing code.
@@ -60,7 +51,7 @@ impl RulePipeline {
     /// the kernel O(N × max_scan_bytes).
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch or readback failure.
+    /// Returns [`vyre_driver::BackendError`] on dispatch or readback failure.
     /// Returns an error wrapping the message
     /// `"haystack length exceeds u32 capacity"` when `haystack.len()`
     /// cannot be encoded as `u32`  -  split the input first.
@@ -69,7 +60,7 @@ impl RulePipeline {
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_into(backend, haystack, max_matches, &mut matches)?;
         Ok(matches)
@@ -95,7 +86,7 @@ impl RulePipeline {
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_bounded_into(backend, haystack, max_matches, max_scan_bytes, &mut matches)?;
         Ok(matches)
@@ -108,14 +99,14 @@ impl RulePipeline {
     /// of [`Self::scan`].
     ///
     /// # Errors
-    /// Returns [`vyre::BackendError`] on dispatch or readback failure.
+    /// Returns [`vyre_driver::BackendError`] on dispatch or readback failure.
     pub fn scan_into<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
+    ) -> Result<(), vyre_driver::BackendError> {
         self.scan_bounded_into(backend, haystack, max_matches, u32::MAX, matches)
     }
 
@@ -131,8 +122,8 @@ impl RulePipeline {
         max_matches: u32,
         max_scan_bytes: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
-        let mut scratch = crate::scan::dispatch_io::ScanDispatchScratch::default();
+    ) -> Result<(), vyre_driver::BackendError> {
+        let mut scratch = crate::dispatch_io::ScanDispatchScratch::default();
         self.scan_bounded_into_with_scratch(
             backend,
             haystack,
@@ -159,14 +150,14 @@ impl RulePipeline {
         max_matches: u32,
         max_scan_bytes: u32,
         matches: &mut Vec<Match>,
-        scratch: &mut crate::scan::dispatch_io::ScanDispatchScratch,
-    ) -> Result<(), vyre::BackendError> {
-        use crate::scan::dispatch_io;
+        scratch: &mut crate::dispatch_io::ScanDispatchScratch,
+    ) -> Result<(), vyre_driver::BackendError> {
+        use crate::dispatch_io;
 
         matches.clear();
         let haystack_len = dispatch_io::scan_guard(
             haystack,
-            "RulePipeline::scan",
+            "ScanSession::scan",
             dispatch_io::DEFAULT_MAX_SCAN_BYTES,
         )?;
 
@@ -183,8 +174,8 @@ impl RulePipeline {
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
         let hit_bytes = scratch.hit_bytes.as_slice();
         let haystack_bytes = scratch.haystack_bytes.as_slice();
-        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.transition_table);
-        let epsilon_bytes = dispatch_io::u32_words_as_le_bytes(&self.epsilon_table);
+        let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.transition_table);
+        let epsilon_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.epsilon_table);
         let haystack_len_bytes = haystack_len.to_le_bytes();
         let max_scan_bytes_bytes = max_scan_bytes.to_le_bytes();
 
@@ -200,13 +191,14 @@ impl RulePipeline {
         ]
         .into_iter()
         .collect();
-        let outputs = backend.dispatch_borrowed(&self.program, &borrowed_inputs, &config)?;
+        let outputs =
+            backend.dispatch_borrowed(&self.compiled.program, &borrowed_inputs, &config)?;
 
         // The hit buffer is the only ReadWrite storage in the program;
         // backends return outputs in declaration order, so it lives at
         // index 0 of `outputs`.
-        let hit_bytes = dispatch_io::try_output_bytes(&outputs, 0, "RulePipeline hit buffer")?;
-        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "RulePipeline hit buffer")?;
+        let hit_bytes = dispatch_io::try_output_bytes(&outputs, 0, "ScanSession hit buffer")?;
+        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ScanSession hit buffer")?;
         // Triples start at byte 4 (after the atomic counter). The counter is an
         // atomic incremented for every match found, including matches past slot
         // `max_matches` the kernel could not write, so a count over the cap means
@@ -216,7 +208,7 @@ impl RulePipeline {
             &hit_bytes[4..],
             count,
             max_matches,
-            "RulePipeline hit buffer",
+            "ScanSession hit buffer",
             matches,
         )?;
         Ok(())
@@ -249,7 +241,7 @@ impl RulePipeline {
                 // (Law 10). Fail closed instead. Callers that must handle a
                 // >u32 haystack without unwinding call try_reference_scan.
                 panic!(
-                    "vyre-libs RulePipeline::reference_scan cannot honor the u32 match ABI for this haystack: {error}. \
+                    "vyre-libs ScanSession::reference_scan cannot honor the u32 match ABI for this haystack: {error}. \
                      returning an empty match set would silently report the input as clean; \
                      use try_reference_scan and split the haystack below u32::MAX bytes."
                 )
@@ -261,9 +253,12 @@ impl RulePipeline {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre::BackendError`] when haystack positions cannot fit the
+    /// Returns [`vyre_driver::BackendError`] when haystack positions cannot fit the
     /// same `u32` match ABI used by the GPU path.
-    pub fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre::BackendError> {
+    pub fn try_reference_scan(
+        &self,
+        haystack: &[u8],
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         let mut results = Vec::new();
         self.try_reference_scan_into(haystack, &mut results)?;
         Ok(results)
@@ -277,19 +272,19 @@ impl RulePipeline {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre::BackendError`] when haystack positions cannot fit the
+    /// Returns [`vyre_driver::BackendError`] when haystack positions cannot fit the
     /// same `u32` match ABI used by the GPU path.
     pub fn try_reference_scan_into(
         &self,
         haystack: &[u8],
         results: &mut Vec<Match>,
-    ) -> Result<(), vyre::BackendError> {
-        crate::scan::dispatch_io::scan_guard(haystack, "RulePipeline::reference_scan", u32::MAX)?;
+    ) -> Result<(), vyre_driver::BackendError> {
+        crate::dispatch_io::scan_guard(haystack, "ScanSession::reference_scan", u32::MAX)?;
         results.clear();
         for start in 0..haystack.len() {
             let start_u32 = u32::try_from(start).map_err(|_| {
-                vyre::BackendError::new(
-                    "RulePipeline::reference_scan start offset exceeds u32 capacity. Fix: split the haystack before parity scanning.",
+                vyre_driver::BackendError::new(
+                    "ScanSession::reference_scan start offset exceeds u32 capacity. Fix: split the haystack before parity scanning.",
                 )
             })?;
             let mut state = [0_u32; NFA_LANES];
@@ -301,8 +296,8 @@ impl RulePipeline {
             // never leaves the entry state and reports zero matches for any ε-bearing NFA.
             close_epsilon(
                 &mut state,
-                &self.epsilon_table,
-                self.plan.num_states as usize,
+                &self.compiled.epsilon_table,
+                self.compiled.plan.num_states as usize,
             );
             for (cursor, &byte) in haystack.iter().enumerate().skip(start) {
                 next.fill(0);
@@ -312,12 +307,12 @@ impl RulePipeline {
                             continue;
                         }
                         let src_state = lane * 32 + bit;
-                        if src_state >= self.plan.num_states as usize {
+                        if src_state >= self.compiled.plan.num_states as usize {
                             continue;
                         }
                         let base = src_state * 256 * NFA_LANES + (byte as usize) * NFA_LANES;
                         for (dst_lane, slot) in next.iter_mut().enumerate() {
-                            *slot |= self.transition_table[base + dst_lane];
+                            *slot |= self.compiled.transition_table[base + dst_lane];
                         }
                     }
                 }
@@ -325,21 +320,22 @@ impl RulePipeline {
                 // ε-close the post-transition state set (same fixpoint the GPU eps loop runs).
                 close_epsilon(
                     &mut state,
-                    &self.epsilon_table,
-                    self.plan.num_states as usize,
+                    &self.compiled.epsilon_table,
+                    self.compiled.plan.num_states as usize,
                 );
                 for (&accept_state, &(pattern_id, _pattern_len)) in self
+                    .compiled
                     .plan
                     .accept_state_ids
                     .iter()
-                    .zip(&self.plan.accept_states)
+                    .zip(&self.compiled.plan.accept_states)
                 {
                     let lane = (accept_state / 32) as usize;
                     let bit = accept_state % 32;
                     if lane < state.len() && (state[lane] & (1_u32 << bit)) != 0 {
                         let end_u32 = u32::try_from(cursor + 1).map_err(|_| {
-                            vyre::BackendError::new(
-                                "RulePipeline::reference_scan end offset exceeds u32 capacity. Fix: split the haystack before parity scanning.",
+                            vyre_driver::BackendError::new(
+                                "ScanSession::reference_scan end offset exceeds u32 capacity. Fix: split the haystack before parity scanning.",
                             )
                         })?;
                         results.push(Match::new(pattern_id, start_u32, end_u32));
@@ -399,42 +395,35 @@ fn close_epsilon(state: &mut [u32; NFA_LANES], epsilon_table: &[u32], num_states
 /// Additional G-stack options land here as optional parameters  -
 /// callers that don't opt in keep the current behaviour.
 #[must_use]
-pub fn build(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> RulePipeline {
-    let plan = nfa::compile(patterns).for_input_len(input_len);
-    let program = nfa::nfa_scan(patterns, input_buf, hit_buf, input_len);
-    let transition_table = nfa::build_transition_table(patterns);
-    let epsilon_table = nfa::build_epsilon_table(patterns);
-    RulePipeline {
-        program,
-        transition_table,
-        epsilon_table,
-        plan,
+pub fn build(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> ScanSession {
+    ScanSession {
+        compiled: vyre_libs::scan::build_scan_program(patterns, input_buf, hit_buf, input_len),
     }
 }
 
-pub(crate) fn hit_buffer_byte_len(max_matches: u32) -> Result<usize, vyre::BackendError> {
+pub(crate) fn hit_buffer_byte_len(max_matches: u32) -> Result<usize, vyre_driver::BackendError> {
     let match_words = usize::try_from(max_matches)
         .map_err(|_| {
-            vyre::BackendError::new(
-                "RulePipeline::scan max_matches exceeds host usize capacity. Fix: reduce max_matches or shard the scan.",
+            vyre_driver::BackendError::new(
+                "ScanSession::scan max_matches exceeds host usize capacity. Fix: reduce max_matches or shard the scan.",
             )
         })?
         .checked_mul(3)
         .and_then(|words| words.checked_add(1))
         .ok_or_else(|| {
-            vyre::BackendError::new(
-                "RulePipeline::scan hit-buffer word count overflowed. Fix: reduce max_matches or shard the scan.",
+            vyre_driver::BackendError::new(
+                "ScanSession::scan hit-buffer word count overflowed. Fix: reduce max_matches or shard the scan.",
             )
         })?;
     match_words.checked_mul(4).ok_or_else(|| {
-        vyre::BackendError::new(
-            "RulePipeline::scan hit-buffer byte count overflowed. Fix: reduce max_matches or shard the scan.",
+        vyre_driver::BackendError::new(
+            "ScanSession::scan hit-buffer byte count overflowed. Fix: reduce max_matches or shard the scan.",
         )
     })
 }
 
 #[cfg(test)]
-fn zeroed_hit_buffer(max_matches: u32) -> Result<Vec<u8>, vyre::BackendError> {
+fn zeroed_hit_buffer(max_matches: u32) -> Result<Vec<u8>, vyre_driver::BackendError> {
     let byte_len = hit_buffer_byte_len(max_matches)?;
     let mut bytes = Vec::new();
     zeroed_hit_buffer_into(max_matches, &mut bytes)?;
@@ -442,13 +431,16 @@ fn zeroed_hit_buffer(max_matches: u32) -> Result<Vec<u8>, vyre::BackendError> {
     Ok(bytes)
 }
 
-fn zeroed_hit_buffer_into(max_matches: u32, bytes: &mut Vec<u8>) -> Result<(), vyre::BackendError> {
+fn zeroed_hit_buffer_into(
+    max_matches: u32,
+    bytes: &mut Vec<u8>,
+) -> Result<(), vyre_driver::BackendError> {
     let byte_len = hit_buffer_byte_len(max_matches)?;
     bytes.clear();
     vyre_foundation::allocation::try_reserve_vec_to_capacity(bytes, byte_len).map_err(
         |source| {
-            vyre::BackendError::new(format!(
-                "RulePipeline::scan could not reserve {byte_len} hit-buffer byte(s): {source}. Fix: lower max_matches or shard the scan."
+            vyre_driver::BackendError::new(format!(
+                "ScanSession::scan could not reserve {byte_len} hit-buffer byte(s): {source}. Fix: lower max_matches or shard the scan."
             ))
         },
     )?;
@@ -485,7 +477,7 @@ const PIPELINE_WIRE_MAGIC: &[u8; 4] = b"VRPL";
 // missing-binding lookup.
 const PIPELINE_WIRE_VERSION: u32 = 4;
 
-/// Errors returned by [`RulePipeline::from_bytes`]. Mirrors the layered
+/// Errors returned by [`ScanSession::from_bytes`]. Mirrors the layered
 /// error pattern of `LiteralSetWireError`  -  outer envelope failures
 /// forward to `WireFraming`, inner failures keep typed variants.
 #[derive(Debug)]
@@ -517,12 +509,12 @@ pub enum PipelineWireError {
 impl std::fmt::Display for PipelineWireError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::WireFraming(e) => write!(f, "RulePipeline wire envelope: {e}"),
+            Self::WireFraming(e) => write!(f, "ScanSession wire envelope: {e}"),
             Self::InvalidProgram(msg) => {
-                write!(f, "RulePipeline wire blob has invalid Program: {msg}")
+                write!(f, "ScanSession wire blob has invalid Program: {msg}")
             }
             Self::ShapeMismatch { reason } => {
-                write!(f, "RulePipeline wire blob shape mismatch: {reason}")
+                write!(f, "ScanSession wire blob shape mismatch: {reason}")
             }
             Self::StorageReserveFailed {
                 field,
@@ -530,7 +522,7 @@ impl std::fmt::Display for PipelineWireError {
                 message,
             } => write!(
                 f,
-                "RulePipeline wire serialization could not reserve {requested} {field} slot(s): {message}. Fix: shard the pattern pipeline before serialization."
+                "ScanSession wire serialization could not reserve {requested} {field} slot(s): {message}. Fix: shard the pattern pipeline before serialization."
             ),
         }
     }
@@ -538,7 +530,7 @@ impl std::fmt::Display for PipelineWireError {
 
 impl std::error::Error for PipelineWireError {}
 
-impl RulePipeline {
+impl ScanSession {
     /// Serialize this pipeline into a self-describing binary blob
     /// suitable for on-disk caching. Built on the shared
     /// `vyre_foundation::serial::envelope` primitive  -  any future cache
@@ -565,40 +557,45 @@ impl RulePipeline {
             PIPELINE_WIRE_MAGIC,
             PIPELINE_WIRE_VERSION,
         );
-        w.write_u32(self.plan.num_states);
-        w.write_u32(self.plan.input_len);
-        w.write_section(&self.program.to_bytes())
+        w.write_u32(self.compiled.plan.num_states);
+        w.write_u32(self.compiled.plan.input_len);
+        w.write_section(&self.compiled.program.to_bytes())
             .map_err(PipelineWireError::WireFraming)?;
-        w.write_words(&self.transition_table)
+        w.write_words(&self.compiled.transition_table)
             .map_err(PipelineWireError::WireFraming)?;
-        w.write_words(&self.epsilon_table)
+        w.write_words(&self.compiled.epsilon_table)
             .map_err(PipelineWireError::WireFraming)?;
         // Flatten accept_states tuples into a flat u32 array; each
         // accept-state contributes two consecutive words.
-        let accept_flat_words = self.plan.accept_states.len().checked_mul(2).ok_or(
-            PipelineWireError::ShapeMismatch {
+        let accept_flat_words = self
+            .compiled
+            .plan
+            .accept_states
+            .len()
+            .checked_mul(2)
+            .ok_or(PipelineWireError::ShapeMismatch {
                 reason: "accept_states length overflows flattened word count",
-            },
-        )?;
+            })?;
         let mut accept_flat: Vec<u32> = Vec::new();
         reserve_wire_vec(&mut accept_flat, accept_flat_words, "accept state word")?;
-        for &(pid, len) in &self.plan.accept_states {
+        for &(pid, len) in &self.compiled.plan.accept_states {
             accept_flat.push(pid);
             accept_flat.push(len);
         }
         w.write_words(&accept_flat)
             .map_err(PipelineWireError::WireFraming)?;
-        w.write_words(&self.plan.accept_state_ids)
+        w.write_words(&self.compiled.plan.accept_state_ids)
             .map_err(PipelineWireError::WireFraming)?;
         let mut anchor_flags: Vec<u32> = Vec::new();
         reserve_wire_vec(
             &mut anchor_flags,
-            self.plan.accept_states.len(),
+            self.compiled.plan.accept_states.len(),
             "accept anchor flag",
         )?;
-        for idx in 0..self.plan.accept_states.len() {
+        for idx in 0..self.compiled.plan.accept_states.len() {
             let mut flags = 0u32;
             if self
+                .compiled
                 .plan
                 .accept_start_anchored
                 .get(idx)
@@ -608,6 +605,7 @@ impl RulePipeline {
                 flags |= 1;
             }
             if self
+                .compiled
                 .plan
                 .accept_end_anchored
                 .get(idx)
@@ -623,7 +621,7 @@ impl RulePipeline {
         Ok(w.into_bytes())
     }
 
-    /// Decode a `RulePipeline` from a blob produced by
+    /// Decode a `ScanSession` from a blob produced by
     /// [`Self::to_bytes`].
     ///
     /// # Errors
@@ -711,17 +709,19 @@ impl RulePipeline {
         let accept_start_anchored = anchor_flags.iter().map(|flags| flags & 1 != 0).collect();
         let accept_end_anchored = anchor_flags.iter().map(|flags| flags & 2 != 0).collect();
 
-        Ok(RulePipeline {
-            program,
-            transition_table,
-            epsilon_table,
-            plan: nfa::NfaPlan {
-                num_states,
-                input_len,
-                accept_states,
-                accept_state_ids,
-                accept_start_anchored,
-                accept_end_anchored,
+        Ok(ScanSession {
+            compiled: ScanProgram {
+                program,
+                transition_table,
+                epsilon_table,
+                plan: nfa::NfaPlan {
+                    num_states,
+                    input_len,
+                    accept_states,
+                    accept_state_ids,
+                    accept_start_anchored,
+                    accept_end_anchored,
+                },
             },
         })
     }
@@ -736,7 +736,7 @@ mod tests {
         outputs: Vec<Vec<u8>>,
     }
 
-    impl vyre::backend::private::Sealed for RuleReadbackBackend {}
+    impl vyre_driver::backend::private::Sealed for RuleReadbackBackend {}
 
     impl VyreBackend for RuleReadbackBackend {
         fn id(&self) -> &'static str {
@@ -747,8 +747,8 @@ mod tests {
             &self,
             _program: &Program,
             _inputs: &[Vec<u8>],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             Ok(self.outputs.clone())
         }
 
@@ -756,8 +756,8 @@ mod tests {
             &self,
             _program: &Program,
             _inputs: &[&[u8]],
-            _config: &vyre::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+            _config: &vyre_driver::DispatchConfig,
+        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
             Ok(self.outputs.clone())
         }
     }
@@ -779,7 +779,7 @@ mod tests {
 
     #[test]
     fn scan_fails_closed_when_kernel_count_exceeds_cap() {
-        // Law 10 regression at the RulePipeline decode call site: the kernel's
+        // Law 10 regression at the ScanSession decode call site: the kernel's
         // atomic counter reports 9 hits into a buffer sized for the cap of 4
         // triples. The capped decode must error (naming the overflow and the 5
         // dropped matches) instead of silently returning the truncated 4, a
@@ -797,11 +797,11 @@ mod tests {
             .expect_err("count 9 over cap 4 must fail closed, not truncate to 4");
         let msg = err.to_string();
         assert!(
-            msg.contains("RulePipeline hit buffer")
+            msg.contains("ScanSession hit buffer")
                 && msg.contains("exceeds the output-buffer cap 4")
                 && msg.contains("drop 5 match(es)")
                 && matches.is_empty(),
-            "RulePipeline must surface the dropped-match overflow and expose no partial set: {msg}"
+            "ScanSession must surface the dropped-match overflow and expose no partial set: {msg}"
         );
     }
 
@@ -832,26 +832,32 @@ mod tests {
             * vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
         let expected_eps_len =
             (plan.num_states as usize) * vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
-        assert_eq!(pipe.transition_table.len(), expected_trans_len);
-        assert_eq!(pipe.epsilon_table.len(), expected_eps_len);
+        assert_eq!(pipe.compiled.transition_table.len(), expected_trans_len);
+        assert_eq!(pipe.compiled.epsilon_table.len(), expected_eps_len);
     }
 
     #[test]
     fn integrator_plan_matches_compile() {
         let pipe = build(&["ab", "cd"], "input", "hits", 8);
-        assert_eq!(pipe.plan.num_states, 5);
-        assert_eq!(pipe.plan.input_len, 8);
-        assert_eq!(pipe.plan.accept_states.len(), 2);
+        assert_eq!(pipe.compiled.plan.num_states, 5);
+        assert_eq!(pipe.compiled.plan.input_len, 8);
+        assert_eq!(pipe.compiled.plan.accept_states.len(), 2);
     }
 
     #[test]
     fn rule_pipeline_wire_roundtrips_and_scans_identically() {
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
         let bytes = pipe.to_bytes().expect("valid pipeline must serialize");
-        let decoded = RulePipeline::from_bytes(&bytes).expect("roundtrip must decode");
-        assert_eq!(decoded.plan.num_states, pipe.plan.num_states);
-        assert_eq!(decoded.transition_table, pipe.transition_table);
-        assert_eq!(decoded.epsilon_table, pipe.epsilon_table);
+        let decoded = ScanSession::from_bytes(&bytes).expect("roundtrip must decode");
+        assert_eq!(
+            decoded.compiled.plan.num_states,
+            pipe.compiled.plan.num_states
+        );
+        assert_eq!(
+            decoded.compiled.transition_table,
+            pipe.compiled.transition_table
+        );
+        assert_eq!(decoded.compiled.epsilon_table, pipe.compiled.epsilon_table);
         assert_eq!(
             decoded.reference_scan(b"zabc"),
             vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]
@@ -865,11 +871,11 @@ mod tests {
         // closed at decode (ShapeMismatch), NOT be accepted and OOB-panic later
         // in try_reference_scan_into's `transition_table[base + dst_lane]`.
         let mut pipe = build(&["ab"], "input", "hits", 16);
-        let honest_states = pipe.plan.num_states;
-        pipe.plan.num_states = honest_states + 1; // header now overstates the tables
+        let honest_states = pipe.compiled.plan.num_states;
+        pipe.compiled.plan.num_states = honest_states + 1; // header now overstates the tables
         let bytes = pipe.to_bytes().expect("serialize with tampered header");
 
-        let err = RulePipeline::from_bytes(&bytes)
+        let err = ScanSession::from_bytes(&bytes)
             .expect_err("num_states overstating the tables must be rejected");
         assert!(
             matches!(
@@ -889,18 +895,18 @@ mod tests {
         // `lane < state.len()` guard would otherwise SILENTLY DROP that accept
         // an invisible recall hole on a stale cache, not a loud corruption error.
         let mut pipe = build(&["ab", "bc"], "input", "hits", 16);
-        let honest = pipe.plan.num_states;
+        let honest = pipe.compiled.plan.num_states;
         assert!(
-            !pipe.plan.accept_state_ids.is_empty(),
+            !pipe.compiled.plan.accept_state_ids.is_empty(),
             "fixture must have accepts"
         );
         // `num_states` itself is the first out-of-range id (valid ids are 0..num_states).
-        pipe.plan.accept_state_ids[0] = honest;
+        pipe.compiled.plan.accept_state_ids[0] = honest;
         let bytes = pipe
             .to_bytes()
             .expect("serialize with tampered accept id (to_bytes does not validate consistency)");
 
-        let err = RulePipeline::from_bytes(&bytes)
+        let err = ScanSession::from_bytes(&bytes)
             .expect_err("an accept_state_id >= num_states must be rejected, not silently dropped");
         assert!(
             matches!(
@@ -918,17 +924,21 @@ mod tests {
         // Positive twin: an untampered pipeline whose accept ids are all in range
         // roundtrips cleanly, proving the new guard rejects only real corruption.
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
-        let states = pipe.plan.num_states as usize;
+        let states = pipe.compiled.plan.num_states as usize;
         assert!(
-            pipe.plan
+            pipe.compiled
+                .plan
                 .accept_state_ids
                 .iter()
                 .all(|&id| (id as usize) < states),
             "honest fixture accept ids must all be < num_states"
         );
         let bytes = pipe.to_bytes().expect("valid pipeline must serialize");
-        let decoded = RulePipeline::from_bytes(&bytes).expect("in-range accept ids must decode");
-        assert_eq!(decoded.plan.accept_state_ids, pipe.plan.accept_state_ids);
+        let decoded = ScanSession::from_bytes(&bytes).expect("in-range accept ids must decode");
+        assert_eq!(
+            decoded.compiled.plan.accept_state_ids,
+            pipe.compiled.plan.accept_state_ids
+        );
     }
 
     #[test]
@@ -939,7 +949,7 @@ mod tests {
         let retained_capacity = scratch.capacity();
 
         pipe.try_reference_scan_into(b"zabc", &mut scratch)
-            .expect("Fix: RulePipeline CPU oracle should scan small haystacks");
+            .expect("Fix: ScanSession CPU oracle should scan small haystacks");
 
         assert_eq!(scratch, owned);
         assert!(scratch.capacity() >= retained_capacity);
@@ -954,7 +964,7 @@ mod tests {
         // stepper (not the panicking default) and that the infallible wrapper
         // returns the fallible result verbatim, asserted on concrete triples,
         // never `is_empty`.
-        use crate::scan::engine::MatchScan;
+        use crate::engine::MatchScan;
 
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
         let haystack = b"zabc";
@@ -998,7 +1008,7 @@ mod tests {
             .expect_err("Fix: an over-u32 haystack must error, never report zero matches");
         let msg = err.to_string();
         assert!(
-            msg.contains("RulePipeline::reference_scan") && msg.contains("u32"),
+            msg.contains("ScanSession::reference_scan") && msg.contains("u32"),
             "error must name the scan and the u32 ABI limit, got: {msg}"
         );
 
@@ -1026,8 +1036,8 @@ mod tests {
 
     #[test]
     fn rule_pipeline_hit_buffer_allocation_is_checked_and_zeroed() {
-        let bytes = super::zeroed_hit_buffer(2)
-            .expect("Fix: small RulePipeline hit buffer should allocate");
+        let bytes =
+            super::zeroed_hit_buffer(2).expect("Fix: small ScanSession hit buffer should allocate");
 
         assert_eq!(bytes.len(), (2 * 3 + 1) * 4);
         assert!(bytes.iter().all(|&byte| byte == 0));
@@ -1039,7 +1049,7 @@ mod tests {
         let retained = scratch.capacity();
 
         super::zeroed_hit_buffer_into(3, &mut scratch)
-            .expect("Fix: RulePipeline hit buffer scratch should reserve");
+            .expect("Fix: ScanSession hit buffer scratch should reserve");
 
         assert_eq!(scratch.len(), (3 * 3 + 1) * 4);
         assert!(scratch.iter().all(|&byte| byte == 0));
@@ -1056,7 +1066,7 @@ mod tests {
 
         let err = pipe
             .scan_into(&backend, b"ab", 1, &mut matches)
-            .expect_err("missing RulePipeline hit output must fail");
+            .expect_err("missing ScanSession hit output must fail");
 
         let msg = err.to_string();
         assert!(
@@ -1064,8 +1074,8 @@ mod tests {
             "scan errors must not expose stale matches"
         );
         assert!(
-            msg.contains("RulePipeline hit buffer") && msg.contains("output index 0"),
-            "RulePipeline missing-output error must identify the omitted slot: {msg}"
+            msg.contains("ScanSession hit buffer") && msg.contains("output index 0"),
+            "ScanSession missing-output error must identify the omitted slot: {msg}"
         );
     }
 
@@ -1079,7 +1089,7 @@ mod tests {
 
         let err = pipe
             .scan_into(&backend, b"ab", 1, &mut matches)
-            .expect_err("short RulePipeline counter readback must fail");
+            .expect_err("short ScanSession counter readback must fail");
 
         let msg = err.to_string();
         assert!(
@@ -1087,8 +1097,8 @@ mod tests {
             "scan errors must not expose stale matches"
         );
         assert!(
-            msg.contains("RulePipeline hit buffer") && msg.contains("requires 4 bytes"),
-            "RulePipeline counter error must name the malformed hit buffer: {msg}"
+            msg.contains("ScanSession hit buffer") && msg.contains("requires 4 bytes"),
+            "ScanSession counter error must name the malformed hit buffer: {msg}"
         );
     }
 
@@ -1102,7 +1112,7 @@ mod tests {
 
         let err = pipe
             .scan_into(&backend, b"ab", 2, &mut matches)
-            .expect_err("short RulePipeline match payload must fail");
+            .expect_err("short ScanSession match payload must fail");
 
         let msg = err.to_string();
         assert!(
@@ -1113,16 +1123,16 @@ mod tests {
             msg.contains("readback was 12 byte(s)")
                 && msg.contains("count=2")
                 && msg.contains("requires 24 byte(s)"),
-            "RulePipeline match-payload error must identify observed and required bytes: {msg}"
+            "ScanSession match-payload error must identify observed and required bytes: {msg}"
         );
     }
 
     #[test]
     fn rule_pipeline_reference_scan_state_is_stack_backed() {
-        let production = include_str!("mega_scan.rs")
+        let production = include_str!("session.rs")
             .split("#[cfg(test)]")
             .next()
-            .expect("Fix: mega_scan.rs must contain production section");
+            .expect("Fix: session.rs must contain production section");
 
         assert!(
             production.contains("let mut state = [0_u32; NFA_LANES];")
@@ -1130,7 +1140,7 @@ mod tests {
                 && production.contains("next.fill(0);")
                 && !production.contains("vec![0_u32;")
                 && !production.contains("Vec::with_capacity"),
-            "Fix: RulePipeline scan and wire paths must use checked shared reservation helpers instead of nested subgroup vector allocation or infallible capacity allocation."
+            "Fix: ScanSession scan and wire paths must use checked shared reservation helpers instead of nested subgroup vector allocation or infallible capacity allocation."
         );
     }
 
@@ -1145,11 +1155,17 @@ mod tests {
     #[test]
     fn rule_pipeline_program_declares_haystack_len_buffer() {
         let pipe = build(&["ab"], "input", "hits", 1024);
-        let names: Vec<&str> = pipe.program.buffers.iter().map(|b| b.name()).collect();
+        let names: Vec<&str> = pipe
+            .compiled
+            .program
+            .buffers
+            .iter()
+            .map(|b| b.name())
+            .collect();
         assert!(
             names.iter().any(|n| *n == super::nfa::HAYSTACK_LEN_BUF),
             "Fix: nfa_scan must declare `{}` so the cursor loop bound \
-             is runtime-supplied; without it, RulePipeline can only \
+             is runtime-supplied; without it, ScanSession can only \
              dispatch at exactly its compile-time input_len.",
             super::nfa::HAYSTACK_LEN_BUF
         );
@@ -1165,11 +1181,17 @@ mod tests {
     #[test]
     fn rule_pipeline_program_declares_max_scan_bytes_buffer() {
         let pipe = build(&["ab"], "input", "hits", 1024);
-        let names: Vec<&str> = pipe.program.buffers.iter().map(|b| b.name()).collect();
+        let names: Vec<&str> = pipe
+            .compiled
+            .program
+            .buffers
+            .iter()
+            .map(|b| b.name())
+            .collect();
         assert!(
             names.iter().any(|n| *n == super::nfa::MAX_SCAN_BYTES_BUF),
             "Fix: nfa_scan must declare `{}` so the per-workgroup \
-             cursor cap is runtime-supplied; without it, RulePipeline \
+             cursor cap is runtime-supplied; without it, ScanSession \
              dispatches at O(N²) per shard.",
             super::nfa::MAX_SCAN_BYTES_BUF
         );

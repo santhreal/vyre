@@ -2,7 +2,7 @@
 //!
 //! # Why this exists
 //!
-//! [`GpuLiteralSet::scan_presence_by_region`](crate::scan::literal_set::GpuLiteralSet::scan_presence_by_region)
+//! [`GpuLiteralSet::scan_presence_by_region`](crate::literal_set::GpuLiteralSet::scan_presence_by_region)
 //! and its async sibling issue every dispatch through `dispatch_borrowed`, which
 //! re-encodes and **re-uploads seven immutable tables on every call**: the DFA
 //! transition / output-offset / output-record tables, the per-pattern length
@@ -22,9 +22,9 @@
 //! resident tables, and reads back the per-region presence bitmap, the per-scan
 //! transfer drops from `O(tables + haystack)` to `O(haystack + region rows)`.
 //! This is the region-presence counterpart of
-//! `ResidentRulePipeline::prepare_resident` (requires the `matching-nfa` feature,
+//! `ResidentScanSession::prepare_resident` (requires the `matching-nfa` feature,
 //! the regex/NFA mega-scan path) and of
-//! [`GpuLiteralSet::prepare_presence_by_region_dispatch`](crate::scan::literal_set::GpuLiteralSet::prepare_presence_by_region_dispatch)
+//! [`GpuLiteralSet::prepare_presence_by_region_dispatch`](crate::literal_set::GpuLiteralSet::prepare_presence_by_region_dispatch)
 //! (the backend-neutral single-shot prepared payload).
 //!
 //! The decoded bitmap is byte-identical to
@@ -54,7 +54,7 @@
 //! `UnsupportedFeature` error **loudly**: the caller must handle it explicitly
 //! (fail closed, or a loud/recorded fallback), never degrade silently.
 
-use vyre::{BackendError, VyreBackend};
+use vyre_driver::{BackendError, VyreBackend};
 use vyre_driver::{Resource, TimedDispatchResult};
 use vyre_foundation::ir::Program;
 
@@ -123,7 +123,7 @@ pub struct ResidentPresencePipeline {
     workgroup_x: u32,
 }
 
-// SAFETY mirror of the `ResidentRulePipeline`/`GpuLiteralSet` contract: `Resource`
+// SAFETY mirror of the `ResidentScanSession`/`GpuLiteralSet` contract: `Resource`
 // handles are plain ids and `Program` is `Send + Sync`.
 const _: () = {
     const fn assert_send_sync<T: Send + Sync>() {}
@@ -336,7 +336,7 @@ impl ResidentPresencePipeline {
         // OR-accumulated by the kernel, so it must arrive zeroed). Rows beyond
         // region_count are never written (the kernel bounds the region index by
         // buf_len(region_starts)) and never read, so only the used prefix needs
-        // clearing, the resident analogue of `ResidentRulePipeline`'s 4-byte
+        // clearing, the resident analogue of `ResidentScanSession`'s 4-byte
         // counter reset. Reusing `scratch` is safe: `upload_resident_at` copies the
         // source synchronously (wgpu `Queue::write_buffer` into the staging belt,
         // CUDA H2D memcpy), so the buffer is free to repurpose the instant the
@@ -492,7 +492,7 @@ mod tests {
     use std::collections::BTreeSet;
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::sync::Mutex;
-    use vyre::DispatchConfig as Config;
+    use vyre_driver::DispatchConfig as Config;
     use vyre_driver::TimedDispatchResult;
 
     // pattern_id order matches the integration corpus: key=0 .. api=7.
@@ -543,7 +543,7 @@ mod tests {
         }
     }
 
-    impl vyre::backend::private::Sealed for MockResidentBackend {}
+    impl vyre_driver::backend::private::Sealed for MockResidentBackend {}
 
     impl VyreBackend for MockResidentBackend {
         fn id(&self) -> &'static str {

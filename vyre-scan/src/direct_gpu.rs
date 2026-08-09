@@ -5,9 +5,9 @@
 //! second scanner implementation from drifting out of conformance with the
 //! literal-set engine.
 
-use crate::scan::literal_set::GpuLiteralSet;
-use vyre::ir::Program;
-use vyre::VyreBackend;
+use crate::literal_set::GpuLiteralSet;
+use vyre_driver::VyreBackend;
+use vyre_foundation::ir::Program;
 pub use vyre_foundation::match_result::Match;
 
 /// State for a pipelined direct-to-GPU scan.
@@ -35,7 +35,7 @@ impl DirectGpuScanner {
     /// fork from the literal-set caches.
     #[must_use]
     pub fn literal_set_cache_key(&self) -> String {
-        use crate::scan::MatchScan;
+        use crate::MatchScan;
         MatchScan::cache_key(&self.literal_set)
     }
 
@@ -49,14 +49,14 @@ impl DirectGpuScanner {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre::BackendError`] when the backend cannot dispatch or read
+    /// Returns [`vyre_driver::BackendError`] when the backend cannot dispatch or read
     /// back the compiled matcher.
     pub fn scan<B: VyreBackend + ?Sized>(
         &self,
         backend: &B,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre::BackendError> {
+    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
         self.literal_set.scan(backend, haystack, max_matches)
     }
 }

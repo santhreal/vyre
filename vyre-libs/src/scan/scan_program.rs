@@ -9,7 +9,7 @@ use super::nfa;
 
 /// Typed program plus immutable inputs required by the NFA scan composition.
 #[derive(Debug, Clone)]
-pub struct RulePipeline {
+pub struct ScanProgram {
     /// Substrate-neutral scan program.
     pub program: Program,
     /// Lane-major transition table consumed by `nfa_transition`.
@@ -22,10 +22,15 @@ pub struct RulePipeline {
 
 /// Build a neutral NFA program artifact and its immutable table inputs.
 #[must_use]
-pub fn build(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> RulePipeline {
+pub fn build(patterns: &[&str], input_buf: &str, hit_buf: &str, input_len: u32) -> ScanProgram {
     let plan = nfa::compile(patterns).for_input_len(input_len);
     let program = nfa::nfa_scan(patterns, input_buf, hit_buf, input_len);
     let transition_table = nfa::build_transition_table(patterns);
     let epsilon_table = nfa::build_epsilon_table(patterns);
-    RulePipeline { program, transition_table, epsilon_table, plan }
+    ScanProgram {
+        program,
+        transition_table,
+        epsilon_table,
+        plan,
+    }
 }

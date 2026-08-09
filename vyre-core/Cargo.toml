@@ -20,6 +20,7 @@ vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
 vyre-runtime.workspace = true
 vyre-libs = { workspace = true, features = ["full", "c-parser", "matching-regex"] }
+vyre-scan.workspace = true
 vyre-primitives.workspace = true
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }

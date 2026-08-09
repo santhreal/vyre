@@ -1,7 +1,7 @@
 //! Shared GPU dispatch primitives for matching engines.
 //!
 //! Every high-level matcher in `vyre-libs::matching` (`GpuLiteralSet`,
-//! `RulePipeline`, future ones) needs the same four operations to talk
+//! `ScanSession`, future ones) needs the same four operations to talk
 //! to a `VyreBackend`:
 //!
 //!   1. Pack a haystack `&[u8]` into `u32` words for the read-only
@@ -15,21 +15,21 @@
 //!      onto the program's `workgroup_size[0]` lane fan-out.
 //!
 //! Each of those was duplicated 2x as I added the second matcher
-//! (`RulePipeline::scan`). Centralising them here makes the *next*
+//! (`ScanSession::scan`). Centralising them here makes the *next*
 //! matcher (parser combinators, taint-flow scan, custom regex
 //! compositions in downstream crates) free to compose  -  write the unique
 //! plumbing, reuse the shared four.
 //!
 //! The output-layout step is intentionally **not** centralised:
 //! `GpuLiteralSet` uses a two-buffer layout (`match_count` + `matches`),
-//! while `RulePipeline` uses a single hit buffer with embedded counter.
+//! while `ScanSession` uses a single hit buffer with embedded counter.
 //! Once the caller has isolated the counter and match-triple byte range,
 //! decoding is shared so every engine rejects malformed readbacks the same
 //! way.
 
 use std::borrow::Cow;
 
-use vyre::{BackendError, DispatchConfig};
+use vyre_driver::{BackendError, DispatchConfig};
 
 const U32_COUNTER_BYTES: usize = 4;
 const MATCH_TRIPLE_BYTES: usize = 12;
@@ -305,7 +305,7 @@ pub fn try_output_bytes<'a>(
 
 /// Decode a packed match-triple buffer (`pid, start, end` × N) into
 /// [`vyre_foundation::match_result::Match`] values. The triple layout is
-/// shared between `GpuLiteralSet` and `RulePipeline`; only the *position*
+/// shared between `GpuLiteralSet` and `ScanSession`; only the *position*
 /// of the buffer in the dispatch outputs differs.
 ///
 /// Decodes at most `count` triples and never reads past a complete 12-byte
@@ -476,7 +476,7 @@ pub fn try_unpack_match_triples_exact_prefix_into(
 /// naming the shortfall and the fix; on success `count` is proven `<= cap` and
 /// decoded exactly via [`try_unpack_match_triples_exact_prefix_into`].
 ///
-/// `context` labels the readback (e.g. `"RulePipeline hit buffer"`) so the
+/// `context` labels the readback (e.g. `"ScanSession hit buffer"`) so the
 /// error points the operator at the dispatch that overflowed.
 ///
 /// # Errors

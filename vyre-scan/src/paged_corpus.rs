@@ -32,10 +32,10 @@ use std::io::Read;
 use std::ops::Range;
 use std::path::Path;
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 
-use crate::scan::literal_set::{GpuLiteralSet, PendingFusedRegion};
+use crate::literal_set::{GpuLiteralSet, PendingFusedRegion};
 
 type PagedPlan = Option<(u32, Vec<usize>, Vec<CorpusWindow>)>;
 
@@ -344,9 +344,9 @@ fn window_region_starts(
 fn window_presence_words(
     win_presence: &[u32],
     scan_region_count: usize,
-) -> Result<usize, vyre::BackendError> {
+) -> Result<usize, vyre_driver::BackendError> {
     if scan_region_count == 0 || win_presence.len() % scan_region_count != 0 {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "scan_paged_fused: window presence length {} is not a multiple of its region count {scan_region_count}. Fix: internal invariant broke, report with the corpus shape.",
             win_presence.len()
         )));
@@ -384,12 +384,12 @@ fn globalize_window(
     presence_words: &mut usize,
     presence: &mut Vec<u32>,
     matches: &mut Vec<GlobalMatch>,
-) -> Result<(), vyre::BackendError> {
+) -> Result<(), vyre_driver::BackendError> {
     let words = window_presence_words(win_presence, staging.region_starts.len())?;
     if *presence_words == 0 {
         *presence_words = words;
     } else if words != *presence_words {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "scan_paged_fused: presence word count changed across windows ({} -> {words}). Fix: internal invariant broke, report with the corpus shape.",
             *presence_words
         )));
@@ -419,15 +419,15 @@ fn finish_result(
 fn plan_paged(
     files: &[&[u8]],
     window_budget_bytes: usize,
-) -> Result<PagedPlan, vyre::BackendError> {
+) -> Result<PagedPlan, vyre_driver::BackendError> {
     let region_count = u32::try_from(files.len()).map_err(|_| {
-        vyre::BackendError::new(
+        vyre_driver::BackendError::new(
             "scan_paged_fused: file count exceeds the u32 region-id ABI. Fix: coalesce fewer files per corpus or shard the corpus.".to_string(),
         )
     })?;
     let file_lengths: Vec<usize> = files.iter().map(|file| file.len()).collect();
     let windows = plan_corpus_windows(&file_lengths, window_budget_bytes)
-        .map_err(|error| vyre::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
     if windows.is_empty() {
         return Ok(None);
     }
@@ -448,7 +448,7 @@ fn plan_paged(
 /// fused session (tables uploaded once), scanning each window in turn.
 ///
 /// # Errors
-/// Returns [`vyre::BackendError`] on any window's dispatch/readback failure, if the
+/// Returns [`vyre_driver::BackendError`] on any window's dispatch/readback failure, if the
 /// plan is invalid (see `plan_corpus_windows`, surfaced as a backend error), or
 /// if the file count exceeds the u32 region ABI.
 pub fn scan_paged_fused(
@@ -457,7 +457,7 @@ pub fn scan_paged_fused(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     let Some((region_count, file_lengths, windows)) = plan_paged(files, window_budget_bytes)?
     else {
         return Ok(finish_result(Vec::new(), 0, 0, Vec::new()));
@@ -540,7 +540,7 @@ pub fn scan_paged_fused_timed(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<(PagedScanResult, PagedScanTiming), vyre::BackendError> {
+) -> Result<(PagedScanResult, PagedScanTiming), vyre_driver::BackendError> {
     let Some((region_count, file_lengths, windows)) = plan_paged(files, window_budget_bytes)?
     else {
         let timing = PagedScanTiming {
@@ -655,7 +655,7 @@ pub fn scan_paged_fused_timed(
 /// physical device is present.
 ///
 /// # Errors
-/// [`vyre::BackendError`] if `backends` is empty (fail closed, a shard scan needs
+/// [`vyre_driver::BackendError`] if `backends` is empty (fail closed, a shard scan needs
 /// at least one device), or on any window's dispatch/readback/free failure.
 pub fn scan_sharded_fused(
     matcher: &GpuLiteralSet,
@@ -663,7 +663,7 @@ pub fn scan_sharded_fused(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     scan_sharded_core(
         matcher,
         backends,
@@ -690,7 +690,7 @@ pub fn scan_sharded_fused_timed(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<(PagedScanResult, ShardedScanTiming), vyre::BackendError> {
+) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
     scan_sharded_core(
         matcher,
         backends,
@@ -711,7 +711,7 @@ pub fn scan_sharded_fused_timed(
 /// ANY weights (only the work DISTRIBUTION changes, never the answer (parity_policy)).
 ///
 /// # Errors
-/// [`vyre::BackendError`] if `backends` is empty, if `weights.len() != backends.len()`
+/// [`vyre_driver::BackendError`] if `backends` is empty, if `weights.len() != backends.len()`
 /// (each device needs exactly one weight, fail closed rather than guess), or on any
 /// window's dispatch/readback/free failure.
 pub fn scan_sharded_fused_weighted(
@@ -721,9 +721,9 @@ pub fn scan_sharded_fused_weighted(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     if weights.len() != backends.len() {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "scan_sharded_fused_weighted: {} weights for {} backends. Fix: pass exactly one throughput weight per device backend.",
             weights.len(),
             backends.len()
@@ -751,9 +751,9 @@ pub fn scan_sharded_fused_weighted_timed(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<(PagedScanResult, ShardedScanTiming), vyre::BackendError> {
+) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
     if weights.len() != backends.len() {
-        return Err(vyre::BackendError::new(format!(
+        return Err(vyre_driver::BackendError::new(format!(
             "scan_sharded_fused_weighted_timed: {} weights for {} backends. Fix: pass exactly one throughput weight per device backend.",
             weights.len(),
             backends.len()
@@ -768,7 +768,6 @@ pub fn scan_sharded_fused_weighted_timed(
         Some(weights),
     )
 }
-
 
 /// Assign each window (by its own byte length) to a shard index. With `weights ==
 /// None` the assignment is plain round-robin (`index % shard_count`). With weights,
@@ -815,9 +814,9 @@ fn scan_sharded_core(
     window_budget_bytes: usize,
     max_matches: u32,
     weights: Option<&[u32]>,
-) -> Result<(PagedScanResult, ShardedScanTiming), vyre::BackendError> {
+) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
     if backends.is_empty() {
-        return Err(vyre::BackendError::new(
+        return Err(vyre_driver::BackendError::new(
             "scan_sharded_fused: the backend set is empty. Fix: pass at least one device backend to shard the corpus across.".to_string(),
         ));
     }
@@ -890,14 +889,14 @@ fn scan_sharded_core(
     // sessions + streams); genuine multi-GPU speedup needs distinct peer devices, but
     // the parallel dispatch + deterministic aggregation is exercised and proven correct
     // on one device by driving several backend handles at once.
-    let thread_results: Result<Vec<ShardThreadResult>, vyre::BackendError> = std::thread::scope(
-        |scope| {
+    let thread_results: Result<Vec<ShardThreadResult>, vyre_driver::BackendError> =
+        std::thread::scope(|scope| {
             let mut handles = Vec::with_capacity(backends.len());
             for shard in 0..backends.len() {
                 let backend = backends[shard];
                 let indices = std::mem::take(&mut shard_window_indices[shard]);
                 handles.push(scope.spawn(
-                    move || -> Result<ShardThreadResult, vyre::BackendError> {
+                    move || -> Result<ShardThreadResult, vyre_driver::BackendError> {
                         let mut timing = ShardTiming {
                             shard: shard as u32,
                             windows: 0,
@@ -926,7 +925,7 @@ fn scan_sharded_core(
                         let mut win_matches: Vec<Match> = Vec::new();
                         let mut scratch: Vec<u8> = Vec::new();
                         let mut outputs = Vec::with_capacity(indices.len());
-                        let mut scan_error: Option<vyre::BackendError> = None;
+                        let mut scan_error: Option<vyre_driver::BackendError> = None;
                         for index in indices {
                             let window = &windows_ref[index];
                             let staging = stage_window(files, file_lengths_ref, window, overlap);
@@ -1007,15 +1006,14 @@ fn scan_sharded_core(
                     Ok(Ok(result)) => results.push(result),
                     Ok(Err(error)) => return Err(error),
                     Err(_) => {
-                        return Err(vyre::BackendError::new(
+                        return Err(vyre_driver::BackendError::new(
                             "scan_sharded_fused: a per-device shard dispatch thread panicked. Fix: a device backend or its resident session raised an unrecoverable panic, inspect the backend logs; cross-device sharded dispatch fails closed rather than returning a partial result.".to_string(),
                         ))
                     }
                 }
             }
             Ok(results)
-        },
-    );
+        });
     let results = thread_results?;
 
     // Deterministic aggregation: place each shard's timing in device-set order, then
@@ -1036,7 +1034,7 @@ fn scan_sharded_core(
         if presence_words == 0 {
             presence_words = output.words;
         } else if output.words != presence_words {
-            return Err(vyre::BackendError::new(format!(
+            return Err(vyre_driver::BackendError::new(format!(
                 "scan_sharded_fused: presence word count changed across windows ({presence_words} -> {}). Fix: internal invariant broke, report with the corpus shape.",
                 output.words
             )));
@@ -1082,7 +1080,7 @@ pub struct PatternShard<'a> {
 /// stripe / remap / merge architecture.
 ///
 /// # Errors
-/// [`vyre::BackendError`] if `backends` is empty (fail closed), if any shard emits a
+/// [`vyre_driver::BackendError`] if `backends` is empty (fail closed), if any shard emits a
 /// local pattern id with no entry in its `global_pattern_ids` (a malformed shard map
 ///: fail closed rather than drop or mis-attribute the finding, Law 10), or on any
 /// shard's scan failure.
@@ -1090,9 +1088,9 @@ pub fn scan_pattern_sharded(
     shards: &[PatternShard<'_>],
     backends: &[&dyn VyreBackend],
     haystack: &[u8],
-) -> Result<Vec<Match>, vyre::BackendError> {
+) -> Result<Vec<Match>, vyre_driver::BackendError> {
     if backends.is_empty() {
-        return Err(vyre::BackendError::new(
+        return Err(vyre_driver::BackendError::new(
             "scan_pattern_sharded: the backend set is empty. Fix: pass at least one device backend to stripe the rule database across.".to_string(),
         ));
     }
@@ -1102,7 +1100,7 @@ pub fn scan_pattern_sharded(
         let local_matches = shard.matcher.scan_all(backend, haystack)?;
         for mut hit in local_matches {
             let Some(&global_id) = shard.global_pattern_ids.get(hit.pattern_id as usize) else {
-                return Err(vyre::BackendError::new(format!(
+                return Err(vyre_driver::BackendError::new(format!(
                     "scan_pattern_sharded: shard {index} produced local pattern id {} but its global_pattern_ids map has only {} entries. Fix: give each shard a global id for every rule in its sub-matcher.",
                     hit.pattern_id,
                     shard.global_pattern_ids.len()
@@ -1145,7 +1143,7 @@ pub fn scan_paged_fused_async(
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     let Some((region_count, file_lengths, windows)) = plan_paged(files, window_budget_bytes)?
     else {
         return Ok(finish_result(Vec::new(), 0, 0, Vec::new()));
@@ -1164,7 +1162,7 @@ pub fn scan_paged_fused_async(
                   presence: &mut Vec<u32>,
                   matches: &mut Vec<GlobalMatch>,
                   win_matches: &mut Vec<Match>|
-     -> Result<(), vyre::BackendError> {
+     -> Result<(), vyre_driver::BackendError> {
         // The retained `staging` keeps its haystack alive; the pending decodes both
         // the presence words (returned) and the match triples (into win_matches).
         let win_presence = pending.await_into(win_matches)?;
@@ -1286,7 +1284,7 @@ fn fill_window_from_paths(
 /// so a corpus too large to hold at once is still a single call.
 ///
 /// # Errors
-/// Returns [`vyre::BackendError`] on a stat/read failure of any path, a dispatch
+/// Returns [`vyre_driver::BackendError`] on a stat/read failure of any path, a dispatch
 /// failure, an invalid plan, a file larger than the u32 haystack ABI, or a file
 /// count over the u32 region ABI.
 pub fn scan_paths_paged(
@@ -1295,9 +1293,9 @@ pub fn scan_paths_paged(
     paths: &[&Path],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     let region_count = u32::try_from(paths.len()).map_err(|_| {
-        vyre::BackendError::new(
+        vyre_driver::BackendError::new(
             "scan_paths_paged: file count exceeds the u32 region-id ABI. Fix: fewer files per corpus or shard the corpus.".to_string(),
         )
     })?;
@@ -1306,14 +1304,14 @@ pub fn scan_paths_paged(
     for path in paths {
         let len = std::fs::metadata(path)
             .map_err(|error| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "scan_paths_paged: cannot stat {}: {error}. Fix: ensure every path is a readable regular file.",
                     path.display()
                 ))
             })?
             .len();
         let len = usize::try_from(len).map_err(|_| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "scan_paths_paged: {} is {len} bytes, larger than host usize. Fix: pre-split it.",
                 path.display()
             ))
@@ -1322,7 +1320,7 @@ pub fn scan_paths_paged(
     }
 
     let windows = plan_corpus_windows(&file_lengths, window_budget_bytes)
-        .map_err(|error| vyre::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
     if windows.is_empty() {
         return Ok(finish_result(Vec::new(), 0, 0, Vec::new()));
     }
@@ -1358,7 +1356,7 @@ pub fn scan_paths_paged(
             Ok(gathered) => gathered,
             Err(error) => {
                 let _ = session.free(backend);
-                return Err(vyre::BackendError::new(format!(
+                return Err(vyre_driver::BackendError::new(format!(
                     "scan_paths_paged: reading window files failed: {error}. Fix: ensure every path is a readable regular file."
                 )));
             }
@@ -1425,9 +1423,9 @@ pub fn scan_paths_paged_prefetched(
     paths: &[&Path],
     window_budget_bytes: usize,
     max_matches: u32,
-) -> Result<PagedScanResult, vyre::BackendError> {
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
     let region_count = u32::try_from(paths.len()).map_err(|_| {
-        vyre::BackendError::new(
+        vyre_driver::BackendError::new(
             "scan_paths_paged_prefetched: file count exceeds the u32 region-id ABI. Fix: fewer files per corpus or shard the corpus.".to_string(),
         )
     })?;
@@ -1435,14 +1433,14 @@ pub fn scan_paths_paged_prefetched(
     for path in paths {
         let len = std::fs::metadata(path)
             .map_err(|error| {
-                vyre::BackendError::new(format!(
+                vyre_driver::BackendError::new(format!(
                     "scan_paths_paged_prefetched: cannot stat {}: {error}. Fix: ensure every path is a readable regular file.",
                     path.display()
                 ))
             })?
             .len();
         file_lengths.push(usize::try_from(len).map_err(|_| {
-            vyre::BackendError::new(format!(
+            vyre_driver::BackendError::new(format!(
                 "scan_paths_paged_prefetched: {} is {len} bytes, larger than host usize. Fix: pre-split it.",
                 path.display()
             ))
@@ -1450,7 +1448,7 @@ pub fn scan_paths_paged_prefetched(
     }
 
     let windows = plan_corpus_windows(&file_lengths, window_budget_bytes)
-        .map_err(|error| vyre::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
     if windows.is_empty() {
         return Ok(finish_result(Vec::new(), 0, 0, Vec::new()));
     }
@@ -1504,13 +1502,13 @@ pub fn scan_paths_paged_prefetched(
     let mut win_presence: Vec<u32> = Vec::new();
     let mut win_matches: Vec<Match> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
-    let mut outcome: Result<(), vyre::BackendError> = Ok(());
+    let mut outcome: Result<(), vyre_driver::BackendError> = Ok(());
 
     for message in rx.iter() {
         let (index, haystack, gathered) = match message {
             Ok(payload) => payload,
             Err(error) => {
-                outcome = Err(vyre::BackendError::new(format!(
+                outcome = Err(vyre_driver::BackendError::new(format!(
                     "scan_paths_paged_prefetched: reading window files failed: {error}. Fix: ensure every path is a readable regular file."
                 )));
                 break;

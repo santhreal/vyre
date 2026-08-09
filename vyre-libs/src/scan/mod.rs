@@ -17,11 +17,11 @@ pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
     ("dfa_compile", ApiKind::Function, Some("matching-dfa")),
     ("CompiledDfa", ApiKind::Struct, Some("matching-dfa")),
     (
-        "build_rule_pipeline",
+        "build_scan_program",
         ApiKind::Function,
         Some("matching-nfa"),
     ),
-    ("RulePipeline", ApiKind::Struct, Some("matching-nfa")),
+    ("ScanProgram", ApiKind::Struct, Some("matching-nfa")),
     (
         "compile_regex_set",
         ApiKind::Function,
@@ -55,10 +55,10 @@ pub mod classic_ac;
 #[cfg(feature = "matching-dfa")]
 pub mod dfa;
 #[cfg(feature = "matching-nfa")]
-pub mod mega_scan;
-#[cfg(feature = "matching-nfa")]
 pub mod nfa;
 pub mod post_process;
+#[cfg(feature = "matching-nfa")]
+pub mod scan_program;
 #[cfg(feature = "matching-substring")]
 pub mod substring;
 
@@ -89,8 +89,6 @@ pub use hit_buffer::{
     emit_hit_then_compact_with_layout, emit_hit_with_layout, HIT_BUFFER_LIVE_LENGTH,
     HIT_BUFFER_OVERFLOW_COUNT,
 };
-#[cfg(feature = "matching-nfa")]
-pub use mega_scan::{build as build_rule_pipeline, RulePipeline};
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use post_process::{
     reference_post_process, shannon_entropy_bits_per_byte, try_reference_post_process,
@@ -104,7 +102,7 @@ pub use regex_anchored_window::{
 };
 #[cfg(feature = "matching-regex")]
 pub use regex_compile::{
-    build_rule_pipeline_from_regex, compile_regex_set, compile_regex_set_with_policy,
+    build_scan_program_from_regex, compile_regex_set, compile_regex_set_with_policy,
     regex_construct_diagnostic_code, CaptureMode, CaptureModeContract, CompiledRegexSet,
     RegexCompileError, RegexConstruct, RegexPatternExtent, RegexReplayPolicy,
     DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
@@ -121,6 +119,8 @@ pub use regex_region_admission::{
     regex_admission_by_region_program, regex_admission_by_region_reference,
     regex_admission_presence_words, region_of,
 };
+#[cfg(feature = "matching-nfa")]
+pub use scan_program::{build as build_scan_program, ScanProgram};
 #[cfg(feature = "matching-substring")]
 pub use substring::{substring_search, SCAN_SUBSTRING_OP_ID};
 
