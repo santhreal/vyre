@@ -8,7 +8,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 
 use blake3::Hash;
-use inventory::iter;
 use vyre::backend::backend_dispatches;
 use vyre::backend::registered_backends;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
@@ -16,9 +15,6 @@ use vyre::{BackendRegistration, DispatchConfig, VyreBackend};
 use vyre_conform::dispatch_grid;
 use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
-use vyre_intrinsics::harness::OpEntry as IntrinsicsOpEntry;
-use vyre_libs::fixture_catalog::OpEntry as LibsOpEntry;
-use vyre_primitives::harness::OpEntry as PrimitivesOpEntry;
 use vyre_reference::value::Value;
 use vyre_spec::expr_variants;
 
@@ -38,9 +34,15 @@ type FixtureFn = fn() -> FixtureCases;
 #[derive(Clone, Copy)]
 struct UnifiedEntry {
     id: &'static str,
-    build: fn() -> Program,
+    build: Option<fn() -> Program>,
     test_inputs: Option<FixtureFn>,
     expected_output: Option<FixtureFn>,
+}
+
+impl UnifiedEntry {
+    fn program(&self) -> Option<Program> {
+        self.build.map(|build| build().with_entry_op_id(self.id))
+    }
 }
 
 #[derive(Debug)]
@@ -531,7 +533,9 @@ fn parity_matrix_across_all_registered_ops() {
             )
         });
 
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         assert_valid(entry.id, &program, &runners);
         assert_region_chain(entry.id, &program);
 
@@ -750,42 +754,21 @@ fn build_backend_runner(registration: &BackendRegistration) -> Option<BackendRun
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn() -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
+        let metal_acquire: fn()
+            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
             vyre_driver_metal::acquire;
         std::hint::black_box(metal_acquire);
     }
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {
-    let libs = iter::<LibsOpEntry>.into_iter().map(|entry| UnifiedEntry {
-        id: entry.id,
-        build: entry.build,
-        test_inputs: entry.test_inputs,
-        expected_output: entry.expected_output,
-    });
-    let intrinsics = iter::<IntrinsicsOpEntry>
-        .into_iter()
+    let canonical = vyre_foundation::operation::OperationRegistry::global()
+        .iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,
             build: entry.build,
             test_inputs: entry.test_inputs,
             expected_output: entry.expected_output,
         });
-    let primitives = iter::<PrimitivesOpEntry>
-        .into_iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
-
-    let synthetic = synthetic_entries().into_iter();
-    let mut entries = libs
-        .chain(intrinsics)
-        .chain(primitives)
-        .chain(synthetic)
-        .collect::<Vec<_>>();
-    entries.sort_by(|left, right| left.id.cmp(right.id));
-    entries
+    canonical.chain(synthetic_entries()).collect()
 }

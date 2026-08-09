@@ -9,9 +9,6 @@ use crate::api::resident::{transfer_accounting, u32_counter_reset_program, Resid
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-use vyre_foundation::ir::Program;
-use vyre_foundation::match_result::Match;
 use vyre::scan::classic_ac::{CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS};
 use vyre::scan::{
     GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedScan, LiteralSetScanScratch,
@@ -20,6 +17,9 @@ use vyre::scan::{
     LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_RESET_RESOURCE_INDICES,
     LITERAL_SET_SCAN_RESOURCE_INDICES,
 };
+use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
+use vyre_foundation::ir::Program;
+use vyre_foundation::match_result::Match;
 
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const DEFAULT_LITERAL_SET_MATCH_CAP: u32 = 10_000;
@@ -265,7 +265,7 @@ impl BenchCase for LiteralSetIrregularHotloop {
                 prepared
                     .engine
                     .scan_into_with_literal_scratch(
-                        ctx.preferred_backend.as_ref(),
+                        ctx.preferred_backend.id(),
                         &prepared.haystack,
                         prepared.max_matches,
                         &mut prepared.matches,
@@ -475,7 +475,7 @@ impl BenchCase for LiteralSetIrregularCountHotloop {
             let count = prepared
                 .engine
                 .count_with_literal_scratch(
-                    ctx.preferred_backend.as_ref(),
+                    ctx.preferred_backend.id(),
                     &prepared.haystack,
                     &mut prepared.scratch,
                 )

@@ -13,7 +13,9 @@ fn release_per_op_f32_ulp_audit() {
     let mut base = Vec::new();
 
     for entry in entries {
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         let has_f32 = program
             .buffers()
             .iter()

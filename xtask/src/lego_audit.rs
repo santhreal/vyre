@@ -205,14 +205,13 @@ fn tier_of(op_id: &str) -> Tier {
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in vyre_libs::fixture_catalog::all_entries() {
-        ops.push(build_info(entry.id, (entry.build)()));
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        ops.push(build_info(entry.id, (entry.build)()));
-    }
-    for entry in vyre_intrinsics::harness::all_entries() {
-        ops.push(build_info(entry.id, (entry.build)()));
+    for entry in vyre_harness::all_entries() {
+        ops.push(build_info(
+            entry.id,
+            entry
+                .program()
+                .expect("Fix: canonical operation must provide a neutral builder"),
+        ));
     }
     ops
 }

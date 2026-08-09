@@ -89,15 +89,27 @@ pub(crate) fn run_cmd(args: &[String]) {
 }
 
 fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
-    if let Some(entry) = vyre_libs::fixture_catalog::all_entries().find(|e: &&LibsEntry| e.id == op_id) {
+    if let Some(entry) =
+        vyre_libs::fixture_catalog::all_entries().find(|e: &&LibsEntry| e.id == op_id)
+    {
         let inputs = entry.test_inputs?;
-        return Some(((entry.build)(), (inputs)()));
+        return Some((
+            entry
+                .program()
+                .expect("Fix: canonical operation must provide a neutral builder"),
+            (inputs)(),
+        ));
     }
     if let Some(entry) =
         vyre_intrinsics::harness::all_entries().find(|e: &&IntrinsicsEntry| e.id == op_id)
     {
         let inputs = entry.test_inputs?;
-        return Some(((entry.build)(), (inputs)()));
+        return Some((
+            entry
+                .program()
+                .expect("Fix: canonical operation must provide a neutral builder"),
+            (inputs)(),
+        ));
     }
     None
 }

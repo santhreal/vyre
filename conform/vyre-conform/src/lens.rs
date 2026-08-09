@@ -129,7 +129,9 @@ pub fn witness(entry: &OpEntry) -> LensOutcome {
         };
     };
 
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .expect("Fix: conformance operation must provide a neutral builder");
     let cases = test_inputs();
     let expected = expected_fn();
     if cases.is_empty() {
@@ -211,7 +213,9 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
         };
     };
 
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .expect("Fix: conformance operation must provide a neutral builder");
     let required = program_caps::scan(&program);
     if let Err(missing) = program_caps::check_backend_capabilities(
         backend.id(),
@@ -321,7 +325,9 @@ fn prepare_iterative_lens(
             ),
         });
     };
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .expect("Fix: conformance operation must provide a neutral builder");
     let required = program_caps::scan(&program);
     if let Err(missing) = program_caps::check_backend_capabilities(
         backend.id(),

@@ -46,22 +46,9 @@ pub(crate) fn run(args: &[String]) {
 }
 
 fn resolve_program(op_id: &str) -> Option<Program> {
-    for entry in vyre_libs::fixture_catalog::all_entries() {
-        if entry.id == op_id {
-            return Some((entry.build)());
-        }
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        if entry.id == op_id {
-            return Some((entry.build)());
-        }
-    }
-    for entry in vyre_intrinsics::harness::all_entries() {
-        if entry.id == op_id {
-            return Some((entry.build)());
-        }
-    }
-    None
+    vyre_foundation::operation::OperationRegistry::global()
+        .get(op_id)
+        .and_then(|entry| entry.program())
 }
 
 fn print_node(node: &Node, depth: usize) {

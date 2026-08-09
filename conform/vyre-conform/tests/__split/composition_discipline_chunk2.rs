@@ -36,7 +36,9 @@ fn every_op_is_under_complexity_budget() {
     let mut violations = Vec::new();
 
     for entry in vyre_libs::fixture_catalog::all_entries() {
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         let stats = measure_program(&program);
 
         if stats.total_nodes > MAX_NODES {
@@ -78,7 +80,16 @@ fn every_op_is_under_complexity_budget() {
 #[test]
 fn no_op_reinvents_another_registered_op() {
     let entries: Vec<_> = vyre_libs::fixture_catalog::all_entries().collect();
-    let programs: Vec<(&str, Program)> = entries.iter().map(|e| (e.id, (e.build)())).collect();
+    let programs: Vec<(&str, Program)> = entries
+        .iter()
+        .map(|e| {
+            (
+                e.id,
+                e.program()
+                    .expect("Fix: conformance operation must provide a neutral builder"),
+            )
+        })
+        .collect();
     let fingerprints: Vec<(&str, u64)> = programs
         .iter()
         .map(|(id, program)| (*id, structural_fingerprint(program)))
@@ -98,13 +109,8 @@ fn no_op_reinvents_another_registered_op() {
         let (lo, hi) = if a < b { (a, b) } else { (b, a) };
         matches!(
             (lo, hi),
-            (
-                "vyre-libs::logical::and",
-                "vyre-libs::math::algebra::meet"
-            ) | (
-                "vyre-libs::logical::or",
-                "vyre-libs::math::algebra::join"
-            )
+            ("vyre-libs::logical::and", "vyre-libs::math::algebra::meet")
+                | ("vyre-libs::logical::or", "vyre-libs::math::algebra::join")
         )
     }
 
@@ -213,7 +219,9 @@ fn every_op_has_test_fixtures() {
 fn print_complexity_report() {
     let mut report = Vec::new();
     for entry in vyre_libs::fixture_catalog::all_entries() {
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         let stats = measure_program(&program);
         report.push((entry.id, stats));
     }
@@ -291,11 +299,7 @@ fn op_entry_tolerance_is_dead_code_outside_definition() {
     let workspace_root = root.parent().unwrap().parent().unwrap();
 
     let output = std::process::Command::new("grep")
-        .args([
-            "-rn",
-            "\\.tolerance()",
-            "--include=*.rs",
-        ])
+        .args(["-rn", "\\.tolerance()", "--include=*.rs"])
         .current_dir(workspace_root)
         .output()
         .expect("grep must be available for this CI gate");

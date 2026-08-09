@@ -28,7 +28,7 @@ inventory::submit! {
 fn synthetic_entries() -> Vec<UnifiedEntry> {
     vec![UnifiedEntry {
         id: "vyre-conform::synthetic::expr_variant_contract_bundle",
-        build: synthetic_expr_variant_contract_program,
+        build: Some(synthetic_expr_variant_contract_program),
         test_inputs: Some(synthetic_scalar_inputs),
         expected_output: Some(synthetic_zero_output),
     }]
@@ -57,10 +57,7 @@ fn synthetic_expr_variant_contract_program() -> Program {
                             cond: Box::new(Expr::LitBool(true)),
                         },
                     ),
-                    Node::let_bind(
-                        "subgroup_add",
-                        Expr::subgroup_add(Expr::LitU32(7)),
-                    ),
+                    Node::let_bind("subgroup_add", Expr::subgroup_add(Expr::LitU32(7))),
                     Node::let_bind("opaque", Expr::Opaque(Arc::new(SyntheticOpaqueExpr))),
                 ],
                 otherwise: vec![],
@@ -82,7 +79,11 @@ fn synthetic_zero_output() -> FixtureCases {
 fn expr_variant_rows(entries: &[UnifiedEntry]) -> BTreeMap<&'static str, Vec<&'static str>> {
     let mut rows = BTreeMap::<&'static str, BTreeSet<&'static str>>::new();
     for entry in entries {
-        let variants = expr_variants_in_program((entry.build)());
+        let variants = expr_variants_in_program(
+            entry
+                .program()
+                .expect("Fix: conformance operation must provide a neutral builder"),
+        );
         for variant in variants {
             rows.entry(variant).or_default().insert(entry.id);
         }

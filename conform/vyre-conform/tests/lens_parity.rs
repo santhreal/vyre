@@ -66,7 +66,9 @@ fn fixpoint_contract_reachable_for_every_registered_op() {
             "fixpoint contract for `{}` has max_iterations=0",
             entry.id
         );
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         let flag_buffer = contract.converged_flag_buffer;
         let found = program
             .buffers()
@@ -110,7 +112,9 @@ fn convergence_contract_reachable_for_every_registered_op() {
             ));
             continue;
         };
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         let cases = test_inputs();
         if cases.is_empty() {
             cpu_failures.push(format!(
@@ -136,7 +140,8 @@ fn convergence_contract_reachable_for_every_registered_op() {
             }
             {
                 match vyre_conform::convergence_lens::run_fixpoint_to_convergence(
-                    backend.as_ref(),
+                    vyre::backend::backend_registration(backend.id())
+                        .expect("Fix: acquired backend must retain its registration"),
                     &program,
                     inputs,
                     contract.max_iterations,
@@ -177,13 +182,14 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         vec![vec![]]
     }
 
-    let entry = vyre_libs::fixture_catalog::OpEntry {
-        id: "vyre-conform::synthetic::sin_ulp_probe",
-        build: build_sin_program,
-        test_inputs: Some(sin_inputs),
-        expected_output: None,
-        category: Some("conform"),
-    };
+    let entry = vyre_libs::fixture_catalog::OpEntry::new(
+        "vyre-conform::synthetic::sin_ulp_probe",
+        vyre_foundation::operation::OperationTier::External,
+        Some(build_sin_program),
+        Some(sin_inputs),
+        None,
+    )
+    .with_category("conform");
 
     let backend = build_dispatch_backend();
     let outcome = lens::cpu_vs_backend(&entry, backend.as_ref());

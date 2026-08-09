@@ -179,29 +179,7 @@ pub(crate) fn run(args: &[String]) {
             id: entry.id.to_string(),
             has_test_inputs: entry.test_inputs.is_some(),
             has_expected_output: entry.expected_output.is_some(),
-            tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
-        });
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        if !ids.insert(entry.id) {
-            duplicate_op_ids.insert(entry.id.to_string());
-        }
-        entries.push(ConformanceEntry {
-            id: entry.id.to_string(),
-            has_test_inputs: entry.test_inputs.is_some(),
-            has_expected_output: entry.expected_output.is_some(),
-            tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
-        });
-    }
-    for entry in vyre_intrinsics::harness::all_entries() {
-        if !ids.insert(entry.id) {
-            duplicate_op_ids.insert(entry.id.to_string());
-        }
-        entries.push(ConformanceEntry {
-            id: entry.id.to_string(),
-            has_test_inputs: entry.test_inputs.is_some(),
-            has_expected_output: entry.expected_output.is_some(),
-            tolerance_ulp: vyre_harness::OpEntry::tolerance_for_id(entry.id),
+            tolerance_ulp: entry.tolerance(),
         });
     }
     entries.sort_by(|left, right| left.id.cmp(&right.id));

@@ -22,9 +22,8 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
-use vyre::VyreBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_foundation::match_result::Match;
 
 /// A consumer-shaped single corpus. Big enough that the first upload + dispatch is
 /// a real cost, small enough that the cold path is dominated by build/first-touch,
@@ -62,12 +61,10 @@ struct ColdStartMeasurement {
     warm_matches: Vec<Match>,
 }
 
-/// Run the cold path (build + first dispatch) then the warm steady-state loop.
-/// Factored out of `run` so the correctness property (cold == warm) is
-/// unit-testable on `CpuRefBackend` without a GPU. `backend` is `?Sized` so both a
-/// `&dyn` and a concrete backend work.
-fn run_cold_then_warm<B: VyreBackend + ?Sized>(
-    backend: &B,
+/// Run the cold path and warm steady-state loop through one registered artifact
+/// target.
+fn run_cold_then_warm(
+    backend_id: &str,
     corpus: &[u8],
     max_matches: u32,
 ) -> Result<ColdStartMeasurement, vyre::BackendError> {
@@ -86,7 +83,7 @@ fn run_cold_then_warm<B: VyreBackend + ?Sized>(
     let compile_ns = clamp_ns(compile_start.elapsed());
 
     let first_scan_start = Instant::now();
-    engine.scan_into(backend, corpus, max_matches, &mut cold_matches)?;
+    engine.scan_into(backend_id, corpus, max_matches, &mut cold_matches)?;
     let first_scan_ns = clamp_ns(first_scan_start.elapsed());
     let cold_wall_ns = compile_ns.saturating_add(first_scan_ns);
 
@@ -96,7 +93,7 @@ fn run_cold_then_warm<B: VyreBackend + ?Sized>(
     let mut warm_device_ns = None;
     let warm_start = Instant::now();
     for _ in 0..WARM_ITERS {
-        let timed = engine.scan_into_timed(backend, corpus, max_matches, &mut warm_matches)?;
+        let timed = engine.scan_into_timed(backend_id, corpus, max_matches, &mut warm_matches)?;
         warm_device_ns = timed.device_ns;
     }
     let warm_total_ns = clamp_ns(warm_start.elapsed());
@@ -235,7 +232,7 @@ impl BenchCase for LiteralSetColdStart {
             })?;
 
         let measurement = run_cold_then_warm(
-            ctx.preferred_backend.as_ref(),
+            ctx.preferred_backend.id(),
             &prepared.corpus,
             prepared.max_matches,
         )
@@ -327,7 +324,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver_reference::CpuRefBackend;
 
     #[test]
     fn overhead_scales_and_guards_zero() {
@@ -347,22 +343,17 @@ mod tests {
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);
     }
 
-    /// The correctness property this bench asserts, runnable without a GPU: on the
-    /// serialized `CpuRefBackend`, the warm re-dispatch must reproduce the cold
-    /// dispatch bit-for-bit (warming caches changes no result. Law 10). A small
-    /// corpus keeps the CpuRef scan fully covered so the check is non-vacuous. The
-    /// cold-vs-reference equality is asserted on the real GPU by the bench's own
-    /// `verify_exact_outputs`; here we prove the load-bearing cold==warm property.
+    /// Artifact-backed warm dispatch must reproduce cold dispatch exactly.
     #[test]
-    fn cold_equals_warm_on_cpu_reference() {
-        let backend = CpuRefBackend;
+    fn cold_equals_warm_on_registered_target() {
+        let backend_id = "wgpu";
         let (corpus, _) = build_irregular_haystack(32 * 1024);
         let engine = GpuLiteralSet::try_compile(PATTERNS).expect("compile literal set");
         let reference = engine.reference_scan(&corpus);
         let max_matches = u32::try_from(reference.len().max(1)).unwrap();
 
         let measurement =
-            run_cold_then_warm(&backend, &corpus, max_matches).expect("cold-then-warm on cpu ref");
+            run_cold_then_warm(backend_id, &corpus, max_matches).expect("cold-then-warm");
 
         assert!(
             !measurement.cold_matches.is_empty(),

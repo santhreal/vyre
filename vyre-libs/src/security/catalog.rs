@@ -7,17 +7,17 @@ fn u32s(words: &[u32]) -> Vec<u8> {
 macro_rules! bitset_and_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OpEntry {
-                id: super::$module::OP_ID,
-                build: $build,
-                test_inputs: Some(|| {
+            OpEntry::library(
+                super::$module::OP_ID,
+                $build,
+                Some(|| {
                     super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
                 }),
-                expected_output: Some(|| {
+                Some(|| {
                     super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
                 }),
-                category: Some("security"),
-            }
+            )
+            .with_category("security")
         }
     };
 }
@@ -25,17 +25,17 @@ macro_rules! bitset_and_entry {
 macro_rules! bitset_and_not_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OpEntry {
-                id: super::$module::OP_ID,
-                build: $build,
-                test_inputs: Some(|| {
+            OpEntry::library(
+                super::$module::OP_ID,
+                $build,
+                Some(|| {
                     super::predicate_catalog::packed_witness_inputs(super::$module::OP_ID)
                 }),
-                expected_output: Some(|| {
+                Some(|| {
                     super::predicate_catalog::packed_witness_expected(super::$module::OP_ID)
                 }),
-                category: Some("security"),
-            }
+            )
+            .with_category("security")
         }
     };
 }
@@ -73,42 +73,42 @@ bitset_and_not_entry!(unchecked_return, || {
 });
 
 inventory::submit! {
-    OpEntry {
-        id: super::sink_intersection::OP_ID,
-        build: || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
-        test_inputs: Some(|| vec![vec![
+    OpEntry::library(
+        super::sink_intersection::OP_ID,
+        || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
+        Some(|| vec![vec![
             u32s(&[0b1100]),
             u32s(&[0b1010]),
             u32s(&[0]),
             u32s(&[0]),
         ]]),
-        expected_output: Some(|| vec![vec![
+        Some(|| vec![vec![
             u32s(&[0b1000]),
             u32s(&[1]),
         ]]),
-        category: Some("security"),
-    }
+    )
+    .with_category("security")
 }
 
 inventory::submit! {
-    OpEntry {
-        id: super::integer_overflow_arith::OP_ID,
-        build: || {
+    OpEntry::library(
+        super::integer_overflow_arith::OP_ID,
+        || {
             super::integer_overflow_arith::integer_overflow_arith(
                 4, "arith", "reach", "guards", "scratch", "out",
             )
         },
-        test_inputs: Some(|| vec![vec![
+        Some(|| vec![vec![
             u32s(&[0b1111]),
             u32s(&[0b1100]),
             u32s(&[0b1000]),
             u32s(&[0]),
             u32s(&[0]),
         ]]),
-        expected_output: Some(|| vec![vec![
+        Some(|| vec![vec![
             u32s(&[0b1100]),
             u32s(&[0b0100]),
         ]]),
-        category: Some("security"),
-    }
+    )
+    .with_category("security")
 }

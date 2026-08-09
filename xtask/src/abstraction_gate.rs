@@ -70,26 +70,12 @@ struct OpInfo {
 
 fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_harness::all_entries() {
         ops.push(OpInfo {
             id: entry.id.to_string(),
-            program: (entry.build)(),
-            test_inputs_missing: entry.test_inputs.is_none(),
-            expected_output_missing: entry.expected_output.is_none(),
-        });
-    }
-    for entry in vyre_intrinsics::harness::all_entries() {
-        ops.push(OpInfo {
-            id: entry.id.to_string(),
-            program: (entry.build)(),
-            test_inputs_missing: entry.test_inputs.is_none(),
-            expected_output_missing: entry.expected_output.is_none(),
-        });
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        ops.push(OpInfo {
-            id: entry.id.to_string(),
-            program: (entry.build)(),
+            program: entry
+                .program()
+                .expect("Fix: canonical operation must provide a neutral builder"),
             test_inputs_missing: entry.test_inputs.is_none(),
             expected_output_missing: entry.expected_output.is_none(),
         });

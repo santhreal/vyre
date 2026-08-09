@@ -114,7 +114,7 @@ type FixtureFn = fn() -> FixtureCases;
 #[derive(Clone, Copy)]
 struct UnifiedEntry {
     id: &'static str,
-    build: fn() -> vyre::Program,
+    build: Option<fn() -> vyre::Program>,
     test_inputs: Option<FixtureFn>,
     expected_output: Option<FixtureFn>,
 }
@@ -466,45 +466,20 @@ fn is_reference_backend(backend_id: &str) -> bool {
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {
-    // CRITIQUE_CONFORM_2026-04-23 H1: previous version only chained
-    // vyre_libs + vyre_intrinsics, silently omitting the entire
-    // vyre_primitives catalog (bitset, reduce, label, predicate,
-    // fixpoint, etc.). Both `vyre-conform dispatch --ops all` and
-    // `vyre-conform prove` therefore skipped every primitive op
-    // without warning, producing certificates that claimed full
-    // coverage while leaving primitive semantics untested against the
-    // backend. Match the breadth of parity_matrix.rs by chaining
-    // primitives in too.
-    let mut entries = vyre_libs::fixture_catalog::all_entries()
+    vyre_harness::all_entries()
         .map(|entry| UnifiedEntry {
             id: entry.id,
             build: entry.build,
             test_inputs: entry.test_inputs,
             expected_output: entry.expected_output,
         })
-        .chain(
-            vyre_intrinsics::harness::all_entries().map(|entry| UnifiedEntry {
-                id: entry.id,
-                build: entry.build,
-                test_inputs: entry.test_inputs,
-                expected_output: entry.expected_output,
-            }),
-        )
-        .chain(
-            vyre_primitives::harness::all_entries().map(|entry| UnifiedEntry {
-                id: entry.id,
-                build: entry.build,
-                test_inputs: entry.test_inputs,
-                expected_output: entry.expected_output,
-            }),
-        )
-        .collect::<Vec<_>>();
-    entries.sort_by(|left, right| left.id.cmp(right.id));
-    entries
+        .collect()
 }
 
 fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String> {
-    let program = (entry.build)();
+    let program = entry
+        .build
+        .ok_or_else(|| format!("{} has no neutral Program builder", entry.id))?();
     let dispatch_config = dispatch_grid::config_for_program(&program)?;
     let cases = match entry.test_inputs {
         Some(test_inputs) => test_inputs(),

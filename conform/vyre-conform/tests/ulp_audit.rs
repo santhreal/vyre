@@ -14,7 +14,6 @@
 
 use std::collections::BTreeMap;
 
-use inventory::iter;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre::VyreBackend;
 use vyre_conform::dispatch_grid;
@@ -44,40 +43,27 @@ pub(crate) use ulp_audit_input_plan::*;
 
 struct UnifiedEntry {
     id: &'static str,
-    build: fn() -> Program,
+    build: Option<fn() -> Program>,
     test_inputs: Option<FixtureFn>,
     expected_output: Option<FixtureFn>,
 }
 
-fn all_entries() -> Vec<UnifiedEntry> {
-    let libs = iter::<vyre_libs::fixture_catalog::OpEntry>
-        .into_iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
-    let intrinsics = iter::<vyre_intrinsics::harness::OpEntry>
-        .into_iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
-    let primitives = iter::<vyre_primitives::harness::OpEntry>
-        .into_iter()
-        .map(|entry| UnifiedEntry {
-            id: entry.id,
-            build: entry.build,
-            test_inputs: entry.test_inputs,
-            expected_output: entry.expected_output,
-        });
+impl UnifiedEntry {
+    fn program(&self) -> Option<Program> {
+        self.build.map(|build| build().with_entry_op_id(self.id))
+    }
+}
 
-    let mut entries: Vec<UnifiedEntry> = libs.chain(intrinsics).chain(primitives).collect();
-    entries.sort_by(|a, b| a.id.cmp(b.id));
-    entries
+fn all_entries() -> Vec<UnifiedEntry> {
+    vyre_foundation::operation::OperationRegistry::global()
+        .iter()
+        .map(|entry| UnifiedEntry {
+            id: entry.id,
+            build: entry.build,
+            test_inputs: entry.test_inputs,
+            expected_output: entry.expected_output,
+        })
+        .collect()
 }
 
 fn run_cpu_from_slices<'a>(

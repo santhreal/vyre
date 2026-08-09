@@ -49,7 +49,9 @@ fn parity_matrix_across_all_registered_ops() {
             )
         });
 
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: conformance operation must provide a neutral builder");
         assert_valid(entry.id, &program, &runners);
         assert_region_chain(entry.id, &program);
 
@@ -218,4 +220,3 @@ fn parity_matrix_across_all_registered_ops() {
         format_divergences(&summary.divergences)
     );
 }
-

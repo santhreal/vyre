@@ -24,9 +24,8 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
-use vyre::VyreBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_foundation::match_result::Match;
 
 /// Batch A and batch B use DIFFERENT sizes so their content (and match sets)
 /// differ, a cross-handle buffer mixup in the pipeline would then be
@@ -68,12 +67,10 @@ struct OverlapMeasurement {
     matches_b_async: Vec<Match>,
 }
 
-/// Run the two-batch pipeline both sequentially and overlapped. Factored out of
-/// `run` so the correctness property (overlapped == sequential) is unit-testable
-/// on `CpuRefBackend` without a GPU. `backend` is `?Sized` so both a `&dyn` and a
-/// concrete backend work.
-fn run_two_batch_overlap<B: VyreBackend + ?Sized>(
-    backend: &B,
+/// Run the two-batch pipeline both sequentially and overlapped through one
+/// registered artifact target.
+fn run_two_batch_overlap(
+    backend_id: &str,
     engine: &GpuLiteralSet,
     batch_a: &[u8],
     batch_b: &[u8],
@@ -86,16 +83,16 @@ fn run_two_batch_overlap<B: VyreBackend + ?Sized>(
 
     // Warm up caches/queues so the timed loops measure steady state, not first
     // touch (compile caches, device buffers).
-    engine.scan_into(backend, batch_a, max_matches, &mut a_seq)?;
-    engine.scan_into(backend, batch_b, max_matches, &mut b_seq)?;
+    engine.scan_into(backend_id, batch_a, max_matches, &mut a_seq)?;
+    engine.scan_into(backend_id, batch_b, max_matches, &mut b_seq)?;
 
     // Sequential path: each batch is submitted AND awaited before the next, so
     // the second batch's staging cannot overlap the first batch's execution.
     let mut sequential_device_ns = None;
     let seq_start = Instant::now();
     for _ in 0..ITERS {
-        let timed_a = engine.scan_into_timed(backend, batch_a, max_matches, &mut a_seq)?;
-        let timed_b = engine.scan_into_timed(backend, batch_b, max_matches, &mut b_seq)?;
+        let timed_a = engine.scan_into_timed(backend_id, batch_a, max_matches, &mut a_seq)?;
+        let timed_b = engine.scan_into_timed(backend_id, batch_b, max_matches, &mut b_seq)?;
         sequential_device_ns = match (timed_a.device_ns, timed_b.device_ns) {
             (Some(a), Some(b)) => Some(a.saturating_add(b)),
             _ => None,
@@ -107,8 +104,8 @@ fn run_two_batch_overlap<B: VyreBackend + ?Sized>(
     // on a pipelining backend batch B's upload overlaps batch A's device scan.
     let async_start = Instant::now();
     for _ in 0..ITERS {
-        let pending_a = engine.scan_into_async(backend, batch_a, max_matches)?;
-        let pending_b = engine.scan_into_async(backend, batch_b, max_matches)?;
+        let pending_a = engine.scan_into_async(backend_id, batch_a, max_matches)?;
+        let pending_b = engine.scan_into_async(backend_id, batch_b, max_matches)?;
         // Await in submit order; the retained owned inputs keep both uploads
         // valid until their decode.
         pending_a.await_into(&mut a_async)?;
@@ -256,7 +253,7 @@ impl BenchCase for LiteralSetAsyncOverlap {
             })?;
 
         let measurement = run_two_batch_overlap(
-            ctx.preferred_backend.as_ref(),
+            ctx.preferred_backend.id(),
             &prepared.engine,
             &prepared.batch_a,
             &prepared.batch_b,
@@ -360,7 +357,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver_reference::CpuRefBackend;
 
     #[test]
     fn overlap_factor_scales_and_guards_zero() {
@@ -388,25 +384,19 @@ mod tests {
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);
     }
 
-    /// The pipeline's CORRECTNESS property, runnable without a GPU: on the
-    /// serialized `CpuRefBackend`, the overlapped two-batch matches must equal
-    /// the sequential ones for BOTH batches (the degraded path changes no bits
-    /// Law 10). This is the pipeline property this bench exists to prove; the
-    /// separate question of `scan_into` vs the engine's own `reference_scan`
-    /// AC-walk is out of scope here (that CPU-reference parity is covered by the
-    /// literal-set scan tests). A generous match cap keeps the fixed-size decode
-    /// from being the variable. Uses small batches so it runs quickly.
+    /// Artifact-backed overlap must preserve both batches exactly.
     #[test]
-    fn overlapped_matches_equal_sequential_on_cpu_reference() {
-        let backend = CpuRefBackend;
+    fn overlapped_matches_equal_sequential_on_registered_target() {
+        let backend_id = "wgpu";
         // Small distinct batches (different sizes -> different content).
         let (batch_a, _) = build_irregular_haystack(64 * 1024);
         let (batch_b, _) = build_irregular_haystack(96 * 1024);
         let engine = GpuLiteralSet::try_compile(PATTERNS).expect("compile literal set");
         let max_matches = 100_000u32;
 
-        let measurement = run_two_batch_overlap(&backend, &engine, &batch_a, &batch_b, max_matches)
-            .expect("two-batch overlap on cpu reference");
+        let measurement =
+            run_two_batch_overlap(backend_id, &engine, &batch_a, &batch_b, max_matches)
+                .expect("two-batch overlap on registered target");
 
         // Non-vacuous: both batches actually produce matches.
         assert!(
@@ -422,12 +412,6 @@ mod tests {
             measurement.matches_b_async, measurement.matches_b_sequential,
             "batch B: overlapped matches must equal sequential (overlap changes no bits)"
         );
-        // (Batch distinctness, the cross-handle mixup guard, is asserted at full
-        // coverage in `irregular_batches_of_different_sizes_are_distinct` and in
-        // the bench's own `prepare`; it is not re-checked here because the
-        // `CpuRefBackend` scan under-covers a haystack larger than its max buffer
-        // element count, so A and B could share an identical covered prefix. That
-        // under-coverage is a CpuRef-only reference-oracle limitation, orthogonal
-        // to the overlap-equals-sequential property this test proves.)
+        // Batch distinctness is covered independently above.
     }
 }
