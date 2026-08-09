@@ -178,19 +178,18 @@ pub(crate) fn dispatch_resident_queue_sequence(
             byte_offset: 0,
             byte_len: spec.baseline_output_len,
         }];
-        ctx.preferred_backend
-            .dispatch_resident_sequence_read_ranges_into(
-                &[
-                    reset_step,
-                    high_reset_step,
-                    queue_step,
-                    split_step,
-                    high_step,
-                ],
-                &read_ranges,
-                &mut [&mut frontier_output],
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        ctx.dispatch_resident_sequence_read_ranges_into(
+            &[
+                reset_step,
+                high_reset_step,
+                queue_step,
+                split_step,
+                high_step,
+            ],
+            &read_ranges,
+            &mut [&mut frontier_output],
+        )
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     } else {
         let traverse_resources =
             resident.resources_for_indices(spec.traverse_indices, traverse_label)?;
@@ -205,13 +204,12 @@ pub(crate) fn dispatch_resident_queue_sequence(
             byte_offset: 0,
             byte_len: spec.baseline_output_len,
         }];
-        ctx.preferred_backend
-            .dispatch_resident_sequence_read_ranges_into(
-                &[reset_step, queue_step, traverse_step],
-                &read_ranges,
-                &mut [&mut frontier_output],
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        ctx.dispatch_resident_sequence_read_ranges_into(
+            &[reset_step, queue_step, traverse_step],
+            &read_ranges,
+            &mut [&mut frontier_output],
+        )
+        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     }
     let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
     let bytes_written = frontier_output.len() as u64;
@@ -798,14 +796,13 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
             clear_b_step(),
             delta_a_to_b_step(),
         ];
-        ctx.preferred_backend
-            .dispatch_resident_repeated_sequence_read_ranges_into(
-                &prefix_steps,
-                &repeated_steps,
-                repeated_pair_count,
-                &read_ranges,
-                &mut [&mut accumulator_output],
-            )
+        ctx.dispatch_resident_repeated_sequence_read_ranges_into(
+            &prefix_steps,
+            &repeated_steps,
+            repeated_pair_count,
+            &read_ranges,
+            &mut [&mut accumulator_output],
+        )
     } else {
         let prefix_steps = [reset_step];
         let repeated_steps = [
@@ -814,14 +811,13 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
             clear_a_step(),
             delta_b_to_a_step(),
         ];
-        ctx.preferred_backend
-            .dispatch_resident_repeated_sequence_read_ranges_into(
-                &prefix_steps,
-                &repeated_steps,
-                repeated_pair_count,
-                &read_ranges,
-                &mut [&mut accumulator_output],
-            )
+        ctx.dispatch_resident_repeated_sequence_read_ranges_into(
+            &prefix_steps,
+            &repeated_steps,
+            repeated_pair_count,
+            &read_ranges,
+            &mut [&mut accumulator_output],
+        )
     }
     .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
 

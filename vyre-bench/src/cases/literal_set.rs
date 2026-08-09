@@ -1003,13 +1003,12 @@ fn dispatch_literal_set_resident_sequence(
 
     let mut count_output = Vec::with_capacity(prepared.prepared_scan.match_count_readback_bytes());
     let mut matches_output = Vec::with_capacity(match_output_bytes);
-    ctx.preferred_backend
-        .dispatch_resident_sequence_read_ranges_into(
-            &[reset_step, scan_step],
-            &read_ranges,
-            &mut [&mut count_output, &mut matches_output],
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    ctx.dispatch_resident_sequence_read_ranges_into(
+        &[reset_step, scan_step],
+        &read_ranges,
+        &mut [&mut count_output, &mut matches_output],
+    )
+    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
 
     Ok(LiteralSetResidentSequenceRun {
         outputs: vec![count_output, matches_output],
@@ -1059,13 +1058,12 @@ fn dispatch_literal_set_count_resident_sequence(
 
     let mut count_output = Vec::with_capacity(prepared.prepared_count.count_readback_bytes());
     let started = Instant::now();
-    ctx.preferred_backend
-        .dispatch_resident_sequence_read_ranges_into(
-            &[reset_step, scan_step],
-            &read_ranges,
-            &mut [&mut count_output],
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    ctx.dispatch_resident_sequence_read_ranges_into(
+        &[reset_step, scan_step],
+        &read_ranges,
+        &mut [&mut count_output],
+    )
+    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
 
     Ok(LiteralSetCountResidentSequenceRun {

@@ -10,8 +10,6 @@ use crate::api::resident::{
     ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
-use vyre_foundation::ir::Program;
 use vyre::scan::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
@@ -19,6 +17,8 @@ use vyre::scan::classic_ac::{
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 use vyre::scan::{pack_haystack_u32, pack_u32_slice};
+use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
+use vyre_foundation::ir::Program;
 
 use super::baseline::cpu_aho_overlapping_matches;
 use super::metrics::{scan_ac_baseline_metric_points, scan_ac_count_metric_points, ScanAcStats};
@@ -471,13 +471,12 @@ fn dispatch_resident_count_sequence(
 
     let mut count_output = Vec::with_capacity(prepared.baseline_output.len());
     let started = Instant::now();
-    ctx.preferred_backend
-        .dispatch_resident_sequence_read_ranges_into(
-            &[reset_step, scan_step],
-            &read_ranges,
-            &mut [&mut count_output],
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    ctx.dispatch_resident_sequence_read_ranges_into(
+        &[reset_step, scan_step],
+        &read_ranges,
+        &mut [&mut count_output],
+    )
+    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
 
     Ok(CountResidentSequenceRun {

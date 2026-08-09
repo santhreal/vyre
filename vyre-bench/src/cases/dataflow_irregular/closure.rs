@@ -386,15 +386,14 @@ fn dispatch_resident_closure_sequence(
     let mut frontier_output = Vec::with_capacity(prepared.baseline_outputs[0].len());
     let mut changed_output = Vec::with_capacity(prepared.baseline_outputs[1].len());
     let started = Instant::now();
-    ctx.preferred_backend
-        .dispatch_resident_repeated_sequence_read_ranges_into(
-            &[reset_step],
-            &[closure_step],
-            prepared.dispatch_iterations,
-            &read_ranges,
-            &mut [&mut frontier_output, &mut changed_output],
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    ctx.dispatch_resident_repeated_sequence_read_ranges_into(
+        &[reset_step],
+        &[closure_step],
+        prepared.dispatch_iterations,
+        &read_ranges,
+        &mut [&mut frontier_output, &mut changed_output],
+    )
+    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
 
     Ok(ClosureSequenceRun {

@@ -553,7 +553,6 @@ fn dispatch_resident_conditional_sequence(
     let mut count_output = Vec::with_capacity(prepared.baseline_output[0].len());
     let mut rules_output = Vec::with_capacity(prepared.baseline_output[1].len());
     let timing = ctx
-        .preferred_backend
         .dispatch_resident_sequence_read_ranges_timed_into(
             &[reset_step, conditional_step],
             &read_ranges,

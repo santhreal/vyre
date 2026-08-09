@@ -514,13 +514,12 @@ fn dispatch_resident_conditional_batch_sequence(
     let mut count_output = Vec::with_capacity(prepared.baseline_output[0].len());
     let mut pairs_output = Vec::with_capacity(prepared.baseline_output[1].len());
     let started = Instant::now();
-    ctx.preferred_backend
-        .dispatch_resident_sequence_read_ranges_into(
-            &[reset_step, conditional_step],
-            &read_ranges,
-            &mut [&mut count_output, &mut pairs_output],
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    ctx.dispatch_resident_sequence_read_ranges_into(
+        &[reset_step, conditional_step],
+        &read_ranges,
+        &mut [&mut count_output, &mut pairs_output],
+    )
+    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
 
     Ok(ConditionalBatchResidentSequenceRun {

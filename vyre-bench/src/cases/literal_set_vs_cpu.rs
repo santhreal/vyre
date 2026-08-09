@@ -28,7 +28,6 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
 
 /// A consumer-shaped mixed corpus, large enough that the GPU's staging (upload +
@@ -91,12 +90,10 @@ fn aho_corasick_matches(aho: &AhoCorasick, haystack: &[u8]) -> Vec<Match> {
     matches
 }
 
-/// Run both engines over the corpus for `iters` steady-state iterations. The vyre
-/// side uses a resident session (GPU-only. `CpuRefBackend` has no resident
-/// allocation), so this helper is exercised by the bench on the Gpu suite; the CPU
-/// baseline's correctness is unit-tested against `reference_scan` without a GPU.
+/// Run the registered resident artifact and independent CPU engine for `iters`
+/// steady-state iterations.
 fn run_vs_cpu(
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     engine: &GpuLiteralSet,
     aho: &AhoCorasick,
     corpus: &[u8],
@@ -104,7 +101,7 @@ fn run_vs_cpu(
     iters: usize,
 ) -> Result<VsCpuMeasurement, vyre::BackendError> {
     // vyre: resident tables (uploaded once), then a timed re-dispatch loop.
-    let session = engine.prepare_resident_scan(backend.id(), corpus.len() + 64, max_matches)?;
+    let session = engine.prepare_resident_scan(backend_id, corpus.len() + 64, max_matches)?;
     let mut vyre_matches = Vec::new();
     let mut scratch = Vec::new();
     session.scan_into(corpus, &mut vyre_matches, &mut scratch)?; // warm
@@ -258,7 +255,7 @@ impl BenchCase for LiteralSetVsCpu {
         })?;
 
         let measurement = run_vs_cpu(
-            ctx.preferred_backend.as_ref(),
+            ctx.preferred_backend.id(),
             &prepared.engine,
             &prepared.aho,
             &prepared.corpus,

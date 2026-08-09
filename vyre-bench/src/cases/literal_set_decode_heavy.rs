@@ -24,7 +24,6 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre::VyreBackend;
 use vyre_foundation::match_result::Match;
 
 /// A consumer-shaped corpus, tiled densely so the scan produces many thousands of
@@ -87,11 +86,10 @@ fn build_dense_match_haystack(len: usize, period: usize) -> (Vec<u8>, u32) {
     (haystack, planted)
 }
 
-/// Prepare a resident session, warm it, then run the timed steady-state
-/// re-dispatch loop. Factored out of `run` so it is unit-testable on
-/// `CpuRefBackend` without a GPU.
+/// Prepare a resident artifact session, warm it, then run the timed steady-state
+/// re-dispatch loop.
 fn run_decode_heavy(
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     engine: &GpuLiteralSet,
     corpus: &[u8],
     max_matches: u32,
@@ -100,7 +98,7 @@ fn run_decode_heavy(
     // Resident session: the seven immutable tables upload ONCE here, so the timed
     // loop below re-stages only the haystack + counter reset, the residual cost is
     // the dense match write-out + readback + decode.
-    let session = engine.prepare_resident_scan(backend.id(), corpus.len() + 64, max_matches)?;
+    let session = engine.prepare_resident_scan(backend_id, corpus.len() + 64, max_matches)?;
     let mut matches = Vec::new();
     let mut scratch = Vec::new();
 
@@ -236,7 +234,7 @@ impl BenchCase for LiteralSetDecodeHeavy {
             })?;
 
         let measurement = run_decode_heavy(
-            ctx.preferred_backend.as_ref(),
+            ctx.preferred_backend.id(),
             &prepared.engine,
             &prepared.corpus,
             prepared.max_matches,
@@ -314,7 +312,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver_reference::CpuRefBackend;
 
     #[test]
     fn dense_haystack_is_actually_dense() {
@@ -336,40 +333,30 @@ mod tests {
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);
     }
 
-    /// The correctness property, runnable without a GPU: the dense-match corpus is
-    /// really decode-heavy AND the BORROWED `scan_into` of a small fully-covered
-    /// dense corpus equals the CPU AC-walk oracle (`reference_scan`), so the dense
-    /// fixture is matchable and the count-then-triples decode is correct. The
-    /// RESIDENT path itself is GPU-only (`CpuRefBackend` does not implement
-    /// `allocate_resident`), so the resident-equals-reference property over the
-    /// full dense corpus is asserted on the real GPU by the bench's own
-    /// `verify_exact_outputs`; here we prove the borrowed-path oracle relationship
-    /// the resident scan is proven byte-identical to (`ResidentLiteralScan`
-    /// GPU parity tests) without needing a device.
+    /// The registered artifact path must equal the independent reference scan on
+    /// a dense, non-vacuous corpus.
     #[test]
-    fn dense_borrowed_scan_matches_reference_on_cpu_reference() {
-        let backend = CpuRefBackend;
+    fn dense_artifact_scan_matches_reference() {
+        let backend_id = "wgpu";
         let (corpus, _) = build_dense_match_haystack(16 * 1024, MATCH_PERIOD_BYTES);
         let engine = GpuLiteralSet::try_compile(PATTERNS).expect("compile literal set");
         let reference = engine.reference_scan(&corpus);
         let max_matches = u32::try_from(reference.len().max(1)).unwrap();
 
-        let mut borrowed = Vec::new();
+        let mut artifact_matches = Vec::new();
         engine
-            .scan_into(&backend, &corpus, max_matches, &mut borrowed)
-            .expect("borrowed dense scan");
+            .scan_into(backend_id, &corpus, max_matches, &mut artifact_matches)
+            .expect("artifact-backed dense scan");
 
         // Non-vacuous: the dense corpus really is decode-heavy.
         assert!(
-            borrowed.len() >= 50,
+            artifact_matches.len() >= 50,
             "the dense corpus must produce many matches; got {}",
-            borrowed.len()
+            artifact_matches.len()
         );
-        // On a small fully-covered corpus the borrowed scan equals the AC-walk
-        // oracle (the property the resident GPU scan is proven identical to).
         assert_eq!(
-            borrowed, reference,
-            "borrowed dense scan of a fully-covered corpus must equal the reference AC walk"
+            artifact_matches, reference,
+            "artifact-backed dense scan must equal the reference AC walk"
         );
     }
 }
