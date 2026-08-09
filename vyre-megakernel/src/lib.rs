@@ -13,7 +13,17 @@
 
 #![forbid(unsafe_code)]
 
+mod artifact;
+mod candidate;
+/// Open, reproducible whole-program candidate cost model.
+pub mod cost;
 mod envelope;
+mod facts;
+/// Stable semantic legality decisions for whole-program fusion.
+pub mod legality;
+mod normalize;
+mod search;
+mod select;
 
 pub use envelope::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
@@ -31,11 +41,11 @@ use vyre_foundation::ir::{
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 2;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 3;
 const ARTIFACT_MAGIC: &[u8; 4] = b"VMK0";
 const ARTIFACT_HEADER_BYTES: usize = 10;
 const ARTIFACT_DIGEST_BYTES: usize = 32;
-const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v2\0";
+const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v3\0";
 const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
 
@@ -131,6 +141,20 @@ impl SearchBudget {
             max_elapsed_ns,
         }
     }
+}
+/// Exact bounded work performed while selecting a whole-program plan.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SearchWork {
+    /// Legal candidates scored by the open cost model.
+    pub candidates_explored: u32,
+    /// Abstract deterministic CPU work units consumed.
+    pub cpu_work: u64,
+    /// Target compilations performed for finalist evaluation.
+    pub target_compilations: u32,
+    /// On-device measurements performed for finalist evaluation.
+    pub measurements: u32,
+    /// Deterministic elapsed-budget units charged by the search.
+    pub elapsed_ns: u64,
 }
 
 /// Stable external semantic facts not encoded by graph topology.
@@ -487,6 +511,18 @@ pub struct FusionRecord {
     /// Compiler-derived semantic-legality identities used to form the group.
     pub legality: Vec<Digest>,
 }
+/// Stable evidence that one proposed fusion was pruned before selection.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FusionRejection {
+    /// Proposed producer.
+    pub from: ArtifactNodeId,
+    /// Proposed consumer.
+    pub to: ArtifactNodeId,
+    /// Connecting value.
+    pub value: ArtifactValueId,
+    /// Stable semantic rejection reason.
+    pub reason: legality::FusionRejectionReason,
+}
 
 /// Dependency-completion boundary between canonical stages.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -537,6 +573,12 @@ pub struct SelectedPlan {
     pub candidates_explored: u32,
     /// Search bounds under which this plan was selected.
     pub search_budget: SearchBudget,
+    /// Exact work charged against the bounded search.
+    pub search_work: SearchWork,
+    /// Open-model cost of the selected plan.
+    pub selection_cost: cost::CostBreakdown,
+    /// Illegal producer-consumer fusions pruned with stable reasons.
+    pub pruned_fusions: Vec<FusionRejection>,
 }
 
 /// Deterministic identities establishing how an artifact was produced.
@@ -792,69 +834,18 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         })
         .collect::<Vec<_>>();
 
-    let mut dependencies = Vec::new();
-    for value in request.graph.values() {
-        let value_id = ArtifactValueId(value.id.0);
-        if let Some(producer) = value.producer {
-            let from = ArtifactNodeId(producer.0);
-            for consumer in &value.consumers {
-                dependencies.push(DependencyEdge {
-                    from: DependencyEndpoint::Node(from),
-                    to: DependencyEndpoint::Node(ArtifactNodeId(consumer.0)),
-                    kind: DependencyKind::Data,
-                    value: Some(value_id),
-                });
-            }
-            if matches!(
-                value.contract.lifetime,
-                ValueLifetime::Output | ValueLifetime::Retained
-            ) {
-                dependencies.push(DependencyEdge {
-                    from: DependencyEndpoint::Node(from),
-                    to: DependencyEndpoint::Value(value_id),
-                    kind: DependencyKind::Materialization,
-                    value: Some(value_id),
-                });
-            }
-        }
-        if let (Some(prior), Some(successor_node)) = (value.retained_successor_of, value.producer) {
-            let prior = &request.graph.values()[prior.0 as usize];
-            let from = prior
-                .producer
-                .map(|node| DependencyEndpoint::Node(ArtifactNodeId(node.0)))
-                .unwrap_or_else(|| DependencyEndpoint::Value(ArtifactValueId(prior.id.0)));
-            dependencies.push(DependencyEdge {
-                from,
-                to: DependencyEndpoint::Node(ArtifactNodeId(successor_node.0)),
-                kind: DependencyKind::Retained,
-                value: Some(value_id),
-            });
-        }
-    }
-    dependencies.sort();
-    dependencies.dedup();
-    ensure_node_dag(nodes.len(), &dependencies, DiagnosticCode::DependencyCycle)?;
-
-    let fusion = nodes
-        .iter()
-        .map(|node| FusionRecord {
-            id: FusionGroupId(node.id.0),
-            members: vec![node.id],
-            legality: Vec::new(),
-        })
-        .collect::<Vec<_>>();
-    let node_groups = nodes
-        .iter()
-        .map(|node| FusionGroupId(node.id.0))
-        .collect::<Vec<_>>();
-    let group_stages = group_stages(fusion.len(), &dependencies, &node_groups)?;
-    let barriers = build_barriers(&dependencies, &node_groups, &group_stages)?;
-    let materializations = build_materializations(&request.graph, &node_groups, &group_stages);
+    let normalized = normalize::normalize(&request.graph)?;
+    let dependencies = normalized.dependencies;
+    let artifact::ArtifactPlan {
+        node_groups,
+        stages,
+        selected_plan,
+    } = artifact::plan(&request.graph, &dependencies, request.search_budget)?;
     let (resources, resource_envelope) = build_resources(
         &request.graph,
         &request.facts.symbolic_bindings,
         &node_groups,
-        &group_stages,
+        &stages,
     )?;
     let abi = build_abi(&request.graph)?;
     let request_bytes =
@@ -868,13 +859,7 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         schema_version: ARTIFACT_SCHEMA_VERSION,
         nodes,
         dependencies,
-        selected_plan: SelectedPlan {
-            fusion,
-            barriers,
-            materializations,
-            candidates_explored: 1,
-            search_budget: request.search_budget,
-        },
+        selected_plan,
         abi,
         resources,
         resource_envelope,

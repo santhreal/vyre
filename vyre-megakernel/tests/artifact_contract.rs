@@ -9,8 +9,10 @@ use vyre_foundation::ir::{
     ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, CompileRequest, DependencyKind, DiagnosticCode, Digest, ExternalFacts,
-    SearchBudget,
+    compile,
+    legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
+    Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyKind, DiagnosticCode,
+    Digest, ExternalFacts, SearchBudget,
 };
 
 const LIMIT: u64 = 1_000_000;
@@ -160,6 +162,77 @@ fn whole_graph() -> ProgramGraph {
         .unwrap();
     graph
 }
+fn fusion_pair_graph(
+    producer_workgroup: [u32; 3],
+    consumer_workgroup: [u32; 3],
+    producer_barrier: bool,
+) -> ProgramGraph {
+    fn pair_program(input: &str, output: &str, workgroup: [u32; 3], barrier: bool) -> Program {
+        let mut body = Vec::new();
+        if barrier {
+            body.push(Node::barrier());
+        }
+        body.push(Node::store(
+            output,
+            Expr::u32(0),
+            Expr::load(input, Expr::u32(0)),
+        ));
+        Program::wrapped(
+            vec![
+                BufferDecl::storage(input, 0, BufferAccess::ReadWrite, DataType::U32),
+                BufferDecl::storage(output, 1, BufferAccess::ReadWrite, DataType::U32),
+            ],
+            workgroup,
+            body,
+        )
+    }
+
+    let invocation = contract(BufferAccess::ReadWrite, ValueLifetime::Invocation);
+    let mut graph = ProgramGraph::new();
+    let input = graph
+        .add_external_value("input", invocation.clone())
+        .unwrap();
+    let (_, intermediate) = graph
+        .add_node(
+            "producer",
+            pair_program(
+                "input",
+                "intermediate",
+                producer_workgroup,
+                producer_barrier,
+            ),
+            vec![GraphInput {
+                buffer: "input".into(),
+                value: input,
+                contract: invocation.clone(),
+            }],
+            vec![GraphOutput {
+                buffer: "intermediate".into(),
+                name: "intermediate".into(),
+                contract: invocation.clone(),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    graph
+        .add_node(
+            "consumer",
+            pair_program("intermediate", "output", consumer_workgroup, false),
+            vec![GraphInput {
+                buffer: "intermediate".into(),
+                value: intermediate[0],
+                contract: invocation,
+            }],
+            vec![GraphOutput {
+                buffer: "output".into(),
+                name: "output".into(),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
+                retained_successor_of: None,
+            }],
+        )
+        .unwrap();
+    graph
+}
 
 fn budget() -> SearchBudget {
     SearchBudget::new(128, 1_000_000, 8, 4, 1_000_000_000)
@@ -216,17 +289,101 @@ fn round_trip_preserves_typed_ids_abi_plan_and_digest() {
     assert_eq!(decoded.abi().entries[0].inputs[0].0, 0);
     assert_eq!(decoded.abi().entries[0].inputs[1].0, 1);
     assert_eq!(decoded.abi().entries[0].outputs[0].0, 3);
-    assert_eq!(decoded.selected_plan().candidates_explored, 1);
+    assert_eq!(decoded.selected_plan().candidates_explored, 2);
     assert_eq!(decoded.selected_plan().search_budget, budget());
-    assert_eq!(decoded.fusion().len(), 3);
-    assert!(decoded
-        .fusion()
-        .iter()
-        .all(|group| group.members.len() == 1));
+    assert_eq!(decoded.selected_plan().search_work.candidates_explored, 2);
+    assert_eq!(decoded.selected_plan().search_work.target_compilations, 0);
+    assert_eq!(decoded.selected_plan().search_work.measurements, 0);
+    assert!(decoded.selected_plan().search_work.cpu_work <= budget().max_cpu_work);
+    assert_eq!(decoded.fusion().len(), 2);
+    assert_eq!(decoded.fusion()[0].members.len(), 2);
+    assert_eq!(decoded.fusion()[1].members.len(), 1);
     assert!(decoded
         .dependencies()
         .iter()
         .any(|edge| edge.kind == DependencyKind::Retained));
+}
+/// WHY: the compiler must select profitable legal fusion while preserving lifecycle boundaries.
+#[test]
+fn planner_fuses_invocation_dataflow_and_prunes_retained_dataflow() {
+    let graph = whole_graph();
+    assert_eq!(
+        analyze_fusion_pair(
+            &graph,
+            ArtifactNodeId(0),
+            ArtifactNodeId(1),
+            ArtifactValueId(3),
+        ),
+        FusionDecision::Legal
+    );
+    assert_eq!(
+        analyze_fusion_pair(
+            &graph,
+            ArtifactNodeId(1),
+            ArtifactNodeId(2),
+            ArtifactValueId(4),
+        ),
+        FusionDecision::Rejected(FusionRejectionReason::LifecycleBoundary)
+    );
+
+    let artifact = compile(&request(LIMIT)).unwrap();
+    assert_eq!(
+        artifact.fusion()[0].members,
+        [ArtifactNodeId(0), ArtifactNodeId(1)]
+    );
+    assert_eq!(artifact.selected_plan().pruned_fusions.len(), 1);
+    assert_eq!(
+        artifact.selected_plan().pruned_fusions[0].reason,
+        FusionRejectionReason::LifecycleBoundary
+    );
+    assert_eq!(artifact.selected_plan().selection_cost.launches, 2);
+    assert_eq!(artifact.selected_plan().selection_cost.materializations, 1);
+}
+
+/// WHY: the baseline remains a valid result when the explicit candidate budget forbids alternatives.
+#[test]
+fn candidate_bound_terminates_search_with_best_explored_plan() {
+    let bounded = SearchBudget::new(1, 1_000_000, 0, 0, 1_000_000_000);
+    let artifact = compile(&request_with(facts(), bounded, LIMIT)).unwrap();
+    assert_eq!(artifact.selected_plan().search_work.candidates_explored, 1);
+    assert_eq!(artifact.fusion().len(), 3);
+    assert!(artifact
+        .fusion()
+        .iter()
+        .all(|group| group.members.len() == 1));
+}
+/// WHY: target geometry and explicit synchronization are hard legality boundaries, not costs.
+#[test]
+fn fusion_legality_reasons_are_stable_for_geometry_and_synchronization() {
+    let geometry = fusion_pair_graph([32, 1, 1], [64, 1, 1], false);
+    assert_eq!(
+        analyze_fusion_pair(
+            &geometry,
+            ArtifactNodeId(0),
+            ArtifactNodeId(1),
+            ArtifactValueId(1),
+        ),
+        FusionDecision::Rejected(FusionRejectionReason::WorkgroupMismatch)
+    );
+    assert_eq!(
+        FusionRejectionReason::WorkgroupMismatch.code(),
+        "MKL005_WORKGROUP_MISMATCH"
+    );
+
+    let synchronization = fusion_pair_graph([32, 1, 1], [32, 1, 1], true);
+    assert_eq!(
+        analyze_fusion_pair(
+            &synchronization,
+            ArtifactNodeId(0),
+            ArtifactNodeId(1),
+            ArtifactValueId(1),
+        ),
+        FusionDecision::Rejected(FusionRejectionReason::SynchronizationBoundary)
+    );
+    assert_eq!(
+        FusionRejectionReason::SynchronizationBoundary.code(),
+        "MKL006_SYNCHRONIZATION_BOUNDARY"
+    );
 }
 
 /// WHY: names are diagnostic metadata and must not remap typed graph identities.
@@ -353,12 +510,12 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     assert_eq!(error.diagnostic.code, DiagnosticCode::ResourceOverflow);
 }
 
-/// WHY: persisted v1 artifacts must be rejected after the v2 identity cutover.
+/// WHY: persisted v2 artifacts must be rejected after the v3 planning cutover.
 #[test]
 fn stale_artifact_version_is_rejected_before_body_decode() {
     let artifact = compile(&request(LIMIT)).unwrap();
     let mut bytes = artifact.to_bytes().unwrap();
-    bytes[4..6].copy_from_slice(&1u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&2u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
     assert_eq!(error.diagnostic.code, DiagnosticCode::VersionSkew);
     assert_eq!(error.diagnostic.path, "artifact.schema_version");
