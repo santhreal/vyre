@@ -8,11 +8,19 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     attach_target, compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
-    CompileRequest, DiagnosticCode, Digest, ExternalFacts, FusionGroupId, SearchBudget,
+    CompileError, CompileRequest, Digest, ExternalFacts, FusionGroupId, SearchBudget,
     TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
     TargetPayload, TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
+
+fn diagnostic_path(error: &CompileError) -> Option<&str> {
+    error
+        .diagnostic
+        .location
+        .as_ref()
+        .and_then(|location| location.path.as_deref())
+}
 
 fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
     let mut graph = ProgramGraph::new();
@@ -145,10 +153,13 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
         .attach_target_payload(payload)
         .expect_err("wrong neutral artifact must fail deterministically");
     assert_eq!(
-        error.diagnostic.code,
-        DiagnosticCode::TargetPayloadAssociationMismatch
+        error.diagnostic.code.as_str(),
+        "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH"
     );
-    assert_eq!(error.diagnostic.path, "target_payload.neutral_artifact");
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("target_payload.neutral_artifact")
+    );
 }
 
 /// Regression: consumers must reject both unsupported payload schemas and format versions.
@@ -162,12 +173,12 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
     let schema_error = TargetPayload::from_bytes(&payload_bytes)
         .expect_err("unsupported attachment schema must fail before body admission");
     assert_eq!(
-        schema_error.diagnostic.code,
-        DiagnosticCode::TargetPayloadVersionSkew
+        schema_error.diagnostic.code.as_str(),
+        "MKC018_TARGET_PAYLOAD_VERSION_SKEW"
     );
     assert_eq!(
-        schema_error.diagnostic.path,
-        "target_payload.schema_version"
+        diagnostic_path(&schema_error),
+        Some("target_payload.schema_version")
     );
 
     let mut envelope = ArtifactEnvelope::new(neutral);
@@ -178,12 +189,12 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
         .require_target_payload(&format(3))
         .expect_err("wrong target format version must fail");
     assert_eq!(
-        format_error.diagnostic.code,
-        DiagnosticCode::TargetPayloadVersionSkew
+        format_error.diagnostic.code.as_str(),
+        "MKC018_TARGET_PAYLOAD_VERSION_SKEW"
     );
     assert_eq!(
-        format_error.diagnostic.path,
-        "envelope.target_payloads.format.version"
+        diagnostic_path(&format_error),
+        Some("envelope.target_payloads.format.version")
     );
 }
 
@@ -199,10 +210,10 @@ fn corrupted_target_payload_identity_is_rejected() {
     let error = TargetPayload::from_bytes(&bytes)
         .expect_err("payload mutation must fail its domain-separated digest");
     assert_eq!(
-        error.diagnostic.code,
-        DiagnosticCode::TargetPayloadDigestMismatch
+        error.diagnostic.code.as_str(),
+        "MKC019_TARGET_PAYLOAD_DIGEST_MISMATCH"
     );
-    assert_eq!(error.diagnostic.path, "target_payload.digest");
+    assert_eq!(diagnostic_path(&error), Some("target_payload.digest"));
 }
 
 /// WHY: authenticated payload bytes must not admit duplicate or out-of-order selected modules.

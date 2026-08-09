@@ -9,14 +9,15 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
     Device, DeviceIdentity, Submission, VyreBackend,
 };
+use vyre_foundation::diagnostics::DiagnosticStage;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest,
-    DiagnosticCode, Digest, ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload,
-    TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, Digest,
+    ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::{
     admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
@@ -172,11 +173,18 @@ fn envelope_bytes(neutral: Artifact, payloads: impl IntoIterator<Item = TargetPa
     envelope.to_bytes().expect("fixture envelope must encode")
 }
 
-fn assert_diagnostic(error: &ArtifactAdmissionError, code: DiagnosticCode, path: &str, fix: &str) {
+fn assert_diagnostic(error: &ArtifactAdmissionError, code: &str, path: &str, fix: &str) {
     let diagnostic = error.diagnostic();
-    assert_eq!(diagnostic.code, code);
-    assert_eq!(diagnostic.path, path);
-    assert_eq!(diagnostic.fix, fix);
+    assert_eq!(diagnostic.code.as_str(), code);
+    assert_eq!(diagnostic.stage, DiagnosticStage::Admit);
+    assert_eq!(
+        diagnostic
+            .location
+            .as_ref()
+            .and_then(|location| location.path.as_deref()),
+        Some(path)
+    );
+    assert_eq!(diagnostic.suggested_fix.as_deref(), Some(fix));
 }
 
 fn frame_body(frame: &[u8]) -> &[u8] {
@@ -288,7 +296,7 @@ fn rejects_malformed_truncated_and_corrupted_envelopes() {
         admit_artifact(b"not an envelope", &required).expect_err("short malformed bytes must fail");
     assert_diagnostic(
         &malformed,
-        DiagnosticCode::MalformedArtifact,
+        "MKC014_MALFORMED_ARTIFACT",
         "envelope.header",
         "supply one complete canonical frame",
     );
@@ -303,7 +311,7 @@ fn rejects_malformed_truncated_and_corrupted_envelopes() {
         admit_artifact(&truncated, &required).expect_err("truncated canonical bytes must fail");
     assert_diagnostic(
         &truncated_error,
-        DiagnosticCode::MalformedArtifact,
+        "MKC014_MALFORMED_ARTIFACT",
         "envelope.body_length",
         "supply exactly one complete canonical frame",
     );
@@ -317,7 +325,7 @@ fn rejects_malformed_truncated_and_corrupted_envelopes() {
         .expect_err("corrupted canonical bytes must fail authentication");
     assert_diagnostic(
         &corrupted_error,
-        DiagnosticCode::DigestMismatch,
+        "MKC016_DIGEST_MISMATCH",
         "envelope.digest",
         "discard the corrupted bytes and regenerate them",
     );
@@ -337,7 +345,7 @@ fn rejects_envelope_framing_version_skew() {
     let error = admit_artifact(&bytes, &required).expect_err("unknown envelope schema must fail");
     assert_diagnostic(
         &error,
-        DiagnosticCode::VersionSkew,
+        "MKC015_VERSION_SKEW",
         "envelope.schema_version",
         "recompile or re-materialize with a compatible schema version",
     );
@@ -359,7 +367,7 @@ fn rejects_missing_payload_identity_without_fallback() {
         .expect_err("unattached identity must not fall back");
     assert_diagnostic(
         &error,
-        DiagnosticCode::IncompatibleTargetPayload,
+        "MKC021_INCOMPATIBLE_TARGET_PAYLOAD",
         "envelope.target_payloads.format.identity",
         "attach a compatible payload or materialize one from the neutral artifact",
     );
@@ -381,7 +389,7 @@ fn rejects_same_identity_wrong_version_without_fallback() {
         .expect_err("same-identity version skew must not select another version-two payload");
     assert_diagnostic(
         &error,
-        DiagnosticCode::TargetPayloadVersionSkew,
+        "MKC018_TARGET_PAYLOAD_VERSION_SKEW",
         "envelope.target_payloads.format.version",
         "materialize the neutral artifact with the exact required target format version",
     );
@@ -403,7 +411,7 @@ fn rejects_corrupted_nested_payload_through_canonical_decode() {
         .expect_err("nested payload corruption must fail its canonical digest");
     assert_diagnostic(
         &error,
-        DiagnosticCode::TargetPayloadDigestMismatch,
+        "MKC019_TARGET_PAYLOAD_DIGEST_MISMATCH",
         "target_payload.digest",
         "discard the corrupted bytes and regenerate them",
     );
@@ -427,7 +435,7 @@ fn rejects_payload_association_mismatch_through_canonical_decode() {
         .expect_err("wrong neutral association must fail canonical validation");
     assert_diagnostic(
         &error,
-        DiagnosticCode::TargetPayloadAssociationMismatch,
+        "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH",
         "target_payload.neutral_artifact",
         "discard the payload and materialize bytes from this exact neutral artifact",
     );

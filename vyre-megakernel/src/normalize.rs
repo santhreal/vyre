@@ -1,8 +1,8 @@
 use vyre_foundation::ir::{ProgramGraph, ValueLifetime};
 
 use crate::{
-    ensure_node_dag, failure, ArtifactNodeId, ArtifactValueId, CompileError, DependencyEdge,
-    DependencyEndpoint, DependencyKind, DiagnosticCode,
+    ensure_node_dag, failure, ArtifactNodeId, ArtifactValueId, CompileError, CompilerFailureKind,
+    DependencyEdge, DependencyEndpoint, DependencyKind,
 };
 
 #[derive(Debug)]
@@ -39,7 +39,7 @@ pub(crate) fn normalize(graph: &ProgramGraph) -> Result<NormalizedGraph, Compile
         if let (Some(prior), Some(successor_node)) = (value.retained_successor_of, value.producer) {
             let prior = graph.values().get(prior.0 as usize).ok_or_else(|| {
                 failure(
-                    DiagnosticCode::InvalidProgram,
+                    CompilerFailureKind::InvalidProgram,
                     format!("graph.values[{}].retained_successor_of", value.id.0),
                     format!("retained predecessor {} does not exist", prior.0),
                     "repair the validated ProgramGraph retained transition",
@@ -62,7 +62,7 @@ pub(crate) fn normalize(graph: &ProgramGraph) -> Result<NormalizedGraph, Compile
     ensure_node_dag(
         graph.nodes().len(),
         &dependencies,
-        DiagnosticCode::DependencyCycle,
+        CompilerFailureKind::DependencyCycle,
     )?;
     Ok(NormalizedGraph { dependencies })
 }

@@ -11,11 +11,19 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileRequest, DependencyKind,
-    DiagnosticCode, Digest, ExternalFacts, SearchBudget,
+    selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest,
+    DependencyKind, Digest, ExternalFacts, SearchBudget,
 };
 
 const LIMIT: u64 = 1_000_000;
+
+fn diagnostic_path(error: &CompileError) -> Option<&str> {
+    error
+        .diagnostic
+        .location
+        .as_ref()
+        .and_then(|location| location.path.as_deref())
+}
 
 fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
     ValueContract {
@@ -455,10 +463,10 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         .validate()
         .err()
         .expect("missing symbol must fail");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::MissingSymbol);
+    assert_eq!(error.diagnostic.code.as_str(), "MKC002_MISSING_SYMBOL");
     assert_eq!(
-        error.diagnostic.path,
-        "request.facts.symbolic_bindings.items"
+        diagnostic_path(&error),
+        Some("request.facts.symbolic_bindings.items")
     );
 
     let mut missing_constant = facts();
@@ -468,10 +476,13 @@ fn missing_symbol_and_constant_identity_have_stable_diagnostics() {
         .err()
         .expect("missing constant identity must fail");
     assert_eq!(
-        error.diagnostic.code,
-        DiagnosticCode::MissingConstantIdentity
+        error.diagnostic.code.as_str(),
+        "MKC023_MISSING_CONSTANT_IDENTITY"
     );
-    assert_eq!(error.diagnostic.path, "request.facts.constant_identities.1");
+    assert_eq!(
+        diagnostic_path(&error),
+        Some("request.facts.constant_identities.1")
+    );
 }
 
 /// WHY: an unbounded or disabled mandatory search dimension is not a valid request.
@@ -486,8 +497,11 @@ fn zero_mandatory_search_bound_is_rejected() {
     .validate()
     .err()
     .expect("zero candidate bound must fail");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::InvalidSearchBudget);
-    assert_eq!(error.diagnostic.path, "request.search_budget");
+    assert_eq!(
+        error.diagnostic.code.as_str(),
+        "MKC022_INVALID_SEARCH_BUDGET"
+    );
+    assert_eq!(diagnostic_path(&error), Some("request.search_budget"));
 }
 
 /// WHY: exact artifact limits are inclusive and smaller limits fail closed.
@@ -496,7 +510,7 @@ fn artifact_byte_limit_is_inclusive_and_checked() {
     let len = compile(&request(LIMIT)).unwrap().to_bytes().unwrap().len() as u64;
     compile(&request(len)).expect("exact byte limit is inclusive");
     let error = compile(&request(len - 1)).expect_err("one-byte-short limit must fail");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::ArtifactLimit);
+    assert_eq!(error.diagnostic.code.as_str(), "MKC013_ARTIFACT_LIMIT");
 }
 
 /// WHY: neutral whole-program compilation validates subgroup semantics without
@@ -549,7 +563,7 @@ fn resource_shape_overflow_has_stable_diagnostic() {
     .validate()
     .unwrap();
     let error = compile(&request).expect_err("overflow must fail closed");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::ResourceOverflow);
+    assert_eq!(error.diagnostic.code.as_str(), "MKC011_RESOURCE_OVERFLOW");
 }
 
 /// WHY: persisted v3 artifacts must be rejected after the v4 target-seam cutover.
@@ -559,8 +573,8 @@ fn stale_artifact_version_is_rejected_before_body_decode() {
     let mut bytes = artifact.to_bytes().unwrap();
     bytes[4..6].copy_from_slice(&3u16.to_le_bytes());
     let error = Artifact::from_bytes(&bytes).expect_err("stale schema must fail");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::VersionSkew);
-    assert_eq!(error.diagnostic.path, "artifact.schema_version");
+    assert_eq!(error.diagnostic.code.as_str(), "MKC015_VERSION_SKEW");
+    assert_eq!(diagnostic_path(&error), Some("artifact.schema_version"));
 }
 
 /// WHY: authenticated canonical artifacts must reject body mutation.
@@ -570,5 +584,5 @@ fn artifact_body_tampering_is_detected() {
     let mut bytes = artifact.to_bytes().unwrap();
     bytes[10] ^= 1;
     let error = Artifact::from_bytes(&bytes).expect_err("tampered body must fail");
-    assert_eq!(error.diagnostic.code, DiagnosticCode::DigestMismatch);
+    assert_eq!(error.diagnostic.code.as_str(), "MKC016_DIGEST_MISMATCH");
 }

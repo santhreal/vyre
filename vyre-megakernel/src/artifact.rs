@@ -2,7 +2,7 @@ use vyre_foundation::ir::ProgramGraph;
 
 use crate::{
     build_barriers, build_materializations, domain_digest, failure, group_stages, ArtifactNodeId,
-    CompileError, DiagnosticCode, FusionGroupId, FusionRecord, FusionRejection, SearchBudget,
+    CompileError, CompilerFailureKind, FusionGroupId, FusionRecord, FusionRejection, SearchBudget,
     SelectedPlan,
 };
 
@@ -76,7 +76,7 @@ pub(crate) fn plan(
     let materializations = build_materializations(graph, &node_groups, &stages);
     if node_groups.len() != graph.nodes().len() {
         return Err(failure(
-            DiagnosticCode::InvalidProgram,
+            CompilerFailureKind::InvalidProgram,
             "planner.node_groups",
             "planner did not assign every graph node",
             "report the compiler defect",

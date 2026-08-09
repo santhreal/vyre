@@ -39,10 +39,11 @@ pub use target::{
 };
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+pub use vyre_foundation::diagnostics::Diagnostic;
+use vyre_foundation::diagnostics::{DiagnosticStage, OpLocation, RetryClass};
 use vyre_foundation::ir::{
     BufferAccess, DataType, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
 };
@@ -231,7 +232,7 @@ impl CompileRequest {
     pub fn validate(self) -> Result<ValidatedCompileRequest, CompileError> {
         if self.max_artifact_bytes == 0 {
             return Err(failure(
-                DiagnosticCode::ArtifactLimit,
+                CompilerFailureKind::ArtifactLimit,
                 "request.max_artifact_bytes",
                 "artifact byte limit must be greater than zero",
                 "supply a positive bounded artifact byte limit",
@@ -242,7 +243,7 @@ impl CompileRequest {
             || self.search_budget.max_elapsed_ns == 0
         {
             return Err(failure(
-                DiagnosticCode::InvalidSearchBudget,
+                CompilerFailureKind::InvalidSearchBudget,
                 "request.search_budget",
                 "candidate, CPU-work, and elapsed-work bounds must be positive",
                 "supply explicit positive bounds for every mandatory search dimension",
@@ -250,7 +251,7 @@ impl CompileRequest {
         }
         self.graph.analyze().map_err(|error| {
             failure(
-                DiagnosticCode::InvalidProgram,
+                CompilerFailureKind::InvalidProgram,
                 "request.graph",
                 error.to_string(),
                 "supply a structurally valid acyclic ProgramGraph",
@@ -269,7 +270,7 @@ impl CompileRequest {
                     .collect::<Vec<_>>()
                     .join("; ");
                 return Err(failure(
-                    DiagnosticCode::InvalidProgram,
+                    CompilerFailureKind::InvalidProgram,
                     format!("request.graph.nodes[{}].program", node.id.0),
                     message,
                     "supply semantically valid typed IR; target capability support is checked by the selected target compiler",
@@ -321,10 +322,9 @@ impl ValidatedCompileRequest {
     }
 }
 
-/// Stable diagnostic reason code.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum DiagnosticCode {
+/// Compiler-internal failure classification projected into the shared diagnostic protocol.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) enum CompilerFailureKind {
     /// A program failed structural validation.
     InvalidProgram,
     /// A symbolic extent had no exact binding.
@@ -363,7 +363,7 @@ pub enum DiagnosticCode {
     UnknownConstantIdentity,
 }
 
-impl DiagnosticCode {
+impl CompilerFailureKind {
     /// Stable ASCII code for logs and serialized evidence.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -390,17 +390,37 @@ impl DiagnosticCode {
     }
 }
 
-/// Stable actionable compiler diagnostic.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Diagnostic {
-    /// Machine-stable reason code.
-    pub code: DiagnosticCode,
-    /// Stable request or artifact path associated with the failure.
-    pub path: String,
-    /// Deterministic failure detail.
-    pub message: String,
-    /// Deterministic corrective action.
-    pub fix: String,
+const fn diagnostic_stage(code: CompilerFailureKind) -> DiagnosticStage {
+    match code {
+        CompilerFailureKind::InvalidProgram
+        | CompilerFailureKind::MissingSymbol
+        | CompilerFailureKind::UnknownSymbol
+        | CompilerFailureKind::InvalidSearchBudget
+        | CompilerFailureKind::MissingConstantIdentity
+        | CompilerFailureKind::UnknownConstantIdentity => DiagnosticStage::Validate,
+        CompilerFailureKind::DependencyCycle => DiagnosticStage::Plan,
+        CompilerFailureKind::ResourceOverflow | CompilerFailureKind::UnsizedResource => {
+            DiagnosticStage::Lower
+        }
+        CompilerFailureKind::ArtifactLimit => DiagnosticStage::Emit,
+        CompilerFailureKind::MalformedArtifact
+        | CompilerFailureKind::VersionSkew
+        | CompilerFailureKind::DigestMismatch
+        | CompilerFailureKind::MalformedTargetPayload
+        | CompilerFailureKind::TargetPayloadVersionSkew
+        | CompilerFailureKind::TargetPayloadDigestMismatch
+        | CompilerFailureKind::TargetPayloadAssociationMismatch
+        | CompilerFailureKind::IncompatibleTargetPayload => DiagnosticStage::Admit,
+    }
+}
+
+const fn diagnostic_retry(code: CompilerFailureKind) -> RetryClass {
+    match code {
+        CompilerFailureKind::VersionSkew
+        | CompilerFailureKind::TargetPayloadVersionSkew
+        | CompilerFailureKind::IncompatibleTargetPayload => RetryClass::RecompileSource,
+        _ => RetryClass::Never,
+    }
 }
 
 /// Compilation or artifact-validation failure.
@@ -409,19 +429,6 @@ pub struct Diagnostic {
 pub struct CompileError {
     /// Structured stable diagnostic.
     pub diagnostic: Diagnostic,
-}
-
-impl fmt::Display for Diagnostic {
-    fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            output,
-            "{} at {}: {}. Fix: {}",
-            self.code.as_str(),
-            self.path,
-            self.message,
-            self.fix
-        )
-    }
 }
 
 /// Canonical executable-node payload.
@@ -735,7 +742,7 @@ impl Artifact {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, CompileError> {
         if bytes.len() < ARTIFACT_HEADER_BYTES + ARTIFACT_DIGEST_BYTES {
             return Err(failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "artifact.header",
                 "artifact is shorter than its fixed framing",
                 "supply complete VMK0 bytes",
@@ -743,7 +750,7 @@ impl Artifact {
         }
         if &bytes[..4] != ARTIFACT_MAGIC {
             return Err(failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "artifact.magic",
                 "artifact magic is not VMK0",
                 "supply canonical megakernel artifact bytes",
@@ -752,7 +759,7 @@ impl Artifact {
         let version = u16::from_le_bytes([bytes[4], bytes[5]]);
         if version != ARTIFACT_SCHEMA_VERSION {
             return Err(failure(
-                DiagnosticCode::VersionSkew,
+                CompilerFailureKind::VersionSkew,
                 "artifact.schema_version",
                 format!("schema {version} is unsupported; expected {ARTIFACT_SCHEMA_VERSION}"),
                 "recompile the source graph with this compiler version",
@@ -764,7 +771,7 @@ impl Artifact {
             .and_then(|len| len.checked_add(ARTIFACT_DIGEST_BYTES))
             .ok_or_else(|| {
                 failure(
-                    DiagnosticCode::MalformedArtifact,
+                    CompilerFailureKind::MalformedArtifact,
                     "artifact.body_length",
                     "framed body length overflowed addressable memory",
                     "supply bounded canonical artifact bytes",
@@ -772,7 +779,7 @@ impl Artifact {
             })?;
         if bytes.len() != expected_len {
             return Err(failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "artifact.body_length",
                 format!(
                     "framing declares {expected_len} bytes but received {}",
@@ -788,7 +795,7 @@ impl Artifact {
             .expect("validated digest length");
         if expected_digest.0 != encoded_digest {
             return Err(failure(
-                DiagnosticCode::DigestMismatch,
+                CompilerFailureKind::DigestMismatch,
                 "artifact.digest",
                 "artifact body does not match its content identity",
                 "discard the corrupted artifact and recompile",
@@ -796,7 +803,7 @@ impl Artifact {
         }
         let payload: ArtifactPayload = serde_json::from_slice(body).map_err(|error| {
             failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "artifact.body",
                 error.to_string(),
                 "supply a canonical body emitted by this crate",
@@ -804,7 +811,7 @@ impl Artifact {
         })?;
         if payload.schema_version != version {
             return Err(failure(
-                DiagnosticCode::VersionSkew,
+                CompilerFailureKind::VersionSkew,
                 "artifact.body.schema_version",
                 "body schema disagrees with framing schema",
                 "recompile instead of rewriting artifact framing",
@@ -813,7 +820,7 @@ impl Artifact {
         let canonical = serde_json::to_vec(&payload).map_err(serialization_failure)?;
         if canonical != body {
             return Err(failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "artifact.body",
                 "artifact body is valid JSON but not canonical JSON",
                 "use the canonical bytes emitted by Artifact::to_bytes",
@@ -830,7 +837,7 @@ impl Artifact {
 pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileError> {
     let canonical_wire = request.graph.to_wire().map_err(|error| {
         failure(
-            DiagnosticCode::InvalidProgram,
+            CompilerFailureKind::InvalidProgram,
             "request.graph",
             error.to_string(),
             "supply a graph representable by the canonical foundation wire format",
@@ -845,7 +852,7 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         .map(|node| {
             let program = node.program.canonical_wire_bytes().map_err(|error| {
                 failure(
-                    DiagnosticCode::InvalidProgram,
+                    CompilerFailureKind::InvalidProgram,
                     format!("request.graph.nodes[{}].program", node.id.0),
                     error.to_string(),
                     "supply canonical-wire-compatible typed IR",
@@ -905,7 +912,7 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileErr
         .map_err(|_| overflow("artifact", "artifact length exceeds u64"))?;
     if byte_len > request.max_artifact_bytes {
         return Err(failure(
-            DiagnosticCode::ArtifactLimit,
+            CompilerFailureKind::ArtifactLimit,
             "artifact",
             format!(
                 "canonical artifact is {byte_len} bytes; limit is {}",
@@ -965,7 +972,7 @@ fn validate_bindings(
         .find(|symbol| !bindings.contains_key(**symbol))
     {
         return Err(failure(
-            DiagnosticCode::MissingSymbol,
+            CompilerFailureKind::MissingSymbol,
             format!("request.facts.symbolic_bindings.{symbol}"),
             "graph symbol has no exact extent",
             "bind every symbolic graph dimension before compilation",
@@ -976,7 +983,7 @@ fn validate_bindings(
         .find(|symbol| !symbols.contains(symbol.as_str()))
     {
         return Err(failure(
-            DiagnosticCode::UnknownSymbol,
+            CompilerFailureKind::UnknownSymbol,
             format!("request.facts.symbolic_bindings.{symbol}"),
             "binding does not occur in the graph",
             "remove stale bindings or use the graph's exact symbol name",
@@ -997,7 +1004,7 @@ fn validate_constant_identities(
         .collect::<BTreeSet<_>>();
     if let Some(id) = constants.iter().find(|id| !identities.contains_key(*id)) {
         return Err(failure(
-            DiagnosticCode::MissingConstantIdentity,
+            CompilerFailureKind::MissingConstantIdentity,
             format!("request.facts.constant_identities.{}", id.0),
             "constant graph value has no verified content identity",
             "supply one digest keyed by the constant GraphValueId",
@@ -1005,7 +1012,7 @@ fn validate_constant_identities(
     }
     if let Some(id) = identities.keys().find(|id| !constants.contains(id)) {
         return Err(failure(
-            DiagnosticCode::UnknownConstantIdentity,
+            CompilerFailureKind::UnknownConstantIdentity,
             format!("request.facts.constant_identities.{}", id.0),
             "constant identity names a non-constant or missing graph value",
             "remove stale identities and key constant content by GraphValueId",
@@ -1026,7 +1033,7 @@ fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileError> {
                 BufferAccess::Uniform => AbiAccess::Uniform,
                 unsupported => {
                     return Err(failure(
-                        DiagnosticCode::InvalidProgram,
+                        CompilerFailureKind::InvalidProgram,
                         format!("request.graph.values[{}].contract.access", value.id.0),
                         format!("access {unsupported:?} has no artifact ABI representation"),
                         "lower workgroup/private resources inside the node Program",
@@ -1064,7 +1071,7 @@ fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileError> {
 fn ensure_node_dag(
     count: usize,
     dependencies: &[DependencyEdge],
-    code: DiagnosticCode,
+    code: CompilerFailureKind,
 ) -> Result<(), CompileError> {
     let groups: Vec<_> = (0..count).map(|id| FusionGroupId(id as u32)).collect();
     ensure_group_dag(count, dependencies, &groups, code)
@@ -1074,7 +1081,7 @@ fn ensure_group_dag(
     count: usize,
     dependencies: &[DependencyEdge],
     node_groups: &[FusionGroupId],
-    code: DiagnosticCode,
+    code: CompilerFailureKind,
 ) -> Result<(), CompileError> {
     group_stages_inner(count, dependencies, node_groups)
         .map(|_| ())
@@ -1095,7 +1102,7 @@ fn group_stages(
 ) -> Result<Vec<u32>, CompileError> {
     group_stages_inner(count, dependencies, node_groups).map_err(|_| {
         failure(
-            DiagnosticCode::DependencyCycle,
+            CompilerFailureKind::DependencyCycle,
             "artifact.dependencies",
             "selected-plan dependency graph contains a cycle",
             "fix compiler legality before plan selection",
@@ -1246,7 +1253,7 @@ fn build_resources(
             .map_err(|message| overflow(format!("graph.values[{}].dtype", value.name), message))?
             .ok_or_else(|| {
                 failure(
-                    DiagnosticCode::UnsizedResource,
+                    CompilerFailureKind::UnsizedResource,
                     format!("graph.values[{}].dtype", value.name),
                     "value representation has no fixed packed byte size",
                     "resolve the representation to a fixed-width typed value before compilation",
@@ -1362,7 +1369,7 @@ fn domain_digest(domain: &[u8], bytes: &[u8]) -> Digest {
 
 fn serialization_failure(error: serde_json::Error) -> CompileError {
     failure(
-        DiagnosticCode::MalformedArtifact,
+        CompilerFailureKind::MalformedArtifact,
         "artifact.body",
         error.to_string(),
         "use values representable by the canonical artifact schema",
@@ -1371,7 +1378,7 @@ fn serialization_failure(error: serde_json::Error) -> CompileError {
 
 fn overflow(path: impl Into<String>, message: impl Into<String>) -> CompileError {
     failure(
-        DiagnosticCode::ResourceOverflow,
+        CompilerFailureKind::ResourceOverflow,
         path,
         message,
         "reduce resolved extents or split the graph before compilation",
@@ -1379,17 +1386,18 @@ fn overflow(path: impl Into<String>, message: impl Into<String>) -> CompileError
 }
 
 fn failure(
-    code: DiagnosticCode,
+    code: CompilerFailureKind,
     path: impl Into<String>,
     message: impl Into<String>,
     fix: impl Into<String>,
 ) -> CompileError {
+    let stage = diagnostic_stage(code);
+    let retry = diagnostic_retry(code);
     CompileError {
-        diagnostic: Diagnostic {
-            code,
-            path: path.into(),
-            message: message.into(),
-            fix: fix.into(),
-        },
+        diagnostic: Diagnostic::error(code.as_str(), message.into())
+            .with_stage(stage)
+            .with_location(OpLocation::op("vyre-megakernel").with_path(path))
+            .with_fix(fix.into())
+            .with_retry(retry),
     }
 }

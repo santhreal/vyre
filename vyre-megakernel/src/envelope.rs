@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    failure, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, DiagnosticCode, Digest,
+    failure, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompilerFailureKind, Digest,
 };
 
 /// Current schema for the artifact envelope that carries neutral data and target payloads.
@@ -32,7 +32,7 @@ impl TargetPayloadFormat {
         let identity = identity.into();
         if identity.is_empty() {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.format.identity",
                 "target payload format identity is empty",
                 "supply the stable format identity owned by the target materializer",
@@ -40,7 +40,7 @@ impl TargetPayloadFormat {
         }
         if version == 0 {
             return Err(failure(
-                DiagnosticCode::TargetPayloadVersionSkew,
+                CompilerFailureKind::TargetPayloadVersionSkew,
                 "target_payload.format.version",
                 "target payload format version zero is reserved",
                 "supply a positive target format version",
@@ -143,7 +143,7 @@ impl TargetPayload {
     ) -> Result<Self, CompileError> {
         if bytes.is_empty() {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.bytes",
                 "target payload bytes are empty",
                 "attach non-empty bytes emitted for the declared target format",
@@ -219,12 +219,12 @@ impl TargetPayload {
             TARGET_PAYLOAD_SCHEMA_VERSION,
             TARGET_PAYLOAD_DIGEST_DOMAIN,
             "target_payload",
-            DiagnosticCode::TargetPayloadVersionSkew,
-            DiagnosticCode::TargetPayloadDigestMismatch,
+            CompilerFailureKind::TargetPayloadVersionSkew,
+            CompilerFailureKind::TargetPayloadDigestMismatch,
         )?;
         let body: TargetPayloadBody = serde_json::from_slice(body).map_err(|error| {
             failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
                 error.to_string(),
                 "supply canonical target payload bytes emitted by this crate",
@@ -232,7 +232,7 @@ impl TargetPayload {
         })?;
         if body.schema_version != version {
             return Err(failure(
-                DiagnosticCode::TargetPayloadVersionSkew,
+                CompilerFailureKind::TargetPayloadVersionSkew,
                 "target_payload.body.schema_version",
                 "target payload body schema disagrees with its framing schema",
                 "re-materialize the target payload instead of rewriting its framing",
@@ -242,7 +242,7 @@ impl TargetPayload {
         if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
         {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 "target_payload.body",
                 "target payload body is not canonical JSON",
                 "use bytes emitted by TargetPayload::to_bytes",
@@ -301,7 +301,7 @@ impl ArtifactEnvelope {
             .any(|existing| existing.format() == payload.format())
         {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 "envelope.target_payloads",
                 format!(
                     "duplicate target payload format {} version {}",
@@ -335,7 +335,7 @@ impl ArtifactEnvelope {
             .find(|payload| payload.format().identity() == required.identity())
         {
             return Err(failure(
-                DiagnosticCode::TargetPayloadVersionSkew,
+                CompilerFailureKind::TargetPayloadVersionSkew,
                 "envelope.target_payloads.format.version",
                 format!(
                     "format {} version {} is incompatible; required version {}",
@@ -347,7 +347,7 @@ impl ArtifactEnvelope {
             ));
         }
         Err(failure(
-            DiagnosticCode::IncompatibleTargetPayload,
+            CompilerFailureKind::IncompatibleTargetPayload,
             "envelope.target_payloads.format.identity",
             format!(
                 "required target payload format {} is absent",
@@ -365,7 +365,7 @@ impl ArtifactEnvelope {
         let index = self.require_target_payload_index(required)?;
         self.target_payloads.get(index).ok_or_else(|| {
             failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "envelope.target_payloads",
                 "validated target payload index is outside the canonical attachment set",
                 "discard the artifact and regenerate its canonical envelope",
@@ -400,12 +400,12 @@ impl ArtifactEnvelope {
             ARTIFACT_ENVELOPE_SCHEMA_VERSION,
             ENVELOPE_DIGEST_DOMAIN,
             "envelope",
-            DiagnosticCode::VersionSkew,
-            DiagnosticCode::DigestMismatch,
+            CompilerFailureKind::VersionSkew,
+            CompilerFailureKind::DigestMismatch,
         )?;
         let body: EnvelopeBody = serde_json::from_slice(body).map_err(|error| {
             failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
                 error.to_string(),
                 "supply canonical envelope bytes emitted by this crate",
@@ -413,7 +413,7 @@ impl ArtifactEnvelope {
         })?;
         if body.schema_version != version {
             return Err(failure(
-                DiagnosticCode::VersionSkew,
+                CompilerFailureKind::VersionSkew,
                 "envelope.body.schema_version",
                 "envelope body schema disagrees with its framing schema",
                 "repackage the artifact instead of rewriting its framing",
@@ -423,7 +423,7 @@ impl ArtifactEnvelope {
         if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
         {
             return Err(failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 "envelope.body",
                 "envelope body is not canonical JSON",
                 "use bytes emitted by ArtifactEnvelope::to_bytes",
@@ -444,7 +444,7 @@ fn validate_target_payload(
 ) -> Result<(), CompileError> {
     if payload.schema_version() != TARGET_PAYLOAD_SCHEMA_VERSION {
         return Err(failure(
-            DiagnosticCode::TargetPayloadVersionSkew,
+            CompilerFailureKind::TargetPayloadVersionSkew,
             "target_payload.schema_version",
             format!(
                 "target payload schema {} is unsupported; expected {}",
@@ -456,7 +456,7 @@ fn validate_target_payload(
     }
     if payload.neutral_artifact() != neutral.digest() {
         return Err(failure(
-            DiagnosticCode::TargetPayloadAssociationMismatch,
+            CompilerFailureKind::TargetPayloadAssociationMismatch,
             "target_payload.neutral_artifact",
             "target payload names a different neutral artifact digest",
             "discard the payload and materialize bytes from this exact neutral artifact",
@@ -466,7 +466,7 @@ fn validate_target_payload(
     let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &payload.body)?;
     if digest != payload.digest() {
         return Err(failure(
-            DiagnosticCode::TargetPayloadDigestMismatch,
+            CompilerFailureKind::TargetPayloadDigestMismatch,
             "target_payload.digest",
             "target payload identity does not match its association, metadata, and bytes",
             "discard the corrupted target payload and materialize it again",
@@ -478,7 +478,7 @@ fn validate_target_payload(
 fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<(), CompileError> {
     if entries.is_empty() {
         return Err(failure(
-            DiagnosticCode::MalformedTargetPayload,
+            CompilerFailureKind::MalformedTargetPayload,
             "target_payload.entries",
             "target payload has no entry metadata",
             "associate at least one payload entry with a canonical neutral node",
@@ -489,7 +489,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
         let path = format!("target_payload.entries[{entry_index}]");
         if entry.name.is_empty() {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 format!("{path}.name"),
                 "target entry name is empty",
                 "supply the emitted entry symbol name",
@@ -497,7 +497,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
         }
         if !names.insert(entry.name.as_str()) {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 format!("{path}.name"),
                 format!("duplicate target entry name {}", entry.name),
                 "supply each target entry name exactly once",
@@ -505,7 +505,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
         }
         if !neutral.nodes().iter().any(|node| node.id == entry.node) {
             return Err(failure(
-                DiagnosticCode::TargetPayloadAssociationMismatch,
+                CompilerFailureKind::TargetPayloadAssociationMismatch,
                 format!("{path}.node"),
                 format!("neutral artifact has no node {}", entry.node.0),
                 "associate the target entry with a canonical neutral node identity",
@@ -517,7 +517,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
             .any(|geometry| geometry.node == entry.node)
         {
             return Err(failure(
-                DiagnosticCode::TargetPayloadAssociationMismatch,
+                CompilerFailureKind::TargetPayloadAssociationMismatch,
                 format!("{path}.node"),
                 "target entry node has no canonical neutral geometry record",
                 "compile a complete neutral artifact before attaching target bytes",
@@ -525,7 +525,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
         }
         if let Some(axis) = entry.grid_size.iter().position(|extent| *extent == 0) {
             return Err(failure(
-                DiagnosticCode::MalformedTargetPayload,
+                CompilerFailureKind::MalformedTargetPayload,
                 format!("{path}.grid_size[{axis}]"),
                 "target entry grid extent is zero",
                 "materialize explicit positive target grid dimensions",
@@ -537,7 +537,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
             let binding_path = format!("{path}.resource_bindings[{binding_index}]");
             if !slots.insert(binding.slot) {
                 return Err(failure(
-                    DiagnosticCode::MalformedTargetPayload,
+                    CompilerFailureKind::MalformedTargetPayload,
                     format!("{binding_path}.slot"),
                     format!("duplicate target binding slot {}", binding.slot),
                     "associate each target binding slot exactly once",
@@ -545,7 +545,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
             }
             if !resources.insert(binding.resource) {
                 return Err(failure(
-                    DiagnosticCode::MalformedTargetPayload,
+                    CompilerFailureKind::MalformedTargetPayload,
                     format!("{binding_path}.resource"),
                     format!(
                         "canonical resource {} is bound more than once",
@@ -560,7 +560,7 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
                 .any(|resource| resource.value == binding.resource)
             {
                 return Err(failure(
-                    DiagnosticCode::TargetPayloadAssociationMismatch,
+                    CompilerFailureKind::TargetPayloadAssociationMismatch,
                     format!("{binding_path}.resource"),
                     format!("neutral artifact has no resource {}", binding.resource.0),
                     "bind only canonical resources from the associated neutral artifact",
@@ -580,7 +580,7 @@ fn encode_frame<T: Serialize>(
     let body = serde_json::to_vec(body).map_err(serialization_failure)?;
     let body_len = u32::try_from(body.len()).map_err(|_| {
         failure(
-            DiagnosticCode::MalformedArtifact,
+            CompilerFailureKind::MalformedArtifact,
             "envelope.body",
             "canonical body exceeds the u32 framing limit",
             "reduce or detach target payload bytes",
@@ -602,12 +602,12 @@ fn decode_frame<'a>(
     expected_version: u16,
     domain: &[u8],
     path: &str,
-    version_code: DiagnosticCode,
-    digest_code: DiagnosticCode,
+    version_code: CompilerFailureKind,
+    digest_code: CompilerFailureKind,
 ) -> Result<(u16, &'a [u8], [u8; 32]), CompileError> {
     if bytes.len() < FRAME_HEADER_BYTES + DIGEST_BYTES {
         return Err(failure(
-            DiagnosticCode::MalformedArtifact,
+            CompilerFailureKind::MalformedArtifact,
             format!("{path}.header"),
             "framed bytes are shorter than the fixed header and digest",
             "supply one complete canonical frame",
@@ -615,7 +615,7 @@ fn decode_frame<'a>(
     }
     if &bytes[..4] != magic {
         return Err(failure(
-            DiagnosticCode::MalformedArtifact,
+            CompilerFailureKind::MalformedArtifact,
             format!("{path}.magic"),
             "framing magic is invalid",
             "supply bytes emitted for the expected artifact layer",
@@ -636,7 +636,7 @@ fn decode_frame<'a>(
         .and_then(|len| len.checked_add(DIGEST_BYTES))
         .ok_or_else(|| {
             failure(
-                DiagnosticCode::MalformedArtifact,
+                CompilerFailureKind::MalformedArtifact,
                 format!("{path}.body_length"),
                 "framed body length overflowed addressable memory",
                 "supply bounded canonical artifact bytes",
@@ -644,7 +644,7 @@ fn decode_frame<'a>(
         })?;
     if bytes.len() != expected_len {
         return Err(failure(
-            DiagnosticCode::MalformedArtifact,
+            CompilerFailureKind::MalformedArtifact,
             format!("{path}.body_length"),
             format!(
                 "framing declares {expected_len} bytes but received {}",
@@ -689,7 +689,7 @@ fn digest_bytes(domain: &[u8], version: u16, body: &[u8]) -> [u8; 32] {
 
 fn serialization_failure(error: serde_json::Error) -> CompileError {
     failure(
-        DiagnosticCode::MalformedArtifact,
+        CompilerFailureKind::MalformedArtifact,
         "envelope.serialization",
         error.to_string(),
         "report this deterministic canonical serialization failure",
