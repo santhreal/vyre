@@ -3,10 +3,7 @@
 use std::collections::BTreeMap;
 
 use thiserror::Error;
-use vyre_foundation::ir::{
-    inline_calls_with_resolver, BufferAccess, OpResolver, Program, ProgramGraph, ShapeDim,
-    ValueContract, ValueLifetime,
-};
+use vyre_foundation::ir::{inline_calls_with_resolver, OpResolver, Program, ProgramGraph};
 use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler,
 };
@@ -100,32 +97,9 @@ fn registered_target_compiler(target: Target) -> Result<Box<dyn TargetCompiler>,
 }
 
 fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError> {
-    let mut graph = ProgramGraph::new();
-    for buffer in program.buffers() {
-        graph
-            .add_external_value(
-                buffer.name(),
-                ValueContract {
-                    dtype: buffer.element(),
-                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
-                    access: buffer.access(),
-                    lifetime: resource_lifetime(buffer.access()),
-                },
-            )
-            .map_err(|error| {
-                CompileError::ArtifactLayout(format!(
-                    "resource `{}` cannot enter the canonical graph: {error}",
-                    buffer.name()
-                ))
-            })?;
-    }
-    graph
-        .add_node("main", program.clone(), Vec::new(), Vec::new())
-        .map_err(|error| {
-            CompileError::ArtifactLayout(format!(
-                "Program cannot enter the canonical graph: {error}"
-            ))
-        })?;
+    let graph = ProgramGraph::from_program("main", program.clone()).map_err(|error| {
+        CompileError::ArtifactLayout(format!("Program cannot enter the canonical graph: {error}"))
+    })?;
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
@@ -141,17 +115,6 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
         stage: "neutral-compile",
         source,
     })
-}
-
-fn resource_lifetime(access: BufferAccess) -> ValueLifetime {
-    match access {
-        BufferAccess::WriteOnly => ValueLifetime::Output,
-        BufferAccess::ReadWrite => ValueLifetime::Retained,
-        BufferAccess::ReadOnly | BufferAccess::Uniform | BufferAccess::Workgroup => {
-            ValueLifetime::Invocation
-        }
-        _ => ValueLifetime::Invocation,
-    }
 }
 
 #[cfg(test)]

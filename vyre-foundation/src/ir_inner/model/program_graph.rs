@@ -221,6 +221,34 @@ impl ProgramGraph {
         Self::default()
     }
 
+    /// Lift one frontend program into the canonical graph boundary.
+    ///
+    /// Every declared buffer becomes one typed external graph value. The
+    /// compiler then owns ABI projection and scheduling for the single node.
+    pub fn from_program(
+        node_name: impl Into<String>,
+        program: Program,
+    ) -> Result<Self, ProgramGraphError> {
+        let mut graph = Self::new();
+        for buffer in program.buffers() {
+            graph.add_external_value(
+                buffer.name(),
+                ValueContract {
+                    dtype: buffer.element(),
+                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                    access: buffer.access(),
+                    lifetime: match buffer.access() {
+                        BufferAccess::WriteOnly => ValueLifetime::Output,
+                        BufferAccess::ReadWrite => ValueLifetime::Retained,
+                        _ => ValueLifetime::Invocation,
+                    },
+                },
+            )?;
+        }
+        graph.add_node(node_name, program, Vec::new(), Vec::new())?;
+        Ok(graph)
+    }
+
     /// Register a graph input, constant, or initial retained value.
     pub fn add_external_value(
         &mut self,
