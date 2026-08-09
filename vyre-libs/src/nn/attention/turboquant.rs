@@ -199,8 +199,13 @@ pub fn turboquant_attention(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || turboquant_attention("q", "kp", "vp", "out", 2, 2),
+        build: Some(|| turboquant_attention("q", "kp", "vp", "out", 2, 2)),
         test_inputs: Some(|| {
             let to_f32_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);

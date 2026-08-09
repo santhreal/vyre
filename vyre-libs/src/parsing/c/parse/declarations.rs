@@ -329,8 +329,13 @@ fn is_declaration_boundary(token: Expr, prev: Expr, prev_prev: Expr) -> Expr {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::opt_propagate_type_specifiers",
-        build: || opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(1024)),
+        build: Some(|| opt_propagate_type_specifiers("tok_types", "tok_depths", "node_out", Expr::u32(1024))),
         // Buffers: tok_types (read-only u32), tok_depths (read-only u32),
         // node_out (read-write u32). The witness asserts propagation across
         // `int a, b;` and termination before `char c;`.

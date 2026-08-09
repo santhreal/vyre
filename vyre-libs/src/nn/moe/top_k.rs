@@ -128,8 +128,13 @@ mod tests {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::top_k",
-        build: || top_k("input", "output", 8, 2),
+        build: Some(|| top_k("input", "output", 8, 2)),
         test_inputs: Some(|| {
             let scores: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let input_bytes = vyre_primitives::wire::pack_f32_slice(&scores);

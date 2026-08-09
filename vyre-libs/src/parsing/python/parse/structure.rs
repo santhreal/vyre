@@ -573,8 +573,13 @@ pub fn python312_extract_with_blocks(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::python312_extract_structure",
-        build: || python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        build: Some(|| python312_extract_structure("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
         test_inputs: Some(structure_fixture_inputs),
         expected_output: Some(structure_fixture_expected),
         category: Some("parsing"),
@@ -583,8 +588,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::python312_extract_imports",
-        build: || python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        build: Some(|| python312_extract_imports("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
         test_inputs: Some(import_fixture_inputs),
         expected_output: Some(import_fixture_expected),
         category: Some("parsing"),
@@ -593,8 +603,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::python312_extract_with_blocks",
-        build: || python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16),
+        build: Some(|| python312_extract_with_blocks("tok_types", "tok_starts", "tok_lens", "out_records", "out_counts", 16)),
         test_inputs: Some(with_fixture_inputs),
         expected_output: Some(with_fixture_expected),
         category: Some("parsing"),

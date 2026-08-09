@@ -280,8 +280,13 @@ fn reference_cross_entropy_bytes(logits: &[f32], targets: &[u32], vocab_size: us
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || cross_entropy("logits", "targets", "loss", 2, 4),
+        build: Some(|| cross_entropy("logits", "targets", "loss", 2, 4)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);

@@ -72,8 +72,13 @@ pub fn weighted_sum_fma_f32(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             weighted_sum_fma_f32("weights", "values", "output", 4).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     OP_ID,
@@ -82,7 +87,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             let weights = crate::test_support::byte_pack::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
             let values = crate::test_support::byte_pack::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);

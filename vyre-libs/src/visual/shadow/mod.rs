@@ -168,8 +168,13 @@ pub fn box_shadow(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000),
+        build: Some(|| box_shadow("out", 8, 8, 2, 2, 4, 4, 2.0, 0x80_000000)),
         test_inputs: Some(|| {
             vec![vec![vec![0u8; 256]]]  // initial 8×8 output buffer
         }),

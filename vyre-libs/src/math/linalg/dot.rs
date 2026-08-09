@@ -220,8 +220,13 @@ fn dot_reference(lhs: &str, rhs: &str, out: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: dot fixture must build: {error}"))),
+        build: Some(|| dot("lhs", "rhs", "out", 256).unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: dot fixture must build: {error}")))),
         test_inputs: Some(|| vec![vec![
             vec![0u8; 256 * 4],
             vec![0u8; 256 * 4],

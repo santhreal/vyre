@@ -129,7 +129,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::new(
+    crate::fixture_catalog::OpEntry::library(
         OP_ID,
         || encodex_gpu("input", "output", 5),
         Some(fixture_inputs),

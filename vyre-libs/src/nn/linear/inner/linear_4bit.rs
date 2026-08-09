@@ -1248,8 +1248,13 @@ mod tests {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::linear_4bit",
-        build: || {
+        build: Some(|| {
             linear_4bit("x", "w", "b", "out", 8, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     "vyre-libs::nn::linear_4bit",
@@ -1258,7 +1263,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             let x: Vec<f32> = (0..8).map(|i| i as f32).collect();
             let w: Vec<u32> = vec![0x7654_3210, 0xFEDC_BA98, 0x1111_1111, 0x0000_0000];
@@ -1279,8 +1284,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::linear_4bit_affine_grouped",
-        build: || {
+        build: Some(|| {
             linear_4bit_affine_grouped("x", "w", "scale", "zp", "b", "out", 8, 2, 4)
                 .unwrap_or_else(|error| {
                     crate::builder::invalid_output_program(
@@ -1290,7 +1300,7 @@ inventory::submit! {
                         error,
                     )
                 })
-        },
+        }),
         test_inputs: Some(|| {
             let x = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             let w = [0x8765_4321u32, 0x0000_0000u32];

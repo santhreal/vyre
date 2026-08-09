@@ -36,8 +36,13 @@ pub fn linear_relu(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             linear_relu("x", "w", "b", "out", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     OP_ID,
@@ -46,7 +51,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             let f32_bytes = vyre_primitives::wire::pack_f32_slice;
             let x = f32_bytes(&(0..4).map(|i| i as f32).collect::<Vec<_>>());

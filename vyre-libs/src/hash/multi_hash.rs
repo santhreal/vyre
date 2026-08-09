@@ -49,8 +49,13 @@ pub fn multi_hash(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 3),
+        build: Some(|| multi_hash("input", "out_crc32", "out_fnv1a32", "out_adler32", 3)),
         test_inputs: Some(|| {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes]]

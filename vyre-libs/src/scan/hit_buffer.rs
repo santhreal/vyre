@@ -4,8 +4,8 @@
 //! matching pipeline appends only the live tuples into a flat u32 buffer:
 //! `(rule_id, file_id, span_start, span_len)`.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::execution_plan::fusion::{fuse_programs_vec, FusionError};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
 
@@ -292,7 +292,7 @@ mod emit_then_compact_tests {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::new(
+    crate::fixture_catalog::OpEntry::library(
         EMIT_HIT_OP_ID,
         || emit_hit(
             "rule_id",
@@ -308,7 +308,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::new(
+    crate::fixture_catalog::OpEntry::library(
         COMPACT_HITS_OP_ID,
         || compact_hits("out_hits", "out_cursor", DEFAULT_MAX_HITS),
         Some(compact_hits_inputs),

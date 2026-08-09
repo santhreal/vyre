@@ -22,8 +22,13 @@ pub fn atomic_compare_exchange_u32(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4),
+        build: Some(|| atomic_compare_exchange_u32("expected", "desired", "state", "trace", 4)),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
@@ -48,7 +53,6 @@ inventory::submit! {
         category: Some("math"),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

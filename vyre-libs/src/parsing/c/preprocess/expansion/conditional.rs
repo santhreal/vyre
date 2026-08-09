@@ -350,10 +350,15 @@ pub fn opt_conditional_mask_with_directives(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::opt_conditional_mask_with_directives",
-        build: || opt_conditional_mask_with_directives(
+        build: Some(|| opt_conditional_mask_with_directives(
             "tok_types", "directive_kinds", "directive_values", "out_mask", Expr::u32(3)
-        ),
+        )),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[
@@ -375,11 +380,16 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::opt_dynamic_macro_expansion",
-        build: || opt_dynamic_macro_expansion(
+        build: Some(|| opt_dynamic_macro_expansion(
             "in_tok_types", "macro_keys", "macro_vals", "macro_sizes",
             "out_tok_types", "out_tok_counts", Expr::u32(4), 16
-        ),
+        )),
         test_inputs: Some(dynamic_macro_fixture_inputs),
         expected_output: Some(dynamic_macro_fixture_expected),
         category: Some("parsing"),

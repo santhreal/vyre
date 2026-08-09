@@ -121,12 +121,17 @@ pub fn aho_corasick_bounded(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::matching::aho_corasick",
-        build: || {
+        build: Some(|| {
             let patterns: [&[u8]; 1] = [b"abra"];
             let compiled = crate::scan::dfa::dfa_compile(&patterns);
             aho_corasick_bounded("haystack", "transitions", "accept", "matches", 11, compiled.accept.len() as u32, compiled.max_pattern_len)
-        },
+        }),
         test_inputs: Some(|| {
             let patterns: [&[u8]; 1] = [b"abra"];
             let compiled = crate::scan::dfa::dfa_compile(&patterns);

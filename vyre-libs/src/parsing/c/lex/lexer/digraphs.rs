@@ -230,10 +230,15 @@ pub fn c11_lex_digraphs(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::c_lexer",
-        build: || {
+        build: Some(|| {
             c11_lexer("haystack", "out_tok_types", "out_tok_starts", "out_tok_lens", "out_counts", 4096)
-        },
+        }),
         test_inputs: Some(lexer_bounded_identifier_inputs),
         expected_output: Some(lexer_bounded_identifier_expected),
         category: Some("parsing"),
@@ -242,10 +247,15 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::c11_lex_digraphs",
-        build: || {
+        build: Some(|| {
             c11_lex_digraphs("tok_types", "tok_starts", "tok_lens", 4096)
-        },
+        }),
         test_inputs: Some(digraph_inputs),
         expected_output: Some(digraph_expected),
         category: Some("parsing"),

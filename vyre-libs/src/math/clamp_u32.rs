@@ -52,8 +52,13 @@ pub fn clamp_u32(input: &str, lo: &str, hi: &str, out: &str, n: u32) -> Program 
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || clamp_u32("input", "lo", "hi", "out", 4),
+        build: Some(|| clamp_u32("input", "lo", "hi", "out", 4)),
         test_inputs: Some(|| {
             let input = [0u32, 5, 10, u32::MAX];
             let lo = [3u32, 3, 3, 100];

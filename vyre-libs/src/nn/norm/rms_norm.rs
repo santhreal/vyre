@@ -140,8 +140,13 @@ fn rms_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> Pr
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
         id: "vyre-libs::nn::rms_norm",
-        build: || rms_norm("input", "output", 4, 1e-5),
+        build: Some(|| rms_norm("input", "output", 4, 1e-5)),
         test_inputs: Some(|| {
             let to_bytes =
                 |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);

@@ -136,8 +136,13 @@ fn build_substring_program(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SCAN_SUBSTRING_OP_ID,
-        build: || substring_search("haystack", "needle", "matches", 8, 3),
+        build: Some(|| substring_search("haystack", "needle", "matches", 8, 3)),
         test_inputs: Some(|| {
             let to_u32_vec = |s: &str| s.bytes().map(u32::from).collect::<Vec<_>>();
             vec![

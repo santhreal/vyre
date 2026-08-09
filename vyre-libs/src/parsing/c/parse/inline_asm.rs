@@ -155,8 +155,13 @@ pub fn c11_gnu_inline_asm_pass(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || c11_gnu_inline_asm_pass("ast", "out_asm", Expr::u32(4)),
+        build: Some(|| c11_gnu_inline_asm_pass("ast", "out_asm", Expr::u32(4))),
         // ast: 4 u32 opcodes including one ASM tag (0x41534D00) at
         // index 2. out_asm: 4 u32 slots. out_asm_counts: 1 u32 slot
         // for the atomic counter. The pass writes t=2 into

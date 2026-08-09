@@ -6,12 +6,17 @@ use super::{ast_shunting_yard, pack_u32, MAX_TOK_SCAN, OP_ID};
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || ast_shunting_yard(
+        build: Some(|| ast_shunting_yard(
             "tok_types", "statements", Expr::u32(100),
             "out_ast_nodes", "out_ast_count", "out_statement_roots",
             "scratch_val_stack", "scratch_op_stack"
-        ),
+        )),
         test_inputs: Some(|| vec![vec![
             shunting_token_fixture(),
             shunting_statement_fixture(),

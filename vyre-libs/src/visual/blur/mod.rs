@@ -13,8 +13,8 @@
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::blur";
 
@@ -395,8 +395,13 @@ pub use vyre_primitives::math::conv1d::gaussian_weights;
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal,
+        build: Some(|| gaussian_blur_2pass("input", "output", "scratch", 4, 4, 1, 0.8).horizontal),
         test_inputs: Some(|| {
             // 4×4 all-white → blurred all-white (identity for uniform).
             let pixels = vec![0xFFFF_FFFFu32; 16];

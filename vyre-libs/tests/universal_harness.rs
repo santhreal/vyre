@@ -274,5 +274,5 @@ fn output_buffer_indices(program: &Program) -> Vec<usize> {
 }
 
 fn build_program(entry: &OpEntry) -> Program {
-    (entry.build)()
+    entry.program().expect("Fix: registered library operation must provide a neutral builder")
 }

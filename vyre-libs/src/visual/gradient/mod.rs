@@ -3,8 +3,8 @@
 //! Rasterizes a linear gradient with up to 16 color stops.
 //! Category A composition  -  pure IR expressions.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::gradient";
 
@@ -313,14 +313,19 @@ pub fn try_linear_gradient(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || linear_gradient(
+        build: Some(|| linear_gradient(
             "output", 4, 1, 90.0,
             &[
                 ColorStop { position: 0.0, color: 0xFF_0000FF }, // red
                 ColorStop { position: 1.0, color: 0xFF_FF0000 }, // blue
             ],
-        ),
+        )),
         test_inputs: Some(|| {
             vec![vec![vec![0u8; 16]]]  // initial 4×1 output buffer
         }),

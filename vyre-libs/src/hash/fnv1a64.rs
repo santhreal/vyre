@@ -57,8 +57,13 @@ pub fn fnv1a64_n(input: &str, out: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || fnv1a64_n("input", "out", 3),
+        build: Some(|| fnv1a64_n("input", "out", 3)),
         test_inputs: Some(|| {
             let bytes = vyre_primitives::wire::pack_bytes_as_u32_slice(b"abc");
             vec![vec![bytes]]

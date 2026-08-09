@@ -40,8 +40,13 @@ pub fn muoneq_r(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(8),
         id: OP_ID,
-        build: || muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95),
+        build: Some(|| muoneq_r("params", "grads", "momentum", "output", 4, 4, 2, 0.02, 0.95)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

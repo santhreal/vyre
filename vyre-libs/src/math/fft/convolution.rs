@@ -311,8 +311,13 @@ fn scale_conjugate_inverse_expected() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: MULTIPLY_OP_ID,
-        build: pointwise_complex_multiply_conjugate_program,
+        build: Some(pointwise_complex_multiply_conjugate_program),
         test_inputs: Some(pointwise_complex_multiply_conjugate_inputs),
         expected_output: Some(pointwise_complex_multiply_conjugate_expected),
         category: Some("math"),
@@ -321,8 +326,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SCALE_OP_ID,
-        build: scale_conjugate_inverse_program,
+        build: Some(scale_conjugate_inverse_program),
         test_inputs: Some(scale_conjugate_inverse_inputs),
         expected_output: Some(scale_conjugate_inverse_expected),
         category: Some("math"),
@@ -331,8 +341,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
         id: OP_ID,
-        build: || fft_convolve_circular_complex(
+        build: Some(|| fft_convolve_circular_complex(
             "signal",
             "kernel",
             "signal_freq",
@@ -340,7 +355,7 @@ inventory::submit! {
             "product_freq",
             "output",
             4,
-        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers.")),
+        ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers."))),
         test_inputs: Some(|| {
             vec![vec![
                 crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),

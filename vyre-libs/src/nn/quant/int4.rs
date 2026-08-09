@@ -202,8 +202,13 @@ pub fn int4_batched_matmul_top1_f32_scaled(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: DOT_OP_ID,
-        build: || int4_dot_i32("lhs", "rhs", "out", 8),
+        build: Some(|| int4_dot_i32("lhs", "rhs", "out", 8)),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
@@ -217,8 +222,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: DOT_SCALED_OP_ID,
-        build: || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
+        build: Some(|| int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8)),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
@@ -234,8 +244,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: MATVEC_SCALED_OP_ID,
-        build: || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
+        build: Some(|| int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8)),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
@@ -252,8 +267,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: BATCHED_MATVEC_SCALED_OP_ID,
-        build: || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
+        build: Some(|| int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8)),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
@@ -270,8 +290,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: BATCHED_MATMUL_SCALED_OP_ID,
-        build: || {
+        build: Some(|| {
             int4_batched_matmul_f32_scaled(
                 "weights",
                 "activations",
@@ -282,7 +307,7 @@ inventory::submit! {
                 2,
                 8,
             )
-        },
+        }),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),
@@ -300,8 +325,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: BATCHED_MATMUL_TOP1_SCALED_OP_ID,
-        build: || {
+        build: Some(|| {
             int4_batched_matmul_top1_f32_scaled(
                 "weights",
                 "activations",
@@ -312,7 +342,7 @@ inventory::submit! {
                 2,
                 8,
             )
-        },
+        }),
         test_inputs: Some(|| {
             vec![vec![
                 vyre_primitives::wire::pack_u32_slice(&[0, 0]),

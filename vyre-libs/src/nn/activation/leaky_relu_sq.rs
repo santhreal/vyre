@@ -28,8 +28,13 @@ pub fn leaky_relu_sq(input: &str, output: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || leaky_relu_sq("input", "output", 4),
+        build: Some(|| leaky_relu_sq("input", "output", 4)),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             vec![vec![

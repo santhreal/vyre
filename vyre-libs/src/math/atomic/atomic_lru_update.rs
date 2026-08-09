@@ -37,8 +37,13 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::atomic::lru_update_u32",
-        build: || atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345)),
+        build: Some(|| atomic_lru_update_u32("buffer", Expr::u32(0), Expr::u32(12345))),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![
@@ -53,4 +58,3 @@ inventory::submit! {
         category: Some("math"),
     }
 }
-

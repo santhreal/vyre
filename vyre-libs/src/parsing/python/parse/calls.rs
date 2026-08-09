@@ -310,10 +310,15 @@ pub fn python312_extract_calls(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::python312_extract_calls",
-        build: || python312_extract_calls(
+        build: Some(|| python312_extract_calls(
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16
-        ),
+        )),
         test_inputs: Some(call_fixture_inputs),
         expected_output: Some(call_fixture_expected),
         category: Some("parsing"),

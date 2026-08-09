@@ -347,8 +347,13 @@ pub fn try_sketch_mix(input: &str, out: &str, size: u32) -> Result<Program, Tens
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: JOIN_OP_ID,
-        build: || lattice_join("a", "b", "out", 4),
+        build: Some(|| lattice_join("a", "b", "out", 4)),
         test_inputs: Some(|| {
             let a = [0x0000FFFFu32, 0xAAAAAAAA, 0x00000000, 0xFFFFFFFF];
             let b = [0xFFFF0000u32, 0x55555555, 0x00000000, 0x00000000];
@@ -366,8 +371,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: MEET_OP_ID,
-        build: || lattice_meet("a", "b", "out", 4),
+        build: Some(|| lattice_meet("a", "b", "out", 4)),
         test_inputs: Some(|| {
             let a = [0x0000FFFFu32, 0xAAAAAAAA, 0x00000000, 0xFFFFFFFF];
             let b = [0xFFFF0000u32, 0x55555555, 0x00000000, 0x00000000];
@@ -385,8 +395,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: MINPLUS_MUL_OP_ID,
-        build: || semiring_min_plus_mul("a", "b", "out", 4),
+        build: Some(|| semiring_min_plus_mul("a", "b", "out", 4)),
         test_inputs: Some(|| {
             let a = [10u32, 20, u32::MAX, u32::MAX - 1];
             let b = [1u32, 2, 3, 4];
@@ -404,8 +419,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: BOOL_MATMUL_OP_ID,
-        build: || bool_semiring_matmul("a", "b", "out", 2, 3, 2),
+        build: Some(|| bool_semiring_matmul("a", "b", "out", 2, 3, 2)),
         test_inputs: Some(|| {
             let a = [1u32, 0, 1, 0, 1, 0];
             let b = [0u32, 1, 1, 0, 0, 0];
@@ -423,8 +443,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SKETCH_MIX_OP_ID,
-        build: || sketch_mix("input", "out", 4),
+        build: Some(|| sketch_mix("input", "out", 4)),
         test_inputs: Some(|| {
             let input = [1u32, 2, 3, 4];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;

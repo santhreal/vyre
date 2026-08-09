@@ -3,8 +3,8 @@
 //! Applies brightness, contrast, saturate, and invert in sequence.
 //! All math is integer fixed-point 16.16. Category A  -  pure IR.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::filter_chain";
 
@@ -251,8 +251,13 @@ pub fn filter_chain(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || filter_chain("pixels", 4, 1.0, 1.0, 1.0, 0.0),
+        build: Some(|| filter_chain("pixels", 4, 1.0, 1.0, 1.0, 0.0)),
         test_inputs: Some(|| {
             // Identity transform: all params = 1.0/0.0 → output == input.
             let pixels = [0xFF_804020u32, 0xFF_FF0000, 0xFF_00FF00, 0xFF_0000FF];

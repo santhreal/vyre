@@ -8,8 +8,8 @@
 use core::fmt;
 
 use crate::region::{tag_program, wrap_anonymous, wrap_child};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const RANK_SUPERBLOCKS_OP_ID: &str = "vyre-libs::math::succinct::rank1_superblocks";
 const RANK_QUERY_OP_ID: &str = "vyre-libs::math::succinct::rank1_query";
@@ -326,8 +326,13 @@ pub fn try_select1_query(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: RANK_SUPERBLOCKS_OP_ID,
-        build: || rank1_superblocks("bits", "superblocks", 4, 2),
+        build: Some(|| rank1_superblocks("bits", "superblocks", 4, 2)),
         test_inputs: Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
@@ -344,8 +349,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SELECT_QUERY_OP_ID,
-        build: || select1_query("bits", "queries", "out", 4, 5),
+        build: Some(|| select1_query("bits", "queries", "out", 4, 5)),
         test_inputs: Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let queries = [1u32, 2, 3, 4, 5];
@@ -363,8 +373,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: RANK_QUERY_OP_ID,
-        build: || rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2),
+        build: Some(|| rank1_query("bits", "superblocks", "queries", "out", 4, 5, 2)),
         test_inputs: Some(|| {
             let bits = [0b1011u32, 0x8000_0000, 0xFFFF_0000, 0u32];
             let superblocks = [0u32, 4, 20];

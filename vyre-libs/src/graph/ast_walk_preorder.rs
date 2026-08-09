@@ -144,8 +144,13 @@ fn preorder_harness_expected() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || ast_walk_preorder("nodes", "out", 6, 8),
+        build: Some(|| ast_walk_preorder("nodes", "out", 6, 8)),
         test_inputs: Some(preorder_harness_inputs),
         expected_output: Some(preorder_harness_expected),
         category: Some("graph"),

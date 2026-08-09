@@ -223,8 +223,13 @@ pub fn downsample_2x(input: &str, output: &str, width: u32, height: u32) -> Prog
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || downsample_2x("input", "output", 4, 4),
+        build: Some(|| downsample_2x("input", "output", 4, 4)),
         test_inputs: Some(|| {
             // 4×4 all-white → 2×2 all-white
             let input = vec![0xFFFF_FFFFu32; 16];

@@ -149,11 +149,16 @@ pub fn linear_tiled_reference(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::linear",
-        build: || {
+        build: Some(|| {
             linear("x", "w", "b", "out", 4, 4)
                 .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear", format!("Fix: linear fixture dimensions are invalid: {error}")))
-        },
+        }),
         // V7-TEST-005: deterministic fixture for linear(4, 4).
         // Body indexes `w[k * out_dim + i]` (column-major per out_dim),
         // so for w = [0..16], out_dim = 4:
@@ -185,11 +190,16 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::linear_tiled",
-        build: || {
+        build: Some(|| {
             linear_tiled("x", "w", "b", "out", 4, 4, 2)
                 .unwrap_or_else(|error| crate::invalid_program("vyre-libs::nn::linear_tiled", format!("Fix: linear_tiled fixture dimensions are invalid: {error}")))
-        },
+        }),
         test_inputs: Some(|| {
 
             let x = crate::test_support::byte_pack::u32_bytes(&(0..4).collect::<Vec<_>>());

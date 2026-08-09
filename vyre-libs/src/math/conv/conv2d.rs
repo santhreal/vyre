@@ -117,8 +117,13 @@ pub fn conv2d_3x3_direct(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             conv2d_3x3_direct("input", "kernel", "output", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     OP_ID,
@@ -127,7 +132,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
             let input = crate::test_support::byte_pack::f32_bytes(&[

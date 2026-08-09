@@ -74,8 +74,13 @@ pub fn skip_gate(gate: &str, branch: &str, skip: &str, output: &str, n: u32) -> 
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || skip_gate("gate", "branch", "skip", "output", 2),
+        build: Some(|| skip_gate("gate", "branch", "skip", "output", 2)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

@@ -345,8 +345,13 @@ fn softmax_reference_program(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
         id: "vyre-libs::nn::softmax",
-        build: || softmax("input", "output", 4),
+        build: Some(|| softmax("input", "output", 4)),
         test_inputs: Some(|| {
             let input = [0.5f32, -1.0, 1.5, 0.25];
             vec![vec![

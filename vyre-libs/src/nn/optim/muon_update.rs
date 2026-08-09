@@ -30,8 +30,13 @@ pub fn muon_update(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95),
+        build: Some(|| muon_update("params", "grads", "momentum", "output", 2, 0.02, 0.95)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

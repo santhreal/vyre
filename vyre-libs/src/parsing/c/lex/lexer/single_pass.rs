@@ -17,8 +17,8 @@
 
 use rustc_hash::FxHashSet;
 use std::sync::Arc;
-use vyre_foundation::ir::{BufferDecl, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferDecl, Node, Program};
 
 use super::core::{c11_lexer, c11_lexer_regular};
 use super::digraphs::c11_lex_digraphs;
@@ -163,8 +163,13 @@ pub fn c11_lex_regular_single_pass(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || c11_lex_single_pass(
+        build: Some(|| c11_lex_single_pass(
             "haystack",
             "tok_types",
             "tok_starts",
@@ -172,7 +177,7 @@ inventory::submit! {
             "tok_counts",
             64,
             64,
-        ),
+        )),
         test_inputs: Some(single_pass_inputs),
         expected_output: Some(single_pass_expected),
         category: Some("parsing"),

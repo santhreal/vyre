@@ -94,8 +94,13 @@ pub fn flows_to_alias_only(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || flows_to(ProgramGraphShape::new(4, 3), "fin", "fout"),
+        build: Some(|| flows_to(ProgramGraphShape::new(4, 3), "fin", "fout")),
         test_inputs: Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // Linear chain 0 → 1 → 2 → 3. Starting frontier {0}.
@@ -260,8 +265,9 @@ mod tests {
         // depths are identical by construction.
         let c_flows = crate::fixture_catalog::convergence_contract("vyre-libs::security::flows_to")
             .expect("Fix: flows_to must have a ConvergenceContract");
-        let c_taint = crate::fixture_catalog::convergence_contract("vyre-libs::security::taint_flow")
-            .expect("Fix: taint_flow must have a ConvergenceContract");
+        let c_taint =
+            crate::fixture_catalog::convergence_contract("vyre-libs::security::taint_flow")
+                .expect("Fix: taint_flow must have a ConvergenceContract");
         assert_eq!(
             c_flows.max_iterations, c_taint.max_iterations,
             "flows_to and taint_flow MUST share max_iterations: they close the \

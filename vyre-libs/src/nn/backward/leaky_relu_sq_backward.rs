@@ -23,8 +23,13 @@ pub fn leaky_relu_sq_backward(input: &str, grad_out: &str, grad_in: &str, n: u32
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || leaky_relu_sq_backward("input", "grad_out", "grad_in", 4),
+        build: Some(|| leaky_relu_sq_backward("input", "grad_out", "grad_in", 4)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

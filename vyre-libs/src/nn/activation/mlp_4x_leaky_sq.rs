@@ -226,11 +226,16 @@ fn output_projection_body(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             mlp_4x_leaky_sq("x", "w1", "b1", "w2", "b2", "out", 2, 4)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: mlp_4x_leaky_sq fixture must build: {error}")))
-        },
+        }),
         test_inputs: Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![
@@ -322,8 +327,13 @@ fn output_projection_program() -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: HIDDEN_PROJECTION_OP_ID,
-        build: hidden_projection_program,
+        build: Some(hidden_projection_program),
         test_inputs: Some(|| vec![vec![
             f32_fixture(&[1.0, 2.0]),
             f32_fixture(&[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
@@ -346,8 +356,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OUTPUT_PROJECTION_OP_ID,
-        build: output_projection_program,
+        build: Some(output_projection_program),
         test_inputs: Some(|| vec![vec![
             f32_fixture(&[1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0]),
             f32_fixture(&[0.0, 0.0]),

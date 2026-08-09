@@ -8,8 +8,8 @@
 //! The default builder maps one invocation to one query row. The
 //! scalar row-loop reference remains available through [`attention_reference`].
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::attention_passes::{
     attention_max_pass, attention_sum_pass, attention_write_pass, ATTENTION_MAX_PASS_OP_ID,
     ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
@@ -610,8 +610,13 @@ fn attention_reference_program(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
         id: "vyre-libs::nn::attention",
-        build: || attention("q", "k", "v", "out", 2, 4),
+        build: Some(|| attention("q", "k", "v", "out", 2, 4)),
         test_inputs: Some(|| {
             let q = [0.5f32, -1.0, 1.5, 0.25, -0.75, 0.5, 1.0, -0.5];
             let k = [1.0f32, 0.25, -0.5, 1.5, 0.75, -1.25, 0.5, 0.5];
@@ -635,8 +640,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: REFERENCE_OP_ID,
-        build: || attention_reference("q", "k", "v", "out", 2, 2),
+        build: Some(|| attention_reference("q", "k", "v", "out", 2, 2)),
         test_inputs: Some(|| {
             let pack = vyre_primitives::wire::pack_f32_slice;
             vec![vec![

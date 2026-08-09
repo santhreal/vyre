@@ -333,8 +333,13 @@ pub fn matmul_bias_tiled(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::matmul_tiled",
-        build: || matmul_tiled("a", "b", "out", 2, 2, 2, 2),
+        build: Some(|| matmul_tiled("a", "b", "out", 2, 2, 2, 2)),
         test_inputs: Some(|| {
             vec![vec![
                 crate::test_support::byte_pack::u32_bytes(&[1, 2, 3, 4]),
@@ -350,8 +355,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::matmul_bias_tiled",
-        build: || matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2),
+        build: Some(|| matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2)),
         test_inputs: Some(|| {
             vec![vec![
                 crate::test_support::byte_pack::u32_bytes(&[1, 2, 3, 4]),

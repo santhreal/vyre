@@ -62,8 +62,13 @@ pub fn ln_scale_backward(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4),
+        build: Some(|| ln_scale_backward("input", "scale", "grad_out", "grad_x", "grad_scale", 4)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

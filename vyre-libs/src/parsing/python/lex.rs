@@ -587,8 +587,13 @@ pub fn python312_lexer(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::python312_lexer",
-        build: || python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16),
+        build: Some(|| python312_lexer("haystack", "tok_types", "tok_starts", "tok_lens", "counts", 16)),
         test_inputs: Some(lexer_fixture_inputs),
         expected_output: Some(lexer_fixture_expected),
         category: Some("parsing"),

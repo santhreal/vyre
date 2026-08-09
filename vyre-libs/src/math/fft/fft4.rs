@@ -144,8 +144,13 @@ pub fn fft4_complex(input: &str, output: &str) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || fft4_complex("input", "output"),
+        build: Some(|| fft4_complex("input", "output")),
         test_inputs: Some(|| {
             // Real-valued sequence [1, 0, 0, 0] (impulse): all bins = 1+0i
             let input = crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);

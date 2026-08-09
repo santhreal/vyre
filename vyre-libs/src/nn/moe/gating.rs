@@ -3,8 +3,8 @@
 //! Category-A composition over `nn::softmax` and `nn::top_k`.
 
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::nn::quest_paging_passes::{quest_select_top_k_body, QUEST_SELECT_TOP_K_OP_ID};
 
 const OP_ID: &str = "vyre-libs::nn::moe_gate";
@@ -148,8 +148,13 @@ fn weight_write_body(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || moe_gate("scores", "indices", "weights", 8, 2),
+        build: Some(|| moe_gate("scores", "indices", "weights", 8, 2)),
         // Buffer order: scores (read-only f32 × 8), indices
         // (read-write u32 × 2), weights (output f32 × 2).
         test_inputs: Some(|| {
@@ -227,8 +232,13 @@ fn weight_write_program() -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SOFTMAX_STATS_OP_ID,
-        build: softmax_stats_program,
+        build: Some(softmax_stats_program),
         test_inputs: Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             vec![vec![
@@ -252,8 +262,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: WEIGHT_WRITE_OP_ID,
-        build: weight_write_program,
+        build: Some(weight_write_program),
         test_inputs: Some(|| {
             let scores = [0.5_f32, 1.0, 0.1, 2.0, 0.3, 3.0, 0.2, 0.4];
             let max_score = scores.iter().copied().fold(f32::NEG_INFINITY, f32::max);

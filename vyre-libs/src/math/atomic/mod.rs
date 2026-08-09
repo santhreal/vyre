@@ -21,7 +21,6 @@ use vyre_foundation::memory_model::MemoryOrdering;
 // cannot see them and fail to compile with "cannot find macro …" errors.
 // F-IR-35 reclassified atomics to Category::Intrinsic through these.
 
-
 macro_rules! define_atomic_serial_module {
     (
         $fn_name:ident,
@@ -52,8 +51,13 @@ macro_rules! define_atomic_serial_module {
 
         inventory::submit! {
             crate::fixture_catalog::OpEntry {
+                semantic_version: 1,
+                signature: None,
+                tier: vyre_foundation::operation::OperationTier::Library,
+                laws: &[],
+                tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
                 id: OP_ID,
-                build: || $fn_name("values", "state", "trace", 4),
+                build: Some(|| $fn_name("values", "state", "trace", 4)),
                 test_inputs: Some(|| {
                     let to_bytes = vyre_primitives::wire::pack_u32_slice;
                     let values: &[u32] = &$values;
@@ -67,7 +71,6 @@ macro_rules! define_atomic_serial_module {
                 category: Some("math"),
             }
         }
-
 
         #[cfg(test)]
         mod tests {

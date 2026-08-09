@@ -246,8 +246,13 @@ impl GlassHalfResPipeline {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
+        build: Some(|| crate::region::tag_program(OP_ID, glass_blur_stage("scene", "output", "scratch", &GlassParams {
             width: 4,
             height: 4,
             blur_radius: 1,
@@ -255,7 +260,7 @@ inventory::submit! {
             tint_rgba: 0x0D_FFFFFF,
             brightness: 1.0,
             saturation: 0.75,
-        }).horizontal),
+        }).horizontal)),
         test_inputs: Some(|| {
             // 4×4 all-white scene → glass blur → all-white.
             let pixels = vec![0xFFFF_FFFFu32; 16];

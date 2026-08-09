@@ -139,8 +139,13 @@ pub fn try_rms_norm_linear(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
         id: "vyre-libs::nn::rms_norm_linear",
-        build: || rms_norm_linear("input", "w", "b", "out", 4, 4, 4, 1e-5),
+        build: Some(|| rms_norm_linear("input", "w", "b", "out", 4, 4, 4, 1e-5)),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
             let input = [1.0_f32, 2.0, 3.0, 4.0];

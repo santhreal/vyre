@@ -102,8 +102,13 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             im2col_3x3("input", "output", 4, 4).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     OP_ID,
@@ -112,7 +117,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             vec![vec![f32_bytes(&im2col_fixture_input())]]
         }),

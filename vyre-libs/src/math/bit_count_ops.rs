@@ -25,8 +25,13 @@ macro_rules! define_bit_count_u32_op {
 
             inventory::submit! {
                 crate::fixture_catalog::OpEntry {
+                    semantic_version: 1,
+                    signature: None,
+                    tier: vyre_foundation::operation::OperationTier::Library,
+                    laws: &[],
+                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
                     id: OP_ID,
-                    build: || $function("input", "out", 4),
+                    build: Some(|| $function("input", "out", 4)),
                     test_inputs: Some(|| {
                         let input = [0u32, 1, 0x8000_0000, 0x00F0_0000];
                         let to_bytes = vyre_primitives::wire::pack_u32_slice;

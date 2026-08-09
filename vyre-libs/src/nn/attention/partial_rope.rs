@@ -10,10 +10,7 @@ use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::partial_rope";
 
-/// Build a Program applying partial RoPE (F32).
-///
-/// Applies RoPE to the first `rope_dims` channels of each head and
-/// copies the remaining channels unchanged.
+/// Build partial RoPE with positions starting at zero.
 #[must_use]
 pub fn partial_rope(
     input: &str,
@@ -25,11 +22,105 @@ pub fn partial_rope(
     head_dim: u32,
     rope_dims: u32,
 ) -> Program {
+    partial_rope_at_offset(
+        input, cos_table, sin_table, output, num_heads, seq_len, head_dim, rope_dims, 0, seq_len,
+    )
+}
+
+/// Build partial RoPE for a prompt or cached decode position range.
+///
+/// `table_seq_len` is the number of positions in each cosine/sine table;
+/// `position_offset` selects the first position consumed by this Program.
+#[must_use]
+#[allow(clippy::too_many_arguments)]
+pub fn partial_rope_at_offset(
+    input: &str,
+    cos_table: &str,
+    sin_table: &str,
+    output: &str,
+    num_heads: u32,
+    seq_len: u32,
+    head_dim: u32,
+    rope_dims: u32,
+    position_offset: u32,
+    table_seq_len: u32,
+) -> Program {
+    build_partial_rope_at_offset(
+        input,
+        cos_table,
+        sin_table,
+        output,
+        num_heads,
+        seq_len,
+        head_dim,
+        rope_dims,
+        position_offset,
+        table_seq_len,
+        DataType::F32,
+    )
+}
+
+/// Build partial RoPE with typed activation storage and F32 lookup tables.
+///
+/// # Errors
+///
+/// Returns `Err` when the activation dtype is not F16, BF16, or F32.
+#[allow(clippy::too_many_arguments)]
+pub fn partial_rope_at_offset_typed(
+    input: &str,
+    cos_table: &str,
+    sin_table: &str,
+    output: &str,
+    num_heads: u32,
+    seq_len: u32,
+    head_dim: u32,
+    rope_dims: u32,
+    position_offset: u32,
+    table_seq_len: u32,
+    activation_dtype: DataType,
+) -> Result<Program, String> {
+    if !matches!(
+        activation_dtype,
+        DataType::F16 | DataType::BF16 | DataType::F32
+    ) {
+        return Err(format!(
+            "Fix: partial_rope_at_offset_typed supports F16, BF16, or F32 activations; got {activation_dtype:?}"
+        ));
+    }
+    Ok(build_partial_rope_at_offset(
+        input,
+        cos_table,
+        sin_table,
+        output,
+        num_heads,
+        seq_len,
+        head_dim,
+        rope_dims,
+        position_offset,
+        table_seq_len,
+        activation_dtype,
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_partial_rope_at_offset(
+    input: &str,
+    cos_table: &str,
+    sin_table: &str,
+    output: &str,
+    num_heads: u32,
+    seq_len: u32,
+    head_dim: u32,
+    rope_dims: u32,
+    position_offset: u32,
+    table_seq_len: u32,
+    activation_dtype: DataType,
+) -> Program {
     if num_heads == 0 || seq_len == 0 || head_dim == 0 {
         return crate::builder::invalid_output_program(
             OP_ID,
             output,
-            DataType::F32,
+            activation_dtype.clone(),
             format!(
                 "Fix: partial_rope requires positive num_heads, seq_len, and head_dim; got num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
             ),
@@ -39,9 +130,22 @@ pub fn partial_rope(
         return crate::builder::invalid_output_program(
             OP_ID,
             output,
-            DataType::F32,
+            activation_dtype.clone(),
             format!(
                 "Fix: partial_rope requires an even rope_dims <= head_dim; got rope_dims={rope_dims}, head_dim={head_dim}."
+            ),
+        );
+    }
+    if position_offset
+        .checked_add(seq_len)
+        .is_none_or(|end| end > table_seq_len)
+    {
+        return crate::builder::invalid_output_program(
+            OP_ID,
+            output,
+            activation_dtype.clone(),
+            format!(
+                "Fix: partial_rope position range offset={position_offset}, seq_len={seq_len} exceeds table_seq_len={table_seq_len}."
             ),
         );
     }
@@ -54,7 +158,7 @@ pub fn partial_rope(
             return crate::builder::invalid_output_program(
                 OP_ID,
                 output,
-                DataType::F32,
+                activation_dtype.clone(),
                 format!(
                     "Fix: partial_rope total element count overflows u32 for num_heads={num_heads}, seq_len={seq_len}, head_dim={head_dim}."
                 ),
@@ -62,15 +166,15 @@ pub fn partial_rope(
         }
     };
     let half_rope = rope_dims / 2;
-    let table_count = match seq_len.checked_mul(half_rope) {
+    let table_count = match table_seq_len.checked_mul(half_rope) {
         Some(count) => count,
         None => {
             return crate::builder::invalid_output_program(
                 OP_ID,
                 output,
-                DataType::F32,
+                activation_dtype.clone(),
                 format!(
-                    "Fix: partial_rope table element count overflows u32 for seq_len={seq_len}, rope_dims={rope_dims}."
+                    "Fix: partial_rope table element count overflows u32 for table_seq_len={table_seq_len}, rope_dims={rope_dims}."
                 ),
             );
         }
@@ -85,9 +189,18 @@ pub fn partial_rope(
     let pair = Expr::div(dim.clone(), Expr::u32(2));
     let parity = Expr::rem(dim.clone(), Expr::u32(2));
     let pair_base = Expr::sub(i.clone(), parity.clone());
-    let x0 = Expr::load(input, pair_base.clone());
-    let x1 = Expr::load(input, Expr::add(pair_base, Expr::u32(1)));
-    let table_idx = Expr::add(Expr::mul(token, Expr::u32(half_rope)), pair);
+    let x0 = Expr::cast(DataType::F32, Expr::load(input, pair_base.clone()));
+    let x1 = Expr::cast(
+        DataType::F32,
+        Expr::load(input, Expr::add(pair_base, Expr::u32(1))),
+    );
+    let table_idx = Expr::add(
+        Expr::mul(
+            Expr::add(token, Expr::u32(position_offset)),
+            Expr::u32(half_rope),
+        ),
+        pair,
+    );
     let cos_v = Expr::load(cos_table, table_idx.clone());
     let sin_v = Expr::load(sin_table, table_idx);
     let rotated_even = Expr::sub(
@@ -96,10 +209,13 @@ pub fn partial_rope(
     );
     let rotated_odd = Expr::add(Expr::mul(x0, sin_v), Expr::mul(x1, cos_v));
     let rotated = Expr::select(Expr::eq(parity, Expr::u32(0)), rotated_even, rotated_odd);
-    let value = Expr::select(
-        Expr::lt(dim, Expr::u32(rope_dims)),
-        rotated,
-        Expr::load(input, i.clone()),
+    let value = Expr::cast(
+        activation_dtype.clone(),
+        Expr::select(
+            Expr::lt(dim, Expr::u32(rope_dims)),
+            rotated,
+            Expr::cast(DataType::F32, Expr::load(input, i.clone())),
+        ),
     );
 
     let body = vec![
@@ -116,12 +232,13 @@ pub fn partial_rope(
 
     Program::wrapped(
         vec![
-            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(total),
+            BufferDecl::storage(input, 0, BufferAccess::ReadOnly, activation_dtype.clone())
+                .with_count(total),
             BufferDecl::storage(cos_table, 1, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(table_count),
             BufferDecl::storage(sin_table, 2, BufferAccess::ReadOnly, DataType::F32)
                 .with_count(table_count),
-            BufferDecl::output(output, 3, DataType::F32).with_count(total),
+            BufferDecl::output(output, 3, activation_dtype).with_count(total),
         ],
         [64, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],
@@ -130,8 +247,13 @@ pub fn partial_rope(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2),
+        build: Some(|| partial_rope("input", "cos", "sin", "output", 1, 2, 4, 2)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

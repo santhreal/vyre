@@ -305,8 +305,13 @@ mod tests {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: ELF_LOWERING_OP_ID,
-        build: || opt_lower_elf("ssa", "obj", Expr::u32(4)),
+        build: Some(|| opt_lower_elf("ssa", "obj", Expr::u32(4))),
         // Small deterministic fixture: 4 encoded words and a 4096-word object buffer.
         test_inputs: Some(|| vec![vec![
             vyre_primitives::wire::pack_u32_slice(&[

@@ -74,8 +74,13 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || bracket_match("kinds", "stack", "match_pairs", 4, 4),
+        build: Some(|| bracket_match("kinds", "stack", "match_pairs", 4, 4)),
         test_inputs: Some(fixture_inputs),
         expected_output: Some(fixture_outputs),
         category: Some("parsing"),
@@ -84,10 +89,15 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: CORE_DELIMITER_OP_ID,
-        build: || {
+        build: Some(|| {
             core_delimiter_match("tok_types", "tok_depths", 8, 12, 13)
-        },
+        }),
         test_inputs: Some(|| {
             let tokens: [u32; 8] = [12, 12, 0, 0, 0, 13, 13, 0];
             let bytes = vyre_primitives::wire::pack_u32_slice(&tokens);

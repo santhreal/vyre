@@ -61,8 +61,13 @@ fn strided_accumulate_program() -> Program {
 
 inventory::submit! {
     OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: INDEXED_MAP_OP_ID,
-        build: indexed_map_program,
+        build: Some(indexed_map_program),
         test_inputs: Some(|| vec![vec![
             u32s(&[1, 2, 3, 4]),
         ]]),
@@ -73,8 +78,13 @@ inventory::submit! {
 
 inventory::submit! {
     OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: STRIDED_ACCUMULATE_OP_ID,
-        build: strided_accumulate_program,
+        build: Some(strided_accumulate_program),
         test_inputs: Some(|| vec![vec![
             u32s(&[7, 11, 13, 17]),
         ]]),

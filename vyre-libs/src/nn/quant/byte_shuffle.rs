@@ -59,11 +59,16 @@ pub fn byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> Resul
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             byte_shuffle("input", "output", 3, 2)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: byte_shuffle fixture must build: {error}")))
-        },
+        }),
         test_inputs: Some(|| vec![vec![
             // 3 elements × 2 bytes: [a0,a1, b0,b1, c0,c1]
             vyre_primitives::wire::pack_u32_slice(&[10u32, 11, 20, 21, 30, 31]),

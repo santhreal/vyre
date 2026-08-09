@@ -266,8 +266,13 @@ pub fn flash_attention(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::nn::flash_attention",
-        build: || {
+        build: Some(|| {
             flash_attention("q", "k", "v", "out", 9, 1).unwrap_or_else(|error| {
                 crate::builder::invalid_output_program(
                     "vyre-libs::nn::flash_attention",
@@ -276,7 +281,7 @@ inventory::submit! {
                     error,
                 )
             })
-        },
+        }),
         test_inputs: Some(|| {
             let q = [0.0_f32; 9];
             let k = [0.0_f32; 9];

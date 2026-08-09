@@ -48,8 +48,13 @@ pub fn bounded_by_comparison(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || bounded_by_comparison(ProgramGraphShape::new(4, 4), "fin", "fout"),
+        build: Some(|| bounded_by_comparison(ProgramGraphShape::new(4, 4), "fin", "fout")),
         test_inputs: Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // Diamond dominance tree: 0 dominates 1 and 2; both dominate 3.

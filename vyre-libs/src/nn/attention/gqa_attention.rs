@@ -2,11 +2,13 @@
 //!
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::nn::attention_passes::{
-    attention_max_pass_with_bases, attention_sum_pass_with_bases, attention_write_pass_with_bases,
-    ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
+    attention_max_pass_bounded, attention_max_pass_with_bases, attention_sum_pass_bounded,
+    attention_sum_pass_with_bases, attention_write_pass_bounded_typed,
+    attention_write_pass_with_bases, ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID,
+    ATTENTION_WRITE_PASS_OP_ID,
 };
 use vyre_primitives::nn::attention_stability::positive_denominator;
 
@@ -137,13 +139,215 @@ pub fn gqa_attention(
     ))
 }
 
+/// Build batch-aware causal GQA over a prompt or cached decode window.
+///
+/// Query rows use `query_len`; K/V cache rows use `kv_len`. Query token `t`
+/// may attend exactly through `cache_offset + t`, never later cache entries.
+#[allow(clippy::too_many_arguments)]
+pub fn gqa_attention_causal(
+    q: &str,
+    k: &str,
+    v_buf: &str,
+    output: &str,
+    batch: u32,
+    n_q_heads: u32,
+    n_kv_heads: u32,
+    query_len: u32,
+    kv_len: u32,
+    head_dim: u32,
+    cache_offset: u32,
+) -> Result<Program, String> {
+    gqa_attention_causal_typed(
+        q,
+        k,
+        v_buf,
+        output,
+        batch,
+        n_q_heads,
+        n_kv_heads,
+        query_len,
+        kv_len,
+        head_dim,
+        cache_offset,
+        DataType::F32,
+    )
+}
+
+/// Build typed batch-aware causal GQA with F32 score and value accumulation.
+#[allow(clippy::too_many_arguments)]
+pub fn gqa_attention_causal_typed(
+    q: &str,
+    k: &str,
+    v_buf: &str,
+    output: &str,
+    batch: u32,
+    n_q_heads: u32,
+    n_kv_heads: u32,
+    query_len: u32,
+    kv_len: u32,
+    head_dim: u32,
+    cache_offset: u32,
+    dtype: DataType,
+) -> Result<Program, String> {
+    if batch == 0
+        || n_q_heads == 0
+        || n_kv_heads == 0
+        || query_len == 0
+        || kv_len == 0
+        || head_dim == 0
+    {
+        return Err("Fix: gqa_attention_causal requires non-zero dimensions".into());
+    }
+    if !matches!(dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
+        return Err(format!(
+            "Fix: gqa_attention_causal_typed supports F16, BF16, or F32 tensors; got {dtype:?}"
+        ));
+    }
+    if n_q_heads % n_kv_heads != 0 {
+        return Err("Fix: n_q_heads must be multiple of n_kv_heads".into());
+    }
+    if cache_offset
+        .checked_add(query_len)
+        .is_none_or(|end| end > kv_len)
+    {
+        return Err(format!(
+            "Fix: causal GQA query range offset={cache_offset}, query_len={query_len} exceeds kv_len={kv_len}"
+        ));
+    }
+    let checked = |values: &[u32], label: &str| {
+        values.iter().try_fold(1_u32, |product, value| {
+            product
+                .checked_mul(*value)
+                .ok_or_else(|| format!("Fix: causal GQA {label} element count overflows u32"))
+        })
+    };
+    let q_total = checked(&[batch, n_q_heads, query_len, head_dim], "query")?;
+    let kv_total = checked(&[batch, n_kv_heads, kv_len, head_dim], "KV")?;
+    let rows = checked(&[batch, n_q_heads, query_len], "row")?;
+    let q_head_span = query_len
+        .checked_mul(head_dim)
+        .ok_or_else(|| "Fix: causal GQA query head span overflows u32".to_string())?;
+    let kv_head_span = kv_len
+        .checked_mul(head_dim)
+        .ok_or_else(|| "Fix: causal GQA KV head span overflows u32".to_string())?;
+    let q_batch_span = n_q_heads
+        .checked_mul(q_head_span)
+        .ok_or_else(|| "Fix: causal GQA query batch span overflows u32".to_string())?;
+    let kv_batch_span = n_kv_heads
+        .checked_mul(kv_head_span)
+        .ok_or_else(|| "Fix: causal GQA KV batch span overflows u32".to_string())?;
+    let group = n_q_heads / n_kv_heads;
+    let row = Expr::var("row");
+    let batch_index = Expr::div(row.clone(), Expr::u32(n_q_heads * query_len));
+    let batch_row = Expr::sub(
+        row.clone(),
+        Expr::mul(batch_index.clone(), Expr::u32(n_q_heads * query_len)),
+    );
+    let query_head = Expr::div(batch_row.clone(), Expr::u32(query_len));
+    let query_token = Expr::sub(
+        batch_row,
+        Expr::mul(query_head.clone(), Expr::u32(query_len)),
+    );
+    let kv_head = Expr::div(query_head.clone(), Expr::u32(group));
+    let query_base = Expr::add(
+        Expr::mul(batch_index.clone(), Expr::u32(q_batch_span)),
+        Expr::add(
+            Expr::mul(query_head, Expr::u32(q_head_span)),
+            Expr::mul(query_token.clone(), Expr::u32(head_dim)),
+        ),
+    );
+    let kv_base = Expr::add(
+        Expr::mul(batch_index, Expr::u32(kv_batch_span)),
+        Expr::mul(kv_head, Expr::u32(kv_head_span)),
+    );
+    let key_limit = Expr::add(
+        Expr::add(Expr::u32(cache_offset), query_token),
+        Expr::u32(1),
+    );
+    let scale = Expr::f32(1.0 / (head_dim as f32).sqrt());
+    let parent = GeneratorRef {
+        name: OP_ID.to_string(),
+    };
+    let body = vec![
+        Node::let_bind("row", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(row, Expr::u32(rows)),
+            vec![
+                Node::let_bind("max_val", Expr::f32(f32::MIN)),
+                wrap_child(
+                    ATTENTION_MAX_PASS_OP_ID,
+                    parent.clone(),
+                    attention_max_pass_bounded(
+                        q,
+                        k,
+                        head_dim,
+                        key_limit.clone(),
+                        scale.clone(),
+                        query_base.clone(),
+                        kv_base.clone(),
+                    ),
+                ),
+                Node::let_bind("sum_val", Expr::f32(0.0)),
+                wrap_child(
+                    ATTENTION_SUM_PASS_OP_ID,
+                    parent.clone(),
+                    attention_sum_pass_bounded(
+                        q,
+                        k,
+                        head_dim,
+                        key_limit.clone(),
+                        scale.clone(),
+                        query_base.clone(),
+                        kv_base.clone(),
+                    ),
+                ),
+                Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
+                wrap_child(
+                    ATTENTION_WRITE_PASS_OP_ID,
+                    parent,
+                    attention_write_pass_bounded_typed(
+                        q,
+                        k,
+                        v_buf,
+                        head_dim,
+                        key_limit,
+                        scale,
+                        output,
+                        query_base.clone(),
+                        kv_base.clone(),
+                        kv_base,
+                        query_base,
+                        dtype.clone(),
+                    ),
+                ),
+            ],
+        ),
+    ];
+    Ok(Program::wrapped(
+        vec![
+            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(q_total),
+            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(kv_total),
+            BufferDecl::storage(v_buf, 2, BufferAccess::ReadOnly, dtype.clone())
+                .with_count(kv_total),
+            BufferDecl::output(output, 3, dtype).with_count(q_total),
+        ],
+        [64, 1, 1],
+        vec![wrap_anonymous("vyre-libs::nn::gqa_attention_causal", body)],
+    ))
+}
+
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(4),
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             gqa_attention("q", "k", "v", "out", 2, 1, 2, 2)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: gqa_attention fixture must build: {error}")))
-        },
+        }),
         test_inputs: Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![

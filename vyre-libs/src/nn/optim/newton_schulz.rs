@@ -20,8 +20,13 @@ pub fn newton_schulz_5step(mat: &str, output: &str, rows: u32, cols: u32) -> Pro
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(64),
         id: OP_ID,
-        build: || newton_schulz_5step("mat", "output", 2, 2),
+        build: Some(|| newton_schulz_5step("mat", "output", 2, 2)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

@@ -19,8 +19,13 @@ macro_rules! define_wrapped_bitset_binary {
 
             inventory::submit! {
                 crate::fixture_catalog::OpEntry {
+                    semantic_version: 1,
+                    signature: None,
+                    tier: vyre_foundation::operation::OperationTier::Library,
+                    laws: &[],
+                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
                     id: OP_ID,
-                    build: || $function("a", "b", "out", 4),
+                    build: Some(|| $function("a", "b", "out", 4)),
                     test_inputs: Some(|| {
                         let a = [0xFF00_FF00u32, 0x00FF_00FF, 0xFFFF_FFFF, 0x0000_0000];
                         let b = [0xF0F0_F0F0u32, 0x0F0F_0F0F, 0xFFFF_FFFF, 0x0000_0000];
@@ -55,8 +60,13 @@ macro_rules! define_synthesized_logical_binary {
 
             inventory::submit! {
                 crate::fixture_catalog::OpEntry {
+                    semantic_version: 1,
+                    signature: None,
+                    tier: vyre_foundation::operation::OperationTier::Library,
+                    laws: &[],
+                    tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
                     id: OP_ID,
-                    build: || $function("a", "b", "out", 4),
+                    build: Some(|| $function("a", "b", "out", 4)),
                     test_inputs: Some(|| {
                         let a = [0xFF00_FF00u32, 0x00FF_00FF, 0xFFFF_FFFF, 0x0000_0000];
                         let b = [0xF0F0_F0F0u32, 0x0F0F_0F0F, 0xFFFF_FFFF, 0x0000_0000];
@@ -131,7 +141,10 @@ mod tests {
     use vyre_foundation::ir::Node;
     use vyre_reference::value::Value;
 
-    fn assert_delegates_to_primitive(program: vyre_foundation::ir::Program, expected_primitive: &str) {
+    fn assert_delegates_to_primitive(
+        program: vyre_foundation::ir::Program,
+        expected_primitive: &str,
+    ) {
         let [Node::Region { body, .. }] = program.entry() else {
             panic!("expected one top-level logical wrapper region");
         };

@@ -50,8 +50,13 @@ pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(1),
         id: OP_ID,
-        build: || ema_apply("ema", "theta", 4, 0.9),
+        build: Some(|| ema_apply("ema", "theta", 4, 0.9)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

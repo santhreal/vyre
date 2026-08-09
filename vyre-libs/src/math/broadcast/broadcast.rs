@@ -46,8 +46,13 @@ pub fn broadcast(src: &str, dst: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::broadcast",
-        build: || broadcast("src", "dst", 4),
+        build: Some(|| broadcast("src", "dst", 4)),
         test_inputs: Some(|| vec![vec![
             42u32.to_le_bytes().to_vec(),                       // src: scalar 42
         ]]),

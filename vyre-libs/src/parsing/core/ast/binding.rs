@@ -80,12 +80,17 @@ pub fn ast_binding_strength(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::ast_binding_strength",
         // Use a small 4-token fixture so the witness is trivially
         // checkable: tok_types = [STAR, PLUS, '=', 0], depths = [1, 1, 0, 0].
         // Expected strengths = depth*100 + precedence: [1*100+40=140,
         // 1*100+30=130, 0*100+10=10, 0*100+0=0].
-        build: || ast_binding_strength("tok_types", "out_depths", "out_strengths", Expr::u32(4)),
+        build: Some(|| ast_binding_strength("tok_types", "out_depths", "out_strengths", Expr::u32(4))),
         test_inputs: Some(|| {
             let tokens: [u32; 4] = [TOK_STAR, TOK_PLUS, 0x3D, 0];
             let depths: [u32; 4] = [1, 1, 0, 0];

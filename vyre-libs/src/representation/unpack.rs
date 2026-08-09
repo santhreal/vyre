@@ -43,8 +43,13 @@ pub fn unpack_4bit_f32(input: &str, output: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::representation::unpack_4bit_f32",
-        build: || unpack_4bit_f32("input", "output", 16),
+        build: Some(|| unpack_4bit_f32("input", "output", 16)),
         test_inputs: Some(|| {
 
             // Pack 16 4-bit values: 0..15 into 2 u32s (8 nibbles each)

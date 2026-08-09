@@ -71,8 +71,13 @@ pub fn opt_x86_64_register_allocation(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::opt_x86_64_register_allocation",
-        build: || opt_x86_64_register_allocation("cfg", "regs", Expr::u32(16)),
+        build: Some(|| opt_x86_64_register_allocation("cfg", "regs", Expr::u32(16))),
         // 16 SSA nodes, 16 physical registers. Every lane contributes
         // a nonzero CFG weight to the shared interference counter, then
         // assigns reg = t % 16.

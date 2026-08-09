@@ -101,11 +101,16 @@ pub fn ast_cfg_blocks(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::ast_cfg_blocks",
-        build: || ast_cfg_blocks(
+        build: Some(|| ast_cfg_blocks(
             "tok_types", "out_scope_parents", "statements",
             Expr::u32(2), "out_block_headers"
-        ),
+        )),
         // 2-statement fixture. tok_types[0] = TOK_IF, followed by
         // a body token at index 1; statements = [(1, 1), (0, 0)].
         // Statement 0 starts at token 1; the backward lookback finds

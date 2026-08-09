@@ -79,8 +79,13 @@ pub fn int8_pack(input: &str, output: &str, n: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: UNPACK_OP_ID,
-        build: || int8_unpack("packed", "scales", "output", 4, 2),
+        build: Some(|| int8_unpack("packed", "scales", "output", 4, 2)),
         test_inputs: Some(|| {
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
@@ -101,8 +106,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: PACK_OP_ID,
-        build: || int8_pack("input", "output", 4),
+        build: Some(|| int8_pack("input", "output", 4)),
         test_inputs: Some(|| {
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             vec![vec![

@@ -28,8 +28,8 @@
 //! `fixpoint_iterations` config  -  the same path single-direction
 //! flows_to uses.
 
-use vyre_foundation::ir::Program;
 use vyre_foundation::execution_plan::fusion::{fuse_programs, FusionError};
+use vyre_foundation::ir::Program;
 use vyre_foundation::ir::{BufferAccess, DataType};
 use vyre_primitives::bitset::and::bitset_and;
 use vyre_primitives::bitset::or_into::bitset_or_into;
@@ -263,8 +263,13 @@ fn witness_expected_outputs() -> Vec<Vec<u8>> {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: witness_program,
+        build: Some(witness_program),
         test_inputs: Some(|| vec![witness_inputs()]),
         expected_output: Some(|| vec![witness_expected_outputs()]),
         category: Some("security"),

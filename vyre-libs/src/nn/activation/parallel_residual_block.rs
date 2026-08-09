@@ -48,11 +48,16 @@ pub fn parallel_residual_block(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || {
+        build: Some(|| {
             parallel_residual_block("x", "attn", "mlp", "out", 4)
                 .unwrap_or_else(|error| crate::invalid_program(OP_ID, format!("Fix: parallel_residual_block fixture must build: {error}")))
-        },
+        }),
         test_inputs: Some(|| {
             let f = vyre_primitives::wire::pack_f32_slice;
             vec![vec![

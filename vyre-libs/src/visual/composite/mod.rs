@@ -5,8 +5,8 @@
 //! Category A composition  -  pure IR over existing expressions.
 //! No Tier 2.5 primitives consumed.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 const OP_ID: &str = "vyre-libs::visual::composite";
 
@@ -204,8 +204,13 @@ pub fn alpha_over(fg: &str, bg: &str, output: &str, count: u32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || alpha_over("fg", "bg", "out", 2),
+        build: Some(|| alpha_over("fg", "bg", "out", 2)),
         test_inputs: Some(|| {
             // Pixel 0: semi-transparent red (128 alpha) over opaque blue.
             // Pixel 1: fully opaque green over opaque white.

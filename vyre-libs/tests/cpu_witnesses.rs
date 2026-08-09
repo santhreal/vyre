@@ -23,12 +23,12 @@ fn assert_entry_matches_declared_witness(id: &'static str) {
     let expected = (entry
         .expected_output
         .expect("Fix: expected_output required"))();
-    assert_entry_matches_cases(id, entry.build, inputs, expected);
+    assert_entry_matches_cases(id, entry.build.expect("Fix: registered library operation must provide a neutral builder"), inputs, expected);
 }
 
 fn assert_entry_matches_cases(
     id: &'static str,
-    build: fn() -> vyre_foundation::ir::Program,
+    build: fn() -> vyre::Program,
     inputs: Vec<Vec<Vec<u8>>>,
     expected: Vec<Vec<Vec<u8>>>,
 ) {
@@ -62,7 +62,7 @@ fn assert_entry_matches_cases(
 fn assert_entry_matches_pinned_witness(id: &'static str, expected: Vec<Vec<Vec<u8>>>) {
     let entry = entry(id);
     let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
-    assert_entry_matches_cases(id, entry.build, inputs, expected);
+    assert_entry_matches_cases(id, entry.build.expect("Fix: registered library operation must provide a neutral builder"), inputs, expected);
 }
 
 #[test]

@@ -54,8 +54,13 @@ pub fn qk_gain_backward(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || qk_gain_backward("gain", "grad_out", "grad_q", 2, 1, 2),
+        build: Some(|| qk_gain_backward("gain", "grad_out", "grad_q", 2, 1, 2)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

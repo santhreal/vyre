@@ -30,8 +30,13 @@ pub fn opt_stack_layout_generation(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || opt_stack_layout_generation("regs", "spills", Expr::u32(4)),
+        build: Some(|| opt_stack_layout_generation("regs", "spills", Expr::u32(4))),
         // 4 virtual registers: two sit in the 0..=15 physical window,
         // two spill (reg_bound = 20, 30). Each spill claims an 8-byte
         // stack slot via atomic_add on a workgroup-scoped counter.

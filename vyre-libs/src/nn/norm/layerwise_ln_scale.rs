@@ -15,8 +15,13 @@ pub fn layerwise_ln_scale(input: &str, scale: &str, output: &str, n: u32) -> Pro
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || layerwise_ln_scale("input", "scale", "output", 4),
+        build: Some(|| layerwise_ln_scale("input", "scale", "output", 4)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

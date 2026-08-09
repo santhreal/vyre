@@ -1,6 +1,6 @@
 use crate::region::{wrap_anonymous, wrap_child};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// SIMT Control Flow Graph (CFG) & Goto Resolver.
 ///
@@ -260,8 +260,13 @@ mod tests {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::parsing::c11_build_cfg_and_gotos",
-        build: || c11_build_cfg_and_gotos("ssa", "cfg", "labels", Expr::u32(5)),
+        build: Some(|| c11_build_cfg_and_gotos("ssa", "cfg", "labels", Expr::u32(5))),
         test_inputs: Some(|| {
             let mut ssa = Vec::with_capacity(5 * 4);
             for value in [0u32, 0x4C41424C, 7, 0x474F544F, 7] {

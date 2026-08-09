@@ -39,10 +39,73 @@ pub fn embedding(embed_table: &str, tokens: &str, output: &str, n: u32, embed_di
     )
 }
 
+/// Build a typed embedding lookup with an explicit checkpoint table extent.
+///
+/// `table` uses `[vocab_size, embed_dim]`, `tokens` uses `[n]`, and `output`
+/// uses `[n, embed_dim]`. Token IDs outside the declared vocabulary retain the
+/// backend's bounds-trap semantics.
+#[allow(clippy::too_many_arguments)]
+pub fn embedding_typed(
+    table: &str,
+    tokens: &str,
+    output: &str,
+    n: u32,
+    vocab_size: u32,
+    embed_dim: u32,
+    dtype: DataType,
+) -> Result<Program, String> {
+    if n == 0 || vocab_size == 0 || embed_dim == 0 {
+        return Err(
+            "Fix: typed embedding requires nonzero token, vocabulary, and embedding dimensions"
+                .to_string(),
+        );
+    }
+    if !matches!(dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
+        return Err(format!(
+            "Fix: typed embedding requires F16, BF16, or F32 table storage; got {dtype:?}"
+        ));
+    }
+    let table_count = vocab_size
+        .checked_mul(embed_dim)
+        .ok_or_else(|| "Fix: embedding vocabulary table count overflows u32".to_string())?;
+    let output_count = n
+        .checked_mul(embed_dim)
+        .ok_or_else(|| "Fix: embedding output count overflows u32".to_string())?;
+    Ok(build_indexed_map(
+        OP_ID,
+        vec![
+            BufferDecl::storage(table, 0, BufferAccess::ReadOnly, dtype.clone())
+                .with_count(table_count),
+            BufferDecl::storage(tokens, 1, BufferAccess::ReadOnly, DataType::U32).with_count(n),
+            BufferDecl::output(output, 2, dtype).with_count(output_count),
+        ],
+        output,
+        output_count,
+        [64, 1, 1],
+        |index| {
+            let token = Expr::div(index.clone(), Expr::u32(embed_dim));
+            let feature = Expr::rem(index.clone(), Expr::u32(embed_dim));
+            let token_id = Expr::load(tokens, token);
+            (
+                index,
+                Expr::load(
+                    table,
+                    Expr::add(Expr::mul(token_id, Expr::u32(embed_dim)), feature),
+                ),
+            )
+        },
+    ))
+}
+
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || embedding("table", "tokens", "output", 2, 3),
+        build: Some(|| embedding("table", "tokens", "output", 2, 3)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             let to_u32 = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);

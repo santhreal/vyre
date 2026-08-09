@@ -91,8 +91,13 @@ pub fn gptq_sdclip(input: &str, output: &str, n: u32, k: f32) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: ROUND_OP_ID,
-        build: || gptq_round("input", "scale", "output", 4, 63.0),
+        build: Some(|| gptq_round("input", "scale", "output", 4, 63.0)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![
@@ -112,8 +117,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: SDCLIP_OP_ID,
-        build: || gptq_sdclip("input", "output", 4, 30.0),
+        build: Some(|| gptq_sdclip("input", "output", 4, 30.0)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

@@ -164,8 +164,13 @@ pub fn matmul_strassen_2x2(a: &str, b: &str, c: &str) -> Program {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(32),
         id: OP_ID,
-        build: || matmul_strassen_2x2("a", "b", "c"),
+        build: Some(|| matmul_strassen_2x2("a", "b", "c")),
         test_inputs: Some(|| {
             // A = [[1, 2], [3, 4]], B = [[5, 6], [7, 8]]
             let a = crate::test_support::byte_pack::f32_bytes(&[1.0, 2.0, 3.0, 4.0]);

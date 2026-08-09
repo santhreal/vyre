@@ -4,89 +4,31 @@
 //! neutral program builders and deterministic byte fixtures; it has no backend
 //! or harness-crate dependency.
 
-use vyre_foundation::ir::Program;
+pub use vyre_foundation::operation::OperationRegistration as OpEntry;
+use vyre_foundation::operation::{OperationRegistry, OperationTier};
 /// Floating-point parity policy for upper execution harnesses.
 pub mod fp_contract;
 
-
-pub use crate::region::{
-    reparent_program_children, tag_program, wrap, wrap_anonymous, wrap_child,
-};
+pub use crate::region::{reparent_program_children, tag_program, wrap, wrap_anonymous, wrap_child};
 
 /// Deterministic fixture input cases.
-pub type InputsFn = fn() -> Vec<Vec<Vec<u8>>>;
+pub type InputsFn = vyre_foundation::operation::OperationFixtures;
 /// Deterministic expected-output fixtures.
-pub type ExpectedFn = fn() -> Vec<Vec<Vec<u8>>>;
+pub type ExpectedFn = vyre_foundation::operation::OperationFixtures;
 
-/// Neutral fixture descriptor for a library composition.
-pub struct OpEntry {
-    /// Stable operation identifier.
-    pub id: &'static str,
-    /// Construct the neutral program under test.
-    pub build: fn() -> Program,
-    /// Deterministic input byte fixtures.
-    pub test_inputs: Option<InputsFn>,
-    /// Deterministic reference output byte fixtures.
-    pub expected_output: Option<ExpectedFn>,
-    /// Coarse library category.
-    pub category: Option<&'static str>,
-}
-
-impl OpEntry {
-    /// Construct a fixture descriptor.
-    #[must_use]
-    pub const fn new(
-        id: &'static str,
-        build: fn() -> Program,
-        test_inputs: Option<InputsFn>,
-        expected_output: Option<ExpectedFn>,
-    ) -> Self {
-        Self { id, build, test_inputs, expected_output, category: None }
-    }
-
-    /// Attach a category.
-    #[must_use]
-    pub const fn with_category(mut self, category: &'static str) -> Self {
-        self.category = Some(category);
-        self
-    }
-
-    /// Return the category.
-    #[must_use]
-    pub const fn category(&self) -> Option<&'static str> {
-        self.category
-    }
-
-    /// Return the permitted f32 ULP drift for this composition.
-    #[must_use]
-    pub fn tolerance(&self) -> u32 {
-        Self::tolerance_for_id(self.id)
-    }
-
-    /// Resolve the permitted f32 ULP drift for an operation id.
-    #[must_use]
-    pub fn tolerance_for_id(id: &str) -> u32 {
-        match id {
-            "vyre-libs::nn::softmax" => 1,
-            "vyre-libs::nn::attention" | "vyre-libs::nn::gqa_attention" => 4,
-            "vyre-libs::nn::layer_norm" | "vyre-libs::nn::silu" => 1,
-            "vyre-libs::nn::logit_softcap" | "vyre-libs::nn::rms_norm" | "vyre-libs::nn::rms_norm_linear" => 2,
-            "vyre-libs::math::fft::fft_convolve_circular_complex" => 4,
-            "vyre-libs::math::linalg::matmul_strassen_2x2" => 32,
-            "vyre-libs::optim::newton_schulz_5step" => 64,
-            "vyre-libs::optim::ema_apply" => 1,
-            "vyre-libs::optim::muoneq_r" => 8,
-            "vyre-primitives::math::newton_schulz_poly5_f32" => 32,
-            _ => 0,
-        }
-    }
-}
-
-inventory::collect!(OpEntry);
-
-/// Iterate over neutral library composition fixtures.
+/// Iterate over canonical library composition registrations.
 pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
-    inventory::iter::<OpEntry>()
+    OperationRegistry::global()
+        .iter()
+        .filter(|entry| entry.tier == OperationTier::Library)
+}
+
+/// Resolve the semantic operation's registered f32 ULP tolerance.
+#[must_use]
+pub fn tolerance_for_id(id: &str) -> u32 {
+    OperationRegistry::global()
+        .get(id)
+        .map_or(0, OpEntry::tolerance)
 }
 
 /// Fixpoint metadata consumed by upper execution harnesses.

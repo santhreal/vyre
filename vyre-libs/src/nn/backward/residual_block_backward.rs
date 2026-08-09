@@ -62,8 +62,13 @@ pub fn residual_block_backward(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4),
+        build: Some(|| residual_block_backward("grad_out", "grad_x", "grad_attn", "grad_mlp", 4)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

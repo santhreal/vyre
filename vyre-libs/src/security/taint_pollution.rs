@@ -65,8 +65,13 @@ impl vyre_foundation::soundness::SoundnessTagged for TaintPollution {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
+        build: Some(|| taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar")),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![vec![

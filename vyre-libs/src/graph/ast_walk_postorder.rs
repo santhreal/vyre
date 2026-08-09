@@ -51,8 +51,13 @@ pub fn ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || ast_walk_postorder_nodes("nodes", "out", 6, 8),
+        build: Some(|| ast_walk_postorder_nodes("nodes", "out", 6, 8)),
         test_inputs: Some(|| {
             vec![vec![
                 super::ast_walk_preorder::pack_branching_fixture(),

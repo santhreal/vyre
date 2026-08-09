@@ -18,8 +18,8 @@
 //! Migration 3 moved this op from `vyre-libs::crypto::blake3_compress`
 //! to `vyre-libs::hash::blake3_compress`.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::hash::blake3::{blake3_round, BLAKE3_ROUND_OP_ID, MSG_SCHEDULE};
 
 use crate::buffer_names::scoped_generic_name;
@@ -155,8 +155,13 @@ pub fn blake3_compress(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || blake3_compress("cv_in", "msg", "params", "cv_out"),
+        build: Some(|| blake3_compress("cv_in", "msg", "params", "cv_out")),
         test_inputs: Some(|| {
             let iv: [u32; 8] = [
                 0x6A09_E667, 0xBB67_AE85, 0x3C6E_F372, 0xA54F_F53A,

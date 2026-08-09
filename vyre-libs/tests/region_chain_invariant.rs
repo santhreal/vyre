@@ -18,7 +18,7 @@
 //! must be closed before the PR merges.
 
 use std::collections::BTreeSet;
-use vyre_foundation::ir::{Node, Program};
+use vyre::ir::{Node, Program};
 use vyre_foundation::composition::self_exclusive_region_key;
 
 fn collect_generators(program: &Program) -> BTreeSet<String> {
@@ -117,7 +117,7 @@ fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     let registered = registered_op_ids();
     let mut offenders: Vec<(String, Vec<String>)> = Vec::new();
     for entry in vyre_libs::fixture_catalog::all_entries() {
-        let program = (entry.build)();
+        let program = entry.program().expect("Fix: registered library operation must provide a neutral builder");
         let generators = collect_generators(&program);
         let unregistered: Vec<String> = generators
             .into_iter()

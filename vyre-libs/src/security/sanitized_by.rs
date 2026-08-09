@@ -22,8 +22,8 @@
 //! Region with no scratch, eliminating one buffer + one dispatch
 //! per call.
 
-use vyre_foundation::ir::DataType;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
+use vyre_foundation::ir::DataType;
 use vyre_primitives::bitset::and_not::bitset_and_not;
 use vyre_primitives::graph::csr_forward_traverse::{bitset_words, csr_forward_traverse};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
@@ -79,8 +79,13 @@ pub fn sanitized_by(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout"),
+        build: Some(|| sanitized_by(ProgramGraphShape::new(4, 3), "fin", "san", "fout")),
         test_inputs: Some(|| {
             let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
             // Linear 0→1→2→3 with node 1 marked sanitizer.

@@ -100,8 +100,13 @@ pub(crate) fn cpu_dominator_sets(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout"),
+        build: Some(|| dominator_tree(ProgramGraphShape::new(4, 4), "fin", "fout")),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_u32_slice;
             // Diamond dominance tree: 0 dominates 1 and 2; both dominate 3.

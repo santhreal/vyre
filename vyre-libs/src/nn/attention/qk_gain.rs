@@ -99,8 +99,13 @@ pub fn qk_gain(
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: || qk_gain("q_in", "q_out", "gain", 2, 1, 2),
+        build: Some(|| qk_gain("q_in", "q_out", "gain", 2, 1, 2)),
         test_inputs: Some(|| {
             let to_f32 = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
             vec![vec![

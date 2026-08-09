@@ -86,7 +86,6 @@ impl TolerancePolicy {
 }
 
 /// One semantic operation identity and all target-neutral catalog policy.
-#[non_exhaustive]
 pub struct OperationRegistration {
     /// Stable operation identifier.
     pub id: &'static str,
@@ -132,6 +131,40 @@ impl OperationRegistration {
             laws: &[],
             tolerance: TolerancePolicy::EXACT,
         }
+    }
+
+    /// Construct a library-composition registration.
+    #[must_use]
+    pub const fn library(
+        id: &'static str,
+        build: fn() -> Program,
+        test_inputs: Option<OperationFixtures>,
+        expected_output: Option<OperationFixtures>,
+    ) -> Self {
+        Self::new(
+            id,
+            OperationTier::Library,
+            Some(build),
+            test_inputs,
+            expected_output,
+        )
+    }
+
+    /// Construct a reusable primitive registration.
+    #[must_use]
+    pub const fn primitive(
+        id: &'static str,
+        build: fn() -> Program,
+        test_inputs: Option<OperationFixtures>,
+        expected_output: Option<OperationFixtures>,
+    ) -> Self {
+        Self::new(
+            id,
+            OperationTier::Primitive,
+            Some(build),
+            test_inputs,
+            expected_output,
+        )
     }
 
     /// Attach an explicit signature.

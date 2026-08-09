@@ -662,8 +662,13 @@ mod tests {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::matmul",
-        build: || matmul("a", "b", "out", 4, 4, 4),
+        build: Some(|| matmul("a", "b", "out", 4, 4, 4)),
         test_inputs: Some(|| {
             let a: Vec<u32> = (0..16).collect();
             let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
@@ -697,8 +702,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID_BIAS,
-        build: || matmul_bias("a", "b", "bias", "out", 2, 2, 2),
+        build: Some(|| matmul_bias("a", "b", "bias", "out", 2, 2, 2)),
         test_inputs: Some(|| {
 
             vec![vec![
@@ -717,8 +727,13 @@ inventory::submit! {
 
 inventory::submit! {
     crate::fixture_catalog::OpEntry {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: "vyre-libs::math::matmul_bias::scalar",
-        build: || matmul_bias("a", "b", "bias", "out", 1, 1, 1),
+        build: Some(|| matmul_bias("a", "b", "bias", "out", 1, 1, 1)),
         test_inputs: Some(|| {
             vec![vec![
                 crate::test_support::byte_pack::u32_bytes(&[2]),
