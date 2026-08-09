@@ -11,8 +11,6 @@ mod bench_crossback;
 mod bench_release;
 mod benchmark_evidence_semantics;
 mod binary;
-mod c_parser_bench;
-mod c_parser_corpus;
 mod catalog;
 mod check_cat_a;
 mod check_tier_deps;
@@ -101,8 +99,6 @@ fn print_help() {
            check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)\n\
            command-matrix [--output PATH] [--check] Generate/check xtask command owner/proof matrix\n\
            compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)\n\
-           c-parser-bench --corpus DIR --output PATH  Benchmark GPU C parser against tree-sitter\n\
-           c-parser-corpus --corpus DIR [--output PATH]  Compile a C corpus into parser evidence\n\
            conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage\n\
            dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version\n\
            docs-matrix [--output PATH]         Generate release documentation evidence matrix\n\
@@ -165,8 +161,6 @@ fn main() {
         "check-tier-deps" => check_tier_deps::run(&args),
         "command-matrix" => command_matrix::run(&args),
         "compile" => compile::run(&args),
-        "c-parser-bench" => c_parser_bench::run(&args),
-        "c-parser-corpus" => c_parser_corpus::run(&args),
         "conformance-matrix" => conformance_matrix::run(&args),
         "dep-drift" => dep_drift::run(&args),
         "docs-matrix" => docs_matrix::run(&args),

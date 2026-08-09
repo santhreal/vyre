@@ -64,7 +64,9 @@ pub enum CFrontendError {
         offset: usize,
     },
     /// Byte input was not UTF-8.
-    #[error("C frontend source is not UTF-8 at byte {offset}. Fix: provide UTF-8 encoded C source.")]
+    #[error(
+        "C frontend source is not UTF-8 at byte {offset}. Fix: provide UTF-8 encoded C source."
+    )]
     InvalidUtf8 {
         /// Zero-based byte offset of the first invalid sequence.
         offset: usize,
@@ -200,10 +202,9 @@ impl ScalarType {
     fn literal(self, value: u32, node: SyntaxNode<'_>) -> Result<Expr, CFrontendError> {
         match self {
             Self::U32 => Ok(Expr::u32(value)),
-            Self::I32 => i32::try_from(value).map(Expr::i32).map_err(|_| unsupported(
-                node,
-                "an integer literal outside the signed 32-bit range",
-            )),
+            Self::I32 => i32::try_from(value).map(Expr::i32).map_err(|_| {
+                unsupported(node, "an integer literal outside the signed 32-bit range")
+            }),
         }
     }
 }
@@ -249,11 +250,16 @@ fn lower_parameters(
     let mut cursor = parameters.walk();
     for parameter in parameters.named_children(&mut cursor) {
         if parameter.kind() != "parameter_declaration" {
-            return Err(unsupported(parameter, "a variadic or non-parameter declaration"));
+            return Err(unsupported(
+                parameter,
+                "a variadic or non-parameter declaration",
+            ));
         }
         let type_node = required_field(parameter, "type", "a parameter type")?;
         let type_text = node_text(type_node, source);
-        if normalized_type(type_text) == "void" && parameter.child_by_field_name("declarator").is_none() {
+        if normalized_type(type_text) == "void"
+            && parameter.child_by_field_name("declarator").is_none()
+        {
             continue;
         }
         let declarator = required_field(parameter, "declarator", "an unnamed kernel parameter")?;
@@ -263,7 +269,10 @@ fn lower_parameters(
         let identifier = find_kind(declarator, "identifier")
             .ok_or_else(|| unsupported(declarator, "an unnamed pointer parameter"))?;
         let name = node_text(identifier, source).to_owned();
-        if result.iter().any(|existing: &BufferParam| existing.name == name) {
+        if result
+            .iter()
+            .any(|existing: &BufferParam| existing.name == name)
+        {
             return Err(unsupported(identifier, "a duplicate kernel parameter name"));
         }
         let scalar = parse_scalar_type(type_node, type_text)?;
@@ -338,7 +347,10 @@ fn lower_void_kernel(
     let mut entry = Vec::new();
     for statement in named_children(body) {
         if statement.kind() != "expression_statement" {
-            return Err(unsupported(statement, "a non-assignment statement in a void kernel"));
+            return Err(unsupported(
+                statement,
+                "a non-assignment statement in a void kernel",
+            ));
         }
         let assignment = statement
             .named_child(0)
@@ -346,7 +358,10 @@ fn lower_void_kernel(
         if assignment.kind() != "assignment_expression"
             || assignment_operator(assignment, source) != "="
         {
-            return Err(unsupported(assignment, "an expression other than direct assignment"));
+            return Err(unsupported(
+                assignment,
+                "an expression other than direct assignment",
+            ));
         }
         let left = required_field(assignment, "left", "an assignment without a left operand")?;
         let right = required_field(assignment, "right", "an assignment without a right operand")?;
@@ -390,13 +405,18 @@ fn lower_expression(
                 .get(name.as_str())
                 .ok_or_else(|| unsupported(node, "read from an unknown buffer"))?;
             if parameter.scalar != scalar {
-                return Err(unsupported(node, "an implicit conversion between buffer element types"));
+                return Err(unsupported(
+                    node,
+                    "an implicit conversion between buffer element types",
+                ));
             }
             Ok(Expr::load(name, index))
         }
         "binary_expression" => {
-            let left_node = required_field(node, "left", "a binary expression without a left operand")?;
-            let right_node = required_field(node, "right", "a binary expression without a right operand")?;
+            let left_node =
+                required_field(node, "left", "a binary expression without a left operand")?;
+            let right_node =
+                required_field(node, "right", "a binary expression without a right operand")?;
             let left = lower_expression(left_node, source, scalar, buffers)?;
             let right = lower_expression(right_node, source, scalar, buffers)?;
             match binary_operator(node, left_node, right_node, source) {
@@ -423,7 +443,10 @@ fn lower_subscript(
     buffers: &HashMap<&str, &BufferParam>,
 ) -> Result<(String, Expr), CFrontendError> {
     if node.kind() != "subscript_expression" {
-        return Err(unsupported(node, "an assignment target other than a buffer subscript"));
+        return Err(unsupported(
+            node,
+            "an assignment target other than a buffer subscript",
+        ));
     }
     let argument = required_field(node, "argument", "a subscript without a buffer")?;
     if argument.kind() != "identifier" {
@@ -452,10 +475,17 @@ fn normalized_type(text: &str) -> String {
 }
 
 fn parse_integer_literal(text: &str) -> Option<u32> {
-    let digits = text.trim_end_matches(|character: char| matches!(character, 'u' | 'U' | 'l' | 'L'));
-    let (radix, digits) = if let Some(hex) = digits.strip_prefix("0x").or_else(|| digits.strip_prefix("0X")) {
+    let digits =
+        text.trim_end_matches(|character: char| matches!(character, 'u' | 'U' | 'l' | 'L'));
+    let (radix, digits) = if let Some(hex) = digits
+        .strip_prefix("0x")
+        .or_else(|| digits.strip_prefix("0X"))
+    {
         (16, hex)
-    } else if let Some(binary) = digits.strip_prefix("0b").or_else(|| digits.strip_prefix("0B")) {
+    } else if let Some(binary) = digits
+        .strip_prefix("0b")
+        .or_else(|| digits.strip_prefix("0B"))
+    {
         (2, binary)
     } else if digits.len() > 1 && digits.starts_with('0') {
         (8, &digits[1..])
@@ -507,9 +537,11 @@ fn assignment_operator<'a>(node: SyntaxNode<'_>, source: &'a [u8]) -> &'a str {
     let left = node.child_by_field_name("left");
     let right = node.child_by_field_name("right");
     match (left, right) {
-        (Some(left), Some(right)) => std::str::from_utf8(&source[left.end_byte()..right.start_byte()])
-            .unwrap_or("")
-            .trim(),
+        (Some(left), Some(right)) => {
+            std::str::from_utf8(&source[left.end_byte()..right.start_byte()])
+                .unwrap_or("")
+                .trim()
+        }
         _ => "",
     }
 }
@@ -547,7 +579,11 @@ fn first_syntax_error(node: SyntaxNode<'_>) -> Option<SyntaxNode<'_>> {
 fn syntax_error(source: &str, node: SyntaxNode<'_>) -> CFrontendError {
     let Point { row, column } = node.start_position();
     let start = node.start_byte().min(source.len());
-    let end = node.end_byte().max(start).min(source.len()).min(start.saturating_add(24));
+    let end = node
+        .end_byte()
+        .max(start)
+        .min(source.len())
+        .min(start.saturating_add(24));
     let mut fragment = source[start..end]
         .chars()
         .flat_map(char::escape_default)

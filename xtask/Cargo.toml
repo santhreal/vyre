@@ -34,7 +34,6 @@ vyre-driver-wgpu.workspace = true
 vyre-driver-cuda.workspace = true
 vyre-driver-reference.workspace = true
 vyre-driver-spirv.workspace = true
-vyre-frontend-c.workspace = true
 vyre-lints.workspace = true
 vyre-lower.workspace = true
 vyre-emit-metal.workspace = true
@@ -47,8 +46,6 @@ walkdir.workspace = true
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-tree-sitter = { workspace = true }
-tree-sitter-c = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

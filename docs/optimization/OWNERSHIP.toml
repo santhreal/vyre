@@ -227,7 +227,7 @@ required_commands = [
 ]
 
 [lane.parser_frontend]
-purpose = "Parser/frontend research seam: VAST source-of-truth types, changed-range parsing, Tree-sitter baselines, parser evidence, and frontend handoff certificates."
+purpose = "Frontend seam: source validation, syntax parsing, source diagnostics, and backend-neutral typed-IR construction."
 layer = "Frontend research seam"
 write = [
   "vyre-foundation/src/vast.rs",
@@ -236,10 +236,7 @@ write = [
   "vyre-frontend-rust/src/**",
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
-  "examples/c_lex_on_gpu/**",
-  "xtask/src/c_parser_bench.rs",
-  "xtask/src/c_parser_corpus.rs",
-  "release/evidence/parser/**",
+  "examples/c_source_to_ir/**",
   "docs/parsing-and-frontends.md",
 ]
 avoid = [

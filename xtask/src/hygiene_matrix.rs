@@ -1266,7 +1266,6 @@ fn scan_optional_test_root(
 fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for module in [
         "backend_matrix",
-        "c_parser_corpus",
         "conformance_matrix",
         "docs_matrix",
         "feature_matrix",

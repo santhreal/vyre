@@ -323,18 +323,6 @@ fn command_specs() -> &'static [CommandSpec] {
             proof_kind: ProofKind::ParserEvidence,
         },
         CommandSpec {
-            command: "c-parser-bench",
-            module: "c_parser_bench",
-            owner_lane: "bench_harness",
-            proof_kind: ProofKind::Benchmark,
-        },
-        CommandSpec {
-            command: "c-parser-corpus",
-            module: "c_parser_corpus",
-            owner_lane: "bench_harness",
-            proof_kind: ProofKind::ParserEvidence,
-        },
-        CommandSpec {
             command: "conformance-matrix",
             module: "conformance_matrix",
             owner_lane: "coordination",
