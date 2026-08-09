@@ -110,6 +110,12 @@ impl ArtifactMaterializer for SpirvMaterializer {
                 .filter(|resource| resource.lifetime == ResourceLifetime::Output)
                 .map(|resource| resource.value)
                 .collect(),
+            retained: artifact
+                .resources()
+                .iter()
+                .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
+                .map(|resource| resource.value)
+                .collect(),
         }))
     }
 }
@@ -127,6 +133,7 @@ struct SpirvArtifactInstance {
     modules: Vec<SpirvExecutableModule>,
     values: BTreeMap<String, ArtifactValueId>,
     outputs: BTreeSet<ArtifactValueId>,
+    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for SpirvArtifactInstance {
@@ -255,9 +262,26 @@ impl SpirvArtifactInstance {
                     })
             })
             .collect::<Result<BTreeMap<_, _>, _>>()?;
+        let retained = self
+            .retained
+            .iter()
+            .map(|value| {
+                state
+                    .get(value)
+                    .cloned()
+                    .map(|bytes| (*value, bytes))
+                    .ok_or_else(|| BackendError::InvalidProgram {
+                        fix: format!(
+                            "Fix: selected execution must preserve retained value {}.",
+                            value.0
+                        ),
+                    })
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
         Ok(Completion {
             artifact: self.artifact,
             outputs,
+            retained,
             device_ns: None,
         })
     }

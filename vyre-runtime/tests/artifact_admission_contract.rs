@@ -1,7 +1,14 @@
 //! Regression contracts for canonical runtime artifact admission.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::LazyLock;
 
+use vyre_driver::backend::BackendRegistration;
+use vyre_driver::{
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion, Device,
+    DeviceIdentity, Submission, VyreBackend,
+};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
@@ -12,8 +19,8 @@ use vyre_megakernel::{
     TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::{
-    admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError,
-    InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,
+    admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
+    InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint, RetainedArtifactSession,
 };
 
 const FRAME_HEADER_BYTES: usize = 10;
@@ -460,4 +467,192 @@ fn cached_envelope_payload_admits_and_miss_is_none() {
         !err.to_string().is_empty(),
         "admission error must carry diagnostics"
     );
+}
+
+static MATERIALIZER_GENERATION: AtomicU64 = AtomicU64::new(0);
+static MATERIALIZER_CALLS: AtomicU64 = AtomicU64::new(0);
+static TEST_SUPPORTED_OPS: LazyLock<HashSet<vyre_foundation::ir::OpId>> =
+    LazyLock::new(HashSet::new);
+
+struct TestDevice {
+    identity: DeviceIdentity,
+    format: TargetPayloadFormat,
+}
+
+impl Device for TestDevice {
+    fn identity(&self) -> &DeviceIdentity {
+        &self.identity
+    }
+
+    fn target_format(&self) -> &TargetPayloadFormat {
+        &self.format
+    }
+
+    fn is_healthy(&self) -> bool {
+        true
+    }
+}
+
+struct TestMaterializer {
+    device: TestDevice,
+}
+
+impl ArtifactMaterializer for TestMaterializer {
+    fn device(&self) -> &dyn Device {
+        &self.device
+    }
+
+    fn materialize(
+        &self,
+        artifact: &Artifact,
+        payload: &TargetPayload,
+    ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
+        if payload.neutral_artifact() != artifact.digest() {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: test payload association must match the neutral artifact.".to_string(),
+            });
+        }
+        Ok(Box::new(TestInstance {
+            artifact: artifact.digest(),
+            payload: payload.digest(),
+            device: self.device.identity.clone(),
+        }))
+    }
+}
+
+struct TestInstance {
+    artifact: Digest,
+    payload: Digest,
+    device: DeviceIdentity,
+}
+
+impl ArtifactInstance for TestInstance {
+    fn artifact(&self) -> Digest {
+        self.artifact
+    }
+
+    fn payload(&self) -> Digest {
+        self.payload
+    }
+
+    fn device(&self) -> &DeviceIdentity {
+        &self.device
+    }
+
+    fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
+        if bindings.artifact() != self.artifact {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: test bindings must name the materialized artifact.".to_string(),
+            });
+        }
+        Ok(Box::new(TestSubmission(Some(Completion {
+            artifact: self.artifact,
+            outputs: BTreeMap::new(),
+            retained: BTreeMap::new(),
+            device_ns: None,
+        }))))
+    }
+}
+
+struct TestSubmission(Option<Completion>);
+
+impl Submission for TestSubmission {
+    fn is_ready(&self) -> bool {
+        true
+    }
+
+    fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
+        self.0.take().ok_or_else(|| BackendError::InvalidProgram {
+            fix: "Fix: consume the test submission only once.".to_string(),
+        })
+    }
+}
+
+fn test_backend_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
+    Err(BackendError::UnsupportedFeature {
+        name: "legacy raw Program backend".to_string(),
+        backend: "test-artifact".to_string(),
+    })
+}
+
+fn test_supported_ops() -> &'static HashSet<vyre_foundation::ir::OpId> {
+    &TEST_SUPPORTED_OPS
+}
+
+fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
+    MATERIALIZER_CALLS.fetch_add(1, Ordering::AcqRel);
+    let generation = MATERIALIZER_GENERATION.fetch_add(1, Ordering::AcqRel) + 1;
+    Ok(Box::new(TestMaterializer {
+        device: TestDevice {
+            identity: DeviceIdentity {
+                backend: "test-artifact",
+                device: "test-device".to_string(),
+                generation,
+            },
+            format: format("test.cache-target", 1),
+        },
+    }))
+}
+
+static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
+    id: "test-artifact",
+    factory: test_backend_factory,
+    supported_ops: test_supported_ops,
+    target_compiler: None,
+    materializer: Some(test_materializer_factory),
+};
+
+/// WHY: bootstrap and recovery must authenticate and rematerialize without a compiler facet.
+#[test]
+fn artifact_session_bootstrap_and_recovery_use_only_materialization() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let digest = neutral.digest();
+    let required = format("test.cache-target", 1);
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [payload(&neutral, required, &[4, 5, 6, 7])],
+    );
+    let calls_before = MATERIALIZER_CALLS.load(Ordering::Acquire);
+    let session = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes)
+        .expect("authenticated artifact must materialize");
+    assert_eq!(session.artifact().unwrap(), digest);
+    let first_device = session.device().unwrap();
+    let completion = session
+        .submit_and_wait(session.bindings().unwrap())
+        .expect("materialized instance must submit");
+    assert_eq!(completion.artifact, digest);
+    let second_device = session
+        .rematerialize()
+        .expect("recovery must reacquire and rematerialize");
+    assert!(second_device.generation > first_device.generation);
+    assert_eq!(session.artifact().unwrap(), digest);
+    assert!(MATERIALIZER_CALLS.load(Ordering::Acquire) >= calls_before + 2);
+}
+
+/// WHY: retained and ephemeral policies must preserve one neutral artifact identity.
+#[test]
+fn retained_and_ephemeral_sessions_share_artifact_identity() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let digest = neutral.digest();
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [payload(
+            &neutral,
+            format("test.cache-target", 1),
+            &[9, 8, 7],
+        )],
+    );
+    let ephemeral = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes).unwrap();
+    let retained_session = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes).unwrap();
+    let retained = RetainedArtifactSession::new(retained_session, BTreeMap::new()).unwrap();
+    assert_eq!(ephemeral.artifact().unwrap(), digest);
+    assert_eq!(retained.artifact().unwrap(), digest);
+    let completion = retained
+        .submit_and_wait(retained_session_bindings(digest))
+        .unwrap();
+    assert_eq!(completion.artifact, digest);
+}
+
+fn retained_session_bindings(artifact: Digest) -> BindingSet {
+    BindingSet::new(artifact)
 }

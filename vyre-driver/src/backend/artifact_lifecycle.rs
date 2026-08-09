@@ -76,6 +76,8 @@ pub struct Completion {
     pub artifact: Digest,
     /// Canonical output values keyed by artifact ABI identity.
     pub outputs: BTreeMap<ArtifactValueId, Vec<u8>>,
+    /// Updated retained values keyed by artifact ABI identity.
+    pub retained: BTreeMap<ArtifactValueId, Vec<u8>>,
     /// Backend-measured device duration when available.
     pub device_ns: Option<u64>,
 }

@@ -120,6 +120,12 @@ impl ArtifactMaterializer for CudaMaterializer {
                 .filter(|resource| resource.lifetime == ResourceLifetime::Output)
                 .map(|resource| resource.value)
                 .collect(),
+            retained: artifact
+                .resources()
+                .iter()
+                .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
+                .map(|resource| resource.value)
+                .collect(),
         }))
     }
 }
@@ -136,6 +142,7 @@ struct CudaArtifactInstance {
     modules: Vec<CudaExecutableModule>,
     values: BTreeMap<String, ArtifactValueId>,
     outputs: BTreeSet<ArtifactValueId>,
+    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for CudaArtifactInstance {
@@ -236,9 +243,11 @@ impl CudaArtifactInstance {
             }
         }
         let outputs = project_outputs(&self.outputs, &state)?;
+        let retained = project_outputs(&self.retained, &state)?;
         Ok(Completion {
             artifact: self.artifact,
             outputs,
+            retained,
             device_ns: has_device_timing.then_some(device_ns),
         })
     }

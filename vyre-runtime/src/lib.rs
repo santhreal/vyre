@@ -125,6 +125,12 @@ impl From<vyre_driver::backend::BackendError> for PipelineError {
 /// Canonical artifact-envelope authentication and exact-format admission.
 pub mod artifact_admission;
 
+/// Bounded safetensors checkpoint metadata ingestion.
+pub mod checkpoint;
+
+/// Immutable model, compiled artifact, and per-sequence state residency.
+pub mod model_residency;
+
 /// Persistent megakernel  -  the vyre Program that runs forever on
 /// the GPU, decoding host-fed ring opcodes from a host-fed ring buffer.
 pub mod megakernel;
@@ -165,6 +171,10 @@ pub use pipeline_cache::{
     PipelineCacheStore, PipelineFingerprint,
 };
 
+pub use artifact_admission::{
+    admit_artifact, admit_cached_artifact, admit_envelope, AdmittedArtifact,
+    ArtifactAdmissionError, ArtifactSession, ArtifactSessionError, RetainedArtifactSession,
+};
 pub use megakernel::Megakernel;
 
 /// Linux io_uring integration. Compiled out on macOS / Windows.

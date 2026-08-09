@@ -113,6 +113,12 @@ mod native {
                     .filter(|resource| resource.lifetime == ResourceLifetime::Output)
                     .map(|resource| resource.value)
                     .collect(),
+                retained: artifact
+                    .resources()
+                    .iter()
+                    .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
+                    .map(|resource| resource.value)
+                    .collect(),
             }))
         }
     }
@@ -130,6 +136,7 @@ mod native {
         modules: Vec<MetalExecutableModule>,
         values: BTreeMap<String, ArtifactValueId>,
         outputs: BTreeSet<ArtifactValueId>,
+        retained: BTreeSet<ArtifactValueId>,
     }
 
     impl ArtifactInstance for MetalArtifactInstance {
@@ -236,9 +243,26 @@ mod native {
                         })
                 })
                 .collect::<Result<BTreeMap<_, _>, _>>()?;
+            let retained = self
+                .retained
+                .iter()
+                .map(|value| {
+                    state
+                        .get(value)
+                        .cloned()
+                        .map(|bytes| (*value, bytes))
+                        .ok_or_else(|| {
+                            invalid_module(&format!(
+                                "selected execution did not preserve retained value {}",
+                                value.0
+                            ))
+                        })
+                })
+                .collect::<Result<BTreeMap<_, _>, _>>()?;
             Ok(Completion {
                 artifact: self.artifact,
                 outputs,
+                retained,
                 device_ns: None,
             })
         }
