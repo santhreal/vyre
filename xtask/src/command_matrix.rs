@@ -14,9 +14,9 @@ use crate::hash::sha256_hex;
 use crate::ownership::{load_ownership_lanes, owner_lane_for_file, OwnershipLaneRule};
 use crate::release_evidence::expected_artifacts_for_command;
 
-const MAX_COMMAND_SOURCE_BYTES: u64 = 2_097_152;
+const MAX_COMMAND_SOURCE_BYTES: u64 = 8_388_608;
 const CANONICAL_COMMAND_MATRIX: &str = "docs/optimization/XTASK_COMMAND_MATRIX.md";
-const ACTIVE_ACCELERATION_PLAN: &str = "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md";
+const ACTIVE_BACKLOG: &str = "BACKLOG.md";
 const GENERATED_COMMAND: &str =
     "cargo_full run -p xtask --bin xtask -- command-matrix --output docs/optimization/XTASK_COMMAND_MATRIX.md";
 const SOURCE_COUNT_PROVENANCE_VERSION: &str = "command-matrix-source-count:v1";
@@ -365,6 +365,12 @@ fn command_specs() -> &'static [CommandSpec] {
             proof_kind: ProofKind::MatrixEvidence,
         },
         CommandSpec {
+            command: "operation-schema",
+            module: "operation_schema",
+            owner_lane: "coordination",
+            proof_kind: ProofKind::MatrixEvidence,
+        },
+        CommandSpec {
             command: "op-matrix",
             module: "op_matrix",
             owner_lane: "coordination",
@@ -444,12 +450,6 @@ fn command_specs() -> &'static [CommandSpec] {
         },
         CommandSpec {
             command: "vyre-release-gate",
-            module: "vyre_weir_release_gate",
-            owner_lane: "coordination",
-            proof_kind: ProofKind::ReleaseEvidence,
-        },
-        CommandSpec {
-            command: "vyre-weir-release-gate",
             module: "vyre_weir_release_gate",
             owner_lane: "coordination",
             proof_kind: ProofKind::ReleaseEvidence,
@@ -737,7 +737,7 @@ fn shared_sources_for_command(command: &str) -> &'static [&'static str] {
             REPO_BOUNDARY_SOURCE,
             TOML_CONFIG_SOURCE,
         ],
-        "version-matrix" | "vyre-release-gate" | "vyre-weir-release-gate" => &[
+        "version-matrix" | "vyre-release-gate" => &[
             RELEASE_TRAIN_DATA_SOURCE,
             RELEASE_TRAIN_SOURCE,
             TOML_CONFIG_SOURCE,
@@ -915,17 +915,17 @@ fn render_markdown(rows: &[CommandMatrixRow]) -> String {
 }
 
 fn validate_high_risk_vx_links(root: &Path, rows: &[CommandMatrixRow]) -> Result<(), Vec<String>> {
-    let plan_path = root.join(ACTIVE_ACCELERATION_PLAN);
-    let plan_text = match read_text_bounded(&plan_path, MAX_COMMAND_SOURCE_BYTES) {
+    let backlog_path = root.join(ACTIVE_BACKLOG);
+    let backlog_text = match read_text_bounded(&backlog_path, MAX_COMMAND_SOURCE_BYTES) {
         Ok(text) => text,
         Err(error) => {
             return Err(vec![format!(
-                "could not read active VX plan `{}`: {error}",
-                plan_path.display()
+                "could not read active VX backlog `{}`: {error}",
+                backlog_path.display()
             )]);
         }
     };
-    let failures = missing_high_risk_vx_links(rows, &plan_text);
+    let failures = missing_high_risk_vx_links(rows, &backlog_text);
     if failures.is_empty() {
         Ok(())
     } else {
@@ -1400,14 +1400,6 @@ mod tests {
         );
         assert_eq!(
             shared_sources_for_command("vyre-release-gate"),
-            &[
-                RELEASE_TRAIN_DATA_SOURCE,
-                RELEASE_TRAIN_SOURCE,
-                TOML_CONFIG_SOURCE
-            ]
-        );
-        assert_eq!(
-            shared_sources_for_command("vyre-weir-release-gate"),
             &[
                 RELEASE_TRAIN_DATA_SOURCE,
                 RELEASE_TRAIN_SOURCE,

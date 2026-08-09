@@ -1,7 +1,10 @@
 use crate::markdown_table::markdown_cells;
 
 pub(crate) const VX_PLAN_TABLE_HEADER: &str =
-    "| ID | Axis | Local evidence | Research basis | Work | Proof gate | Dedup seam |";
+    "| Number | Affected files | Problem | Acceptance criteria |";
+const RESEARCH_MARKER: &str = " Research baseline: ";
+const DEDUP_SEAM_MARKER: &str = " Deduplication seam: ";
+const WORK_MARKERS: &[&str] = &[". Fix:", ". Improvement:", ". Innovation candidate:"];
 pub(crate) const VX_PLAN_MIN_ROWS: usize = 480;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -62,22 +65,50 @@ pub(crate) fn parse_raw_vx_plan_table(plan: &str) -> RawVxPlanTable {
             continue;
         }
         let cells = markdown_cells(line);
-        if cells.len() != 7 {
+        if cells.len() != 4 {
             failures.push(format!(
-                "line {line_no}: VX row has {} cells, expected 7",
+                "line {line_no}: VX backlog row has {} cells, expected 4",
                 cells.len()
             ));
             continue;
         }
+        let Some((local_evidence, research_and_work)) = cells[2].split_once(RESEARCH_MARKER) else {
+            failures.push(format!(
+                "line {line_no}: VX backlog problem must contain `{}`",
+                RESEARCH_MARKER.trim()
+            ));
+            continue;
+        };
+        let Some(work_start) = WORK_MARKERS
+            .iter()
+            .filter_map(|marker| research_and_work.find(marker))
+            .min()
+        else {
+            failures.push(format!(
+                "line {line_no}: VX backlog problem must contain Fix, Improvement, or Innovation candidate work"
+            ));
+            continue;
+        };
+        let Some((proof_gate, dedup_seam)) = cells[3].split_once(DEDUP_SEAM_MARKER) else {
+            failures.push(format!(
+                "line {line_no}: VX backlog acceptance criteria must contain `{}`",
+                DEDUP_SEAM_MARKER.trim()
+            ));
+            continue;
+        };
+        let axis = cells[1]
+            .strip_suffix(" lane")
+            .unwrap_or(cells[1])
+            .trim_matches('`');
         rows.push(RawVxPlanRow {
             line: line_no,
             id: cells[0].to_string(),
-            axis: cells[1].to_string(),
-            local_evidence: cells[2].to_string(),
-            research_basis: cells[3].to_string(),
-            work: cells[4].to_string(),
-            proof_gate: cells[5].to_string(),
-            dedup_seam: cells[6].to_string(),
+            axis: axis.to_string(),
+            local_evidence: local_evidence.to_string(),
+            research_basis: research_and_work[..work_start].to_string(),
+            work: research_and_work[work_start + 2..].to_string(),
+            proof_gate: proof_gate.to_string(),
+            dedup_seam: dedup_seam.to_string(),
         });
     }
     RawVxPlanTable {
@@ -128,16 +159,63 @@ mod tests {
         }
     }
 
+    /// Consolidated backlog rows must recover every field used by the acceleration gates.
+    ///
+    /// This prevents the four-column project backlog contract from discarding the local
+    /// evidence, research basis, work class, proof gate, or deduplication seam.
     #[test]
-    fn raw_vx_plan_rows_preserve_line_and_cells() {
-        let plan =
-            "\n| VX-001 | coordination | local | `MLIR_PASS` | Fix: x | Proof gate. | seam |\n";
+    fn raw_vx_backlog_rows_preserve_line_and_embedded_contract_fields() {
+        let plan = "\n| Number | Affected files | Problem | Acceptance criteria |\n| VX-001 | `coordination` lane | local evidence Research baseline: `MLIR_PASS`. Fix: x | Proof gate. Deduplication seam: one owner |\n";
 
         let table = parse_raw_vx_plan_table(plan);
 
         assert_eq!(table.failures, Vec::<String>::new());
-        assert_eq!(table.rows[0].line, 2);
+        assert!(table.saw_header);
+        assert_eq!(table.rows[0].line, 3);
         assert_eq!(table.rows[0].id, "VX-001");
+        assert_eq!(table.rows[0].axis, "coordination");
+        assert_eq!(table.rows[0].local_evidence, "local evidence");
         assert_eq!(table.rows[0].research_basis, "`MLIR_PASS`");
+        assert_eq!(table.rows[0].work, "Fix: x");
+        assert_eq!(table.rows[0].proof_gate, "Proof gate.");
+        assert_eq!(table.rows[0].dedup_seam, "one owner");
+    }
+
+    /// A backlog row without rooted evidence and research separation is ambiguous.
+    ///
+    /// Rejecting it prevents prose-only tasks from entering the proof-backed VX queue.
+    #[test]
+    fn raw_vx_backlog_rows_reject_missing_research_marker() {
+        let plan =
+            "| VX-001 | `coordination` lane | local Fix: x | Proof. Deduplication seam: owner |";
+        let table = parse_raw_vx_plan_table(plan);
+        assert_eq!(table.rows, Vec::new());
+        assert_eq!(table.failures.len(), 1);
+        assert!(table.failures[0].contains("Research baseline"));
+    }
+
+    /// Every VX backlog row must name the kind of implementation work it carries.
+    ///
+    /// This rejects evidence-only rows that cannot be scheduled or reviewed as a fix,
+    /// improvement, or innovation candidate.
+    #[test]
+    fn raw_vx_backlog_rows_reject_missing_work_class() {
+        let plan = "| VX-001 | `coordination` lane | local Research baseline: `MLIR_PASS`. Observe x | Proof. Deduplication seam: owner |";
+        let table = parse_raw_vx_plan_table(plan);
+        assert_eq!(table.rows, Vec::new());
+        assert_eq!(table.failures.len(), 1);
+        assert!(table.failures[0].contains("Fix, Improvement, or Innovation"));
+    }
+
+    /// Proof and deduplication are independent acceptance contracts.
+    ///
+    /// A missing separator would otherwise let ordinary prose masquerade as both.
+    #[test]
+    fn raw_vx_backlog_rows_reject_missing_deduplication_seam() {
+        let plan = "| VX-001 | `coordination` lane | local Research baseline: `MLIR_PASS`. Fix: x | Proof only |";
+        let table = parse_raw_vx_plan_table(plan);
+        assert_eq!(table.rows, Vec::new());
+        assert_eq!(table.failures.len(), 1);
+        assert!(table.failures[0].contains("Deduplication seam"));
     }
 }

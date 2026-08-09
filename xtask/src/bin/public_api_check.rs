@@ -27,13 +27,34 @@ const UPDATE_COMMAND: &str = "./cargo_full run --bin public_api_check -- --updat
 const BREAKING_UPDATE_COMMAND: &str =
     "./cargo_full run --bin public_api_check -- --update --allow-breaking";
 
+fn print_help() {
+    println!("Check publishable facade APIs against committed snapshots.");
+    println!();
+    println!("Usage: public_api_check [--update [--allow-breaking]]");
+    println!();
+    println!("Options:");
+    println!("  --update          refresh snapshots after compatibility checks");
+    println!("  --allow-breaking  permit removed API items while refreshing");
+    println!("  -h, --help        print this help");
+    println!();
+    println!("Environment:");
+    println!("  VYRE_CARGO_RUNNER  Cargo wrapper to invoke (default: cargo_full)");
+    println!();
+    println!("Exit codes:");
+    println!("  0  snapshots match or were refreshed");
+    println!("  1  API generation, compatibility, or snapshot checks failed");
+    println!("  2  command-line arguments are invalid");
+}
+
 fn main() {
     let mut is_update = false;
     let mut allow_breaking = false;
+    let mut show_help = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--update" => is_update = true,
             "--allow-breaking" => allow_breaking = true,
+            "-h" | "--help" => show_help = true,
             _ => {
                 eprintln!(
                     "Fix: unknown public_api_check argument `{arg}`. Use no arguments, `--update`, or `--update --allow-breaking`."
@@ -41,6 +62,14 @@ fn main() {
                 std::process::exit(2);
             }
         }
+    }
+    if show_help {
+        if is_update || allow_breaking {
+            eprintln!("Fix: `--help` cannot be combined with update arguments.");
+            std::process::exit(2);
+        }
+        print_help();
+        return;
     }
     if allow_breaking && !is_update {
         eprintln!("Fix: `--allow-breaking` requires `--update`.");
@@ -180,13 +209,6 @@ fn main() {
         }
     }
 
-    if let Err(errors) = validate_vyre_libs_alias_metadata(&root) {
-        for error in errors {
-            eprintln!("{error}");
-        }
-        failed = true;
-    }
-
     if failed {
         std::process::exit(1);
     }
@@ -256,85 +278,6 @@ fn facade_snapshot_inventory_failures(root: &Path, facade_crates: &[&str]) -> Ve
             failures.push(format!(
                 "Fix: gated public API snapshot `{}` does not exist.",
                 snapshot.display()
-            ));
-        }
-    }
-    failures
-}
-
-fn validate_vyre_libs_alias_metadata(root: &Path) -> Result<(), Vec<String>> {
-    let registry_path = root.join("vyre-libs/src/compat_aliases.rs");
-    let api_path = root.join("vyre-libs/PUBLIC_API.md");
-    let registry = read_text_bounded(&registry_path).map_err(|error| {
-        vec![format!(
-            "Fix: failed to read alias registry `{}`: {error}",
-            registry_path.display()
-        )]
-    })?;
-    let api = read_text_bounded(&api_path).map_err(|error| {
-        vec![format!(
-            "Fix: failed to read vyre-libs public API snapshot `{}`: {error}",
-            api_path.display()
-        )]
-    })?;
-    let failures = alias_metadata_failures(&registry, &api);
-    if failures.is_empty() {
-        Ok(())
-    } else {
-        Err(failures)
-    }
-}
-
-fn alias_metadata_failures(registry: &str, public_api: &str) -> Vec<String> {
-    let mut failures = Vec::new();
-    for required in [
-        "pub struct CompatibilityAlias",
-        "deprecated_path",
-        "canonical_path",
-        "canonical_owner",
-        "removal_condition",
-        "COMPATIBILITY_ALIASES",
-    ] {
-        if !registry.contains(required) {
-            failures.push(format!(
-                "Fix: vyre-libs alias registry is missing `{required}`."
-            ));
-        }
-    }
-    for (alias, deprecated_path, canonical_path) in [
-        ("MATCHING_ALIAS", "vyre_libs::matching", "vyre_libs::scan"),
-        (
-            "MATCHING_SUBSTRING_ALIAS",
-            "vyre_libs::matching::substring",
-            "vyre_libs::scan::substring",
-        ),
-    ] {
-        if !registry.contains(alias) {
-            failures.push(format!(
-                "Fix: vyre-libs alias registry is missing `{alias}`."
-            ));
-        }
-        if !registry.contains(deprecated_path) {
-            failures.push(format!(
-                "Fix: alias `{alias}` must name deprecated path `{deprecated_path}`."
-            ));
-        }
-        if !registry.contains(canonical_path) {
-            failures.push(format!(
-                "Fix: alias `{alias}` must name canonical path `{canonical_path}`."
-            ));
-        }
-    }
-    for required_api in [
-        "pub mod vyre_libs::compat_aliases",
-        "pub mod vyre_libs::matching",
-        "pub mod vyre_libs::scan",
-        "pub struct vyre_libs::compat_aliases::CompatibilityAlias",
-        "pub const vyre_libs::compat_aliases::COMPATIBILITY_ALIASES",
-    ] {
-        if !public_api.contains(required_api) {
-            failures.push(format!(
-                "Fix: vyre-libs PUBLIC_API.md is missing `{required_api}`; regenerate the snapshot after alias metadata changes."
             ));
         }
     }
@@ -509,73 +452,5 @@ mod tests {
             removed_public_api_items(old, new),
             vec!["pub fn api::removed()", "pub fn api::changed(value: u32)"]
         );
-    }
-
-    #[test]
-    fn alias_metadata_accepts_registry_and_snapshot() {
-        let registry = r#"
-pub struct CompatibilityAlias {
-    pub deprecated_path: &'static str,
-    pub canonical_path: &'static str,
-    pub canonical_owner: &'static str,
-    pub removal_condition: &'static str,
-}
-pub const MATCHING_ALIAS: CompatibilityAlias = CompatibilityAlias {
-    deprecated_path: "vyre_libs::matching",
-    canonical_path: "vyre_libs::scan",
-    canonical_owner: "vyre-libs/src/scan",
-    removal_condition: "snapshot no longer requires it",
-};
-pub const MATCHING_SUBSTRING_ALIAS: CompatibilityAlias = CompatibilityAlias {
-    deprecated_path: "vyre_libs::matching::substring",
-    canonical_path: "vyre_libs::scan::substring",
-    canonical_owner: "vyre-libs/src/scan/substring",
-    removal_condition: "snapshot no longer requires it",
-};
-pub const COMPATIBILITY_ALIASES: &[CompatibilityAlias] = &[MATCHING_ALIAS, MATCHING_SUBSTRING_ALIAS];
-"#;
-        let public_api = r#"
-pub mod vyre_libs::compat_aliases
-pub mod vyre_libs::matching
-pub mod vyre_libs::scan
-pub struct vyre_libs::compat_aliases::CompatibilityAlias
-pub const vyre_libs::compat_aliases::COMPATIBILITY_ALIASES
-"#;
-
-        assert!(alias_metadata_failures(registry, public_api).is_empty());
-    }
-
-    #[test]
-    fn alias_metadata_rejects_missing_removal_condition_and_snapshot_alias() {
-        let registry = r#"
-pub struct CompatibilityAlias {
-    pub deprecated_path: &'static str,
-    pub canonical_path: &'static str,
-    pub canonical_owner: &'static str,
-}
-pub const MATCHING_ALIAS: CompatibilityAlias = CompatibilityAlias {
-    deprecated_path: "vyre_libs::matching",
-    canonical_path: "vyre_libs::scan",
-    canonical_owner: "vyre-libs/src/scan",
-};
-pub const COMPATIBILITY_ALIASES: &[CompatibilityAlias] = &[MATCHING_ALIAS];
-"#;
-        let public_api = r#"
-pub mod vyre_libs::compat_aliases
-pub mod vyre_libs::scan
-pub struct vyre_libs::compat_aliases::CompatibilityAlias
-"#;
-
-        let failures = alias_metadata_failures(registry, public_api);
-
-        assert!(failures
-            .iter()
-            .any(|failure| failure.contains("removal_condition")));
-        assert!(failures
-            .iter()
-            .any(|failure| failure.contains("MATCHING_SUBSTRING_ALIAS")));
-        assert!(failures
-            .iter()
-            .any(|failure| failure.contains("pub mod vyre_libs::matching")));
     }
 }

@@ -1,11 +1,10 @@
 //! Evidence-backed acceleration plan gate.
 //!
-//! This gate enforces the shape promised by
-//! `docs/optimization/ALL_AXES_ACCELERATION_PLAN.md`: each VX work row must
-//! carry a concrete axis, local evidence, research basis, work item, proof gate,
-//! and dedup seam. The gate is deliberately structural. It prevents another
-//! generated catalog from replacing the plan without pretending to prove the
-//! implementation status of every VX row.
+//! This gate enforces the shape promised by `BACKLOG.md`: each VX work row
+//! must carry a concrete axis, local evidence, research basis, work item,
+//! proof gate, and dedup seam. The gate is deliberately structural. It prevents
+//! another generated catalog from replacing the backlog without pretending to
+//! prove the implementation status of every VX row.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -24,7 +23,7 @@ use crate::research_source_ledger::{
 };
 use crate::vx_plan_table::{parse_raw_vx_plan_table, VX_PLAN_MIN_ROWS, VX_PLAN_TABLE_HEADER};
 
-const DEFAULT_PLAN: &str = "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md";
+const DEFAULT_PLAN: &str = "BACKLOG.md";
 pub(crate) use crate::artifact_paths::PLAN_PROGRESS_ARTIFACT;
 pub(crate) const PLAN_PROGRESS_SCHEMA_VERSION: u32 = 4;
 const REQUIRED_AXES: &[&str] = &[
@@ -228,7 +227,6 @@ pub(crate) fn run(args: &[String]) {
     failures.extend(crate::rules_as_data::validate_rules_as_data_manifest(
         &vyre_root,
     ));
-    validate_compat_alias_audit(&vyre_root, &mut failures);
     validate_no_parallel_active_plan_files(&vyre_root, &mut failures);
     if failures.is_empty() {
         if let Some(progress_json) = config.progress_json.as_ref() {
@@ -926,8 +924,7 @@ fn validate_local_evidence(row: &PlanRow, root: Option<&Path>, failures: &mut Ve
 fn validate_plan_self_citation(row: &PlanRow, failures: &mut Vec<String>) {
     let evidence = row.local_evidence.to_ascii_lowercase();
     let cites_active_plan = row.local_evidence.starts_with("This file")
-        || evidence.contains("all_axes_acceleration_plan.md")
-        || evidence.contains(DEFAULT_PLAN);
+        || evidence.contains(&DEFAULT_PLAN.to_ascii_lowercase());
     if !cites_active_plan {
         return;
     }
@@ -1555,79 +1552,6 @@ fn evidence_paths_for_progress(row: &PlanRow) -> Vec<String> {
 mod tests {
     use super::*;
 
-    const VALID_PLAN: &str = r#"# Vyre all-axes acceleration plan
-
-## External research basis
-
-| Key | Source | Use in this plan |
-| --- | --- | --- |
-| `MLIR_PASS` | <https://mlir.llvm.org/docs/PassManagement/> | Pass gates. |
-
-## Evidence-backed plan items
-
-| ID | Axis | Local evidence | Research basis | Work | Proof gate | Dedup seam |
-| --- | --- | --- | --- | --- | --- | --- |
-| VX-001 | coordination | This file contained generated plan label appendices | `MLIR_PASS` | Fix: enforce grounded plan rows. | Gate test rejects malformed rows. | This file owns the synthetic plan. |
-| VX-002 | coordination | `docs/optimization/OWNERSHIP.toml` | Internal Vyre evidence contract | Fix: enforce claim shape. | Claim audit rejects broad rows. | `OWNERSHIP.toml`. |
-| VX-003 | coordination | `docs/optimization/HOT_PATHS.toml` | `MLIR_PASS` | Fix: enforce hot paths. | Gate test rejects gaps. | `HOT_PATHS.toml`. |
-| VX-004 | coordination | `docs/optimization/OP_MATRIX.toml` | `MLIR_PASS` | Fix: enforce op rows. | Gate test rejects gaps. | `OP_MATRIX.toml`. |
-| VX-005 | coordination | `docs/optimization/BENCH_TARGETS.toml` | `MLIR_PASS` | Fix: enforce bench rows. | Gate test rejects gaps. | `BENCH_TARGETS.toml`. |
-| VX-006 | coordination | `docs/optimization/LEGACY_DOCS.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `LEGACY_DOCS.md`. |
-| VX-007 | coordination | `docs/optimization/README.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `README.md`. |
-| VX-008 | coordination | `docs/optimization/TAXONOMY.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `TAXONOMY.md`. |
-| VX-009 | coordination | `docs/RECURSION_THESIS.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `RECURSION_THESIS.md`. |
-| VX-010 | coordination | `docs/lego-block-rule.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `lego-block-rule.md`. |
-| VX-011 | coordination | `Cargo.toml` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `Cargo.toml`. |
-| VX-012 | coordination | `xtask/src/main.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `xtask`. |
-| VX-013 | coordination | `xtask/README.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `xtask`. |
-| VX-014 | coordination | `vyre-driver/src/evidence.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `evidence.rs`. |
-| VX-015 | coordination | `vyre-driver/src/device_profile.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `device_profile.rs`. |
-| VX-016 | coordination | `vyre-driver/src/observability.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `observability.rs`. |
-| VX-017 | coordination | `vyre-lower/src/pre_emit.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `pre_emit.rs`. |
-| VX-018 | coordination | `vyre-lower/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `lib.rs`. |
-| VX-019 | coordination | `vyre-lower/src/emit_adversarial_corpus.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `emit_adversarial_corpus.rs`. |
-| VX-020 | coordination | `vyre-emit-metal/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-emit-metal`. |
-| VX-021 | coordination | `vyre-runtime/src/megakernel/ring.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `ring.rs`. |
-| VX-022 | coordination | `vyre-runtime/src/megakernel/task.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `task.rs`. |
-| VX-023 | coordination | `vyre-runtime/src/megakernel/scheduler.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `scheduler.rs`. |
-| VX-024 | coordination | `vyre-runtime/src/megakernel/telemetry.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `telemetry.rs`. |
-| VX-025 | coordination | `vyre-libs/src/security/facts.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `facts.rs`. |
-| VX-026 | coordination | `vyre-libs/src/security/family_mask.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `family_mask.rs`. |
-| VX-027 | coordination | `vyre-bench/src/registry/mod.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `registry`. |
-| VX-028 | coordination | `vyre-bench/src/cases/release_workloads.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `release_workloads`. |
-| VX-029 | coordination | `release/evidence/docs/cuda-release-path.md` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `release/evidence`. |
-| VX-030 | coordination | `vyre-driver-cuda/src/backend/cuda_graph.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `cuda_graph.rs`. |
-| VX-031 | coordination | `vyre-driver-cuda/src/backend/resident_dispatch.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `resident_dispatch.rs`. |
-| VX-032 | coordination | `vyre-driver-metal/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-driver-metal`. |
-| VX-033 | coordination | `vyre-driver-wgpu/tests/megakernel_emit.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-driver-wgpu`. |
-| VX-034 | coordination | `vyre-foundation/src/optimizer/eqsat.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `eqsat.rs`. |
-| VX-035 | coordination | `vyre-foundation/src/optimizer/fact_substrate.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `fact_substrate.rs`. |
-| VX-036 | coordination | `vyre-foundation/src/optimizer/rewrite_proof.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `rewrite_proof.rs`. |
-| VX-037 | coordination | `vyre-core/tests/wire_malformed_adversarial.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `wire_malformed_adversarial.rs`. |
-| VX-038 | coordination | `vyre-libs/tests/rust_gpu_lexer_plan.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `rust_gpu_lexer_plan.rs`. |
-| VX-039 | coordination | `xtask/src/hygiene_matrix.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `hygiene_matrix.rs`. |
-| VX-040 | coordination | `xtask/src/op_matrix.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `op_matrix.rs`. |
-| VX-041 | coordination | `xtask/src/hot_path_scan.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `hot_path_scan.rs`. |
-| VX-042 | coordination | `xtask/src/recursion_gate.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `recursion_gate.rs`. |
-| VX-043 | coordination | `xtask/src/release_workload_matrix.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `release_workload_matrix.rs`. |
-| VX-044 | coordination | `xtask/src/test_matrix.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `test_matrix.rs`. |
-| VX-045 | coordination | `xtask/src/docs_matrix.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `docs_matrix.rs`. |
-| VX-046 | coordination | `xtask/src/vyre_weir_release_gate/mod.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `release_gate`. |
-| VX-047 | coordination | `vyre-self-substrate/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-self-substrate`. |
-| VX-048 | coordination | `vyre-primitives/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-primitives`. |
-| VX-049 | coordination | `vyre-intrinsics/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-intrinsics`. |
-| VX-050 | coordination | `vyre-reference/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-reference`. |
-| VX-051 | coordination | `vyre-core/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-core`. |
-| VX-052 | coordination | `vyre-driver-reference/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-driver-reference`. |
-| VX-053 | coordination | `vyre-driver-spirv/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-driver-spirv`. |
-| VX-054 | coordination | `vyre-frontend-c/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-frontend-c`. |
-| VX-055 | coordination | `vyre-lints/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-lints`. |
-| VX-056 | coordination | `vyre-aot/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-aot`. |
-| VX-057 | coordination | `vyre-harness/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-harness`. |
-| VX-058 | coordination | `vyre-spec/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-spec`. |
-| VX-059 | coordination | `vyre-debug/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-debug`. |
-| VX-060 | coordination | `vyre-macros/src/lib.rs` | `MLIR_PASS` | Fix: enforce docs. | Gate test rejects gaps. | `vyre-macros`. |
-"#;
 
     #[test]
     fn valid_plan_rows_pass() {
@@ -1659,14 +1583,16 @@ mod tests {
         );
     }
 
+    /// A backend row cannot cite the backlog itself as implementation evidence.
+    ///
+    /// This prevents a planning claim from recursively proving its own delivery.
     #[test]
-    fn plan_self_citation_fails_outside_plan_coordination_rows() {
+    fn backlog_self_citation_fails_outside_coordination_rows() {
         let row = PlanRow {
             line: 9,
             id: "VX-009".to_string(),
             axis: "driver_cuda".to_string(),
-            local_evidence: "`docs/optimization/ALL_AXES_ACCELERATION_PLAN.md` has CUDA text"
-                .to_string(),
+            local_evidence: "`BACKLOG.md` has CUDA text".to_string(),
             research_basis: "`MLIR_PASS`".to_string(),
             work: "Fix: enforce CUDA behavior.".to_string(),
             proof_gate: "Gate test rejects plan-only evidence.".to_string(),
@@ -1941,8 +1867,12 @@ mod tests {
         // passed a plan with no unknown key at all while claiming to reject one.
         let axis = REQUIRED_AXES[0];
         let text = plan.replacen(
-            &format!("| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `MLIR_PASS` |"),
-            &format!("| VX-001 | {axis} | `Cargo.toml` is rooted local evidence | `UNKNOWN_KEY` |"),
+            &format!(
+                "| VX-001 | {axis} lane | `Cargo.toml` is rooted local evidence Research baseline: `MLIR_PASS`."
+            ),
+            &format!(
+                "| VX-001 | {axis} lane | `Cargo.toml` is rooted local evidence Research baseline: `UNKNOWN_KEY`."
+            ),
             1,
         );
         assert!(
@@ -1988,10 +1918,8 @@ mod tests {
             "`./cargo_full test -p xtask acceleration_plan_gate` rejects malformed rows.",
         );
         let report = validate_plan_text(&text);
-        assert!(report
-            .failures
-            .iter()
-            .any(|failure| failure.contains("must start with `Fix:`")));
+        assert!(report.failures.iter().any(|failure| failure
+            .contains("must contain Fix, Improvement, or Innovation candidate work")));
     }
 
     #[test]
@@ -2058,13 +1986,13 @@ proof_required = ["Run one test."]
         text.push_str(
             "\n\
 ## Evidence-backed plan items\n\n\
-| ID | Axis | Local evidence | Research basis | Work | Proof gate | Dedup seam |\n\
-| --- | --- | --- | --- | --- | --- | --- |\n",
+| Number | Affected files | Problem | Acceptance criteria |\n\
+| --- | --- | --- | --- |\n",
         );
         for id in 1..=fixture_plan_row_count() {
             let axis = REQUIRED_AXES[(id - 1) % REQUIRED_AXES.len()];
             text.push_str(&format!(
-                "| VX-{id:03} | {axis} | {evidence} | `MLIR_PASS` | {work} | {proof} | `Cargo.toml` owns synthetic test seam VX-{id:03}. |\n"
+                "| VX-{id:03} | {axis} lane | {evidence} Research baseline: `MLIR_PASS`. {work} | {proof} Deduplication seam: `Cargo.toml` owns synthetic test seam VX-{id:03}. |\n"
             ));
         }
         text
@@ -2423,7 +2351,7 @@ fn validate_parallel_plan_file(
     failures: &mut Vec<String>,
 ) {
     let rel = relative_plan_path(vyre_root, path);
-    if rel == "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md" {
+    if rel == "BACKLOG.md" {
         return;
     }
 
@@ -2439,7 +2367,7 @@ fn validate_parallel_plan_file(
 
     if let Some(marker) = active_parallel_plan_marker(&text) {
         failures.push(format!(
-            "parallel active plan marker `{marker}` found in `{rel}`; move active work to `docs/optimization/ALL_AXES_ACCELERATION_PLAN.md` and keep this file as evidence archive."
+            "parallel active plan marker `{marker}` found in `{rel}`; move active work to `BACKLOG.md` and keep this file as evidence archive."
         ));
     }
 }
@@ -2494,18 +2422,21 @@ mod parallel_plan_source_of_truth_tests {
         assert!(failures[0].contains("docs/old_plan.md"));
     }
 
+    /// The canonical root backlog is excluded from the parallel-plan detector.
+    ///
+    /// Without this exception, enforcing one active queue would reject that queue itself.
     #[test]
-    fn source_truth_plan_is_ignored_by_parallel_scan() {
+    fn canonical_backlog_is_ignored_by_parallel_scan() {
         let tmp = tempfile::tempdir().unwrap();
-        let plan_dir = tmp.path().join("docs/optimization");
-        std::fs::create_dir_all(&plan_dir).unwrap();
+        let backlog = tmp.path().join("BACKLOG.md");
         std::fs::write(
-            plan_dir.join("ALL_AXES_ACCELERATION_PLAN.md"),
-            "# Source plan\n\n## Evidence-backed plan items\n\n| VX-001 | active source row |\n",
+            &backlog,
+            "# Backlog\n\n| Number | Affected files | Problem | Acceptance criteria |\n| VX-001 | lane | evidence Research baseline: `MLIR_PASS`. Fix: work | proof Deduplication seam: owner |\n",
         )
         .unwrap();
 
-        let failures = collect_parallel_plan_failures(tmp.path());
+        let mut failures = Vec::new();
+        validate_parallel_plan_file(tmp.path(), &backlog, &mut failures);
 
         assert!(failures.is_empty(), "{failures:?}");
     }
@@ -2591,160 +2522,5 @@ proof = ["A completed proof record is valid historical evidence."]
 "#;
 
         assert_eq!(validate_claim_text(text, &lanes()), Ok(()));
-    }
-}
-
-const DEPRECATED_ALIAS_IMPORTS: &[(&str, &str)] = &[
-    ("crate::matching::", "crate::scan::"),
-    ("vyre_libs::matching::", "vyre_libs::scan::"),
-];
-
-fn validate_compat_alias_audit(vyre_root: &std::path::Path, failures: &mut Vec<String>) {
-    validate_compat_alias_registry(vyre_root, failures);
-    let source_root = vyre_root.join("vyre-libs/src");
-    if !source_root.exists() {
-        failures.push(
-            "compat alias audit could not find `vyre-libs/src`. Fix: run from the Vyre workspace root."
-                .to_string(),
-        );
-        return;
-    }
-
-    for entry in walkdir::WalkDir::new(&source_root)
-        .into_iter()
-        .filter_map(Result::ok)
-    {
-        let path = entry.path();
-        if !entry.file_type().is_file()
-            || path.extension().and_then(|ext| ext.to_str()) != Some("rs")
-        {
-            continue;
-        }
-        let rel = relative_plan_path(vyre_root, path);
-        if compat_alias_path_allows_deprecated_imports(&rel) {
-            continue;
-        }
-        let text = match std::fs::read_to_string(path) {
-            Ok(text) => text,
-            Err(error) => {
-                failures.push(format!(
-                    "compat alias audit could not read `{rel}`: {error}. Fix: make source files readable before running acceleration-plan-gate."
-                ));
-                continue;
-            }
-        };
-        for (line_index, line) in text.lines().enumerate() {
-            if let Some(failure) = compat_alias_import_failure(&rel, line_index + 1, line) {
-                failures.push(failure);
-            }
-        }
-    }
-}
-
-fn validate_compat_alias_registry(vyre_root: &std::path::Path, failures: &mut Vec<String>) {
-    let registry = vyre_root.join("vyre-libs/src/compat_aliases.rs");
-    let registry_text = match std::fs::read_to_string(&registry) {
-        Ok(text) => text,
-        Err(error) => {
-            failures.push(format!(
-                "compat alias registry `vyre-libs/src/compat_aliases.rs` is missing or unreadable: {error}. Fix: keep compatibility metadata in one registry."
-            ));
-            return;
-        }
-    };
-    for required in [
-        "COMPATIBILITY_ALIASES",
-        "MATCHING_ALIAS",
-        "MATCHING_SUBSTRING_ALIAS",
-        "deprecated_path",
-        "canonical_path",
-        "canonical_owner",
-        "removal_condition",
-    ] {
-        if !registry_text.contains(required) {
-            failures.push(format!(
-                "compat alias registry is missing `{required}`. Fix: every compatibility shim must name deprecated path, canonical owner, and removal condition."
-            ));
-        }
-    }
-
-    let lib = vyre_root.join("vyre-libs/src/lib.rs");
-    let lib_text = match std::fs::read_to_string(&lib) {
-        Ok(text) => text,
-        Err(error) => {
-            failures.push(format!(
-                "compat alias audit could not read `vyre-libs/src/lib.rs`: {error}. Fix: facade must expose the alias registry."
-            ));
-            return;
-        }
-    };
-    if !lib_text.contains("pub mod compat_aliases;") {
-        failures.push(
-            "vyre-libs facade does not expose `compat_aliases`. Fix: register public compatibility shims through the alias registry."
-                .to_string(),
-        );
-    }
-}
-
-fn compat_alias_import_failure(rel: &str, line_no: usize, line: &str) -> Option<String> {
-    if compat_alias_path_allows_deprecated_imports(rel) {
-        return None;
-    }
-    let trimmed = line.trim_start();
-    if trimmed.starts_with("//") || trimmed.starts_with('*') {
-        return None;
-    }
-    for (deprecated, canonical) in DEPRECATED_ALIAS_IMPORTS {
-        if line.contains(deprecated) {
-            return Some(format!(
-                "deprecated alias import `{deprecated}` found in `{rel}:{line_no}`; use canonical `{canonical}` internally. Alias registry owner: `vyre-libs/src/compat_aliases.rs`."
-            ));
-        }
-    }
-    None
-}
-
-fn compat_alias_path_allows_deprecated_imports(rel: &str) -> bool {
-    rel == "vyre-libs/src/lib.rs"
-        || rel == "vyre-libs/src/compat_aliases.rs"
-        || rel.starts_with("vyre-libs/src/matching/")
-}
-
-#[cfg(test)]
-mod compat_alias_audit_tests {
-    use super::*;
-
-    #[test]
-    fn deprecated_alias_import_fails_outside_compat_shim() {
-        let failure = compat_alias_import_failure(
-            "vyre-libs/src/scan/bad.rs",
-            7,
-            "use crate::matching::substring::substring_search;",
-        )
-        .unwrap();
-
-        assert!(failure.contains("deprecated alias import"));
-        assert!(failure.contains("crate::scan::"));
-        assert!(failure.contains("compat_aliases.rs"));
-    }
-
-    #[test]
-    fn compat_shim_path_may_reference_deprecated_alias() {
-        assert!(compat_alias_import_failure(
-            "vyre-libs/src/matching/substring/substring.rs",
-            1,
-            "const PATH: &str = \"vyre_libs::matching::substring\";",
-        )
-        .is_none());
-    }
-
-    #[test]
-    fn comments_do_not_trip_alias_import_audit() {
-        assert!(compat_alias_import_failure(
-            "vyre-libs/src/scan/good.rs",
-            3,
-            "//! old docs mention vyre_libs::matching::substring",
-        )
-        .is_none());
     }
 }

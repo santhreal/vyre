@@ -40,6 +40,7 @@ mod manifest_walk;
 mod markdown_table;
 mod metadata_matrix;
 mod op_matrix;
+mod operation_schema;
 mod optimization_corpus;
 mod optimization_matrix;
 mod output_arg;
@@ -94,6 +95,7 @@ fn print_help() {
            abstraction-gate                     Enforce registered building-block boundaries\n\
            bench-crossback [program]           Cross-backend perf table\n\
            backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy\n\
+           bench-release [--backend all]        Run the legacy cross-backend release benchmark coordinator\n\
            shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer\n\
            check-cat-a                         Run every Cat-A pre-merge gate\n\
            check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)\n\
@@ -107,9 +109,10 @@ fn print_help() {
            trace-f32 <op_id>                   Run an op's test_inputs through vyre-reference and dump expected_output literal\n\
            gate1                               Enforce Gate 1 complexity budget (CI floor)\n\
            launch-state [--output PATH]       Generate public launch completion state evidence\n\
-           list-ops [--write PATH]             Walk registries; print op catalog. Optional: write markdown snapshot\n\
+           list-ops [--write PATH|--check]     Render or check the schema-derived operation inventory\n\
            metadata-matrix [--output PATH]     Generate Vyre/Weir crate metadata evidence\n\
-           op-matrix [--check|--write [PATH]]  Generate/check docs/optimization/OP_MATRIX.toml from registries\n\
+           operation-schema [--output PATH] [--check] [--validate PATH]  Generate or verify the canonical live operation contract schema\n\
+           op-matrix [--output PATH]           Generate operation/backend coverage evidence\n\
            optimization-matrix [--output PATH] Generate release optimization integration evidence\n\
            package-readiness [--output PATH]  Generate pre-publish package order evidence\n\
            optimization-corpus [--output PATH]  Generate release optimization corpus manifest\n\
@@ -125,10 +128,10 @@ fn print_help() {
            release-completion-audit [--output PATH]  Generate final prompt-to-artifact audit evidence\n\
            release-evidence                    Generate cheap structural release evidence artifacts\n\
            vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure\n\
-           vyre-weir-release-gate [--prepublish] [--manifest PATH]  Compatibility alias for vyre-release-gate\n\
            recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
            research-audit [--output PATH]      Generate research-grounding audit evidence for the VX plan\n\
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
+           verify-rewrite-proofs               Verify optimizer rewrite proof fixtures\n\
            hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers\n\
            lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management\n\
            lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
@@ -168,6 +171,7 @@ fn main() {
         "print-composition" => print_composition::run(&args),
         "list-ops" => list_ops::run(&args),
         "metadata-matrix" => metadata_matrix::run(&args),
+        "operation-schema" => operation_schema::run(&args),
         "op-matrix" => op_matrix::run(&args),
         "optimization-matrix" => optimization_matrix::run(&args),
         "package-readiness" => package_readiness::run(&args),
@@ -181,7 +185,7 @@ fn main() {
         "release-conformance" => release_conformance::run(&args),
         "release-completion-audit" => release_completion_audit::run(&args),
         "release-evidence" => release_evidence::run(&args),
-        "vyre-release-gate" | "vyre-weir-release-gate" => vyre_weir_release_gate::run(&args),
+        "vyre-release-gate" => vyre_weir_release_gate::run(&args),
         "recursion-gate" => recursion_gate::run(&args),
         "research-audit" => research_audit::run(&args),
         "heuristic-audit" => heuristic_audit::run(&args),

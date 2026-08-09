@@ -12,7 +12,7 @@ cargo xtask <subcommand> [options]
 
 | Subcommand | Description |
 |------------|-------------|
-| `acceleration-plan-gate [--plan PATH]` | Enforces evidence-backed VX row shape in `docs/optimization/ALL_AXES_ACCELERATION_PLAN.md`. |
+| `acceleration-plan-gate [--plan PATH]` | Enforces evidence-backed VX row shape in the private root `BACKLOG.md`. |
 | `generate-tests [--op NAME \| --all]` | Wraps `vyre-gen-tests` to materialize generated conformance tests. |
 | `mutation-gate [--tests PATH]` | Wraps H6 (mutation gate) to probe agent-written tests for surviving mutations. |
 | `coverage-check` | Runs the workspace coverage check target. |
@@ -23,3 +23,166 @@ cargo xtask <subcommand> [options]
 
 `xtask/` is a workspace member so it shares the workspace target directory and
 lockfile.
+
+<!-- BEGIN GENERATED CLI CONTRACT -->
+## Command-line interface
+
+This section is generated from `docs/CLI.toml` and executable help output.
+
+### `audit_rule_contracts`
+
+```console
+./cargo_full run -p xtask --bin audit_rule_contracts -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The command reads the enclosing Santh rules/launch and tests/launch_rule_truth trees.
+
+Failure behavior: A missing rules tree or incomplete rule contract returns status 1.
+
+Exit codes: 0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments.
+
+### `lint_shape_tests`
+
+```console
+./cargo_full run -p xtask --bin lint_shape_tests -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: --threshold sets the maximum shape-only test percentage.
+
+Failure behavior: Incomplete scans, malformed sources, or a threshold violation return status 1.
+
+Exit codes: 0 within threshold or on help, 1 on scan or threshold failure, 2 on invalid arguments.
+
+### `public_api_check`
+
+```console
+./cargo_full run -p xtask --bin public_api_check -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: VYRE_CARGO_RUNNER selects the Cargo wrapper.
+
+Configuration: --update refreshes snapshots and --allow-breaking explicitly permits removals.
+
+Failure behavior: Tool launch, API generation, UTF-8, inventory, compatibility, and snapshot mismatches return status 1.
+
+Exit codes: 0 on matching or approved updated snapshots, 1 on API failure, 2 on invalid arguments.
+
+### `scaffold_rule`
+
+```console
+./cargo_full run -p xtask --bin scaffold_rule -- --help
+```
+
+Commands: none.
+
+Hardware: No accelerator is required.
+
+Environment: No environment variables alter CLI behavior.
+
+Configuration: The slug selects directories in the enclosing Santh rule and truth-test trees.
+
+Failure behavior: Missing slugs and filesystem creation failures return non-zero without claiming success.
+
+Exit codes: 0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments.
+
+### `vyre_new_op`
+
+```console
+./cargo_full run -p xtask --bin vyre_new_op -- --help
+```
+
+Commands: `new-op`.
+
+Hardware: No accelerator is required.
+
+Environment: VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers.
+
+Configuration: Operation id, archetype, display name, summary, and category are explicit arguments.
+
+Failure behavior: Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero.
+
+Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments.
+
+### `xtask`
+
+```console
+./cargo_full run -p xtask --bin xtask -- --help
+```
+
+Commands: `abstraction-gate`, `acceleration-plan-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `c-parser-bench`, `c-parser-corpus`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-matrix`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `research-audit`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `vyre-weir-release-gate`, `weir-matrix`, `whats-similar`.
+
+Hardware: Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices.
+
+Environment: Commands read documented release, backend, benchmark, and Cargo wrapper environment controls.
+
+Configuration: Each subcommand documents its manifest, config, input, and output arguments in top-level help and the generated inventory.
+
+Failure behavior: Unknown commands return non-zero. Each command fails closed when required inputs, devices, or evidence are unavailable.
+
+Exit codes: 0 on help or command success, 1 on command failure or unknown subcommand, 2 where a subcommand rejects arguments.
+<!-- END GENERATED CLI CONTRACT -->
+
+<!-- BEGIN GENERATED CRATE CONTRACT -->
+## Crate contract
+
+This section is generated by `python3 scripts/crate_readmes.py --write` from
+the crate manifest, release train, ownership registry, and crate-guide metadata.
+
+### Purpose
+
+Generate evidence and enforce repository, release, documentation, and architecture contracts.
+
+### Boundaries
+
+The `release-tooling` owner maintains this `tooling` crate at `xtask`.
+Its allowed internal production dependencies are: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-frontend-c`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
+Any other normal or build dependency requires an ownership-registry change.
+
+### Minimal real example
+
+Run the checked-in behavior from `xtask/src/main.rs`:
+
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full run -p xtask -- --help
+```
+
+### Features
+
+- Manifest features: None
+- Default feature members: None
+
+### Errors and unsupported behavior
+
+Invalid arguments, stale evidence, violated repository contracts, and failed commands return a nonzero status with a concrete correction.
+
+### Testing
+
+Use [`docs/testing/xtask.md`](../docs/testing/xtask.md) for exact commands, Cargo targets, hardware
+requirements, evidence outputs, expected skips, and failure semantics.
+
+### Release status
+
+This crate is internal repository and release tooling for the 0.7.2 train and is not published to crates.io.
+
+### Ownership
+
+`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
+and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
+`docs/OWNERSHIP.md` after changing that registry.
+<!-- END GENERATED CRATE CONTRACT -->
