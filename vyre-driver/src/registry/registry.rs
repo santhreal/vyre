@@ -209,7 +209,7 @@ impl DialectRegistry {
 
     pub(crate) fn from_inventory() -> Self {
         let registration_count = inventory::iter::<super::dialect::OpDefRegistration>().count();
-        let intrinsic_count = vyre_intrinsics::harness::all_entries().len();
+        let intrinsic_count = vyre_intrinsics::harness::all_entries().count();
         let extern_defs = Self::extern_defs();
         let total_defs = registration_count
             .saturating_add(intrinsic_count)

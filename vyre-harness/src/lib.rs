@@ -27,7 +27,6 @@ pub use region::{reparent_program_children, tag_program, wrap, wrap_anonymous, w
 #[doc(hidden)]
 pub use inventory;
 
-use vyre::ir::Program;
 
 /// Canonical operation tier used by harness, catalog, and matrix gates.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -89,143 +88,17 @@ fn is_external_crate_namespace(id: &str) -> bool {
     !crate_name.is_empty() && !crate_name.starts_with("vyre-")
 }
 
+/// Canonical semantic operation registration.
+pub use vyre_foundation::operation::OperationRegistration as OpEntry;
+
 /// Deterministic fixture input cases.
-pub type InputsFn = fn() -> Vec<Vec<Vec<u8>>>;
+pub type InputsFn = vyre_foundation::operation::OperationFixtures;
 /// Deterministic expected-output fixtures.
-pub type ExpectedFn = fn() -> Vec<Vec<Vec<u8>>>;
+pub type ExpectedFn = vyre_foundation::operation::OperationFixtures;
 
-/// Shared migration-compatible fixture descriptor for registered Cat-A programs.
-///
-/// At migration time, new entries may still rely on the
-/// [`OpEntry::expected_output`] field while legacy entries that only
-/// set `expected_output` and omit an oracle are skipped from oracle
-/// comparison. Once all entries migrate, `expected_output` is
-/// deprecated but kept for back-compat until that migration completes.
-//
-// The struct is intentionally NOT `#[non_exhaustive]` so the dozens of
-// in-tree vyre-libs registrations (graph/, parsing/, security/, …) can
-// continue to use struct-literal syntax. External consumers should still
-// prefer `OpEntry::new(...)` to keep their code resilient to future
-// fields, but every cross-crate field addition will be accompanied by
-// either a bump or a defaulted helper.
-pub struct OpEntry {
-    /// Stable operation identifier.
-    pub id: &'static str,
-
-    /// Construct the [`Program`] under test.
-    pub build: fn() -> Program,
-
-    /// Deterministic fixture input bytes in declaration order.
-    ///
-    /// The harness passes this into both `vyre_reference::reference_eval` and the
-    /// legacy `expected_output` oracle when they are both provided.
-    pub test_inputs: Option<InputsFn>,
-
-    /// Legacy fixture oracle output bytes.
-    ///
-    /// Kept during migration so existing registrations in
-    /// `src/{math,nn,crypto,matching}` remain buildable without edits.
-    pub expected_output: Option<ExpectedFn>,
-
-    /// Coarse-grained taxonomy tag (T028 / SEPARATION_AUDIT S2 prep).
-    /// Examples: `"math"`, `"nn"`, `"crypto"`, `"scan"`, `"parsing"`,
-    /// `"graph"`, `"security"`, `"dataflow"`, `"compiler"`. `None`
-    /// means uncategorised  -  equivalent to the pre-T028 behaviour.
-    pub category: Option<&'static str>,
-}
-
-impl OpEntry {
-    /// Construct an `OpEntry` with all required fields set. Exists so
-    /// community Cat-A crates can `inventory::submit!(OpEntry::new(...))`
-    /// despite the struct being `#[non_exhaustive]` (V7-EXT-004).
-    /// `category` initialises to `None`; chain `with_category` if a
-    /// category is required at submission time.
-    #[must_use]
-    pub const fn new(
-        id: &'static str,
-        build: fn() -> Program,
-        test_inputs: Option<InputsFn>,
-        expected_output: Option<ExpectedFn>,
-    ) -> Self {
-        Self {
-            id,
-            build,
-            test_inputs,
-            expected_output,
-            category: None,
-        }
-    }
-
-    /// Set the category and return `self`. `const`-friendly so callers
-    /// can write `OpEntry::new(...).with_category("math")` inside
-    /// `inventory::submit!`.
-    #[must_use]
-    pub const fn with_category(mut self, category: &'static str) -> Self {
-        self.category = Some(category);
-        self
-    }
-
-    /// Return the registered coarse-grained taxonomy tag, if any.
-    #[must_use]
-    pub const fn category(&self) -> Option<&'static str> {
-        self.category
-    }
-
-    /// Allowed output drift in ULPs for f32-producing backends.
-    ///
-    /// `0` means byte identity is required. Non-zero tolerances are used only
-    /// for operations whose numerical contract permits the declared drift.
-    #[must_use]
-    pub fn tolerance(&self) -> u32 {
-        Self::tolerance_for_id(self.id)
-    }
-
-    /// Resolve the ULP tolerance for a registered operation id.
-    #[must_use]
-    pub fn tolerance_for_id(id: &str) -> u32 {
-        explicit_tolerance_for_id(id)
-    }
-}
-
-fn explicit_tolerance_for_id(id: &str) -> u32 {
-    match id {
-        "vyre-libs::nn::softmax" => 1,
-        "vyre-libs::nn::attention" => 4,
-        "vyre-libs::nn::gqa_attention" => 4,
-        "vyre-libs::nn::layer_norm" => 1,
-        "vyre-libs::nn::silu" => 1,
-        // Observed 2-ULP drift on a 5090 lane (CPU 0x415dd0f4 vs
-        // GPU 0x415dd0f6) under FMA fusion in cat_a_gpu_differential.
-        "vyre-libs::nn::logit_softcap" => 2,
-        "vyre-libs::nn::rms_norm" => 2,
-        "vyre-libs::nn::rms_norm_linear" => 2,
-        "vyre-libs::math::fft::fft_convolve_circular_complex" => 4,
-        // Strassen's seven-product reconstruction contains cancellation-heavy
-        // add/sub chains. Composing fractional upstream values exposed 24 ULP
-        // of WGSL FMA drift on the fourth output lane.
-        "vyre-libs::math::linalg::matmul_strassen_2x2" => 32,
-        "vyre-libs::optim::newton_schulz_5step" => 64,
-        // `decay*ema + (1-decay)*theta`  -  straight mul+add chain,
-        // one lane drifts 1 ULP from CPU's serial mul+add+add to
-        // GPU's fused mul-add (WGSL-spec-allowed).
-        "vyre-libs::optim::ema_apply" => 1,
-        // MuonEq-R computes momentum and Nesterov update through
-        // adjacent f32 mul+add chains. Random-input WGPU parity observed
-        // 6-ULP drift on an RTX backend under allowed FMA contraction.
-        "vyre-libs::optim::muoneq_r" => 8,
-        // Newton-Schulz Cat-A primitive: the polynomial has nested
-        // mul+add steps that fuse to FMA on GPU. Random-input parity
-        // observed 24-ULP drift across catalog wrappers.
-        "vyre-primitives::math::newton_schulz_poly5_f32" => 32,
-        _ => 0,
-    }
-}
-
-inventory::collect!(OpEntry);
-
-/// Return all registered operation entries.
+/// Return every canonical semantic operation registration linked into the binary.
 pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
-    inventory::iter::<OpEntry>()
+    vyre_foundation::operation::OperationRegistry::global().iter()
 }
 
 /// Fixpoint contract for dataflow ops whose GPU body performs one
@@ -349,57 +222,19 @@ macro_rules! vyre_op {
         expected_output: $output:expr $(,)?
     ) => {
         $crate::inventory::submit! {
-            $crate::OpEntry {
-                id: $id,
-                build: $build,
-                test_inputs: $inputs,
-                expected_output: $output,
-                category: None,
-            }
+            $crate::OpEntry::new(
+                $id,
+                vyre_foundation::operation::OperationTier::External,
+                ::core::option::Option::Some($build),
+                $inputs,
+                $output,
+            )
         }
     };
 }
 
 #[cfg(test)]
 mod tests {
-    use super::OpEntry;
-
-    #[test]
-    fn tolerance_defaults_to_zero_byte_identity() {
-        // Adversarial: an unknown op id (not catalog-shaped, no
-        // explicit tolerance row) must default to byte identity.
-        assert_eq!(
-            OpEntry::tolerance_for_id("vyre-libs::foo::bar::baz_unknown_op_id"),
-            0
-        );
-    }
-
-    #[test]
-    fn muoneq_r_random_stress_tolerance_covers_fma_contraction() {
-        assert_eq!(OpEntry::tolerance_for_id("vyre-libs::optim::muoneq_r"), 8);
-    }
-
-    /// Fractional upstream values must retain enough budget for Strassen's
-    /// cancellation-heavy seven-product reconstruction.
-    #[test]
-    fn strassen_composition_tolerance_covers_fma_cancellation() {
-        assert_eq!(
-            OpEntry::tolerance_for_id("vyre-libs::math::linalg::matmul_strassen_2x2"),
-            32
-        );
-    }
-
-    #[test]
-    fn newton_schulz_random_stress_tolerance_covers_nested_fma_drift() {
-        assert_eq!(
-            OpEntry::tolerance_for_id("vyre-primitives::math::newton_schulz_poly5_f32"),
-            32
-        );
-        assert_eq!(
-            OpEntry::tolerance_for_id("vyre-libs::optim::newton_schulz_5step"),
-            64
-        );
-    }
 
     // ---------------- vyre_op! macro (S8 generator) ----------------
 
@@ -449,7 +284,9 @@ mod tests {
         let entry = crate::all_entries()
             .find(|e| e.id == "vyre-harness::test::trivial_minimal")
             .expect("Fix: entry must exist");
-        let program = (entry.build)();
+        let program = entry
+            .program()
+            .expect("Fix: macro registration must retain its neutral builder");
         assert_ne!(program.entry().len(), 0);
     }
 }

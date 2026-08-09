@@ -44,10 +44,13 @@ fn op_definition(entry: &'static OpEntry) -> OpDef {
         id: entry.id,
         dialect: "intrinsic",
         category: Category::Intrinsic,
-        signature: entry.signature.clone(),
+        signature: entry
+            .signature
+            .clone()
+            .expect("canonical intrinsic registration must provide a signature"),
         lowerings: LoweringTable::empty(),
         laws: &[],
-        compose: Some(entry.build),
+        compose: entry.build,
     }
 }
 
@@ -62,7 +65,7 @@ pub fn validate_intrinsic_lowering(
     let entry = all_entries()
         .find(|entry| entry.id == lowering.id)
         .ok_or(IntrinsicRegistrationError::UnknownId { id: lowering.id })?;
-    if entry.signature != lowering.signature {
+    if entry.signature.as_ref() != Some(&lowering.signature) {
         return Err(IntrinsicRegistrationError::SignatureMismatch { id: lowering.id });
     }
     Ok(entry)
