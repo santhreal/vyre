@@ -97,13 +97,6 @@ impl ExampleOp {
     }
 }
 
-/// Back-compat free function. Panics on contract violation.
-#[must_use]
-pub fn example_op(input: &str, output: &str, n: u32) -> Program {
-    ExampleOp::new(TensorRef::u32_1d(input, n), TensorRef::u32_1d(output, n))
-        .build()
-        .unwrap_or_else(|err| panic!("Fix: example_op build failed: {err}"))
-}
 
 #[cfg(test)]
 mod tests {
@@ -117,12 +110,4 @@ mod tests {
         assert!(matches!(err, TensorRefError::ShapeMismatch { .. }));
     }
 
-    #[test]
-    fn free_and_builder_are_byte_identical() {
-        let free = example_op("a", "b", 4);
-        let built = ExampleOp::new(TensorRef::u32_1d("a", 4), TensorRef::u32_1d("b", 4))
-            .build()
-            .unwrap();
-        assert_eq!(free.to_wire().unwrap(), built.to_wire().unwrap());
-    }
 }

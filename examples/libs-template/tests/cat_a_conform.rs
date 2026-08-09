@@ -3,7 +3,8 @@
 //! Every op in this crate ships a byte-identity witness test here.
 //! Follow `AUTHORING.md` in vyre-libs for the pattern.
 
-use {{crate_name_snake}}::example_op;
+use {{crate_name_snake}}::ExampleOp;
+use vyre_libs::tensor_ref::TensorRef;
 use vyre_reference::value::Value;
 
 fn u32_bytes(words: &[u32]) -> Vec<u8> {
@@ -16,7 +17,12 @@ fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {
 
 #[test]
 fn example_op_adds_one_elementwise() {
-    let program = example_op("input", "output", 4);
+    let program = ExampleOp::new(
+        TensorRef::u32_1d("input", 4),
+        TensorRef::u32_1d("output", 4),
+    )
+    .build()
+    .expect("example operation must satisfy its typed contract");
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
