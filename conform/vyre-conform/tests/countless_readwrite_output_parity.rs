@@ -37,7 +37,7 @@
 #![forbid(unsafe_code)]
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_conform::production::ProductionSession;
 use vyre_reference::value::Value;
 
 /// Element count for the main cases. Matches the `[64, 1, 1]` workgroup exactly.
@@ -107,22 +107,27 @@ fn run_reference(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, 
         .map_err(|error| error.to_string())
 }
 
-fn run_cuda(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-    let backend = vyre_driver_cuda::CudaBackend::acquire()
-        .map_err(|error| format!("CUDA acquire failed: {error}"))?;
-    let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-    backend
-        .dispatch_borrowed(program, &borrowed, &DispatchConfig::default())
+fn run_target(
+    backend_id: &str,
+    program: &Program,
+    inputs: &[Vec<u8>],
+) -> Result<Vec<Vec<u8>>, String> {
+    let registration =
+        vyre::backend::backend_registration(backend_id).map_err(|error| error.to_string())?;
+    let production =
+        ProductionSession::compile(program, registration).map_err(|error| error.to_string())?;
+    let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    production
+        .submit(&borrowed)
         .map_err(|error| error.to_string())
 }
 
+fn run_cuda(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
+    run_target(vyre_driver_cuda::CUDA_BACKEND_ID, program, inputs)
+}
+
 fn run_wgpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, String> {
-    let backend = vyre_driver_wgpu::WgpuBackend::acquire()
-        .map_err(|error| format!("WGPU acquire failed: {error}"))?;
-    let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-    backend
-        .dispatch_borrowed(program, &borrowed, &DispatchConfig::default())
-        .map_err(|error| error.to_string())
+    run_target(vyre_driver_wgpu::WGPU_BACKEND_ID, program, inputs)
 }
 
 /// Assert the three paths return byte-identical first output buffers.
@@ -563,14 +568,14 @@ fn an_explicit_grid_override_is_not_replaced_by_the_resolved_element_count() {
     const WIDE: u32 = 4096;
     let program = xor_program(BufferDecl::read_write("out", 1, DataType::U32), WIDE);
     let inputs = inputs_for(&program, WIDE as usize * 4, WIDE);
-    let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-    let backend = vyre_driver_wgpu::WgpuBackend::acquire().expect("WGPU adapter required");
-
-    let mut config = DispatchConfig::default();
-    config.grid_override = Some([1, 1, 1]);
-    let pinned = backend
-        .dispatch_borrowed(&program, &borrowed, &config)
-        .expect("a pinned grid must still dispatch");
+    let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let registration = vyre::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+        .expect("WGPU artifact target must be registered");
+    let production =
+        ProductionSession::compile(&program, registration).expect("WGPU adapter required");
+    let pinned = production
+        .submit_with_invocation_grid(&borrowed, [1, 1, 1])
+        .expect("a pinned grid must still submit");
 
     assert_eq!(
         pinned[0].len(),

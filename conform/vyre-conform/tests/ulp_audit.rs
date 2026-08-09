@@ -15,10 +15,8 @@
 use std::collections::BTreeMap;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
-use vyre::VyreBackend;
-use vyre_conform::dispatch_grid;
 use vyre_conform::fp_parity::{f32_ulp_tolerance, ulp_distance};
-use vyre_foundation::program_caps;
+use vyre_conform::production::ProductionSession;
 use vyre_reference::value::Value;
 
 #[cfg(feature = "gpu")]
@@ -303,36 +301,29 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
     value.is_finite() && value.abs() > f32::MIN_POSITIVE && value.abs() < f32::MAX
 }
 
-fn build_dispatch_backend() -> Box<dyn VyreBackend> {
+fn build_registered_backend() -> &'static vyre::BackendRegistration {
     force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let registration = vyre::backend::registered_backends()
+    vyre::backend::registered_backends()
         .iter()
-        .find(|r| {
-            vyre::backend::backend_dispatches(r.id)
-                && selected.as_deref().is_none_or(|backend| r.id == backend)
+        .find(|registration| {
+            vyre::backend::backend_dispatches(registration.id)
+                && selected
+                    .as_deref()
+                    .is_none_or(|backend| registration.id == backend)
         })
         .expect(
             "Fix: a dispatch-capable backend must be registered for ULP audit. \
              Link a concrete driver crate into the test binary.",
-        );
-    registration.acquire().unwrap_or_else(|error| {
-        panic!(
-            "Fix: dispatch-capable backend `{}` failed its factory probe: {error}",
-            registration.id
         )
-    })
 }
 
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn()
-            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
-            vyre_driver_metal::acquire;
-        std::hint::black_box(metal_acquire);
+        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
     }
 }
 

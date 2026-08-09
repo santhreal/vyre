@@ -73,4 +73,18 @@ impl ProductionSession {
         let completion = self.session.submit_host_inputs(inputs)?;
         Ok(self.session.ordered_outputs(&completion)?)
     }
+
+    /// Submit caller inputs with a typed invocation-grid override.
+    pub fn submit_with_invocation_grid(
+        &self,
+        inputs: &[&[u8]],
+        grid: [u32; 3],
+    ) -> Result<Vec<Vec<u8>>, ProductionError> {
+        let mut bindings = self.session.host_bindings(inputs)?;
+        bindings
+            .set_invocation_grid(grid)
+            .map_err(ArtifactSessionError::from)?;
+        let completion = self.session.submit_and_wait(bindings)?;
+        Ok(self.session.ordered_outputs(&completion)?)
+    }
 }

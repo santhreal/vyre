@@ -49,7 +49,7 @@ fn bundle_certificate_uses_shared_witness_input_planner() {
     );
     assert!(
         !source.contains("witness.inputs.iter().map(Vec::as_slice).collect"),
-        "Fix: bundle cert backend verification must not feed raw witness buffers directly to dispatch_borrowed."
+        "Fix: bundle certificate verification must plan canonical artifact inputs instead of forwarding raw witness buffers."
     );
 }
 

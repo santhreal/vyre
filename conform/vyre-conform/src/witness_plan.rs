@@ -1,9 +1,9 @@
 //! Shared witness-input planner for release conformance paths.
 //!
-//! Fixtures are authored in logical input order, while backend dispatch expects
-//! one slice per executable program input. The planner is the single production
-//! contract that expands logical witnesses into the stream consumed by both
-//! `vyre_reference::reference_eval` and backend `dispatch_borrowed`.
+//! Fixtures are authored in logical input order, while artifact submission
+//! expects one slice per canonical program input. The planner expands logical
+//! witnesses into the stream consumed by both `vyre_reference::reference_eval`
+//! and [`crate::production::ProductionSession`].
 
 use vyre::ir::{BufferAccess, BufferDecl, MemoryKind, Program};
 

@@ -276,10 +276,9 @@ fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
         return;
     }
     let backend_capabilities = BackendCapabilities {
-        supports_subgroup_ops: runners.iter().any(|runner| match &runner.kind {
-            BackendKind::ReferenceBackend => true,
-            BackendKind::Registered(backend) => backend.supports_subgroup_ops(),
-        }),
+        // This pass validates semantic IR shape. Registered target compilation
+        // below is the sole authority for target capability admission.
+        supports_subgroup_ops: true,
         supports_indirect_dispatch: false,
         supports_specialization_constants: false,
         // BackendCapabilities grew 8 additional fields (has_dual_issue_fp32_int32,

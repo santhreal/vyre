@@ -4,8 +4,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::Serialize;
-#[cfg(feature = "gpu")]
-use vyre::VyreBackend;
 use vyre_conform::convergence_lens;
 use vyre_conform::dispatch_grid;
 use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
@@ -322,10 +320,7 @@ fn dispatch_capable_backends() -> Vec<&'static vyre::BackendRegistration> {
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn()
-            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
-            vyre_driver_metal::acquire;
-        std::hint::black_box(metal_acquire);
+        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
     }
 }
 

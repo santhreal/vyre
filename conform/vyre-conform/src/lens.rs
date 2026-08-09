@@ -12,9 +12,8 @@
 //! Each test picks a lens, passes an op iterator, and the shared code
 //! does the rest with missing coverage represented as failure.
 
-use vyre_driver::{BackendError, DispatchConfig, Error, VyreBackend};
+use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, Error};
 use vyre_foundation::ir::{BufferAccess, Program};
-use vyre_foundation::program_caps;
 use vyre_libs::fixture_catalog::{
     convergence_contract, fixpoint_contract, FixpointContract, OpEntry,
 };
@@ -191,11 +190,11 @@ pub fn witness(entry: &OpEntry) -> LensOutcome {
 
 /// CPU-vs-backend byte-identity lens.
 ///
-/// Dispatches the op on both the CPU reference and the supplied
-/// backend, and asserts byte-identity (modulo the op's declared ULP
-/// tolerance). Missing fixtures and missing backend capabilities are hard
-/// failures. Fixpoint ops are routed to [`fixpoint`] instead.
-pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
+/// Compiles the operation for the supplied registered target, executes the
+/// authenticated artifact and CPU reference, and compares outputs under the
+/// operation's declared tolerance. Missing fixtures and target failures are
+/// hard failures. Fixpoint operations are routed to [`fixpoint`] instead.
+pub fn cpu_vs_backend(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
     // Fixpoint ops need a convergence loop; route them to the fixpoint
     // lens automatically instead of skipping.
     if fixpoint_contract(entry.id).is_some() {
@@ -216,26 +215,6 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
     let program = entry
         .program()
         .expect("Fix: conformance operation must provide a neutral builder");
-    let required = program_caps::scan(&program);
-    if let Err(missing) = program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    ) {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: missing backend capability: {missing}. Fix: wire the capability or the op.",
-                entry.id
-            ),
-        };
-    }
 
     let cases = test_inputs();
     if cases.is_empty() {
@@ -247,23 +226,14 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
             ),
         };
     }
-    let registration = match vyre_driver::backend::backend_registration(backend.id()) {
-        Ok(registration) => registration,
-        Err(error) => {
-            return LensOutcome::Fail {
-                case_index: 0,
-                detail: format!("backend `{}` registration failed: {error}", backend.id()),
-            };
-        }
-    };
-    let production = match ProductionSession::compile(&program, registration) {
+    let production = match ProductionSession::compile(&program, backend) {
         Ok(session) => session,
         Err(error) => {
             return LensOutcome::Fail {
                 case_index: 0,
                 detail: format!(
                     "backend `{}` production compilation failed: {error}",
-                    backend.id()
+                    backend.id
                 ),
             };
         }
@@ -286,7 +256,7 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
                     case_index: index,
                     detail: format!(
                         "backend `{}` artifact submission failed: {error}",
-                        backend.id()
+                        backend.id
                     ),
                 };
             }
@@ -296,7 +266,7 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
                 case_index: index,
                 detail: format!(
                     "backend `{}` diverged from CPU reference on case {index}: {detail}",
-                    backend.id(),
+                    backend.id,
                 ),
             };
         }
@@ -313,7 +283,6 @@ struct IterativeLensSetup {
 
 fn prepare_iterative_lens(
     entry: &OpEntry,
-    backend: &dyn VyreBackend,
     lens_name: &str,
 ) -> Result<IterativeLensSetup, LensOutcome> {
     let Some(test_inputs) = entry.test_inputs else {
@@ -328,26 +297,6 @@ fn prepare_iterative_lens(
     let program = entry
         .program()
         .expect("Fix: conformance operation must provide a neutral builder");
-    let required = program_caps::scan(&program);
-    if let Err(missing) = program_caps::check_backend_capabilities(
-        backend.id(),
-        backend.supports_subgroup_ops(),
-        backend.supports_f16(),
-        backend.supports_bf16(),
-        backend.supports_indirect_dispatch(),
-        true,
-        backend.supports_distributed_collectives(),
-        backend.max_workgroup_size(),
-        &required,
-    ) {
-        return Err(LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "{}: missing backend capability: {missing}. Fix: wire the capability or the op.",
-                entry.id
-            ),
-        });
-    }
     let config = dispatch_config_for(&program).map_err(|detail| LensOutcome::Fail {
         case_index: 0,
         detail,
@@ -371,7 +320,7 @@ fn prepare_iterative_lens(
 
 fn compare_iterative_lens_cases(
     setup: &IterativeLensSetup,
-    backend: &dyn VyreBackend,
+    backend: &'static BackendRegistration,
     loop_name: &str,
     max_iterations: u32,
     mut run_cpu_loop: impl FnMut(&[Vec<u8>]) -> Result<Vec<Vec<u8>>, LoopError>,
@@ -414,7 +363,7 @@ fn compare_iterative_lens_cases(
                     case_index: index,
                     detail: format!(
                         "backend `{}` did not converge in {max_iterations} iterations.",
-                        backend.id()
+                        backend.id
                     ),
                 };
             }
@@ -423,7 +372,7 @@ fn compare_iterative_lens_cases(
                     case_index: index,
                     detail: format!(
                         "backend `{}` {loop_name} dispatch failed: {error}",
-                        backend.id()
+                        backend.id
                     ),
                 };
             }
@@ -442,7 +391,7 @@ fn compare_iterative_lens_cases(
             Err(detail) => {
                 return LensOutcome::Fail {
                     case_index: index,
-                    detail: format!("backend `{}` {detail}", backend.id()),
+                    detail: format!("backend `{}` {detail}", backend.id),
                 };
             }
         };
@@ -453,7 +402,7 @@ fn compare_iterative_lens_cases(
                 case_index: index,
                 detail: format!(
                     "backend `{}` final state diverged from CPU reference after {loop_name} loop: {detail}",
-                    backend.id()
+                    backend.id
                 ),
             };
         }
@@ -471,14 +420,14 @@ fn compare_iterative_lens_cases(
 /// read the flag's first word; if zero, the op has converged. The CPU
 /// reference is expected to reach the same final state after iterating
 /// under the same loop.
-pub fn fixpoint(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
+pub fn fixpoint(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
     let Some(contract) = fixpoint_contract(entry.id) else {
         return LensOutcome::Fail {
             case_index: 0,
             detail: format!("{}: no FixpointContract registered for this op. Fix: register a contract or use the cpu_vs_backend lens.", entry.id),
         };
     };
-    let setup = match prepare_iterative_lens(entry, backend, "fixpoint") {
+    let setup = match prepare_iterative_lens(entry, "fixpoint") {
         Ok(setup) => setup,
         Err(outcome) => return outcome,
     };
@@ -518,7 +467,7 @@ pub fn fixpoint(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
 /// The lens infers the `current` (RO input) and `next` (RW output)
 /// buffers, copies `next` → `current` between iterations, and stops
 /// when `next` stops changing.
-pub fn convergence(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
+pub fn convergence(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
     let Some(contract) = convergence_contract(entry.id) else {
         return LensOutcome::Fail {
             case_index: 0,
@@ -528,7 +477,7 @@ pub fn convergence(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome {
             ),
         };
     };
-    let setup = match prepare_iterative_lens(entry, backend, "convergence") {
+    let setup = match prepare_iterative_lens(entry, "convergence") {
         Ok(setup) => setup,
         Err(outcome) => return outcome,
     };
@@ -672,7 +621,7 @@ fn cpu_convergence(
 }
 
 fn gpu_convergence(
-    backend: &dyn VyreBackend,
+    backend: &'static BackendRegistration,
     program: &Program,
     initial_inputs: &[Vec<u8>],
     max_iterations: u32,
@@ -706,12 +655,10 @@ enum LoopError {
 }
 
 fn production_session(
-    backend: &dyn VyreBackend,
+    backend: &'static BackendRegistration,
     program: &Program,
 ) -> Result<ProductionSession, LoopError> {
-    let registration =
-        vyre_driver::backend::backend_registration(backend.id()).map_err(LoopError::Backend)?;
-    ProductionSession::compile(program, registration)
+    ProductionSession::compile(program, backend)
         .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))
 }
 
@@ -742,7 +689,7 @@ fn cpu_fixpoint(
 }
 
 fn gpu_fixpoint(
-    backend: &dyn VyreBackend,
+    backend: &'static BackendRegistration,
     program: &Program,
     initial_inputs: &[Vec<u8>],
     flag_index: usize,

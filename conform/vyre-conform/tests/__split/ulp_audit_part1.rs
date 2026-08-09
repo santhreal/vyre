@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn release_per_op_f32_ulp_audit() {
-    let backend = build_dispatch_backend();
+    let backend = build_registered_backend();
     let entries = all_entries();
 
     let mut table: BTreeMap<&'static str, u32> = BTreeMap::new();
@@ -40,29 +40,13 @@ fn release_per_op_f32_ulp_audit() {
         };
 
         let tolerance = audit_f32_ulp_budget(&program);
-        let required = program_caps::scan(&program);
-        if let Err(missing) = program_caps::check_backend_capabilities(
-            backend.id(),
-            backend.supports_subgroup_ops(),
-            backend.supports_f16(),
-            backend.supports_bf16(),
-            backend.supports_indirect_dispatch(),
-            true,
-            backend.supports_distributed_collectives(),
-            backend.max_workgroup_size(),
-            &required,
-        ) {
-            failures.push(format!(
-                "{}: backend `{}` missing required capabilities for F32 ULP audit: {missing}",
-                entry.id,
-                backend.id(),
-            ));
-            continue;
-        }
-        let config = match dispatch_grid::config_for_program(&program) {
-            Ok(config) => config,
+        let production = match ProductionSession::compile(&program, backend) {
+            Ok(production) => production,
             Err(error) => {
-                failures.push(format!("{}: {error}", entry.id));
+                failures.push(format!(
+                    "{}: backend `{}` artifact compilation failed: {error}",
+                    entry.id, backend.id
+                ));
                 continue;
             }
         };
@@ -133,11 +117,11 @@ fn release_per_op_f32_ulp_audit() {
                     continue;
                 }
             };
-            let gpu = match backend.dispatch_borrowed(&program, &backend_inputs, &config) {
+            let gpu = match production.submit(&backend_inputs) {
                 Ok(o) => o,
                 Err(e) => {
                     failures.push(format!(
-                        "{} case {}: backend dispatch failed: {e}",
+                        "{} case {}: artifact submission failed: {e}",
                         entry.id, case_index
                     ));
                     continue;
@@ -202,8 +186,7 @@ fn release_per_op_f32_ulp_audit() {
                         continue;
                     }
                 };
-                match backend.dispatch_borrowed(&program, &backend_inputs_for_adversarial, &config)
-                {
+                match production.submit(&backend_inputs_for_adversarial) {
                     Ok(gpu) => {
                         let max_ulp = match max_ulp_delta(&cpu, &gpu, &program) {
                             Some(u) => u,
@@ -224,7 +207,7 @@ fn release_per_op_f32_ulp_audit() {
                         }
                     }
                     Err(error) => failures.push(format!(
-                        "{} adversarial ({:?}): backend dispatch failed: {error}",
+                        "{} adversarial ({:?}): artifact submission failed: {error}",
                         entry.id, adv
                     )),
                 }

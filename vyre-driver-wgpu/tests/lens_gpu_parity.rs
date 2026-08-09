@@ -3,18 +3,10 @@
 //! `lens_parity.rs` by adding the `cpu_vs_backend` and `fixpoint`
 //! coverage the CPU-only harness can't exercise.
 
-use std::sync::OnceLock;
-
-use vyre_driver_wgpu::WgpuBackend;
 use vyre_conform::lens::{self, LensOutcome};
-
-fn backend() -> &'static WgpuBackend {
-    static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
-    BACKEND.get_or_init(|| {
-        WgpuBackend::acquire().expect(
-            "Fix: GPU adapter required for lens_gpu_parity. Run on a host with a working wgpu adapter.",
-        )
-    })
+fn backend() -> &'static vyre_driver::BackendRegistration {
+    vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+        .expect("Fix: WGPU driver crate must register its authenticated artifact target.")
 }
 
 #[test]

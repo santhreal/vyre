@@ -11,7 +11,7 @@ use blake3::Hash;
 use vyre::backend::backend_dispatches;
 use vyre::backend::registered_backends;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, ExprNode, Node, Program};
-use vyre::{BackendRegistration, DispatchConfig, VyreBackend};
+use vyre::{BackendRegistration, DispatchConfig};
 use vyre_conform::dispatch_grid;
 use vyre_conform::fp_parity::{compare_output_buffers, BufferParity};
 use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
@@ -105,7 +105,7 @@ struct Summary {
 #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
 enum BackendKind {
     ReferenceBackend,
-    Registered(Box<dyn VyreBackend>),
+    Registered(&'static BackendRegistration),
 }
 
 struct BackendRunner {
@@ -164,24 +164,22 @@ impl BackendRunner {
                     .map(|outputs| outputs.into_iter().map(|value| value.to_bytes()).collect())
                     .map_err(|error| format!("reference dispatch failed: {error}"))
             }
-            BackendKind::Registered(backend) => {
-                let run_dispatch = |inputs: &[&[u8]]| {
-                    if self.id == "cuda"
-                        && vyre_driver::grid_sync::contains_grid_sync(program)
-                        && !backend.supports_grid_sync()
-                    {
-                        vyre_driver::grid_sync::dispatch_with_grid_sync_split(
-                            &**backend, program, inputs, config,
-                        )
+            BackendKind::Registered(registration) => {
+                let production =
+                    vyre_conform::production::ProductionSession::compile(program, registration)
+                        .map_err(|error| error.to_string())?;
+                let run_submission = |inputs: &[&[u8]]| {
+                    if let Some(grid) = config.grid_override {
+                        production.submit_with_invocation_grid(inputs, grid)
                     } else {
-                        backend.dispatch_borrowed(program, inputs, config)
+                        production.submit(inputs)
                     }
                     .map_err(|error| error.to_string())
                 };
 
                 if let Some(plan) = plan {
                     backend_dispatch_inputs_with_plan_into(inputs, plan, backend_inputs)?;
-                    run_dispatch(backend_inputs)
+                    run_submission(backend_inputs)
                 } else {
                     let plan_storage = backend_dispatch_plan(program)?;
                     let mut local_inputs = Vec::new();
@@ -190,7 +188,7 @@ impl BackendRunner {
                         &plan_storage,
                         &mut local_inputs,
                     )?;
-                    run_dispatch(&local_inputs)
+                    run_submission(&local_inputs)
                 }
             }
         }
@@ -710,7 +708,7 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
     let selected = env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&BackendRegistration> = registered_backends().to_vec();
+    let mut registrations: Vec<&'static BackendRegistration> = registered_backends().to_vec();
     registrations.retain(|registration| {
         selected
             .as_deref()
@@ -734,30 +732,17 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
     runners
 }
 
-fn build_backend_runner(registration: &BackendRegistration) -> Option<BackendRunner> {
-    if !backend_dispatches(registration.id) {
-        return None;
-    }
-
-    match registration.acquire() {
-        Ok(backend) => Some(BackendRunner {
-            id: registration.id,
-            kind: BackendKind::Registered(backend),
-        }),
-        Err(error) => panic!(
-            "Fix: registered dispatch backend `{}` failed its factory probe in the strict parity matrix: {error}",
-            registration.id
-        ),
-    }
+fn build_backend_runner(registration: &'static BackendRegistration) -> Option<BackendRunner> {
+    backend_dispatches(registration.id).then_some(BackendRunner {
+        id: registration.id,
+        kind: BackendKind::Registered(registration),
+    })
 }
 
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn()
-            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
-            vyre_driver_metal::acquire;
-        std::hint::black_box(metal_acquire);
+        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
     }
 }
 

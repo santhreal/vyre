@@ -10,8 +10,6 @@
 
 use vyre_conform::lens::{self, LensOutcome};
 
-use vyre::VyreBackend;
-
 #[cfg(feature = "gpu")]
 use vyre_driver_metal as _;
 #[cfg(feature = "gpu")]
@@ -83,17 +81,15 @@ fn fixpoint_contract_reachable_for_every_registered_op() {
     }
 }
 
-// Calls `build_dispatch_backend`; if no dispatch-capable GPU backend is linked,
-// the test must fail loudly instead of being compiled out.
+// If no artifact-capable target is linked, the test fails loudly.
 #[test]
 fn convergence_contract_reachable_for_every_registered_op() {
     // Discover every op with a ConvergenceContract and verify structural
-    // invariants plus CPU-side and backend convergence. Backend acquisition
-    // must fail loudly if no dispatch-capable GPU backend is linked.
+    // invariants plus CPU-side and registered-target convergence.
     let entries = vyre_libs::fixture_catalog::all_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut cpu_failures = Vec::with_capacity(failure_capacity);
-    let backend = build_dispatch_backend();
+    let backend = build_registered_backend();
 
     for entry in entries {
         let Some(contract) = vyre_libs::fixture_catalog::convergence_contract(entry.id) else {
@@ -140,8 +136,7 @@ fn convergence_contract_reachable_for_every_registered_op() {
             }
             {
                 match vyre_conform::convergence_lens::run_fixpoint_to_convergence(
-                    vyre::backend::backend_registration(backend.id())
-                        .expect("Fix: acquired backend must retain its registration"),
+                    backend,
                     &program,
                     inputs,
                     contract.max_iterations,
@@ -191,43 +186,36 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
     )
     .with_category("conform");
 
-    let backend = build_dispatch_backend();
-    let outcome = lens::cpu_vs_backend(&entry, backend.as_ref());
+    let backend = build_registered_backend();
+    let outcome = lens::cpu_vs_backend(&entry, backend);
     assert!(
         outcome.is_pass(),
         "cpu_vs_backend lens should accept small ULP divergence for sin(1.0), but got: {outcome:?}"
     );
 }
 
-fn build_dispatch_backend() -> Box<dyn VyreBackend> {
+fn build_registered_backend() -> &'static vyre::BackendRegistration {
     force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let registration = vyre::backend::registered_backends()
+    vyre::backend::registered_backends()
         .iter()
-        .find(|r| {
-            vyre::backend::backend_dispatches(r.id)
-                && selected.as_deref().is_none_or(|backend| r.id == backend)
+        .find(|registration| {
+            vyre::backend::backend_dispatches(registration.id)
+                && selected
+                    .as_deref()
+                    .is_none_or(|backend| registration.id == backend)
         })
         .expect(
             "Fix: a dispatch-capable backend must be registered for convergence lens. \
              Link a concrete driver crate into the test binary.",
-        );
-    registration.acquire().unwrap_or_else(|error| {
-        panic!(
-            "Fix: dispatch-capable backend `{}` failed its factory probe: {error}",
-            registration.id
         )
-    })
 }
 
 fn force_link_backend_inventory() {
     #[cfg(feature = "gpu")]
     {
-        let metal_acquire: fn()
-            -> Result<Box<dyn VyreBackend>, vyre_driver::backend::BackendError> =
-            vyre_driver_metal::acquire;
-        std::hint::black_box(metal_acquire);
+        std::hint::black_box(vyre_driver_metal::METAL_BACKEND_ID);
     }
 }
