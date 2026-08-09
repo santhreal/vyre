@@ -27,6 +27,7 @@ pub mod emit;
 pub mod engine;
 mod executable_api;
 pub mod ext;
+mod materializer;
 mod numeric;
 mod padded_upload;
 #[cfg(feature = "parity-testing")]
@@ -212,7 +213,7 @@ inventory::submit! {
         }),
         supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
         target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: None,
+        materializer: Some(materializer::materializer_factory),
     }
 }
 

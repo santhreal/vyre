@@ -329,12 +329,42 @@ impl WgpuPipeline {
         )
     }
 
+    /// Materialize authenticated WGSL using backend-owned device resources.
+    pub(crate) fn compile_target_with_device_queue(
+        program: &Program,
+        wgsl: &str,
+        descriptor: &vyre_lower::KernelDescriptor,
+        config: &DispatchConfig,
+        adapter_info: wgpu::AdapterInfo,
+        enabled_features: crate::runtime::device::EnabledFeatures,
+        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
+        dispatch_arena: Arc<DispatchArena>,
+        persistent_pool: crate::buffer::BufferPool,
+        pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
+        bind_group_layout_cache: Arc<BindGroupLayoutCache>,
+    ) -> Result<Arc<Self>, BackendError> {
+        Self::compile_with_device_queue_source(
+            program,
+            config,
+            adapter_info,
+            enabled_features,
+            device_queue,
+            dispatch_arena,
+            persistent_pool,
+            pipeline_cache,
+            bind_group_layout_cache,
+            Some(wgsl),
+            Some(descriptor),
+        )
+    }
+
     /// Pre-compile `program` using the supplied backend-owned device and arena.
     ///
     /// # Errors
     ///
     /// Returns a backend error when lowering, cache access, or pipeline
     /// creation fails.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn compile_with_device_queue(
         program: &Program,
         config: &DispatchConfig,
@@ -346,31 +376,81 @@ impl WgpuPipeline {
         pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
         bind_group_layout_cache: Arc<BindGroupLayoutCache>,
     ) -> Result<Arc<Self>, BackendError> {
+        Self::compile_with_device_queue_source(
+            program,
+            config,
+            adapter_info,
+            enabled_features,
+            device_queue,
+            _dispatch_arena,
+            persistent_pool,
+            pipeline_cache,
+            bind_group_layout_cache,
+            None,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn compile_with_device_queue_source(
+        program: &Program,
+        config: &DispatchConfig,
+        adapter_info: wgpu::AdapterInfo,
+        enabled_features: crate::runtime::device::EnabledFeatures,
+        device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
+        _dispatch_arena: Arc<DispatchArena>,
+        persistent_pool: crate::buffer::BufferPool,
+        pipeline_cache: Arc<runtime::cache::pipeline::LruPipelineCache>,
+        bind_group_layout_cache: Arc<BindGroupLayoutCache>,
+        authenticated_wgsl: Option<&str>,
+        authenticated_descriptor: Option<&vyre_lower::KernelDescriptor>,
+    ) -> Result<Arc<Self>, BackendError> {
         let compile_program = program;
+        let mut target_config;
+        let config = if let Some(descriptor) = authenticated_descriptor {
+            target_config = config.clone();
+            target_config.workgroup_override = Some(descriptor.dispatch.workgroup_size);
+            &target_config
+        } else {
+            config
+        };
         let effective_config =
             wgpu_effective_dispatch_config(compile_program, config, &device_queue.0)?;
         let config = &effective_config;
-        // Cache-first: both keys are checked before `execution_plan::plan`
-        // and before binding-metadata construction (orchestration sweep 2026-04).
+        // Authenticated target bytes cannot reuse a Program-keyed cache entry
+        // that may have been built from different module bytes.
         let early_key = early_pipeline_cache_key(compile_program, &adapter_info, config);
-        if let Some(hit) = pipeline_cache.get(&early_key) {
-            return Ok(Arc::new(Self::from_cached_artifact(
-                hit.as_ref(),
-                device_queue,
-                persistent_pool,
-            )));
+        if authenticated_wgsl.is_none() {
+            if let Some(hit) = pipeline_cache.get(&early_key) {
+                return Ok(Arc::new(Self::from_cached_artifact(
+                    hit.as_ref(),
+                    device_queue,
+                    persistent_pool,
+                )));
+            }
         }
 
-        let wgsl =
-            load_or_compile_disk_wgsl(compile_program, &adapter_info, config, &enabled_features)?;
+        let wgsl = match authenticated_wgsl {
+            Some(wgsl) => wgsl.to_string(),
+            None => load_or_compile_disk_wgsl(
+                compile_program,
+                &adapter_info,
+                config,
+                &enabled_features,
+            )?,
+        };
         let artifact_key = compiled_pipeline_cache_key(&adapter_info, &wgsl);
 
-        let descriptor = crate::emit::descriptor_gate::validate_and_analyze(compile_program)
-            .map_err(|error| {
-                BackendError::new(format!(
-                    "failed to derive KernelDescriptor for wgpu pipeline metadata: {error}. Fix: keep pipeline metadata on the same descriptor path as WGSL emission."
-                ))
-            })?;
+        let descriptor = match authenticated_descriptor {
+            Some(descriptor) => descriptor.clone(),
+            None => crate::emit::descriptor_gate::validate_and_analyze(compile_program).map_err(
+                |error| {
+                    BackendError::new(format!(
+                        "failed to derive KernelDescriptor for wgpu pipeline metadata: {error}. Fix: keep pipeline metadata on the same descriptor path as WGSL emission."
+                    ))
+                },
+            )?,
+        };
         let staging_pool = StagingBufferPool::new();
         let trap_tags_vec = descriptor_trap_tags(&descriptor)?;
         if !trap_tags_vec.is_empty()
@@ -589,7 +669,9 @@ impl WgpuPipeline {
             staging_pool: staging_pool.clone(),
         });
 
-        pipeline_cache.insert(early_key, Arc::clone(&compiled_artifact));
+        if authenticated_wgsl.is_none() {
+            pipeline_cache.insert(early_key, Arc::clone(&compiled_artifact));
+        }
 
         Ok(Arc::new(Self::from_cached_artifact(
             compiled_artifact.as_ref(),

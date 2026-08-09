@@ -1,12 +1,12 @@
 use vyre_driver::BackendError;
 use vyre_megakernel::{
-    compile_selected_modules, Artifact, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat,
+    compile_selected_modules, Artifact, EmittedTargetModule, TargetCompileError, TargetCompiler,
+    TargetPayload, TargetPayloadFormat,
 };
 
 use crate::METAL_BACKEND_ID;
 
-const METAL_TARGET_FORMAT_VERSION: u16 = 1;
+pub(crate) const METAL_TARGET_FORMAT_VERSION: u16 = 2;
 
 pub(crate) struct MetalTargetCompiler {
     format: TargetPayloadFormat,
@@ -24,10 +24,17 @@ impl TargetCompiler for MetalTargetCompiler {
                     "verified lowering failed before Metal emission: {error}"
                 ))
             })?;
-            vyre_emit_metal::emit(&lowered.descriptor)
-                .map(String::into_bytes)
-                .map_err(|error| {
+            let artifact =
+                vyre_emit_metal::emit_artifact(&lowered.descriptor).map_err(|error| {
                     TargetCompileError::Emission(format!("Metal emission failed: {error}"))
+                })?;
+            let entry_point = artifact.entry_point.clone();
+            serde_json::to_vec(&artifact)
+                .map(|bytes| EmittedTargetModule { entry_point, bytes })
+                .map_err(|error| {
+                    TargetCompileError::Emission(format!(
+                        "Metal target artifact serialization failed: {error}"
+                    ))
                 })
         })
     }

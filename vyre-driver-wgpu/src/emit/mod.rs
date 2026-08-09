@@ -285,7 +285,7 @@ impl WgpuBackend {
     }
 }
 
-fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError> {
+pub(crate) fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError> {
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     let info = match validator.validate(module) {
         Ok(info) => info,

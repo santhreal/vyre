@@ -1,7 +1,7 @@
 use vyre_driver::BackendError;
 use vyre_megakernel::{
-    compile_selected_modules, Artifact, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat,
+    compile_selected_modules, Artifact, EmittedTargetModule, TargetCompileError, TargetCompiler,
+    TargetPayload, TargetPayloadFormat,
 };
 
 use crate::{backend::SpirvBackend, SPIRV_BACKEND_ID};
@@ -25,7 +25,10 @@ impl TargetCompiler for SpirvTargetCompiler {
             for word in words {
                 bytes.extend_from_slice(&word.to_le_bytes());
             }
-            Ok(bytes)
+            Ok(EmittedTargetModule {
+                entry_point: "main".to_string(),
+                bytes,
+            })
         })
     }
 }

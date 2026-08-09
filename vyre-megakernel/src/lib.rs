@@ -33,9 +33,9 @@ pub use envelope::{
     TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use target::{
-    artifact_abi, compile_selected_modules, fuse_selected_module, selected_modules, SelectedModule,
-    TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
-    TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+    artifact_abi, compile_selected_modules, fuse_selected_module, selected_modules,
+    EmittedTargetModule, SelectedModule, TargetCompileError, TargetCompiler, TargetModuleBundle,
+    TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
 
 use std::collections::{BTreeMap, BTreeSet};

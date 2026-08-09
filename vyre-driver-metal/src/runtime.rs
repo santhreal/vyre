@@ -427,6 +427,10 @@ impl MetalBackend {
         })
     }
 
+    pub(crate) fn artifact_device_name(&self) -> String {
+        self.device.name().to_string()
+    }
+
     fn compile_pipeline(
         &self,
         program: &Program,
@@ -526,6 +530,93 @@ impl MetalBackend {
             cached.artifact.clone(),
             cached.pipeline.clone(),
         ))
+    }
+
+    pub(crate) fn materialize_target_module(
+        &self,
+        artifact: vyre_emit_metal::MetalArtifact,
+    ) -> Result<MetalTargetModule, BackendError> {
+        if artifact.entry_point != "main" {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: authenticated Metal target entry point must be `main`, found `{}`.",
+                    artifact.entry_point
+                ),
+            });
+        }
+        let options = metal::CompileOptions::new();
+        let library = self
+            .device
+            .new_library_with_source(&artifact.msl, &options)
+            .map_err(|error| BackendError::KernelCompileFailed {
+                backend: METAL_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "authenticated Metal library compilation failed: {error}"
+                ),
+            })?;
+        let function = library
+            .get_function(&artifact.entry_point, None)
+            .map_err(|error| BackendError::KernelCompileFailed {
+                backend: METAL_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "authenticated Metal entry point `{}` lookup failed: {error}",
+                    artifact.entry_point
+                ),
+            })?;
+        let pipeline = self
+            .device
+            .new_compute_pipeline_state_with_function(&function)
+            .map_err(|error| BackendError::KernelCompileFailed {
+                backend: METAL_BACKEND_ID.to_string(),
+                compiler_message: format!(
+                    "authenticated Metal pipeline creation failed for `{}`: {error}",
+                    artifact.entry_point
+                ),
+            })?;
+        Ok(MetalTargetModule { artifact, pipeline })
+    }
+
+    pub(crate) fn dispatch_target_module(
+        &self,
+        module: &MetalTargetModule,
+        program: &Program,
+        inputs: &[&[u8]],
+        config: &DispatchConfig,
+    ) -> Result<TimedDispatchResult, BackendError> {
+        let started = Instant::now();
+        validate_metal_dispatch_config(
+            config,
+            "Metal authenticated cooperative grid dispatch",
+            "Metal authenticated repeated dispatch",
+            "Metal authenticated dispatch",
+        )?;
+        let binding_plan = BindingPlan::from_borrowed_inputs(program, inputs)?;
+        let output_layouts = output_binding_layouts(program)?;
+        let output_by_binding = output_layout_map(output_layouts)?;
+        let metal_slots = metal_slot_map(&module.artifact)?;
+        let buffers = plan_buffers(
+            &self.device,
+            &binding_plan,
+            inputs,
+            &output_by_binding,
+            &metal_slots,
+            &module.artifact.bindings,
+        )?;
+        let result = self.dispatch_planned_buffers(
+            program,
+            &binding_plan,
+            config,
+            &module.artifact,
+            &module.pipeline,
+            buffers,
+        )?;
+        Ok(TimedDispatchResult {
+            outputs: result.outputs,
+            wall_ns: elapsed_ns(started, "Metal authenticated timed dispatch")?,
+            device_ns: None,
+            enqueue_ns: Some(result.enqueue_ns),
+            wait_ns: Some(result.wait_ns),
+        })
     }
 
     fn record_pipeline_cache_miss_reason(&self, reason: PipelineCacheMissReason) {
@@ -1567,6 +1658,11 @@ struct MetalResidentBuffer {
 #[derive(Clone)]
 struct MetalCompiledPipeline {
     identity: PipelineCacheIdentity,
+    artifact: vyre_emit_metal::MetalArtifact,
+    pipeline: metal::ComputePipelineState,
+}
+
+pub(crate) struct MetalTargetModule {
     artifact: vyre_emit_metal::MetalArtifact,
     pipeline: metal::ComputePipelineState,
 }

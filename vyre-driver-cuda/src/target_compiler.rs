@@ -1,7 +1,7 @@
 use vyre_driver::{BackendError, DispatchConfig};
 use vyre_megakernel::{
-    compile_selected_modules, Artifact, TargetCompileError, TargetCompiler, TargetPayload,
-    TargetPayloadFormat,
+    compile_selected_modules, Artifact, EmittedTargetModule, TargetCompileError, TargetCompiler,
+    TargetPayload, TargetPayloadFormat,
 };
 
 use crate::CUDA_BACKEND_ID;
@@ -20,7 +20,10 @@ impl TargetCompiler for CudaTargetCompiler {
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
         compile_selected_modules(artifact, self.format.clone(), |program| {
             crate::codegen::program_to_ptx(program, &DispatchConfig::default())
-                .map(String::into_bytes)
+                .map(|source| EmittedTargetModule {
+                    entry_point: "main".to_string(),
+                    bytes: source.into_bytes(),
+                })
                 .map_err(TargetCompileError::Emission)
         })
     }

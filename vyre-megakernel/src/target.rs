@@ -148,11 +148,20 @@ pub fn fuse_selected_module(module: &SelectedModule) -> Result<Program, TargetCo
     })
 }
 
+/// Target-native bytes and the exact emitted entry-point identity.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EmittedTargetModule {
+    /// Entry point exported by the target-native module.
+    pub entry_point: String,
+    /// Immutable target-native module bytes.
+    pub bytes: Vec<u8>,
+}
+
 /// Compile all selected groups through one target emitter and package canonical bytes.
 pub fn compile_selected_modules(
     artifact: &Artifact,
     format: TargetPayloadFormat,
-    mut emit: impl FnMut(&Program) -> Result<Vec<u8>, TargetCompileError>,
+    mut emit: impl FnMut(&Program) -> Result<EmittedTargetModule, TargetCompileError>,
 ) -> Result<TargetPayload, TargetCompileError> {
     let modules = selected_modules(artifact)?;
     let bindings = resource_bindings(artifact);
@@ -160,8 +169,8 @@ pub fn compile_selected_modules(
     let mut entries = Vec::with_capacity(modules.len());
     for module in modules {
         let program = fuse_selected_module(&module)?;
-        let bytes = emit(&program)?;
-        let entry_point = "main".to_string();
+        let emitted = emit(&program)?;
+        let entry_point = emitted.entry_point;
         let node = *module.nodes.first().ok_or_else(|| {
             TargetCompileError::InvalidArtifact(format!(
                 "fusion group {} has no member node",
@@ -179,7 +188,7 @@ pub fn compile_selected_modules(
             group: module.group,
             stage: module.stage,
             entry_point,
-            bytes,
+            bytes: emitted.bytes,
         });
     }
     let bytes = TargetModuleBundle::new(images).to_bytes()?;

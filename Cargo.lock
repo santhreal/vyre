@@ -3678,6 +3678,7 @@ dependencies = [
  "proptest",
  "rustc-hash 2.1.3",
  "serde",
+ "serde_json",
  "smallvec",
  "stats_alloc",
  "tempfile",

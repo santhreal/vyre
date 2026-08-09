@@ -10,6 +10,7 @@ use vyre_driver::backend::{BackendError, VyreBackend};
 /// Stable backend id for native Metal execution.
 pub const METAL_BACKEND_ID: &str = "metal";
 
+mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod runtime;
 mod target_compiler;
@@ -54,7 +55,7 @@ inventory::submit! {
         factory: acquire,
         supported_ops: vyre_driver::backend::core_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: None,
+        materializer: Some(materializer::materializer_factory),
     }
 }
 
