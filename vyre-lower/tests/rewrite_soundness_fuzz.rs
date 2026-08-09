@@ -261,7 +261,7 @@ fn gen_descriptor(seed: u64) -> KernelDescriptor {
             95..=97 => {
                 ops.push(KernelOp {
                     kind: KernelOpKind::Barrier {
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![],
                     result: None,
@@ -274,7 +274,7 @@ fn gen_descriptor(seed: u64) -> KernelDescriptor {
                 ops.push(KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: vyre_foundation::ir::AtomicOp::Add,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![slot, idx, val],
                     result: Some(next_id),

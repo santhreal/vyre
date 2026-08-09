@@ -17,7 +17,7 @@ use crate::optimizer::{
     fact_substrate::FactSubstrate, registered_passes, requirements_satisfied, OptimizerError,
     PassMetadata, ProgramPassKind, ProgramPassRegistration,
 };
-use crate::runtime::perf::PerfScope;
+use crate::perf::PerfScope;
 
 #[derive(Debug, Default)]
 pub(crate) struct SchedulerFactState {

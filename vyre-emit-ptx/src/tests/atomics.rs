@@ -83,7 +83,7 @@ fn atomic_add_emits_atom_global_add_u32() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::Add,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: Some(2),
@@ -128,7 +128,7 @@ fn atomic_exchange_emits_atom_global_exch_b32() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::Exchange,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: Some(2),
@@ -185,8 +185,7 @@ fn atomic_bitwise_emits_atom_global_b32_suffix() {
                     KernelOp {
                         kind: KernelOpKind::Atomic {
                             op,
-                            ordering:
-                                vyre_foundation::runtime::memory_model::MemoryOrdering::Relaxed,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
                         },
                         operands: vec![0, 0, 1],
                         result: Some(2),
@@ -245,7 +244,7 @@ fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::Or,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::Relaxed,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
                     },
                     operands: vec![0, 0, 3],
                     result: Some(4),
@@ -302,8 +301,7 @@ fn atomic_min_max_emit_correct_mnemonic() {
                     KernelOp {
                         kind: KernelOpKind::Atomic {
                             op,
-                            ordering:
-                                vyre_foundation::runtime::memory_model::MemoryOrdering::Relaxed,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
                         },
                         operands: vec![0, 0, 1],
                         result: Some(2),
@@ -351,7 +349,7 @@ fn shared_atomic_kernel(op: vyre_foundation::ir::AtomicOp) -> KernelDescriptor {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: Some(2),

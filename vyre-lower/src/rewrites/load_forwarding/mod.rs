@@ -906,8 +906,7 @@ mod tests {
                     },
                     KernelOp {
                         kind: KernelOpKind::Barrier {
-                            ordering:
-                                vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                         },
                         operands: vec![],
                         result: None,
@@ -1021,8 +1020,7 @@ mod tests {
                     KernelOp {
                         kind: KernelOpKind::Atomic {
                             op: vyre_foundation::ir::AtomicOp::Add,
-                            ordering:
-                                vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                         },
                         operands: vec![0, 0, 1], // slot 0
                         result: Some(2),
@@ -1202,8 +1200,7 @@ mod tests {
                     },
                     KernelOp {
                         kind: KernelOpKind::Barrier {
-                            ordering:
-                                vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                         },
                         operands: vec![],
                         result: None,

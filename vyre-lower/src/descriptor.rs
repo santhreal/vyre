@@ -29,7 +29,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, SubgroupReduceOp, UnOp};
-use vyre_foundation::runtime::memory_model::MemoryOrdering;
+use vyre_foundation::memory_model::MemoryOrdering;
 
 /// Reserved binding name for trap diagnostics.
 pub const TRAP_SIDECAR_NAME: &str = "__vyre_descriptor_trap_sidecar";

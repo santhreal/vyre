@@ -343,7 +343,7 @@ fn atomic_unsupported_op_returns_error() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::FetchNand,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: Some(2),

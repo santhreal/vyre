@@ -918,7 +918,7 @@ fn walk_expr(expr: &Expr, owning_node: NodeIndex, facts: &mut ProgramFacts) {
 mod tests {
     use super::*;
     use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-    use crate::runtime::memory_model::MemoryOrdering;
+    use crate::memory_model::MemoryOrdering;
 
     fn buf(name: &str) -> BufferDecl {
         BufferDecl::storage(name, 0, BufferAccess::ReadWrite, DataType::U32).with_count(4)

@@ -33,7 +33,7 @@ pub mod ir {
         // Audit cleanup A16 (2026-04-30): replaced `pub use crate::ir_eval::*`
         // wildcard with explicit named re-exports per
         // organization_contracts::foundation_wildcard_pub_reexports_are_baselined.
-        pub use crate::runtime::ir_eval::{
+        pub use crate::ir_eval::{
             fold_binary_literal, fold_cast_literal, fold_fma_literal, fold_literal_tree,
             fold_unary_literal,
         };
@@ -86,14 +86,20 @@ pub mod ir {
     pub use crate::validate::validation_error::ValidationError;
 }
 
-// Audit cleanup A12 (2026-04-30): grouped 13 loose `pub mod` decls into
-// 4 logical subdirs. Back-compat `pub use` aliases below preserve the
-// historical `vyre_foundation::<file>::*` paths so external callers
-// don't break during the transition.
-
-/// Runtime / evaluation surface (cpu_op, cpu_references, ir_eval,
-/// match_result, memory_model, perf, program_caps).
-pub mod runtime;
+/// CPU reference registration contract.
+pub mod cpu_op;
+/// Foundation-local CPU reference algorithms.
+pub mod cpu_references;
+/// Backend-neutral literal evaluation used by IR optimization and lowering.
+pub(crate) mod ir_eval;
+/// Domain-neutral byte-range result types.
+pub mod match_result;
+/// Substrate-neutral memory ordering.
+pub mod memory_model;
+/// Optimizer performance counters.
+pub mod perf;
+/// Program capability analysis.
+pub mod program_caps;
 
 /// Dispatch surface (dialect_lookup, extension, extern_registry).
 pub mod dispatch;
@@ -107,7 +113,6 @@ pub mod analysis;
 /// Substrate-neutral allocation reservation arithmetic shared by hot paths.
 pub mod allocation;
 
-// ---- Back-compat re-exports (old `vyre_foundation::<file>` paths) -----
 pub use algebra::algebraic_law_registry;
 pub use algebra::algebraic_law_registry::{
     has_law, is_associative, is_commutative, laws_for_op, AlgebraicLaw, AlgebraicLawRegistration,
@@ -115,8 +120,7 @@ pub use algebra::algebraic_law_registry::{
 pub use analysis::graph_view;
 pub use dispatch::dialect_lookup;
 pub use dispatch::extern_registry;
-pub use runtime::memory_model;
-pub use runtime::memory_model::MemoryOrdering;
+pub use memory_model::MemoryOrdering;
 
 /// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
 pub mod opaque_payload;
@@ -150,19 +154,8 @@ pub use dispatch::extern_registry::{
 mod ir_inner {
     pub mod model;
 }
-// composition / cpu_op / cpu_references / extension / ir_eval / match_result
-// / perf / program_caps relocated in audit cleanup A12 (2026-04-30)  -  they
-// now live under runtime/, dispatch/, algebra/, analysis/. Back-compat
-// re-exports for external `vyre_foundation::<file>::*` paths land further
-// up via `pub use runtime::memory_model;` etc.
 pub use algebra::composition;
 pub use dispatch::extension;
-pub use runtime::cpu_op;
-pub use runtime::cpu_references;
-pub(crate) use runtime::ir_eval;
-pub use runtime::match_result;
-pub use runtime::match_result::ByteRange;
-pub use runtime::perf;
 
 /// Deterministic field framing for content-addressed hashes.
 pub mod hashing;
@@ -186,11 +179,6 @@ pub mod pass_substrate;
 /// Program → substrate-neutral execution planning for fusion, readback,
 /// provenance, autotune, and accuracy guard decisions.
 pub mod execution_plan;
-/// Program → required-capability analysis (used by backends and conform
-/// harnesses to skip ops whose lowering needs a capability the backend
-/// does not advertise, without maintaining hardcoded exempt lists).
-/// Relocated to `runtime/` in audit cleanup A12 (2026-04-30).
-pub use runtime::program_caps;
 
 /// Unified error type for validation, wire format, lowering, and execution.
 pub mod error;

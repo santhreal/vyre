@@ -43,7 +43,7 @@ mod tests {
     use crate::OpaqueNodeData;
     use vyre_foundation::{
         ir::{AtomicOp, BinOp},
-        runtime::memory_model::MemoryOrdering,
+        memory_model::MemoryOrdering,
     };
 
     #[test]

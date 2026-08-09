@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 
 use crate::dialect_lookup::Signature;
 use crate::ir::{BufferAccess, Program};
-use crate::runtime::program_caps::{scan as scan_capabilities, RequiredCapabilities};
+use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 
 /// Deterministic fixture input cases. One case contains declaration-ordered buffers.
 pub type OperationFixtures = fn() -> Vec<Vec<Vec<u8>>>;

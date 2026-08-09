@@ -4,8 +4,8 @@
 //! Op id: `vyre-foundation::optimizer::passes::atomic_minimize`.
 
 use crate::ir::{AtomicOp, Expr, Node, Program, SubgroupReduceOp};
+use crate::memory_model::MemoryOrdering;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-use crate::runtime::memory_model::MemoryOrdering;
 // Ident hashes well into the FxHash64-mixed bucket; the std SipHash-13
 // default (which fights HashDoS) is overkill for an internal pass-private
 // table that never sees adversarial input. FxHashMap/FxHashSet measurably

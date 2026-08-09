@@ -32,7 +32,7 @@ fn atomic_add_emits_statement() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::Add,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: None,
@@ -98,7 +98,7 @@ fn atomic_fetch_nand_emits_compare_exchange_loop() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::FetchNand,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 1],
                     result: None,
@@ -145,7 +145,7 @@ fn atomic_compare_exchange_emits_statement() {
                 KernelOp {
                     kind: KernelOpKind::Atomic {
                         op: AtomicOp::CompareExchange,
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![0, 0, 0, 1],
                     result: Some(2),

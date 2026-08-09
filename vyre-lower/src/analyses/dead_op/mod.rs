@@ -339,7 +339,7 @@ mod tests {
             body: KernelBody {
                 ops: vec![KernelOp {
                     kind: KernelOpKind::Barrier {
-                        ordering: vyre_foundation::runtime::memory_model::MemoryOrdering::SeqCst,
+                        ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
                     },
                     operands: vec![],
                     result: None,
