@@ -8,7 +8,7 @@ fn read_metrics_returns_nonzero_only() {
     let off7 = ((control::METRICS_BASE + 7) as usize) * 4;
     ctrl[off7..off7 + 4].copy_from_slice(&99u32.to_le_bytes());
 
-    let metrics = Megakernel::read_metrics(&ctrl);
+    let metrics = ResidentWorkQueue::read_metrics(&ctrl);
     assert_eq!(metrics.len(), 2);
     assert!(metrics.contains(&(2, 42)));
     assert!(metrics.contains(&(7, 99)));
@@ -28,8 +28,8 @@ fn program_with_new_opcodes_passes_validation() {
 
 #[test]
 fn packed_slot_round_trips() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
-    Megakernel::publish_packed_slot(
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
+    ResidentWorkQueue::publish_packed_slot(
         &mut ring,
         0,
         7,
@@ -58,8 +58,8 @@ fn packed_slot_round_trips() {
 
 #[test]
 fn exceeds_12_args_rejected() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    let err = Megakernel::publish_packed_slot(
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    let err = ResidentWorkQueue::publish_packed_slot(
         &mut ring,
         0,
         0,
@@ -74,9 +74,9 @@ fn exceeds_12_args_rejected() {
 
 #[test]
 fn opcode_count_zero_is_nop() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let empty_ops: &[(u8, &[u32])] = &[];
-    Megakernel::publish_packed_slot(&mut ring, 0, 0, empty_ops)
+    ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, empty_ops)
         .expect("Fix: empty packed slot must still publish");
     let slot_words = ring[..(SLOT_WORDS as usize * 4)]
         .chunks_exact(4)
@@ -91,10 +91,10 @@ fn opcode_count_zero_is_nop() {
 
 #[test]
 fn batch_fence_after_packed_slot_increments_epoch() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
-    Megakernel::publish_packed_slot(&mut ring, 0, 0, &[(opcodes::STORE_U32 as u8, vec![10, 32])])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(opcodes::STORE_U32 as u8, vec![10, 32])])
         .expect("Fix: packed slot publish must succeed");
-    Megakernel::publish_slot(&mut ring, 1, 0, opcodes::BATCH_FENCE, &[1, 0xBEEF])
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::BATCH_FENCE, &[1, 0xBEEF])
         .expect("Fix: fence publish after packed slot must succeed");
     let fence_base = SLOT_WORDS as usize * 4;
     let fence_op = u32::from_le_bytes(ring[fence_base + 4..fence_base + 8].try_into().unwrap());

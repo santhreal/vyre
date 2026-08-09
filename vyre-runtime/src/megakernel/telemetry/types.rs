@@ -260,7 +260,7 @@ impl RuntimeEvidenceMetricCoverage {
 
 /// Runtime-owned IO/residency evidence envelope for release and benchmark artifacts.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MegakernelRuntimeEvidence {
+pub struct ResidentRuntimeEvidence {
     /// Runtime evidence schema version.
     pub schema_version: u32,
     /// Device-resident bytes retained by the dispatch family.
@@ -279,7 +279,7 @@ pub struct MegakernelRuntimeEvidence {
     pub coverage: RuntimeEvidenceMetricCoverage,
 }
 
-impl MegakernelRuntimeEvidence {
+impl ResidentRuntimeEvidence {
     /// Construct a complete runtime evidence envelope.
     #[must_use]
     pub const fn complete(
@@ -341,7 +341,7 @@ mod evidence_tests {
 
     #[test]
     fn runtime_evidence_reports_missing_metric_families() {
-        let evidence = MegakernelRuntimeEvidence {
+        let evidence = ResidentRuntimeEvidence {
             schema_version: RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
             resident_device_bytes: 0,
             host_copy_bytes: 0,
@@ -369,7 +369,7 @@ mod evidence_tests {
 
     #[test]
     fn runtime_evidence_records_copy_avoidance_and_occupancy() {
-        let evidence = MegakernelRuntimeEvidence::complete(
+        let evidence = ResidentRuntimeEvidence::complete(
             4096,
             1024,
             3072,
@@ -415,7 +415,7 @@ pub struct ControlSnapshot {
 
 /// Aggregated runtime performance counters derived from one telemetry snapshot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelRuntimeCounters {
+pub struct ResidentRuntimeCounters {
     /// Total ring slots represented by the snapshot.
     pub total_slots: u32,
     /// Active queue depth: published/claimed/waiting/requeued/fault/unknown slots.
@@ -446,7 +446,7 @@ pub struct MegakernelRuntimeCounters {
 
 /// Watchdog view computed from two host-visible telemetry snapshots.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelWatchdogSnapshot {
+pub struct ResidentWatchdogSnapshot {
     /// Increase in drained slots between the previous and current snapshot.
     pub done_delta: u32,
     /// Current active queue depth.

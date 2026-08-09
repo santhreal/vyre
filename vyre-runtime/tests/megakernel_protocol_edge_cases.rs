@@ -7,10 +7,10 @@
 //! - Queue packing validation (BatchDescriptor/WindowDescriptor overflow)
 //! - No silent CPU fallback (runtime-level explicit GPU mode selection)
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, control, slot, ARGS_PER_SLOT, STATUS_WORD},
-    Megakernel, MegakernelExecutionMode,
+    ResidentWorkQueue, ResidentExecutionMode,
 };
 use vyre_runtime::PipelineError;
 
@@ -25,18 +25,18 @@ fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
 
 #[test]
 fn slot_publish_exact_boundary_last_slot_ok_next_fails() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
-    Megakernel::publish_slot(&mut ring, 3, 0, protocol::opcode::NOP, &[])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 3, 0, protocol::opcode::NOP, &[])
         .expect("last slot (slot_count - 1) must be publishable");
-    let err = Megakernel::publish_slot(&mut ring, 4, 0, protocol::opcode::NOP, &[])
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 4, 0, protocol::opcode::NOP, &[])
         .expect_err("slot_idx == slot_count must be rejected");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn slot_publish_empty_ring_rejects_any_slot() {
-    let mut ring = Megakernel::encode_empty_ring(0).unwrap();
-    let err = Megakernel::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(0).unwrap();
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect_err("empty ring must reject any slot publish");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
@@ -47,9 +47,9 @@ fn slot_publish_empty_ring_rejects_any_slot() {
 
 #[test]
 fn packed_slot_exact_12_word_boundary_succeeds() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let args = vec![0u32; 11];
-    Megakernel::publish_packed_slot(&mut ring, 0, 0, &[(1u8, args)])
+    ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(1u8, args)])
         .expect("packed slot with exactly 12 words must succeed");
     let base = (STATUS_WORD as usize) * 4;
     let status = u32::from_le_bytes(ring[base..base + 4].try_into().unwrap());
@@ -58,9 +58,9 @@ fn packed_slot_exact_12_word_boundary_succeeds() {
 
 #[test]
 fn packed_slot_13_word_boundary_fails() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let args = vec![0u32; 12];
-    let err = Megakernel::publish_packed_slot(&mut ring, 0, 0, &[(1u8, args)])
+    let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(1u8, args)])
         .expect_err("packed slot with 13 words must fail");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
     let msg = err.to_string();
@@ -72,9 +72,9 @@ fn packed_slot_13_word_boundary_fails() {
 
 #[test]
 fn packed_slot_256_ops_rejects_u8_opcode_count_overflow() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let ops: Vec<_> = (0..256).map(|_| (0u8, vec![])).collect();
-    let err = Megakernel::publish_packed_slot(&mut ring, 0, 0, &ops)
+    let err = ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect_err("256 inner ops must fail u8 opcode_count overflow");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
     assert!(
@@ -106,7 +106,7 @@ fn try_read_epoch_rejects_buffer_missing_epoch_word() {
 #[test]
 fn try_read_metrics_rejects_short_buffer() {
     let short = vec![0u8; ((control::METRICS_BASE + 1) as usize) * 4];
-    let err = Megakernel::try_read_metrics(&short).expect_err("short metrics buffer must fail");
+    let err = ResidentWorkQueue::try_read_metrics(&short).expect_err("short metrics buffer must fail");
     assert!(err.to_string().contains("Fix:"));
 }
 
@@ -114,7 +114,7 @@ fn try_read_metrics_rejects_short_buffer() {
 fn try_read_metrics_accepts_exact_size_buffer() {
     let exact = vec![0u8; ((control::METRICS_BASE + control::METRICS_SLOTS) as usize) * 4];
     let metrics =
-        Megakernel::try_read_metrics(&exact).expect("exact-size metrics buffer must succeed");
+        ResidentWorkQueue::try_read_metrics(&exact).expect("exact-size metrics buffer must succeed");
     assert!(metrics.is_empty());
 }
 
@@ -138,7 +138,7 @@ fn try_read_epoch_accepts_minimal_buffer() {
 
 #[test]
 fn batch_descriptor_rejects_items_exceeding_ring_capacity() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
     let batch = BatchDescriptor::new(
         0,
         vec![
@@ -155,8 +155,8 @@ fn batch_descriptor_rejects_items_exceeding_ring_capacity() {
 
 #[test]
 fn batch_publish_rejects_u32_slot_index_overflow() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    let err = Megakernel::batch_publish(
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    let err = ResidentWorkQueue::batch_publish(
         &mut ring,
         u32::MAX,
         0,
@@ -169,7 +169,7 @@ fn batch_publish_rejects_u32_slot_index_overflow() {
 
 #[test]
 fn window_descriptor_rejects_prefixed_arg_overflow() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     // WindowDescriptor prefixes [ticket, class_tag] (2 words) to the payload.
     // A payload of ARGS_PER_SLOT args makes the total 2 + ARGS_PER_SLOT > ARGS_PER_SLOT.
     let window = WindowDescriptor::new(
@@ -194,8 +194,8 @@ fn window_descriptor_rejects_prefixed_arg_overflow() {
 fn execution_mode_variants_are_always_gpu() {
     // Interpreter and Jit are both GPU execution modes; there is no CPU variant.
     for mode in [
-        MegakernelExecutionMode::Interpreter,
-        MegakernelExecutionMode::Jit,
+        ResidentExecutionMode::Interpreter,
+        ResidentExecutionMode::Jit,
     ] {
         let name = format!("{mode:?}").to_lowercase();
         assert!(

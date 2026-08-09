@@ -1,7 +1,7 @@
 use super::*;
 
-fn legacy_item(op_handle: u32) -> MegakernelWorkItem {
-    MegakernelWorkItem {
+fn legacy_item(op_handle: u32) -> ResidentWorkItem {
+    ResidentWorkItem {
         op_handle,
         input_handle: 11,
         output_handle: 12,
@@ -75,7 +75,7 @@ fn snapshot_feeds_launch_request_from_schedulable_continuations() {
     assert_eq!(snapshot.total_requeues, 2);
     assert_eq!(snapshot.max_priority_age, 2);
 
-    let request = snapshot.apply_to_launch_request(MegakernelLaunchRequest::direct(99, 64, 256));
+    let request = snapshot.apply_to_launch_request(ResidentLaunchRequest::direct(99, 64, 256));
     assert_eq!(request.queue_len, 3);
     assert_eq!(request.requeue_count, 4);
     assert_eq!(request.max_priority_age, 2);

@@ -7,7 +7,7 @@ use vyre_foundation::ir::{BufferDecl, Node};
 
 /// Adapter implemented by any domain that wants a GPU-resident megakernel
 /// workspace without baking that domain into `vyre-runtime`.
-pub trait MegakernelWorkspaceAdapter {
+pub trait ResidentWorkspaceAdapter {
     /// Buffer declaration inserted after the core megakernel buffers.
     fn buffer_decl(&self) -> BufferDecl;
 

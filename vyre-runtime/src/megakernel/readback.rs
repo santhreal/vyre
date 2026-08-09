@@ -7,7 +7,7 @@ use crate::PipelineError;
 
 /// Decoded megakernel output buffers in ABI order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct MegakernelReadback {
+pub struct ResidentQueueReadback {
     /// Control buffer bytes after dispatch.
     pub control_bytes: Vec<u8>,
     /// Ring buffer bytes after dispatch.
@@ -20,7 +20,7 @@ pub struct MegakernelReadback {
 
 /// Host-visible byte volume for one strict megakernel readback.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct MegakernelReadbackCounters {
+pub struct ResidentReadbackCounters {
     /// Bytes copied back for the control buffer.
     pub control_bytes: usize,
     /// Bytes copied back for the ring buffer.
@@ -33,7 +33,7 @@ pub struct MegakernelReadbackCounters {
     pub total_bytes: usize,
 }
 
-impl MegakernelReadback {
+impl ResidentQueueReadback {
     /// Decode the backend output vector produced by [`super::Megakernel`].
     ///
     /// # Errors
@@ -140,7 +140,7 @@ impl MegakernelReadback {
     /// are physically impossible), but the error is surfaced loudly so that a
     /// pathological or mocked readback cannot silently report `usize::MAX` as a
     /// byte count and mislead telemetry consumers.
-    pub fn counters(&self) -> Result<MegakernelReadbackCounters, PipelineError> {
+    pub fn counters(&self) -> Result<ResidentReadbackCounters, PipelineError> {
         let control_bytes = self.control_bytes.len();
         let ring_bytes = self.ring_bytes.len();
         let debug_log_bytes = self.debug_log_bytes.len();
@@ -157,7 +157,7 @@ impl MegakernelReadback {
                      Fix: split the readback into smaller shards."
                 ))
             })?;
-        Ok(MegakernelReadbackCounters {
+        Ok(ResidentReadbackCounters {
             control_bytes,
             ring_bytes,
             debug_log_bytes,
@@ -198,9 +198,10 @@ mod tests {
 
     fn valid_outputs(slot_count: u32) -> Vec<Vec<u8>> {
         vec![
-            crate::megakernel::Megakernel::try_encode_control(false, 1, 4).unwrap(),
-            crate::megakernel::Megakernel::try_encode_empty_ring(slot_count).unwrap(),
-            crate::megakernel::Megakernel::try_encode_empty_debug_log(
+            crate::resident_work_queue::ResidentWorkQueue::try_encode_control(false, 1, 4).unwrap(),
+            crate::resident_work_queue::ResidentWorkQueue::try_encode_empty_ring(slot_count)
+                .unwrap(),
+            crate::resident_work_queue::ResidentWorkQueue::try_encode_empty_debug_log(
                 protocol::debug::RECORD_CAPACITY,
             )
             .unwrap(),
@@ -217,9 +218,9 @@ mod tests {
             outputs[2].len(),
             outputs[3].len(),
         ];
-        let mut readback = MegakernelReadback::default();
+        let mut readback = ResidentQueueReadback::default();
 
-        MegakernelReadback::drain_outputs_into(&mut outputs, 4, &mut readback)
+        ResidentQueueReadback::drain_outputs_into(&mut outputs, 4, &mut readback)
             .expect("Fix: valid megakernel outputs must decode");
 
         assert_eq!(outputs.len(), 4);
@@ -240,7 +241,7 @@ mod tests {
 
     #[test]
     fn readback_counters_report_total_volume() {
-        let readback = MegakernelReadback::from_outputs(valid_outputs(4), 4)
+        let readback = ResidentQueueReadback::from_outputs(valid_outputs(4), 4)
             .expect("Fix: valid megakernel outputs must decode");
         let counters = readback
             .counters()
@@ -262,7 +263,7 @@ mod tests {
     #[test]
     fn readback_counters_overflow_is_a_structured_error_not_usize_max() {
         // Construct a pathological readback where the control + ring buffers
-        // together exceed usize::MAX. We do this by building a MegakernelReadback
+        // together exceed usize::MAX. We do this by building a ResidentQueueReadback
         // directly (field assignment) rather than going through the validated
         // from_outputs path, because validated paths cannot produce buffers that
         // large on real hardware.

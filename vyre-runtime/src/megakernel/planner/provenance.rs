@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use super::MegakernelWorkItem;
+use super::ResidentWorkItem;
 use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 
@@ -10,7 +10,7 @@ use vyre_foundation::ir::Program;
 pub fn build_scallop_lineage_with_program_and_scratch(
     backend: &dyn VyreBackend,
     program: &Program,
-    work_items: &[MegakernelWorkItem],
+    work_items: &[ResidentWorkItem],
     exchange_adj: &[u32],
     n_items: usize,
     state: &mut Vec<u32>,
@@ -124,7 +124,7 @@ fn record_provenance(_nonempty_fraction: f64) {}
 #[cfg(feature = "self-substrate-adapters")]
 pub fn build_scallop_lineage_with_scratch(
     backend: &dyn VyreBackend,
-    work_items: &[MegakernelWorkItem],
+    work_items: &[ResidentWorkItem],
     exchange_adj: &[u32],
     n_items: usize,
     state: &mut Vec<u32>,

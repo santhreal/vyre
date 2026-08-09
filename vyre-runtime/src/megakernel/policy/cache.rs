@@ -1,6 +1,6 @@
 use super::{
-    MegakernelLaunchCacheStats, MegakernelLaunchPolicy, MegakernelLaunchRecommendation,
-    MegakernelLaunchRequest,
+    ResidentLaunchCacheStats, ResidentLaunchPolicy, ResidentLaunchRecommendation,
+    ResidentLaunchRequest,
 };
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
@@ -9,8 +9,8 @@ const LAUNCH_RECOMMENDATION_CACHE_CAP: usize = 128;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) struct LaunchRecommendationCacheKey {
-    pub(super) policy: MegakernelLaunchPolicy,
-    pub(super) request: MegakernelLaunchRequest,
+    pub(super) policy: ResidentLaunchPolicy,
+    pub(super) request: ResidentLaunchRequest,
 }
 
 pub(super) struct LaunchRecommendationCache {
@@ -21,7 +21,7 @@ pub(super) struct LaunchRecommendationCache {
 }
 
 pub(super) struct LaunchRecommendationCacheEntry {
-    recommendation: MegakernelLaunchRecommendation,
+    recommendation: ResidentLaunchRecommendation,
     last_seen: u64,
 }
 
@@ -29,7 +29,7 @@ impl LaunchRecommendationCache {
     pub(super) fn get(
         &mut self,
         key: &LaunchRecommendationCacheKey,
-    ) -> Option<MegakernelLaunchRecommendation> {
+    ) -> Option<ResidentLaunchRecommendation> {
         if self.clock == u64::MAX {
             self.clock = 0;
             for entry in self.entries.values_mut() {
@@ -49,7 +49,7 @@ impl LaunchRecommendationCache {
     pub(super) fn insert(
         &mut self,
         key: LaunchRecommendationCacheKey,
-        value: MegakernelLaunchRecommendation,
+        value: ResidentLaunchRecommendation,
     ) {
         let tick = self.next_tick();
         self.entries.insert(
@@ -73,8 +73,8 @@ impl LaunchRecommendationCache {
         }
     }
 
-    pub(super) fn stats(&self) -> MegakernelLaunchCacheStats {
-        MegakernelLaunchCacheStats {
+    pub(super) fn stats(&self) -> ResidentLaunchCacheStats {
+        ResidentLaunchCacheStats {
             entries: self.entries.len(),
             hits: self.hits,
             misses: self.misses,

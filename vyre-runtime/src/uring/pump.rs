@@ -6,7 +6,7 @@
 //! while [`crate::megakernel::Megakernel::publish_slot`] owns the host-side
 //! ring-slot writer that signals a persistent GPU kernel. Nothing composed
 //! them  -  a caller had to manually reach into both every dispatch.
-//! [`UringMegakernelPump`] wires them together so a host thread can run one
+//! [`UringResidentQueuePump`] wires them together so a host thread can run one
 //! compact loop:
 //!
 //! ```text
@@ -43,7 +43,7 @@
 //! surface itself is Linux-specific. Callers gate their pipeline
 //! code the same way.
 
-use crate::megakernel::Megakernel;
+use crate::resident_work_queue::ResidentWorkQueue;
 use crate::uring::stream::AsyncUringStream;
 use crate::PipelineError;
 use core::sync::atomic::Ordering;
@@ -68,7 +68,7 @@ struct PendingPublish {
 /// host can drive the compatibility mapped-read ingest loop with one compact
 /// pump. Native NVMe → BAR1 ingest is owned by
 /// [`super::driver::NvmeGpuIngestDriver::new_gpudirect`].
-pub struct UringMegakernelPump<'a> {
+pub struct UringResidentQueuePump<'a> {
     stream: AsyncUringStream<'a>,
     /// Bytes per DMA chunk. Used to compute the destination offset
     /// inside the GPU buffer: `chunk_idx * chunk_bytes`.
@@ -86,7 +86,7 @@ pub struct UringMegakernelPump<'a> {
     pending: VecDeque<PendingPublish>,
 }
 
-impl<'a> UringMegakernelPump<'a> {
+impl<'a> UringResidentQueuePump<'a> {
     /// Construct a pump bound to an existing stream. `chunk_bytes`
     /// is the fixed read size  -  every call to `submit_file_scan`
     /// must request exactly this many bytes.
@@ -279,7 +279,13 @@ impl<'a> UringMegakernelPump<'a> {
             self.stream.megakernel_tail.fetch_add(1, Ordering::Release);
 
             if let Some(p) = publish {
-                Megakernel::publish_slot(ring_bytes, p.slot_idx, p.tenant_id, p.opcode, &p.args)?;
+                ResidentWorkQueue::publish_slot(
+                    ring_bytes,
+                    p.slot_idx,
+                    p.tenant_id,
+                    p.opcode,
+                    &p.args,
+                )?;
             }
 
             completed += 1;
@@ -297,7 +303,7 @@ impl<'a> UringMegakernelPump<'a> {
     /// dispatches.
     #[must_use]
     pub fn observe_epoch(&self, control_bytes: &[u8]) -> u32 {
-        Megakernel::read_epoch(control_bytes)
+        ResidentWorkQueue::read_epoch(control_bytes)
     }
 }
 
@@ -315,7 +321,7 @@ mod tests {
     /// `drain_into_ring` produces internally.
     #[test]
     fn pending_publish_layout_matches_ring_slot() {
-        let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
         let p = PendingPublish {
             chunk_idx: 0,
             slot_idx: 2,
@@ -323,14 +329,15 @@ mod tests {
             opcode: 0x4000_0000,
             args: [11, 22, 33],
         };
-        Megakernel::publish_slot(&mut ring, p.slot_idx, p.tenant_id, p.opcode, &p.args)
+        ResidentWorkQueue::publish_slot(&mut ring, p.slot_idx, p.tenant_id, p.opcode, &p.args)
             .expect("Fix: publish slot; restore this invariant before continuing.");
 
         // Second publish on the same slot without DONE must reject
         // (status still PUBLISHED/CLAIMED); this is the back-
         // pressure surface drain_into_ring relies on.
-        let err = Megakernel::publish_slot(&mut ring, p.slot_idx, p.tenant_id, p.opcode, &p.args)
-            .expect_err("second publish on in-flight slot must reject");
+        let err =
+            ResidentWorkQueue::publish_slot(&mut ring, p.slot_idx, p.tenant_id, p.opcode, &p.args)
+                .expect_err("second publish on in-flight slot must reject");
         assert!(matches!(err, PipelineError::QueueFull { .. }));
     }
 

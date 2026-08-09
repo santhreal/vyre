@@ -12,7 +12,7 @@
 
 #![allow(clippy::assertions_on_constants)]
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     self, control, opcode, slot, ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, SLOT_WORDS, STATUS_WORD,
     TENANT_WORD,
 };
@@ -74,7 +74,7 @@ fn opcode_discriminants_frozen() {
 fn encode_control_populates_tenant_table_with_all_lanes_allowed() {
     // Default tenant-mask = !0u32 (every lane allowed). Multi-tenant
     // schedulers flip specific bits to 0 to revoke a tenant's slot.
-    let ctrl = megakernel::Megakernel::encode_control(false, 4, 4).unwrap();
+    let ctrl = resident_work_queue::ResidentWorkQueue::encode_control(false, 4, 4).unwrap();
     // Tenant table lives at word control::TENANT_BASE+1 .. OBSERVABLE_BASE.
     let tt_word_start = (control::TENANT_BASE + 1) as usize;
     for i in 0..4 {
@@ -86,9 +86,9 @@ fn encode_control_populates_tenant_table_with_all_lanes_allowed() {
 
 #[test]
 fn priority_offsets_and_fairness_counters_do_not_alias() {
-    use vyre_runtime::megakernel::scheduler::{write_default_priority_offsets, PRIORITY_LEVELS};
+    use vyre_runtime::resident_work_queue::scheduler::{write_default_priority_offsets, PRIORITY_LEVELS};
 
-    let mut ctrl = megakernel::Megakernel::encode_control(false, 40, 4).unwrap();
+    let mut ctrl = resident_work_queue::ResidentWorkQueue::encode_control(false, 40, 4).unwrap();
     write_default_priority_offsets(&mut ctrl, 40).expect("priority offsets must encode");
 
     for i in 0..=PRIORITY_LEVELS {
@@ -108,7 +108,7 @@ fn priority_offsets_and_fairness_counters_do_not_alias() {
         ctrl[off..off + 4].copy_from_slice(&(pri + 1).to_le_bytes());
     }
 
-    let offsets = vyre_runtime::megakernel::scheduler::default_priority_offsets(40);
+    let offsets = vyre_runtime::resident_work_queue::scheduler::default_priority_offsets(40);
     for (i, expected) in offsets.iter().copied().enumerate() {
         let off = ((control::PRIORITY_OFFSETS_BASE as usize) + i) * 4;
         let word = u32::from_le_bytes(ctrl[off..off + 4].try_into().unwrap());
@@ -121,7 +121,7 @@ fn priority_offsets_and_fairness_counters_do_not_alias() {
 
 #[test]
 fn encode_control_keeps_fairness_counters_cold_at_boot() {
-    let ctrl = megakernel::Megakernel::encode_control(false, 40, 4).unwrap();
+    let ctrl = resident_work_queue::ResidentWorkQueue::encode_control(false, 40, 4).unwrap();
     for i in 0..control::TENANT_FAIRNESS_SLOTS {
         let off = ((control::TENANT_FAIRNESS_BASE + i) as usize) * 4;
         let word = u32::from_le_bytes(ctrl[off..off + 4].try_into().unwrap());
@@ -136,8 +136,8 @@ fn encode_control_keeps_fairness_counters_cold_at_boot() {
 
 #[test]
 fn publish_slot_stamps_tenant_id_at_word_2() {
-    let mut ring = megakernel::Megakernel::encode_empty_ring(2).unwrap();
-    megakernel::Megakernel::publish_slot(&mut ring, 1, 7, opcode::STORE_U32, &[42, 3]).unwrap();
+    let mut ring = resident_work_queue::ResidentWorkQueue::encode_empty_ring(2).unwrap();
+    resident_work_queue::ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::STORE_U32, &[42, 3]).unwrap();
     // Slot 1 starts at byte offset SLOT_WORDS * 4.
     let base = (SLOT_WORDS as usize) * 4;
     let tenant = u32::from_le_bytes(ring[base + 2 * 4..base + 2 * 4 + 4].try_into().unwrap());
@@ -149,6 +149,6 @@ fn sharded_megakernel_scales_with_workgroup_size() {
     // Building a sharded program at wg_x=1024 must produce a program
     // whose workgroup_size matches. Community schedulers that
     // slice slots across workgroups pin against this.
-    let program = megakernel::build_program_sharded(1024, &[]);
+    let program = resident_work_queue::build_program_sharded(1024, &[]);
     assert_eq!(program.workgroup_size(), [1024, 1, 1]);
 }

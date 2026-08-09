@@ -4,7 +4,7 @@ use std::fs::File;
 use std::os::fd::AsRawFd;
 use std::path::Path;
 
-use crate::megakernel::MegakernelIoQueue;
+use crate::resident_work_queue::ResidentIoQueue;
 use crate::PipelineError;
 
 #[cfg(feature = "uring-cmd-nvme")]
@@ -212,7 +212,7 @@ pub struct NvmeGpuIngestDriver<'a> {
     stream: AsyncUringStream<'a>,
     mapped_slots: Vec<GpuMappedBuffer<'a>>,
     registered_iovecs: Vec<Iovec>,
-    megakernel_io_queue: MegakernelIoQueue,
+    megakernel_io_queue: ResidentIoQueue,
     pending: Vec<Option<PendingIngest>>,
     slot_bytes: usize,
     read_path: NativeReadPath,
@@ -231,7 +231,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     pub fn new(
         stream: AsyncUringStream<'a>,
         slot_count: u32,
-        megakernel_io_queue: MegakernelIoQueue,
+        megakernel_io_queue: ResidentIoQueue,
     ) -> Result<Self, PipelineError> {
         Self::new_with_path(
             stream,
@@ -256,7 +256,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     pub fn new_gpudirect(
         stream: AsyncUringStream<'a>,
         slot_count: u32,
-        megakernel_io_queue: MegakernelIoQueue,
+        megakernel_io_queue: ResidentIoQueue,
     ) -> Result<Self, PipelineError> {
         match GpuDirectCapability::probe() {
             GpuDirectCapability::Available { .. } => Self::new_with_path(
@@ -275,7 +275,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
     fn new_with_path(
         stream: AsyncUringStream<'a>,
         slot_count: u32,
-        megakernel_io_queue: MegakernelIoQueue,
+        megakernel_io_queue: ResidentIoQueue,
         read_path: NativeReadPath,
     ) -> Result<Self, PipelineError> {
         let total_len = stream.gpu_buffer.len();
@@ -599,13 +599,13 @@ impl<'a> NvmeGpuIngestDriver<'a> {
 
     /// Borrow the raw io_queue bytes for backend upload/readback.
     #[must_use]
-    pub fn megakernel_io_queue(&self) -> &MegakernelIoQueue {
+    pub fn megakernel_io_queue(&self) -> &ResidentIoQueue {
         &self.megakernel_io_queue
     }
 
     /// Mutable access to the io_queue bytes.
     #[must_use]
-    pub fn megakernel_io_queue_mut(&mut self) -> &mut MegakernelIoQueue {
+    pub fn megakernel_io_queue_mut(&mut self) -> &mut ResidentIoQueue {
         &mut self.megakernel_io_queue
     }
 

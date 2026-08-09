@@ -15,7 +15,7 @@ use vyre_frontend_c::megakernel_workspace::{
     C_FRONTEND_VAST_ROW_WORDS, C_FRONTEND_WORKSPACE_ABI_VERSION, C_FRONTEND_WORKSPACE_BINDING,
     C_FRONTEND_WORKSPACE_BUFFER, C_FRONTEND_WORKSPACE_MAGIC, C_FRONTEND_WORK_QUEUE_WORDS,
 };
-use vyre_runtime::megakernel::build_program_sharded_with_workspace_adapter;
+use vyre_runtime::resident_work_queue::build_program_sharded_with_workspace_adapter;
 
 #[test]
 fn workspace_manifest_regions_are_ordered_and_non_overlapping() {

@@ -32,8 +32,8 @@ fn haystack_words(source: &[u8]) -> Vec<u32> {
 }
 
 fn emit_wgsl(program: &vyre::ir::Program) -> String {
-    let module = emit_module(program, [1, 1, 1])
-        .expect("Program must lower to a valid Naga module");
+    let module =
+        emit_module(program, [1, 1, 1]).expect("Program must lower to a valid Naga module");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),

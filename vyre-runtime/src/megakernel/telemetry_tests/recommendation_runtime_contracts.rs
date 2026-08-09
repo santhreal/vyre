@@ -2,19 +2,19 @@ use super::*;
 
 #[test]
 fn telemetry_recommendation_promotes_hot_opcodes_and_requeue_pressure() {
-    let mut control = Megakernel::try_encode_control(false, 1, 0).unwrap();
+    let mut control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
     for opcode_idx in 0..8u32 {
         let off = ((control::METRICS_BASE + opcode_idx) as usize) * 4;
         control[off..off + 4].copy_from_slice(&1u32.to_le_bytes());
     }
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let status_off = (STATUS_WORD as usize) * 4;
     ring[status_off..status_off + 4].copy_from_slice(&slot::REQUEUE.to_le_bytes());
     let telemetry = RingTelemetry::decode(&control, &ring);
     let rec = telemetry
-        .recommend_launch(MegakernelLaunchRequest::direct(4096, 64, 256))
+        .recommend_launch(ResidentLaunchRequest::direct(4096, 64, 256))
         .expect("Fix: telemetry launch recommendation must accept valid limits");
-    assert_eq!(rec.execution_mode, MegakernelExecutionMode::Jit);
+    assert_eq!(rec.execution_mode, ResidentExecutionMode::Jit);
     assert!(rec.promote_hot_opcodes);
     assert!(rec.age_priority_work);
     assert_eq!(telemetry.priority_accounting().requeue_count, 1);
@@ -22,7 +22,7 @@ fn telemetry_recommendation_promotes_hot_opcodes_and_requeue_pressure() {
 
 #[test]
 fn runtime_counters_report_queue_idle_fairness_and_drain() {
-    let mut control = Megakernel::try_encode_control(false, 7, 0).unwrap();
+    let mut control = ResidentWorkQueue::try_encode_control(false, 7, 0).unwrap();
     let tenant_a = (control::TENANT_FAIRNESS_BASE as usize) * 4;
     let tenant_b = ((control::TENANT_FAIRNESS_BASE + 1) as usize) * 4;
     let priority_a = (control::PRIORITY_FAIRNESS_BASE as usize) * 4;
@@ -32,8 +32,8 @@ fn runtime_counters_report_queue_idle_fairness_and_drain() {
     control[tenant_b..tenant_b + 4].copy_from_slice(&9u32.to_le_bytes());
     control[priority_a..priority_a + 4].copy_from_slice(&5u32.to_le_bytes());
 
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
-    Megakernel::publish_slot(&mut ring, 2, 11, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 2, 11, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
     let slot_status =
         |slot_idx: usize| slot_idx * (SLOT_WORDS as usize) * 4 + (STATUS_WORD as usize) * 4;
     let requeue = slot_status(0);
@@ -58,28 +58,28 @@ fn runtime_counters_report_queue_idle_fairness_and_drain() {
 
 #[test]
 fn telemetry_launch_recommendation_uses_frontier_density_for_topology() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(8).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-    Megakernel::publish_slot(&mut ring, 2, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-    Megakernel::publish_slot(&mut ring, 3, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(8).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 2, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 3, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
 
     let telemetry = RingTelemetry::decode(&control, &ring);
     let rec = telemetry
-        .recommend_launch(MegakernelLaunchRequest::direct(8, 64, 256))
+        .recommend_launch(ResidentLaunchRequest::direct(8, 64, 256))
         .expect("Fix: telemetry launch recommendation must accept valid limits");
 
     assert_eq!(telemetry.runtime_counters().frontier_density_bps, 5_000);
-    assert_eq!(rec.topology, MegakernelDispatchTopology::DenseFrontier);
+    assert_eq!(rec.topology, ResidentQueueTopology::DenseFrontier);
 }
 
 #[test]
 fn telemetry_decode_into_reports_caller_owned_capacity_evidence() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[11, 0, 0]).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[11, 1, 0]).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::ATOMIC_ADD, &[11, 0, 0]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::ATOMIC_ADD, &[11, 1, 0]).unwrap();
     let mut telemetry = RingTelemetry::default();
     let mut scratch = TelemetryDecodeScratch::new();
 
@@ -128,7 +128,7 @@ fn launch_recommendation_rejects_route_window_demand_overflow_without_panic() {
     };
 
     let error = telemetry
-        .recommend_launch(MegakernelLaunchRequest::direct(4096, 64, 256))
+        .recommend_launch(ResidentLaunchRequest::direct(4096, 64, 256))
         .expect_err("Fix: route-window demand overflow must not panic during launch recommendation");
     assert!(
         error.to_string().contains("route-window slot demand overflowed"),
@@ -138,20 +138,20 @@ fn launch_recommendation_rejects_route_window_demand_overflow_without_panic() {
 
 #[test]
 fn metrics_and_observable_regions_remain_non_overlapping_in_snapshot() {
-    let mut control = Megakernel::try_encode_control(false, 1, 4).unwrap();
+    let mut control = ResidentWorkQueue::try_encode_control(false, 1, 4).unwrap();
     let metric_off = (control::METRICS_BASE as usize) * 4;
     control[metric_off..metric_off + 4].copy_from_slice(&0xAA55AA55u32.to_le_bytes());
     let observable_off = (control::OBSERVABLE_BASE as usize) * 4;
     control[observable_off..observable_off + 4].copy_from_slice(&0x11223344u32.to_le_bytes());
 
-    let ring = Megakernel::try_encode_empty_ring(1).unwrap();
+    let ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
     let telemetry = RingTelemetry::decode(&control, &ring);
     assert!(
         telemetry.control.metrics.contains(&(0, 0xAA55AA55)),
         "metrics decoder must preserve metric slot 0 value"
     );
     assert_eq!(
-        Megakernel::read_observable(&control, 0),
+        ResidentWorkQueue::read_observable(&control, 0),
         0x11223344,
         "observable reads must not alias metric region words"
     );

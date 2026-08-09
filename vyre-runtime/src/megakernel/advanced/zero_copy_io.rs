@@ -7,7 +7,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
-use crate::megakernel::io::{
+use crate::resident_work_queue::io::{
     IO_DESTINATION_CAPABILITY_TABLE, IO_QUEUE_DMA_TAG, IO_SOURCE_CAPABILITY_TABLE,
 };
 

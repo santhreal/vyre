@@ -1,5 +1,5 @@
 use super::*;
-use crate::megakernel::protocol::{slot, ARGS_PER_SLOT, SLOT_WORDS, STATUS_WORD};
+use crate::resident_work_queue::protocol::{slot, ARGS_PER_SLOT, SLOT_WORDS, STATUS_WORD};
 
 /// Regression test for the P0 Law-10 silent-fallback bug:
 /// WindowDescriptor::into_batch previously returned an empty BatchDescriptor
@@ -58,7 +58,7 @@ fn read_word(buf: &[u8], slot_idx: u32, word_idx: u32) -> u32 {
 
 #[test]
 fn single_descriptor_publishes_normal_slot() {
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let slot = SlotDescriptor::single(
         7,
         SlotOpcode::Builtin(BuiltinOpcode::StoreU32),
@@ -70,7 +70,7 @@ fn single_descriptor_publishes_normal_slot() {
 
 #[test]
 fn packed_descriptor_uses_packed_opcode() {
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let slot = SlotDescriptor::packed(
         3,
         vec![
@@ -88,7 +88,7 @@ fn packed_descriptor_uses_packed_opcode() {
 
 #[test]
 fn batch_descriptor_publishes_sequential_slots() {
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let batch = BatchDescriptor::new(
         1,
         vec![
@@ -104,7 +104,7 @@ fn batch_descriptor_publishes_sequential_slots() {
 
 #[test]
 fn batch_descriptor_rejects_slot_index_overflow_before_publication() {
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let before = ring.clone();
     let batch = BatchDescriptor::new(
         u32::MAX,
@@ -127,7 +127,7 @@ fn batch_descriptor_rejects_slot_index_overflow_before_publication() {
 
 #[test]
 fn normal_slot_respects_wire_arg_budget() {
-    let mut ring = Megakernel::try_encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
     let slot = SlotDescriptor::single(
         0,
         SlotOpcode::Builtin(BuiltinOpcode::Memcpy),
@@ -139,7 +139,7 @@ fn normal_slot_respects_wire_arg_budget() {
 
 #[test]
 fn window_descriptor_publishes_required_then_lookahead() {
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let window = WindowDescriptor::new(
         1,
         5,
@@ -166,7 +166,7 @@ fn window_descriptor_publishes_required_then_lookahead() {
 
 #[test]
 fn window_publish_rejects_overflow_before_publication() {
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let before = ring.clone();
     let window = WindowDescriptor::new(
         u32::MAX,
@@ -186,7 +186,7 @@ fn window_publish_rejects_overflow_before_publication() {
 
 #[test]
 fn window_publish_rejects_oversized_payload_before_publication() {
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let before = ring.clone();
     let window = WindowDescriptor::new(
         0,

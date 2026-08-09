@@ -50,7 +50,7 @@ pub fn persistent_body_priority_slots(
     slot_count: u32,
     opcodes: &[OpcodeHandler],
 ) -> Vec<Node> {
-    use crate::megakernel::scheduler;
+    use crate::resident_work_queue::scheduler;
 
     let slot_count = slot_count.max(1);
     let mut body = persistent_lane_prologue(workgroup_size_x);

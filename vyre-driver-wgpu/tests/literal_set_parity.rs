@@ -1,8 +1,8 @@
 //! WGPU parity coverage for the shared literal-set matcher.
 
 #![allow(deprecated)]
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::literal_set::{GpuLiteralSet, Match};
+use vyre_driver_wgpu::WgpuBackend;
 
 #[test]
 fn literal_set_parity_abc() {

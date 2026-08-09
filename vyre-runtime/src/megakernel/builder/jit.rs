@@ -3,8 +3,8 @@ use super::{
     claimed_slot_bindings, direct_slot_base_binding, process_io_requests, slot_tenant_id_load,
     tenant_authorized_claim_body, wrap_persistent_megakernel_program,
 };
-use crate::megakernel::ir_util::atomic_load_relaxed;
-use crate::megakernel::protocol::{control, slot, STATUS_WORD};
+use crate::resident_work_queue::ir_util::atomic_load_relaxed;
+use crate::resident_work_queue::protocol::{control, slot, STATUS_WORD};
 use vyre_foundation::ir::{Expr, Node, Program};
 
 /// Build the JIT Megakernel IR where payload processor logic is fused into the body stream.

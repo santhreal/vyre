@@ -29,9 +29,9 @@ pub use nodes::{
 pub use workspace::CFrontendWorkspaceManifest;
 
 use vyre_foundation::ir::{Node, Program};
-use vyre_runtime::megakernel::{
-    build_program_sharded_with_workspace_adapter, MegakernelWorkspaceAdapter,
-    MegakernelWorkspaceRegion, OpcodeHandler,
+use vyre_runtime::resident_work_queue::{
+    build_program_sharded_with_workspace_adapter, OpcodeHandler, ResidentWorkspaceAdapter,
+    ResidentWorkspaceRegion,
 };
 
 /// Binding used by the resident C frontend workspace.
@@ -341,7 +341,7 @@ impl CFrontendWorkspaceLimits {
 }
 
 /// One contiguous region inside the resident C frontend workspace.
-pub type CFrontendWorkspaceRegion = MegakernelWorkspaceRegion<CFrontendRegionId>;
+pub type CFrontendWorkspaceRegion = ResidentWorkspaceRegion<CFrontendRegionId>;
 
 /// Runtime adapter that keeps the C frontend outside the generic megakernel
 /// builder seam.
@@ -362,7 +362,7 @@ impl<'a> CFrontendMegakernelWorkspace<'a> {
     }
 }
 
-impl MegakernelWorkspaceAdapter for CFrontendMegakernelWorkspace<'_> {
+impl ResidentWorkspaceAdapter for CFrontendMegakernelWorkspace<'_> {
     fn buffer_decl(&self) -> vyre_foundation::ir::BufferDecl {
         self.manifest.buffer_decl()
     }

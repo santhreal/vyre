@@ -55,13 +55,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
         if !self.descriptor.is_healthy() {
-            return Err(BackendError::DispatchFailed {
-                code: None,
-                message: format!(
-                    "WGPU device generation {} is lost; reacquire and rematerialize the artifact",
-                    self.descriptor.identity.generation
-                ),
-            });
+            return Err(device_lost_error(&self.descriptor.identity));
         }
         if payload.neutral_artifact() != artifact.digest() {
             return Err(invalid_module(
@@ -126,6 +120,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
             artifact: artifact.digest(),
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
+            lost: Arc::clone(&self.descriptor.lost),
             modules,
             values: artifact
                 .resources()
@@ -157,6 +152,7 @@ struct WgpuArtifactInstance {
     artifact: Digest,
     payload: Digest,
     device: DeviceIdentity,
+    lost: Arc<AtomicBool>,
     modules: Vec<WgpuExecutableModule>,
     values: BTreeMap<String, ArtifactValueId>,
     outputs: BTreeSet<ArtifactValueId>,
@@ -177,6 +173,9 @@ impl ArtifactInstance for WgpuArtifactInstance {
     }
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
+        if self.lost.load(Ordering::Acquire) {
+            return Err(device_lost_error(&self.device));
+        }
         if bindings.artifact() != self.artifact {
             return Err(invalid_module("bindings name a different neutral artifact"));
         }
@@ -231,7 +230,12 @@ impl WgpuArtifactInstance {
                     ))
                 })?;
             }
-            let dispatched = module.pipeline.dispatch_borrowed_timed(&inputs, &config)?;
+            let dispatched = match module.pipeline.dispatch_borrowed_timed(&inputs, &config) {
+                Err(_) if self.lost.load(Ordering::Acquire) => {
+                    return Err(device_lost_error(&self.device));
+                }
+                result => result?,
+            };
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
                 has_device_timing = true;
@@ -300,6 +304,15 @@ impl WgpuArtifactInstance {
     }
 }
 
+fn device_lost_error(identity: &DeviceIdentity) -> BackendError {
+    BackendError::DeviceLost {
+        backend: identity.backend.to_string(),
+        device: identity.device.clone(),
+        generation: identity.generation,
+        message: "the WGPU device-loss callback invalidated this generation".to_string(),
+    }
+}
+
 struct ReadySubmission {
     result: Option<Result<Completion, BackendError>>,
 }
@@ -349,5 +362,38 @@ fn compile_error(error: impl std::fmt::Display) -> BackendError {
         compiler_message: format!(
             "{error}. Fix: rebuild the target payload from the neutral artifact."
         ),
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// WHY: runtime recovery must receive a stable device-loss class, never text to parse.
+    #[test]
+    fn lost_instance_submission_is_structured() {
+        let digest = Digest([7; 32]);
+        let instance = WgpuArtifactInstance {
+            artifact: digest,
+            payload: Digest([8; 32]),
+            device: DeviceIdentity {
+                backend: WGPU_BACKEND_ID,
+                device: "fault-injection".to_string(),
+                generation: 11,
+            },
+            lost: Arc::new(AtomicBool::new(true)),
+            modules: Vec::new(),
+            values: BTreeMap::new(),
+            outputs: BTreeSet::new(),
+            retained: BTreeSet::new(),
+        };
+
+        let error = match instance.submit(BindingSet::new(digest)) {
+            Ok(_) => panic!("a lost device generation must reject submission"),
+            Err(error) => error,
+        };
+        assert!(matches!(
+            error,
+            BackendError::DeviceLost { generation: 11, .. }
+        ));
     }
 }

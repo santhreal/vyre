@@ -3,8 +3,8 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType};
 
-use vyre_runtime::megakernel::{
-    build_workspace_regions, MegakernelWorkspaceLayoutError, MegakernelWorkspaceRegionSpec,
+use vyre_runtime::resident_work_queue::{
+    build_workspace_regions, ResidentWorkspaceLayoutError, ResidentWorkspaceRegionSpec,
 };
 
 use super::error::CFrontendWorkspaceError;
@@ -60,49 +60,49 @@ impl CFrontendWorkspaceManifest {
         validate_non_zero(limits.work_queue_capacity, CFrontendRegionId::WorkQueue)?;
 
         let specs = [
-            MegakernelWorkspaceRegionSpec::fixed(
+            ResidentWorkspaceRegionSpec::fixed(
                 CFrontendRegionId::Manifest,
                 C_FRONTEND_MANIFEST_WORDS,
                 1,
                 C_FRONTEND_MANIFEST_WORDS,
             ),
-            MegakernelWorkspaceRegionSpec::fixed(
+            ResidentWorkspaceRegionSpec::fixed(
                 CFrontendRegionId::SourceBytes,
                 limits.source_bytes.div_ceil(4),
                 1,
                 limits.source_bytes,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::Tokens,
                 C_FRONTEND_TOKEN_WORDS,
                 limits.token_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::Macros,
                 C_FRONTEND_MACRO_WORDS,
                 limits.macro_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::Conditionals,
                 C_FRONTEND_CONDITIONAL_WORDS,
                 limits.conditional_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::VastRows,
                 C_FRONTEND_VAST_ROW_WORDS,
                 limits.vast_row_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::PgEdges,
                 C_FRONTEND_PG_EDGE_WORDS,
                 limits.pg_edge_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::Diagnostics,
                 C_FRONTEND_DIAGNOSTIC_WORDS,
                 limits.diagnostic_capacity,
             ),
-            MegakernelWorkspaceRegionSpec::record(
+            ResidentWorkspaceRegionSpec::record(
                 CFrontendRegionId::WorkQueue,
                 C_FRONTEND_WORK_QUEUE_WORDS,
                 limits.work_queue_capacity,
@@ -190,16 +190,16 @@ impl CFrontendWorkspaceManifest {
 }
 
 fn map_layout_error(
-    error: MegakernelWorkspaceLayoutError<CFrontendRegionId>,
+    error: ResidentWorkspaceLayoutError<CFrontendRegionId>,
 ) -> CFrontendWorkspaceError {
     match error {
-        MegakernelWorkspaceLayoutError::RecordWordsOverflow { region } => {
+        ResidentWorkspaceLayoutError::RecordWordsOverflow { region } => {
             CFrontendWorkspaceError::WordOverflow {
                 region,
                 fix: "reduce C frontend arena capacity so record_words * capacity fits u32",
             }
         }
-        MegakernelWorkspaceLayoutError::OffsetOverflow { region } => {
+        ResidentWorkspaceLayoutError::OffsetOverflow { region } => {
             CFrontendWorkspaceError::WordOverflow {
                 region,
                 fix: "reduce C frontend arena capacity so region offsets fit u32",

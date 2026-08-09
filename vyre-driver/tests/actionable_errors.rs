@@ -17,6 +17,12 @@ fn all_backend_error_variants_contain_fix() {
             requested: 1024,
             available: 512,
         },
+        BackendError::DeviceLost {
+            backend: "test".into(),
+            device: "gpu0".into(),
+            generation: 7,
+            message: "device callback reported loss".into(),
+        },
         BackendError::UnsupportedFeature {
             name: "subgroup_ops".into(),
             backend: "test".into(),
@@ -95,6 +101,7 @@ fn poisoned_lock_is_actionable() {
 fn error_code_stable_ids_are_unique() {
     let codes = vec![
         ErrorCode::DeviceOutOfMemory,
+        ErrorCode::DeviceLost,
         ErrorCode::UnsupportedFeature,
         ErrorCode::PoisonedLock,
         ErrorCode::KernelCompileFailed,
@@ -121,6 +128,15 @@ fn backend_error_code_roundtrip() {
                 available: 0,
             },
             ErrorCode::DeviceOutOfMemory,
+        ),
+        (
+            BackendError::DeviceLost {
+                backend: "test".into(),
+                device: "gpu0".into(),
+                generation: 7,
+                message: "lost".into(),
+            },
+            ErrorCode::DeviceLost,
         ),
         (
             BackendError::UnsupportedFeature {

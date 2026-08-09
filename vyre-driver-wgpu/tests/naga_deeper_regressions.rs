@@ -106,11 +106,10 @@ fn f59_u64_add_rejects_with_named_carry_hint() {
         )],
     );
 
-    let err = naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE)
-        .expect_err(
-            "Fix: U64 Add must reject; a componentwise vec2<u32> sum \
+    let err = naga_emit::emit_module(&program, TEST_WORKGROUP_SIZE).expect_err(
+        "Fix: U64 Add must reject; a componentwise vec2<u32> sum \
              without carry would silently produce wrong results.",
-        );
+    );
     let msg = format!("{err}");
     assert!(
         msg.contains("carry") && (msg.contains("U64") || msg.contains("64-bit")),

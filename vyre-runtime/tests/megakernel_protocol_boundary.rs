@@ -4,7 +4,7 @@
 //! that cross the host→GPU boundary. Off-by-one or overflow here
 //! causes silent corruption or OOM.
 
-use vyre_runtime::megakernel::protocol::{
+use vyre_runtime::resident_work_queue::protocol::{
     control_byte_len, debug_log_byte_len, encode_control, encode_empty_debug_log,
     encode_empty_ring, read_done_count, read_epoch, read_metrics, read_observable, ring_byte_len,
     try_encode_control, try_read_done_count, try_read_epoch, try_read_observable,

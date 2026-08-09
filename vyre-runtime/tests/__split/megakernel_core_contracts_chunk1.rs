@@ -1,11 +1,9 @@
 // Core megakernel construction and host protocol contracts.
 
-use std::sync::{Arc, Mutex};
-use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{Node, Program};
-use vyre_runtime::megakernel::protocol::{control, debug, opcode as opcodes, slot};
-use vyre_runtime::megakernel::scheduler;
-use vyre_runtime::megakernel::*;
+use vyre_runtime::resident_work_queue::protocol::{control, debug, opcode as opcodes, slot};
+use vyre_runtime::resident_work_queue::scheduler;
+use vyre_runtime::resident_work_queue::*;
 use vyre_runtime::PipelineError;
 
 #[cfg(test)]
@@ -14,49 +12,6 @@ struct PackedSlotHostView {
     opcode_count: u8,
     entries: Vec<(u8, u8)>,
     packed_args: Vec<u32>,
-}
-
-#[derive(Default)]
-struct RecordingBackend {
-    calls: Mutex<Vec<Vec<Vec<u8>>>>,
-}
-
-impl vyre_driver::backend::private::Sealed for RecordingBackend {}
-
-impl VyreBackend for RecordingBackend {
-    fn id(&self) -> &'static str {
-        "recording"
-    }
-
-    fn dispatch(
-        &self,
-        _program: &Program,
-        inputs: &[Vec<u8>],
-        _config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        self.calls
-            .lock()
-            .expect("Fix: recording backend mutex must not be poisoned")
-            .push(inputs.to_vec());
-        Ok(inputs.to_vec())
-    }
-
-    fn dispatch_borrowed(
-        &self,
-        _program: &Program,
-        inputs: &[&[u8]],
-        _config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        let owned = inputs
-            .iter()
-            .map(|input| (*input).to_vec())
-            .collect::<Vec<_>>();
-        self.calls
-            .lock()
-            .expect("Fix: recording backend mutex must not be poisoned")
-            .push(owned.clone());
-        Ok(owned)
-    }
 }
 
 fn decode_packed_slot_words(words: &[u32]) -> PackedSlotHostView {
@@ -181,7 +136,7 @@ fn jit_payload_has_slot_opcode_and_arg_bindings() {
 
 #[test]
 fn encode_control_sets_shutdown_and_tenant_base() {
-    let ctrl = Megakernel::encode_control(true, 4, 8).unwrap();
+    let ctrl = ResidentWorkQueue::encode_control(true, 4, 8).unwrap();
     let shutdown = u32::from_le_bytes(ctrl[0..4].try_into().unwrap());
     let done_count = u32::from_le_bytes(ctrl[4..8].try_into().unwrap());
     let tenant_base = u32::from_le_bytes(ctrl[8..12].try_into().unwrap());
@@ -197,7 +152,7 @@ fn encode_control_sets_shutdown_and_tenant_base() {
 
 #[test]
 fn encode_control_covers_epoch_and_priority_offsets() {
-    let ctrl = Megakernel::encode_control(false, 1, 0).unwrap();
+    let ctrl = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
     let min_len = protocol::control_byte_len(0).expect("control length must fit");
     assert_eq!(ctrl.len(), min_len);
     assert!(ctrl.len() >= (control::EPOCH as usize + 1) * 4);
@@ -206,32 +161,32 @@ fn encode_control_covers_epoch_and_priority_offsets() {
 
 #[test]
 fn publish_slot_writes_status_last_and_respects_backpressure() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 0, opcodes::STORE_U32, &[42, 7]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::STORE_U32, &[42, 7]).unwrap();
     let base = (SLOT_WORDS as usize) * 4;
     let status = u32::from_le_bytes(ring[base..base + 4].try_into().unwrap());
     let op = u32::from_le_bytes(ring[base + 4..base + 8].try_into().unwrap());
     assert_eq!(status, slot::PUBLISHED);
     assert_eq!(op, opcodes::STORE_U32);
-    let err = Megakernel::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap_err();
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap_err();
     assert!(matches!(err, PipelineError::QueueFull { .. }));
     ring[base..base + 4].copy_from_slice(&slot::DONE.to_le_bytes());
-    Megakernel::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 0, opcodes::NOP, &[]).unwrap();
 }
 
 #[test]
 fn publish_slot_rejects_malformed_ring_lengths() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 1];
-    let err = Megakernel::publish_slot(&mut ring, 0, 0, opcodes::NOP, &[]).unwrap_err();
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::NOP, &[]).unwrap_err();
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn republishing_done_slot_clears_stale_args() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 0, opcodes::STORE_U32, &[1, 2, 3]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::STORE_U32, &[1, 2, 3]).unwrap();
     ring[..4].copy_from_slice(&slot::DONE.to_le_bytes());
-    Megakernel::publish_slot(&mut ring, 0, 0, opcodes::NOP, &[9]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::NOP, &[9]).unwrap();
     let words = ring
         .chunks_exact(4)
         .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
@@ -244,99 +199,44 @@ fn republishing_done_slot_clears_stale_args() {
 #[test]
 fn fallible_ring_encoder_rejects_u32_word_overflow() {
     let too_many_slots = (u32::MAX / SLOT_WORDS) + 1;
-    let err = Megakernel::try_encode_empty_ring(too_many_slots).unwrap_err();
+    let err = ResidentWorkQueue::try_encode_empty_ring(too_many_slots).unwrap_err();
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn publish_slot_out_of_bounds_returns_queue_full() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
-    let err = Megakernel::publish_slot(&mut ring, 5, 0, opcodes::NOP, &[]).unwrap_err();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 5, 0, opcodes::NOP, &[]).unwrap_err();
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn publish_slot_too_many_args_returns_queue_full() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let too_many = vec![0u32; (ARGS_PER_SLOT + 1) as usize];
-    let err = Megakernel::publish_slot(&mut ring, 0, 0, opcodes::NOP, &too_many).unwrap_err();
+    let err =
+        ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcodes::NOP, &too_many).unwrap_err();
     assert!(matches!(err, PipelineError::QueueFull { .. }));
-}
-
-fn dispatch_protocol_buffers(slot_count: u32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
-    (
-        Megakernel::try_encode_control(false, 1, 0).expect("control buffer must encode"),
-        Megakernel::try_encode_empty_ring(slot_count).expect("ring buffer must encode"),
-        Megakernel::try_encode_empty_debug_log(debug::RECORD_CAPACITY)
-            .expect("debug log must encode"),
-    )
-}
-
-#[test]
-fn dispatch_with_io_queue_preserves_caller_owned_queue() {
-    let backend = Arc::new(RecordingBackend::default());
-    let kernel = Megakernel::bootstrap_sharded(backend.clone(), 1, 1, Vec::new())
-        .expect("recording backend must bootstrap");
-    let (control, ring, debug_log) = dispatch_protocol_buffers(1);
-    let mut io_queue = MegakernelIoQueue::new(1).expect("valid io queue");
-    io_queue
-        .publish_slot(0, 7, 42, 99)
-        .expect("completion publication must succeed");
-    let expected_io_queue = io_queue.as_bytes().to_vec();
-
-    let outputs = kernel
-        .dispatch_with_io_queue(control, ring, debug_log, expected_io_queue.clone())
-        .expect("custom io_queue dispatch must reach backend");
-
-    assert_eq!(outputs[3], expected_io_queue);
-    let calls = backend
-        .calls
-        .lock()
-        .expect("Fix: recording backend mutex must not be poisoned");
-    assert_eq!(calls.len(), 1);
-    assert_eq!(calls[0][3], expected_io_queue);
-}
-
-#[test]
-fn dispatch_with_io_queue_rejects_malformed_queue_before_backend() {
-    let backend = Arc::new(RecordingBackend::default());
-    let kernel = Megakernel::bootstrap_sharded(backend.clone(), 1, 1, Vec::new())
-        .expect("recording backend must bootstrap");
-    let (control, ring, debug_log) = dispatch_protocol_buffers(1);
-
-    let err = kernel
-        .dispatch_with_io_queue(control, ring, debug_log, vec![0u8; 3])
-        .expect_err("misaligned io_queue must fail before backend dispatch");
-
-    assert!(err.to_string().contains("4-byte aligned"));
-    assert!(
-        backend
-            .calls
-            .lock()
-            .expect("Fix: recording backend mutex must not be poisoned")
-            .is_empty(),
-        "malformed io_queue must not reach backend dispatch"
-    );
 }
 
 #[test]
 fn read_done_count_decodes_little_endian() {
-    let mut ctrl = Megakernel::encode_control(false, 0, 0).unwrap();
+    let mut ctrl = ResidentWorkQueue::encode_control(false, 0, 0).unwrap();
     let off = (control::DONE_COUNT as usize) * 4;
     ctrl[off..off + 4].copy_from_slice(&42u32.to_le_bytes());
-    assert_eq!(Megakernel::read_done_count(&ctrl), 42);
+    assert_eq!(ResidentWorkQueue::read_done_count(&ctrl), 42);
 }
 
 #[test]
 fn read_debug_log_decodes_printf_records() {
-    let mut log = Megakernel::encode_empty_debug_log(3).unwrap();
+    let mut log = ResidentWorkQueue::encode_empty_debug_log(3).unwrap();
     let cursor = 8u32;
     log[0..4].copy_from_slice(&cursor.to_le_bytes());
     let rec_off = (debug::RECORDS_BASE as usize) * 4;
     for (i, w) in [11u32, 12, 13, 14, 21, 22, 23, 24].iter().enumerate() {
         log[rec_off + i * 4..rec_off + i * 4 + 4].copy_from_slice(&w.to_le_bytes());
     }
-    let records = Megakernel::read_debug_log(&log);
+    let records = ResidentWorkQueue::read_debug_log(&log);
     assert_eq!(records.len(), 2);
     assert_eq!(
         records[0],
@@ -396,13 +296,13 @@ fn new_opcodes_are_distinct() {
 
 #[test]
 fn batch_publish_fills_slots_and_adds_fence() {
-    let mut ring = Megakernel::encode_empty_ring(8).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(8).unwrap();
     let items = vec![
         (opcodes::STORE_U32, vec![10, 32]),
         (opcodes::STORE_U32, vec![20, 33]),
         (opcodes::ATOMIC_ADD, vec![1, 34]),
     ];
-    let consumed = Megakernel::batch_publish(&mut ring, 0, 0, &items, 0xBEEF).unwrap();
+    let consumed = ResidentWorkQueue::batch_publish(&mut ring, 0, 0, &items, 0xBEEF).unwrap();
     // 3 work items + 1 fence = 4 slots
     assert_eq!(consumed, 4);
 
@@ -417,11 +317,11 @@ fn read_epoch_decodes_control() {
     let mut ctrl = vec![0u8; (control::EPOCH as usize + 2) * 4];
     let off = (control::EPOCH as usize) * 4;
     ctrl[off..off + 4].copy_from_slice(&7u32.to_le_bytes());
-    assert_eq!(Megakernel::read_epoch(&ctrl), 7);
+    assert_eq!(ResidentWorkQueue::read_epoch(&ctrl), 7);
 }
 
 #[test]
 fn read_observable_returns_zero_for_unset() {
     let ctrl = vec![0u8; (control::OBSERVABLE_BASE as usize + 10) * 4];
-    assert_eq!(Megakernel::read_observable(&ctrl, 5), 0);
+    assert_eq!(ResidentWorkQueue::read_observable(&ctrl, 5), 0);
 }

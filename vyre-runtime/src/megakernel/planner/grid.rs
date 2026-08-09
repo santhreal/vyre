@@ -5,12 +5,12 @@ use std::cell::RefCell;
 use rustc_hash::FxHashMap;
 use vyre_driver::backend::BackendError;
 
-use super::geometry::MegakernelLaunchGeometry;
-use super::sizing::MegakernelSizingPolicy;
+use super::geometry::ResidentLaunchGeometry;
+use super::sizing::ResidentSizingPolicy;
 
 /// Adapter limits that bound a megakernel worker-grid recommendation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MegakernelGridLimits {
+pub struct ResidentGridLimits {
     /// Adapter maximum workgroup size in the x dimension.
     pub max_workgroup_size_x: u32,
     /// Adapter maximum compute workgroups per dimension.
@@ -29,9 +29,8 @@ struct GeometryCacheKey {
 }
 
 struct MegakernelPlannerCache {
-    grid_plans:
-        FxHashMap<(MegakernelGridRequest, MegakernelGridLimits), CacheEntry<MegakernelGridPlan>>,
-    geometries: FxHashMap<GeometryCacheKey, CacheEntry<MegakernelLaunchGeometry>>,
+    grid_plans: FxHashMap<(ResidentGridRequest, ResidentGridLimits), CacheEntry<ResidentGridPlan>>,
+    geometries: FxHashMap<GeometryCacheKey, CacheEntry<ResidentLaunchGeometry>>,
     clock: u64,
 }
 
@@ -43,8 +42,8 @@ struct CacheEntry<T> {
 impl MegakernelPlannerCache {
     fn get_grid_plan(
         &mut self,
-        key: &(MegakernelGridRequest, MegakernelGridLimits),
-    ) -> Option<MegakernelGridPlan> {
+        key: &(ResidentGridRequest, ResidentGridLimits),
+    ) -> Option<ResidentGridPlan> {
         self.prepare_cache_hit_tick();
         let entry = self.grid_plans.get_mut(key)?;
         self.clock += 1;
@@ -54,8 +53,8 @@ impl MegakernelPlannerCache {
 
     fn insert_grid_plan(
         &mut self,
-        key: (MegakernelGridRequest, MegakernelGridLimits),
-        value: MegakernelGridPlan,
+        key: (ResidentGridRequest, ResidentGridLimits),
+        value: ResidentGridPlan,
     ) {
         let tick = self.next_tick();
         self.grid_plans.insert(
@@ -68,7 +67,7 @@ impl MegakernelPlannerCache {
         self.evict_grid_plans_to_cap();
     }
 
-    fn get_geometry(&mut self, key: &GeometryCacheKey) -> Option<MegakernelLaunchGeometry> {
+    fn get_geometry(&mut self, key: &GeometryCacheKey) -> Option<ResidentLaunchGeometry> {
         self.prepare_cache_hit_tick();
         let entry = self.geometries.get_mut(key)?;
         self.clock += 1;
@@ -76,7 +75,7 @@ impl MegakernelPlannerCache {
         Some(entry.value)
     }
 
-    fn insert_geometry(&mut self, key: GeometryCacheKey, value: MegakernelLaunchGeometry) {
+    fn insert_geometry(&mut self, key: GeometryCacheKey, value: ResidentLaunchGeometry) {
         let tick = self.next_tick();
         self.geometries.insert(
             key,
@@ -156,16 +155,16 @@ thread_local! {
 }
 
 fn cached_grid_plan(
-    request: MegakernelGridRequest,
-    limits: MegakernelGridLimits,
-) -> Result<MegakernelGridPlan, BackendError> {
+    request: ResidentGridRequest,
+    limits: ResidentGridLimits,
+) -> Result<ResidentGridPlan, BackendError> {
     if let Some(plan) =
         PLANNER_CACHE.with(|cache| cache.borrow_mut().get_grid_plan(&(request, limits)))
     {
         return Ok(plan);
     }
 
-    let plan = MegakernelSizingPolicy::standard().calculate_optimal_grid(request, limits)?;
+    let plan = ResidentSizingPolicy::standard().calculate_optimal_grid(request, limits)?;
     PLANNER_CACHE.with(|cache| {
         cache.borrow_mut().insert_grid_plan((request, limits), plan);
     });
@@ -176,7 +175,7 @@ pub(super) fn cached_geometry_from_slots(
     slot_count: u32,
     worker_count: u32,
     max_workgroup_size_x: u32,
-) -> MegakernelLaunchGeometry {
+) -> ResidentLaunchGeometry {
     let key = GeometryCacheKey {
         slot_count,
         worker_count,
@@ -186,7 +185,7 @@ pub(super) fn cached_geometry_from_slots(
         return geometry;
     }
 
-    let geometry = MegakernelSizingPolicy::standard().geometry_from_slots(
+    let geometry = ResidentSizingPolicy::standard().geometry_from_slots(
         slot_count,
         worker_count,
         max_workgroup_size_x,
@@ -197,7 +196,7 @@ pub(super) fn cached_geometry_from_slots(
     geometry
 }
 
-impl MegakernelGridLimits {
+impl ResidentGridLimits {
     /// Construct megakernel grid limits from backend adapter limits.
     #[must_use]
     pub const fn new(
@@ -234,14 +233,14 @@ impl MegakernelGridLimits {
 
 /// Logical work shape requested for a megakernel worker-grid recommendation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MegakernelGridRequest {
+pub struct ResidentGridRequest {
     /// Logical ring slots or work items queued for this launch.
     pub queue_len: u32,
     /// Caller-requested worker workgroup ceiling. Zero means derive from occupancy.
     pub requested_worker_groups: u32,
 }
 
-impl MegakernelGridRequest {
+impl ResidentGridRequest {
     /// Construct a worker-grid request.
     #[must_use]
     pub const fn new(queue_len: u32, requested_worker_groups: u32) -> Self {
@@ -254,22 +253,22 @@ impl MegakernelGridRequest {
 
 /// Resolved worker-grid plan shared by direct and policy-driven megakernel paths.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelGridPlan {
+pub struct ResidentGridPlan {
     /// Padded launch geometry for the ring protocol.
-    pub geometry: MegakernelLaunchGeometry,
+    pub geometry: ResidentLaunchGeometry,
     /// Worker workgroups selected for the dispatch.
     pub worker_groups: u32,
 }
 
-impl MegakernelGridPlan {
+impl ResidentGridPlan {
     /// Resolve worker groups, workgroup width, slot padding, and dispatch grid.
     ///
     /// # Errors
     ///
     /// Returns [`BackendError`] when adapter limits are malformed.
     pub fn recommend(
-        request: MegakernelGridRequest,
-        limits: MegakernelGridLimits,
+        request: ResidentGridRequest,
+        limits: ResidentGridLimits,
     ) -> Result<Self, BackendError> {
         cached_grid_plan(request, limits)
     }
@@ -279,16 +278,16 @@ impl MegakernelGridPlan {
 mod tests {
     use super::*;
 
-    fn limits() -> MegakernelGridLimits {
-        MegakernelGridLimits::new(256, 65_535, 256)
+    fn limits() -> ResidentGridLimits {
+        ResidentGridLimits::new(256, 65_535, 256)
     }
 
-    fn request(queue_len: u32) -> MegakernelGridRequest {
-        MegakernelGridRequest::new(queue_len, 0)
+    fn request(queue_len: u32) -> ResidentGridRequest {
+        ResidentGridRequest::new(queue_len, 0)
     }
 
-    fn geometry(slot_count: u32) -> MegakernelLaunchGeometry {
-        MegakernelLaunchGeometry {
+    fn geometry(slot_count: u32) -> ResidentLaunchGeometry {
+        ResidentLaunchGeometry {
             workgroup_size_x: 1,
             slot_count,
             dispatch_grid: [1, 1, 1],
@@ -300,7 +299,7 @@ mod tests {
         let mut cache = MegakernelPlannerCache::default();
         let limits = limits();
         let hot_key = (request(1), limits);
-        let hot_plan = MegakernelGridPlan {
+        let hot_plan = ResidentGridPlan {
             geometry: geometry(1),
             worker_groups: 1,
         };
@@ -308,7 +307,7 @@ mod tests {
         for queue_len in 2..=GRID_PLAN_CACHE_CAP as u32 {
             cache.insert_grid_plan(
                 (request(queue_len), limits),
-                MegakernelGridPlan {
+                ResidentGridPlan {
                     geometry: geometry(queue_len),
                     worker_groups: 1,
                 },
@@ -317,7 +316,7 @@ mod tests {
         assert_eq!(cache.get_grid_plan(&hot_key), Some(hot_plan));
         cache.insert_grid_plan(
             (request((GRID_PLAN_CACHE_CAP + 1) as u32), limits),
-            MegakernelGridPlan {
+            ResidentGridPlan {
                 geometry: geometry((GRID_PLAN_CACHE_CAP + 1) as u32),
                 worker_groups: 1,
             },

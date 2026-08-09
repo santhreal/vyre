@@ -234,6 +234,29 @@ impl ArtifactSession {
         Ok(identity)
     }
 
+    /// Resolve one canonical artifact ABI value by its stable resource name.
+    pub fn resource(&self, name: &str) -> Result<ArtifactValueId, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        state
+            .admitted
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.name == name)
+            .map(|resource| resource.value)
+            .ok_or_else(|| {
+                BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: artifact ABI does not declare required runtime resource `{name}`."
+                    ),
+                }
+                .into()
+            })
+    }
+
     fn retained_values(&self) -> Result<BTreeSet<ArtifactValueId>, ArtifactSessionError> {
         let state = self
             .state
@@ -282,6 +305,43 @@ impl RetainedArtifactSession {
         self.session.artifact()
     }
 
+    /// Current immutable device generation identity.
+    pub fn device(&self) -> Result<DeviceIdentity, ArtifactSessionError> {
+        self.session.device()
+    }
+
+    /// Build empty transient bindings for the shared neutral artifact.
+    pub fn bindings(&self) -> Result<BindingSet, ArtifactSessionError> {
+        self.session.bindings()
+    }
+
+    /// Reacquire a device and rematerialize the authenticated artifact bytes.
+    pub fn rematerialize(&self) -> Result<DeviceIdentity, ArtifactSessionError> {
+        self.session.rematerialize()
+    }
+
+    /// Replace runtime-owned retained bytes before the next submission.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error unless the update covers exactly every retained ABI value.
+    pub fn replace_retained(
+        &self,
+        values: BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Result<(), ArtifactSessionError> {
+        if values.keys().copied().collect::<BTreeSet<_>>() != self.retained_values {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: replace exactly every retained artifact value.".to_string(),
+            }
+            .into());
+        }
+        *self
+            .retained
+            .lock()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))? = values;
+        Ok(())
+    }
+
     /// Submit transient bindings, merge retained state, and atomically retain completion state.
     pub fn submit_and_wait(
         &self,
@@ -317,11 +377,6 @@ impl RetainedArtifactSession {
             .map_err(|error| ArtifactSessionError::State(error.to_string()))? =
             completion.retained.clone();
         Ok(completion)
-    }
-
-    /// Reacquire and rematerialize without changing neutral or retained identities.
-    pub fn rematerialize(&self) -> Result<DeviceIdentity, ArtifactSessionError> {
-        self.session.rematerialize()
     }
 }
 

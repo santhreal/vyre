@@ -11,6 +11,8 @@ use crate::Error;
 pub enum ErrorCode {
     /// Backend device reported insufficient memory.
     DeviceOutOfMemory,
+    /// Acquired device generation was lost or invalidated.
+    DeviceLost,
     /// The backend does not support a required feature.
     UnsupportedFeature,
     /// A lock used by the backend failed to unlock safely.
@@ -53,6 +55,7 @@ impl ErrorCode {
             Self::DispatchFailed => 1005,
             Self::InvalidProgram => 1006,
             Self::CooperativeResidencyExceeded => 1007,
+            Self::DeviceLost => 1008,
             Self::Unknown => 1999,
         }
     }
@@ -89,6 +92,21 @@ pub enum BackendError {
         requested: u64,
         /// Bytes reported available at the time of the failure.
         available: u64,
+    },
+
+    /// The acquired device generation was lost and all native handles are stale.
+    #[error(
+        "device generation {generation} was lost on backend `{backend}` device `{device}`: {message}. Fix: reacquire the registered materializer and rematerialize the authenticated artifact before retrying."
+    )]
+    DeviceLost {
+        /// Registered backend identifier.
+        backend: String,
+        /// Backend-local physical or logical device identifier.
+        device: String,
+        /// Invalidated device generation.
+        generation: u64,
+        /// Concrete device-loss detail.
+        message: String,
     },
 
     /// The backend does not support a required feature.
@@ -249,6 +267,7 @@ impl BackendError {
     pub fn code(&self) -> ErrorCode {
         match self {
             Self::DeviceOutOfMemory { .. } => ErrorCode::DeviceOutOfMemory,
+            Self::DeviceLost { .. } => ErrorCode::DeviceLost,
             Self::UnsupportedFeature { .. } => ErrorCode::UnsupportedFeature,
             Self::PoisonedLock { .. } => ErrorCode::PoisonedLock,
             Self::KernelCompileFailed { .. } => ErrorCode::KernelCompileFailed,

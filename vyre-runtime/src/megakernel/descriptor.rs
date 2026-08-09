@@ -12,7 +12,7 @@ use smallvec::SmallVec;
 
 const ARGS_PER_SLOT_USIZE: usize = 12;
 
-use super::{protocol, Megakernel};
+use super::{protocol, ResidentWorkQueue};
 
 /// Built-in megakernel opcodes exposed as a typed host API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,11 +146,15 @@ impl SlotDescriptor {
                 tenant_id,
                 opcode,
                 args,
-            } => {
-                Megakernel::publish_slot(ring_bytes, slot_idx, *tenant_id, opcode.into_wire(), args)
-            }
+            } => ResidentWorkQueue::publish_slot(
+                ring_bytes,
+                slot_idx,
+                *tenant_id,
+                opcode.into_wire(),
+                args,
+            ),
             Self::Packed { tenant_id, ops } => {
-                Megakernel::publish_packed_descriptors(ring_bytes, slot_idx, *tenant_id, ops)
+                ResidentWorkQueue::publish_packed_descriptors(ring_bytes, slot_idx, *tenant_id, ops)
             }
         }
     }
@@ -430,7 +434,7 @@ fn publish_window_payload(
     args.push(ticket);
     args.push(class.into_wire());
     args.extend_from_slice(payload);
-    Megakernel::publish_slot(ring_bytes, slot_idx, tenant_id, opcode.into_wire(), args)?;
+    ResidentWorkQueue::publish_slot(ring_bytes, slot_idx, tenant_id, opcode.into_wire(), args)?;
     *slot_offset = slot_offset.checked_add(1).ok_or(PipelineError::QueueFull {
         queue: "submission",
         fix: "window slot count overflowed u32; split the window before publishing",

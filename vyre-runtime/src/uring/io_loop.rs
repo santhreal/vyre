@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use crate::megakernel::io::{claim_io_requests_into, complete_io_request, io_op};
+use crate::resident_work_queue::io::{claim_io_requests_into, complete_io_request, io_op};
 use crate::uring::stream::AsyncUringStream;
 use crate::PipelineError;
 
@@ -62,12 +62,12 @@ impl IdleBackoff {
 }
 
 /// Host-side pump that services GPU-driven IO requests.
-pub struct MegakernelIoLoop {
+pub struct ResidentIoLoop {
     shutdown: Arc<AtomicBool>,
     handle: Option<JoinHandle<Result<(), PipelineError>>>,
 }
 
-impl MegakernelIoLoop {
+impl ResidentIoLoop {
     /// Start a background thread that polls `io_queue_mapped`.
     ///
     /// READ requests require registered destinations; call
@@ -167,7 +167,7 @@ impl MegakernelIoLoop {
                             } else {
                                 complete_io_request(io_queue_mapped, req.slot_idx, false)?;
                                 return Err(PipelineError::Backend(format!(
-                                    "megakernel IO READ requested unregistered GPU destination handle {} in slot {}. Fix: register the destination with MegakernelIoLoop::spawn_with_registered_destinations before publishing READ requests.",
+                                    "megakernel IO READ requested unregistered GPU destination handle {} in slot {}. Fix: register the destination with ResidentIoLoop::spawn_with_registered_destinations before publishing READ requests.",
                                     req.dst_handle, req.slot_idx
                                 )));
                             }

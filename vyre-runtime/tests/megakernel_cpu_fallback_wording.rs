@@ -3,9 +3,9 @@
 //! Guarantees that error messages and source code never imply a CPU
 //! fallback path exists.
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode},
-    protocol, Megakernel, MegakernelIoQueue, IO_SLOT_COUNT,
+    protocol, ResidentWorkQueue, ResidentIoQueue, IO_SLOT_COUNT,
 };
 use vyre_runtime::PipelineError;
 
@@ -26,22 +26,22 @@ fn assert_no_cpu_wording(err: &PipelineError) {
 fn encoder_errors_never_suggest_cpu_fallback() {
     let too_many_slots = (u32::MAX / protocol::SLOT_WORDS) + 1;
     assert_no_cpu_wording(
-        &Megakernel::try_encode_empty_ring(too_many_slots).expect_err("must fail"),
+        &ResidentWorkQueue::try_encode_empty_ring(too_many_slots).expect_err("must fail"),
     );
 
     assert_no_cpu_wording(
-        &Megakernel::try_encode_control(false, 1, u32::MAX).expect_err("must fail"),
+        &ResidentWorkQueue::try_encode_control(false, 1, u32::MAX).expect_err("must fail"),
     );
 
     assert_no_cpu_wording(
-        &Megakernel::try_encode_empty_debug_log(u32::MAX).expect_err("must fail"),
+        &ResidentWorkQueue::try_encode_empty_debug_log(u32::MAX).expect_err("must fail"),
     );
 }
 
 #[test]
 fn queue_full_errors_never_suggest_cpu_fallback() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    let err = Megakernel::publish_slot(
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    let err = ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         0,
@@ -51,16 +51,16 @@ fn queue_full_errors_never_suggest_cpu_fallback() {
     .expect_err("too many args must fail");
     assert_no_cpu_wording(&err);
 
-    let err = MegakernelIoQueue::new(0).expect_err("zero slots must fail");
+    let err = ResidentIoQueue::new(0).expect_err("zero slots must fail");
     assert_no_cpu_wording(&err);
 
-    let err = MegakernelIoQueue::new(IO_SLOT_COUNT + 1).expect_err("oversized must fail");
+    let err = ResidentIoQueue::new(IO_SLOT_COUNT + 1).expect_err("oversized must fail");
     assert_no_cpu_wording(&err);
 }
 
 #[test]
 fn batch_descriptor_errors_never_suggest_cpu_fallback() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let batch = BatchDescriptor::new(
         0,
         vec![

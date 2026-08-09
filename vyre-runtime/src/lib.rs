@@ -1,32 +1,9 @@
-//! # vyre-runtime  -  persistent megakernel + io_uring zero-copy
+//! Artifact execution, resident work queues, model residency, and zero-copy IO.
 //!
-//! This crate provides the execution runtime for vyre  -  the layer
-//! between "I have a compiled Program" and "bytes flow through the
-//! GPU continuously."
-//!
-//! ## Architecture
-//!
-//! 1. **`megakernel`**  -  the persistent GPU process. A vyre `Program`
-//!    wrapping `Node::forever` that loops a ring-buffer interpreter
-//!    or a JIT-fused payload processor.
-//!    - `protocol`  -  slot layout, control words, opcodes
-//!    - `opcode`  -  built-in opcode handlers + extension mechanism
-//!    - `builder`  -  IR `Program` construction (interpreted + JIT)
-//! 2. **`cache`**  -  content-addressed compilation cache.
-//! 3. **`stream`**  -  `GpuStream` glue bridging io_uring completions
-//!    to the megakernel tail pointer.
-//! 4. **`uring`** (Linux only)  -  raw `io_uring` syscall wrappers.
-//!
-//! ## Design laws
-//!
-//! - **No CPU executor on the hot path.** Compatibility ingest may submit
-//!   registered mapped reads, but the native path is NVMe passthrough into
-//!   BAR1 GPU memory; after launch the megakernel owns execution and the CPU
-//!   only touches queue metadata.
-//! - **Megakernel is IR, not target-text.** The persistent kernel is a
-//!   `Program` any `VyreBackend` can compile + dispatch.
-//! - **Structured errors, never silent swallowing.** Every failure
-//!   mode returns `PipelineError` with a `Fix: ` hint.
+//! Runtime construction starts from an authenticated [`ArtifactSession`].
+//! Immutable compiler artifacts are materialized through registered target
+//! devices; runtime policy owns bindings, retained state, queueing, recovery,
+//! checkpoint residency, IO, and telemetry.
 
 #![deny(missing_docs)]
 #![warn(unreachable_pub)]
@@ -60,7 +37,7 @@ pub enum PipelineError {
     },
     /// Attempted to use io_uring on a non-Linux platform.
     #[error(
-        "io_uring is Linux-only. Fix: run on Linux 5.1+ or use Megakernel::dispatch without a GpuStream"
+        "io_uring is Linux-only. Fix: run on Linux 5.1+ or construct GpuStream without an io_uring stream"
     )]
     NotLinux,
     /// Feature required for NVMe passthrough is not enabled.
@@ -128,17 +105,20 @@ pub mod artifact_admission;
 /// Bounded safetensors checkpoint metadata ingestion.
 pub mod checkpoint;
 
-/// Immutable model, compiled artifact, and per-sequence state residency.
+/// Immutable model, artifact-instance, and per-sequence state residency.
 pub mod model_residency;
 
-/// Persistent megakernel  -  the vyre Program that runs forever on
-/// the GPU, decoding host-fed ring opcodes from a host-fed ring buffer.
-pub mod megakernel;
+/// Resident work-queue protocols, scheduling policy, and runtime IO.
+#[path = "megakernel/mod.rs"]
+pub mod resident_work_queue;
 
-/// Content-addressed pipeline cache: `blake3(canonicalize(p).to_wire())`
-/// is the cache key.
+/// Authenticated persistent execution over retained artifact bindings.
+pub mod persistent_executor;
+/// Content-addressed authenticated artifact cache.
 pub mod pipeline_cache;
 
+/// Structured artifact-session recovery without message parsing or recompilation.
+pub mod recovery;
 /// Differential megakernel replay log  -  captures every published
 /// ring slot so a later cert run can diff epoch-by-epoch execution
 /// against a live backend.
@@ -175,7 +155,8 @@ pub use artifact_admission::{
     admit_artifact, admit_cached_artifact, admit_envelope, AdmittedArtifact,
     ArtifactAdmissionError, ArtifactSession, ArtifactSessionError, RetainedArtifactSession,
 };
-pub use megakernel::Megakernel;
+pub use persistent_executor::{PersistentExecutor, ResidentQueueCompletion, ResidentQueueState};
+pub use recovery::{classify_backend_error, recover_artifact_session, RecoveryClass};
 
 /// Linux io_uring integration. Compiled out on macOS / Windows.
 #[cfg(target_os = "linux")]

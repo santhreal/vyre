@@ -1,8 +1,6 @@
 //! Backend-neutral C source ingestion and typed-IR contract tests.
 
-use vyre_foundation::ir::{
-    validate, BufferAccess, BufferDecl, DataType, Expr, Node, Program,
-};
+use vyre_foundation::ir::{validate, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_frontend_c::{
     lower_source, lower_translation_unit, parse_source, parse_source_bytes, CFrontendError,
     MAX_SOURCE_BYTES,
@@ -21,9 +19,7 @@ fn scalar_kernel_lowers_to_exact_typed_ir_without_execution() {
         "frontend must return structurally valid typed IR"
     );
     let expected = Program::wrapped(
-        vec![
-            BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
+        vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store(
             "out",
@@ -80,11 +76,9 @@ fn malformed_syntax_preserves_exact_location_diagnostic() {
 
 #[test]
 fn hostile_bytes_preserve_exact_diagnostics() {
-    let nul = parse_source_bytes(b"int kernel(void) {\0}").expect_err("embedded NUL must be rejected");
-    assert_eq!(
-        nul,
-        CFrontendError::EmbeddedNul { offset: 18 },
-    );
+    let nul =
+        parse_source_bytes(b"int kernel(void) {\0}").expect_err("embedded NUL must be rejected");
+    assert_eq!(nul, CFrontendError::EmbeddedNul { offset: 18 },);
     assert_eq!(
         nul.to_string(),
         "C frontend rejected byte 0x00 at byte 18. Fix: remove embedded NUL bytes from C source."

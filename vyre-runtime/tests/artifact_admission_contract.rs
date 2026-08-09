@@ -1,13 +1,13 @@
 //! Regression contracts for canonical runtime artifact admission.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
 use vyre_driver::backend::BackendRegistration;
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, Completion, Device,
-    DeviceIdentity, Submission, VyreBackend,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
+    Device, DeviceIdentity, Submission, VyreBackend,
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
@@ -19,8 +19,10 @@ use vyre_megakernel::{
     TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::{
-    admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession,
-    InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint, RetainedArtifactSession,
+    admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
+    recover_artifact_session, ArtifactAdmissionError, ArtifactSession, InMemoryPipelineCache,
+    PersistentExecutor, PipelineCacheStore, PipelineFingerprint, RecoveryClass, ResidentQueueState,
+    RetainedArtifactSession,
 };
 
 const FRAME_HEADER_BYTES: usize = 10;
@@ -62,6 +64,78 @@ fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
     .validate()
     .expect("fixture request must validate");
     compile(&request).expect("fixture request must compile")
+}
+
+fn resident_queue_artifact() -> Artifact {
+    let mut graph = ProgramGraph::new();
+    let buffers = ["control", "ring_buffer", "debug_log", "io_queue"];
+    for name in buffers {
+        graph
+            .add_external_value(
+                name,
+                ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(4)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Retained,
+                },
+            )
+            .unwrap();
+    }
+    graph
+        .add_node(
+            "queue",
+            Program::wrapped(
+                buffers
+                    .into_iter()
+                    .enumerate()
+                    .map(|(slot, name)| {
+                        BufferDecl::read_write(name, slot as u32, DataType::U32).with_count(4)
+                    })
+                    .collect(),
+                [1, 1, 1],
+                Vec::new(),
+            ),
+            Vec::new(),
+            Vec::new(),
+        )
+        .unwrap();
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .unwrap();
+    compile(&request).unwrap()
+}
+
+fn queue_payload(neutral: &Artifact) -> TargetPayload {
+    let bindings = neutral
+        .resources()
+        .iter()
+        .enumerate()
+        .map(|(slot, resource)| TargetResourceBinding {
+            resource: resource.value,
+            slot: slot as u32,
+            memory: TargetResourceMemory::Global,
+            access: TargetResourceAccess::ReadWrite,
+        })
+        .collect();
+    TargetPayload::new(
+        neutral,
+        format("test.cache-target", 1),
+        vec![TargetEntryPoint {
+            name: "queue".to_string(),
+            node: ArtifactNodeId(0),
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![1, 2, 3],
+    )
+    .unwrap()
 }
 
 fn format(identity: &str, version: u16) -> TargetPayloadFormat {
@@ -516,6 +590,12 @@ impl ArtifactMaterializer for TestMaterializer {
             artifact: artifact.digest(),
             payload: payload.digest(),
             device: self.device.identity.clone(),
+            retained: artifact
+                .resources()
+                .iter()
+                .filter(|resource| resource.lifetime == vyre_megakernel::ResourceLifetime::Retained)
+                .map(|resource| resource.value)
+                .collect(),
         }))
     }
 }
@@ -524,6 +604,7 @@ struct TestInstance {
     artifact: Digest,
     payload: Digest,
     device: DeviceIdentity,
+    retained: BTreeSet<ArtifactValueId>,
 }
 
 impl ArtifactInstance for TestInstance {
@@ -545,10 +626,23 @@ impl ArtifactInstance for TestInstance {
                 fix: "Fix: test bindings must name the materialized artifact.".to_string(),
             });
         }
+        let retained = bindings
+            .resources()
+            .iter()
+            .filter_map(|(value, resource)| {
+                self.retained.contains(value).then(|| match resource {
+                    BoundResource::Host(bytes) => Ok((*value, bytes.clone())),
+                    BoundResource::Resident(_) => Err(BackendError::UnsupportedFeature {
+                        name: "test resident resource".to_string(),
+                        backend: "test-artifact".to_string(),
+                    }),
+                })
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
         Ok(Box::new(TestSubmission(Some(Completion {
             artifact: self.artifact,
             outputs: BTreeMap::new(),
-            retained: BTreeMap::new(),
+            retained,
             device_ns: None,
         }))))
     }
@@ -629,6 +723,41 @@ fn artifact_session_bootstrap_and_recovery_use_only_materialization() {
     assert!(MATERIALIZER_CALLS.load(Ordering::Acquire) >= calls_before + 2);
 }
 
+/// WHY: recovery must branch on the stable error variant and preserve other failures.
+#[test]
+fn artifact_recovery_requires_structured_device_loss() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [payload(
+            &neutral,
+            format("test.cache-target", 1),
+            &[4, 5, 6, 7],
+        )],
+    );
+    let session = ArtifactSession::from_bytes(&TEST_REGISTRATION, &bytes).unwrap();
+    let first_device = session.device().unwrap();
+    let failure = BackendError::DeviceLost {
+        backend: first_device.backend.to_string(),
+        device: first_device.device.clone(),
+        generation: first_device.generation,
+        message: "fault injection".to_string(),
+    };
+    assert_eq!(classify_backend_error(&failure), RecoveryClass::DeviceLoss);
+    let recovered = recover_artifact_session(&session, failure).unwrap();
+    assert!(recovered.generation > first_device.generation);
+    assert_eq!(session.artifact().unwrap(), neutral.digest());
+
+    let permanent = BackendError::InvalidProgram {
+        fix: "Fix: reject malformed test bindings.".to_string(),
+    };
+    let error = recover_artifact_session(&session, permanent).unwrap_err();
+    assert!(matches!(
+        error,
+        vyre_runtime::ArtifactSessionError::Backend(BackendError::InvalidProgram { .. })
+    ));
+}
+
 /// WHY: retained and ephemeral policies must preserve one neutral artifact identity.
 #[test]
 fn retained_and_ephemeral_sessions_share_artifact_identity() {
@@ -651,6 +780,37 @@ fn retained_and_ephemeral_sessions_share_artifact_identity() {
         .submit_and_wait(retained_session_bindings(digest))
         .unwrap();
     assert_eq!(completion.artifact, digest);
+}
+
+/// WHY: the shipped persistent route must authenticate, retain, submit, and recover one artifact.
+#[test]
+fn persistent_executor_uses_retained_artifact_lifecycle() {
+    let neutral = resident_queue_artifact();
+    let digest = neutral.digest();
+    let bytes = envelope_bytes(neutral.clone(), [queue_payload(&neutral)]);
+    let initial = ResidentQueueState {
+        control: vec![1; 16],
+        ring: vec![2; 16],
+        debug_log: vec![3; 16],
+        io_queue: vec![4; 16],
+    };
+    let executor =
+        PersistentExecutor::from_bytes(&TEST_REGISTRATION, &bytes, initial.clone()).unwrap();
+    assert_eq!(executor.artifact().unwrap(), digest);
+    let completion = executor.submit_and_wait(initial.clone()).unwrap();
+    assert_eq!(completion.state, initial);
+
+    let first_device = executor.device().unwrap();
+    let recovered = executor
+        .recover(BackendError::DeviceLost {
+            backend: first_device.backend.to_string(),
+            device: first_device.device.clone(),
+            generation: first_device.generation,
+            message: "fault injection".to_string(),
+        })
+        .unwrap();
+    assert!(recovered.generation > first_device.generation);
+    assert_eq!(executor.artifact().unwrap(), digest);
 }
 
 fn retained_session_bindings(artifact: Digest) -> BindingSet {

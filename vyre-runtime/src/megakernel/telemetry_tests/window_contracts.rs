@@ -2,10 +2,10 @@ use super::*;
 
 #[test]
 fn decode_window_opcodes_groups_ticketed_slots() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let window_opcode = 0xF101;
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         3,
@@ -13,7 +13,7 @@ fn decode_window_opcodes_groups_ticketed_slots() {
         &[7, WindowClass::Required.into_wire(), 42],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         1,
         3,
@@ -21,7 +21,7 @@ fn decode_window_opcodes_groups_ticketed_slots() {
         &[7, WindowClass::Lookahead.into_wire(), 99],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         2,
         3,
@@ -61,11 +61,11 @@ fn decode_window_opcodes_groups_ticketed_slots() {
 
 #[test]
 fn decode_window_opcodes_matches_dense_bitmap_opcodes() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let first_window_opcode = 3u32;
     let second_window_opcode = 9u32;
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         3,
@@ -73,7 +73,7 @@ fn decode_window_opcodes_matches_dense_bitmap_opcodes() {
         &[11, WindowClass::Required.into_wire(), 42],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         1,
         3,
@@ -99,10 +99,10 @@ fn decode_window_opcodes_matches_dense_bitmap_opcodes() {
 
 #[test]
 fn decode_with_scratch_reuses_snapshot_storage() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let window_opcode = 0xF101;
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         3,
@@ -110,7 +110,7 @@ fn decode_with_scratch_reuses_snapshot_storage() {
         &[7, WindowClass::Required.into_wire(), 42],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         1,
         3,
@@ -165,11 +165,11 @@ fn decode_with_scratch_reuses_snapshot_storage() {
 
 #[test]
 fn decode_sorted_window_opcodes_reuses_scratch_without_resort_growth() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let first_opcode = 0xF101;
     let second_opcode = 0xF102;
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         3,
@@ -177,7 +177,7 @@ fn decode_sorted_window_opcodes_reuses_scratch_without_resort_growth() {
         &[7, WindowClass::Required.into_wire(), 42],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         1,
         3,
@@ -226,10 +226,10 @@ fn decode_sorted_window_opcodes_reuses_scratch_without_resort_growth() {
 
 #[test]
 fn terminal_window_is_not_reported_as_active() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let window_opcode = 0xF101;
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         0,
         3,
@@ -237,7 +237,7 @@ fn terminal_window_is_not_reported_as_active() {
         &[9, WindowClass::Required.into_wire(), 42],
     )
     .unwrap();
-    Megakernel::publish_slot(
+    ResidentWorkQueue::publish_slot(
         &mut ring,
         1,
         3,

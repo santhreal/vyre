@@ -1,6 +1,6 @@
-use crate::megakernel::planner::MegakernelWorkItem;
-use crate::megakernel::protocol::{self, slot, SLOT_WORDS};
-use crate::megakernel::{scheduler, Megakernel, PackedOpDescriptor};
+use crate::resident_work_queue::planner::ResidentWorkItem;
+use crate::resident_work_queue::protocol::{self, slot, SLOT_WORDS};
+use crate::resident_work_queue::{scheduler, PackedOpDescriptor, ResidentWorkQueue};
 use crate::PipelineError;
 
 const SLOT_WORDS_USIZE: usize = 16;
@@ -92,7 +92,7 @@ fn validate_ring_publish_view(ring_bytes: &[u8]) -> Result<RingPublishView, Pipe
     })
 }
 
-impl Megakernel {
+impl ResidentWorkQueue {
     /// Apply one explicit lifecycle transition to a ring slot status word.
     ///
     /// This helper is for host-side tests, recovery, cancellation, and
@@ -140,23 +140,23 @@ impl Megakernel {
         Self::publish_slot_validated(ring_bytes, view, slot_idx, tenant_id, opcode, args)
     }
 
-    /// Reset `ring_bytes` to an empty ring and publish a contiguous `MegakernelWorkItem`
+    /// Reset `ring_bytes` to an empty ring and publish a contiguous `ResidentWorkItem`
     /// queue into slots `0..items.len()`.
     ///
     /// This is the hot-path publisher for one-shot megakernel launches. It
     /// validates the full batch before mutating `ring_bytes`, encodes an empty
-    /// ring once, writes the fixed `MegakernelWorkItem` ABI directly, and stores
+    /// ring once, writes the fixed `ResidentWorkItem` ABI directly, and stores
     /// [`slot::PUBLISHED`] last for each slot.
     ///
     /// # Errors
     ///
     /// Returns [`PipelineError::QueueFull`] when `slot_count` cannot encode,
     /// the queue does not fit in the ring, the slot ABI cannot hold a
-    /// `MegakernelWorkItem`, or an item opcode is not publishable.
+    /// `ResidentWorkItem`, or an item opcode is not publishable.
     pub fn encode_work_items_ring_into(
         slot_count: u32,
         tenant_id: u32,
-        items: &[MegakernelWorkItem],
+        items: &[ResidentWorkItem],
         ring_bytes: &mut Vec<u8>,
     ) -> Result<(), PipelineError> {
         let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
@@ -172,7 +172,7 @@ impl Megakernel {
         if ARGS_PER_SLOT_USIZE < 3 {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
-                fix: "MegakernelWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
+                fix: "ResidentWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
             });
         }
         for item in items {
@@ -218,7 +218,7 @@ impl Megakernel {
         ring_bytes: &mut [u8],
         start_slot: u32,
         tenant_id: u32,
-        items: &[MegakernelWorkItem],
+        items: &[ResidentWorkItem],
     ) -> Result<u32, PipelineError> {
         validate_work_items(items)?;
         let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
@@ -257,7 +257,7 @@ impl Megakernel {
         Ok(item_count)
     }
 
-    /// Reset `ring_words` to an empty ring and publish a contiguous `MegakernelWorkItem`
+    /// Reset `ring_words` to an empty ring and publish a contiguous `ResidentWorkItem`
     /// queue as native little-endian u32 words.
     ///
     /// This is equivalent to [`Megakernel::encode_work_items_ring_into`] but
@@ -268,11 +268,11 @@ impl Megakernel {
     ///
     /// Returns [`PipelineError::QueueFull`] when `slot_count` cannot encode,
     /// the queue does not fit in the ring, the slot ABI cannot hold a
-    /// `MegakernelWorkItem`, or an item opcode is not publishable.
+    /// `ResidentWorkItem`, or an item opcode is not publishable.
     pub fn encode_work_items_ring_words_into(
         slot_count: u32,
         tenant_id: u32,
-        items: &[MegakernelWorkItem],
+        items: &[ResidentWorkItem],
         ring_words: &mut Vec<u32>,
     ) -> Result<(), PipelineError> {
         validate_work_item_batch(slot_count, items)?;
@@ -754,7 +754,7 @@ fn write_work_item_unchecked(
     view: RingPublishView,
     slot_idx: u32,
     tenant_id: u32,
-    item: &MegakernelWorkItem,
+    item: &ResidentWorkItem,
 ) -> Result<(), PipelineError> {
     let base = slot_base(slot_idx, view)?;
     write_slot_word(ring_bytes, base, OPCODE_WORD_USIZE, item.op_handle);
@@ -777,7 +777,7 @@ fn write_work_item_unchecked(
 
 fn validate_work_item_batch(
     slot_count: u32,
-    items: &[MegakernelWorkItem],
+    items: &[ResidentWorkItem],
 ) -> Result<(), PipelineError> {
     let item_count = u32::try_from(items.len()).map_err(|_| PipelineError::QueueFull {
         queue: "submission",
@@ -792,11 +792,12 @@ fn validate_work_item_batch(
     validate_work_items(items)
 }
 
-fn validate_work_items(items: &[MegakernelWorkItem]) -> Result<(), PipelineError> {
+fn validate_work_items(items: &[ResidentWorkItem]) -> Result<(), PipelineError> {
     if ARGS_PER_SLOT_USIZE < 3 {
         return Err(PipelineError::QueueFull {
             queue: "submission",
-            fix: "MegakernelWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
+            fix:
+                "ResidentWorkItem publication requires three argument words; increase ARGS_PER_SLOT",
         });
     }
     for item in items {

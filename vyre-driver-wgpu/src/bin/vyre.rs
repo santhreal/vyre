@@ -31,11 +31,26 @@ fn run() -> Result<(), String> {
             println!("vyre {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
-        Some("demo") => {
-            let value = run_demo()?;
-            println!("vyre demo gpu_u32={value}");
-            Ok(())
-        }
+        Some("demo") => match args.next().as_deref() {
+            None => {
+                let value = run_demo()?;
+                println!("vyre demo gpu_u32={value}");
+                Ok(())
+            }
+            Some("-h" | "--help") => {
+                if let Some(extra) = args.next() {
+                    Err(format!(
+                        "unexpected argument `{extra}` after `--help`. Fix: use `vyre demo --help`."
+                    ))
+                } else {
+                    print_demo_help();
+                    Ok(())
+                }
+            }
+            Some(other) => Err(format!(
+                "unexpected demo argument `{other}`. Fix: use `vyre demo --help`."
+            )),
+        },
         Some("--help") | Some("-h") | None => {
             print_help();
             Ok(())
@@ -48,10 +63,33 @@ fn run() -> Result<(), String> {
 
 fn print_help() {
     println!("vyre {}", env!("CARGO_PKG_VERSION"));
-    println!("usage: vyre --version | vyre demo");
+    println!("Run a minimal Vyre IR program on the local WGPU device.");
     println!();
-    println!("  demo       build a minimal vyre IR Program, dispatch on the local GPU,");
-    println!("             and print the resulting u32 (expected: 42).");
+    println!("Usage: vyre [--version] <COMMAND>");
+    println!();
+    println!("Commands:");
+    println!("  demo  dispatch one u32 write and verify the exact result 42");
+    println!();
+    println!("Options:");
+    println!("  -h, --help     print this help");
+    println!("  -V, --version  print the Vyre version");
+    println!();
+    println!("Exit codes:");
+    println!("  0  help, version, or GPU demo completed");
+    println!("  1  invalid arguments, device acquisition, dispatch, or output validation failed");
+}
+
+fn print_demo_help() {
+    println!("Dispatch one generated Vyre IR program on the local WGPU device.");
+    println!();
+    println!("Usage: vyre demo");
+    println!();
+    println!("Hardware:");
+    println!("  A Vulkan, Metal, DX12, or WebGPU compute device is required.");
+    println!("  The command never falls back to CPU.");
+    println!();
+    println!("Output:");
+    println!("  vyre demo gpu_u32=42");
 }
 
 fn run_demo() -> Result<u32, String> {

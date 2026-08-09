@@ -1,4 +1,4 @@
-//! [`MegakernelIoQueue`]  -  high-level wrapper around the raw queue bytes.
+//! [`ResidentIoQueue`]  -  high-level wrapper around the raw queue bytes.
 
 use std::sync::atomic::{fence, Ordering};
 
@@ -11,12 +11,12 @@ use super::{io_op, io_status, io_word, IoCompletion, IO_SLOT_COUNT, IO_SLOT_WORD
 /// Host-side handle to the megakernel IO queue. Wraps a `Vec<u32>` slot ring
 /// and exposes typed poll/publish/complete entry points.
 #[derive(Debug, Clone)]
-pub struct MegakernelIoQueue {
+pub struct ResidentIoQueue {
     words: Vec<u32>,
     slot_count: u32,
 }
 
-impl MegakernelIoQueue {
+impl ResidentIoQueue {
     /// Allocate an empty queue with `slot_count` entries.
     ///
     /// # Errors
@@ -27,13 +27,13 @@ impl MegakernelIoQueue {
         if slot_count == 0 {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
-                fix: "MegakernelIoQueue requires at least one slot",
+                fix: "ResidentIoQueue requires at least one slot",
             });
         }
         if slot_count > IO_SLOT_COUNT {
             return Err(PipelineError::QueueFull {
                 queue: "submission",
-                fix: "MegakernelIoQueue exceeds the compiled IO poll window of 64 slots; enlarge IO_SLOT_COUNT and rebuild the megakernel before publishing more than 64 completions",
+                fix: "ResidentIoQueue exceeds the compiled IO poll window of 64 slots; enlarge IO_SLOT_COUNT and rebuild the megakernel before publishing more than 64 completions",
             });
         }
         let word_count = slot_count
@@ -93,7 +93,7 @@ impl MegakernelIoQueue {
             mapped_slot,
             byte_count,
             tag,
-            "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or publish into a valid slot id",
+            "io_queue slot exceeds ResidentIoQueue::slot_count; enlarge the queue or publish into a valid slot id",
             "io_queue slot still in flight; wait for the GPU to recycle it before publishing again",
         )
     }
@@ -122,7 +122,7 @@ impl MegakernelIoQueue {
             dst_handle,
             byte_count,
             tag,
-            "io_queue slot exceeds MegakernelIoQueue::slot_count; enlarge the queue or submit into a valid slot id",
+            "io_queue slot exceeds ResidentIoQueue::slot_count; enlarge the queue or submit into a valid slot id",
             "io_queue slot still in flight; wait for completion before submitting a new request",
         )
     }

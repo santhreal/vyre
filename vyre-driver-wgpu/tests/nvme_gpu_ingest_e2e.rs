@@ -12,7 +12,7 @@ use tempfile::tempdir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::megakernel::MegakernelIoQueue;
+use vyre_runtime::resident_work_queue::ResidentIoQueue;
 use vyre_runtime::uring::{
     AsyncUringStream, GpuMappedBuffer, IoUringState, NativeReadPath, NvmeGpuIngestDriver,
 };
@@ -47,7 +47,7 @@ fn make_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
     let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(target) };
     let tail = Box::leak(Box::new(AtomicU32::new(0)));
     let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
-    NvmeGpuIngestDriver::new(stream, 1, MegakernelIoQueue::new(64)?)
+    NvmeGpuIngestDriver::new(stream, 1, ResidentIoQueue::new(64)?)
 }
 
 fn make_gpudirect_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError> {
@@ -59,7 +59,7 @@ fn make_gpudirect_driver() -> Result<NvmeGpuIngestDriver<'static>, PipelineError
     let gpu_buffer = unsafe { GpuMappedBuffer::from_host_visible_slice(target) };
     let tail = Box::leak(Box::new(AtomicU32::new(0)));
     let stream = AsyncUringStream::new(ring, gpu_buffer, tail);
-    NvmeGpuIngestDriver::new_gpudirect(stream, 1, MegakernelIoQueue::new(64)?)
+    NvmeGpuIngestDriver::new_gpudirect(stream, 1, ResidentIoQueue::new(64)?)
 }
 
 fn copy_hash_program() -> Program {

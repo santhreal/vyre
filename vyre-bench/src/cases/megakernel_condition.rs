@@ -11,10 +11,10 @@ use rayon::prelude::*;
 use std::sync::Arc;
 use vyre_driver::CompiledPipeline;
 use vyre_foundation::ir::{Expr, Node};
-use vyre_runtime::megakernel::protocol::{
+use vyre_runtime::resident_work_queue::protocol::{
     ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, STATUS_WORD, TENANT_WORD,
 };
-use vyre_runtime::megakernel::{self, control, slot, OpcodeHandler, SLOT_WORDS};
+use vyre_runtime::resident_work_queue::{self, control, slot, OpcodeHandler, SLOT_WORDS};
 
 pub struct MegakernelCondition;
 
@@ -83,18 +83,18 @@ impl BenchCase for MegakernelCondition {
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let handler = condition_opcode_handler();
-        let program = megakernel::build_program_sharded_once_slots_control_report_shared(
+        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
             WORKGROUP_SIZE,
             SLOT_COUNT,
             &[handler],
         );
-        let control_bytes = megakernel::encode_control(false, 1, 0)
+        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let mut expected_fired = 0u32;
         let ring_bytes = condition_ring(SLOT_COUNT, &mut expected_fired)?;
-        let debug_bytes = megakernel::encode_empty_debug_log(megakernel::debug::RECORD_CAPACITY)
+        let debug_bytes = resident_work_queue::encode_empty_debug_log(resident_work_queue::debug::RECORD_CAPACITY)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = megakernel::io::try_encode_empty_io_queue(megakernel::io::IO_SLOT_COUNT)
+        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(resident_work_queue::io::IO_SLOT_COUNT)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
@@ -290,7 +290,7 @@ fn condition_opcode_handler() -> OpcodeHandler {
 }
 
 fn condition_ring(slot_count: u32, expected_fired: &mut u32) -> Result<Vec<u8>, BenchError> {
-    let mut ring = megakernel::encode_empty_ring(slot_count)
+    let mut ring = resident_work_queue::encode_empty_ring(slot_count)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     for slot_index in 0..slot_count {
         let flags = condition_flags(slot_index);

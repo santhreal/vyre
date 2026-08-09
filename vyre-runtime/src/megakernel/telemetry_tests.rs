@@ -2,11 +2,11 @@
 // parent file focused on production code.
 
 use super::*;
-use crate::megakernel::descriptor::WindowClass;
-use crate::megakernel::protocol::{opcode, SLOT_WORDS};
-use crate::megakernel::Megakernel;
-use crate::megakernel::{
-    MegakernelDispatchTopology, MegakernelExecutionMode, MegakernelLaunchRequest,
+use crate::resident_work_queue::descriptor::WindowClass;
+use crate::resident_work_queue::protocol::{opcode, SLOT_WORDS};
+use crate::resident_work_queue::ResidentWorkQueue;
+use crate::resident_work_queue::{
+    ResidentQueueTopology, ResidentExecutionMode, ResidentLaunchRequest,
 };
 
 #[path = "telemetry_tests/decode_contracts.rs"]

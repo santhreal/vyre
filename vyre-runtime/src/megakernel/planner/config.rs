@@ -5,17 +5,17 @@ use std::time::Duration;
 use vyre_driver::backend::BackendError;
 
 use super::super::policy::{
-    MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
+    ResidentLaunchPolicy, ResidentLaunchRecommendation, ResidentLaunchRequest,
 };
 use super::super::task::{TaskQueueSnapshot, TaskWorkItem};
 use super::geometry::dispatch_grid_for;
-use super::sizing::MegakernelSizingPolicy;
+use super::sizing::ResidentSizingPolicy;
 
 /// Optional scale signals that let the megakernel launch policy choose sparse,
 /// dense, hybrid, fused, or memory-constrained execution from real workload
 /// shape instead of queue length alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct MegakernelWorkloadHints {
+pub struct ResidentWorkloadHints {
     /// Count of opcodes observed hot enough for promotion consideration.
     pub hot_opcode_count: u32,
     /// Count of ticketed route windows observed hot enough for promotion.
@@ -36,7 +36,7 @@ pub struct MegakernelWorkloadHints {
 
 /// Configuration for one megakernel dispatch invocation.
 #[derive(Debug, Clone)]
-pub struct MegakernelConfig {
+pub struct ResidentQueueConfig {
     /// Number of persistent worker workgroups.
     pub worker_count: u32,
     /// Maximum wall-clock time the megakernel runs before draining
@@ -45,21 +45,21 @@ pub struct MegakernelConfig {
     /// Hint to the scheduler about expected items per worker.
     pub expected_items_per_worker: u32,
     /// Optional workload-shape hints consumed by the launch policy.
-    pub workload: MegakernelWorkloadHints,
+    pub workload: ResidentWorkloadHints,
 }
 
-impl Default for MegakernelConfig {
+impl Default for ResidentQueueConfig {
     fn default() -> Self {
         Self {
-            worker_count: MegakernelSizingPolicy::standard().default_worker_count(),
+            worker_count: ResidentSizingPolicy::standard().default_worker_count(),
             max_wall_time: Duration::from_secs(60),
             expected_items_per_worker: 0,
-            workload: MegakernelWorkloadHints::default(),
+            workload: ResidentWorkloadHints::default(),
         }
     }
 }
 
-impl MegakernelConfig {
+impl ResidentQueueConfig {
     /// Validate the config and surface actionable errors.
     ///
     /// # Errors
@@ -99,8 +99,8 @@ impl MegakernelConfig {
         max_workgroup_size_x: u32,
         max_compute_workgroups_per_dimension: u32,
         max_compute_invocations_per_workgroup: u32,
-    ) -> MegakernelLaunchRequest {
-        MegakernelLaunchRequest {
+    ) -> ResidentLaunchRequest {
+        ResidentLaunchRequest {
             queue_len,
             requested_worker_groups: self.worker_count,
             max_workgroup_size_x,
@@ -140,7 +140,7 @@ impl MegakernelConfig {
         max_workgroup_size_x: u32,
         max_compute_workgroups_per_dimension: u32,
         max_compute_invocations_per_workgroup: u32,
-    ) -> Result<MegakernelLaunchRequest, BackendError> {
+    ) -> Result<ResidentLaunchRequest, BackendError> {
         let snapshot = TaskQueueSnapshot::from_tasks(tasks)?;
         let schedulable_count = snapshot.try_schedulable_count()?;
         let request = self.launch_request(
@@ -163,8 +163,8 @@ impl MegakernelConfig {
         max_workgroup_size_x: u32,
         max_compute_workgroups_per_dimension: u32,
         max_compute_invocations_per_workgroup: u32,
-    ) -> Result<MegakernelLaunchRecommendation, BackendError> {
-        MegakernelLaunchPolicy::standard().recommend(self.launch_request(
+    ) -> Result<ResidentLaunchRecommendation, BackendError> {
+        ResidentLaunchPolicy::standard().recommend(self.launch_request(
             queue_len,
             max_workgroup_size_x,
             max_compute_workgroups_per_dimension,
@@ -184,8 +184,8 @@ impl MegakernelConfig {
         max_workgroup_size_x: u32,
         max_compute_workgroups_per_dimension: u32,
         max_compute_invocations_per_workgroup: u32,
-    ) -> Result<MegakernelLaunchRecommendation, BackendError> {
-        MegakernelLaunchPolicy::standard().recommend(self.launch_request_for_tasks(
+    ) -> Result<ResidentLaunchRecommendation, BackendError> {
+        ResidentLaunchPolicy::standard().recommend(self.launch_request_for_tasks(
             tasks,
             max_workgroup_size_x,
             max_compute_workgroups_per_dimension,
@@ -200,8 +200,8 @@ mod tests {
 
     #[test]
     fn launch_request_preserves_workload_hints() {
-        let config = MegakernelConfig {
-            workload: MegakernelWorkloadHints {
+        let config = ResidentQueueConfig {
+            workload: ResidentWorkloadHints {
                 hot_opcode_count: 7,
                 hot_window_count: 11,
                 graph_node_count: 1_000,
@@ -211,7 +211,7 @@ mod tests {
                 resident_device_bytes: 1 << 20,
                 device_memory_budget_bytes: 1 << 24,
             },
-            ..MegakernelConfig::default()
+            ..ResidentQueueConfig::default()
         };
 
         let request = config.launch_request(128, 256, 65_535, 1_024);

@@ -2,9 +2,9 @@ use super::*;
 
 #[test]
 fn sketch_into_reuses_counter_storage() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
     let telemetry = RingTelemetry::decode(&control, &ring);
     let mut scratch = SketchTelemetryScratch::new(3, 16).unwrap();
 
@@ -30,15 +30,15 @@ fn sketch_into_reuses_counter_storage() {
 
 #[test]
 fn watchdog_health_flags_active_queue_without_drain_progress() {
-    let mut previous_control = Megakernel::try_encode_control(false, 7, 0).unwrap();
+    let mut previous_control = ResidentWorkQueue::try_encode_control(false, 7, 0).unwrap();
     let done_count = (control::DONE_COUNT as usize) * 4;
     previous_control[done_count..done_count + 4].copy_from_slice(&7u32.to_le_bytes());
-    let previous_ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let previous_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let previous = RingTelemetry::decode(&previous_control, &previous_ring);
 
     let mut current_control = previous_control.clone();
-    let mut current_ring = Megakernel::try_encode_empty_ring(2).unwrap();
-    Megakernel::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    let mut current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
+    ResidentWorkQueue::publish_slot(&mut current_ring, 0, 7, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
     let stalled = RingTelemetry::decode(&current_control, &current_ring).health_since(&previous);
     assert_eq!(stalled.done_delta, 0);
     assert_eq!(stalled.queue_depth, 1);
@@ -52,15 +52,15 @@ fn watchdog_health_flags_active_queue_without_drain_progress() {
 
 #[test]
 fn watchdog_try_health_rejects_done_counter_wrap_without_panic() {
-    let mut previous_control = Megakernel::try_encode_control(false, 7, 0).unwrap();
+    let mut previous_control = ResidentWorkQueue::try_encode_control(false, 7, 0).unwrap();
     let done_count = (control::DONE_COUNT as usize) * 4;
     previous_control[done_count..done_count + 4].copy_from_slice(&9u32.to_le_bytes());
-    let previous_ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let previous_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let previous = RingTelemetry::decode(&previous_control, &previous_ring);
 
     let mut current_control = previous_control.clone();
     current_control[done_count..done_count + 4].copy_from_slice(&7u32.to_le_bytes());
-    let current_ring = Megakernel::try_encode_empty_ring(2).unwrap();
+    let current_ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
     let current = RingTelemetry::decode(&current_control, &current_ring);
 
     let error = current

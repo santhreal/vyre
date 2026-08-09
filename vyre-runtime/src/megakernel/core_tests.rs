@@ -2,12 +2,12 @@
 // parent file focused on production code.
 
 use super::*;
-use crate::megakernel::{diffuse_priority_across_siblings, MegakernelLaunchPolicy};
+use crate::resident_work_queue::{diffuse_priority_across_siblings, ResidentLaunchPolicy};
 use vyre_foundation::execution_plan::SchedulingPolicy;
 
 #[test]
 fn launch_geometry_pads_slots_and_caps_grid_by_workers() {
-    let geometry = MegakernelLaunchGeometry::from_slots(300, 64, 256);
+    let geometry = ResidentLaunchGeometry::from_slots(300, 64, 256);
     assert_eq!(geometry.workgroup_size_x, 64);
     assert_eq!(geometry.slot_count, 320);
     assert_eq!(geometry.covering_worker_groups(), 5);
@@ -16,7 +16,7 @@ fn launch_geometry_pads_slots_and_caps_grid_by_workers() {
 
 #[test]
 fn launch_geometry_preserves_legacy_worker_clamp() {
-    let geometry = MegakernelLaunchGeometry::from_slots(1, 1_000, 256);
+    let geometry = ResidentLaunchGeometry::from_slots(1, 1_000, 256);
     assert_eq!(geometry.workgroup_size_x, 256);
     assert_eq!(geometry.slot_count, 256);
     assert_eq!(geometry.dispatch_grid, [1, 1, 1]);
@@ -24,18 +24,18 @@ fn launch_geometry_preserves_legacy_worker_clamp() {
 
 #[test]
 fn dispatch_grid_keeps_worker_count_as_ceiling() {
-    let config = MegakernelConfig {
+    let config = ResidentQueueConfig {
         worker_count: 2,
-        ..MegakernelConfig::default()
+        ..ResidentQueueConfig::default()
     };
     assert_eq!(config.dispatch_grid(4096, 64), [2, 1, 1]);
 }
 
 #[test]
 fn dispatch_grid_preserves_logical_queue_width_policy() {
-    let config = MegakernelConfig {
+    let config = ResidentQueueConfig {
         worker_count: 64,
-        ..MegakernelConfig::default()
+        ..ResidentQueueConfig::default()
     };
     assert_eq!(config.dispatch_grid(300, 256), [2, 1, 1]);
 }
@@ -44,7 +44,7 @@ fn dispatch_grid_preserves_logical_queue_width_policy() {
 fn megakernel_helpers_delegate_to_shared_scheduling_policy() {
     let policy = SchedulingPolicy::standard();
     assert_eq!(
-        MegakernelConfig::default().worker_count,
+        ResidentQueueConfig::default().worker_count,
         policy.default_worker_count()
     );
     assert_eq!(
@@ -67,12 +67,12 @@ fn megakernel_helpers_delegate_to_shared_scheduling_policy() {
 
 #[test]
 fn config_builds_launch_policy_from_continuation_task_queue() {
-    let config = MegakernelConfig {
+    let config = ResidentQueueConfig {
         worker_count: 64,
         expected_items_per_worker: 2,
-        ..MegakernelConfig::default()
+        ..ResidentQueueConfig::default()
     };
-    let item = MegakernelWorkItem {
+    let item = ResidentWorkItem {
         op_handle: 10,
         input_handle: 11,
         output_handle: 12,
@@ -98,34 +98,8 @@ fn config_builds_launch_policy_from_continuation_task_queue() {
 }
 
 #[test]
-fn fusion_selection_into_matches_owned_selector() {
-    let costs = [3.0, 1.0, 2.0, 4.0];
-    let n = costs.len() as u32;
-    let exchange_adj = vec![0; costs.len() * costs.len()];
-    let owned = select_fused_subset(&costs, n, &exchange_adj);
-
-    let mut scratch = FusionSelectionScratch::default();
-    select_fused_subset_into(&costs, n, &exchange_adj, &mut scratch);
-
-    assert_eq!(scratch.result(), owned.as_slice());
-}
-
-#[test]
-fn fusion_compact_into_matches_owned_selector() {
-    let costs = [30u16, 10, 20, 40];
-    let n = costs.len() as u32;
-    let exchange_adj = vec![0; costs.len() * costs.len()];
-    let owned = select_fused_subset_compact(&costs, n, &exchange_adj);
-
-    let mut scratch = FusionSelectionScratch::default();
-    select_fused_subset_compact_into(&costs, n, &exchange_adj, &mut scratch);
-
-    assert_eq!(scratch.result(), owned.as_slice());
-}
-
-#[test]
 fn launch_policy_autotune_uses_local_min_cost_selection() {
-    let policy = MegakernelLaunchPolicy::standard();
+    let policy = ResidentLaunchPolicy::standard();
     assert_eq!(
         policy.autotune_hit_capacity_multiplier(&[1, 2, 4, 8], &[9.0, 5.0, 1.0, 3.0]),
         4
@@ -141,7 +115,7 @@ fn priority_diffusion_and_natural_gradient_are_runtime_local() {
     let diffused = diffuse_priority_across_siblings(&[10.0, 20.0], &[0.5, 0.25], 0.2, 1);
     assert_eq!(diffused, vec![9.0, 19.0]);
 
-    let delta = MegakernelLaunchPolicy::natural_gradient_autotune_step(
+    let delta = ResidentLaunchPolicy::natural_gradient_autotune_step(
         &[1.0, 0.0, 0.0, 1.0],
         &[3.0, -2.0],
         2,
@@ -156,7 +130,7 @@ fn natural_gradient_rejects_invalid_shape_before_output_growth() {
     out.extend_from_slice(&[99.0, 100.0]);
     let ptr = out.as_ptr();
 
-    MegakernelLaunchPolicy::natural_gradient_autotune_step_into(
+    ResidentLaunchPolicy::natural_gradient_autotune_step_into(
         &[1.0, 0.0],
         &[3.0],
         2,

@@ -1,15 +1,15 @@
 //! Overflow at ring/protocol boundaries  -  cumulative and arithmetic edge cases.
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, control, debug},
-    Megakernel,
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 
 #[test]
 fn cumulative_batch_publish_rejects_overflow_past_ring_end() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
     let batch1 = BatchDescriptor::new(
         0,
         vec![
@@ -35,7 +35,7 @@ fn cumulative_batch_publish_rejects_overflow_past_ring_end() {
 
 #[test]
 fn cumulative_window_publish_rejects_overflow_past_ring_end() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
     let w1 = WindowDescriptor::new(0, 0, SlotOpcode::Custom(0xBEEF), 1, vec![vec![]], vec![]);
     w1.publish_into(&mut ring).unwrap();
 
@@ -48,8 +48,8 @@ fn cumulative_window_publish_rejects_overflow_past_ring_end() {
 
 #[test]
 fn batch_publish_fence_slot_index_overflows_cleanly_near_u32_max() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    let err = Megakernel::batch_publish(
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    let err = ResidentWorkQueue::batch_publish(
         &mut ring,
         u32::MAX,
         0,
@@ -63,8 +63,8 @@ fn batch_publish_fence_slot_index_overflows_cleanly_near_u32_max() {
 #[test]
 fn strict_io_completion_rejects_slot_beyond_u32_max_mapped_index() {
     let mut buf =
-        vyre_runtime::megakernel::io::encode_empty_io_queue(1).expect("valid io_queue must encode");
-    let err = vyre_runtime::megakernel::io::try_complete_io_request(&mut buf, u32::MAX, true)
+        vyre_runtime::resident_work_queue::io::encode_empty_io_queue(1).expect("valid io_queue must encode");
+    let err = vyre_runtime::resident_work_queue::io::try_complete_io_request(&mut buf, u32::MAX, true)
         .expect_err("completion at u32::MAX must be rejected on a 1-slot queue");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }

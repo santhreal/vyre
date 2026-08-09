@@ -3,7 +3,7 @@
 
 use proptest::prelude::*;
 
-use vyre_runtime::megakernel::scheduler::{default_priority_offsets, PRIORITY_LEVELS};
+use vyre_runtime::resident_work_queue::scheduler::{default_priority_offsets, PRIORITY_LEVELS};
 
 // A differential model of the GPU megakernel ring buffer priority scheduling logic.
 // This proves the mathematical properties of our priority implementation

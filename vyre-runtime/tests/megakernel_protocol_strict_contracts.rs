@@ -3,7 +3,7 @@
 //! The compatibility readers keep returning zero for legacy callers, but every
 //! untrusted readback path needs a strict API that rejects malformed byte views.
 
-use vyre_runtime::megakernel::{protocol, Megakernel};
+use vyre_runtime::resident_work_queue::{protocol, ResidentWorkQueue};
 
 fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
     let off = word_idx * 4;
@@ -22,13 +22,13 @@ fn strict_control_readers_reject_misaligned_buffers() {
 
 #[test]
 fn strict_observable_reader_rejects_out_of_range_word() {
-    let control = Megakernel::encode_control(false, 1, 0).unwrap();
+    let control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
     assert_eq!(
-        Megakernel::read_observable(&control, 0),
+        ResidentWorkQueue::read_observable(&control, 0),
         0,
         "legacy observable reader keeps compatibility zero for missing words"
     );
-    let err = Megakernel::try_read_observable(&control, 0)
+    let err = ResidentWorkQueue::try_read_observable(&control, 0)
         .expect_err("strict observable reader must reject absent observable word");
     let msg = err.to_string();
     assert!(
@@ -40,7 +40,7 @@ fn strict_observable_reader_rejects_out_of_range_word() {
 #[test]
 fn strict_metrics_reader_requires_complete_metrics_window() {
     let truncated = vec![0u8; protocol::control::METRICS_BASE as usize * 4];
-    let err = Megakernel::try_read_metrics(&truncated)
+    let err = ResidentWorkQueue::try_read_metrics(&truncated)
         .expect_err("strict metrics reader must reject missing metrics window");
     assert!(
         err.to_string().contains("Fix:"),
@@ -50,9 +50,9 @@ fn strict_metrics_reader_requires_complete_metrics_window() {
 
 #[test]
 fn strict_debug_log_rejects_partial_record_cursor() {
-    let mut log = Megakernel::encode_empty_debug_log(1).unwrap();
+    let mut log = ResidentWorkQueue::encode_empty_debug_log(1).unwrap();
     write_word(&mut log, protocol::debug::CURSOR_WORD as usize, 3);
-    let err = Megakernel::try_read_debug_log(&log)
+    let err = ResidentWorkQueue::try_read_debug_log(&log)
         .expect_err("debug cursor must advance in complete PRINTF records");
     let msg = err.to_string();
     assert!(
@@ -63,13 +63,13 @@ fn strict_debug_log_rejects_partial_record_cursor() {
 
 #[test]
 fn strict_debug_log_rejects_cursor_beyond_capacity() {
-    let mut log = Megakernel::encode_empty_debug_log(1).unwrap();
+    let mut log = ResidentWorkQueue::encode_empty_debug_log(1).unwrap();
     write_word(
         &mut log,
         protocol::debug::CURSOR_WORD as usize,
         protocol::debug::RECORD_WORDS + 1,
     );
-    let err = Megakernel::try_read_debug_log(&log)
+    let err = ResidentWorkQueue::try_read_debug_log(&log)
         .expect_err("debug cursor beyond encoded capacity must be rejected");
     let msg = err.to_string();
     assert!(
@@ -95,7 +95,7 @@ fn strict_encoders_reject_overflow_without_panicking() {
 
 #[test]
 fn publish_slot_rejects_every_inflight_status() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     for status in [
         protocol::slot::PUBLISHED,
         protocol::slot::CLAIMED,
@@ -105,7 +105,7 @@ fn publish_slot_rejects_every_inflight_status() {
         protocol::slot::FAULT,
     ] {
         write_word(&mut ring, protocol::STATUS_WORD as usize, status);
-        let err = Megakernel::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
+        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
             .expect_err("host must not overwrite in-flight slot state");
         assert!(
             err.to_string().contains("not publishable"),
@@ -118,19 +118,19 @@ fn publish_slot_rejects_every_inflight_status() {
         protocol::STATUS_WORD as usize,
         protocol::slot::DONE,
     );
-    Megakernel::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
         .expect("DONE slot may be recycled");
 }
 
 #[test]
 fn publish_slot_rejects_reserved_non_builtin_opcodes() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     for opcode in [
         protocol::opcode::SYSTEM_MASK,
         protocol::opcode::RESERVED_MAX_RANGE_MIN,
         protocol::opcode::RESERVED_MAX_RANGE_MIN + 1,
     ] {
-        let err = Megakernel::publish_slot(&mut ring, 0, 0, opcode, &[])
+        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode, &[])
             .expect_err("reserved non-builtin opcode must be rejected before publication");
         assert!(
             err.to_string().contains("reserved"),
@@ -138,6 +138,6 @@ fn publish_slot_rejects_reserved_non_builtin_opcodes() {
         );
     }
 
-    Megakernel::publish_slot(&mut ring, 0, 0, 0x4000_0000, &[])
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, 0x4000_0000, &[])
         .expect("caller-defined opcode outside reserved ranges may be published");
 }

@@ -14,8 +14,8 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
 
-use vyre_foundation::match_result::Match;
 use vyre::scan::{cached_load_or_compile, engine_cache_path, GpuLiteralSet, MatchScan};
+use vyre_foundation::match_result::Match;
 
 #[cfg(feature = "matching-nfa")]
 use vyre::scan::build_rule_pipeline;

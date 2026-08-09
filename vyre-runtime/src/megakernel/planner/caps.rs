@@ -2,20 +2,18 @@
 
 use std::time::Duration;
 
-use super::super::policy::{
-    MegakernelDispatchTopology, MegakernelExecutionMode, MegakernelQueuePressure,
-};
+use super::super::policy::{ResidentExecutionMode, ResidentQueuePressure, ResidentQueueTopology};
 
 /// Capabilities surfaced by megakernel-aware backends.
 #[derive(Debug, Clone, Copy)]
-pub struct MegakernelCaps {
+pub struct ResidentQueueCapabilities {
     /// Whether the backend implements a megakernel path.
     pub supported: bool,
     /// Maximum worker-count ceiling the backend accepts.
     pub max_worker_count: u32,
 }
 
-impl MegakernelCaps {
+impl ResidentQueueCapabilities {
     /// Unsupported  -  every method returns an explicit error.
     #[must_use]
     pub const fn unsupported() -> Self {
@@ -38,7 +36,7 @@ impl MegakernelCaps {
 /// One work-queue item the megakernel worker consumes.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct MegakernelWorkItem {
+pub struct ResidentWorkItem {
     /// Stable op id index into the dialect registry.
     pub op_handle: u32,
     /// Input-buffer handle.
@@ -51,7 +49,7 @@ pub struct MegakernelWorkItem {
 
 /// Production counters from one megakernel dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelTelemetry {
+pub struct ResidentQueueTelemetry {
     /// Bytes uploaded across control, ring, debug, and IO inputs.
     pub bytes_uploaded: u64,
     /// Bytes read back across all megakernel output buffers.
@@ -75,11 +73,11 @@ pub struct MegakernelTelemetry {
     /// True when the direct dispatch reused resident input resources.
     pub resident_input_cache_hit: bool,
     /// Scale-aware topology selected by the launch policy.
-    pub topology: MegakernelDispatchTopology,
+    pub topology: ResidentQueueTopology,
     /// Queue pressure classification selected by the launch policy.
-    pub pressure: MegakernelQueuePressure,
+    pub pressure: ResidentQueuePressure,
     /// Interpreter or JIT route selected by launch policy telemetry.
-    pub execution_mode: MegakernelExecutionMode,
+    pub execution_mode: ResidentExecutionMode,
     /// Sparse-hit capacity selected by the launch policy.
     pub hit_capacity: u32,
     /// Estimated peak device bytes for the selected launch plan.
@@ -88,7 +86,7 @@ pub struct MegakernelTelemetry {
     pub device_memory_budget_bytes: u64,
 }
 
-impl Default for MegakernelTelemetry {
+impl Default for ResidentQueueTelemetry {
     fn default() -> Self {
         Self {
             bytes_uploaded: 0,
@@ -102,9 +100,9 @@ impl Default for MegakernelTelemetry {
             readback_buffers: 0,
             compiled_pipeline_cache_hit: false,
             resident_input_cache_hit: false,
-            topology: MegakernelDispatchTopology::Empty,
-            pressure: MegakernelQueuePressure::Empty,
-            execution_mode: MegakernelExecutionMode::Interpreter,
+            topology: ResidentQueueTopology::Empty,
+            pressure: ResidentQueuePressure::Empty,
+            execution_mode: ResidentExecutionMode::Interpreter,
             hit_capacity: 0,
             estimated_peak_device_bytes: 0,
             device_memory_budget_bytes: 0,
@@ -114,7 +112,7 @@ impl Default for MegakernelTelemetry {
 
 /// Summary stats from one megakernel run.
 #[derive(Debug, Clone, Default)]
-pub struct MegakernelReport {
+pub struct ResidentQueueReport {
     /// Items the workers processed before exiting.
     pub items_processed: u64,
     /// Items still queued when `max_wall_time` fired.
@@ -139,7 +137,7 @@ pub struct MegakernelReport {
     /// Number of work items included in region lineage tracking.
     pub lineage_items: u64,
     /// Production counters for performance gates and launch tuning.
-    pub telemetry: MegakernelTelemetry,
+    pub telemetry: ResidentQueueTelemetry,
     /// Per-output provenance lineage bitsets, one entry per fused
     /// region in dispatch order. `lineage[i]` is a 32-bit set of
     /// source-rule IDs that contributed to fused-region `i`'s output,

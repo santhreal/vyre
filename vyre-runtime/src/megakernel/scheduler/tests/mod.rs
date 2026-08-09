@@ -53,7 +53,8 @@ fn priority_offsets_do_not_overlap_epoch() {
 
 #[test]
 fn write_default_offsets_populates_control_buffer() {
-    let mut control = crate::megakernel::Megakernel::try_encode_control(false, 1, 0).unwrap();
+    let mut control =
+        crate::resident_work_queue::ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
     write_default_priority_offsets(&mut control, 10).unwrap();
     let read = |word: u32| {
         let start = word as usize * 4;

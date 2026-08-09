@@ -20,7 +20,7 @@ pub mod stream;
 
 pub use driver::{CompletedIngest, NativeReadPath, NvmeGpuIngestDriver, NvmeGpuIngestTelemetry};
 pub use gpudirect::{encode_nvme_read_sqe, GpuDirectCapability, NVME_CMD_READ};
-pub use io_loop::{MegakernelIoLoop, RegisteredIoDestination};
-pub use pump::UringMegakernelPump;
+pub use io_loop::{RegisteredIoDestination, ResidentIoLoop};
+pub use pump::UringResidentQueuePump;
 pub use ring::IoUringState;
 pub use stream::{AsyncUringStream, GpuMappedBuffer, Iovec};

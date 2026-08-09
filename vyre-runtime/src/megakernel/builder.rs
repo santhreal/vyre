@@ -15,7 +15,7 @@ use super::io::{
 };
 use super::ir_util::atomic_load_relaxed;
 use super::protocol::*;
-use super::workspace_adapter::MegakernelWorkspaceAdapter;
+use super::workspace_adapter::ResidentWorkspaceAdapter;
 mod cache;
 mod jit;
 mod priority;
@@ -84,7 +84,7 @@ pub fn build_program_sharded_with_workspace_adapter(
     workgroup_size_x: u32,
     slot_count: u32,
     opcodes: &[OpcodeHandler],
-    adapter: &impl MegakernelWorkspaceAdapter,
+    adapter: &impl ResidentWorkspaceAdapter,
 ) -> Program {
     wrap_persistent_megakernel_program_with_buffers(
         default_buffers_with_workspace_adapter(slot_count, adapter),
@@ -165,7 +165,7 @@ pub fn build_program_sharded_once_slots_control_report_shared(
 
 /// Build the megakernel IR without the IO polling sidecar.
 ///
-/// This is the dispatch path for host-provided [`super::MegakernelWorkItem`]
+/// This is the dispatch path for host-provided [`super::ResidentWorkItem`]
 /// queues. It keeps the executable kernel free of `AsyncLoad` nodes until the
 /// runtime scheduler owns a concrete async-lowering pass.
 #[must_use]
@@ -313,7 +313,7 @@ fn default_buffers(slot_count: u32) -> Vec<BufferDecl> {
 
 fn default_buffers_with_workspace_adapter(
     slot_count: u32,
-    adapter: &impl MegakernelWorkspaceAdapter,
+    adapter: &impl ResidentWorkspaceAdapter,
 ) -> Vec<BufferDecl> {
     let mut buffers = default_buffers(slot_count);
     buffers.push(adapter.buffer_decl());
@@ -436,7 +436,7 @@ fn lane_id_expr(workgroup_size_x: u32) -> Expr {
 fn persistent_body_with_workspace_adapter(
     workgroup_size_x: u32,
     opcodes: &[OpcodeHandler],
-    adapter: &impl MegakernelWorkspaceAdapter,
+    adapter: &impl ResidentWorkspaceAdapter,
 ) -> Vec<Node> {
     let mut body = adapter.bootstrap_nodes();
     body.extend(adapter.guard_nodes());

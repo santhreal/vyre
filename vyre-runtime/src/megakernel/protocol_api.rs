@@ -6,7 +6,7 @@ pub use publish::RingSlotTransition;
 use crate::PipelineError;
 
 use super::protocol::{self, DebugRecord};
-use super::Megakernel;
+use super::ResidentWorkQueue;
 
 macro_rules! protocol_counter_readers {
     () => {
@@ -46,7 +46,7 @@ macro_rules! empty_protocol_encoder_into {
     };
 }
 
-impl Megakernel {
+impl ResidentWorkQueue {
     /// Byte length of a control buffer for `observable_slots`.
     #[must_use]
     pub fn control_byte_len(observable_slots: u32) -> Option<usize> {

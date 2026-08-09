@@ -6,8 +6,8 @@
 
 use super::protocol::{control, read_word, slot, ARG0_WORD, OPCODE_WORD, STATUS_WORD, TENANT_WORD};
 use super::scaling::{
-    MegakernelLaunchPolicy, MegakernelLaunchRecommendation, MegakernelLaunchRequest,
-    PriorityRequeueAccounting,
+    PriorityRequeueAccounting, ResidentLaunchPolicy, ResidentLaunchRecommendation,
+    ResidentLaunchRequest,
 };
 use super::staging_reserve::{
     reserve_hash_map_capacity, reserve_vec_capacity as reserve_target_capacity,
@@ -20,11 +20,10 @@ mod types;
 pub use sketch::{CountMinSketch, SketchTelemetry, SketchTelemetryScratch};
 use types::WindowAccumulator;
 pub use types::{
-    ControlSnapshot, MegakernelRuntimeCounters, MegakernelRuntimeEvidence,
-    MegakernelWatchdogSnapshot, RingOccupancy, RingSlotSnapshot, RingStatus, RingTelemetry,
-    RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily, TelemetryDecodeCapacityEvidence,
-    TelemetryDecodeScratch, WindowTelemetry, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
-    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
+    ControlSnapshot, ResidentRuntimeCounters, ResidentRuntimeEvidence, ResidentWatchdogSnapshot,
+    RingOccupancy, RingSlotSnapshot, RingStatus, RingTelemetry, RuntimeEvidenceMetricCoverage,
+    RuntimeEvidenceMetricFamily, TelemetryDecodeCapacityEvidence, TelemetryDecodeScratch,
+    WindowTelemetry, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION, TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
 };
 
 const SLOT_WORDS_USIZE: usize = 16;
@@ -61,7 +60,7 @@ impl ControlSnapshot {
     /// the two shims must not disagree about what a bad buffer means. Callers
     /// that can handle the error use [`Self::try_decode`].
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn decode(control_bytes: &[u8]) -> Self {
         match Self::try_decode(control_bytes) {
             Ok(snapshot) => snapshot,
@@ -72,7 +71,7 @@ impl ControlSnapshot {
     }
 
     /// Decode a structured control-buffer view into caller-owned storage.
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn decode_into(control_bytes: &[u8], out: &mut Self) {
         // Resetting to default on decode failure silently reports zeroed
         // telemetry as if it were a real reading (Law 10). Fail loud; callers
@@ -156,7 +155,7 @@ impl ControlSnapshot {
 impl RingTelemetry {
     /// Decode the ring and control buffers into one structured snapshot.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn decode(control_bytes: &[u8], ring_bytes: &[u8]) -> Self {
         Self::decode_with_window_opcodes(control_bytes, ring_bytes, &[])
     }
@@ -175,7 +174,7 @@ impl RingTelemetry {
     /// whose opcode is present in `window_opcodes` into ticketed route-window
     /// telemetry records.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn decode_with_window_opcodes(
         control_bytes: &[u8],
         ring_bytes: &[u8],
@@ -187,7 +186,7 @@ impl RingTelemetry {
 
     /// Decode the ring and control buffers into caller-owned telemetry and
     /// scratch storage.
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn decode_with_window_opcodes_into(
         control_bytes: &[u8],
         ring_bytes: &[u8],
@@ -415,7 +414,7 @@ impl RingTelemetry {
 
     /// Active slots matching a given opcode.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn active_slots_for_opcode(&self, opcode: u32) -> Vec<&RingSlotSnapshot> {
         self.try_active_slots_for_opcode(opcode).unwrap_or_default()
     }
@@ -445,7 +444,7 @@ impl RingTelemetry {
     }
 
     /// Active slots matching a given opcode into caller-owned storage.
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn active_slots_for_opcode_into<'a>(
         &'a self,
         opcode: u32,
@@ -480,7 +479,7 @@ impl RingTelemetry {
 
     /// Unfinished ticketed windows.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn active_windows(&self) -> Vec<&WindowTelemetry> {
         self.try_active_windows().unwrap_or_default()
     }
@@ -497,7 +496,7 @@ impl RingTelemetry {
     }
 
     /// Unfinished ticketed windows into caller-owned storage.
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn active_windows_into<'a>(&'a self, out: &mut Vec<&'a WindowTelemetry>) {
         // Clearing to empty on failure silently reports "no active windows"
         // when the readback actually failed (Law 10). Fail loud; callers use
@@ -538,8 +537,8 @@ impl RingTelemetry {
     /// Aggregate queue, idle, fairness, and drain counters into one cheap
     /// runtime snapshot for SRE dashboards and launch-policy feedback.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
-    pub fn runtime_counters(&self) -> MegakernelRuntimeCounters {
+    #[cfg(test)]
+    pub fn runtime_counters(&self) -> ResidentRuntimeCounters {
         match self.try_runtime_counters() {
             Ok(counters) => counters,
             Err(_) => zero_runtime_counters(),
@@ -552,7 +551,7 @@ impl RingTelemetry {
     ///
     /// Returns [`PipelineError`] when counter aggregation overflows or decoded
     /// telemetry contains an impossible relationship.
-    pub fn try_runtime_counters(&self) -> Result<MegakernelRuntimeCounters, PipelineError> {
+    pub fn try_runtime_counters(&self) -> Result<ResidentRuntimeCounters, PipelineError> {
         let total_slots = self.occupancy.total_slots();
         let queue_depth = self.occupancy.queue_depth();
         let gpu_idle_slots = self.occupancy.empty;
@@ -576,7 +575,7 @@ impl RingTelemetry {
             "shard priority counters before telemetry aggregation",
         )?;
         let tenant_fairness_skew = try_fairness_skew(&self.control.tenant_fairness)?;
-        Ok(MegakernelRuntimeCounters {
+        Ok(ResidentRuntimeCounters {
             total_slots,
             queue_depth,
             gpu_idle_slots,
@@ -596,8 +595,8 @@ impl RingTelemetry {
     /// Derive persistent-kernel health from two snapshots without polling the
     /// device or synchronizing with the GPU.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
-    pub fn health_since(&self, previous: &RingTelemetry) -> MegakernelWatchdogSnapshot {
+    #[cfg(test)]
+    pub fn health_since(&self, previous: &RingTelemetry) -> ResidentWatchdogSnapshot {
         match self.try_health_since(previous) {
             Ok(snapshot) => snapshot,
             Err(_) => zero_watchdog_snapshot(),
@@ -613,7 +612,7 @@ impl RingTelemetry {
     pub fn try_health_since(
         &self,
         previous: &RingTelemetry,
-    ) -> Result<MegakernelWatchdogSnapshot, PipelineError> {
+    ) -> Result<ResidentWatchdogSnapshot, PipelineError> {
         let counters = self.try_runtime_counters()?;
         let done_delta = self
             .control
@@ -624,7 +623,7 @@ impl RingTelemetry {
             })?;
         let suspected_stall =
             counters.queue_depth > 0 && done_delta == 0 && counters.fault_slots == 0;
-        Ok(MegakernelWatchdogSnapshot {
+        Ok(ResidentWatchdogSnapshot {
             done_delta,
             queue_depth: counters.queue_depth,
             fault_slots: counters.fault_slots,
@@ -641,8 +640,8 @@ impl RingTelemetry {
     /// Returns a backend error when the supplied adapter limits are malformed.
     pub fn recommend_launch(
         &self,
-        mut request: MegakernelLaunchRequest,
-    ) -> Result<MegakernelLaunchRecommendation, vyre_driver::BackendError> {
+        mut request: ResidentLaunchRequest,
+    ) -> Result<ResidentLaunchRecommendation, vyre_driver::BackendError> {
         let counters = self
             .try_runtime_counters()
             .map_err(errors::launch_telemetry_failed)?;
@@ -682,15 +681,15 @@ impl RingTelemetry {
             .requeue_count
             .checked_add(u64::from(self.occupancy.requeue))
             .ok_or_else(errors::requeue_count_overflow)?;
-        MegakernelLaunchPolicy::standard().recommend(request)
+        ResidentLaunchPolicy::standard().recommend(request)
     }
 }
 
 /// All-zero runtime counters, returned by the infallible `runtime_counters`
 /// accessor when the fallible decode path reports an error.
-#[cfg(any(test, feature = "legacy-infallible"))]
-fn zero_runtime_counters() -> MegakernelRuntimeCounters {
-    MegakernelRuntimeCounters {
+#[cfg(test)]
+fn zero_runtime_counters() -> ResidentRuntimeCounters {
+    ResidentRuntimeCounters {
         total_slots: 0,
         queue_depth: 0,
         gpu_idle_slots: 0,
@@ -709,9 +708,9 @@ fn zero_runtime_counters() -> MegakernelRuntimeCounters {
 
 /// All-zero watchdog snapshot, returned by the infallible `health_since`
 /// accessor when the fallible derivation path reports an error.
-#[cfg(any(test, feature = "legacy-infallible"))]
-fn zero_watchdog_snapshot() -> MegakernelWatchdogSnapshot {
-    MegakernelWatchdogSnapshot {
+#[cfg(test)]
+fn zero_watchdog_snapshot() -> ResidentWatchdogSnapshot {
+    ResidentWatchdogSnapshot {
         done_delta: 0,
         queue_depth: 0,
         fault_slots: 0,

@@ -1,7 +1,7 @@
 //! Regression tests for megakernel rule-catalog caller-owned scratch reuse.
 #![cfg(feature = "megakernel-batch")]
 
-use vyre_runtime::megakernel::rule_catalog::{
+use vyre_runtime::resident_work_queue::rule_catalog::{
     accepted_rule_fingerprints_and_rejections_into, pack_rule_catalog_into, BatchRuleProgram,
     RuleCatalogPackingScratch,
 };

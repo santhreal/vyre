@@ -26,7 +26,7 @@ fn stage_key_window<'a>(source: &'a str, stage: &str) -> &'a str {
 fn sparse_compact_capacity_is_token_count_driven_across_compaction_paths() {
     let compaction = read("src/pipeline/sparse_compaction.rs");
     let programs = read("src/pipeline/sparse_compaction/programs.rs");
-    let megakernel = read("src/pipeline/sparse_lexer_megakernel.rs");
+    let resident_work_queue = read("src/pipeline/sparse_lexer_megakernel.rs");
     let resident = read("src/pipeline/sparse_lexer_megakernel/resident_stages.rs");
     let collect = read("src/pipeline/sparse_lexer_megakernel/output_collect.rs");
 
@@ -58,7 +58,7 @@ fn sparse_compact_capacity_is_token_count_driven_across_compaction_paths() {
     );
 
     let block_total_key =
-        stage_key_window(&megakernel, "\"syntax_sparse_block_total_stage_compact\"");
+        stage_key_window(&resident_work_queue, "\"syntax_sparse_block_total_stage_compact\"");
     assert!(block_total_key.contains("haystack_len as u64"));
     assert!(block_total_key.contains("num_blocks as u64"));
     assert!(
@@ -66,7 +66,7 @@ fn sparse_compact_capacity_is_token_count_driven_across_compaction_paths() {
         "block-total sparse lexer compact cache key must include token-count capacity"
     );
 
-    let staged_key = stage_key_window(&megakernel, "\"syntax_sparse_lexer_stage_compact\"");
+    let staged_key = stage_key_window(&resident_work_queue, "\"syntax_sparse_lexer_stage_compact\"");
     assert!(staged_key.contains("haystack_len as u64"));
     assert!(
         staged_key.contains("compact_capacity as u64"),

@@ -9,7 +9,7 @@ use crate::api::resident::{
 use std::sync::Arc;
 use std::time::Instant;
 use vyre_driver::CompiledPipeline;
-use vyre_runtime::megakernel::{self, protocol, MegakernelWorkItem};
+use vyre_runtime::resident_work_queue::{self, protocol, ResidentWorkItem};
 
 pub struct MegakernelTruth;
 
@@ -24,7 +24,7 @@ const SUITES: &[crate::api::suite::SuiteKind] = &[
 
 struct MegakernelTruthPrepared {
     program: Arc<vyre_foundation::ir::Program>,
-    work_items: Vec<MegakernelWorkItem>,
+    work_items: Vec<ResidentWorkItem>,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     compiled: Option<Arc<dyn CompiledPipeline>>,
@@ -77,15 +77,15 @@ impl BenchCase for MegakernelTruth {
                 "megakernel truth work item count cannot fit u32: {source}"
             ))
         })?;
-        let program = megakernel::build_program_sharded_once_slots_control_report_shared(
+        let program = resident_work_queue::build_program_sharded_once_slots_control_report_shared(
             WORKER_COUNT,
             slot_count,
             &[],
         );
-        let control_bytes = megakernel::encode_control(false, 1, 0)
+        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let mut ring_words = Vec::new();
-        vyre_runtime::megakernel::Megakernel::encode_work_items_ring_words_into(
+        vyre_runtime::resident_work_queue::ResidentWorkQueue::encode_work_items_ring_words_into(
             slot_count,
             0,
             &work_items,
@@ -96,10 +96,14 @@ impl BenchCase for MegakernelTruth {
         for word in &ring_words {
             ring_bytes.extend_from_slice(&word.to_le_bytes());
         }
-        let debug_bytes = megakernel::encode_empty_debug_log(megakernel::debug::RECORD_CAPACITY)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = megakernel::io::try_encode_empty_io_queue(megakernel::io::IO_SLOT_COUNT)
-            .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let debug_bytes = resident_work_queue::encode_empty_debug_log(
+            resident_work_queue::debug::RECORD_CAPACITY,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
+        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(
+            resident_work_queue::io::IO_SLOT_COUNT,
+        )
+        .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
         let resident = ResidentInputPool::upload_optional(
@@ -255,12 +259,12 @@ fn read_done_count(outputs: &[Vec<u8>]) -> Result<u64, BenchError> {
             "megakernel truth dispatch produced no control output".to_string(),
         )
     })?;
-    let done = vyre_runtime::megakernel::try_read_done_count(control)
+    let done = vyre_runtime::resident_work_queue::try_read_done_count(control)
         .map_err(|error| BenchError::CorrectnessViolation(error.to_string()))?;
     Ok(u64::from(done))
 }
 
-fn make_work_items(count: usize) -> Result<Vec<MegakernelWorkItem>, BenchError> {
+fn make_work_items(count: usize) -> Result<Vec<ResidentWorkItem>, BenchError> {
     let mut items = Vec::with_capacity(count);
     for index in 0..count {
         let word = u32::try_from(index).map_err(|_| {
@@ -268,7 +272,7 @@ fn make_work_items(count: usize) -> Result<Vec<MegakernelWorkItem>, BenchError> 
                 "megakernel truth work item index exceeded u32::MAX".to_string(),
             )
         })?;
-        items.push(MegakernelWorkItem {
+        items.push(ResidentWorkItem {
             op_handle: protocol::opcode::NOP,
             input_handle: word,
             output_handle: word,
@@ -278,7 +282,7 @@ fn make_work_items(count: usize) -> Result<Vec<MegakernelWorkItem>, BenchError> 
     Ok(items)
 }
 
-fn simulate_cpu_drain(items: &[MegakernelWorkItem]) -> u64 {
+fn simulate_cpu_drain(items: &[ResidentWorkItem]) -> u64 {
     items.iter().fold(0_u64, |count, item| {
         count.saturating_add(if item.op_handle == protocol::opcode::NOP {
             1
@@ -295,18 +299,6 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn work_items_are_unique_for_dedupe_truth() {
-        let items = make_work_items(64).expect("Fix: fixture");
-        let mut deduped = Vec::new();
-        let report =
-            vyre_runtime::megakernel::try_prune_redundant_work_items_into(&items, &mut deduped)
-                .expect("Fix: dedupe truth fixture must satisfy megakernel planner invariants.");
-
-        assert!(report.is_empty());
-        assert!(deduped.is_empty());
-    }
 
     #[test]
     fn cpu_drain_counts_nop_items() {

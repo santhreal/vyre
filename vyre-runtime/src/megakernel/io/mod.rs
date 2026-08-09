@@ -2,7 +2,7 @@
 //!
 //! Module ownership:
 //!  - `mod.rs`: doc + constants + IoRequest/IoCompletion + word/op/status modules
-//!  - `queue.rs`: [`MegakernelIoQueue`] + view
+//!  - `queue.rs`: [`ResidentIoQueue`] + view
 //!  - `poll.rs`: poll/claim/peek surface
 //!  - `complete.rs`: completion-write surface
 //!  - `encode.rs`: bytes <-> validated queue helpers
@@ -42,7 +42,7 @@ pub use poll::{
     claim_io_requests_into, poll_io_requests, try_claim_io_requests_into, try_poll_io_requests,
     try_poll_io_requests_into,
 };
-pub use queue::MegakernelIoQueue;
+pub use queue::ResidentIoQueue;
 
 /// Number of u32 words per IO queue slot.
 pub const IO_SLOT_WORDS: u32 = 8;

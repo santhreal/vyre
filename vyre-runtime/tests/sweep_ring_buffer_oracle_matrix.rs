@@ -5,8 +5,8 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_runtime::megakernel::protocol;
-use vyre_runtime::megakernel::ring::{HostRing, RingConsumer, RingProducer, SLOT_BYTES};
+use vyre_runtime::resident_work_queue::protocol;
+use vyre_runtime::resident_work_queue::ring::{HostRing, RingConsumer, RingProducer, SLOT_BYTES};
 
 const RING_CASES: u32 = 256;
 

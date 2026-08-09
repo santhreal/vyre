@@ -7,7 +7,7 @@
 
 use vyre_driver::backend::BackendError;
 
-use super::planner::MegakernelWorkItem;
+use super::planner::ResidentWorkItem;
 use super::task::{TaskPriority, TaskState, TaskWorkItem, TASK_FLAG_REQUEUE_REQUESTED};
 
 /// Schema version for automata worklist benchmark evidence.
@@ -47,7 +47,7 @@ impl AutomataStateIndex {
             task_id,
             tenant_id,
             priority,
-            MegakernelWorkItem {
+            ResidentWorkItem {
                 op_handle,
                 input_handle,
                 output_handle,

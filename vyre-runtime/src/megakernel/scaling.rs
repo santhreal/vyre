@@ -1,6 +1,4 @@
-//! Occupancy-aware grid scaling for megakernels.
-//!
-//! Runtime-owned megakernel planning and launch policy.
+//! Occupancy-aware resident work-queue scaling.
 
 #[cfg(feature = "self-substrate-adapters")]
 pub use super::planner::{
@@ -8,16 +6,14 @@ pub use super::planner::{
     build_persistent_fixpoint_program, build_sinkhorn_clustering_program,
 };
 pub use super::planner::{
-    default_worker_groups_from_limits, dispatch_grid_for, padded_slot_count, select_fused_subset,
-    select_fused_subset_compact_into, select_fused_subset_into, select_fused_subset_pruned,
-    select_fused_subset_pruned_into, select_fused_subset_with_rate, select_optimal_fused_subset,
-    worker_workgroup_size, FusionSelectionScratch, MegakernelGridLimits, MegakernelGridPlan,
-    MegakernelGridRequest, MegakernelLaunchGeometry, MegakernelSizingPolicy,
+    default_worker_groups_from_limits, dispatch_grid_for, padded_slot_count, worker_workgroup_size,
+    ResidentGridLimits, ResidentGridPlan, ResidentGridRequest, ResidentLaunchGeometry,
+    ResidentSizingPolicy,
 };
-#[cfg(any(test, feature = "legacy-infallible"))]
+#[cfg(test)]
 pub use super::policy::{diffuse_priority_across_siblings, diffuse_priority_across_siblings_into};
 pub use super::policy::{
     try_diffuse_priority_across_siblings, try_diffuse_priority_across_siblings_into,
-    MegakernelExecutionMode, MegakernelLaunchPolicy, MegakernelLaunchRecommendation,
-    MegakernelLaunchRequest, MegakernelQueuePressure, PriorityRequeueAccounting,
+    PriorityRequeueAccounting, ResidentExecutionMode, ResidentLaunchPolicy,
+    ResidentLaunchRecommendation, ResidentLaunchRequest, ResidentQueuePressure,
 };

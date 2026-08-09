@@ -1,7 +1,7 @@
 //! Integration tests for the megakernel scheduler fairness accounting.
 
 #![allow(clippy::assertions_on_constants)]
-use vyre_runtime::megakernel::{control, priority_scan_body};
+use vyre_runtime::resident_work_queue::{control, priority_scan_body};
 
 #[test]
 fn scheduler_priority_scan_includes_fairness_accounting() {

@@ -12,10 +12,10 @@
 // `megakernel_protocol_layout_contracts.rs` because inner attributes
 // cannot ride an `include!`-d chunk.
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     protocol::{self, control, opcode, slot, ARG0_WORD, ARGS_PER_SLOT, SLOT_WORDS},
     scheduler::{self, PRIORITY_LEVELS},
-    Megakernel,
+    ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 
@@ -89,7 +89,7 @@ fn priority_offsets_slots_equals_levels_plus_sentinel() {
 
 #[test]
 fn write_default_priority_offsets_preserves_epoch_word() {
-    let mut control = Megakernel::encode_control(false, 1, 0).unwrap();
+    let mut control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
     write_word(&mut control, control::EPOCH as usize, 0xABCD_1234);
     scheduler::write_default_priority_offsets(&mut control, 64).unwrap();
     assert_eq!(
@@ -101,7 +101,7 @@ fn write_default_priority_offsets_preserves_epoch_word() {
 
 #[test]
 fn write_default_priority_offsets_preserves_done_count() {
-    let mut control = Megakernel::encode_control(false, 1, 0).unwrap();
+    let mut control = ResidentWorkQueue::encode_control(false, 1, 0).unwrap();
     write_word(&mut control, control::DONE_COUNT as usize, 99);
     scheduler::write_default_priority_offsets(&mut control, 64).unwrap();
     assert_eq!(
@@ -141,7 +141,7 @@ fn control_min_words_covers_all_fixed_regions() {
 
 #[test]
 fn encode_control_zero_observables_equals_control_min_words_in_bytes() {
-    let ctrl = Megakernel::encode_control(false, 0, 0).unwrap();
+    let ctrl = ResidentWorkQueue::encode_control(false, 0, 0).unwrap();
     assert_eq!(
         ctrl.len(),
         (protocol::CONTROL_MIN_WORDS as usize) * 4,
@@ -172,7 +172,7 @@ fn encode_control_huge_tenant_count_saturates_fixed_tables() {
 
 #[test]
 fn encode_control_nonzero_observables_exceeds_min_words() {
-    let ctrl = Megakernel::encode_control(false, 0, 8).unwrap();
+    let ctrl = ResidentWorkQueue::encode_control(false, 0, 8).unwrap();
     let expected = (control::OBSERVABLE_BASE as usize + 8) * 4;
     assert_eq!(
         ctrl.len(),
@@ -222,7 +222,7 @@ fn debug_log_byte_len_rejects_record_count_above_protocol_cap() {
 fn strict_metrics_reader_rejects_less_than_full_metrics_window() {
     // Metrics window needs METRICS_BASE .. METRICS_BASE+METRICS_SLOTS words.
     let short = vec![0u8; (control::METRICS_BASE as usize) * 4];
-    let err = Megakernel::try_read_metrics(&short)
+    let err = ResidentWorkQueue::try_read_metrics(&short)
         .expect_err("control buffer ending at metrics base must reject metrics read");
     assert!(err.to_string().contains("Fix:"));
 }
@@ -253,31 +253,31 @@ fn observable_base_matches_control_min_words() {
 
 #[test]
 fn read_observable_uses_correct_byte_offset() {
-    let mut ctrl = Megakernel::encode_control(false, 0, 4).unwrap();
+    let mut ctrl = ResidentWorkQueue::encode_control(false, 0, 4).unwrap();
     let base_word = control::OBSERVABLE_BASE as usize;
     write_word(&mut ctrl, base_word, 0x1111_1111);
     write_word(&mut ctrl, base_word + 1, 0x2222_2222);
     write_word(&mut ctrl, base_word + 3, 0x4444_4444);
 
-    assert_eq!(Megakernel::read_observable(&ctrl, 0), 0x1111_1111);
-    assert_eq!(Megakernel::read_observable(&ctrl, 1), 0x2222_2222);
-    assert_eq!(Megakernel::read_observable(&ctrl, 3), 0x4444_4444);
+    assert_eq!(ResidentWorkQueue::read_observable(&ctrl, 0), 0x1111_1111);
+    assert_eq!(ResidentWorkQueue::read_observable(&ctrl, 1), 0x2222_2222);
+    assert_eq!(ResidentWorkQueue::read_observable(&ctrl, 3), 0x4444_4444);
 }
 
 #[test]
 fn strict_observable_rejects_index_at_exact_buffer_end() {
-    let ctrl = Megakernel::encode_control(false, 0, 2).unwrap();
-    let err = Megakernel::try_read_observable(&ctrl, 2)
+    let ctrl = ResidentWorkQueue::encode_control(false, 0, 2).unwrap();
+    let err = ResidentWorkQueue::try_read_observable(&ctrl, 2)
         .expect_err("observable index 2 is at word OBSERVABLE_BASE+2 == buffer end / 4");
     assert!(err.to_string().contains("Fix:"));
 }
 
 #[test]
 fn strict_observable_accepts_last_valid_index() {
-    let mut ctrl = Megakernel::encode_control(false, 0, 2).unwrap();
+    let mut ctrl = ResidentWorkQueue::encode_control(false, 0, 2).unwrap();
     write_word(&mut ctrl, (control::OBSERVABLE_BASE + 1) as usize, 0xBEEF);
     let val =
-        Megakernel::try_read_observable(&ctrl, 1).expect("index 1 must be valid for 2 observables");
+        ResidentWorkQueue::try_read_observable(&ctrl, 1).expect("index 1 must be valid for 2 observables");
     assert_eq!(val, 0xBEEF);
 }
 
@@ -318,22 +318,22 @@ fn observable_does_not_alias_priority_regions() {
 
 #[test]
 fn slot_publish_first_slot_is_index_zero() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &[])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[])
         .expect("slot index 0 must always be publishable in a non-empty ring");
 }
 
 #[test]
 fn slot_publish_last_slot_is_count_minus_one() {
-    let mut ring = Megakernel::encode_empty_ring(8).unwrap();
-    Megakernel::publish_slot(&mut ring, 7, 0, opcode::NOP, &[])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(8).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 7, 0, opcode::NOP, &[])
         .expect("slot index slot_count - 1 must be publishable");
 }
 
 #[test]
 fn slot_publish_at_count_is_rejected() {
-    let mut ring = Megakernel::encode_empty_ring(8).unwrap();
-    let err = Megakernel::publish_slot(&mut ring, 8, 0, opcode::NOP, &[])
+    let mut ring = ResidentWorkQueue::encode_empty_ring(8).unwrap();
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 8, 0, opcode::NOP, &[])
         .expect_err("slot index == slot_count must be rejected");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
@@ -341,7 +341,7 @@ fn slot_publish_at_count_is_rejected() {
 #[test]
 fn slot_publish_rejects_malformed_ring_not_multiple_of_slot_bytes() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 1];
-    let err = Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &[])
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[])
         .expect_err("ring length not a multiple of slot bytes must be rejected");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
@@ -361,7 +361,7 @@ fn ring_byte_len_exactly_slots_times_slot_words_times_four() {
 #[test]
 fn encode_empty_ring_produces_exact_byte_length() {
     for slot_count in [0, 1, 4, 16] {
-        let ring = Megakernel::encode_empty_ring(slot_count).unwrap();
+        let ring = ResidentWorkQueue::encode_empty_ring(slot_count).unwrap();
         let expected = protocol::ring_byte_len(slot_count).unwrap();
         assert_eq!(
             ring.len(),
@@ -373,49 +373,49 @@ fn encode_empty_ring_produces_exact_byte_length() {
 
 #[test]
 fn publish_slot_args_exactly_at_budget_succeeds() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let args = vec![0u32; ARGS_PER_SLOT as usize];
-    Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &args)
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &args)
         .expect("exactly ARGS_PER_SLOT args must succeed");
 }
 
 #[test]
 fn publish_slot_args_one_over_budget_fails() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let args = vec![0u32; ARGS_PER_SLOT as usize + 1];
-    let err = Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &args)
+    let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &args)
         .expect_err("ARGS_PER_SLOT + 1 args must be rejected");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn slot_word_layout_status_is_word_0() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &[]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[]).unwrap();
     let status = read_word(&ring, 0);
     assert_eq!(status, slot::PUBLISHED, "status must be at word 0");
 }
 
 #[test]
 fn slot_word_layout_opcode_is_word_1() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 0, opcode::STORE_U32, &[1, 2]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::STORE_U32, &[1, 2]).unwrap();
     let op = read_word(&ring, 1);
     assert_eq!(op, opcode::STORE_U32, "opcode must be at word 1");
 }
 
 #[test]
 fn slot_word_layout_tenant_is_word_2() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 7, opcode::NOP, &[]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 7, opcode::NOP, &[]).unwrap();
     let tenant = read_word(&ring, 2);
     assert_eq!(tenant, 7, "tenant id must be at word 2");
 }
 
 #[test]
 fn slot_word_layout_priority_is_word_3() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 0, opcode::NOP, &[]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, opcode::NOP, &[]).unwrap();
     let priority = read_word(&ring, 3);
     assert_eq!(
         priority,

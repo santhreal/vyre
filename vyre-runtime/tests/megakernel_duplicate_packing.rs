@@ -2,18 +2,17 @@
 //!
 //! Covers behavior when the same opcode, ticket, or task identity appears
 //! more than once in a packed batch or window.
-#![cfg(feature = "legacy-infallible")]
 
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, slot},
-    Megakernel, RingTelemetry,
+    ResidentWorkQueue, RingTelemetry,
 };
 use vyre_runtime::PipelineError;
 
 #[test]
 fn batch_descriptor_counts_duplicate_items_independently() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
     let batch = BatchDescriptor::new(
         0,
         vec![
@@ -26,18 +25,20 @@ fn batch_descriptor_counts_duplicate_items_independently() {
         .expect("duplicate items must publish");
     assert_eq!(consumed, 2);
 
-    let telemetry = RingTelemetry::decode(&Megakernel::encode_control(false, 1, 0).unwrap(), &ring);
+    let telemetry =
+        RingTelemetry::try_decode(&ResidentWorkQueue::encode_control(false, 1, 0).unwrap(), &ring)
+            .expect("telemetry decode");
     assert_eq!(telemetry.occupancy.published, 2);
 }
 
 #[test]
 fn packed_slot_accepts_duplicate_inner_opcodes() {
-    let mut ring = Megakernel::encode_empty_ring(1).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
     let ops = vec![
         (protocol::opcode::NOP as u8, vec![1u32]),
         (protocol::opcode::NOP as u8, vec![1u32]),
     ];
-    Megakernel::publish_packed_slot(&mut ring, 0, 0, &ops)
+    ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &ops)
         .expect("duplicate inner opcodes must be allowed in packed slot");
     let status = u32::from_le_bytes(ring[..4].try_into().unwrap());
     assert_eq!(status, slot::PUBLISHED);
@@ -45,7 +46,7 @@ fn packed_slot_accepts_duplicate_inner_opcodes() {
 
 #[test]
 fn duplicate_window_tickets_aggregate_in_telemetry() {
-    let mut ring = Megakernel::encode_empty_ring(4).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(4).unwrap();
     let window_opcode = 0xF102;
     let w1 = WindowDescriptor::new(
         0,
@@ -66,11 +67,12 @@ fn duplicate_window_tickets_aggregate_in_telemetry() {
     w1.publish_into(&mut ring).unwrap();
     w2.publish_into(&mut ring).unwrap();
 
-    let telemetry = RingTelemetry::decode_with_window_opcodes(
-        &Megakernel::encode_control(false, 1, 0).unwrap(),
+    let telemetry = RingTelemetry::try_decode_with_window_opcodes(
+        &ResidentWorkQueue::encode_control(false, 1, 0).unwrap(),
         &ring,
         &[window_opcode],
-    );
+    )
+    .expect("window telemetry decode");
     assert_eq!(
         telemetry.windows.len(),
         1,
@@ -84,10 +86,10 @@ fn duplicate_window_tickets_aggregate_in_telemetry() {
 
 #[test]
 fn duplicate_batch_publish_to_same_inflight_slot_is_rejected() {
-    let mut ring = Megakernel::encode_empty_ring(2).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 0, protocol::opcode::NOP, &[]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(2).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 0, protocol::opcode::NOP, &[]).unwrap();
 
-    let err = Megakernel::batch_publish(
+    let err = ResidentWorkQueue::batch_publish(
         &mut ring,
         1,
         0,

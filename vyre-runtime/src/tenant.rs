@@ -42,8 +42,8 @@ use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
 
-use crate::megakernel::protocol::opcode::SHUTDOWN;
-use crate::megakernel::Megakernel;
+use crate::resident_work_queue::protocol::opcode::SHUTDOWN;
+use crate::resident_work_queue::ResidentWorkQueue;
 use crate::PipelineError;
 
 /// First opcode the tenant registry hands out. Sits inside the
@@ -384,7 +384,7 @@ impl TenantHandle {
             });
         }
         let global = self.state.base_opcode + local;
-        if let Err(e) = crate::megakernel::protocol::opcode::validate_user_opcode(global) {
+        if let Err(e) = crate::resident_work_queue::protocol::opcode::validate_user_opcode(global) {
             return Err(TenantError::Pipeline(PipelineError::Backend(format!(
                 "tenant registry produced invalid global opcode {global}: {e}. Fix: repair tenant opcode window allocation before publishing."
             ))));
@@ -414,7 +414,7 @@ impl TenantHandle {
         let global = self.global_opcode(local_opcode)?;
         self.reserve_publish_slot()?;
         if let Err(error) =
-            Megakernel::publish_slot(ring_bytes, slot_idx, self.state.id, global, args)
+            ResidentWorkQueue::publish_slot(ring_bytes, slot_idx, self.state.id, global, args)
         {
             saturating_atomic_sub_u64(&self.state.published_count, 1, "tenant published rollback");
             return Err(error.into());
@@ -1039,7 +1039,7 @@ mod tests {
     fn publish_slot_writes_with_tenant_id_and_bumps_counter() {
         let reg = TenantRegistry::new();
         let t = reg.register("warpscan").unwrap();
-        let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
 
         t.publish_slot(
             &mut ring,
@@ -1051,8 +1051,8 @@ mod tests {
         assert_eq!(t.published_count(), 1);
 
         // Slot 0 should carry tenant=t.id(), opcode=t.base_opcode()+7.
-        let tenant_off = super::super::megakernel::protocol::TENANT_WORD as usize * 4;
-        let opcode_off = super::super::megakernel::protocol::OPCODE_WORD as usize * 4;
+        let tenant_off = super::super::resident_work_queue::protocol::TENANT_WORD as usize * 4;
+        let opcode_off = super::super::resident_work_queue::protocol::OPCODE_WORD as usize * 4;
         let stored_tenant =
             u32::from_le_bytes(ring[tenant_off..tenant_off + 4].try_into().unwrap());
         let stored_opcode =
@@ -1066,7 +1066,7 @@ mod tests {
         let reg = TenantRegistry::new();
         let t = reg.register("vein").unwrap();
         let tenant_id = t.id();
-        let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
         t.publish_slot(&mut ring, 0, 0, &[0, 0, 0])
             .expect("Fix: first publish ok; restore this invariant before continuing.");
         reg.unregister(tenant_id)
@@ -1082,7 +1082,7 @@ mod tests {
     fn quiesce_returns_when_drained_catches_up() {
         let reg = TenantRegistry::new();
         let t = reg.register("t1").unwrap();
-        let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
         t.publish_slot(&mut ring, 0, 0, &[1, 2, 3]).unwrap();
         t.publish_slot(&mut ring, 1, 0, &[4, 5, 6]).unwrap();
         assert_eq!(t.published_count(), 2);
@@ -1101,7 +1101,7 @@ mod tests {
     fn quiesce_times_out_when_drain_stalled() {
         let reg = TenantRegistry::new();
         let t = reg.register("t2").unwrap();
-        let mut ring = Megakernel::try_encode_empty_ring(1).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
         t.publish_slot(&mut ring, 0, 0, &[0, 0, 0]).unwrap();
         // Never note_drained → quiesce must time out.
         let err = t.quiesce(4).expect_err("stalled quiesce must time out");
@@ -1119,7 +1119,7 @@ mod tests {
     fn bounded_tenant_backpressure_rejects_unbounded_publish_backlog() {
         let reg = TenantRegistry::new();
         let t = reg.register_with_backpressure("bounded", 2).unwrap();
-        let mut ring = Megakernel::try_encode_empty_ring(4).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
 
         t.publish_slot(&mut ring, 0, 0, &[1]).unwrap();
         t.publish_slot(&mut ring, 1, 0, &[2]).unwrap();
@@ -1144,7 +1144,7 @@ mod tests {
     fn tenant_backpressure_reopens_after_drain_progress() {
         let reg = TenantRegistry::new();
         let t = reg.register_with_backpressure("bounded", 1).unwrap();
-        let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
+        let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
 
         t.publish_slot(&mut ring, 0, 0, &[1]).unwrap();
         assert!(matches!(

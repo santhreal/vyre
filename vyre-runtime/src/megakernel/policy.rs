@@ -3,12 +3,12 @@
 use vyre_driver::backend::BackendError;
 
 mod cache;
-use super::planner::{MegakernelGridLimits, MegakernelGridRequest, MegakernelLaunchGeometry};
+use super::planner::{ResidentGridLimits, ResidentGridRequest, ResidentLaunchGeometry};
 use super::staging_reserve::try_reserve_vec_capacity;
 
 /// Host-side pressure classification for one megakernel launch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MegakernelQueuePressure {
+pub enum ResidentQueuePressure {
     /// No logical slots are queued.
     Empty,
     /// The queue is below the available worker lanes.
@@ -21,7 +21,7 @@ pub enum MegakernelQueuePressure {
 
 /// Interpreter/JIT route selected by the launch policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MegakernelExecutionMode {
+pub enum ResidentExecutionMode {
     /// Use the generic opcode interpreter.
     Interpreter,
     /// Use a fused payload processor for hot windows or opcodes.
@@ -30,7 +30,7 @@ pub enum MegakernelExecutionMode {
 
 /// Scale-aware execution topology selected for one megakernel launch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MegakernelDispatchTopology {
+pub enum ResidentQueueTopology {
     /// Nothing is queued.
     Empty,
     /// Low frontier density; prefer sparse frontier expansion and avoid
@@ -57,7 +57,7 @@ pub const HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION: u32 = 1;
 
 /// GraphBLAS-style sparse/dense switch class for a selected launch topology.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MegakernelGraphBlasSwitchClass {
+pub enum ResidentGraphBlasSwitchClass {
     /// Nothing is queued.
     Empty,
     /// Sparse frontier expansion is preferred.
@@ -70,7 +70,7 @@ pub enum MegakernelGraphBlasSwitchClass {
     MemoryConstrained,
 }
 
-impl MegakernelGraphBlasSwitchClass {
+impl ResidentGraphBlasSwitchClass {
     /// Stable label for reports and bench output.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -86,19 +86,19 @@ impl MegakernelGraphBlasSwitchClass {
 
 /// Evidence envelope that makes topology selection auditable by runtime benches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelTopologyEvidence {
+pub struct ResidentTopologyEvidence {
     /// Evidence schema version.
     pub schema_version: u32,
     /// Queue pressure that participated in the launch recommendation.
-    pub queue_pressure: MegakernelQueuePressure,
+    pub queue_pressure: ResidentQueuePressure,
     /// Active frontier density in basis points after policy-side inference.
     pub frontier_density_bps: u16,
     /// Semiring frontier density input used for GraphBLAS-style switching.
     pub semiring_frontier_density_bps: u16,
     /// Concrete topology selected by the launch policy.
-    pub selected_topology: MegakernelDispatchTopology,
+    pub selected_topology: ResidentQueueTopology,
     /// Sparse/dense switch class corresponding to the selected topology.
-    pub graphblas_switch_class: MegakernelGraphBlasSwitchClass,
+    pub graphblas_switch_class: ResidentGraphBlasSwitchClass,
     /// Resident device bytes reported by the caller after policy-side inference.
     pub resident_device_bytes: u64,
     /// Estimated peak resident bytes for the selected launch plan.
@@ -107,7 +107,7 @@ pub struct MegakernelTopologyEvidence {
     pub output_parity_required: bool,
 }
 
-impl MegakernelTopologyEvidence {
+impl ResidentTopologyEvidence {
     /// Return true when the evidence envelope contains bounded, versioned
     /// fields that a parity bench can report without consulting hidden policy
     /// state.
@@ -122,7 +122,7 @@ impl MegakernelTopologyEvidence {
 
 /// Interpreter/JIT promotion route selected from queue and hot-window signals.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MegakernelPromotionRoute {
+pub enum ResidentPromotionRoute {
     /// Stay on the generic interpreter path.
     Interpreter,
     /// Use JIT because the queue is large enough to amortize fused execution.
@@ -135,7 +135,7 @@ pub enum MegakernelPromotionRoute {
     OpcodeAndWindowJit,
 }
 
-impl MegakernelPromotionRoute {
+impl ResidentPromotionRoute {
     /// Stable label for reports and lowerer evidence.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -151,7 +151,7 @@ impl MegakernelPromotionRoute {
 
 /// Evidence envelope that makes hot opcode/window promotion auditable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelPromotionEvidence {
+pub struct ResidentPromotionEvidence {
     /// Evidence schema version.
     pub schema_version: u32,
     /// Logical ring slots or work items queued for this launch.
@@ -167,20 +167,20 @@ pub struct MegakernelPromotionEvidence {
     /// Hot descriptor-window threshold configured on the policy.
     pub hot_window_threshold: u32,
     /// Interpreter or JIT route selected by the policy.
-    pub execution_mode: MegakernelExecutionMode,
+    pub execution_mode: ResidentExecutionMode,
     /// True when opcode counters require fused opcode promotion.
     pub promote_hot_opcodes: bool,
     /// True when window counters require fused descriptor-window promotion.
     pub promote_hot_windows: bool,
     /// Stable promotion class for reports and lowerer input.
-    pub promotion_route: MegakernelPromotionRoute,
+    pub promotion_route: ResidentPromotionRoute,
     /// True when the lowerer should materialize fused descriptor windows.
     pub fused_descriptor_window_required: bool,
     /// True when benches must compare interpreter and fused-window outputs.
     pub output_parity_required: bool,
 }
 
-impl MegakernelPromotionEvidence {
+impl ResidentPromotionEvidence {
     /// Return true when the promotion evidence carries all thresholds and
     /// route fields needed by a lowerer or parity bench.
     #[must_use]
@@ -196,7 +196,7 @@ impl MegakernelPromotionEvidence {
 
 /// Thread-local launch recommendation cache telemetry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelLaunchCacheStats {
+pub struct ResidentLaunchCacheStats {
     /// Live cache entries retained in the current thread.
     pub entries: usize,
     /// Cache hits served without recomputing launch geometry.
@@ -207,7 +207,7 @@ pub struct MegakernelLaunchCacheStats {
 
 /// Inputs for one launch-policy recommendation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MegakernelLaunchRequest {
+pub struct ResidentLaunchRequest {
     /// Logical ring slots or work items queued for this launch.
     pub queue_len: u32,
     /// Caller-requested worker workgroup ceiling. Zero means derive from occupancy.
@@ -246,7 +246,7 @@ pub struct MegakernelLaunchRequest {
     pub device_memory_budget_bytes: u64,
 }
 
-impl MegakernelLaunchRequest {
+impl ResidentLaunchRequest {
     /// Construct a direct-dispatch request with conservative defaults.
     #[must_use]
     pub const fn direct(
@@ -278,20 +278,20 @@ impl MegakernelLaunchRequest {
 
 /// Policy output consumed by runtime dispatchers and batch builders.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelLaunchRecommendation {
+pub struct ResidentLaunchRecommendation {
     /// Padded launch geometry for the ring protocol.
-    pub geometry: MegakernelLaunchGeometry,
+    pub geometry: ResidentLaunchGeometry,
     /// Worker workgroups selected for the dispatch.
     pub worker_groups: u32,
     /// Sparse-hit capacity selected for the dispatch.
     pub hit_capacity: u32,
     /// Queue pressure classification.
-    pub pressure: MegakernelQueuePressure,
+    pub pressure: ResidentQueuePressure,
     /// Interpreter or JIT route selected from telemetry.
-    pub execution_mode: MegakernelExecutionMode,
+    pub execution_mode: ResidentExecutionMode,
     /// Scale-aware dispatch topology selected from graph shape, frontier
     /// density, and memory pressure.
-    pub topology: MegakernelDispatchTopology,
+    pub topology: ResidentQueueTopology,
     /// True when hot opcode counters justify fused opcode promotion.
     pub promote_hot_opcodes: bool,
     /// True when ticketed route windows justify fused window promotion.
@@ -464,7 +464,7 @@ impl PriorityRequeueAccounting {
 ///
 /// Returns the post-diffusion priority vector, same shape as input.
 #[must_use]
-#[cfg(any(test, feature = "legacy-infallible"))]
+#[cfg(test)]
 pub fn diffuse_priority_across_siblings(
     priority_stalks: &[f64],
     restriction_diag: &[f64],
@@ -506,7 +506,7 @@ pub fn try_diffuse_priority_across_siblings(
 }
 
 /// Diffuse priority signals into caller-owned storage.
-#[cfg(any(test, feature = "legacy-infallible"))]
+#[cfg(test)]
 pub fn diffuse_priority_across_siblings_into(
     priority_stalks: &[f64],
     restriction_diag: &[f64],
@@ -560,9 +560,9 @@ pub fn try_diffuse_priority_across_siblings_into(
 
 /// Single policy surface for megakernel launch sizing and telemetry-driven routing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MegakernelLaunchPolicy {
+pub struct ResidentLaunchPolicy {
     /// Sizing policy for worker counts and grid geometry.
-    pub sizing: super::planner::MegakernelSizingPolicy,
+    pub sizing: super::planner::ResidentSizingPolicy,
     /// Minimum capacity for sparse-hit results.
     pub min_hit_capacity: u32,
     /// Multiplier for expected hits to determine capacity.
@@ -589,7 +589,7 @@ pub struct MegakernelLaunchPolicy {
     pub scratch_bytes_per_hit: u32,
 }
 
-impl Default for MegakernelLaunchPolicy {
+impl Default for ResidentLaunchPolicy {
     fn default() -> Self {
         Self::standard()
     }
@@ -598,12 +598,12 @@ impl Default for MegakernelLaunchPolicy {
 const FRONTIER_TOPOLOGY_HYSTERESIS_BPS: u16 = 250;
 const MEMORY_TOPOLOGY_HYSTERESIS_BPS: u16 = 250;
 
-impl MegakernelLaunchPolicy {
+impl ResidentLaunchPolicy {
     /// Standard launch policy used by VYRE megakernel dispatchers.
     #[must_use]
     pub const fn standard() -> Self {
         Self {
-            sizing: super::planner::MegakernelSizingPolicy::standard(),
+            sizing: super::planner::ResidentSizingPolicy::standard(),
             min_hit_capacity: 1024,
             hit_capacity_multiplier: 2,
             saturated_waves: 4,
@@ -621,7 +621,7 @@ impl MegakernelLaunchPolicy {
 
     /// Return launch recommendation cache telemetry for the current thread.
     #[must_use]
-    pub fn launch_cache_stats() -> MegakernelLaunchCacheStats {
+    pub fn launch_cache_stats() -> ResidentLaunchCacheStats {
         cache::LAUNCH_RECOMMENDATION_CACHE.with(|cache| cache.borrow().stats())
     }
 
@@ -638,8 +638,8 @@ impl MegakernelLaunchPolicy {
     /// launch values cannot fit the u32 ring protocol.
     pub fn recommend(
         &self,
-        request: MegakernelLaunchRequest,
-    ) -> Result<MegakernelLaunchRecommendation, BackendError> {
+        request: ResidentLaunchRequest,
+    ) -> Result<ResidentLaunchRecommendation, BackendError> {
         self.recommend_inner(request, None)
     }
 
@@ -651,8 +651,8 @@ impl MegakernelLaunchPolicy {
     /// built from the request or adapter limits.
     pub fn recommend_with_topology_evidence(
         &self,
-        request: MegakernelLaunchRequest,
-    ) -> Result<(MegakernelLaunchRecommendation, MegakernelTopologyEvidence), BackendError> {
+        request: ResidentLaunchRequest,
+    ) -> Result<(ResidentLaunchRecommendation, ResidentTopologyEvidence), BackendError> {
         let (effective_request, recommendation) = self.recommend_with_effective_request(request)?;
         let evidence = self.topology_evidence_for(effective_request, recommendation);
         Ok((recommendation, evidence))
@@ -666,8 +666,8 @@ impl MegakernelLaunchPolicy {
     /// built from the request or adapter limits.
     pub fn recommend_with_promotion_evidence(
         &self,
-        request: MegakernelLaunchRequest,
-    ) -> Result<(MegakernelLaunchRecommendation, MegakernelPromotionEvidence), BackendError> {
+        request: ResidentLaunchRequest,
+    ) -> Result<(ResidentLaunchRecommendation, ResidentPromotionEvidence), BackendError> {
         let (effective_request, recommendation) = self.recommend_with_effective_request(request)?;
         let evidence = self.promotion_evidence_for(effective_request, recommendation);
         Ok((recommendation, evidence))
@@ -688,17 +688,17 @@ impl MegakernelLaunchPolicy {
     /// launch values cannot fit the u32 ring protocol.
     pub fn recommend_with_previous_topology(
         &self,
-        request: MegakernelLaunchRequest,
-        previous_topology: MegakernelDispatchTopology,
-    ) -> Result<MegakernelLaunchRecommendation, BackendError> {
+        request: ResidentLaunchRequest,
+        previous_topology: ResidentQueueTopology,
+    ) -> Result<ResidentLaunchRecommendation, BackendError> {
         self.recommend_inner(request, Some(previous_topology))
     }
 
     fn recommend_inner(
         &self,
-        request: MegakernelLaunchRequest,
-        previous_topology: Option<MegakernelDispatchTopology>,
-    ) -> Result<MegakernelLaunchRecommendation, BackendError> {
+        request: ResidentLaunchRequest,
+        previous_topology: Option<ResidentQueueTopology>,
+    ) -> Result<ResidentLaunchRecommendation, BackendError> {
         let cache_key = cache::LaunchRecommendationCacheKey {
             policy: *self,
             request,
@@ -725,11 +725,11 @@ impl MegakernelLaunchPolicy {
         );
         let scheduled_request = self.apply_topology_worker_policy(effective_request, topology)?;
         let grid = self.sizing.calculate_optimal_grid(
-            MegakernelGridRequest::new(
+            ResidentGridRequest::new(
                 scheduled_request.queue_len,
                 scheduled_request.requested_worker_groups,
             ),
-            MegakernelGridLimits::new(
+            ResidentGridLimits::new(
                 scheduled_request.max_workgroup_size_x,
                 scheduled_request.max_compute_workgroups_per_dimension,
                 scheduled_request.max_compute_invocations_per_workgroup,
@@ -764,16 +764,16 @@ impl MegakernelLaunchPolicy {
         let execution_mode = if effective_request.queue_len >= self.jit_queue_len_threshold
             || promote_hot_opcodes
             || promote_hot_windows
-            || topology == MegakernelDispatchTopology::FusedDense
+            || topology == ResidentQueueTopology::FusedDense
         {
-            MegakernelExecutionMode::Jit
+            ResidentExecutionMode::Jit
         } else {
-            MegakernelExecutionMode::Interpreter
+            ResidentExecutionMode::Interpreter
         };
         let age_priority_work = effective_request.requeue_count > 0
             || effective_request.max_priority_age >= self.priority_age_threshold;
 
-        let recommendation = MegakernelLaunchRecommendation {
+        let recommendation = ResidentLaunchRecommendation {
             geometry,
             worker_groups,
             hit_capacity,
@@ -796,8 +796,8 @@ impl MegakernelLaunchPolicy {
 
     fn recommend_with_effective_request(
         &self,
-        request: MegakernelLaunchRequest,
-    ) -> Result<(MegakernelLaunchRequest, MegakernelLaunchRecommendation), BackendError> {
+        request: ResidentLaunchRequest,
+    ) -> Result<(ResidentLaunchRequest, ResidentLaunchRecommendation), BackendError> {
         let effective_request = self.infer_missing_scale_signals(request)?;
         let recommendation = self.recommend(effective_request)?;
         Ok((effective_request, recommendation))
@@ -805,10 +805,10 @@ impl MegakernelLaunchPolicy {
 
     fn topology_evidence_for(
         &self,
-        request: MegakernelLaunchRequest,
-        recommendation: MegakernelLaunchRecommendation,
-    ) -> MegakernelTopologyEvidence {
-        MegakernelTopologyEvidence {
+        request: ResidentLaunchRequest,
+        recommendation: ResidentLaunchRecommendation,
+    ) -> ResidentTopologyEvidence {
+        ResidentTopologyEvidence {
             schema_version: TOPOLOGY_EVIDENCE_SCHEMA_VERSION,
             queue_pressure: recommendation.pressure,
             frontier_density_bps: request.frontier_density_bps,
@@ -823,10 +823,10 @@ impl MegakernelLaunchPolicy {
 
     fn promotion_evidence_for(
         &self,
-        request: MegakernelLaunchRequest,
-        recommendation: MegakernelLaunchRecommendation,
-    ) -> MegakernelPromotionEvidence {
-        MegakernelPromotionEvidence {
+        request: ResidentLaunchRequest,
+        recommendation: ResidentLaunchRecommendation,
+    ) -> ResidentPromotionEvidence {
+        ResidentPromotionEvidence {
             schema_version: HOT_WINDOW_PROMOTION_EVIDENCE_SCHEMA_VERSION,
             queue_len: request.queue_len,
             jit_queue_len_threshold: self.jit_queue_len_threshold,
@@ -843,40 +843,36 @@ impl MegakernelLaunchPolicy {
         }
     }
 
-    fn promotion_route_for(
-        recommendation: MegakernelLaunchRecommendation,
-    ) -> MegakernelPromotionRoute {
-        if recommendation.execution_mode == MegakernelExecutionMode::Interpreter {
-            return MegakernelPromotionRoute::Interpreter;
+    fn promotion_route_for(recommendation: ResidentLaunchRecommendation) -> ResidentPromotionRoute {
+        if recommendation.execution_mode == ResidentExecutionMode::Interpreter {
+            return ResidentPromotionRoute::Interpreter;
         }
         match (
             recommendation.promote_hot_opcodes,
             recommendation.promote_hot_windows,
         ) {
-            (true, true) => MegakernelPromotionRoute::OpcodeAndWindowJit,
-            (true, false) => MegakernelPromotionRoute::OpcodeJit,
-            (false, true) => MegakernelPromotionRoute::WindowJit,
-            (false, false) => MegakernelPromotionRoute::QueueJit,
+            (true, true) => ResidentPromotionRoute::OpcodeAndWindowJit,
+            (true, false) => ResidentPromotionRoute::OpcodeJit,
+            (false, true) => ResidentPromotionRoute::WindowJit,
+            (false, false) => ResidentPromotionRoute::QueueJit,
         }
     }
 
-    fn graphblas_switch_class_for(
-        topology: MegakernelDispatchTopology,
-    ) -> MegakernelGraphBlasSwitchClass {
+    fn graphblas_switch_class_for(topology: ResidentQueueTopology) -> ResidentGraphBlasSwitchClass {
         match topology {
-            MegakernelDispatchTopology::Empty => MegakernelGraphBlasSwitchClass::Empty,
-            MegakernelDispatchTopology::SparseFrontier => MegakernelGraphBlasSwitchClass::Sparse,
-            MegakernelDispatchTopology::HybridFrontier => MegakernelGraphBlasSwitchClass::Hybrid,
-            MegakernelDispatchTopology::DenseFrontier | MegakernelDispatchTopology::FusedDense => {
-                MegakernelGraphBlasSwitchClass::Dense
+            ResidentQueueTopology::Empty => ResidentGraphBlasSwitchClass::Empty,
+            ResidentQueueTopology::SparseFrontier => ResidentGraphBlasSwitchClass::Sparse,
+            ResidentQueueTopology::HybridFrontier => ResidentGraphBlasSwitchClass::Hybrid,
+            ResidentQueueTopology::DenseFrontier | ResidentQueueTopology::FusedDense => {
+                ResidentGraphBlasSwitchClass::Dense
             }
-            MegakernelDispatchTopology::MemoryConstrained => {
-                MegakernelGraphBlasSwitchClass::MemoryConstrained
+            ResidentQueueTopology::MemoryConstrained => {
+                ResidentGraphBlasSwitchClass::MemoryConstrained
             }
         }
     }
 
-    fn hit_capacity_for(&self, request: MegakernelLaunchRequest) -> Result<u32, BackendError> {
+    fn hit_capacity_for(&self, request: ResidentLaunchRequest) -> Result<u32, BackendError> {
         if request.requested_hit_capacity != 0 {
             return Ok(request.requested_hit_capacity);
         }
@@ -900,7 +896,7 @@ impl MegakernelLaunchPolicy {
 
     fn estimated_peak_device_bytes(
         &self,
-        request: MegakernelLaunchRequest,
+        request: ResidentLaunchRequest,
         hit_capacity: u32,
     ) -> Result<u64, BackendError> {
         let scratch_bytes = u64::from(hit_capacity)
@@ -922,8 +918,8 @@ impl MegakernelLaunchPolicy {
 
     fn infer_missing_scale_signals(
         &self,
-        mut request: MegakernelLaunchRequest,
-    ) -> Result<MegakernelLaunchRequest, BackendError> {
+        mut request: ResidentLaunchRequest,
+    ) -> Result<ResidentLaunchRequest, BackendError> {
         if request.frontier_density_bps == 0
             && request.queue_len != 0
             && request.graph_node_count != 0
@@ -969,10 +965,10 @@ impl MegakernelLaunchPolicy {
 
     fn apply_topology_worker_policy(
         &self,
-        mut request: MegakernelLaunchRequest,
-        topology: MegakernelDispatchTopology,
-    ) -> Result<MegakernelLaunchRequest, BackendError> {
-        if topology == MegakernelDispatchTopology::MemoryConstrained
+        mut request: ResidentLaunchRequest,
+        topology: ResidentQueueTopology,
+    ) -> Result<ResidentLaunchRequest, BackendError> {
+        if topology == ResidentQueueTopology::MemoryConstrained
             && request.memory_pressure_bps != 0
             && request.requested_worker_groups > 1
         {
@@ -1029,7 +1025,7 @@ impl MegakernelLaunchPolicy {
                 })?
                 .max(1);
         }
-        if topology == MegakernelDispatchTopology::SparseFrontier
+        if topology == ResidentQueueTopology::SparseFrontier
             && request.graph_node_count != 0
             && request.frontier_density_bps != 0
             && request.requested_worker_groups > 1
@@ -1059,104 +1055,103 @@ impl MegakernelLaunchPolicy {
 
     fn dispatch_topology_for(
         &self,
-        request: MegakernelLaunchRequest,
+        request: ResidentLaunchRequest,
         promote_hot_opcodes: bool,
         promote_hot_windows: bool,
-    ) -> MegakernelDispatchTopology {
+    ) -> ResidentQueueTopology {
         if request.queue_len == 0 {
-            return MegakernelDispatchTopology::Empty;
+            return ResidentQueueTopology::Empty;
         }
         if request.memory_pressure_bps >= self.memory_pressure_threshold_bps {
-            return MegakernelDispatchTopology::MemoryConstrained;
+            return ResidentQueueTopology::MemoryConstrained;
         }
         if request.frontier_density_bps <= self.sparse_frontier_threshold_bps {
-            return MegakernelDispatchTopology::SparseFrontier;
+            return ResidentQueueTopology::SparseFrontier;
         }
         let dense = request.frontier_density_bps >= self.dense_frontier_threshold_bps;
         let graph_is_large =
             request.graph_node_count > 0 && request.graph_edge_count >= self.fusion_edge_threshold;
         if dense && graph_is_large && (promote_hot_opcodes || promote_hot_windows) {
-            return MegakernelDispatchTopology::FusedDense;
+            return ResidentQueueTopology::FusedDense;
         }
         if dense {
-            return MegakernelDispatchTopology::DenseFrontier;
+            return ResidentQueueTopology::DenseFrontier;
         }
-        MegakernelDispatchTopology::HybridFrontier
+        ResidentQueueTopology::HybridFrontier
     }
 
     fn stabilize_topology(
         &self,
-        raw_topology: MegakernelDispatchTopology,
-        request: MegakernelLaunchRequest,
-        previous_topology: Option<MegakernelDispatchTopology>,
+        raw_topology: ResidentQueueTopology,
+        request: ResidentLaunchRequest,
+        previous_topology: Option<ResidentQueueTopology>,
         promote_hot_opcodes: bool,
         promote_hot_windows: bool,
-    ) -> MegakernelDispatchTopology {
-        if raw_topology == MegakernelDispatchTopology::Empty {
+    ) -> ResidentQueueTopology {
+        if raw_topology == ResidentQueueTopology::Empty {
             return raw_topology;
         }
-        if raw_topology == MegakernelDispatchTopology::MemoryConstrained {
+        if raw_topology == ResidentQueueTopology::MemoryConstrained {
             return raw_topology;
         }
         let Some(previous_topology) = previous_topology else {
             return raw_topology;
         };
-        if previous_topology == MegakernelDispatchTopology::MemoryConstrained
+        if previous_topology == ResidentQueueTopology::MemoryConstrained
             && request.memory_pressure_bps
                 >= hysteresis_sub(
                     self.memory_pressure_threshold_bps,
                     MEMORY_TOPOLOGY_HYSTERESIS_BPS,
                 )
         {
-            return MegakernelDispatchTopology::MemoryConstrained;
+            return ResidentQueueTopology::MemoryConstrained;
         }
 
         match previous_topology {
-            MegakernelDispatchTopology::SparseFrontier
-                if raw_topology != MegakernelDispatchTopology::SparseFrontier
+            ResidentQueueTopology::SparseFrontier
+                if raw_topology != ResidentQueueTopology::SparseFrontier
                     && request.frontier_density_bps
                         <= hysteresis_add(
                             self.sparse_frontier_threshold_bps,
                             FRONTIER_TOPOLOGY_HYSTERESIS_BPS,
                         ) =>
             {
-                MegakernelDispatchTopology::SparseFrontier
+                ResidentQueueTopology::SparseFrontier
             }
-            MegakernelDispatchTopology::HybridFrontier
-                if raw_topology == MegakernelDispatchTopology::SparseFrontier
+            ResidentQueueTopology::HybridFrontier
+                if raw_topology == ResidentQueueTopology::SparseFrontier
                     && request.frontier_density_bps
                         >= hysteresis_sub(
                             self.sparse_frontier_threshold_bps,
                             FRONTIER_TOPOLOGY_HYSTERESIS_BPS,
                         ) =>
             {
-                MegakernelDispatchTopology::HybridFrontier
+                ResidentQueueTopology::HybridFrontier
             }
-            MegakernelDispatchTopology::HybridFrontier
+            ResidentQueueTopology::HybridFrontier
                 if matches!(
                     raw_topology,
-                    MegakernelDispatchTopology::DenseFrontier
-                        | MegakernelDispatchTopology::FusedDense
+                    ResidentQueueTopology::DenseFrontier | ResidentQueueTopology::FusedDense
                 ) && request.frontier_density_bps
                     <= hysteresis_add(
                         self.dense_frontier_threshold_bps,
                         FRONTIER_TOPOLOGY_HYSTERESIS_BPS,
                     ) =>
             {
-                MegakernelDispatchTopology::HybridFrontier
+                ResidentQueueTopology::HybridFrontier
             }
-            MegakernelDispatchTopology::DenseFrontier
-                if raw_topology == MegakernelDispatchTopology::HybridFrontier
+            ResidentQueueTopology::DenseFrontier
+                if raw_topology == ResidentQueueTopology::HybridFrontier
                     && request.frontier_density_bps
                         >= hysteresis_sub(
                             self.dense_frontier_threshold_bps,
                             FRONTIER_TOPOLOGY_HYSTERESIS_BPS,
                         ) =>
             {
-                MegakernelDispatchTopology::DenseFrontier
+                ResidentQueueTopology::DenseFrontier
             }
-            MegakernelDispatchTopology::FusedDense
-                if raw_topology == MegakernelDispatchTopology::HybridFrontier
+            ResidentQueueTopology::FusedDense
+                if raw_topology == ResidentQueueTopology::HybridFrontier
                     && request.frontier_density_bps
                         >= hysteresis_sub(
                             self.dense_frontier_threshold_bps,
@@ -1165,7 +1160,7 @@ impl MegakernelLaunchPolicy {
                     && request.graph_edge_count >= self.fusion_edge_threshold
                     && (promote_hot_opcodes || promote_hot_windows) =>
             {
-                MegakernelDispatchTopology::FusedDense
+                ResidentQueueTopology::FusedDense
             }
             _ => raw_topology,
         }
@@ -1235,7 +1230,7 @@ impl MegakernelLaunchPolicy {
     /// descent converges 5-10× faster than plain gradient on the
     /// elongated-valley latency surfaces typical of GPU autotuning.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn natural_gradient_autotune_step(
         m_inv_sqrt: &[f64],
         grad: &[f64],
@@ -1274,7 +1269,7 @@ impl MegakernelLaunchPolicy {
     }
 
     /// Compute the natural-gradient autotune step into caller-owned storage.
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn natural_gradient_autotune_step_into(
         m_inv_sqrt: &[f64],
         grad: &[f64],
@@ -1389,10 +1384,10 @@ fn classify_pressure(
     queue_len: u32,
     lanes: u64,
     requeue_count: u64,
-    policy: &MegakernelLaunchPolicy,
-) -> Result<MegakernelQueuePressure, BackendError> {
+    policy: &ResidentLaunchPolicy,
+) -> Result<ResidentQueuePressure, BackendError> {
     if queue_len == 0 {
-        return Ok(MegakernelQueuePressure::Empty);
+        return Ok(ResidentQueuePressure::Empty);
     }
     let lanes = lanes.max(1);
     let queue_len = u64::from(queue_len);
@@ -1404,11 +1399,11 @@ fn classify_pressure(
             )
         })?;
     if requeue_count > 0 || queue_len >= saturated_lanes {
-        Ok(MegakernelQueuePressure::Saturated)
+        Ok(ResidentQueuePressure::Saturated)
     } else if queue_len >= lanes {
-        Ok(MegakernelQueuePressure::Balanced)
+        Ok(ResidentQueuePressure::Balanced)
     } else {
-        Ok(MegakernelQueuePressure::Light)
+        Ok(ResidentQueuePressure::Light)
     }
 }
 

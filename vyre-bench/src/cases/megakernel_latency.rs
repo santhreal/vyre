@@ -12,7 +12,7 @@ use vyre_driver::specialization::SpecCacheKey;
 use vyre_driver::speculate::SpeculativeVariantKeys;
 use vyre_driver::speculation_substrate::SpeculationVerdict;
 use vyre_driver::CompiledPipeline;
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
 };
 
@@ -71,13 +71,13 @@ impl BenchCase for MegakernelLatency {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = megakernel::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
-        let control_bytes = megakernel::encode_control(false, 1, 0)
+        let program = resident_work_queue::build_program_sharded_once_slots(WORKGROUP_SIZE, SLOT_COUNT, &[]);
+        let control_bytes = resident_work_queue::encode_control(false, 1, 0)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let ring_bytes = published_ring(SLOT_COUNT)?;
-        let debug_bytes = megakernel::encode_empty_debug_log(megakernel::debug::RECORD_CAPACITY)
+        let debug_bytes = resident_work_queue::encode_empty_debug_log(resident_work_queue::debug::RECORD_CAPACITY)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
-        let io_bytes = megakernel::io::try_encode_empty_io_queue(megakernel::io::IO_SLOT_COUNT)
+        let io_bytes = resident_work_queue::io::try_encode_empty_io_queue(resident_work_queue::io::IO_SLOT_COUNT)
             .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
         let inputs = vec![control_bytes, ring_bytes, debug_bytes, io_bytes];
         let input_bytes_total = input_bytes_total(&inputs);
@@ -336,7 +336,7 @@ fn spec_key(id: u64) -> SpecCacheKey {
 }
 
 fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
-    let mut ring = megakernel::encode_empty_ring(slot_count)
+    let mut ring = resident_work_queue::encode_empty_ring(slot_count)
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
     let slot_bytes = (SLOT_WORDS as usize).checked_mul(4).ok_or_else(|| {
         BenchError::ExecutionFailed("megakernel slot byte width overflowed usize".to_string())

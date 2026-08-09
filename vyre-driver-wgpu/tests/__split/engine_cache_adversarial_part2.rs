@@ -220,7 +220,7 @@ fn cross_process_determinism_literal_set_known_constant() {
     // commit: a clean checkout of that commit produces this same key, so the
     // encoding drifted under some earlier change and nothing caught it, because
     // `cargo test --workspace --all-features` could not run to completion.
-    // The two other places that check this key (vyre-libs/src/scan/literal_set.rs
+    // The two other places that check this key (vyre-core/src/scan/literal_set.rs
     // and vyre-libs/tests/cross_layer_parity.rs) recompute it from the wire
     // buffer instead of pinning a literal, which is why only this one drifted.
     let engine = GpuLiteralSet::compile(&[b"VYRE".as_slice()]);

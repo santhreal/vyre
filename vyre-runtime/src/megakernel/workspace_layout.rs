@@ -7,7 +7,7 @@
 
 /// One contiguous u32-word region inside a resident megakernel workspace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelWorkspaceRegion<R> {
+pub struct ResidentWorkspaceRegion<R> {
     /// Domain-owned region id encoded in the workspace manifest.
     pub id: R,
     /// Offset from workspace word zero.
@@ -22,7 +22,7 @@ pub struct MegakernelWorkspaceRegion<R> {
 
 /// Declarative region specification for bulk resident-workspace layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MegakernelWorkspaceRegionSpec<R> {
+pub enum ResidentWorkspaceRegionSpec<R> {
     /// Region whose total word count is already known.
     Fixed {
         /// Domain-owned region id encoded in the workspace manifest.
@@ -45,7 +45,7 @@ pub enum MegakernelWorkspaceRegionSpec<R> {
     },
 }
 
-impl<R> MegakernelWorkspaceRegionSpec<R> {
+impl<R> ResidentWorkspaceRegionSpec<R> {
     /// Build a fixed-size region specification.
     #[must_use]
     pub const fn fixed(id: R, words: u32, record_words: u32, capacity_records: u32) -> Self {
@@ -70,7 +70,7 @@ impl<R> MegakernelWorkspaceRegionSpec<R> {
 
 /// Error returned by bulk resident-workspace layout planning.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MegakernelWorkspaceLayoutError<R> {
+pub enum ResidentWorkspaceLayoutError<R> {
     /// `record_words * capacity_records` overflowed for this record-backed region.
     RecordWordsOverflow {
         /// Region whose record arena overflowed.
@@ -83,7 +83,7 @@ pub enum MegakernelWorkspaceLayoutError<R> {
     },
 }
 
-impl<R: Copy> MegakernelWorkspaceRegion<R> {
+impl<R: Copy> ResidentWorkspaceRegion<R> {
     /// Exclusive end offset for this region.
     #[must_use]
     pub const fn end_words(self) -> Option<u32> {
@@ -104,8 +104,8 @@ pub const fn first_workspace_region<R>(
     words: u32,
     record_words: u32,
     capacity_records: u32,
-) -> MegakernelWorkspaceRegion<R> {
-    MegakernelWorkspaceRegion {
+) -> ResidentWorkspaceRegion<R> {
+    ResidentWorkspaceRegion {
         id,
         offset_words: 0,
         words,
@@ -117,13 +117,13 @@ pub const fn first_workspace_region<R>(
 /// Build the next contiguous region after `previous`.
 #[must_use]
 pub fn next_workspace_region<R: Copy>(
-    previous: MegakernelWorkspaceRegion<R>,
+    previous: ResidentWorkspaceRegion<R>,
     id: R,
     words: u32,
     record_words: u32,
     capacity_records: u32,
-) -> Option<MegakernelWorkspaceRegion<R>> {
-    Some(MegakernelWorkspaceRegion {
+) -> Option<ResidentWorkspaceRegion<R>> {
+    Some(ResidentWorkspaceRegion {
         id,
         offset_words: previous.end_words()?,
         words,
@@ -135,11 +135,11 @@ pub fn next_workspace_region<R: Copy>(
 /// Build the next contiguous record-backed region after `previous`.
 #[must_use]
 pub fn next_record_workspace_region<R: Copy>(
-    previous: MegakernelWorkspaceRegion<R>,
+    previous: ResidentWorkspaceRegion<R>,
     id: R,
     record_words: u32,
     capacity_records: u32,
-) -> Option<MegakernelWorkspaceRegion<R>> {
+) -> Option<ResidentWorkspaceRegion<R>> {
     next_workspace_region(
         previous,
         id,
@@ -156,33 +156,33 @@ pub fn next_record_workspace_region<R: Copy>(
 /// accumulation in `vyre-runtime`, while each adapter keeps its own region ids
 /// and capacity policy.
 pub fn build_workspace_regions<R: Copy>(
-    specs: &[MegakernelWorkspaceRegionSpec<R>],
-) -> Result<Vec<MegakernelWorkspaceRegion<R>>, MegakernelWorkspaceLayoutError<R>> {
+    specs: &[ResidentWorkspaceRegionSpec<R>],
+) -> Result<Vec<ResidentWorkspaceRegion<R>>, ResidentWorkspaceLayoutError<R>> {
     let mut regions = Vec::with_capacity(specs.len());
     let mut next_offset_words = 0_u32;
 
     for spec in specs {
         let (id, words, record_words, capacity_records) = match *spec {
-            MegakernelWorkspaceRegionSpec::Fixed {
+            ResidentWorkspaceRegionSpec::Fixed {
                 id,
                 words,
                 record_words,
                 capacity_records,
             } => (id, words, record_words, capacity_records),
-            MegakernelWorkspaceRegionSpec::Record {
+            ResidentWorkspaceRegionSpec::Record {
                 id,
                 record_words,
                 capacity_records,
             } => {
                 let words = workspace_record_words(record_words, capacity_records)
-                    .ok_or(MegakernelWorkspaceLayoutError::RecordWordsOverflow { region: id })?;
+                    .ok_or(ResidentWorkspaceLayoutError::RecordWordsOverflow { region: id })?;
                 (id, words, record_words, capacity_records)
             }
         };
         let end_words = next_offset_words
             .checked_add(words)
-            .ok_or(MegakernelWorkspaceLayoutError::OffsetOverflow { region: id })?;
-        regions.push(MegakernelWorkspaceRegion {
+            .ok_or(ResidentWorkspaceLayoutError::OffsetOverflow { region: id })?;
+        regions.push(ResidentWorkspaceRegion {
             id,
             offset_words: next_offset_words,
             words,
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn next_region_rejects_offset_overflow() {
-        let previous = MegakernelWorkspaceRegion {
+        let previous = ResidentWorkspaceRegion {
             id: Region::Header,
             offset_words: u32::MAX,
             words: 1,
@@ -261,9 +261,9 @@ mod tests {
         for rows in [1_u32, 2, 7, 8, 31, 32, 1024] {
             for work in [1_u32, 3, 64, 4096] {
                 let specs = [
-                    MegakernelWorkspaceRegionSpec::fixed(Region::Header, 16, 1, 16),
-                    MegakernelWorkspaceRegionSpec::record(Region::Rows, 5, rows),
-                    MegakernelWorkspaceRegionSpec::record(Region::Work, 2, work),
+                    ResidentWorkspaceRegionSpec::fixed(Region::Header, 16, 1, 16),
+                    ResidentWorkspaceRegionSpec::record(Region::Rows, 5, rows),
+                    ResidentWorkspaceRegionSpec::record(Region::Work, 2, work),
                 ];
                 let bulk = build_workspace_regions(&specs)
                     .expect("Fix: generated bulk workspace layout should fit");
@@ -281,25 +281,25 @@ mod tests {
 
     #[test]
     fn bulk_workspace_region_builder_reports_record_and_offset_overflow_separately() {
-        let record = [MegakernelWorkspaceRegionSpec::record(
+        let record = [ResidentWorkspaceRegionSpec::record(
             Region::Rows,
             u32::MAX,
             2,
         )];
         assert_eq!(
             build_workspace_regions(&record),
-            Err(MegakernelWorkspaceLayoutError::RecordWordsOverflow {
+            Err(ResidentWorkspaceLayoutError::RecordWordsOverflow {
                 region: Region::Rows
             })
         );
 
         let offset = [
-            MegakernelWorkspaceRegionSpec::fixed(Region::Header, u32::MAX, 1, u32::MAX),
-            MegakernelWorkspaceRegionSpec::fixed(Region::Rows, 1, 1, 1),
+            ResidentWorkspaceRegionSpec::fixed(Region::Header, u32::MAX, 1, u32::MAX),
+            ResidentWorkspaceRegionSpec::fixed(Region::Rows, 1, 1, 1),
         ];
         assert_eq!(
             build_workspace_regions(&offset),
-            Err(MegakernelWorkspaceLayoutError::OffsetOverflow {
+            Err(ResidentWorkspaceLayoutError::OffsetOverflow {
                 region: Region::Rows
             })
         );

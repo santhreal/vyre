@@ -17,9 +17,9 @@
 
 use std::time::Instant;
 
+use vyre::scan::{build_rule_pipeline, ResidentRulePipeline};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::match_result::Match;
-use vyre::scan::{build_rule_pipeline, ResidentRulePipeline};
 
 /// A pattern set large enough that the lane-major transition table is non-trivial
 /// (this is the table the resident path avoids re-uploading every scan).

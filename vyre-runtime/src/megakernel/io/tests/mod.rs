@@ -4,7 +4,7 @@ use super::{
     claim_io_requests_into, complete_io_request, complete_io_requests_batch, encode_empty_io_queue,
     io_completion_poll_body, io_op, io_status, io_word, poll_io_requests,
     try_claim_io_requests_into, try_encode_empty_io_queue_into, try_poll_io_requests_into,
-    MegakernelIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
+    ResidentIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
 };
 use crate::PipelineError;
 
@@ -285,7 +285,7 @@ fn io_completion_poll_produces_valid_ir() {
 
 #[test]
 fn host_publish_slot_round_trips() {
-    let mut queue = MegakernelIoQueue::new(4).unwrap();
+    let mut queue = ResidentIoQueue::new(4).unwrap();
     assert_eq!(queue.as_bytes().as_ptr() as usize % 4, 0);
     queue.publish_slot(2, 7, 4096, 99).unwrap();
     let completion = queue
@@ -307,7 +307,7 @@ fn host_publish_slot_round_trips() {
 
 #[test]
 fn host_queue_byte_view_stays_aligned_after_mutation() {
-    let mut queue = MegakernelIoQueue::new(IO_SLOT_COUNT).unwrap();
+    let mut queue = ResidentIoQueue::new(IO_SLOT_COUNT).unwrap();
     assert_eq!(queue.as_mut_bytes().as_ptr() as usize % 4, 0);
     queue.publish_slot(0, 3, 512, 77).unwrap();
     assert_eq!(queue.as_bytes().as_ptr() as usize % 4, 0);
@@ -315,7 +315,7 @@ fn host_queue_byte_view_stays_aligned_after_mutation() {
 
 #[test]
 fn oversized_queue_is_rejected_with_actionable_error() {
-    let error = MegakernelIoQueue::new(IO_SLOT_COUNT + 1)
+    let error = ResidentIoQueue::new(IO_SLOT_COUNT + 1)
         .expect_err("queues larger than the compiled 64-slot poll window must fail");
     match error {
         PipelineError::QueueFull { fix, .. } => {
@@ -330,7 +330,7 @@ fn oversized_queue_is_rejected_with_actionable_error() {
 
 #[test]
 fn publishing_the_sixty_fifth_completion_errors_instead_of_dropping() {
-    let mut queue = MegakernelIoQueue::new(IO_SLOT_COUNT).unwrap();
+    let mut queue = ResidentIoQueue::new(IO_SLOT_COUNT).unwrap();
     for slot in 0..IO_SLOT_COUNT {
         queue.publish_slot(slot, slot, 4096, slot).unwrap();
         let base = (slot * IO_SLOT_WORDS + io_word::STATUS) as usize * 4;
@@ -402,7 +402,7 @@ fn io_module_avoids_byte_width_atomic_types() {
 
 #[test]
 fn submit_dma_read_publishes_read_request() {
-    let mut queue = MegakernelIoQueue::new(4).unwrap();
+    let mut queue = ResidentIoQueue::new(4).unwrap();
     queue.submit_dma_read(2, 10, 20, 4096, 99).unwrap();
 
     let reqs = poll_io_requests(queue.as_bytes()).unwrap();
@@ -417,7 +417,7 @@ fn submit_dma_read_publishes_read_request() {
 
 #[test]
 fn submit_dma_read_rejects_non_empty_slot() {
-    let mut queue = MegakernelIoQueue::new(4).unwrap();
+    let mut queue = ResidentIoQueue::new(4).unwrap();
     queue.submit_dma_read(1, 10, 20, 4096, 99).unwrap();
     let err = queue.submit_dma_read(1, 11, 21, 8192, 100).unwrap_err();
     assert!(
@@ -515,7 +515,7 @@ fn queue_word_index_with_max_word_returns_structured_error() {
 /// queue must be pristine and the caller must receive an error.
 #[test]
 fn publish_slot_failure_does_not_silently_corrupt_queue_storage() {
-    let mut queue = MegakernelIoQueue::new(4).unwrap();
+    let mut queue = ResidentIoQueue::new(4).unwrap();
 
     // Mark slot 0 as PUBLISHED so we can detect any silent write to it.
     queue.publish_slot(0, 1, 512, 7).unwrap();

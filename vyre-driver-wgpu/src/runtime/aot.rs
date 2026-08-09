@@ -1,8 +1,12 @@
-//! AOT WGSL specialization cache for pipeline-mode dispatch.
+//! Ephemeral WGSL specialization cache for pipeline-mode dispatch.
 //!
-//! The cache persists lowered WGSL under `~/.cache/vyre/aot/`, keyed by the
-//! canonical IR wire hash plus an observed backend fingerprint. This lets a
-//! second process skip IR lowering and driver-specific specialization checks.
+//! This module is **not** the canonical megakernel artifact seam. It persists
+//! lowered WGSL text under `~/.cache/vyre/aot/`, keyed by the program wire hash
+//! plus an observed backend fingerprint, so a second process can skip IR
+//! lowering. Canonical static/persistent packages use `vyre-megakernel`
+//! envelopes produced by `vyre-aot` and authenticated by
+//! `vyre_runtime::artifact_admission`. Do not treat [`AotArtifact`] as a
+//! substitute for `ArtifactEnvelope`.
 
 use std::env;
 use std::fs;
@@ -17,14 +21,17 @@ const CACHE_VERSION: u32 = 1;
 const MAX_AOT_WGSL_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_AOT_METADATA_BYTES: u64 = 64 * 1024;
 
-/// Result of reading or populating the AOT specialization cache.
+/// Cached WGSL text from the ephemeral specialization store.
+///
+/// Not a `vyre-megakernel` envelope. Prefer that name mentally as
+/// "shader source cache hit" when reading call sites.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AotArtifact {
     /// Lowered WGSL shader source.
     pub wgsl: String,
     /// Cache key derived from program wire bytes and backend fingerprint.
     pub key: String,
-    /// True when the artifact came from disk.
+    /// True when the WGSL text came from disk.
     pub cache_hit: bool,
 }
 

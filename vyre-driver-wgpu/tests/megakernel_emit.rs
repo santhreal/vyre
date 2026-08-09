@@ -26,7 +26,7 @@
 
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_runtime::megakernel::{self, Megakernel};
+use vyre_runtime::resident_work_queue::{self, ResidentWorkQueue};
 
 /// Megakernel's control word index for the SHUTDOWN flag.
 const SHUTDOWN_WORD_INDEX: usize = 0;
@@ -46,7 +46,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     // iteration thanks to the prearmed SHUTDOWN.
     let workgroup_size_x: u32 = 64;
     let slot_count: u32 = 64;
-    let program = megakernel::build_program_sharded(workgroup_size_x, &[]);
+    let program = resident_work_queue::build_program_sharded(workgroup_size_x, &[]);
 
     // Sanity check: the megakernel lowers to valid Naga IR and emits valid WGSL. This
     // is what Gate E cares about  -  both halves must succeed end to
@@ -54,7 +54,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     {
         use vyre_emit_naga::program::emit_module;
         let module = emit_module(&program, [workgroup_size_x, 1, 1])
-        .expect("megakernel Program must emit valid Naga");
+            .expect("megakernel Program must emit valid Naga");
         let info = naga::valid::Validator::new(
             naga::valid::ValidationFlags::all(),
             naga::valid::Capabilities::all(),
@@ -70,7 +70,7 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
     // first iteration. Without this the persistent loop runs until
     // the platform TDR kicks in (~2 s on Windows), turning this
     // smoke test into a GPU hang.
-    let control = Megakernel::encode_control(
+    let control = ResidentWorkQueue::encode_control(
         /* shutdown = */ true, /* tenant_count = */ 1, /* observable_slots = */ 0,
     )
     .expect("Fix: control buffer encoding must fit the megakernel smoke test shape");
@@ -87,9 +87,9 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
 
     // Mutate `control` in place so the compiler has a concrete
     // lifetime to borrow.  Dispatch expects owned Vec<u8> buffers.
-    let ring = Megakernel::encode_empty_ring(slot_count)
+    let ring = ResidentWorkQueue::encode_empty_ring(slot_count)
         .expect("Fix: ring encoding must fit the megakernel smoke test shape");
-    let debug_log = Megakernel::encode_empty_debug_log(/* record_capacity = */ 4)
+    let debug_log = ResidentWorkQueue::encode_empty_debug_log(/* record_capacity = */ 4)
         .expect("Fix: debug-log encoding must fit the megakernel smoke test shape");
     // io_queue shape from vyre-runtime/src/megakernel/builder.rs: 64
     // slots × 8 words each. Must be allocated per-program-buffer or
@@ -135,9 +135,8 @@ fn megakernel_shutdown_on_first_iteration_dispatches_cleanly() {
 fn megakernel_wgsl_contains_compute_entry_and_atomic_cas() {
     use vyre_emit_naga::program::emit_module;
 
-    let program = megakernel::build_program_sharded(64, &[]);
-    let module = emit_module(&program, [64, 1, 1])
-        .expect("megakernel must emit Naga");
+    let program = resident_work_queue::build_program_sharded(64, &[]);
+    let module = emit_module(&program, [64, 1, 1]).expect("megakernel must emit Naga");
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),

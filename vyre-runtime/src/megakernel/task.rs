@@ -2,8 +2,8 @@
 
 use vyre_driver::backend::BackendError;
 
-use super::planner::MegakernelWorkItem;
-use super::policy::MegakernelLaunchRequest;
+use super::planner::ResidentWorkItem;
+use super::policy::ResidentLaunchRequest;
 
 /// Number of `u32` words in one continuation task slot.
 pub const TASK_SLOT_WORDS: usize = 16;
@@ -117,7 +117,7 @@ impl TaskPriority {
 ///
 /// The first four words match the persistent ring header:
 /// status, opcode, tenant, priority. The remaining twelve words are the slot
-/// payload. Words 4..6 preserve the legacy [`MegakernelWorkItem`] payload; words 7..15
+/// payload. Words 4..6 preserve the legacy [`ResidentWorkItem`] payload; words 7..15
 /// carry continuation and scheduler state.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, bytemuck::Pod, bytemuck::Zeroable)]
@@ -163,7 +163,7 @@ impl TaskWorkItem {
         task_id: u32,
         tenant_id: u32,
         priority: TaskPriority,
-        item: MegakernelWorkItem,
+        item: ResidentWorkItem,
     ) -> Self {
         Self {
             state: TaskState::Ready.word(),
@@ -187,8 +187,8 @@ impl TaskWorkItem {
 
     /// Return the compact legacy work item payload carried by this task.
     #[must_use]
-    pub const fn work_item(&self) -> MegakernelWorkItem {
-        MegakernelWorkItem {
+    pub const fn work_item(&self) -> ResidentWorkItem {
+        ResidentWorkItem {
             op_handle: self.op_handle,
             input_handle: self.input_handle,
             output_handle: self.output_handle,
@@ -236,7 +236,7 @@ impl TaskWorkItem {
 
     /// Encode a pause at `continuation_pc` until `resume_epoch`.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn paused(self, continuation_pc: u32, continuation_data: u32, resume_epoch: u32) -> Self {
         self.try_paused(continuation_pc, continuation_data, resume_epoch)
             .unwrap_or_else(|error| panic!("{error}"))
@@ -256,7 +256,7 @@ impl TaskWorkItem {
 
     /// Mark a paused task ready for GPU-side resume.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn resumed(self) -> Self {
         self.try_resumed().unwrap_or_else(|error| panic!("{error}"))
     }
@@ -279,7 +279,7 @@ impl TaskWorkItem {
 
     /// Yield this task back to the scheduler at `continuation_pc`.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn yielded(self, continuation_pc: u32, continuation_data: u32) -> Self {
         self.try_yielded(continuation_pc, continuation_data)
             .unwrap_or_else(|error| panic!("{error}"))
@@ -306,7 +306,7 @@ impl TaskWorkItem {
 
     /// Requeue this task, optionally changing its priority partition.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn requeued(
         self,
         continuation_pc: u32,
@@ -328,7 +328,7 @@ impl TaskWorkItem {
 
     /// Mark this task completed.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn completed(self) -> Self {
         self.try_completed()
             .unwrap_or_else(|error| panic!("{error}"))
@@ -345,7 +345,7 @@ impl TaskWorkItem {
 
     /// Mark this task faulted with a compact fault code.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn faulted(self, fault_code: u32) -> Self {
         self.try_faulted(fault_code)
             .unwrap_or_else(|error| panic!("{error}"))
@@ -428,7 +428,7 @@ impl TaskQueueSnapshot {
 
     /// Number of slots immediately eligible for GPU scheduling.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn schedulable_count(&self) -> u32 {
         match self.try_schedulable_count() {
             Ok(value) => value,
@@ -455,7 +455,7 @@ impl TaskQueueSnapshot {
 
     /// Number of slots carrying continuation pressure.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn continuation_pressure_count(&self) -> u64 {
         match self.try_continuation_pressure_count() {
             Ok(value) => value,
@@ -516,11 +516,11 @@ impl TaskQueueSnapshot {
 
     /// Merge this queue telemetry into a launch request.
     #[must_use]
-    #[cfg(any(test, feature = "legacy-infallible"))]
+    #[cfg(test)]
     pub fn apply_to_launch_request(
         &self,
-        mut request: MegakernelLaunchRequest,
-    ) -> MegakernelLaunchRequest {
+        mut request: ResidentLaunchRequest,
+    ) -> ResidentLaunchRequest {
         request = match self.try_apply_to_launch_request(request) {
             Ok(request) => request,
             Err(error) => panic!("{error}"),
@@ -536,8 +536,8 @@ impl TaskQueueSnapshot {
     /// cannot fit the launch request ABI.
     pub fn try_apply_to_launch_request(
         &self,
-        mut request: MegakernelLaunchRequest,
-    ) -> Result<MegakernelLaunchRequest, BackendError> {
+        mut request: ResidentLaunchRequest,
+    ) -> Result<ResidentLaunchRequest, BackendError> {
         request.queue_len = self.try_schedulable_count()?;
         request.requeue_count = request
             .requeue_count

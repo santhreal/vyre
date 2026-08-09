@@ -19,10 +19,10 @@
 #![forbid(unsafe_code)]
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_runtime::megakernel::{
+use vyre_runtime::resident_work_queue::{
     build_program_jit, build_program_jit_slots, build_program_priority,
     build_program_priority_slots, build_program_sharded_no_io, build_program_sharded_slots,
-    build_program_sharded_with_workspace_adapter, MegakernelWorkspaceAdapter,
+    build_program_sharded_with_workspace_adapter, ResidentWorkspaceAdapter,
 };
 
 /// Structural (Debug-form) equality: `Program` is `Debug` but not `PartialEq`; its Debug
@@ -97,7 +97,7 @@ struct MockWorkspaceAdapter;
 
 const MOCK_WORKSPACE_BUFFER: &str = "mock_resident_workspace";
 
-impl MegakernelWorkspaceAdapter for MockWorkspaceAdapter {
+impl ResidentWorkspaceAdapter for MockWorkspaceAdapter {
     fn buffer_decl(&self) -> BufferDecl {
         BufferDecl::output(MOCK_WORKSPACE_BUFFER, 15, DataType::U32).with_count(4)
     }

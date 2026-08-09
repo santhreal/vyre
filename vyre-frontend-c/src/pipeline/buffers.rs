@@ -2,7 +2,7 @@ use std::path::Path;
 
 use vyre_libs::parsing::c::lex::diagnostics::C11LexerDiagnosticKind;
 use vyre_libs::parsing::c::parse::vast::{C_AST_KIND_GOTO_STMT, C_AST_KIND_LABEL_STMT};
-use vyre_runtime::megakernel::protocol;
+use vyre_runtime::resident_work_queue::protocol;
 
 use super::MAX_TOK_SCAN;
 

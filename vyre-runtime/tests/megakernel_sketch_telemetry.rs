@@ -1,8 +1,7 @@
 //! Contract tests for compact megakernel sketch telemetry.
-#![cfg(feature = "legacy-infallible")]
 
-use vyre_runtime::megakernel::{
-    control, opcode, slot, CountMinSketch, Megakernel, RingTelemetry, SLOT_WORDS, STATUS_WORD,
+use vyre_runtime::resident_work_queue::{
+    control, opcode, slot, CountMinSketch, ResidentWorkQueue, RingTelemetry, SLOT_WORDS, STATUS_WORD,
 };
 
 fn write_slot_status(ring: &mut [u8], slot_idx: usize, status: u32) {
@@ -74,19 +73,19 @@ fn count_min_sketch_merges_matching_shapes_and_rejects_shape_drift() {
 
 #[test]
 fn ring_telemetry_sketch_tracks_hot_opcodes_tenants_statuses_and_metrics() {
-    let mut control = Megakernel::encode_control(false, 3, 0).unwrap();
+    let mut control = ResidentWorkQueue::encode_control(false, 3, 0).unwrap();
     write_control_word(&mut control, control::METRICS_BASE + opcode::ATOMIC_ADD, 9);
     write_control_word(&mut control, control::METRICS_BASE + opcode::STORE_U32, 2);
 
-    let mut ring = Megakernel::encode_empty_ring(6).unwrap();
-    Megakernel::publish_slot(&mut ring, 0, 1, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 1, opcode::ATOMIC_ADD, &[4, 5, 6]).unwrap();
-    Megakernel::publish_slot(&mut ring, 2, 2, opcode::STORE_U32, &[7, 8, 9]).unwrap();
-    Megakernel::publish_slot(&mut ring, 3, 2, opcode::DFA_STEP, &[10, 11, 12]).unwrap();
+    let mut ring = ResidentWorkQueue::encode_empty_ring(6).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 1, opcode::ATOMIC_ADD, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 1, opcode::ATOMIC_ADD, &[4, 5, 6]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 2, 2, opcode::STORE_U32, &[7, 8, 9]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 3, 2, opcode::DFA_STEP, &[10, 11, 12]).unwrap();
     write_slot_status(&mut ring, 1, slot::CLAIMED);
     write_slot_status(&mut ring, 3, slot::DONE);
 
-    let telemetry = RingTelemetry::decode(&control, &ring);
+    let telemetry = RingTelemetry::try_decode(&control, &ring).expect("telemetry decode");
     let sketch = telemetry
         .sketch(4, 128)
         .expect("valid telemetry sketch dimensions");

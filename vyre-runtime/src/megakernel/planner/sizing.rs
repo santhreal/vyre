@@ -1,26 +1,24 @@
 use vyre_driver::backend::BackendError;
 use vyre_foundation::execution_plan::SchedulingPolicy;
 
-use super::{
-    MegakernelGridLimits, MegakernelGridPlan, MegakernelGridRequest, MegakernelLaunchGeometry,
-};
+use super::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest, ResidentLaunchGeometry};
 
 /// Shared worker-grid sizing policy for megakernel dispatch.
 ///
 /// This is the host-side policy surface for persistent worker counts,
 /// workgroup width, slot padding, and backend grid geometry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MegakernelSizingPolicy {
+pub struct ResidentSizingPolicy {
     scheduling: SchedulingPolicy,
 }
 
-impl Default for MegakernelSizingPolicy {
+impl Default for ResidentSizingPolicy {
     fn default() -> Self {
         Self::standard()
     }
 }
 
-impl MegakernelSizingPolicy {
+impl ResidentSizingPolicy {
     /// Standard megakernel sizing policy used by built-in dispatch paths.
     #[must_use]
     pub const fn standard() -> Self {
@@ -87,9 +85,9 @@ impl MegakernelSizingPolicy {
     /// Returns [`BackendError`] when adapter limits are malformed.
     pub fn calculate_optimal_grid(
         &self,
-        request: MegakernelGridRequest,
-        limits: MegakernelGridLimits,
-    ) -> Result<MegakernelGridPlan, BackendError> {
+        request: ResidentGridRequest,
+        limits: ResidentGridLimits,
+    ) -> Result<ResidentGridPlan, BackendError> {
         limits.validate()?;
 
         let occupancy_worker_groups = self
@@ -114,7 +112,7 @@ impl MegakernelSizingPolicy {
             limits.max_workgroup_size_x,
         );
 
-        Ok(MegakernelGridPlan {
+        Ok(ResidentGridPlan {
             geometry,
             worker_groups,
         })
@@ -127,11 +125,11 @@ impl MegakernelSizingPolicy {
         slot_count: u32,
         worker_count: u32,
         max_workgroup_size_x: u32,
-    ) -> MegakernelLaunchGeometry {
+    ) -> ResidentLaunchGeometry {
         let workgroup_size_x = self.worker_workgroup_size(worker_count, max_workgroup_size_x);
         let slot_count = self.padded_slot_count(slot_count, workgroup_size_x);
         let dispatch_grid = self.dispatch_grid_for(worker_count, slot_count, workgroup_size_x);
-        MegakernelLaunchGeometry {
+        ResidentLaunchGeometry {
             workgroup_size_x,
             slot_count,
             dispatch_grid,

@@ -47,7 +47,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::megakernel::recovery::{classify_backend_recovery_error, MegakernelRecoveryClass};
+use crate::recovery::{classify_backend_error, RecoveryClass};
 use crate::PipelineError;
 use vyre_driver::backend::BackendError;
 
@@ -131,12 +131,12 @@ impl ReplayFailureClass {
         }
     }
 
-    const fn from_recovery_class(class: MegakernelRecoveryClass) -> Self {
+    const fn from_recovery_class(class: RecoveryClass) -> Self {
         match class {
-            MegakernelRecoveryClass::DeviceLoss => Self::DeviceLoss,
-            MegakernelRecoveryClass::TransientQueue => Self::TransientQueue,
-            MegakernelRecoveryClass::ProgramBug => Self::ProgramBug,
-            MegakernelRecoveryClass::Unclassified => Self::Unclassified,
+            RecoveryClass::DeviceLoss => Self::DeviceLoss,
+            RecoveryClass::TransientResource => Self::TransientQueue,
+            RecoveryClass::Permanent => Self::ProgramBug,
+            RecoveryClass::Unclassified => Self::Unclassified,
         }
     }
 }
@@ -160,9 +160,7 @@ impl ReplayFailureEvidence {
     pub fn from_backend_error(slot_status: u32, error: &BackendError, output_bytes: &[u8]) -> Self {
         Self {
             slot_status,
-            failure_class: ReplayFailureClass::from_recovery_class(
-                classify_backend_recovery_error(error),
-            ),
+            failure_class: ReplayFailureClass::from_recovery_class(classify_backend_error(error)),
             backend_error_code: error.code().stable_id(),
             output_digest: output_digest(output_bytes),
         }

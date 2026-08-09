@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn decode_empty_ring_counts_slots() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let ring = Megakernel::try_encode_empty_ring(4).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let ring = ResidentWorkQueue::try_encode_empty_ring(4).unwrap();
     let telemetry = RingTelemetry::decode(&control, &ring);
     assert_eq!(telemetry.occupancy.empty, 4);
     assert_eq!(telemetry.occupancy.published, 0);
@@ -13,8 +13,8 @@ fn decode_empty_ring_counts_slots() {
 
 #[test]
 fn strict_decode_rejects_trailing_partial_slot() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(1).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
     ring.push(0);
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("Fix: strict telemetry must reject malformed ring snapshots");
@@ -23,9 +23,9 @@ fn strict_decode_rejects_trailing_partial_slot() {
 
 #[test]
 fn strict_decode_rejects_misaligned_control_snapshot() {
-    let mut control = Megakernel::try_encode_control(false, 1, 0).unwrap();
+    let mut control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
     control.push(0xFF);
-    let ring = Megakernel::try_encode_empty_ring(1).unwrap();
+    let ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
     let err = RingTelemetry::try_decode(&control, &ring)
         .expect_err("Fix: strict telemetry must reject malformed control snapshots");
     assert!(matches!(err, PipelineError::Backend(_)));
@@ -43,8 +43,8 @@ fn control_try_decode_rejects_short_snapshot_without_panic() {
 
 #[test]
 fn strict_decode_into_rejects_trailing_partial_slot_without_mutating_output() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(1).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(1).unwrap();
     ring.push(0);
     let mut telemetry = RingTelemetry::default();
     let mut scratch = TelemetryDecodeScratch::new();
@@ -67,9 +67,9 @@ fn strict_decode_into_rejects_trailing_partial_slot_without_mutating_output() {
 
 #[test]
 fn decode_published_slot_reads_prefix() {
-    let control = Megakernel::try_encode_control(false, 1, 0).unwrap();
-    let mut ring = Megakernel::try_encode_empty_ring(2).unwrap();
-    Megakernel::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
+    let control = ResidentWorkQueue::try_encode_control(false, 1, 0).unwrap();
+    let mut ring = ResidentWorkQueue::try_encode_empty_ring(2).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 1, 9, opcode::ATOMIC_ADD, &[5, 7, 11]).unwrap();
     let telemetry = RingTelemetry::decode(&control, &ring);
     let slot = &telemetry.slots[1];
     assert_eq!(slot.status, RingStatus::Published);

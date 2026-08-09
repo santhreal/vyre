@@ -6,9 +6,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
-use vyre_megakernel::{
-    compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget,
-};
+use vyre_megakernel::{compile, Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget};
 
 pub(in crate::pipeline_cache) fn tiny_artifact() -> Artifact {
     artifact_for_program(Program::wrapped(

@@ -5,11 +5,11 @@ use std::time::Duration;
 use vyre_driver::backend::{BackendError, DispatchConfig};
 
 use super::grid::cached_geometry_from_slots;
-use super::sizing::MegakernelSizingPolicy;
+use super::sizing::ResidentSizingPolicy;
 
 /// Host-side launch geometry for a finite megakernel dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MegakernelLaunchGeometry {
+pub struct ResidentLaunchGeometry {
     /// Lanes per worker workgroup used to compile the program.
     pub workgroup_size_x: u32,
     /// Ring slots allocated for the dispatch, padded to a full workgroup.
@@ -18,7 +18,7 @@ pub struct MegakernelLaunchGeometry {
     pub dispatch_grid: [u32; 3],
 }
 
-impl MegakernelLaunchGeometry {
+impl ResidentLaunchGeometry {
     /// Build geometry for `item_count` host work items.
     ///
     /// # Errors
@@ -71,19 +71,19 @@ impl MegakernelLaunchGeometry {
 /// current megakernel ABI.
 #[must_use]
 pub fn worker_workgroup_size(worker_count: u32, max_workgroup_size_x: u32) -> u32 {
-    MegakernelSizingPolicy::standard().worker_workgroup_size(worker_count, max_workgroup_size_x)
+    ResidentSizingPolicy::standard().worker_workgroup_size(worker_count, max_workgroup_size_x)
 }
 
 /// Round a logical slot count up to a whole workgroup.
 #[must_use]
 pub fn padded_slot_count(slot_count: u32, workgroup_size_x: u32) -> u32 {
-    MegakernelSizingPolicy::standard().padded_slot_count(slot_count, workgroup_size_x)
+    ResidentSizingPolicy::standard().padded_slot_count(slot_count, workgroup_size_x)
 }
 
 /// Compute the backend dispatch grid for a logical queue length.
 #[must_use]
 pub fn dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x: u32) -> [u32; 3] {
-    MegakernelSizingPolicy::standard().dispatch_grid_for(
+    ResidentSizingPolicy::standard().dispatch_grid_for(
         worker_count,
         queue_len,
         max_workgroup_size_x,
@@ -94,13 +94,13 @@ pub fn dispatch_grid_for(worker_count: u32, queue_len: u32, max_workgroup_size_x
 ///
 /// This is the single host-side policy used by runtime batch dispatchers and
 /// direct megakernel dispatch. Callers can still clamp further through
-/// `MegakernelConfig::worker_count`, but occupancy heuristics live here.
+/// `ResidentQueueConfig::worker_count`, but occupancy heuristics live here.
 #[must_use]
 pub fn default_worker_groups_from_limits(
     max_compute_workgroups_per_dimension: u32,
     max_compute_invocations_per_workgroup: u32,
 ) -> u32 {
-    MegakernelSizingPolicy::standard().default_worker_groups_from_limits(
+    ResidentSizingPolicy::standard().default_worker_groups_from_limits(
         max_compute_workgroups_per_dimension,
         max_compute_invocations_per_workgroup,
     )
