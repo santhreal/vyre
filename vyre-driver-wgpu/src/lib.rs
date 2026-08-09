@@ -205,6 +205,13 @@ impl BackendValidationCapabilities for WgpuBackend {
     }
 }
 
+/// Create an artifact materializer bound to the selected WGPU adapter.
+pub fn artifact_materializer(
+    backend: WgpuBackend,
+) -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError> {
+    materializer::materializer_for_backend(backend)
+}
+
 inventory::submit! {
     vyre_driver::BackendRegistration {
         id: "wgpu",

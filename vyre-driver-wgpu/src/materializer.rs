@@ -68,12 +68,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
         offset_bytes: usize,
         bytes: &[u8],
     ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident_at(
-            &self.backend,
-            resource,
-            offset_bytes,
-            bytes,
-        )
+        vyre_driver::VyreBackend::upload_resident_at(&self.backend, resource, offset_bytes, bytes)
     }
 
     fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
@@ -503,8 +498,9 @@ impl Submission for ReadySubmission {
     }
 }
 
-pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
-    let backend = WgpuBackend::acquire()?;
+pub(crate) fn materializer_for_backend(
+    backend: WgpuBackend,
+) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let format =
         TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION).map_err(compile_error)?;
     let generation = ResidentOwner::new()?.get();
@@ -522,6 +518,10 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
             lost,
         },
     }))
+}
+
+pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
+    materializer_for_backend(WgpuBackend::acquire()?)
 }
 
 fn invalid_module(reason: &str) -> BackendError {

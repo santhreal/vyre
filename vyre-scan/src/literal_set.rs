@@ -15,9 +15,7 @@ use crate::dfa::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
 use crate::dispatch_io::ScanDispatchScratch;
 use std::borrow::Cow;
 use std::collections::TryReserveError;
-use vyre_driver::backend::PendingDispatch;
-use vyre_driver::Resource;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, Resource, Submission, VyreBackend};
 use vyre_foundation::ir::Program;
 pub use vyre_foundation::match_result::Match;
 use vyre_primitives::matching::DfaWireError;
@@ -764,7 +762,8 @@ impl ResidentLiteralScan {
 }
 
 struct ResidentFusedSharedResources {
-    program: Program,
+    artifact: crate::artifact_session::ScanArtifactSession,
+    resource_names: Vec<String>,
     transitions: Resource,
     output_offsets: Resource,
     output_records: Resource,
@@ -857,7 +856,9 @@ pub struct ResidentFusedTiming {
 /// session and pending result into separate queue slots without self-references.
 /// It must keep the session alive and must not free it before awaiting.
 pub struct PendingResidentFusedRegion {
-    pending: Box<dyn PendingDispatch>,
+    pending: Box<dyn Submission>,
+    shared: std::sync::Arc<ResidentFusedSharedResources>,
+    started: std::time::Instant,
     in_flight: ResidentFusedInFlightGuard,
     used_words: usize,
     region_count: u32,
@@ -897,9 +898,14 @@ impl PendingResidentFusedRegion {
     ) -> Result<ResidentFusedTiming, vyre_driver::BackendError> {
         out.clear();
         matches.clear();
-        let timed = self.pending.await_timed_result()?;
+        let completion = self.pending.wait()?;
+        let outputs = self
+            .shared
+            .artifact
+            .ordered_outputs(&completion)
+            .map_err(crate::artifact_session::as_backend_error)?;
         decode_resident_fused_outputs(
-            &timed.outputs,
+            &outputs,
             self.used_words,
             self.region_count,
             self.max_matches,
@@ -907,10 +913,10 @@ impl PendingResidentFusedRegion {
             matches,
         )?;
         Ok(ResidentFusedTiming {
-            wall_ns: timed.wall_ns,
-            device_ns: timed.device_ns,
-            enqueue_ns: timed.enqueue_ns,
-            wait_ns: timed.wait_ns,
+            wall_ns: u64::try_from(self.started.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            device_ns: completion.device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
         })
     }
 }
@@ -940,13 +946,13 @@ impl GpuLiteralSet {
     /// overflows the GPU ABI.
     pub fn prepare_resident_fused_scan(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
         haystack_capacity_bytes: usize,
         max_regions: u32,
         max_matches: u32,
     ) -> Result<ResidentFusedRegionScan, vyre_driver::BackendError> {
         self.prepare_resident_fused_scan_positioned_from(
-            backend,
+            backend_id,
             haystack_capacity_bytes,
             max_regions,
             max_matches,
@@ -969,7 +975,43 @@ impl GpuLiteralSet {
     /// exceeds the compiled pattern count.
     pub fn prepare_resident_fused_scan_positioned_from(
         &self,
-        backend: &dyn VyreBackend,
+        backend_id: &str,
+        haystack_capacity_bytes: usize,
+        max_regions: u32,
+        max_matches: u32,
+        first_positioned_pattern_id: u32,
+    ) -> Result<ResidentFusedRegionScan, vyre_driver::BackendError> {
+        let target = crate::ScanTarget::registered(backend_id)?;
+        self.prepare_resident_fused_scan_positioned_on(
+            &target,
+            haystack_capacity_bytes,
+            max_regions,
+            max_matches,
+            first_positioned_pattern_id,
+        )
+    }
+
+    /// Prepare the fused resident scan on an explicitly selected target generation.
+    pub fn prepare_resident_fused_scan_on(
+        &self,
+        target: &crate::ScanTarget,
+        haystack_capacity_bytes: usize,
+        max_regions: u32,
+        max_matches: u32,
+    ) -> Result<ResidentFusedRegionScan, vyre_driver::BackendError> {
+        self.prepare_resident_fused_scan_positioned_on(
+            target,
+            haystack_capacity_bytes,
+            max_regions,
+            max_matches,
+            0,
+        )
+    }
+
+    /// Prepare a positioned fused scan on an explicitly selected target generation.
+    pub fn prepare_resident_fused_scan_positioned_on(
+        &self,
+        target: &crate::ScanTarget,
         haystack_capacity_bytes: usize,
         max_regions: u32,
         max_matches: u32,
@@ -996,24 +1038,42 @@ impl GpuLiteralSet {
                 first_positioned_pattern_id,
             )
             .map_err(vyre_driver::BackendError::new)?;
+        let workgroup_x = program.workgroup_size[0];
+        let resource_names = program
+            .buffers()
+            .iter()
+            .map(|buffer| buffer.name().to_string())
+            .collect::<Vec<_>>();
+        if resource_names.len() != 14 {
+            return Err(vyre_driver::BackendError::new(format!(
+                "resident fused artifact declares {} resources, expected 14",
+                resource_names.len()
+            )));
+        }
+        let artifact = crate::artifact_session::ScanArtifactSession::compile_on(&program, target)
+            .map_err(crate::artifact_session::as_backend_error)?;
         let prefilter_tables = self.build_prefilter_tables()?;
         let tables = self.presence_immutable_table_bytes(&prefilter_tables)?;
         let presence_words = presence_bitmap_words(pattern_count);
         let (_declared_words, matches_output_bytes) = literal_set_match_output_layout(max_matches)?;
 
         let haystack_capacity = dispatch_io::haystack_padded_u32_byte_len(haystack_capacity_bytes)?;
-        let haystack = backend.allocate_resident(haystack_capacity)?;
-
-        // The seven immutable tables: allocate + upload ONCE.
-        let transitions = allocate_and_upload_resident(backend, &tables.transitions)?;
-        let output_offsets = allocate_and_upload_resident(backend, &tables.output_offsets)?;
-        let output_records = allocate_and_upload_resident(backend, &tables.output_records)?;
-        let pattern_lengths = allocate_and_upload_resident(backend, &tables.pattern_lengths)?;
-        let candidate_end_mask = allocate_and_upload_resident(backend, &tables.candidate_end_mask)?;
+        let haystack = artifact
+            .allocate_resident(haystack_capacity)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let transitions = allocate_and_upload_artifact_resident(&artifact, &tables.transitions)?;
+        let output_offsets =
+            allocate_and_upload_artifact_resident(&artifact, &tables.output_offsets)?;
+        let output_records =
+            allocate_and_upload_artifact_resident(&artifact, &tables.output_records)?;
+        let pattern_lengths =
+            allocate_and_upload_artifact_resident(&artifact, &tables.pattern_lengths)?;
+        let candidate_end_mask =
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_end_mask)?;
         let candidate_suffix2_mask =
-            allocate_and_upload_resident(backend, &tables.candidate_suffix2_mask)?;
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_suffix2_mask)?;
         let candidate_suffix3_bloom =
-            allocate_and_upload_resident(backend, &tables.candidate_suffix3_bloom)?;
+            allocate_and_upload_artifact_resident(&artifact, &tables.candidate_suffix3_bloom)?;
 
         // Read-write presence buffer sized for the full max_regions capacity.
         let presence_capacity_words = (max_regions as usize)
@@ -1029,25 +1089,38 @@ impl GpuLiteralSet {
                     "resident fused scan presence-buffer byte capacity overflows host usize. Fix: lower max_regions or shard the pattern set.".to_string(),
                 )
             })?;
-        let presence = backend.allocate_resident(presence_capacity_bytes)?;
+        let presence = artifact
+            .allocate_resident(presence_capacity_bytes)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         // Per-scan control + output buffers (all resident (no borrowed mix)).
-        let haystack_len_buf = backend.allocate_resident(U32_BYTES)?;
+        let haystack_len_buf = artifact
+            .allocate_resident(U32_BYTES)
+            .map_err(crate::artifact_session::as_backend_error)?;
         let region_starts_capacity_bytes =
             (max_regions as usize).checked_mul(U32_BYTES).ok_or_else(|| {
                 vyre_driver::BackendError::new(
                     "resident fused scan region-starts byte capacity overflows host usize. Fix: lower max_regions.".to_string(),
                 )
             })?;
-        let region_starts_buf = backend.allocate_resident(region_starts_capacity_bytes)?;
-        let region_base_buf = backend.allocate_resident(U32_BYTES)?;
-        let match_count_buf = backend.allocate_resident(U32_BYTES)?;
-        let matches_buf = backend.allocate_resident(matches_output_bytes)?;
+        let region_starts_buf = artifact
+            .allocate_resident(region_starts_capacity_bytes)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let region_base_buf = artifact
+            .allocate_resident(U32_BYTES)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let match_count_buf = artifact
+            .allocate_resident(U32_BYTES)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        let matches_buf = artifact
+            .allocate_resident(matches_output_bytes)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         Ok(ResidentFusedRegionScan {
-            workgroup_x: program.workgroup_size[0],
+            workgroup_x,
             shared: std::sync::Arc::new(ResidentFusedSharedResources {
-                program,
+                artifact,
+                resource_names,
                 transitions,
                 output_offsets,
                 output_records,
@@ -1082,10 +1155,7 @@ impl ResidentFusedRegionScan {
     ///
     /// # Errors
     /// Returns [`vyre_driver::BackendError`] if any mutable resident allocation fails.
-    pub fn fork_independent(
-        &self,
-        backend: &dyn VyreBackend,
-    ) -> Result<Self, vyre_driver::BackendError> {
+    pub fn fork_independent(&self) -> Result<Self, vyre_driver::BackendError> {
         let presence_capacity_bytes = (self.max_regions as usize)
             .checked_mul(self.presence_words as usize)
             .and_then(|words| words.checked_mul(U32_BYTES))
@@ -1118,13 +1188,16 @@ impl ResidentFusedRegionScan {
             ))
         })?;
         for size in sizes {
-            match backend.allocate_resident(size) {
+            match self.shared.artifact.allocate_resident(size) {
                 Ok(resource) => resources.push(resource),
                 Err(error) => {
+                    let error = crate::artifact_session::as_backend_error(error);
                     let mut cleanup_error = None;
                     for resource in resources {
-                        if let Err(free_error) = backend.free_resident(resource) {
-                            cleanup_error.get_or_insert(free_error);
+                        if let Err(free_error) = self.shared.artifact.free_resident(resource) {
+                            cleanup_error.get_or_insert(crate::artifact_session::as_backend_error(
+                                free_error,
+                            ));
                         }
                     }
                     return Err(match cleanup_error {
@@ -1146,7 +1219,7 @@ impl ResidentFusedRegionScan {
             matches_buf,
         ] = resources.try_into().map_err(|resources: Vec<Resource>| {
             for resource in resources {
-                let _ = backend.free_resident(resource);
+                let _ = self.shared.artifact.free_resident(resource);
             }
             vyre_driver::BackendError::new(
                 "resident fused fork allocated an invalid resource count. Fix: keep the mutable resource layout synchronized with its allocation sizes.",
@@ -1185,7 +1258,6 @@ impl ResidentFusedRegionScan {
     #[allow(clippy::too_many_arguments)]
     pub fn scan_into(
         &self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
@@ -1193,16 +1265,8 @@ impl ResidentFusedRegionScan {
         matches: &mut Vec<Match>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), vyre_driver::BackendError> {
-        self.scan_into_timed(
-            backend,
-            haystack,
-            region_starts,
-            region_base,
-            out,
-            matches,
-            scratch,
-        )
-        .map(|_timed| ())
+        self.scan_into_timed(haystack, region_starts, region_base, out, matches, scratch)
+            .map(|_timed| ())
     }
 
     /// Start a fused resident scan and return before device execution and
@@ -1218,22 +1282,33 @@ impl ResidentFusedRegionScan {
     #[allow(clippy::too_many_arguments)]
     pub fn scan_async(
         &mut self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
         scratch: &mut Vec<u8>,
     ) -> Result<PendingResidentFusedRegion, vyre_driver::BackendError> {
         let in_flight = self.begin_dispatch()?;
-        let dispatch =
-            self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
-        let pending = backend.dispatch_resident_async(
-            &self.shared.program,
-            &dispatch.resources,
-            &dispatch.config,
-        )?;
+        let dispatch = self.stage_dispatch(haystack, region_starts, region_base, scratch)?;
+        let invocation_grid = dispatch
+            .config
+            .dispatch_grid
+            .or(dispatch.config.grid_override)
+            .ok_or_else(|| {
+                vyre_driver::BackendError::new(
+                    "resident fused artifact dispatch is missing invocation geometry",
+                )
+            })?;
+        let named_resources = self.named_resources(&dispatch.resources);
+        let started = std::time::Instant::now();
+        let pending = self
+            .shared
+            .artifact
+            .submit_resident(&named_resources, invocation_grid)
+            .map_err(crate::artifact_session::as_backend_error)?;
         Ok(PendingResidentFusedRegion {
             pending,
+            shared: std::sync::Arc::clone(&self.shared),
+            started,
             in_flight,
             used_words: dispatch.used_words,
             region_count: dispatch.region_count,
@@ -1268,7 +1343,6 @@ impl ResidentFusedRegionScan {
     #[allow(clippy::too_many_arguments)]
     pub fn scan_into_timed(
         &self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
@@ -1279,13 +1353,22 @@ impl ResidentFusedRegionScan {
         let _in_flight = self.begin_dispatch()?;
         out.clear();
         matches.clear();
-        let dispatch =
-            self.stage_dispatch(backend, haystack, region_starts, region_base, scratch)?;
-        let timed = backend.dispatch_resident_timed(
-            &self.shared.program,
-            &dispatch.resources,
-            &dispatch.config,
-        )?;
+        let dispatch = self.stage_dispatch(haystack, region_starts, region_base, scratch)?;
+        let invocation_grid = dispatch
+            .config
+            .dispatch_grid
+            .or(dispatch.config.grid_override)
+            .ok_or_else(|| {
+                vyre_driver::BackendError::new(
+                    "resident fused artifact dispatch is missing invocation geometry",
+                )
+            })?;
+        let named_resources = self.named_resources(&dispatch.resources);
+        let timed = self
+            .shared
+            .artifact
+            .submit_resident_timed(&named_resources, invocation_grid)
+            .map_err(crate::artifact_session::as_backend_error)?;
         decode_resident_fused_outputs(
             &timed.outputs,
             dispatch.used_words,
@@ -1299,7 +1382,6 @@ impl ResidentFusedRegionScan {
 
     fn stage_dispatch(
         &self,
-        backend: &dyn VyreBackend,
         haystack: &[u8],
         region_starts: &[u32],
         region_base: u32,
@@ -1342,7 +1424,10 @@ impl ResidentFusedRegionScan {
                 self.haystack_capacity
             )));
         }
-        backend.upload_resident_at(&self.haystack, 0, scratch)?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.haystack, 0, scratch)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         let used_words = (region_count as usize)
             .checked_mul(self.presence_words as usize)
@@ -1358,11 +1443,22 @@ impl ResidentFusedRegionScan {
         })?;
         scratch.clear();
         scratch.resize(reset_bytes, 0);
-        backend.upload_resident_at(&self.presence, 0, scratch)?;
-
-        backend.upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())?;
-        backend.upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())?;
-        backend.upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.presence, 0, scratch)
+            .map_err(crate::artifact_session::as_backend_error)?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())
+            .map_err(crate::artifact_session::as_backend_error)?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.region_base_buf, 0, &region_base.to_le_bytes())
+            .map_err(crate::artifact_session::as_backend_error)?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.match_count_buf, 0, &0u32.to_le_bytes())
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         scratch.clear();
         let region_starts_words = self.max_regions as usize;
@@ -1373,7 +1469,10 @@ impl ResidentFusedRegionScan {
         for _ in (region_count as usize)..region_starts_words {
             scratch.extend_from_slice(&u32::MAX.to_le_bytes());
         }
-        backend.upload_resident_at(&self.region_starts_buf, 0, scratch)?;
+        self.shared
+            .artifact
+            .upload_resident_at(&self.region_starts_buf, 0, scratch)
+            .map_err(crate::artifact_session::as_backend_error)?;
 
         let resources = [
             self.haystack.clone(),
@@ -1400,6 +1499,18 @@ impl ResidentFusedRegionScan {
         })
     }
 
+    fn named_resources<'a>(
+        &'a self,
+        resources: &'a [Resource; 14],
+    ) -> Vec<(&'a str, &'a Resource)> {
+        self.shared
+            .resource_names
+            .iter()
+            .map(String::as_str)
+            .zip(resources.iter())
+            .collect()
+    }
+
     /// Largest coalesced-file count this session's presence buffer was sized for.
     #[must_use]
     pub fn max_regions(&self) -> u32 {
@@ -1424,7 +1535,7 @@ impl ResidentFusedRegionScan {
     /// # Errors
     /// Returns an error without recycling any resource while a dispatch remains
     /// in flight, or the first [`vyre_driver::BackendError`] from freeing a resource.
-    pub fn free(self, backend: &dyn VyreBackend) -> Result<(), vyre_driver::BackendError> {
+    pub fn free(self) -> Result<(), vyre_driver::BackendError> {
         if self.in_flight.load(std::sync::atomic::Ordering::Acquire) {
             return Err(vyre_driver::BackendError::new(
                 "ResidentFusedRegionScan cannot be freed while a dispatch is in flight. Fix: await the pending result before freeing this resident session.",
@@ -1440,22 +1551,33 @@ impl ResidentFusedRegionScan {
             self.match_count_buf,
             self.matches_buf,
         ] {
-            if let Err(error) = backend.free_resident(resource) {
-                first_err.get_or_insert(error);
+            if let Err(error) = self.shared.artifact.free_resident(resource) {
+                first_err.get_or_insert(crate::artifact_session::as_backend_error(error));
             }
         }
         if let Ok(shared) = std::sync::Arc::try_unwrap(self.shared) {
+            let ResidentFusedSharedResources {
+                artifact,
+                resource_names: _,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                candidate_end_mask,
+                candidate_suffix2_mask,
+                candidate_suffix3_bloom,
+            } = shared;
             for resource in [
-                shared.transitions,
-                shared.output_offsets,
-                shared.output_records,
-                shared.pattern_lengths,
-                shared.candidate_end_mask,
-                shared.candidate_suffix2_mask,
-                shared.candidate_suffix3_bloom,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                candidate_end_mask,
+                candidate_suffix2_mask,
+                candidate_suffix3_bloom,
             ] {
-                if let Err(error) = backend.free_resident(resource) {
-                    first_err.get_or_insert(error);
+                if let Err(error) = artifact.free_resident(resource) {
+                    first_err.get_or_insert(crate::artifact_session::as_backend_error(error));
                 }
             }
         }
@@ -5550,339 +5672,6 @@ mod compile_tests {
         assert_ne!(
             MatchScan::cache_key(&sensitive),
             MatchScan::cache_key(&insensitive)
-        );
-    }
-}
-
-/// W3-1 resident FUSED presence+positions plumbing: `prepare_resident_fused_scan`
-/// uploads the immutable tables ONCE, and each `ResidentFusedRegionScan::scan_into`
-/// re-stages only the haystack, the region controls, and the two zeroed
-/// accumulators (presence prefix + match counter), then decodes the backend's
-/// `[presence, count, triples]` readback. A `MockResidentFusedBackend` records
-/// resident traffic and returns a CANNED three-output buffer, so the host
-/// orchestration (seven-table-upload-once, per-scan staging + double reset,
-/// fourteen-binding all-resident dispatch, presence + capped-match decode) is
-/// validated WITHOUT a GPU.
-#[cfg(test)]
-mod resident_fused_tests {
-    use super::*;
-    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-    use std::sync::Mutex;
-    use vyre_driver::DispatchConfig as Config;
-    use vyre_driver::TimedDispatchResult;
-
-    const LITERALS: &[&[u8]] = &[
-        b"key",
-        b"token",
-        b"secret",
-        b"AKIA",
-        b"ghp_",
-        b"sk_live_",
-        b"password",
-        b"api",
-    ];
-
-    // The fused program binds 14 buffers (0..=13): the presence common inputs
-    // 0..=9 (presence read-write at 6), region_starts (10), region_base (11),
-    // match_count read-write (12), and the matches OUTPUT at 13. A resident
-    // dispatch resolves presence(6) -> outputs[0], match_count(12) -> outputs[1],
-    // matches(13) -> outputs[2].
-    const FUSED_BINDINGS: usize = 14;
-
-    /// Build the canned `[presence, count, triples]` readback.
-    fn canned_fused_outputs(
-        presence_words: &[u32],
-        count: u32,
-        triples: &[(u32, u32, u32)],
-    ) -> Vec<Vec<u8>> {
-        let mut presence = Vec::new();
-        for &w in presence_words {
-            presence.extend_from_slice(&w.to_le_bytes());
-        }
-        let mut count_buf = Vec::new();
-        count_buf.extend_from_slice(&count.to_le_bytes());
-        let mut triples_buf = Vec::new();
-        for &(pid, start, end) in triples {
-            triples_buf.extend_from_slice(&pid.to_le_bytes());
-            triples_buf.extend_from_slice(&start.to_le_bytes());
-            triples_buf.extend_from_slice(&end.to_le_bytes());
-        }
-        vec![presence, count_buf, triples_buf]
-    }
-
-    struct MockResidentFusedBackend {
-        owner: vyre_driver::ResidentOwner,
-        next_id: AtomicU64,
-        allocations: Mutex<Vec<(u64, usize)>>,
-        full_uploads: AtomicUsize,
-        ranged_uploads: AtomicUsize,
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl MockResidentFusedBackend {
-        fn new(outputs: Vec<Vec<u8>>) -> Self {
-            Self {
-                owner: vyre_driver::ResidentOwner::new()
-                    .expect("Fix: resident owner minting must succeed in tests"),
-                next_id: AtomicU64::new(1),
-                allocations: Mutex::new(Vec::new()),
-                full_uploads: AtomicUsize::new(0),
-                ranged_uploads: AtomicUsize::new(0),
-                outputs,
-            }
-        }
-    }
-
-    impl vyre_driver::backend::private::Sealed for MockResidentFusedBackend {}
-
-    impl VyreBackend for MockResidentFusedBackend {
-        fn id(&self) -> &'static str {
-            "mock-resident-fused"
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &Config,
-        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-            unreachable!("resident path does not use borrowed dispatch")
-        }
-
-        fn allocate_resident(
-            &self,
-            byte_len: usize,
-        ) -> Result<Resource, vyre_driver::BackendError> {
-            let handle = self.next_id.fetch_add(1, Ordering::Relaxed);
-            self.allocations
-                .lock()
-                .expect("mock allocations mutex")
-                .push((handle, byte_len));
-            Ok(Resource::Resident(self.owner.handle(handle)))
-        }
-
-        fn upload_resident(
-            &self,
-            _resource: &Resource,
-            _bytes: &[u8],
-        ) -> Result<(), vyre_driver::BackendError> {
-            self.full_uploads.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        }
-
-        fn upload_resident_at(
-            &self,
-            _resource: &Resource,
-            _dst_offset_bytes: usize,
-            _bytes: &[u8],
-        ) -> Result<(), vyre_driver::BackendError> {
-            self.ranged_uploads.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        }
-
-        fn free_resident(&self, _resource: Resource) -> Result<(), vyre_driver::BackendError> {
-            Ok(())
-        }
-
-        fn dispatch_resident_timed(
-            &self,
-            _program: &Program,
-            resources: &[Resource],
-            config: &Config,
-        ) -> Result<TimedDispatchResult, vyre_driver::BackendError> {
-            assert_eq!(
-                resources.len(),
-                FUSED_BINDINGS,
-                "the fused program binds fourteen buffers"
-            );
-            for (idx, resource) in resources.iter().enumerate() {
-                assert!(
-                    matches!(resource, Resource::Resident(_)),
-                    "binding {idx} must be resident (no borrowed mix in a resident dispatch)"
-                );
-            }
-            assert!(
-                config.grid_override.is_some(),
-                "resident fused scan must supply a byte-scan grid override"
-            );
-            Ok(TimedDispatchResult {
-                outputs: self.outputs.clone(),
-                wall_ns: 0,
-                device_ns: None,
-                enqueue_ns: None,
-                wait_ns: None,
-            })
-        }
-    }
-
-    #[test]
-    fn prepare_uploads_tables_once_then_scans_stage_haystack_controls_and_two_resets() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        let max_regions = 4u32;
-        let max_matches = 4u32;
-        // 8 patterns -> 1 presence word/region. A 3-region batch -> 3 used words.
-        // Plant [row0,row1,row2] + a stale 4th the 3-region decode must ignore.
-        let row0 = (1 << 0) | (1 << 3); // {key, AKIA}
-        let row1 = 1 << 4; // {ghp_}
-        let row2 = 0u32; // {}
-        let stale = 0xDEAD_BEEFu32;
-        let backend = MockResidentFusedBackend::new(canned_fused_outputs(
-            &[row0, row1, row2, stale],
-            2,
-            &[(0, 1, 2), (1, 3, 4)],
-        ));
-
-        let session = matcher
-            .prepare_resident_fused_scan(&backend, 4096, max_regions, max_matches)
-            .expect("mock backend supports resident allocation");
-        assert_eq!(session.max_regions(), max_regions);
-        assert_eq!(session.max_matches(), max_matches);
-
-        // Fourteen resident allocations: haystack + 7 tables + presence +
-        // haystack_len + region_starts + region_base + match_count + matches.
-        {
-            let allocs = backend.allocations.lock().unwrap();
-            assert_eq!(
-                allocs.len(),
-                FUSED_BINDINGS,
-                "haystack + 7 tables + presence + haystack_len + region_starts + region_base + match_count + matches"
-            );
-            // [8] presence = max_regions × 1 word × 4; [9] haystack_len u32;
-            // [10] region_starts = max_regions × 4; [11] region_base u32;
-            // [12] match_count u32; [13] matches = max_matches × 3 × 4.
-            assert_eq!(
-                allocs[8].1,
-                max_regions as usize * U32_BYTES,
-                "presence sized for max_regions"
-            );
-            assert_eq!(allocs[9].1, U32_BYTES, "haystack_len control is one u32");
-            assert_eq!(
-                allocs[10].1,
-                max_regions as usize * U32_BYTES,
-                "region_starts sized for max_regions"
-            );
-            assert_eq!(allocs[11].1, U32_BYTES, "region_base control is one u32");
-            assert_eq!(allocs[12].1, U32_BYTES, "match_count control is one u32");
-            assert_eq!(
-                allocs[13].1,
-                max_matches as usize * MATCH_TRIPLE_WORDS as usize * U32_BYTES,
-                "matches buffer holds max_matches triples"
-            );
-        }
-        // Seven immutable tables uploaded once at prepare; no ranged staging yet.
-        assert_eq!(backend.full_uploads.load(Ordering::Relaxed), 7);
-        assert_eq!(backend.ranged_uploads.load(Ordering::Relaxed), 0);
-
-        // Three scans of a 3-region batch. Each re-stages exactly SIX ranged
-        // uploads: haystack, presence reset, haystack_len, region_base,
-        // match_count reset, region_starts.
-        let haystack = b"key\nghp_\nzzz\n";
-        let region_starts = [0u32, 4, 9];
-        let mut out: Vec<u32> = Vec::new();
-        let mut matches: Vec<Match> = Vec::new();
-        let mut scratch: Vec<u8> = Vec::new();
-        for _ in 0..3 {
-            session
-                .scan_into(
-                    &backend,
-                    haystack,
-                    &region_starts,
-                    0,
-                    &mut out,
-                    &mut matches,
-                    &mut scratch,
-                )
-                .expect("resident fused scan decodes canned presence + matches");
-            assert_eq!(
-                out,
-                vec![row0, row1, row2],
-                "3 regions × 1 word, stale tail ignored"
-            );
-            assert_eq!(
-                matches,
-                vec![Match::new(0, 1, 2), Match::new(1, 3, 4)],
-                "the canned [count=2, triples] readback decodes to exactly two matches"
-            );
-        }
-
-        assert_eq!(
-            backend.full_uploads.load(Ordering::Relaxed),
-            7,
-            "immutable tables are NEVER re-uploaded mid-loop"
-        );
-        assert_eq!(
-            backend.ranged_uploads.load(Ordering::Relaxed),
-            18,
-            "3 scans × 6 ranged uploads (haystack, presence reset, haystack_len, region_base, match_count reset, region_starts)"
-        );
-    }
-
-    #[test]
-    fn scan_fails_closed_when_device_count_exceeds_max_matches() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        // Counter claims 5 but the matches buffer holds only 2 -> fail closed.
-        let backend = MockResidentFusedBackend::new(canned_fused_outputs(
-            &[0u32],
-            5,
-            &[(0, 1, 2), (1, 3, 4)],
-        ));
-        let session = matcher
-            .prepare_resident_fused_scan(&backend, 256, 1, 2)
-            .expect("prepare with a 2-match cap");
-        let mut out: Vec<u32> = Vec::new();
-        let mut matches: Vec<Match> = Vec::new();
-        let mut scratch: Vec<u8> = Vec::new();
-        let err = session
-            .scan_into(
-                &backend,
-                b"key",
-                &[0u32],
-                0,
-                &mut out,
-                &mut matches,
-                &mut scratch,
-            )
-            .expect_err("count 5 over a cap of 2 must fail closed, not truncate");
-        assert!(
-            err.to_string().contains("exceeds the output-buffer cap"),
-            "the overflow error must name the cap breach: {err}"
-        );
-        assert!(
-            matches.is_empty(),
-            "a failed-closed decode exposes no partial matches"
-        );
-    }
-
-    #[test]
-    fn scan_rejects_region_count_over_the_cap() {
-        let matcher = GpuLiteralSet::compile(LITERALS);
-        let backend = MockResidentFusedBackend::new(canned_fused_outputs(&[0u32], 0, &[]));
-        let session = matcher
-            .prepare_resident_fused_scan(&backend, 256, 2, 4)
-            .expect("prepare with a 2-region cap");
-        let mut out: Vec<u32> = Vec::new();
-        let mut matches: Vec<Match> = Vec::new();
-        let mut scratch: Vec<u8> = Vec::new();
-        let err = session
-            .scan_into(
-                &backend,
-                b"a\nb\nc\n",
-                &[0u32, 2, 4],
-                0,
-                &mut out,
-                &mut matches,
-                &mut scratch,
-            )
-            .expect_err("3 regions over a cap of 2 must error, not truncate");
-        assert!(
-            err.to_string()
-                .contains("session was prepared for at most 2"),
-            "cap error must name the limit: {err}"
-        );
-        assert_eq!(
-            backend.ranged_uploads.load(Ordering::Relaxed),
-            0,
-            "a rejected over-cap batch must not stage any resident upload"
         );
     }
 }

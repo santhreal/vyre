@@ -97,3 +97,31 @@ fn resident_presence_uses_authenticated_artifact_resources(
     session.free()?;
     Ok(())
 }
+
+/// WHY: fused presence and position scans must share one authenticated artifact
+/// generation while preserving output identity across repeated resident submissions.
+#[test]
+fn resident_fused_scan_uses_authenticated_artifact_resources(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let haystack = b"abxxbc";
+    let matcher = GpuLiteralSet::compile(&[b"ab".as_slice(), b"bc".as_slice()]);
+    let session = matcher.prepare_resident_fused_scan("wgpu", haystack.len() + 16, 2, 8)?;
+    let mut presence = Vec::new();
+    let mut matches = Vec::new();
+    let mut scratch = Vec::new();
+
+    for _ in 0..2 {
+        session.scan_into(
+            haystack,
+            &[0, 4],
+            0,
+            &mut presence,
+            &mut matches,
+            &mut scratch,
+        )?;
+        assert_eq!(presence, vec![1, 2]);
+        assert_eq!(matches, vec![Match::new(0, 0, 2), Match::new(1, 4, 6)]);
+    }
+    session.free()?;
+    Ok(())
+}

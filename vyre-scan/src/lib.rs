@@ -29,7 +29,7 @@ pub mod resident;
 pub mod resident_presence;
 pub mod session;
 
-pub use artifact_session::{ScanArtifactError, ScanArtifactSession};
+pub use artifact_session::{ScanArtifactError, ScanArtifactSession, ScanTarget};
 pub use direct_gpu::DirectGpuScanner;
 pub use dispatch_io::{
     byte_scan_dispatch_config, candidate_start_dispatch_config, haystack_len_u32,
@@ -51,8 +51,8 @@ pub use literal_set::{
     LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,
 };
 pub use paged_corpus::{
-    scan_paged_fused, scan_paged_fused_async, scan_paged_fused_timed, scan_paths_paged,
-    scan_paths_paged_prefetched, scan_pattern_sharded, scan_sharded_fused,
+    scan_paged_fused, scan_paged_fused_async, scan_paged_fused_on, scan_paged_fused_timed,
+    scan_paths_paged, scan_paths_paged_prefetched, scan_pattern_sharded, scan_sharded_fused,
     scan_sharded_fused_timed, scan_sharded_fused_weighted, scan_sharded_fused_weighted_timed,
     GlobalMatch, PagedScanResult, PagedScanTiming, PatternShard, ShardTiming, ShardedScanTiming,
 };

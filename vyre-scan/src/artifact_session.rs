@@ -1,12 +1,13 @@
 //! Canonical compiler, target payload, materialization, and submission seam for scan products.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::Instant;
 
 use thiserror::Error;
 use vyre_driver::{
-    BackendError, BackendRegistration, BindingSet, BoundResource, Completion, DeviceIdentity,
-    DispatchConfig, Resource, Submission, TimedDispatchResult,
+    ArtifactMaterializer, BackendError, BackendRegistration, BindingSet, BoundResource, Completion,
+    DeviceIdentity, DispatchConfig, Resource, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
@@ -35,6 +36,37 @@ pub enum ScanArtifactError {
     Completion(String),
 }
 
+/// One registered target and one materializer generation for scan artifacts.
+#[derive(Clone)]
+pub struct ScanTarget {
+    registration: &'static BackendRegistration,
+    materializer: Arc<dyn ArtifactMaterializer>,
+}
+
+impl ScanTarget {
+    /// Acquire a fresh materializer generation for a registered backend.
+    pub fn registered(backend_id: &str) -> Result<Self, BackendError> {
+        let registration = vyre_driver::backend::backend_registration(backend_id)?;
+        let materializer = Arc::from(registration.materializer()?);
+        Ok(Self {
+            registration,
+            materializer,
+        })
+    }
+
+    /// Bind an explicitly selected device materializer to its compiler registration.
+    #[must_use]
+    pub fn with_materializer(
+        registration: &'static BackendRegistration,
+        materializer: Arc<dyn ArtifactMaterializer>,
+    ) -> Self {
+        Self {
+            registration,
+            materializer,
+        }
+    }
+}
+
 /// Immutable compiled scan artifact materialized for one registered target.
 pub struct ScanArtifactSession {
     artifact: Digest,
@@ -60,6 +92,32 @@ impl ScanArtifactSession {
         .validate()
         .map_err(|error| ScanArtifactError::Compile(error.to_string()))?;
         let session = ArtifactSession::compile(registration, &request)?;
+        let artifact_digest = session.artifact()?;
+        let payload_digest = session.payload()?;
+        Ok(Self {
+            artifact: artifact_digest,
+            payload: payload_digest,
+            session,
+        })
+    }
+
+    /// Compile and materialize on an explicitly selected scan target.
+    pub fn compile_on(program: &Program, target: &ScanTarget) -> Result<Self, ScanArtifactError> {
+        let graph = ProgramGraph::from_program("scan", program.clone())
+            .map_err(|error| ScanArtifactError::Graph(error.to_string()))?;
+        let request = CompileRequest::new(
+            graph,
+            ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+            SCAN_SEARCH_BUDGET,
+            MAX_SCAN_ARTIFACT_BYTES,
+        )
+        .validate()
+        .map_err(|error| ScanArtifactError::Compile(error.to_string()))?;
+        let session = ArtifactSession::compile_with_materializer(
+            target.registration,
+            &request,
+            Arc::clone(&target.materializer),
+        )?;
         let artifact_digest = session.artifact()?;
         let payload_digest = session.payload()?;
         Ok(Self {
@@ -174,6 +232,27 @@ impl ScanArtifactSession {
 
     pub(crate) fn free_resident(&self, resource: Resource) -> Result<(), ScanArtifactError> {
         Ok(self.session.free_resident(resource)?)
+    }
+
+    pub(crate) fn submit_resident(
+        &self,
+        resources: &[(&str, &Resource)],
+        invocation_grid: [u32; 3],
+    ) -> Result<Box<dyn Submission>, ScanArtifactError> {
+        let mut bindings = self.session.bindings()?;
+        bindings.set_invocation_grid(invocation_grid)?;
+        for (name, resource) in resources {
+            let value = self.session.resource(name)?;
+            bindings.insert(value, BoundResource::Resident((*resource).clone()));
+        }
+        Ok(self.session.submit(bindings)?)
+    }
+
+    pub(crate) fn ordered_outputs(
+        &self,
+        completion: &Completion,
+    ) -> Result<Vec<Vec<u8>>, ScanArtifactError> {
+        Ok(self.session.ordered_outputs(completion)?)
     }
 
     pub(crate) fn submit_resident_timed(

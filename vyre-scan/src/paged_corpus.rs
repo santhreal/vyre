@@ -35,7 +35,7 @@ use std::path::Path;
 use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 
-use crate::literal_set::{GpuLiteralSet, PendingFusedRegion};
+use crate::literal_set::{GpuLiteralSet, PendingResidentFusedRegion};
 
 type PagedPlan = Option<(u32, Vec<usize>, Vec<CorpusWindow>)>;
 
@@ -453,7 +453,19 @@ fn plan_paged(
 /// if the file count exceeds the u32 region ABI.
 pub fn scan_paged_fused(
     matcher: &GpuLiteralSet,
-    backend: &dyn VyreBackend,
+    backend_id: &str,
+    files: &[&[u8]],
+    window_budget_bytes: usize,
+    max_matches: u32,
+) -> Result<PagedScanResult, vyre_driver::BackendError> {
+    let target = crate::ScanTarget::registered(backend_id)?;
+    scan_paged_fused_on(matcher, &target, files, window_budget_bytes, max_matches)
+}
+
+/// Scan a paged corpus on one explicitly selected target generation.
+pub fn scan_paged_fused_on(
+    matcher: &GpuLiteralSet,
+    target: &crate::ScanTarget,
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
@@ -476,8 +488,8 @@ pub fn scan_paged_fused(
         .map(|window| window.file_range.len())
         .max()
         .unwrap_or(0) as u32;
-    let session = matcher.prepare_resident_fused_scan(
-        backend,
+    let session = matcher.prepare_resident_fused_scan_on(
+        target,
         max_window_bytes + overlap + 64,
         max_window_regions + 1,
         max_matches,
@@ -493,7 +505,6 @@ pub fn scan_paged_fused(
     for window in &windows {
         let staging = stage_window(files, &file_lengths, window, overlap);
         session.scan_into(
-            backend,
             &staging.haystack,
             &staging.region_starts,
             0,
@@ -509,12 +520,12 @@ pub fn scan_paged_fused(
             &mut presence,
             &mut matches,
         ) {
-            let _ = session.free(backend);
+            let _ = session.free();
             return Err(error);
         }
     }
 
-    session.free(backend)?;
+    session.free()?;
     Ok(finish_result(
         presence,
         region_count,
@@ -536,7 +547,7 @@ pub fn scan_paged_fused(
 /// Same as [`scan_paged_fused`].
 pub fn scan_paged_fused_timed(
     matcher: &GpuLiteralSet,
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
@@ -564,7 +575,7 @@ pub fn scan_paged_fused_timed(
         .max()
         .unwrap_or(0) as u32;
     let session = matcher.prepare_resident_fused_scan(
-        backend,
+        backend_id,
         max_window_bytes + overlap + 64,
         max_window_regions + 1,
         max_matches,
@@ -587,7 +598,6 @@ pub fn scan_paged_fused_timed(
     for window in &windows {
         let staging = stage_window(files, &file_lengths, window, overlap);
         let timed = match session.scan_into_timed(
-            backend,
             &staging.haystack,
             &staging.region_starts,
             0,
@@ -597,7 +607,7 @@ pub fn scan_paged_fused_timed(
         ) {
             Ok(timed) => timed,
             Err(error) => {
-                let _ = session.free(backend);
+                let _ = session.free();
                 return Err(error);
             }
         };
@@ -615,12 +625,12 @@ pub fn scan_paged_fused_timed(
             &mut presence,
             &mut matches,
         ) {
-            let _ = session.free(backend);
+            let _ = session.free();
             return Err(error);
         }
     }
 
-    session.free(backend)?;
+    session.free()?;
     let timing = PagedScanTiming {
         windows: windows.len() as u32,
         bytes_scanned,
@@ -633,12 +643,10 @@ pub fn scan_paged_fused_timed(
     ))
 }
 
-/// Scan a `files` corpus split into byte-range window shards distributed across a
-/// SET of backends, the W3-5 multi-GPU sharding architecture
-/// (`MULTI_GPU_SHARDING_AGGREGATION_PLAN.toml`, `regex-haystack-byte-range-shards`).
-/// Window `k` is assigned to `backends[k % backends.len()]` (round-robin), and each
-/// backend holds its OWN resident fused session, so on a real multi-GPU host the
-/// shards run concurrently on distinct peer devices.
+/// Scan a `files` corpus split into byte-range window shards distributed across
+/// authenticated scan targets. Window `k` is assigned to
+/// `targets[k % targets.len()]` (round-robin), and each target owns its resident
+/// fused artifact session. Distinct device-bound targets run concurrently.
 ///
 /// The partition (byte-range windows), the halo (`L-1` overlap = the plan's
 /// `overlap-boundary-by-max-pattern-lookbehind`), and the aggregation (host
@@ -648,25 +656,22 @@ pub fn scan_paged_fused_timed(
 /// is byte-identical to a single-shot scan regardless of shard count or device
 /// assignment (the `parity_policy` the plan mandates).
 ///
-/// On a single-device host (a `backends` set of one device, or the same device
-/// repeated) the shards run SEQUENTIALLY, which still exercises the full
-/// partition / round-robin-assignment / per-shard-session / aggregation
-/// architecture; only cross-device *parallelism* is unmodeled until a second
-/// physical device is present.
+/// Repeating the same registered target class still exercises independent
+/// materializer generations, round-robin assignment, and deterministic aggregation.
 ///
 /// # Errors
-/// [`vyre_driver::BackendError`] if `backends` is empty (fail closed, a shard scan needs
-/// at least one device), or on any window's dispatch/readback/free failure.
+/// Returns [`vyre_driver::BackendError`] if `targets` is empty or any target
+/// compilation, materialization, submission, readback, or free fails.
 pub fn scan_sharded_fused(
     matcher: &GpuLiteralSet,
-    backends: &[&dyn VyreBackend],
+    targets: &[crate::ScanTarget],
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
 ) -> Result<PagedScanResult, vyre_driver::BackendError> {
     scan_sharded_core(
         matcher,
-        backends,
+        targets,
         files,
         window_budget_bytes,
         max_matches,
@@ -686,14 +691,14 @@ pub fn scan_sharded_fused(
 /// Same as [`scan_sharded_fused`].
 pub fn scan_sharded_fused_timed(
     matcher: &GpuLiteralSet,
-    backends: &[&dyn VyreBackend],
+    targets: &[crate::ScanTarget],
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
 ) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
     scan_sharded_core(
         matcher,
-        backends,
+        targets,
         files,
         window_budget_bytes,
         max_matches,
@@ -716,22 +721,22 @@ pub fn scan_sharded_fused_timed(
 /// window's dispatch/readback/free failure.
 pub fn scan_sharded_fused_weighted(
     matcher: &GpuLiteralSet,
-    backends: &[&dyn VyreBackend],
+    targets: &[crate::ScanTarget],
     weights: &[u32],
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
 ) -> Result<PagedScanResult, vyre_driver::BackendError> {
-    if weights.len() != backends.len() {
+    if weights.len() != targets.len() {
         return Err(vyre_driver::BackendError::new(format!(
-            "scan_sharded_fused_weighted: {} weights for {} backends. Fix: pass exactly one throughput weight per device backend.",
+            "scan_sharded_fused_weighted: {} weights for {} targets. Fix: pass exactly one throughput weight per scan target.",
             weights.len(),
-            backends.len()
+            targets.len()
         )));
     }
     scan_sharded_core(
         matcher,
-        backends,
+        targets,
         files,
         window_budget_bytes,
         max_matches,
@@ -746,22 +751,22 @@ pub fn scan_sharded_fused_weighted(
 /// supplied, or any shard dispatch/readback fails.
 pub fn scan_sharded_fused_weighted_timed(
     matcher: &GpuLiteralSet,
-    backends: &[&dyn VyreBackend],
+    targets: &[crate::ScanTarget],
     weights: &[u32],
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
 ) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
-    if weights.len() != backends.len() {
+    if weights.len() != targets.len() {
         return Err(vyre_driver::BackendError::new(format!(
-            "scan_sharded_fused_weighted_timed: {} weights for {} backends. Fix: pass exactly one throughput weight per device backend.",
+            "scan_sharded_fused_weighted_timed: {} weights for {} targets. Fix: pass exactly one throughput weight per scan target.",
             weights.len(),
-            backends.len()
+            targets.len()
         )));
     }
     scan_sharded_core(
         matcher,
-        backends,
+        targets,
         files,
         window_budget_bytes,
         max_matches,
@@ -809,20 +814,20 @@ fn shard_assignment(
 
 fn scan_sharded_core(
     matcher: &GpuLiteralSet,
-    backends: &[&dyn VyreBackend],
+    targets: &[crate::ScanTarget],
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
     weights: Option<&[u32]>,
 ) -> Result<(PagedScanResult, ShardedScanTiming), vyre_driver::BackendError> {
-    if backends.is_empty() {
+    if targets.is_empty() {
         return Err(vyre_driver::BackendError::new(
-            "scan_sharded_fused: the backend set is empty. Fix: pass at least one device backend to shard the corpus across.".to_string(),
+            "scan_sharded_fused: the target set is empty. Fix: pass at least one scan target to shard the corpus across.",
         ));
     }
     // One timing slot per backend, in device-set order; each starts at zero windows
     // with a present (Some(0)) device aggregate (an idle shard is timed, not absent).
-    let mut shard_timings: Vec<ShardTiming> = (0..backends.len())
+    let mut shard_timings: Vec<ShardTiming> = (0..targets.len())
         .map(|shard| ShardTiming {
             shard: shard as u32,
             windows: 0,
@@ -842,7 +847,7 @@ fn scan_sharded_core(
     };
     let overlap = paging_overlap(matcher);
     let window_byte_lens: Vec<usize> = windows.iter().map(|window| window.byte_len).collect();
-    let assignment = shard_assignment(&window_byte_lens, backends.len(), weights);
+    let assignment = shard_assignment(&window_byte_lens, targets.len(), weights);
 
     let max_window_bytes = windows
         .iter()
@@ -857,7 +862,7 @@ fn scan_sharded_core(
 
     // Group each shard's window indices (ascending), so a shard replays its own windows
     // in global order. Shard `s` owns every window `i` with `assignment[i] == s`.
-    let mut shard_window_indices: Vec<Vec<usize>> = vec![Vec::new(); backends.len()];
+    let mut shard_window_indices: Vec<Vec<usize>> = vec![Vec::new(); targets.len()];
     for (index, &shard) in assignment.iter().enumerate() {
         shard_window_indices[shard].push(index);
     }
@@ -891,9 +896,9 @@ fn scan_sharded_core(
     // on one device by driving several backend handles at once.
     let thread_results: Result<Vec<ShardThreadResult>, vyre_driver::BackendError> =
         std::thread::scope(|scope| {
-            let mut handles = Vec::with_capacity(backends.len());
-            for shard in 0..backends.len() {
-                let backend = backends[shard];
+            let mut handles = Vec::with_capacity(targets.len());
+            for shard in 0..targets.len() {
+                let target = &targets[shard];
                 let indices = std::mem::take(&mut shard_window_indices[shard]);
                 handles.push(scope.spawn(
                     move || -> Result<ShardThreadResult, vyre_driver::BackendError> {
@@ -913,8 +918,8 @@ fn scan_sharded_core(
                                 timing,
                             });
                         }
-                        let session = matcher.prepare_resident_fused_scan(
-                            backend,
+                        let session = matcher.prepare_resident_fused_scan_on(
+                            target,
                             max_window_bytes + overlap + 64,
                             max_window_regions + 1,
                             max_matches,
@@ -930,7 +935,6 @@ fn scan_sharded_core(
                             let window = &windows_ref[index];
                             let staging = stage_window(files, file_lengths_ref, window, overlap);
                             let timed = match session.scan_into_timed(
-                                backend,
                                 &staging.haystack,
                                 &staging.region_starts,
                                 0,
@@ -981,7 +985,7 @@ fn scan_sharded_core(
                         }
                         // Always free this shard's session before surfacing a scan error
                         // (ONE free path per thread, Law 10 (no resident session leaks)).
-                        let free_error = session.free(backend).err();
+                        let free_error = session.free().err();
                         if let Some(error) = scan_error {
                             return Err(error);
                         }
@@ -1123,23 +1127,17 @@ pub fn scan_pattern_sharded(
 /// execution without unbounded memory.
 const PAGED_PIPELINE_DEPTH: usize = 2;
 
-/// Asynchronous twin of [`scan_paged_fused`]: pipelines the windows so each
-/// window's host staging + upload overlaps the previous window's device execution,
-/// keeping `PAGED_PIPELINE_DEPTH` dispatches in flight. It uses the BORROWED async
-/// fused dispatch (the tables re-upload per window, amortized over a large window
-/// rather than staying resident), which is the trade the overlap buys. The
-/// boundary handling (`L-1` overlap, dummy overlap region, start-based dedup) is the
-/// SAME shared globalization as the sync driver, so the result is identical.
+/// Asynchronous twin of [`scan_paged_fused`]. Two independent resident artifact
+/// sessions keep bounded window submissions in flight while sharing authenticated
+/// target code and immutable matcher state. Boundary handling (`L-1` overlap,
+/// dummy overlap region, start-based dedup) uses the same globalization as the
+/// synchronous driver.
 ///
 /// # Errors
 /// Same as [`scan_paged_fused`].
-///
-/// # Panics
-/// Panics if the in-flight queue is empty at the point the pipeline depth was just
-/// reached, which the preceding length check rules out.
 pub fn scan_paged_fused_async(
     matcher: &GpuLiteralSet,
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     files: &[&[u8]],
     window_budget_bytes: usize,
     max_matches: u32,
@@ -1149,26 +1147,52 @@ pub fn scan_paged_fused_async(
         return Ok(finish_result(Vec::new(), 0, 0, Vec::new()));
     };
     let overlap = paging_overlap(matcher);
+    let max_window_bytes = windows
+        .iter()
+        .map(|window| window.byte_len)
+        .max()
+        .unwrap_or(0);
+    let max_window_regions = windows
+        .iter()
+        .map(|window| window.file_range.len())
+        .max()
+        .unwrap_or(0) as u32;
+    let first = matcher.prepare_resident_fused_scan(
+        backend_id,
+        max_window_bytes + overlap + 64,
+        max_window_regions + 1,
+        max_matches,
+    )?;
+    let second = match first.fork_independent() {
+        Ok(second) => second,
+        Err(error) => {
+            let _ = first.free();
+            return Err(error);
+        }
+    };
+    let mut sessions = [first, second];
 
-    let mut presence: Vec<u32> = Vec::new();
-    let mut presence_words: usize = 0;
-    let mut matches: Vec<GlobalMatch> = Vec::new();
-    let mut win_matches: Vec<Match> = Vec::new();
-    let mut inflight: VecDeque<(WindowStaging, PendingFusedRegion)> = VecDeque::new();
+    let mut presence = Vec::new();
+    let mut presence_words = 0;
+    let mut matches = Vec::new();
+    let mut win_presence = Vec::new();
+    let mut win_matches = Vec::new();
+    let mut scratch = Vec::new();
+    let mut inflight: VecDeque<(WindowStaging, PendingResidentFusedRegion)> = VecDeque::new();
+    let mut scan_error = None;
 
     let retire = |staging: WindowStaging,
-                  pending: PendingFusedRegion,
+                  pending: PendingResidentFusedRegion,
                   presence_words: &mut usize,
                   presence: &mut Vec<u32>,
                   matches: &mut Vec<GlobalMatch>,
+                  win_presence: &mut Vec<u32>,
                   win_matches: &mut Vec<Match>|
      -> Result<(), vyre_driver::BackendError> {
-        // The retained `staging` keeps its haystack alive; the pending decodes both
-        // the presence words (returned) and the match triples (into win_matches).
-        let win_presence = pending.await_into(win_matches)?;
+        pending.await_into(win_presence, win_matches)?;
         globalize_window(
             &staging,
-            &win_presence,
+            win_presence,
             win_matches,
             presence_words,
             presence,
@@ -1176,37 +1200,66 @@ pub fn scan_paged_fused_async(
         )
     };
 
-    for window in &windows {
-        let staging = stage_window(files, &file_lengths, window, overlap);
-        let pending = matcher.scan_presence_and_positions_by_region_async(
-            backend,
-            &staging.haystack,
-            &staging.region_starts,
-            0,
-            max_matches,
-        )?;
-        inflight.push_back((staging, pending));
-        if inflight.len() >= PAGED_PIPELINE_DEPTH {
-            let (staging, pending) = inflight.pop_front().expect("depth reached");
-            retire(
+    for (index, window) in windows.iter().enumerate() {
+        if inflight.len() == PAGED_PIPELINE_DEPTH {
+            let Some((staging, pending)) = inflight.pop_front() else {
+                return Err(vyre_driver::BackendError::new(
+                    "paged artifact pipeline depth invariant failed",
+                ));
+            };
+            if let Err(error) = retire(
                 staging,
                 pending,
                 &mut presence_words,
                 &mut presence,
                 &mut matches,
+                &mut win_presence,
                 &mut win_matches,
-            )?;
+            ) {
+                scan_error = Some(error);
+                break;
+            }
+        }
+        let staging = stage_window(files, &file_lengths, window, overlap);
+        match sessions[index % PAGED_PIPELINE_DEPTH].scan_async(
+            &staging.haystack,
+            &staging.region_starts,
+            0,
+            &mut scratch,
+        ) {
+            Ok(pending) => inflight.push_back((staging, pending)),
+            Err(error) => {
+                scan_error = Some(error);
+                break;
+            }
         }
     }
+
     while let Some((staging, pending)) = inflight.pop_front() {
-        retire(
+        let result = retire(
             staging,
             pending,
             &mut presence_words,
             &mut presence,
             &mut matches,
+            &mut win_presence,
             &mut win_matches,
-        )?;
+        );
+        if scan_error.is_none() {
+            scan_error = result.err();
+        }
+    }
+    let mut free_error = None;
+    for session in sessions {
+        if let Err(error) = session.free() {
+            free_error.get_or_insert(error);
+        }
+    }
+    if let Some(error) = scan_error {
+        return Err(error);
+    }
+    if let Some(error) = free_error {
+        return Err(error);
     }
 
     Ok(finish_result(
@@ -1289,7 +1342,7 @@ fn fill_window_from_paths(
 /// count over the u32 region ABI.
 pub fn scan_paths_paged(
     matcher: &GpuLiteralSet,
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     paths: &[&Path],
     window_budget_bytes: usize,
     max_matches: u32,
@@ -1337,7 +1390,7 @@ pub fn scan_paths_paged(
         .max()
         .unwrap_or(0) as u32;
     let session = matcher.prepare_resident_fused_scan(
-        backend,
+        backend_id,
         max_window_bytes + overlap + 64,
         max_window_regions + 1,
         max_matches,
@@ -1355,7 +1408,7 @@ pub fn scan_paths_paged(
         let gathered = match fill_window_from_paths(paths, window, overlap, &mut haystack) {
             Ok(gathered) => gathered,
             Err(error) => {
-                let _ = session.free(backend);
+                let _ = session.free();
                 return Err(vyre_driver::BackendError::new(format!(
                     "scan_paths_paged: reading window files failed: {error}. Fix: ensure every path is a readable regular file."
                 )));
@@ -1372,15 +1425,17 @@ pub fn scan_paths_paged(
             global_region_base: window.global_region_base,
         };
 
-        session.scan_into(
-            backend,
+        if let Err(error) = session.scan_into(
             &staging.haystack,
             &staging.region_starts,
             0,
             &mut win_presence,
             &mut win_matches,
             &mut scratch,
-        )?;
+        ) {
+            let _ = session.free();
+            return Err(error);
+        }
         if let Err(error) = globalize_window(
             &staging,
             &win_presence,
@@ -1389,12 +1444,12 @@ pub fn scan_paths_paged(
             &mut presence,
             &mut matches,
         ) {
-            let _ = session.free(backend);
+            let _ = session.free();
             return Err(error);
         }
     }
 
-    session.free(backend)?;
+    session.free()?;
     Ok(finish_result(
         presence,
         region_count,
@@ -1419,7 +1474,7 @@ const PAGED_PREFETCH_DEPTH: usize = 1;
 /// backend error.
 pub fn scan_paths_paged_prefetched(
     matcher: &GpuLiteralSet,
-    backend: &dyn VyreBackend,
+    backend_id: &str,
     paths: &[&Path],
     window_budget_bytes: usize,
     max_matches: u32,
@@ -1490,7 +1545,7 @@ pub fn scan_paths_paged_prefetched(
         .max()
         .unwrap_or(0) as u32;
     let session = matcher.prepare_resident_fused_scan(
-        backend,
+        backend_id,
         max_window_bytes + overlap + 64,
         max_window_regions + 1,
         max_matches,
@@ -1526,7 +1581,6 @@ pub fn scan_paths_paged_prefetched(
             global_region_base: window.global_region_base,
         };
         if let Err(error) = session.scan_into(
-            backend,
             &staging.haystack,
             &staging.region_starts,
             0,
@@ -1554,8 +1608,9 @@ pub fn scan_paths_paged_prefetched(
     // thread never outlives the call.
     drop(rx);
     let _ = reader.join();
-    let _ = session.free(backend);
+    let free_result = session.free();
     outcome?;
+    free_result?;
     Ok(finish_result(
         presence,
         region_count,
@@ -1567,6 +1622,11 @@ pub fn scan_paths_paged_prefetched(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn wgpu_targets(count: usize) -> Vec<crate::ScanTarget> {
+        (0..count)
+            .map(|_| crate::ScanTarget::registered("wgpu").expect("registered WGPU scan target"))
+            .collect()
+    }
 
     /// Every file appears in exactly one window, windows tile the file index space
     /// with no gap or overlap, byte offsets are contiguous and monotone, and each
@@ -1774,7 +1834,7 @@ mod tests {
             plan.len()
         );
 
-        let paged = scan_paged_fused(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
+        let paged = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
             .expect("paged fused scan");
 
         // Single-shot ground truth over the concatenated corpus.
@@ -1868,10 +1928,10 @@ mod tests {
         let budget = 16usize;
         let max_matches = 4_096u32;
 
-        let untimed = scan_paged_fused(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
+        let untimed = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
             .expect("untimed paged fused scan");
         let (timed_result, timing) =
-            scan_paged_fused_timed(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
+            scan_paged_fused_timed(&matcher, "wgpu", &file_refs, budget, max_matches)
                 .expect("timed paged fused scan");
 
         // The result must be byte-identical to the untimed driver (timing is free).
@@ -1915,8 +1975,8 @@ mod tests {
         let matcher = GpuLiteralSet::compile(&[b"secret".as_slice()]);
         // A CpuRef backend is never touched here: an empty plan short-circuits
         // before any dispatch, so this exercises the zero-window timing branch.
-        let (result, timing) = scan_paged_fused_timed(&matcher, &CpuRefBackend, &[], 64, 16)
-            .expect("empty timed scan");
+        let (result, timing) =
+            scan_paged_fused_timed(&matcher, "wgpu", &[], 64, 16).expect("empty timed scan");
         assert_eq!(result.region_count, 0);
         assert!(result.matches.is_empty());
         assert_eq!(
@@ -1962,7 +2022,7 @@ mod tests {
         let max_matches = 4_096u32;
 
         // Single-device ground truth (the existing paged driver).
-        let single = scan_paged_fused(&matcher, device, &file_refs, budget, max_matches)
+        let single = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
             .expect("single-device paged scan");
 
         // A multi-window plan is required for round-robin to actually distribute.
@@ -1973,7 +2033,7 @@ mod tests {
         );
 
         // 1-device set: degenerates to the single-device scan.
-        let one = scan_sharded_fused(&matcher, &[device], &file_refs, budget, max_matches)
+        let one = scan_sharded_fused(&matcher, &wgpu_targets(1), &file_refs, budget, max_matches)
             .expect("sharded scan over 1 device");
         assert_eq!(
             one, single,
@@ -1983,14 +2043,8 @@ mod tests {
         // 3-device set (same GPU repeated): the round-robin assigns window k to
         // device k%3, each with its own resident session; the aggregation must still
         // produce the identical global result.
-        let three = scan_sharded_fused(
-            &matcher,
-            &[device, device, device],
-            &file_refs,
-            budget,
-            max_matches,
-        )
-        .expect("sharded scan over 3 devices");
+        let three = scan_sharded_fused(&matcher, &wgpu_targets(3), &file_refs, budget, max_matches)
+            .expect("sharded scan over 3 devices");
         assert_eq!(
             three, single,
             "sharded scan over a 3-device set must equal the single-device paged scan (parity_policy)"
@@ -2010,7 +2064,7 @@ mod tests {
         // the byte-work but must produce the identical result (parity_policy).
         let weighted = scan_sharded_fused_weighted(
             &matcher,
-            &[device, device],
+            &wgpu_targets(2),
             &[3, 1],
             &file_refs,
             budget,
@@ -2030,7 +2084,7 @@ mod tests {
         assert!(
             scan_sharded_fused_weighted(
                 &matcher,
-                &[device, device],
+                &wgpu_targets(2),
                 &[1],
                 &file_refs,
                 budget,
@@ -2106,11 +2160,11 @@ mod tests {
         );
 
         // Single-device ground truth.
-        let single = scan_paged_fused(&matcher, device, &file_refs, budget, max_matches)
+        let single = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
             .expect("single-device paged scan");
 
         // FOUR concurrent handles to the same GPU -> four threads dispatch in parallel.
-        let devices: [&dyn VyreBackend; 4] = [device, device, device, device];
+        let devices = wgpu_targets(4);
         let (parallel, timing) =
             scan_sharded_fused_timed(&matcher, &devices, &file_refs, budget, max_matches)
                 .expect("parallel 4-shard sharded scan");
@@ -2294,7 +2348,7 @@ mod tests {
         let budget = 16usize;
         let max_matches = 4_096u32;
 
-        let set: [&dyn VyreBackend; 2] = [device, device];
+        let set = wgpu_targets(2);
         let untimed =
             scan_sharded_fused(&matcher, &set, &file_refs, budget, max_matches).expect("untimed");
         let (timed_result, timing) =
@@ -2509,12 +2563,10 @@ mod tests {
         }
         let path_refs: Vec<&Path> = paths.iter().map(|path| path.as_path()).collect();
 
-        let in_memory =
-            scan_paged_fused(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
-                .expect("in-memory paged scan");
-        let from_disk =
-            scan_paths_paged(&matcher, backend.as_ref(), &path_refs, budget, max_matches)
-                .expect("disk paged scan");
+        let in_memory = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
+            .expect("in-memory paged scan");
+        let from_disk = scan_paths_paged(&matcher, "wgpu", &path_refs, budget, max_matches)
+            .expect("disk paged scan");
 
         let _ = std::fs::remove_dir_all(&dir);
 
@@ -2565,16 +2617,11 @@ mod tests {
         }
         let path_refs: Vec<&Path> = paths.iter().map(|path| path.as_path()).collect();
 
-        let sync = scan_paths_paged(&matcher, backend.as_ref(), &path_refs, budget, max_matches)
+        let sync = scan_paths_paged(&matcher, "wgpu", &path_refs, budget, max_matches)
             .expect("synchronous disk paged scan");
-        let prefetched = scan_paths_paged_prefetched(
-            &matcher,
-            backend.as_ref(),
-            &path_refs,
-            budget,
-            max_matches,
-        )
-        .expect("prefetched disk paged scan");
+        let prefetched =
+            scan_paths_paged_prefetched(&matcher, "wgpu", &path_refs, budget, max_matches)
+                .expect("prefetched disk paged scan");
 
         let _ = std::fs::remove_dir_all(&dir);
 
@@ -2622,11 +2669,10 @@ mod tests {
             "the test corpus must span multiple windows"
         );
 
-        let sync = scan_paged_fused(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
+        let sync = scan_paged_fused(&matcher, "wgpu", &file_refs, budget, max_matches)
             .expect("sync paged scan");
-        let overlapped =
-            scan_paged_fused_async(&matcher, backend.as_ref(), &file_refs, budget, max_matches)
-                .expect("async paged scan");
+        let overlapped = scan_paged_fused_async(&matcher, "wgpu", &file_refs, budget, max_matches)
+            .expect("async paged scan");
 
         assert_eq!(
             overlapped, sync,
