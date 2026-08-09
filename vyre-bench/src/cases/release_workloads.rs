@@ -695,14 +695,9 @@ impl BenchCase for MetadataConditionBatch {
             })?;
         let mut metadata_batch_wall_ns = None;
         let mut metadata_batch_len = None;
-        let (timed, resident_used, resident_reset_bytes) = if let (
-            Some(resident_batch),
-            Some(pipeline),
-        ) = (
-            prepared.resident_batch.as_ref(),
-            ctx.compiled_pipeline_for(&prepared.program)
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        ) {
+        let (timed, resident_used, resident_reset_bytes) = if let Some(resident_batch) =
+            prepared.resident_batch.as_ref()
+        {
             resident_batch.upload_resource_to_all_sets(
                 0,
                 &0u32.to_le_bytes(),
@@ -714,14 +709,9 @@ impl BenchCase for MetadataConditionBatch {
                 &ctx.dispatch_config,
             )
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            vyre_driver::validate_program_for_backend(
-                ctx.preferred_backend.as_ref(),
+            match resident_batch.dispatch_artifact_batch_timed(
+                ctx,
                 &prepared.program,
-                &config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            match resident_batch.dispatch_compiled_batch_timed(
-                pipeline,
                 METADATA_CONDITION_RESIDENT_BATCH_SIZE,
                 &config,
             ) {
@@ -1058,112 +1048,101 @@ impl BenchCase for SyntheticCountWorkload {
                     "synthetic release prepared payload type mismatch".to_string(),
                 )
             })?;
-        let (timed, resident_used, resident_reset_bytes, batch_wall_ns, batch_len) = if let (
-            SyntheticPattern::StringBitmapScatter,
-            true,
-            Some(resident_batch),
-            Some(pipeline),
-        ) = (
-            self.pattern,
-            ctx.preferred_backend.id() == "cuda",
-            prepared.resident_batch.as_ref(),
-            ctx.compiled_pipeline_for(&prepared.program)
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        ) {
-            let config = crate::api::case::dispatch_config_with_inferred_grid(
-                &prepared.program,
-                &prepared.inputs,
-                &ctx.dispatch_config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            vyre_driver::validate_program_for_backend(
-                ctx.preferred_backend.as_ref(),
-                &prepared.program,
-                &config,
-            )
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-            match resident_batch.dispatch_compiled_batch_timed(
-                pipeline,
-                STRING_BITMAP_RESIDENT_BATCH_SIZE,
-                &config,
+        let (timed, resident_used, resident_reset_bytes, batch_wall_ns, batch_len) =
+            if let (SyntheticPattern::StringBitmapScatter, true, Some(resident_batch)) = (
+                self.pattern,
+                ctx.preferred_backend.id() == "cuda",
+                prepared.resident_batch.as_ref(),
             ) {
-                Ok(batch) => {
-                    if batch.outputs.len() != STRING_BITMAP_RESIDENT_BATCH_SIZE {
-                        return Err(BenchError::ExecutionFailed(format!(
-                            "{} resident batch returned {} output row(s), expected {}",
-                            self.id,
-                            batch.outputs.len(),
-                            STRING_BITMAP_RESIDENT_BATCH_SIZE
-                        )));
+                let config = crate::api::case::dispatch_config_with_inferred_grid(
+                    &prepared.program,
+                    &prepared.inputs,
+                    &ctx.dispatch_config,
+                )
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+                match resident_batch.dispatch_artifact_batch_timed(
+                    ctx,
+                    &prepared.program,
+                    STRING_BITMAP_RESIDENT_BATCH_SIZE,
+                    &config,
+                ) {
+                    Ok(batch) => {
+                        if batch.outputs.len() != STRING_BITMAP_RESIDENT_BATCH_SIZE {
+                            return Err(BenchError::ExecutionFailed(format!(
+                                "{} resident batch returned {} output row(s), expected {}",
+                                self.id,
+                                batch.outputs.len(),
+                                STRING_BITMAP_RESIDENT_BATCH_SIZE
+                            )));
+                        }
+                        let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
+                            BenchError::ExecutionFailed(format!(
+                                "{} resident batch returned no output rows",
+                                self.id
+                            ))
+                        })?;
+                        if let Some((index, _)) = batch
+                            .outputs
+                            .iter()
+                            .enumerate()
+                            .find(|(_, outputs)| **outputs != first_outputs)
+                        {
+                            return Err(BenchError::CorrectnessViolation(format!(
+                                "{} resident batch output row {index} disagreed with row 0",
+                                self.id
+                            )));
+                        }
+                        (
+                            vyre_driver::TimedDispatchResult {
+                                outputs: first_outputs,
+                                wall_ns: batch.per_item_wall_ns(),
+                                device_ns: None,
+                                enqueue_ns: None,
+                                wait_ns: None,
+                            },
+                            true,
+                            0,
+                            Some(batch.wall_ns_total),
+                            Some(batch.batch_len as u64),
+                        )
                     }
-                    let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
-                        BenchError::ExecutionFailed(format!(
-                            "{} resident batch returned no output rows",
-                            self.id
-                        ))
-                    })?;
-                    if let Some((index, _)) = batch
-                        .outputs
-                        .iter()
-                        .enumerate()
-                        .find(|(_, outputs)| **outputs != first_outputs)
-                    {
-                        return Err(BenchError::CorrectnessViolation(format!(
-                            "{} resident batch output row {index} disagreed with row 0",
-                            self.id
-                        )));
+                    Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
+                        dispatch_single_synthetic_resident(ctx, prepared)?
                     }
-                    (
-                        vyre_driver::TimedDispatchResult {
-                            outputs: first_outputs,
-                            wall_ns: batch.per_item_wall_ns(),
-                            device_ns: None,
-                            enqueue_ns: None,
-                            wait_ns: None,
-                        },
-                        true,
+                    Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+                }
+            } else if let Some(resident) = prepared.resident.as_ref() {
+                if !prepared.output_reset_payload.is_empty() {
+                    resident.upload_resource(
                         0,
-                        Some(batch.wall_ns_total),
-                        Some(batch.batch_len as u64),
-                    )
+                        &prepared.output_reset_payload,
+                        "synthetic release resident output reset",
+                    )?;
                 }
-                Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
-                    dispatch_single_synthetic_resident(ctx, prepared)?
-                }
-                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
-            }
-        } else if let Some(resident) = prepared.resident.as_ref() {
-            if !prepared.output_reset_payload.is_empty() {
-                resident.upload_resource(
-                    0,
-                    &prepared.output_reset_payload,
-                    "synthetic release resident output reset",
+                let dispatch = dispatch_program_timed(
+                    ctx,
+                    &prepared.program,
+                    Some(resident),
+                    &prepared.inputs,
+                    &ctx.dispatch_config,
                 )?;
-            }
-            let dispatch = dispatch_program_timed(
-                ctx,
-                &prepared.program,
-                Some(resident),
-                &prepared.inputs,
-                &ctx.dispatch_config,
-            )?;
-            (
-                dispatch.timed,
-                dispatch.resident_used,
-                prepared.output_reset_payload.len() as u64,
-                None,
-                None,
-            )
-        } else {
-            let dispatch = dispatch_program_timed(
-                ctx,
-                &prepared.program,
-                None,
-                &prepared.inputs,
-                &ctx.dispatch_config,
-            )?;
-            (dispatch.timed, dispatch.resident_used, 0, None, None)
-        };
+                (
+                    dispatch.timed,
+                    dispatch.resident_used,
+                    prepared.output_reset_payload.len() as u64,
+                    None,
+                    None,
+                )
+            } else {
+                let dispatch = dispatch_program_timed(
+                    ctx,
+                    &prepared.program,
+                    None,
+                    &prepared.inputs,
+                    &ctx.dispatch_config,
+                )?;
+                (dispatch.timed, dispatch.resident_used, 0, None, None)
+            };
         let baseline_start = std::time::Instant::now();
         let baseline_outputs = match &prepared.baseline {
             SyntheticBaseline::Count { expected } => {

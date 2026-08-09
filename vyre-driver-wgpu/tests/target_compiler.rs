@@ -1,7 +1,7 @@
 //! WGPU target-compiler registry and immutable module-bundle contracts.
 
 use std::collections::BTreeMap;
-use vyre_driver::BindingSet;
+use vyre_driver::{BindingSet, BoundResource};
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
@@ -27,7 +27,7 @@ fn artifact() -> vyre_megakernel::Artifact {
                 contract: ValueContract {
                     dtype: DataType::U32,
                     shape: vec![ShapeDim::Known(1)],
-                    access: BufferAccess::ReadWrite,
+                    access: BufferAccess::WriteOnly,
                     lifetime: ValueLifetime::Output,
                 },
                 retained_successor_of: None,
@@ -84,6 +84,35 @@ fn registered_materializer_executes_authenticated_wgsl() {
         .wait()
         .unwrap();
     assert_eq!(completion.artifact, artifact.digest());
+    assert_eq!(
+        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
+        Some(&1_u32.to_le_bytes().to_vec())
+    );
+}
+
+/// WHY: resident benchmark hot loops must submit authenticated artifact instances,
+/// not bypass materialization through raw `Program` dispatch.
+#[test]
+fn registered_materializer_executes_resident_artifact_bindings() {
+    let registration =
+        vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+            .expect("WGPU materializer registration must be linked");
+    let compiler = registration.target_compiler().unwrap();
+    let materializer = registration
+        .materializer()
+        .expect("WGPU materializer must acquire on the GPU-required host");
+    let artifact = artifact();
+    let payload = compiler.compile(&artifact).unwrap();
+    let instance = materializer.materialize(&artifact, &payload).unwrap();
+    let resource = materializer.allocate_resident(4).unwrap();
+    materializer.upload_resident(&resource, &[0; 4]).unwrap();
+    let mut bindings = BindingSet::new(artifact.digest());
+    bindings.insert(
+        vyre_megakernel::ArtifactValueId(0),
+        BoundResource::Resident(resource.clone()),
+    );
+    let completion = instance.submit(bindings).unwrap().wait().unwrap();
+    materializer.free_resident(resource).unwrap();
     assert_eq!(
         completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
         Some(&1_u32.to_le_bytes().to_vec())

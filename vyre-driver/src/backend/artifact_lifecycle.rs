@@ -106,6 +106,35 @@ pub trait ArtifactInstance: Send + Sync {
 pub trait ArtifactMaterializer: Send + Sync {
     /// Acquired target device.
     fn device(&self) -> &dyn Device;
+
+    /// Allocate one resource owned by this materializer's device generation.
+    fn allocate_resident(&self, _byte_len: usize) -> Result<super::Resource, BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer allocation".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Upload bytes into one resource owned by this materializer.
+    fn upload_resident(
+        &self,
+        _resource: &super::Resource,
+        _bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer upload".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
+    /// Release one resource owned by this materializer.
+    fn free_resident(&self, _resource: super::Resource) -> Result<(), BackendError> {
+        Err(BackendError::UnsupportedFeature {
+            name: "artifact resident buffer free".to_string(),
+            backend: self.device().identity().backend.to_string(),
+        })
+    }
+
     /// Materialize authenticated immutable target bytes.
     fn materialize(
         &self,

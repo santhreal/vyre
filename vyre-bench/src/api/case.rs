@@ -1,8 +1,13 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{
+    borrow::Cow,
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use serde::{Deserialize, Serialize};
 use vyre::{DispatchConfig, VyreBackend};
-use vyre_driver::{BackendError, CompiledPipeline};
+use vyre_driver::{BackendError, BackendRegistration};
 pub use vyre_spec::DeterminismClass;
 
 use super::metric::BenchMetrics;
@@ -180,11 +185,17 @@ impl CpuReference {
     }
 }
 
+pub(crate) struct CachedArtifactSession {
+    fingerprint: [u8; 32],
+    session: Arc<vyre_runtime::ArtifactSession>,
+}
+
 pub struct BenchContext {
     pub backends: Vec<Box<dyn VyreBackend>>,
     pub preferred_backend: Arc<dyn VyreBackend>,
-    pub compiled_pipeline: Option<Arc<dyn CompiledPipeline>>,
-    pub compiled_program_fingerprint: Option<[u8; 32]>,
+    pub preferred_registration: &'static BackendRegistration,
+    pub materializer: Arc<dyn vyre_driver::ArtifactMaterializer>,
+    pub(crate) artifact_session: Mutex<Option<CachedArtifactSession>>,
     pub reference: CpuReference,
     pub optimizer: OptimizerPipeline,
     pub scratch: ScratchPool,
@@ -195,25 +206,63 @@ pub struct BenchContext {
 }
 
 impl BenchContext {
-    pub fn compiled_pipeline_for(
+    pub(crate) fn artifact_session_for(
         &self,
         prog: &vyre::ir::Program,
-    ) -> Result<Option<&dyn CompiledPipeline>, vyre_driver::BackendError> {
-        if !self
-            .compiled_program_fingerprint
-            .is_some_and(|fingerprint| fingerprint == prog.fingerprint())
-        {
-            return Ok(None);
+    ) -> Result<Arc<vyre_runtime::ArtifactSession>, vyre_driver::BackendError> {
+        let fingerprint = prog.fingerprint();
+        let mut cached = self.artifact_session.lock().map_err(|error| {
+            vyre_driver::BackendError::new(format!(
+                "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
+            ))
+        })?;
+        if let Some(cached) = cached.as_ref() {
+            if cached.fingerprint == fingerprint {
+                return Ok(Arc::clone(&cached.session));
+            }
         }
 
-        self.compiled_pipeline
-            .as_deref()
-            .map(Some)
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "compiled program fingerprint was set without a compiled pipeline. Fix: keep BenchContext compiled pipeline state coherent.",
-                )
-            })
+        let graph = vyre::ir::ProgramGraph::from_program("benchmark", prog.clone())
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let request = vyre::compiler::CompileRequest::new(
+            graph,
+            vyre::compiler::ExternalFacts::new(vyre::compiler::Digest([0; 32]), BTreeMap::new()),
+            vyre::compiler::SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000),
+            64 * 1024 * 1024,
+        )
+        .validate()
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let session = Arc::new(
+            vyre_runtime::ArtifactSession::compile_with_materializer(
+                self.preferred_registration,
+                &request,
+                Arc::clone(&self.materializer),
+            )
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?,
+        );
+        *cached = Some(CachedArtifactSession {
+            fingerprint,
+            session: Arc::clone(&session),
+        });
+        Ok(session)
+    }
+    pub(crate) fn take_artifact_session(
+        &self,
+    ) -> Result<Option<[u8; 32]>, vyre_driver::BackendError> {
+        let mut cached = self.artifact_session.lock().map_err(|error| {
+            vyre_driver::BackendError::new(format!(
+                "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
+            ))
+        })?;
+        Ok(cached.take().map(|cached| cached.fingerprint))
+    }
+
+    /// Compile and materialize the benchmark artifact outside measured submissions.
+    pub fn prepare_artifact(
+        &self,
+        prog: &vyre::ir::Program,
+    ) -> Result<(), vyre_driver::BackendError> {
+        self.artifact_session_for(prog).map(|_| ())
     }
 
     pub fn dispatch(
@@ -222,16 +271,15 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
-        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
-        if let Some(pipeline) = self.compiled_pipeline_for(prog)? {
-            let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-            pipeline.dispatch_borrowed(&borrowed_inputs, &config)
-        } else {
-            let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-            self.preferred_backend
-                .dispatch_borrowed(prog, &borrowed_inputs, &config)
-        }
+        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        let session = self.artifact_session_for(prog)?;
+        let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let completion = session
+            .submit_host_inputs(&borrowed_inputs)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        session
+            .ordered_outputs(&completion)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
     }
 
     pub fn dispatch_timed(
@@ -240,15 +288,49 @@ impl BenchContext {
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
-        let config = dispatch_config_with_inferred_grid(prog, inputs, config)?;
-        vyre_driver::validate_program_for_backend(self.preferred_backend.as_ref(), prog, &config)?;
-        let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        if let Some(pipeline) = self.compiled_pipeline_for(prog)? {
-            pipeline.dispatch_borrowed_timed(&borrowed_inputs, &config)
-        } else {
-            self.preferred_backend
-                .dispatch_borrowed_timed(prog, &borrowed_inputs, &config)
-        }
+        let _ = dispatch_config_with_inferred_grid(prog, inputs, config)?;
+        let session = self.artifact_session_for(prog)?;
+        let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let start = Instant::now();
+        let completion = session
+            .submit_host_inputs(&borrowed_inputs)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let outputs = session
+            .ordered_outputs(&completion)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        Ok(vyre_driver::TimedDispatchResult {
+            outputs,
+            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            device_ns: completion.device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
+    }
+    pub fn dispatch_resident_timed(
+        &self,
+        prog: &vyre::ir::Program,
+        resources: &[vyre_driver::Resource],
+        config: &DispatchConfig,
+    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        let _ = config;
+        let session = self.artifact_session_for(prog)?;
+        let bindings = session
+            .resident_bindings(resources)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let start = Instant::now();
+        let completion = session
+            .submit_and_wait(bindings)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        let outputs = session
+            .ordered_outputs(&completion)
+            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        Ok(vyre_driver::TimedDispatchResult {
+            outputs,
+            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            device_ns: completion.device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
     }
 }
 

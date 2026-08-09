@@ -21,7 +21,7 @@ use crate::report::json::{
     benchmark_held_out_corpus_id, CaseReport, ReportBackendProfile, ReportSchema, ReportSummary,
 };
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
@@ -93,8 +93,6 @@ pub fn execute_suite(
     let mut cases_report = Vec::with_capacity(registry.len());
     let mut passed = 0;
     let mut failed = 0;
-    let mut total_cache_hits = 0;
-    let mut total_cache_observed = 0;
     let mut selected_backend_profile = None;
 
     let selected_cases: Vec<_> = registry
@@ -136,6 +134,33 @@ pub fn execute_suite(
                     continue;
                 }
             };
+        let preferred_registration =
+            match vyre_driver::backend::backend_registration(preferred_backend.id()) {
+                Ok(registration) => registration,
+                Err(error) => {
+                    failed += 1;
+                    cases_report.push(case_failure(
+                        case,
+                        None,
+                        format!("Backend registration error: {error}"),
+                        case.performance_contract(),
+                    ));
+                    continue;
+                }
+            };
+        let materializer = match preferred_registration.materializer() {
+            Ok(materializer) => Arc::from(materializer),
+            Err(error) => {
+                failed += 1;
+                cases_report.push(case_failure(
+                    case,
+                    None,
+                    format!("Artifact materializer error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
+            }
+        };
 
         if selected_backend_profile.is_none() {
             selected_backend_profile = Some(ReportBackendProfile::from_device_profile(
@@ -146,8 +171,9 @@ pub fn execute_suite(
         let mut ctx = BenchContext {
             backends: vec![],
             preferred_backend,
-            compiled_pipeline: None,
-            compiled_program_fingerprint: None,
+            preferred_registration,
+            materializer,
+            artifact_session: Mutex::new(None),
             reference: crate::api::case::CpuReference {},
             optimizer: crate::api::case::OptimizerPipeline {},
             scratch: crate::api::case::ScratchPool { buffer: vec![] },
@@ -171,59 +197,20 @@ pub fn execute_suite(
             }
         };
 
-        let mut compile_cache_hit = None;
         if let Some(program) = ctx
             .evolve_candidate
             .as_ref()
             .or_else(|| case.program(&prepared))
         {
-            ctx.compiled_program_fingerprint = Some(program.fingerprint());
-            let compile_res = (|| {
-                let mut inferred_config;
-                let compile_config = if ctx.dispatch_config.grid_override.is_none() {
-                    inferred_config = ctx.dispatch_config.clone();
-                    let binding_plan = vyre_driver::binding::BindingPlan::build(program)?;
-                    let element_count =
-                        vyre_driver::program_walks::dispatch_element_count(&binding_plan.bindings);
-                    inferred_config.grid_override =
-                        Some(vyre_driver::program_walks::infer_dispatch_grid_for_count(
-                            element_count,
-                            inferred_config
-                                .workgroup_override
-                                .unwrap_or(program.workgroup_size()),
-                        )?);
-                    &inferred_config
-                } else {
-                    &ctx.dispatch_config
-                };
-                vyre_driver::pipeline::compile_with_telemetry(
-                    Arc::clone(&ctx.preferred_backend),
-                    program,
-                    compile_config,
-                )
-            })();
-            match compile_res {
-                Ok(build) => {
-                    ctx.compiled_pipeline = Some(build.pipeline);
-                    compile_cache_hit = build.cache_hit;
-                }
-                Err(error) => {
-                    failed += 1;
-                    cases_report.push(case_failure(
-                        case,
-                        Some(ctx.preferred_backend.id().to_string()),
-                        format!("Compile error: {error}"),
-                        case.performance_contract(),
-                    ));
-                    continue;
-                }
-            }
-        }
-
-        if let Some(hit) = compile_cache_hit {
-            total_cache_observed += 1;
-            if hit {
-                total_cache_hits += 1;
+            if let Err(error) = ctx.prepare_artifact(program) {
+                failed += 1;
+                cases_report.push(case_failure(
+                    case,
+                    Some(ctx.preferred_backend.id().to_string()),
+                    format!("Artifact preparation error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
             }
         }
 
@@ -248,11 +235,7 @@ pub fn execute_suite(
         }
     }
 
-    let cache_hit_rate = if total_cache_observed > 0 {
-        Some(total_cache_hits as f64 / total_cache_observed as f64)
-    } else {
-        None
-    };
+    let cache_hit_rate = None;
 
     let mut features = Vec::new();
     if let Some(backend) = config.backend_id.as_deref() {
@@ -457,12 +440,20 @@ pub fn evaluate_candidate_headless(
     let preferred_backend: Arc<dyn vyre::VyreBackend> =
         acquire_backend(config.backend_id.as_deref())
             .map_err(|error| format!("Backend error: {}", error))?;
+    let preferred_registration = vyre_driver::backend::backend_registration(preferred_backend.id())
+        .map_err(|error| format!("Backend registration error: {error}"))?;
+    let materializer = Arc::from(
+        preferred_registration
+            .materializer()
+            .map_err(|error| format!("Artifact materializer error: {error}"))?,
+    );
 
     let mut ctx = BenchContext {
         backends: vec![],
         preferred_backend,
-        compiled_pipeline: None,
-        compiled_program_fingerprint: None,
+        preferred_registration,
+        materializer,
+        artifact_session: Mutex::new(None),
         reference: crate::api::case::CpuReference {},
         optimizer: crate::api::case::OptimizerPipeline {},
         scratch: crate::api::case::ScratchPool { buffer: vec![] },
@@ -475,6 +466,15 @@ pub fn evaluate_candidate_headless(
     let mut prepared = case
         .prepare(&mut ctx)
         .map_err(|error| format!("Prepare error: {}", error))?;
+
+    if let Some(program) = ctx
+        .evolve_candidate
+        .as_ref()
+        .or_else(|| case.program(&prepared))
+    {
+        ctx.prepare_artifact(program)
+            .map_err(|error| format!("Artifact preparation error: {error}"))?;
+    }
 
     run_case(case, &mut ctx, &mut prepared, SuiteKind::Evolve, config)
 }

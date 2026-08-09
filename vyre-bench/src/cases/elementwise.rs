@@ -142,7 +142,7 @@ impl BenchCase for ElementwiseBench {
 
         let timed = if let Some(resident) = &prepared.resident {
             let driver_result = resident
-                .dispatch_timed(&prepared.program, &ctx.dispatch_config)
+                .dispatch_timed(ctx, &prepared.program, &ctx.dispatch_config)
                 .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
 
             crate::probes::cuda_events::CudaEventResult {

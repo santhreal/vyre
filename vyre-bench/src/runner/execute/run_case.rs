@@ -170,11 +170,12 @@ pub(super) fn run_case(
             determinism_p50s.push(percentile(&sorted, 50.0));
         }
     }
+    let cached_fingerprint = ctx
+        .take_artifact_session()
+        .map_err(|error| error.to_string())?;
     let program_fingerprint = case
         .workload_fingerprint_bytes(prepared)
-        .or(ctx.compiled_program_fingerprint);
-    ctx.compiled_pipeline = None;
-    ctx.compiled_program_fingerprint = None;
+        .or(cached_fingerprint);
 
     let correctness = correctness.ok_or_else(|| {
         "benchmark produced no samples; target sample count must be greater than zero".to_string()

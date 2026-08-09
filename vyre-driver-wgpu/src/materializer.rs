@@ -13,7 +13,7 @@ use vyre_megakernel::{
     TargetModuleBundle, TargetPayload, TargetPayloadFormat,
 };
 
-use crate::descriptor_mapping::{descriptor_bind_group, descriptor_buffer_access};
+use crate::descriptor_mapping::descriptor_bind_group;
 use crate::pipeline::WgpuPipeline;
 use crate::target_compiler::{
     WgpuTargetModule, WGPU_TARGET_FORMAT_VERSION, WGPU_TARGET_MODULE_SCHEMA_VERSION,
@@ -49,6 +49,21 @@ pub(crate) struct WgpuMaterializer {
 impl ArtifactMaterializer for WgpuMaterializer {
     fn device(&self) -> &dyn Device {
         &self.descriptor
+    }
+    fn allocate_resident(&self, byte_len: usize) -> Result<vyre_driver::Resource, BackendError> {
+        vyre_driver::VyreBackend::allocate_resident(&self.backend, byte_len)
+    }
+
+    fn upload_resident(
+        &self,
+        resource: &vyre_driver::Resource,
+        bytes: &[u8],
+    ) -> Result<(), BackendError> {
+        vyre_driver::VyreBackend::upload_resident(&self.backend, resource, bytes)
+    }
+
+    fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
+        vyre_driver::VyreBackend::free_resident(&self.backend, resource)
     }
 
     fn materialize(
@@ -102,6 +117,8 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     "WGSL target module does not define compute entry point `main`",
                 ));
             }
+            let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
+            let binding_plan = BindingPlan::build(&program)?;
             let input_slots = target
                 .descriptor
                 .bindings
@@ -111,13 +128,18 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     descriptor_bind_group(slot.memory_class).is_some()
                         && slot.name != TRAP_SIDECAR_NAME
                 })
-                .map(|slot| ArtifactInputSlot {
-                    name: slot.name.clone(),
-                    required: descriptor_buffer_access(slot.visibility)
-                        != vyre_foundation::ir::BufferAccess::WriteOnly,
+                .map(|slot| {
+                    let required = binding_plan
+                        .bindings
+                        .iter()
+                        .find(|binding| program.buffers()[binding.buffer_index].name() == slot.name)
+                        .is_none_or(|binding| binding.input_index.is_some());
+                    ArtifactInputSlot {
+                        name: slot.name.clone(),
+                        required,
+                    }
                 })
                 .collect();
-            let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
             let pipeline = WgpuPipeline::compile_target_with_device_queue(
                 &program,
                 &target.wgsl,
@@ -142,6 +164,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
             lost: Arc::clone(&self.descriptor.lost),
+            backend: self.backend.clone(),
             modules,
             values: artifact
                 .resources()
@@ -181,6 +204,7 @@ struct WgpuArtifactInstance {
     device: DeviceIdentity,
     lost: Arc<AtomicBool>,
     modules: Vec<WgpuExecutableModule>,
+    backend: WgpuBackend,
     values: BTreeMap<String, ArtifactValueId>,
     outputs: BTreeSet<ArtifactValueId>,
     retained: BTreeSet<ArtifactValueId>,
@@ -206,22 +230,30 @@ impl ArtifactInstance for WgpuArtifactInstance {
         if bindings.artifact() != self.artifact {
             return Err(invalid_module("bindings name a different neutral artifact"));
         }
-        let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
+        let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
+        let mut resident_state = BTreeMap::<ArtifactValueId, vyre_driver::Resource>::new();
         for (value, resource) in bindings.resources() {
             match resource {
                 BoundResource::Host(bytes) => {
-                    state.insert(*value, bytes.clone());
+                    host_state.insert(*value, bytes.clone());
                 }
-                BoundResource::Resident(_) => {
-                    return Err(BackendError::UnsupportedFeature {
-                        name: "WGPU artifact resident binding".to_string(),
-                        backend: WGPU_BACKEND_ID.to_string(),
-                    });
+                BoundResource::Resident(resource) => {
+                    resident_state.insert(*value, resource.clone());
                 }
             }
         }
+        if !host_state.is_empty() && !resident_state.is_empty() {
+            return Err(invalid_module(
+                "WGPU artifact submission cannot mix host and resident resources",
+            ));
+        }
+        let result = if resident_state.is_empty() {
+            self.execute(host_state)
+        } else {
+            self.execute_resident(resident_state)
+        };
         Ok(Box::new(ReadySubmission {
-            result: Some(self.execute(state)),
+            result: Some(result),
         }))
     }
 }
@@ -313,6 +345,82 @@ impl WgpuArtifactInstance {
             retained,
             device_ns: has_device_timing.then_some(device_ns),
         })
+    }
+    fn execute_resident(
+        &self,
+        resources: BTreeMap<ArtifactValueId, vyre_driver::Resource>,
+    ) -> Result<Completion, BackendError> {
+        if self.modules.len() != 1 {
+            return Err(BackendError::UnsupportedFeature {
+                name: "WGPU resident submission for multi-module artifacts".to_string(),
+                backend: WGPU_BACKEND_ID.to_string(),
+            });
+        }
+        let module = &self.modules[0];
+        let mut ordered = Vec::with_capacity(module.input_slots.len());
+        for slot in &module.input_slots {
+            let value = self.value_for_buffer(&slot.name)?;
+            let resource = resources.get(&value).ok_or_else(|| {
+                invalid_module(&format!(
+                    "canonical artifact value {} for resident target binding `{}` is unbound",
+                    value.0, slot.name
+                ))
+            })?;
+            ordered.push(resource.clone());
+        }
+        let dispatched = crate::resident_dispatch::dispatch_resident_timed(
+            &self.backend,
+            &module.program,
+            &ordered,
+            &DispatchConfig::default(),
+        )?;
+        let plan = BindingPlan::build(&module.program)?;
+        let mut output_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
+        for binding in &plan.bindings {
+            let Some(output_index) = binding.output_index else {
+                continue;
+            };
+            let buffer = &module.program.buffers()[binding.buffer_index];
+            let value = self.value_for_buffer(buffer.name())?;
+            let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
+                invalid_module(&format!(
+                    "WGPU resident target module omitted output {output_index} for Program buffer `{}`",
+                    buffer.name()
+                ))
+            })?;
+            output_state.insert(value, bytes.clone());
+        }
+        let outputs = self.project_values(&output_state, &self.outputs, "produce")?;
+        let retained = self.project_values(&output_state, &self.retained, "preserve")?;
+        Ok(Completion {
+            artifact: self.artifact,
+            outputs,
+            retained,
+            device_ns: dispatched.device_ns,
+        })
+    }
+
+    fn project_values(
+        &self,
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+        values: &BTreeSet<ArtifactValueId>,
+        action: &str,
+    ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
+        values
+            .iter()
+            .map(|value| {
+                state
+                    .get(value)
+                    .cloned()
+                    .map(|bytes| (*value, bytes))
+                    .ok_or_else(|| {
+                        invalid_module(&format!(
+                            "selected execution did not {action} canonical value {}",
+                            value.0
+                        ))
+                    })
+            })
+            .collect()
     }
 
     fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {

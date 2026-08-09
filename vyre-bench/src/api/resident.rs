@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
-use vyre_driver::{BackendError, CompiledPipeline, OutputBuffers, Resource, TimedDispatchResult};
+use vyre::DispatchConfig;
+use vyre_driver::{
+    ArtifactMaterializer, BackendError, CompiledPipeline, OutputBuffers, Resource,
+    TimedDispatchResult,
+};
 
-use crate::api::case::{dispatch_config_with_inferred_grid, BenchContext, BenchError};
+use crate::api::case::{BenchContext, BenchError};
 
 /// Prepared resident input buffers for a benchmark case.
 ///
@@ -12,7 +15,7 @@ use crate::api::case::{dispatch_config_with_inferred_grid, BenchContext, BenchEr
 /// it to keep setup traffic out of measured samples while preserving an exact
 /// host-buffer fallback on backends that do not support residency.
 pub struct ResidentInputSet {
-    backend: Arc<dyn VyreBackend>,
+    materializer: Arc<dyn ArtifactMaterializer>,
     resources: Vec<Resource>,
     cleanup_label: &'static str,
 }
@@ -24,7 +27,7 @@ pub struct ResidentInputSet {
 /// a small rotating pool lets the benchmark keep host uploads outside the hot
 /// path until the pool wraps.
 pub struct ResidentInputPool {
-    backend: Arc<dyn VyreBackend>,
+    materializer: Arc<dyn ArtifactMaterializer>,
     sets: Vec<Vec<Resource>>,
     input_count: usize,
     next_set: usize,
@@ -239,31 +242,8 @@ pub fn dispatch_program_timed(
     config: &DispatchConfig,
 ) -> Result<ResidentDispatch, BenchError> {
     if let Some(resident) = resident {
-        let config = dispatch_config_with_inferred_grid(program, inputs, config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-        vyre_driver::validate_program_for_backend(
-            ctx.preferred_backend.as_ref(),
-            program,
-            config.as_ref(),
-        )
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-        if let Some(pipeline) = ctx
-            .compiled_pipeline_for(program)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
-        {
-            match resident.dispatch_compiled_timed(pipeline, config.as_ref()) {
-                Ok(timed) => {
-                    return Ok(ResidentDispatch {
-                        timed,
-                        resident_used: true,
-                    });
-                }
-                Err(BackendError::UnsupportedFeature { .. }) => {}
-                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
-            }
-        }
         let timed = resident
-            .dispatch_timed(program, config.as_ref())
+            .dispatch_timed(ctx, program, config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         return Ok(ResidentDispatch {
             timed,
@@ -345,11 +325,11 @@ impl ResidentInputSet {
     /// Dispatch against the uploaded resident resources.
     pub fn dispatch_timed(
         &self,
+        ctx: &BenchContext,
         program: &vyre::ir::Program,
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
-        self.backend
-            .dispatch_resident_timed(program, &self.resources, config)
+        ctx.dispatch_resident_timed(program, &self.resources, config)
     }
 
     /// Dispatch against the uploaded resident resources through a compiled pipeline.
@@ -373,7 +353,7 @@ impl ResidentInputSet {
                 "{context} resident resources missing reset resource at index {index}"
             ))
         })?;
-        self.backend
+        self.materializer
             .upload_resident(resource, payload)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))
     }
@@ -410,11 +390,11 @@ impl ResidentInputSet {
         output_sizes: &[usize],
         cleanup_label: &'static str,
     ) -> Result<Self, BackendError> {
-        let backend = Arc::clone(&ctx.preferred_backend);
+        let materializer = Arc::clone(&ctx.materializer);
         let mut resources = Vec::with_capacity(resident_set_resource_count(inputs, output_sizes));
         let mut zero_scratch = Vec::new();
         let result = allocate_and_upload_resident_set(
-            backend.as_ref(),
+            materializer.as_ref(),
             &mut resources,
             inputs,
             output_sizes,
@@ -423,7 +403,7 @@ impl ResidentInputSet {
 
         if let Err(error) = result {
             for resource in resources {
-                if let Err(cleanup_error) = backend.free_resident(resource) {
+                if let Err(cleanup_error) = materializer.free_resident(resource) {
                     eprintln!("{cleanup_label} resident rollback cleanup failed: {cleanup_error}");
                 }
             }
@@ -431,7 +411,7 @@ impl ResidentInputSet {
         }
 
         Ok(Self {
-            backend,
+            materializer,
             resources,
             cleanup_label,
         })
@@ -442,11 +422,11 @@ impl ResidentInputSet {
         payloads: &[ResidentResourcePayload<'_>],
         cleanup_label: &'static str,
     ) -> Result<Self, BackendError> {
-        let backend = Arc::clone(&ctx.preferred_backend);
+        let materializer = Arc::clone(&ctx.materializer);
         let mut resources = Vec::with_capacity(payloads.len());
         let mut zero_scratch = Vec::new();
         let result = allocate_and_upload_resident_payloads(
-            backend.as_ref(),
+            materializer.as_ref(),
             &mut resources,
             payloads,
             &mut zero_scratch,
@@ -454,7 +434,7 @@ impl ResidentInputSet {
 
         if let Err(error) = result {
             for resource in resources {
-                if let Err(cleanup_error) = backend.free_resident(resource) {
+                if let Err(cleanup_error) = materializer.free_resident(resource) {
                     eprintln!("{cleanup_label} resident rollback cleanup failed: {cleanup_error}");
                 }
             }
@@ -462,7 +442,7 @@ impl ResidentInputSet {
         }
 
         Ok(Self {
-            backend,
+            materializer,
             resources,
             cleanup_label,
         })
@@ -472,7 +452,7 @@ impl ResidentInputSet {
 impl Drop for ResidentInputSet {
     fn drop(&mut self) {
         for resource in self.resources.drain(..) {
-            if let Err(error) = self.backend.free_resident(resource) {
+            if let Err(error) = self.materializer.free_resident(resource) {
                 eprintln!("{} resident cleanup failed: {error}", self.cleanup_label);
             }
         }
@@ -543,7 +523,7 @@ impl ResidentInputPool {
         }
         if self.next_set >= self.sets.len() {
             upload_resident_inputs(
-                self.backend.as_ref(),
+                self.materializer.as_ref(),
                 &self.sets[index][..self.input_count],
                 inputs,
             )
@@ -553,30 +533,33 @@ impl ResidentInputPool {
         Ok(&self.sets[index])
     }
 
-    /// Dispatch the first `batch_len` resident sets through a compiled batched pipeline.
-    pub fn dispatch_compiled_batch_timed(
+    /// Dispatch the first `batch_len` resident sets through one materialized artifact.
+    pub fn dispatch_artifact_batch_timed(
         &self,
-        compiled: &dyn CompiledPipeline,
+        ctx: &BenchContext,
+        program: &Program,
         batch_len: usize,
         config: &DispatchConfig,
     ) -> Result<ResidentBatchDispatch, BackendError> {
         if batch_len == 0 {
             return Err(BackendError::new(
-                "resident compiled batch dispatch requires at least one resident set. Fix: configure a positive resident batch size.",
+                "resident artifact batch dispatch requires at least one resident set. Fix: configure a positive resident batch size.",
             ));
         }
         if batch_len > self.sets.len() {
             return Err(BackendError::new(format!(
-                "resident compiled batch dispatch requested {batch_len} set(s) but pool has {}. Fix: upload a resident pool at least as large as the requested batch.",
+                "resident artifact batch dispatch requested {batch_len} set(s) but pool has {}. Fix: upload a resident pool at least as large as the requested batch.",
                 self.sets.len()
             )));
         }
-        let batches = self.sets[..batch_len]
-            .iter()
-            .map(Vec::as_slice)
-            .collect::<Vec<_>>();
         let started = std::time::Instant::now();
-        let outputs = compiled.dispatch_persistent_handles_batched(&batches, config)?;
+        let mut outputs = Vec::with_capacity(batch_len);
+        for resources in &self.sets[..batch_len] {
+            outputs.push(
+                ctx.dispatch_resident_timed(program, resources, config)?
+                    .outputs,
+            );
+        }
         let wall_ns_total = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
         Ok(ResidentBatchDispatch {
             outputs,
@@ -601,9 +584,12 @@ impl ResidentInputPool {
             })?;
             uploads.push((resource, payload));
         }
-        self.backend
-            .upload_resident_many(&uploads)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))
+        for (resource, bytes) in uploads {
+            self.materializer
+                .upload_resident(resource, bytes)
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        }
+        Ok(())
     }
 
     fn upload(
@@ -624,7 +610,7 @@ impl ResidentInputPool {
     ) -> Result<Self, BackendError> {
         if set_count == 0 {
             return Ok(Self {
-                backend: Arc::clone(&ctx.preferred_backend),
+                materializer: Arc::clone(&ctx.materializer),
                 sets: Vec::new(),
                 input_count: inputs.len(),
                 next_set: 0,
@@ -632,7 +618,7 @@ impl ResidentInputPool {
             });
         }
 
-        let backend = Arc::clone(&ctx.preferred_backend);
+        let materializer = Arc::clone(&ctx.materializer);
         let mut sets = Vec::with_capacity(set_count);
         let mut zero_scratch = Vec::new();
         let result = (|| {
@@ -643,7 +629,7 @@ impl ResidentInputPool {
                 )));
                 let resource_index = sets.len() - 1;
                 allocate_and_upload_resident_set(
-                    backend.as_ref(),
+                    materializer.as_ref(),
                     &mut sets[resource_index],
                     inputs,
                     output_sizes,
@@ -656,7 +642,7 @@ impl ResidentInputPool {
         if let Err(error) = result {
             for set in sets {
                 for resource in set {
-                    if let Err(cleanup_error) = backend.free_resident(resource) {
+                    if let Err(cleanup_error) = materializer.free_resident(resource) {
                         eprintln!(
                             "{cleanup_label} resident pool rollback cleanup failed: {cleanup_error}"
                         );
@@ -667,7 +653,7 @@ impl ResidentInputPool {
         }
 
         Ok(Self {
-            backend,
+            materializer,
             sets,
             input_count: inputs.len(),
             next_set: 0,
@@ -683,7 +669,7 @@ impl ResidentInputPool {
     ) -> Result<Self, BackendError> {
         if set_count == 0 {
             return Ok(Self {
-                backend: Arc::clone(&ctx.preferred_backend),
+                materializer: Arc::clone(&ctx.materializer),
                 sets: Vec::new(),
                 input_count: payloads
                     .iter()
@@ -694,7 +680,7 @@ impl ResidentInputPool {
             });
         }
 
-        let backend = Arc::clone(&ctx.preferred_backend);
+        let materializer = Arc::clone(&ctx.materializer);
         let mut sets = Vec::with_capacity(set_count);
         let mut zero_scratch = Vec::new();
         let result = (|| {
@@ -702,7 +688,7 @@ impl ResidentInputPool {
                 sets.push(Vec::with_capacity(payloads.len()));
                 let resource_index = sets.len() - 1;
                 allocate_and_upload_resident_payloads(
-                    backend.as_ref(),
+                    materializer.as_ref(),
                     &mut sets[resource_index],
                     payloads,
                     &mut zero_scratch,
@@ -714,7 +700,7 @@ impl ResidentInputPool {
         if let Err(error) = result {
             for set in sets {
                 for resource in set {
-                    if let Err(cleanup_error) = backend.free_resident(resource) {
+                    if let Err(cleanup_error) = materializer.free_resident(resource) {
                         eprintln!(
                             "{cleanup_label} resident pool rollback cleanup failed: {cleanup_error}"
                         );
@@ -725,7 +711,7 @@ impl ResidentInputPool {
         }
 
         Ok(Self {
-            backend,
+            materializer,
             sets,
             input_count: payloads
                 .iter()
@@ -741,7 +727,7 @@ impl Drop for ResidentInputPool {
     fn drop(&mut self) {
         for set in self.sets.drain(..) {
             for resource in set {
-                if let Err(error) = self.backend.free_resident(resource) {
+                if let Err(error) = self.materializer.free_resident(resource) {
                     eprintln!(
                         "{} resident pool cleanup failed: {error}",
                         self.cleanup_label
@@ -753,7 +739,7 @@ impl Drop for ResidentInputPool {
 }
 
 fn allocate_and_upload_resident_set(
-    backend: &dyn VyreBackend,
+    materializer: &dyn ArtifactMaterializer,
     resources: &mut Vec<Resource>,
     inputs: &[Vec<u8>],
     output_sizes: &[usize],
@@ -771,18 +757,18 @@ fn allocate_and_upload_resident_set(
             .copied()
             .map(ResidentResourcePayload::Zeroed),
     );
-    allocate_and_upload_resident_payloads(backend, resources, &payloads, zero_scratch)
+    allocate_and_upload_resident_payloads(materializer, resources, &payloads, zero_scratch)
 }
 
 fn allocate_and_upload_resident_payloads(
-    backend: &dyn VyreBackend,
+    materializer: &dyn ArtifactMaterializer,
     resources: &mut Vec<Resource>,
     payloads: &[ResidentResourcePayload<'_>],
     zero_scratch: &mut Vec<u8>,
 ) -> Result<(), BackendError> {
     let start = resources.len();
     for payload in payloads {
-        resources.push(backend.allocate_resident(payload.byte_len())?);
+        resources.push(materializer.allocate_resident(payload.byte_len())?);
     }
     if let Some(max_output_size) = payloads
         .iter()
@@ -809,14 +795,14 @@ fn allocate_and_upload_resident_payloads(
             _ => {}
         }
     }
-    if !uploads.is_empty() {
-        backend.upload_resident_many(&uploads)?;
+    for (resource, bytes) in uploads {
+        materializer.upload_resident(resource, bytes)?;
     }
     Ok(())
 }
 
 fn upload_resident_inputs(
-    backend: &dyn VyreBackend,
+    materializer: &dyn ArtifactMaterializer,
     resources: &[Resource],
     inputs: &[Vec<u8>],
 ) -> Result<(), BackendError> {
@@ -826,8 +812,8 @@ fn upload_resident_inputs(
             uploads.push((resource, input.as_slice()));
         }
     }
-    if !uploads.is_empty() {
-        backend.upload_resident_many(&uploads)?;
+    for (resource, bytes) in uploads {
+        materializer.upload_resident(resource, bytes)?;
     }
     Ok(())
 }

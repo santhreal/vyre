@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use thiserror::Error;
 use vyre_megakernel::{
@@ -10,9 +10,9 @@ use vyre_megakernel::{
 use crate::pipeline_cache::{PipelineCacheStore, PipelineFingerprint};
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
-    BoundResource, Completion, DeviceIdentity, Submission,
+    BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
-use vyre_megakernel::{ArtifactValueId, Digest, ResourceLifetime};
+use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime, TargetResourceMemory};
 
 /// Failure to authenticate an artifact envelope or select its exact required payload.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -144,7 +144,7 @@ pub enum ArtifactSessionError {
 
 struct MaterializedArtifact {
     admitted: AdmittedArtifact,
-    _materializer: Box<dyn ArtifactMaterializer>,
+    materializer: Arc<dyn ArtifactMaterializer>,
     instance: Box<dyn ArtifactInstance>,
 }
 
@@ -161,10 +161,19 @@ impl ArtifactSession {
         registration: &'static BackendRegistration,
         request: &ValidatedCompileRequest,
     ) -> Result<Self, ArtifactSessionError> {
+        let materializer = Arc::from(registration.materializer()?);
+        Self::compile_with_materializer(registration, request, materializer)
+    }
+    /// Compile and materialize through one caller-owned materializer generation.
+    pub fn compile_with_materializer(
+        registration: &'static BackendRegistration,
+        request: &ValidatedCompileRequest,
+        materializer: Arc<dyn ArtifactMaterializer>,
+    ) -> Result<Self, ArtifactSessionError> {
         let artifact = vyre_megakernel::compile(request)?;
         let compiler = registration.target_compiler()?;
         let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())?;
-        Self::from_envelope(registration, envelope)
+        Self::from_envelope_with_materializer(registration, envelope, materializer)
     }
 
     /// Admit one already-decoded canonical envelope and materialize its exact target bytes.
@@ -172,7 +181,16 @@ impl ArtifactSession {
         registration: &'static BackendRegistration,
         envelope: ArtifactEnvelope,
     ) -> Result<Self, ArtifactSessionError> {
-        let materializer = registration.materializer()?;
+        let materializer = Arc::from(registration.materializer()?);
+        Self::from_envelope_with_materializer(registration, envelope, materializer)
+    }
+
+    /// Admit and materialize through one caller-owned materializer generation.
+    pub fn from_envelope_with_materializer(
+        registration: &'static BackendRegistration,
+        envelope: ArtifactEnvelope,
+        materializer: Arc<dyn ArtifactMaterializer>,
+    ) -> Result<Self, ArtifactSessionError> {
         let admitted = admit_envelope(envelope, materializer.device().target_format())?;
         let instance = materializer.materialize(admitted.neutral(), admitted.target_payload())?;
         validate_instance(&admitted, materializer.as_ref(), instance.as_ref())?;
@@ -180,7 +198,7 @@ impl ArtifactSession {
             registration,
             state: RwLock::new(MaterializedArtifact {
                 admitted,
-                _materializer: materializer,
+                materializer,
                 instance,
             }),
         })
@@ -255,7 +273,8 @@ impl ArtifactSession {
             .state
             .write()
             .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
-        let materializer = self.registration.materializer()?;
+        let materializer: Arc<dyn ArtifactMaterializer> =
+            Arc::from(self.registration.materializer()?);
         let admitted = admit_envelope(
             state.admitted.envelope().clone(),
             materializer.device().target_format(),
@@ -265,7 +284,7 @@ impl ArtifactSession {
         let identity = instance.device().clone();
         *state = MaterializedArtifact {
             admitted,
-            _materializer: materializer,
+            materializer,
             instance,
         };
         Ok(identity)
@@ -292,6 +311,158 @@ impl ArtifactSession {
                 }
                 .into()
             })
+    }
+    /// Allocate one resident resource from this session's materializer generation.
+    pub fn allocate_resident(&self, byte_len: usize) -> Result<Resource, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(state.materializer.allocate_resident(byte_len)?)
+    }
+
+    /// Upload bytes into one resource owned by this session's materializer.
+    pub fn upload_resident(
+        &self,
+        resource: &Resource,
+        bytes: &[u8],
+    ) -> Result<(), ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(state.materializer.upload_resident(resource, bytes)?)
+    }
+
+    /// Release one resource owned by this session's materializer.
+    pub fn free_resident(&self, resource: Resource) -> Result<(), ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        Ok(state.materializer.free_resident(resource)?)
+    }
+
+    /// Bind one backend-resident resource per non-shared target slot.
+    pub fn resident_bindings(
+        &self,
+        resources: &[Resource],
+    ) -> Result<BindingSet, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let entries = state.admitted.target_payload().entries();
+        if entries.len() != 1 {
+            return Err(BackendError::UnsupportedFeature {
+                name: "resident bindings for multi-entry artifacts".to_string(),
+                backend: state.instance.device().backend.to_string(),
+            }
+            .into());
+        }
+        let bindings = entries[0]
+            .resource_bindings
+            .iter()
+            .filter(|binding| binding.memory == TargetResourceMemory::Global)
+            .collect::<Vec<_>>();
+        if bindings.len() != resources.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: target entry requires {} resident resource(s), but the caller supplied {}.",
+                    bindings.len(),
+                    resources.len()
+                ),
+            }
+            .into());
+        }
+        let mut typed = BindingSet::new(state.admitted.neutral().digest());
+        for (binding, resource) in bindings.into_iter().zip(resources) {
+            typed.insert(binding.resource, BoundResource::Resident(resource.clone()));
+        }
+        Ok(typed)
+    }
+
+    /// Bind host inputs in canonical ABI slot order.
+    pub fn host_bindings(&self, inputs: &[&[u8]]) -> Result<BindingSet, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut resources = state
+            .admitted
+            .neutral()
+            .abi()
+            .resources
+            .iter()
+            .filter(|resource| {
+                matches!(
+                    resource.access,
+                    AbiAccess::ReadOnly | AbiAccess::ReadWrite | AbiAccess::Uniform
+                )
+            })
+            .collect::<Vec<_>>();
+        resources.sort_unstable_by_key(|resource| resource.slot);
+        if resources.len() != inputs.len() {
+            return Err(BackendError::InvalidProgram {
+                fix: format!(
+                    "Fix: artifact ABI requires {} host input buffer(s), but the caller supplied {}.",
+                    resources.len(),
+                    inputs.len()
+                ),
+            }
+            .into());
+        }
+        let mut bindings = BindingSet::new(state.admitted.neutral().digest());
+        for (resource, bytes) in resources.into_iter().zip(inputs) {
+            bindings.insert(resource.value, BoundResource::Host(bytes.to_vec()));
+        }
+        Ok(bindings)
+    }
+
+    /// Submit host inputs in canonical ABI order and wait for typed completion.
+    pub fn submit_host_inputs(&self, inputs: &[&[u8]]) -> Result<Completion, ArtifactSessionError> {
+        self.submit_and_wait(self.host_bindings(inputs)?)
+    }
+
+    /// Project writable completion values in canonical ABI slot order.
+    pub fn ordered_outputs(
+        &self,
+        completion: &Completion,
+    ) -> Result<Vec<Vec<u8>>, ArtifactSessionError> {
+        let state = self
+            .state
+            .read()
+            .map_err(|error| ArtifactSessionError::State(error.to_string()))?;
+        let mut resources = state
+            .admitted
+            .neutral()
+            .abi()
+            .resources
+            .iter()
+            .filter(|resource| {
+                matches!(resource.access, AbiAccess::ReadWrite | AbiAccess::WriteOnly)
+            })
+            .collect::<Vec<_>>();
+        resources.sort_unstable_by_key(|resource| resource.slot);
+        resources
+            .into_iter()
+            .map(|resource| {
+                completion
+                    .outputs
+                    .get(&resource.value)
+                    .or_else(|| completion.retained.get(&resource.value))
+                    .cloned()
+                    .ok_or_else(|| {
+                        BackendError::InvalidProgram {
+                            fix: format!(
+                                "Fix: materializer completion must project writable artifact value {}.",
+                                resource.value.0
+                            ),
+                        }
+                        .into()
+                    })
+            })
+            .collect()
     }
 
     fn retained_values(&self) -> Result<BTreeSet<ArtifactValueId>, ArtifactSessionError> {

@@ -1,10 +1,12 @@
 //! Canonical compiler, target payload, materialization, and submission seam for scan products.
 
 use std::collections::BTreeMap;
+use std::time::Instant;
 
 use thiserror::Error;
 use vyre_driver::{
     BackendError, BackendRegistration, BindingSet, BoundResource, Completion, DeviceIdentity,
+    Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
@@ -96,6 +98,27 @@ impl ScanArtifactSession {
         }
         Ok(self.session.submit_and_wait(bindings)?)
     }
+    /// Submit host buffers in canonical ABI order and return writable values in ABI order.
+    pub fn submit_ordered(&self, inputs: &[&[u8]]) -> Result<Vec<Vec<u8>>, ScanArtifactError> {
+        let completion = self.session.submit_host_inputs(inputs)?;
+        Ok(self.session.ordered_outputs(&completion)?)
+    }
+    /// Submit host buffers in canonical ABI order and return submission timing.
+    pub fn submit_ordered_timed(
+        &self,
+        inputs: &[&[u8]],
+    ) -> Result<TimedDispatchResult, ScanArtifactError> {
+        let start = Instant::now();
+        let completion = self.session.submit_host_inputs(inputs)?;
+        let outputs = self.session.ordered_outputs(&completion)?;
+        Ok(TimedDispatchResult {
+            outputs,
+            wall_ns: u64::try_from(start.elapsed().as_nanos()).unwrap_or(u64::MAX),
+            device_ns: completion.device_ns,
+            enqueue_ns: None,
+            wait_ns: None,
+        })
+    }
 
     /// Return one writable value from typed output or retained completion state.
     pub fn completion_value<'a>(
@@ -115,4 +138,75 @@ impl ScanArtifactSession {
                 ))
             })
     }
+}
+pub(crate) fn dispatch_registered(
+    program: &Program,
+    backend_id: &str,
+    inputs: &[&[u8]],
+) -> Result<Vec<Vec<u8>>, BackendError> {
+    let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    let session = ScanArtifactSession::compile(program, registration)
+        .map_err(|error| BackendError::new(error.to_string()))?;
+    session
+        .submit_ordered(inputs)
+        .map_err(|error| BackendError::new(error.to_string()))
+}
+
+pub(crate) fn dispatch_registered_timed(
+    program: &Program,
+    backend_id: &str,
+    inputs: &[&[u8]],
+) -> Result<TimedDispatchResult, BackendError> {
+    let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    let session = ScanArtifactSession::compile(program, registration)
+        .map_err(|error| BackendError::new(error.to_string()))?;
+    session
+        .submit_ordered_timed(inputs)
+        .map_err(|error| BackendError::new(error.to_string()))
+}
+
+pub(crate) struct ArtifactPendingDispatch {
+    session: ScanArtifactSession,
+    submission: Box<dyn Submission>,
+}
+
+impl ArtifactPendingDispatch {
+    #[must_use]
+    pub(crate) fn is_ready(&self) -> bool {
+        self.submission.is_ready()
+    }
+
+    pub(crate) fn await_result(self) -> Result<Vec<Vec<u8>>, BackendError> {
+        let completion = self
+            .submission
+            .wait()
+            .map_err(|error| BackendError::new(error.to_string()))?;
+        self.session
+            .session
+            .ordered_outputs(&completion)
+            .map_err(|error| BackendError::new(error.to_string()))
+    }
+}
+
+pub(crate) fn dispatch_registered_async(
+    program: &Program,
+    backend_id: &str,
+    inputs: &[Vec<u8>],
+) -> Result<ArtifactPendingDispatch, BackendError> {
+    let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    let session = ScanArtifactSession::compile(program, registration)
+        .map_err(|error| BackendError::new(error.to_string()))?;
+    let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let bindings = session
+        .session
+        .host_bindings(&borrowed)
+        .map_err(|error| BackendError::new(error.to_string()))?;
+    let submission = session
+        .session
+        .submit(bindings)
+        .map_err(|error| BackendError::new(error.to_string()))?;
+    Ok(ArtifactPendingDispatch {
+        session,
+        submission,
+    })
 }
