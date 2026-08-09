@@ -1,12 +1,10 @@
 //! Scan decomposition explanation reports.
 
 use serde::Serialize;
-use vyre_foundation::serial::wire::encode::{
-    ScanDatabaseHeader, ScanDatabaseSectionKind, UnsupportedScanFeature,
-};
 use vyre_lower::{
     DescriptorIntentKind, DescriptorIntentSet, DescriptorIntentStrategy, IntentAnnotatedDescriptor,
 };
+use vyre_scan::database::{ScanDatabaseHeader, ScanDatabaseSectionKind, UnsupportedScanFeature};
 
 /// Current serialized scan-explanation report schema.
 pub const SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32 = 1;
@@ -448,14 +446,14 @@ fn intent_reason(kind: DescriptorIntentKind) -> String {
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_foundation::serial::wire::encode::{
-        ScanDatabaseCompatibilityRecord, ScanDatabaseMode, ScanDatabaseReaderCompatibility,
-        ScanDatabaseSectionHeader,
-    };
     use vyre_lower::{
         BindingLayout, BindingSlot, BindingVisibility, DescriptorIntent, DescriptorIntentKind,
         DescriptorIntentSet, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
         LiteralValue, MemoryClass,
+    };
+    use vyre_scan::database::{
+        ScanDatabaseCompatibilityRecord, ScanDatabaseMode, ScanDatabaseReaderCompatibility,
+        ScanDatabaseSectionHeader,
     };
 
     fn descriptor(intents: DescriptorIntentSet) -> IntentAnnotatedDescriptor {

@@ -23,6 +23,7 @@ vyre-runtime.workspace = true
 vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
 vyre-primitives.workspace = true
 bytemuck.workspace = true
+serde.workspace = true
 smallvec.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

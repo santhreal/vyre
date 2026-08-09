@@ -4,10 +4,12 @@
 //! header for serialized scan databases that reference compiled pattern sets,
 //! table sections, and unsupported construct diagnostics.
 
-use super::WireEncodeErr;
-use crate::serial::wire::framing::{put_len_u32, put_string, put_u32, put_u8};
-use crate::serial::wire::Reader;
 use serde::{Deserialize, Serialize};
+use vyre_foundation::serial::wire::{
+    encode::WireEncodeErr,
+    framing::{put_len_u32, put_string, put_u32, put_u8},
+    MAX_STRING_LEN,
+};
 
 /// Four-byte magic identifying a versioned scan database header (`VSDH`).
 pub const SCAN_DATABASE_HEADER_MAGIC: &[u8; 4] = b"VSDH";
@@ -307,6 +309,74 @@ pub fn put_scan_database_header(
     Ok(())
 }
 
+struct DatabaseReader<'a> {
+    bytes: &'a [u8],
+    position: usize,
+}
+
+impl<'a> DatabaseReader<'a> {
+    const fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes, position: 0 }
+    }
+
+    fn take(&mut self, len: usize) -> Result<&'a [u8], String> {
+        let end = self.position.checked_add(len).ok_or_else(|| {
+            "scan database header offset overflow. Fix: reject the malformed cache.".to_string()
+        })?;
+        if end > self.bytes.len() {
+            return Err(
+                "truncated scan database header. Fix: provide the complete cache header."
+                    .to_string(),
+            );
+        }
+        let bytes = &self.bytes[self.position..end];
+        self.position = end;
+        Ok(bytes)
+    }
+
+    fn u8(&mut self) -> Result<u8, String> {
+        Ok(self.take(1)?[0])
+    }
+
+    fn u32(&mut self) -> Result<u32, String> {
+        let bytes = self.take(4)?;
+        Ok(u32::from_le_bytes(bytes.try_into().map_err(|_| {
+            "invalid scan database u32 field. Fix: rebuild the cache header.".to_string()
+        })?))
+    }
+
+    fn u64(&mut self) -> Result<u64, String> {
+        let bytes = self.take(8)?;
+        Ok(u64::from_le_bytes(bytes.try_into().map_err(|_| {
+            "invalid scan database u64 field. Fix: rebuild the cache header.".to_string()
+        })?))
+    }
+
+    fn bounded_len(&mut self, max: usize, label: &str) -> Result<usize, String> {
+        let value = usize::try_from(self.u32()?).map_err(|error| {
+            format!(
+                "{label} cannot fit this target: {error}. Fix: reject the scan database header."
+            )
+        })?;
+        if value > max {
+            return Err(format!(
+                "{label} {value} exceeds limit {max}. Fix: reject the scan database header."
+            ));
+        }
+        Ok(value)
+    }
+
+    fn string(&mut self) -> Result<String, String> {
+        let len = self.bounded_len(MAX_STRING_LEN, "scan database string length")?;
+        let bytes = self.take(len)?;
+        std::str::from_utf8(bytes)
+            .map(str::to_owned)
+            .map_err(|error| {
+                format!("invalid UTF-8 in scan database header: {error}. Fix: rebuild the cache.")
+            })
+    }
+}
+
 /// Decode a versioned scan database header without checking compiler/mode
 /// compatibility.
 ///
@@ -315,11 +385,7 @@ pub fn put_scan_database_header(
 /// Returns a `Fix:` diagnostic when the header is truncated, has the wrong
 /// magic/version, has unknown enum tags, or contains trailing bytes.
 pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, String> {
-    let mut reader = Reader {
-        bytes,
-        pos: 0,
-        depth: 0,
-    };
+    let mut reader = DatabaseReader::new(bytes);
     let magic = reader.take(SCAN_DATABASE_HEADER_MAGIC.len())?;
     if magic != SCAN_DATABASE_HEADER_MAGIC {
         return Err(
@@ -363,7 +429,7 @@ pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, S
         });
     }
 
-    let compatibility = if reader.pos == bytes.len() {
+    let compatibility = if reader.position == bytes.len() {
         legacy_compatibility_record(&unsupported_features)
     } else {
         ScanDatabaseCompatibilityRecord {
@@ -373,7 +439,7 @@ pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, S
         }
     };
 
-    if reader.pos != bytes.len() {
+    if reader.position != bytes.len() {
         return Err(
             "scan database header has trailing bytes. Fix: split the header from table payload sections before decoding."
                 .to_string(),

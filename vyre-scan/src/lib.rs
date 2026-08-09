@@ -7,10 +7,10 @@ pub use vyre_libs::scan::{
     build_regex_dfa_shards_unanchored, build_regex_dfa_unanchored, compile_regex_set,
     compile_regex_set_with_policy, dfa_compile, dfa_compile_with_budget, fuse_programs,
     fuse_programs_vec, regex_construct_diagnostic_code, substring_search, AnchoredWindowValidator,
-    ApiKind, CaptureMode, CaptureModeContract, CompiledDfa, CompiledRegexSet, DfaCompileError,
-    FusionError, PostProcessError, PostProcessedMatch, RegexCompileError, RegexConstruct,
-    RegexDfaError, RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy,
-    RegionTriple, ScanProgram, API_INDEX, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+    CaptureMode, CaptureModeContract, CompiledDfa, CompiledRegexSet, DfaCompileError, FusionError,
+    PostProcessError, PostProcessedMatch, RegexCompileError, RegexConstruct, RegexDfaError,
+    RegexDfaPipeline, RegexDfaShard, RegexPatternExtent, RegexReplayPolicy, RegionTriple,
+    ScanProgram, DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
 pub use vyre_libs::scan::{
     builders, classic_ac, dfa, fused_region_evidence, hit_buffer, nfa, post_process,
@@ -18,6 +18,7 @@ pub use vyre_libs::scan::{
 };
 
 pub mod artifact_session;
+pub mod database;
 pub mod direct_gpu;
 pub mod dispatch_io;
 pub mod engine;

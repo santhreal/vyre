@@ -4,49 +4,6 @@
 //! artifacts. Dispatch, resident-resource, timing, and readback adapters are
 //! deliberately owned by upper integration crates.
 
-/// Stable index of the retained neutral scan surface.
-pub const API_INDEX: &[(&str, ApiKind, Option<&str>)] = &[
-    ("compact_hits", ApiKind::Function, None),
-    ("emit_hit", ApiKind::Function, None),
-    (
-        "substring_search",
-        ApiKind::Function,
-        Some("matching-substring"),
-    ),
-    ("aho_corasick", ApiKind::Function, Some("matching-dfa")),
-    ("dfa_compile", ApiKind::Function, Some("matching-dfa")),
-    ("CompiledDfa", ApiKind::Struct, Some("matching-dfa")),
-    (
-        "build_scan_program",
-        ApiKind::Function,
-        Some("matching-nfa"),
-    ),
-    ("ScanProgram", ApiKind::Struct, Some("matching-nfa")),
-    (
-        "compile_regex_set",
-        ApiKind::Function,
-        Some("matching-regex"),
-    ),
-    ("RegexDfaPipeline", ApiKind::Struct, Some("matching-regex")),
-];
-
-/// Coarse item shape for [`API_INDEX`].
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ApiKind {
-    /// Free function.
-    Function,
-    /// Struct or typed artifact.
-    Struct,
-    /// Enum.
-    Enum,
-    /// Trait.
-    Trait,
-    /// Constant.
-    Const,
-    /// Type alias.
-    TypeAlias,
-}
-
 pub mod builders;
 pub mod hit_buffer;
 

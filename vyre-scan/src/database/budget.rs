@@ -1,8 +1,6 @@
 //! Decode-side budgets for serialized scan database payloads.
 
-use crate::serial::wire::encode::{
-    ScanDatabaseHeader, ScanDatabaseSectionKind, MAX_SCAN_DATABASE_SECTIONS,
-};
+use super::header::{ScanDatabaseHeader, ScanDatabaseSectionKind, MAX_SCAN_DATABASE_SECTIONS};
 
 /// Upper bounds applied to a decoded scan database before its payload is
 /// trusted or allocated.
@@ -452,11 +450,11 @@ const fn section_kind_index(kind: ScanDatabaseSectionKind) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::serial::wire::encode::{
+    use super::super::header::{
         ScanDatabaseCompatibilityRecord, ScanDatabaseMode, ScanDatabaseReaderCompatibility,
         ScanDatabaseSectionHeader, UnsupportedScanFeature,
     };
+    use super::*;
 
     fn header() -> ScanDatabaseHeader {
         ScanDatabaseHeader {
