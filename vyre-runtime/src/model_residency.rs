@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use thiserror::Error;
-use vyre_driver::backend::{ArtifactInstance, BackendError, Resource, VyreBackend};
+use vyre_driver::backend::{ArtifactInstance, ArtifactMaterializer, BackendError, Resource};
 
 const ZERO_UPLOAD_CHUNK_BYTES: usize = 1024 * 1024;
 
@@ -136,8 +136,8 @@ pub struct SequenceLease {
 
 /// Minimal resident-resource operations required by the ownership manager.
 ///
-/// Concrete backends use [`BackendResidencyDevice`]. The trait also permits a
-/// deterministic fault-injection device in contract tests.
+/// Production sessions use [`MaterializerResidencyDevice`]. The trait also
+/// permits deterministic fault injection in contract tests.
 pub trait ResidencyDevice: Send + Sync {
     /// Allocate one resident resource.
     fn allocate(&self, byte_len: usize) -> Result<Resource, BackendError>;
@@ -154,27 +154,30 @@ pub trait ResidencyDevice: Send + Sync {
     fn free(&self, resource: Resource) -> Result<(), BackendError>;
 }
 
-/// Adapter from the complete Vyre backend contract to residency operations.
+/// Residency adapter bound to one artifact materializer device generation.
 #[derive(Clone)]
-pub struct BackendResidencyDevice {
-    backend: Arc<dyn VyreBackend>,
+pub struct MaterializerResidencyDevice {
+    materializer: Arc<dyn ArtifactMaterializer>,
 }
 
-impl BackendResidencyDevice {
-    /// Wrap one backend instance without importing a concrete driver.
+impl MaterializerResidencyDevice {
+    /// Bind residency operations to one authenticated artifact materializer.
     #[must_use]
-    pub fn new(backend: Arc<dyn VyreBackend>) -> Self {
-        Self { backend }
+    pub fn new(materializer: Arc<dyn ArtifactMaterializer>) -> Self {
+        Self { materializer }
     }
 }
 
-impl ResidencyDevice for BackendResidencyDevice {
+impl ResidencyDevice for MaterializerResidencyDevice {
     fn allocate(&self, byte_len: usize) -> Result<Resource, BackendError> {
-        self.backend.allocate_resident(byte_len)
+        self.materializer.allocate_resident(byte_len)
     }
 
     fn upload_many(&self, uploads: &[(&Resource, &[u8])]) -> Result<(), BackendError> {
-        self.backend.upload_resident_many(uploads)
+        for (resource, bytes) in uploads {
+            self.materializer.upload_resident(resource, bytes)?;
+        }
+        Ok(())
     }
 
     fn upload_at(
@@ -183,11 +186,12 @@ impl ResidencyDevice for BackendResidencyDevice {
         offset: usize,
         bytes: &[u8],
     ) -> Result<(), BackendError> {
-        self.backend.upload_resident_at(resource, offset, bytes)
+        self.materializer
+            .upload_resident_at(resource, offset, bytes)
     }
 
     fn free(&self, resource: Resource) -> Result<(), BackendError> {
-        self.backend.free_resident(resource)
+        self.materializer.free_resident(resource)
     }
 }
 
@@ -255,10 +259,13 @@ impl std::fmt::Debug for ModelResidency {
 }
 
 impl ModelResidency {
-    /// Create a residency manager over one production backend instance.
+    /// Create a residency manager bound to one artifact materializer generation.
     #[must_use]
-    pub fn new(backend: Arc<dyn VyreBackend>, budget_bytes: u64) -> Self {
-        Self::with_device(Arc::new(BackendResidencyDevice::new(backend)), budget_bytes)
+    pub fn new(materializer: Arc<dyn ArtifactMaterializer>, budget_bytes: u64) -> Self {
+        Self::with_device(
+            Arc::new(MaterializerResidencyDevice::new(materializer)),
+            budget_bytes,
+        )
     }
 
     /// Create a residency manager over an explicit residency device boundary.
