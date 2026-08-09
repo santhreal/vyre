@@ -6,16 +6,16 @@ use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use crate::cases::byte_pack::decode_u64_words;
 use std::time::Instant;
-use vyre::lower::analyses::{
+use vyre_foundation::ir::{BinOp, DataType};
+use vyre_lower::analyses::{
     analyze_bank_conflict, analyze_coalesce, analyze_layout_aos_to_soa, analyze_shared_mem_promote,
     vec_pack,
 };
-use vyre::lower::rewrites::{self, OptimizationStats};
-use vyre::lower::{
+use vyre_lower::rewrites::{self, OptimizationStats};
+use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
-use vyre_foundation::ir::{BinOp, DataType};
 
 pub struct LowerRewriteImpact;
 

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre::ir::{
+use vyre_foundation::ir::{
     BufferDecl, DataType, Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};

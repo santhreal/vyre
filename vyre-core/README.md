@@ -1,12 +1,7 @@
 # vyre
 
-GPU compute intermediate representation with a proven standard operation library.
-
-## What this crate does
-
-vyre is the compiler stack for GPU compute. Construct `ir::Program` values with
-the IR builder, compose operations from the standard library, validate, and
-dispatch through a registered backend.
+Stable facade for Vyre frontend IR, whole-program compiler artifacts, and
+authenticated runtime sessions.
 
 ## Install
 
@@ -14,81 +9,66 @@ dispatch through a registered backend.
 cargo add vyre
 ```
 
-## Quick example
-
-The snippet below builds a small program and validates it. Dispatch lives behind
-the `vyre-driver` registry; `vyre` itself stays substrate-neutral and does not
-depend on any concrete GPU runtime.
+## Compile a graph
 
 ```rust
-use vyre::ir::*;
+use std::collections::BTreeMap;
+use vyre::compiler::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre::ir::{
+    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim,
+    ValueContract, ValueLifetime,
+};
 
-let program = Program::wrapped(
-    vec![
-        BufferDecl::read("a", 0, DataType::U32),
-        BufferDecl::read("b", 1, DataType::U32),
-        BufferDecl::read_write("out", 2, DataType::U32),
-    ],
-    [64, 1, 1],
-    vec![
-        Node::let_bind("idx", Expr::gid_x()),
-        Node::store(
-            "out",
-            Expr::var("idx"),
-            Expr::bitxor(
-                Expr::load("a", Expr::var("idx")),
-                Expr::load("b", Expr::var("idx")),
-            ),
-        ),
-    ],
-);
-assert!(vyre::validate(&program).is_empty());
+let mut graph = ProgramGraph::new();
+graph.add_external_value(
+    "out",
+    ValueContract {
+        dtype: DataType::U32,
+        shape: vec![ShapeDim::Known(1)],
+        access: BufferAccess::WriteOnly,
+        lifetime: ValueLifetime::Output,
+    },
+)?;
+graph.add_node(
+    "main",
+    Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        Vec::new(),
+    ),
+    Vec::new(),
+    Vec::new(),
+)?;
+let request = CompileRequest::new(
+    graph,
+    ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+    SearchBudget::new(1, 1, 1, 0, 1_000_000),
+    1_000_000,
+)
+.validate()?;
+let artifact = compile(&request)?;
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-GPU dispatch and backend-specific readback examples belong in the concrete
-driver crates that own those runtimes.
+Attach a payload through a registered target compiler, serialize the resulting
+`ArtifactEnvelope`, and construct `ArtifactSession` with the matching backend
+registration. Submission uses `BindingSet`; completion returns outputs keyed by
+canonical artifact value IDs.
 
-## Public facade: what `vyre::*` exports
+## Public surface
 
-`vyre` is the single user-facing import path. Reaching for `vyre_core::*`,
-`vyre_foundation::*`, `vyre_driver::*`, or any backend crate from a
-consumer is a smell: the gate
-`scripts/check_examples_public_facade.sh` enforces this for every
-example under `examples/`.
+| Path | Owner | Purpose |
+|------|-------|---------|
+| `vyre::ir` | `vyre-foundation` | Frontend `Program`, `ProgramGraph`, contracts, and validation |
+| `vyre::compiler` | `vyre-megakernel` | Compile requests, bounded schedule selection, artifacts, payloads, and target compiler facets |
+| `vyre::ArtifactSession` | `vyre-runtime` | Authenticated admission, materialization, submission, and recovery |
+| `vyre::PersistentExecutor` | `vyre-runtime` | Retained artifact-backed resident queue execution |
+| `vyre::BindingSet` | `vyre-driver` | Typed resource bindings keyed by artifact value identity |
+| `vyre::cpu_references` | `vyre-foundation` | Explicit reference and conformance semantics |
 
-| Module                  | Source crate          | Purpose                                              |
-|-------------------------|-----------------------|------------------------------------------------------|
-| `vyre::ir::*`           | `vyre-foundation`     | `Program`, `BufferDecl`, `Node`, `Expr`, `validate`. |
-| `vyre::lower`           | `vyre-foundation`     | IR-to-target lowering used by backends.              |
-| `vyre::optimizer`       | `vyre-foundation`     | Pass scheduler + reference passes.                   |
-| `vyre::cpu_op`          | `vyre-foundation`     | Wire-format CPU-reference byte ABI.                  |
-| `vyre::cpu_references`  | `vyre-foundation`     | CPU reference implementations.                       |
-| `vyre::memory_model`    | `vyre-foundation`     | Substrate-neutral memory ordering model.             |
-| `vyre::execution_plan`  | `vyre-foundation`     | Performance/accuracy execution planning.             |
-| `vyre::routing`         | `vyre-driver`         | Distribution-aware runtime algorithm selection.      |
-| `vyre::error`           | `vyre-driver`         | Unified error types.                                 |
-| `vyre::diagnostics`     | `vyre-driver`         | Structured machine-readable diagnostics.             |
-| `vyre::backend`         | `vyre-driver`         | `VyreBackend`, `Executable`, dispatch config types.  |
-| `vyre::match_result`    | `vyre-foundation`     | `Match` and `ByteRange` byte-range types.            |
-| `vyre::pipeline`        | `vyre-driver`         | Pipeline-mode (compile-once-dispatch-many) API.      |
-| `vyre::ByteRange`       | `vyre-foundation`     | Domain-neutral byte-range type.                      |
-
-Top-level re-exports also include `BackendError`, `BackendRegistration`,
-`CompiledPipeline`, `DispatchConfig`, `Error`, `Executable`, `Memory`,
-`MemoryRef`, `OutputBuffers`, `TypedDispatchExt`, `VyreBackend`, 
-everything a consumer needs without reaching beyond `vyre`.
-
-## Why vyre
-
-- **Composable primitives (Cat A):** any algorithm is a composition of simpler
-  ops with zero-cost lowering.
-- **Hardware intrinsics (Cat C):** ops declare GPU instruction backing per-target;
-  swap hardware, swap intrinsics.
-- **Link-time registration:** dialect ops, backends, and optimizer passes register
-  with `inventory::submit!`; consumers discover those registries through
-  `inventory::iter` instead of generated build-scan files.
-- **Forbidden patterns (Cat B):** no typetag, no trait-object execution routing,
-  no CPU fallback dispatch. Closed-enum semantics throughout.
+Concrete drivers own target compilation, device acquisition, native
+materialization, and submission. The facade does not select a concrete backend
+or lower directly to target text.
 
 ## Conformance
 
@@ -103,3 +83,52 @@ mdbook when a rendered site is available.
 ## License
 
 MIT OR Apache-2.0.
+
+<!-- BEGIN GENERATED CRATE CONTRACT -->
+## Crate contract
+
+This section is generated by `python3 scripts/crate_readmes.py --write` from
+the crate manifest, release train, ownership registry, and crate-guide metadata.
+
+### Purpose
+
+Expose the public Vyre API and feature-gated backend selection surface.
+
+### Boundaries
+
+The `public-facade` owner maintains this `facade` crate at `vyre-core`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`.
+Any other normal or build dependency requires an ownership-registry change.
+
+### Minimal real example
+
+Run the checked-in behavior from `vyre-core/examples/vyre_core_release_surface.rs`:
+
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre --example vyre_core_release_surface
+```
+
+### Features
+
+- Manifest features: `cpu-parity`, `cuda`, `default`, `wgpu`
+- Default feature members: None
+
+### Errors and unsupported behavior
+
+Facade calls preserve the selected backend's structured errors. A requested backend that is unavailable or unsupported is reported instead of replaced silently.
+
+### Testing
+
+Use [`docs/testing/vyre-core.md`](../docs/testing/vyre-core.md) for exact commands, Cargo targets, hardware
+requirements, evidence outputs, expected skips, and failure semantics.
+
+### Release status
+
+`vyre@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+
+### Ownership
+
+`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
+and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
+`docs/OWNERSHIP.md` after changing that registry.
+<!-- END GENERATED CRATE CONTRACT -->
