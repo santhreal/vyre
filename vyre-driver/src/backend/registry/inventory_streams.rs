@@ -1,12 +1,33 @@
 //! Inventory streams contributed by linked backend crates.
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use vyre_foundation::ir::OpId;
+use vyre_foundation::operation::{OperationRegistry, TargetOperationFacet};
 
 use super::grid_sync_split::wrap_grid_sync_split;
 use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
 use vyre_megakernel::TargetCompiler;
+
+struct RegisteredOperationSupport {
+    id: &'static str,
+    operations: &'static HashSet<OpId>,
+}
+
+impl crate::backend::Backend for RegisteredOperationSupport {
+    fn id(&self) -> &'static str {
+        self.id
+    }
+
+    fn version(&self) -> &'static str {
+        "registered-target-compiler"
+    }
+
+    fn supported_ops(&self) -> &HashSet<OpId> {
+        self.operations
+    }
+}
 
 /// One backend constructor contributed by a linked backend crate.
 ///
@@ -76,6 +97,45 @@ impl BackendRegistration {
 }
 
 inventory::collect!(BackendRegistration);
+
+/// Return target compiler facets keyed by canonical semantic operation identity.
+///
+/// A compiler-capable backend contributes a facet when the canonical neutral
+/// program contains only operation IDs advertised by that backend.
+#[must_use]
+pub fn registered_target_operation_facets() -> &'static [TargetOperationFacet] {
+    static FACETS: LazyLock<Box<[TargetOperationFacet]>> = LazyLock::new(|| {
+        let operations = OperationRegistry::global()
+            .iter()
+            .filter_map(|operation| operation.program().map(|program| (operation.id, program)))
+            .collect::<Vec<_>>();
+        let mut facets = Vec::new();
+        for backend in registered_backends()
+            .iter()
+            .copied()
+            .filter(|backend| backend.target_compiler.is_some())
+        {
+            let support = RegisteredOperationSupport {
+                id: backend.id,
+                operations: (backend.supported_ops)(),
+            };
+            for (operation_id, program) in &operations {
+                if crate::backend::validate_program(program, &support).is_ok() {
+                    facets.push(TargetOperationFacet {
+                        operation_id: *operation_id,
+                        target_id: backend.id,
+                        version: 1,
+                    });
+                }
+            }
+        }
+        facets.sort_unstable_by(|left, right| {
+            (left.operation_id, left.target_id).cmp(&(right.operation_id, right.target_id))
+        });
+        facets.into_boxed_slice()
+    });
+    &FACETS
+}
 
 /// Per-backend precedence rank registered alongside its
 /// [`BackendRegistration`]. Lower rank wins in router selection.

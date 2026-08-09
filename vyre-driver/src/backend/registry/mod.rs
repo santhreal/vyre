@@ -17,5 +17,6 @@ pub use acquire::{
     registered_backends_by_precedence_slice,
 };
 pub use inventory_streams::{
-    registered_backends, BackendCapability, BackendPrecedence, BackendRegistration,
+    registered_backends, registered_target_operation_facets, BackendCapability, BackendPrecedence,
+    BackendRegistration,
 };

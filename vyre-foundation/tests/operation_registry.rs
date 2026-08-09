@@ -2,8 +2,7 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::operation::{
-    target_operation_facets, OperationRegistration, OperationRegistry, OperationTier,
-    TargetOperationFacet, TolerancePolicy,
+    OperationRegistration, OperationRegistry, OperationTier, TolerancePolicy,
 };
 
 const OP_ID: &str = "fixture.operation_registry.identity";
@@ -28,19 +27,10 @@ inventory::submit! {
     .with_tolerance(TolerancePolicy::f32_ulp(2))
 }
 
-inventory::submit! {
-    TargetOperationFacet {
-        operation_id: OP_ID,
-        target_id: "fixture-target",
-        version: 1,
-    }
-}
-
 /// WHY: one semantic identity must resolve its program, derived effects,
-/// capabilities, fixture policy, tolerance, and independently registered target
-/// facets from one process-wide catalog.
+/// capabilities, fixture policy, and tolerance from one process-wide catalog.
 #[test]
-fn operation_identity_resolves_semantics_and_target_facets() {
+fn operation_identity_resolves_semantics() {
     let registration = OperationRegistry::global()
         .get(OP_ID)
         .expect("fixture operation must be discoverable");
@@ -58,11 +48,4 @@ fn operation_identity_resolves_semantics_and_target_facets() {
         .required_capabilities()
         .expect("capabilities must derive");
     assert_eq!(capabilities.max_workgroup_size, [1, 1, 1]);
-
-    let facets = target_operation_facets()
-        .filter(|facet| facet.operation_id == OP_ID)
-        .collect::<Vec<_>>();
-    assert_eq!(facets.len(), 1);
-    assert_eq!(facets[0].target_id, "fixture-target");
-    assert_eq!(facets[0].version, 1);
 }

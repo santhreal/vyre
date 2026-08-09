@@ -310,10 +310,3 @@ pub struct TargetOperationFacet {
     /// Target facet schema version.
     pub version: u32,
 }
-
-inventory::collect!(TargetOperationFacet);
-
-/// Iterate linked target facets without allowing them to redefine semantics.
-pub fn target_operation_facets() -> impl Iterator<Item = &'static TargetOperationFacet> {
-    inventory::iter::<TargetOperationFacet>.into_iter()
-}
