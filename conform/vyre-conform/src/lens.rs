@@ -21,6 +21,7 @@ use vyre_libs::fixture_catalog::{
 use vyre_reference::value::Value;
 
 use crate::fp_parity::{compare_output_buffers, BufferParity};
+use crate::production::ProductionSession;
 
 /// Outcome of running one lens against one op.
 #[derive(Debug)]
@@ -231,15 +232,6 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
             ),
         };
     }
-    let config = match dispatch_config_for(&program) {
-        Ok(config) => config,
-        Err(detail) => {
-            return LensOutcome::Fail {
-                case_index: 0,
-                detail,
-            };
-        }
-    };
 
     let cases = test_inputs();
     if cases.is_empty() {
@@ -251,6 +243,27 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
             ),
         };
     }
+    let registration = match vyre_driver::backend::backend_registration(backend.id()) {
+        Ok(registration) => registration,
+        Err(error) => {
+            return LensOutcome::Fail {
+                case_index: 0,
+                detail: format!("backend `{}` registration failed: {error}", backend.id()),
+            };
+        }
+    };
+    let production = match ProductionSession::compile(&program, registration) {
+        Ok(session) => session,
+        Err(error) => {
+            return LensOutcome::Fail {
+                case_index: 0,
+                detail: format!(
+                    "backend `{}` production compilation failed: {error}",
+                    backend.id()
+                ),
+            };
+        }
+    };
     for (index, inputs) in cases.iter().enumerate() {
         let cpu = match run_cpu(&program, inputs) {
             Ok(outputs) => outputs,
@@ -262,12 +275,15 @@ pub fn cpu_vs_backend(entry: &OpEntry, backend: &dyn VyreBackend) -> LensOutcome
             }
         };
         let borrowed_inputs: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        let gpu = match backend.dispatch_borrowed(&program, &borrowed_inputs, &config) {
+        let gpu = match production.submit(&borrowed_inputs) {
             Ok(outputs) => outputs,
             Err(error) => {
                 return LensOutcome::Fail {
                     case_index: index,
-                    detail: format!("backend `{}` dispatch failed: {error}", backend.id()),
+                    detail: format!(
+                        "backend `{}` artifact submission failed: {error}",
+                        backend.id()
+                    ),
                 };
             }
         };
@@ -656,15 +672,16 @@ fn gpu_convergence(
     max_iterations: u32,
     current_idx: usize,
     next_idx: usize,
-    config: &DispatchConfig,
+    _config: &DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, LoopError> {
     let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
     let mut prev_next: Vec<u8> = Vec::new();
+    let production = production_session(backend, program)?;
     for _ in 0..max_iterations {
         let borrowed_state: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
-        let outputs = backend
-            .dispatch_borrowed(program, &borrowed_state, config)
-            .map_err(LoopError::Backend)?;
+        let outputs = production
+            .submit(&borrowed_state)
+            .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))?;
         merge_rw(&mut state, &outputs, program);
         if state.get(next_idx) == Some(&prev_next) {
             return Ok(state);
@@ -680,6 +697,16 @@ enum LoopError {
     Reference(Error),
     Backend(BackendError),
     DidNotConverge,
+}
+
+fn production_session(
+    backend: &dyn VyreBackend,
+    program: &Program,
+) -> Result<ProductionSession, LoopError> {
+    let registration =
+        vyre_driver::backend::backend_registration(backend.id()).map_err(LoopError::Backend)?;
+    ProductionSession::compile(program, registration)
+        .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))
 }
 
 fn cpu_fixpoint(
@@ -714,9 +741,10 @@ fn gpu_fixpoint(
     initial_inputs: &[Vec<u8>],
     flag_index: usize,
     contract: &FixpointContract,
-    config: &DispatchConfig,
+    _config: &DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, LoopError> {
     let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
+    let production = production_session(backend, program)?;
     for _ in 0..contract.max_iterations {
         if let Some(buffer) = state.get_mut(flag_index) {
             if buffer.len() >= 4 {
@@ -724,9 +752,9 @@ fn gpu_fixpoint(
             }
         }
         let borrowed_state: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
-        let outputs = backend
-            .dispatch_borrowed(program, &borrowed_state, config)
-            .map_err(LoopError::Backend)?;
+        let outputs = production
+            .submit(&borrowed_state)
+            .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))?;
         merge_rw(&mut state, &outputs, program);
         if flag_word(&state, flag_index) == 0 {
             return Ok(state);
@@ -736,10 +764,8 @@ fn gpu_fixpoint(
 }
 
 fn merge_rw(state: &mut [Vec<u8>], outputs: &[Vec<u8>], program: &Program) {
-    // `vyre_reference::reference_eval` (and `backend.dispatch`) return only the
-    // ReadWrite buffers in declaration order. Walk the declarations in
-    // the same order and splice each RW output back into the
-    // corresponding slot in `state`.
+    // Reference and production artifact execution return writable buffers in
+    // canonical binding order. Walk the declarations in the same order.
     let mut out_iter = outputs.iter();
     for (slot, decl) in state.iter_mut().zip(program.buffers().iter()) {
         if matches!(decl.access(), BufferAccess::ReadWrite) {

@@ -131,9 +131,6 @@ pub use vyre_runtime::{
     PersistentExecutor, RecoveryClass, RetainedArtifactSession,
 };
 
-/// Execution adapter for neutral C preprocessing programs.
-pub mod c;
-
 /// Canonical scan compilation, session, paging, residency, and readback owner.
 pub use vyre_scan as scan;
 
