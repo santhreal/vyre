@@ -1,19 +1,12 @@
-//! Runtime-cache compatibility for AOT-emitted artifacts (audit P0 #26).
+//! Runtime-cache compatibility for canonical AOT envelopes.
 //!
-//! `vyre-runtime`'s `DiskCache` stores compiled pipeline blobs as
-//! `<payload bytes><32-byte BLAKE3 footer>` keyed by
-//! `vyre_runtime::PipelineFingerprint::of(&Program)`. The same algorithm now
-//! lives in `vyre_foundation::optimizer::pipeline_fingerprint_bytes`, so an
-//! AOT producer can write a runtime-cache-compatible blob alongside its
-//! self-contained submission bundle. A consumer that already runs through
-//! the runtime cache then picks up the AOT blob without any additional
-//! plumbing.
+//! Cache lookup and AOT packaging use the neutral artifact digest. Target
+//! payloads remain authenticated attachments and do not create a second
+//! semantic identity.
 
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-
-use vyre_foundation::ir::Program;
 
 /// Errors emitted by [`emit_runtime_cache_blob`].
 #[derive(Debug, thiserror::Error)]
@@ -33,10 +26,7 @@ pub enum RuntimeCacheError {
     CanonicalArtifact(#[from] vyre_megakernel::CompileError),
 }
 
-/// Write the canonical artifact envelope to `cache_dir` with a BLAKE3 footer.
-///
-/// `program` supplies the existing cache lookup key while `artifact` supplies
-/// the sole versioned artifact representation stored as the cache payload.
+/// Write a canonical artifact envelope under its neutral artifact digest.
 ///
 /// Returns the absolute path of the file written.
 ///
@@ -45,8 +35,7 @@ pub enum RuntimeCacheError {
 /// Returns [`RuntimeCacheError::CanonicalArtifact`] when the envelope cannot
 /// encode, or [`RuntimeCacheError::Io`] when the atomic cache write fails.
 pub fn emit_runtime_cache_blob(
-    program: &Program,
-    artifact: &crate::artifact::CompiledArtifact,
+    envelope: &vyre_megakernel::ArtifactEnvelope,
     cache_dir: &Path,
 ) -> Result<PathBuf, RuntimeCacheError> {
     fs::create_dir_all(cache_dir).map_err(|source| RuntimeCacheError::Io {
@@ -54,9 +43,9 @@ pub fn emit_runtime_cache_blob(
         source,
     })?;
 
-    let envelope_bytes = artifact.envelope().to_bytes()?;
+    let envelope_bytes = envelope.to_bytes()?;
 
-    let fingerprint = vyre_foundation::optimizer::pipeline_fingerprint_bytes(program);
+    let fingerprint = envelope.neutral().digest().0;
     let hex = fingerprint_hex(&fingerprint);
     let final_path = cache_dir.join(format!("{hex}.bin"));
     let tmp_path = cache_dir.join(format!(".{hex}.bin.tmp"));
@@ -137,9 +126,9 @@ mod tests {
             &program,
             (0..1024).map(|index| (index % 251) as u8).collect(),
         );
-        let envelope_bytes = artifact.envelope().to_bytes().unwrap();
+        let envelope_bytes = artifact.to_bytes().unwrap();
         let dir = tempfile::tempdir().expect("Fix: tempdir must succeed");
-        let path = emit_runtime_cache_blob(&program, &artifact, dir.path())
+        let path = emit_runtime_cache_blob(&artifact, dir.path())
             .expect("Fix: emit must succeed for a valid canonical artifact");
 
         let blob = std::fs::read(&path).expect("Fix: blob must be readable");
@@ -153,50 +142,15 @@ mod tests {
     #[test]
     fn emit_filename_matches_runtime_fingerprint() {
         let program = add_one_program();
-        let artifact =
-            crate::compile::artifact_fixture(&program, b"\x00\x01\x02\x03".to_vec());
+        let artifact = crate::compile::artifact_fixture(&program, b"\x00\x01\x02\x03".to_vec());
         let dir = tempfile::tempdir().expect("Fix: tempdir must succeed");
-        let path = emit_runtime_cache_blob(&program, &artifact, dir.path())
-            .expect("Fix: emit must succeed");
+        let path = emit_runtime_cache_blob(&artifact, dir.path()).expect("Fix: emit must succeed");
 
-        let expected_fingerprint = vyre_foundation::optimizer::pipeline_fingerprint_bytes(&program);
+        let expected_fingerprint = artifact.neutral().digest().0;
         let expected_filename = format!("{}.bin", fingerprint_hex(&expected_fingerprint));
         assert_eq!(
             path.file_name().and_then(|s| s.to_str()),
             Some(expected_filename.as_str())
-        );
-    }
-
-    #[test]
-    fn buffer_declaration_order_does_not_change_fingerprint() {
-        // Audit P0 #26 invariant: AOT and runtime must hash to the same key
-        // for semantically-equal Programs whose buffer decls happen to be in
-        // a different order.
-        let p1 = Program::wrapped(
-            vec![
-                BufferDecl::read("a", 0, DataType::U32).with_count(64),
-                BufferDecl::read("b", 1, DataType::U32).with_count(64),
-                BufferDecl::output("out", 2, DataType::U32)
-                    .with_count(64)
-                    .with_output_byte_range(0..256),
-            ],
-            [64, 1, 1],
-            vec![Node::return_()],
-        );
-        let p2 = Program::wrapped(
-            vec![
-                BufferDecl::read("b", 1, DataType::U32).with_count(64),
-                BufferDecl::output("out", 2, DataType::U32)
-                    .with_count(64)
-                    .with_output_byte_range(0..256),
-                BufferDecl::read("a", 0, DataType::U32).with_count(64),
-            ],
-            [64, 1, 1],
-            vec![Node::return_()],
-        );
-        assert_eq!(
-            vyre_foundation::optimizer::pipeline_fingerprint_bytes(&p1),
-            vyre_foundation::optimizer::pipeline_fingerprint_bytes(&p2),
         );
     }
 }

@@ -1,22 +1,21 @@
 use std::collections::BTreeMap;
 
 use vyre_aot::{
-    target_payload_format, CompiledArtifact, Target, TargetEntryPoint, TargetPayload,
+    ArtifactEnvelope, Target, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
-use vyre_megakernel::{
-    compile, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget,
-};
+use vyre_megakernel::target::{TargetModuleBundle, TargetModuleImage};
+use vyre_megakernel::{compile, CompileRequest, Digest, ExternalFacts, SearchBudget};
 
-pub(crate) fn compiled_artifact() -> CompiledArtifact {
+pub(crate) fn compiled_artifact() -> ArtifactEnvelope {
     compiled_artifact_with_grid([1, 1, 1])
 }
 
-pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifact {
+pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelope {
     let mut graph = ProgramGraph::new();
     graph
         .add_external_value(
@@ -77,9 +76,18 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifa
         .find(|resource| resource.name == "out")
         .unwrap()
         .value;
+    let group = &neutral.fusion()[0];
+    let module_bytes = TargetModuleBundle::new(vec![TargetModuleImage {
+        group: group.id,
+        stage: group.stage,
+        entry_point: "main".into(),
+        bytes: b"target-payload-fixture".to_vec(),
+    }])
+    .to_bytes()
+    .unwrap();
     let payload = TargetPayload::new(
         &neutral,
-        target_payload_format(Target::Ptx).unwrap(),
+        TargetPayloadFormat::new(Target::Ptx.aot_target_id(), 1).unwrap(),
         vec![TargetEntryPoint {
             name: "main".into(),
             node,
@@ -100,16 +108,10 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifa
                 },
             ],
         }],
-        b"target-payload-fixture".to_vec(),
+        module_bytes,
     )
     .unwrap();
     let mut envelope = ArtifactEnvelope::new(neutral);
     envelope.attach_target_payload(payload).unwrap();
-    CompiledArtifact::new(
-        Target::Ptx,
-        envelope,
-        vyre_aot::VERSION,
-        vec![1, 2, 3, 4, 5, 6, 7, 8],
-    )
-    .unwrap()
+    envelope
 }

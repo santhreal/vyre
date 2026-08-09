@@ -1,7 +1,7 @@
 //! Submission-bundle packager.
 //!
-//! Takes a [`CompiledArtifact`] + uncompressed weight bytes + a launcher
-//! source tree and writes the on-disk submission directory:
+//! Takes an authenticated [`ArtifactEnvelope`] plus uncompressed weight bytes
+//! and a launcher source tree and writes the on-disk submission directory:
 //!
 //! ```text
 //! <bundle_dir>/
@@ -33,15 +33,17 @@ fn sha256_hex(bytes: &[u8]) -> String {
 }
 use thiserror::Error;
 
-use crate::artifact::CompiledArtifact;
+use crate::artifact::Target;
 use crate::launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 use crate::manifest::Manifest;
+use crate::VERSION;
+use vyre_megakernel::{ArtifactEnvelope, TargetPayload};
 
 const METRIC_RECORD_WORDS: u32 = 8;
 
-/// Produced layout of a bundle.
+/// Files written for one deployable artifact envelope.
 #[derive(Debug, Clone)]
-pub struct Bundle {
+pub struct DeploymentBundle {
     /// Files written to disk relative to bundle root, with absolute paths.
     pub files: Vec<PathBuf>,
 }
@@ -84,16 +86,19 @@ pub enum BundleError {
 /// upload to the `params` device buffer after Brotli decompression).
 pub fn bundle(
     out_dir: &Path,
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    target: Target,
     weights: &[u8],
     artifact_name: &str,
     launcher_opts: &LauncherOpts,
     notes: &str,
-) -> Result<Bundle, BundleError> {
-    validate_artifact_for_bundle(artifact, weights)?;
-    let launcher_tree: BTreeMap<PathBuf, String> = emit_launcher_rust(artifact, launcher_opts)?;
+) -> Result<DeploymentBundle, BundleError> {
+    validate_artifact_for_bundle(envelope, target, weights)?;
+    let launcher_tree: BTreeMap<PathBuf, String> =
+        emit_launcher_rust(envelope, target, launcher_opts)?;
     fs::create_dir_all(out_dir)?;
-    let mut written = write_package_files(out_dir, artifact, weights, artifact_name, notes)?;
+    let mut written =
+        write_package_files(out_dir, envelope, target, weights, artifact_name, notes)?;
 
     // 5. Write launcher source tree.
     let launcher_root = out_dir.join(&launcher_opts.crate_name);
@@ -127,32 +132,34 @@ pub fn bundle(
 
     written.push(readme_path);
 
-    Ok(Bundle { files: written })
+    Ok(DeploymentBundle { files: written })
 }
 
 /// Write the canonical envelope, weights, and manifest without generating a launcher.
 pub fn package_artifact(
     out_dir: &Path,
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    target: Target,
     weights: &[u8],
     artifact_name: &str,
     notes: &str,
-) -> Result<Bundle, BundleError> {
-    validate_artifact_for_bundle(artifact, weights)?;
+) -> Result<DeploymentBundle, BundleError> {
+    validate_artifact_for_bundle(envelope, target, weights)?;
     fs::create_dir_all(out_dir)?;
-    Ok(Bundle {
-        files: write_package_files(out_dir, artifact, weights, artifact_name, notes)?,
+    Ok(DeploymentBundle {
+        files: write_package_files(out_dir, envelope, target, weights, artifact_name, notes)?,
     })
 }
 
 fn write_package_files(
     out_dir: &Path,
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    target: Target,
     weights: &[u8],
     artifact_name: &str,
     notes: &str,
 ) -> Result<Vec<PathBuf>, BundleError> {
-    let envelope_bytes = artifact.envelope().to_bytes()?;
+    let envelope_bytes = envelope.to_bytes()?;
     let envelope_compressed = lzma_compress(&envelope_bytes)?;
     let envelope_filename = "artifact.vmk.lzma".to_string();
     let envelope_path = out_dir.join(&envelope_filename);
@@ -163,22 +170,21 @@ fn write_package_files(
     let weights_path = out_dir.join(&weights_filename);
     fs::write(&weights_path, &weights_compressed)?;
 
-    let target_payload = artifact.target_payload()?;
+    let target_payload = target_payload(envelope, target)?;
     let manifest = Manifest {
         schema: Manifest::SCHEMA_VERSION.to_string(),
-        aot_version: artifact.aot_version().to_string(),
+        aot_version: VERSION.to_string(),
         artifact_name: artifact_name.to_string(),
-        target: artifact.target,
+        target,
         envelope_file: envelope_filename,
         envelope_compression: "lzma".to_string(),
         envelope_sha256_hex: sha256_hex(&envelope_bytes),
-        neutral_artifact_digest_hex: digest_hex(artifact.envelope().neutral().digest()),
+        neutral_artifact_digest_hex: digest_hex(envelope.neutral().digest()),
         target_payload_digest_hex: digest_hex(target_payload.digest()),
         weights_file: weights_filename,
         weights_compression: "brotli-11".to_string(),
         weights_sha256_hex: sha256_hex(weights),
         notes: notes.to_string(),
-        vsa_fingerprint: artifact.vsa_fingerprint().to_vec(),
     };
     let manifest_path = out_dir.join("manifest.json");
     fs::write(&manifest_path, serde_json::to_vec_pretty(&manifest)?)?;
@@ -188,7 +194,7 @@ fn write_package_files(
 /// Read and authenticate a packaged canonical artifact envelope.
 pub fn read_bundle_artifact(
     bundle_dir: &Path,
-) -> Result<(Manifest, CompiledArtifact), BundleError> {
+) -> Result<(Manifest, ArtifactEnvelope), BundleError> {
     let manifest_bytes = fs::read(bundle_dir.join("manifest.json"))?;
     let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
     if manifest.schema != Manifest::SCHEMA_VERSION {
@@ -211,31 +217,28 @@ pub fn read_bundle_artifact(
             "canonical envelope SHA-256 does not match manifest identity".to_string(),
         ));
     }
-    let envelope = vyre_megakernel::ArtifactEnvelope::from_bytes(&envelope_bytes)?;
-    let artifact = CompiledArtifact::new(
-        manifest.target,
-        envelope,
-        manifest.aot_version.clone(),
-        manifest.vsa_fingerprint.clone(),
-    )?;
-    if digest_hex(artifact.envelope().neutral().digest()) != manifest.neutral_artifact_digest_hex {
+    let envelope = ArtifactEnvelope::from_bytes(&envelope_bytes)?;
+    if digest_hex(envelope.neutral().digest()) != manifest.neutral_artifact_digest_hex {
         return Err(BundleError::InvalidArtifact(
             "neutral artifact digest does not match manifest identity".to_string(),
         ));
     }
-    if digest_hex(artifact.target_payload()?.digest()) != manifest.target_payload_digest_hex {
+    if digest_hex(target_payload(&envelope, manifest.target)?.digest())
+        != manifest.target_payload_digest_hex
+    {
         return Err(BundleError::InvalidArtifact(
             "target payload digest does not match manifest identity".to_string(),
         ));
     }
-    Ok((manifest, artifact))
+    Ok((manifest, envelope))
 }
 
 fn validate_artifact_for_bundle(
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    target: Target,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    let payload = artifact.target_payload()?;
+    let payload = target_payload(envelope, target)?;
     if payload.bytes().is_empty() {
         return Err(BundleError::InvalidArtifact(
             "target payload bytes are empty".to_string(),
@@ -249,7 +252,7 @@ fn validate_artifact_for_bundle(
             "target entry has no canonical resource bindings".to_string(),
         ));
     }
-    let neutral = artifact.envelope().neutral();
+    let neutral = envelope.neutral();
     let geometry = neutral
         .geometry()
         .iter()
@@ -261,8 +264,8 @@ fn validate_artifact_for_bundle(
         })?;
     validate_axes("workgroup_size", geometry.workgroup_size)?;
     validate_axes("grid_size", entry.grid_size)?;
-    validate_resource_bindings(artifact)?;
-    validate_weight_payload_fits_first_finite_resource(artifact, weights)
+    validate_resource_bindings(envelope, payload)?;
+    validate_weight_payload_fits_first_finite_resource(envelope, payload, weights)
 }
 
 fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
@@ -282,9 +285,12 @@ fn validate_axes(label: &str, axes: [u32; 3]) -> Result<(), BundleError> {
     Ok(())
 }
 
-fn validate_resource_bindings(artifact: &CompiledArtifact) -> Result<(), BundleError> {
-    let neutral = artifact.envelope().neutral();
-    let entry = &artifact.target_payload()?.entries()[0];
+fn validate_resource_bindings(
+    envelope: &ArtifactEnvelope,
+    payload: &TargetPayload,
+) -> Result<(), BundleError> {
+    let neutral = envelope.neutral();
+    let entry = &payload.entries()[0];
     let mut metrics_resources = 0_usize;
     for binding in &entry.resource_bindings {
         let resource = neutral
@@ -326,17 +332,17 @@ fn validate_resource_bindings(artifact: &CompiledArtifact) -> Result<(), BundleE
 }
 
 fn validate_weight_payload_fits_first_finite_resource(
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    payload: &TargetPayload,
     weights: &[u8],
 ) -> Result<(), BundleError> {
-    let entry = &artifact.target_payload()?.entries()[0];
+    let entry = &payload.entries()[0];
     let first_binding = entry
         .resource_bindings
         .iter()
         .min_by_key(|binding| binding.slot)
         .expect("validated non-empty target resource bindings");
-    let first = artifact
-        .envelope()
+    let first = envelope
         .neutral()
         .resources()
         .iter()
@@ -355,6 +361,28 @@ fn validate_weight_payload_fits_first_finite_resource(
         )));
     }
     Ok(())
+}
+
+fn target_payload(
+    envelope: &ArtifactEnvelope,
+    target: Target,
+) -> Result<&TargetPayload, BundleError> {
+    let identity = target.aot_target_id();
+    let mut matches = envelope
+        .target_payloads()
+        .iter()
+        .filter(|payload| payload.format().identity() == identity);
+    let payload = matches.next().ok_or_else(|| {
+        BundleError::InvalidArtifact(format!(
+            "artifact envelope has no `{identity}` target payload"
+        ))
+    })?;
+    if matches.next().is_some() {
+        return Err(BundleError::InvalidArtifact(format!(
+            "artifact envelope has multiple `{identity}` target payload versions"
+        )));
+    }
+    Ok(payload)
 }
 
 fn digest_hex(digest: vyre_megakernel::Digest) -> String {

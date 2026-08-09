@@ -20,7 +20,6 @@ fn manifest_round_trips_through_serde_json() {
         weights_compression: "brotli-11".to_string(),
         weights_sha256_hex: "44".repeat(32),
         notes: "round-trip".to_string(),
-        vsa_fingerprint: vec![1, 2, 3, 4, 5, 6, 7, 8],
     };
 
     let bytes = serde_json::to_vec_pretty(&original).expect("manifest must serialize");

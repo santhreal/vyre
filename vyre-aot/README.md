@@ -1,84 +1,116 @@
 # vyre-aot
 
-Ahead-of-time compilation for vyre Programs. Lowers a `Program` once,
-emits target-native bytes plus a self-contained Rust launcher binary,
-and removes the entire vyre runtime from the deployed image.
-
-## What this crate is
-
-vyre is a JIT-friendly substrate: at runtime, `vyre-driver` routes a
-`Program` to a backend module loaded by the GPU driver. That works
-when the consumer can ship the runtime alongside the artifact. For
-embedded targets and code-budget-constrained submissions
-(parameter-golf is the motivating case: `code_bytes +
-compressed_model_bytes ≤ 16,000,000`) we need the compiler to disappear
-at runtime. Only the target module and a thin launcher remain.
+Ahead-of-time packaging for canonical Vyre compiler artifacts.
 
 ## Compile flow
 
+```text
+Program adapter
+  -> validated ProgramGraph
+  -> vyre-megakernel neutral Artifact
+  -> registered pure target compiler
+  -> ArtifactEnvelope
+  -> DeploymentBundle
 ```
-Program ─► vyre-driver AOT emitter registry
-        ─► target module bytes
-        ─► [optional] brotli or lzma compression
-        ─► launcher.rs (target glue, byte-pinned to the artifact)
-        ─► single binary
+
+`compile` is a convenience adapter for a single frontend `Program`. It builds
+the graph request, invokes the same neutral compiler used by live execution,
+and attaches the payload returned by the registered target compiler facet.
+`attach_target` accepts an existing neutral `Artifact` when the caller already
+owns graph compilation.
+
+Packaging accepts `ArtifactEnvelope` directly. The deployment manifest stores
+package metadata and the exact neutral and target payload digests. Dispatch
+geometry, resource bindings, entry points, and target bytes remain owned by the
+authenticated envelope.
+
+## Deployment bundle
+
+`package_artifact` writes:
+
+```text
+<bundle>/
+  artifact.vmk.lzma
+  weights.brotli
+  manifest.json
 ```
 
-The launcher carries no vyre dependency. It contains exactly the
-register / launch / readback code path the artifact needs. Module
-loading happens through the concrete driver crate that owns the target.
-The launcher is byte-stable across machines.
+`bundle` also emits a target-owned launcher source tree. The generated loader
+authenticates the envelope, selects the manifest target, decodes its canonical
+target-module bundle, and projects the compiler ABI before device allocation.
+The launcher does not run semantic optimization, lowering, or target
+compilation.
 
-## Feature flags
+## Target registration
 
-| Feature | Default | Purpose                                                           |
-|---------|---------|-------------------------------------------------------------------|
-| `secondary_text`   | off     | Enable tests for the primary text target when an emitter is linked. |
+The crate has no concrete driver dependency. The final binary links the
+concrete driver crate that contributes the matching target compiler and
+launcher factories through `vyre-driver` inventory.
 
-The crate itself does not depend on concrete drivers. Binaries that need a
-target link the concrete driver crate that registers the matching AOT emitter.
+Missing compiler or launcher facets fail with `TargetNotEnabled`. Packaging
+rejects missing, ambiguous, empty, digest-mismatched, or ABI-incompatible target
+payloads.
 
-## Configuration
+## Cache identity
 
-Tier-A operational knobs live in `CONFIG.md` (target SM, optimization
-profile, compression algorithm, cache root, verbosity). Tier-B
-contracts live under `rules/aot/*.toml` for per-target shape budgets.
-Embedding tools surface the same env vars verbatim.
+`emit_runtime_cache_blob` names envelopes by the neutral artifact digest. AOT
+packaging and live runtime caches therefore use the same semantic identity.
+Target payloads remain authenticated attachments and do not create a second
+program fingerprint.
 
-## Architecture decisions
+## Public modules
 
-- **Thin launcher.** The launcher is generated, not linked. We
-  control its size byte-for-byte so the parameter-golf budget is met.
-- **Compression in the artifact, not the binary.** Target bytes are
-  brotli- or lzma-compressed inside the launcher; decompression
-  happens once at startup.
-- **No JIT at deploy time.** vyre-aot artifacts do not depend on a
-  runtime JIT path. The deployed binary contains only the target loader
-  path and nothing else from the vyre stack.
-- **Backend-owned emitters.** Concrete drivers register AOT emitters through
-  `vyre-driver`; vyre-aot consumes the registry and never imports a concrete
-  driver.
+- `compile`: canonical graph compilation and target attachment.
+- `bundle`: deployment packaging and authenticated package reads.
+- `launcher`: target-owned launcher source generation.
+- `manifest`: versioned deployment metadata.
+- `cache`: artifact-digest runtime cache emission.
 
-## Where to look
+<!-- BEGIN GENERATED CRATE CONTRACT -->
+## Crate contract
 
-- `src/lib.rs`: public surface (`AotCompileOptions`, `compile`,
-  artifact format).
-- `src/launcher/`: generated launcher templates.
-- `src/compress/`: brotli + lzma wrappers.
-- `CONFIG.md`: Tier A/B configurability surface.
-- `OWNERSHIP.md` (workspace root): dependency boundary.
-- The `vyre-runtime` README: for what the artifact replaces.
+This section is generated by `python3 scripts/crate_readmes.py --write` from
+the crate manifest, release train, ownership registry, and crate-guide metadata.
 
-## Conformance
+### Purpose
 
-Artifacts produced by vyre-aot must run byte-identical to the live-runtime
-path on the conformance corpus. The conformance runner verifies parity
-across `runtime` and every linked AOT target for every Cat-A op.
-Drift is publish-blocking.
+Plan and package ahead-of-time artifacts without owning live backend execution.
 
-## Anti-goals
+### Boundaries
 
-- vyre-aot is not a concrete-backend-specific tool. Targets are registered
-  by concrete driver crates.
-- vyre-aot is not a kernel-author surface. Use `vyre-libs` to author
-  programs; `vyre-aot` only freezes them.
+The `aot-artifacts` owner maintains this `packaging` crate at `vyre-aot`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec`.
+Any other normal or build dependency requires an ownership-registry change.
+
+### Minimal real example
+
+Run the checked-in behavior from `vyre-aot/examples/vyre_aot_release_surface.rs`:
+
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-aot --example vyre_aot_release_surface
+```
+
+### Features
+
+- Manifest features: `default`, `ptx`
+- Default feature members: None
+
+### Errors and unsupported behavior
+
+Invalid plans, incompatible metadata, unsupported targets, and serialization failures prevent an artifact from being emitted or accepted.
+
+### Testing
+
+Use [`docs/testing/vyre-aot.md`](../docs/testing/vyre-aot.md) for exact commands, Cargo targets, hardware
+requirements, evidence outputs, expected skips, and failure semantics.
+
+### Release status
+
+`vyre-aot@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+
+### Ownership
+
+`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
+and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
+`docs/OWNERSHIP.md` after changing that registry.
+<!-- END GENERATED CRATE CONTRACT -->

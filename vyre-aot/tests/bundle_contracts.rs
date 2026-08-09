@@ -2,7 +2,7 @@
 
 mod common;
 
-use vyre_aot::{bundle, package_artifact, BundleError, LauncherError, LauncherOpts};
+use vyre_aot::{bundle, package_artifact, BundleError, LauncherError, LauncherOpts, Target};
 
 /// Existing launcher behavior remains target-owned after the artifact schema cutover.
 #[test]
@@ -12,6 +12,7 @@ fn bundle_requires_linked_launcher_emitter() {
     let error = bundle(
         directory.path(),
         &artifact,
+        Target::Ptx,
         &[42; 128],
         "test-bundle",
         &LauncherOpts::default(),
@@ -33,6 +34,7 @@ fn bundle_does_not_write_partial_artifacts_without_launcher() {
     let error = bundle(
         directory.path(),
         &artifact,
+        Target::Ptx,
         &[0; 16],
         "launcher-test",
         &LauncherOpts::default(),
@@ -52,7 +54,7 @@ fn package_rejects_weight_payload_larger_than_first_canonical_resource() {
     let parent = tempfile::tempdir().expect("temporary directory must exist");
     let output = parent.path().join("oversized");
     let artifact = common::compiled_artifact();
-    let error = package_artifact(&output, &artifact, &[0; 2048], "oversized", "")
+    let error = package_artifact(&output, &artifact, Target::Ptx, &[0; 2048], "oversized", "")
         .expect_err("oversized weights must fail before package creation");
 
     assert!(matches!(
@@ -70,6 +72,7 @@ fn package_writes_the_canonical_artifact_files() {
     let package = package_artifact(
         directory.path(),
         &artifact,
+        Target::Ptx,
         &[0; 128],
         "canonical",
         "",

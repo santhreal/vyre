@@ -35,12 +35,9 @@ pub struct Manifest {
     /// Free-form package notes.
     #[serde(default)]
     pub notes: String,
-    /// Approximate optimized-program fingerprint retained for cache discovery.
-    #[serde(default)]
-    pub vsa_fingerprint: Vec<u32>,
 }
 
 impl Manifest {
     /// Package schema written by this build.
-    pub const SCHEMA_VERSION: &'static str = "vyre-aot-manifest-v2";
+    pub const SCHEMA_VERSION: &'static str = "vyre-aot-manifest-v3";
 }

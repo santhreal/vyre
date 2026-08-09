@@ -29,13 +29,13 @@ fn trivial_xor_program() -> Program {
 }
 
 #[test]
-fn compile_requires_linked_target_emitter() {
+fn compile_requires_linked_target_compiler() {
     let p = trivial_xor_program();
     let err = compile(&p, Target::Ptx)
-        .expect_err("Fix: vyre-aot must not emit target bytes without a linked driver.");
+        .expect_err("Fix: vyre-aot must not emit target bytes without a linked target compiler.");
     assert!(
         matches!(err, CompileError::TargetNotEnabled(Target::Ptx)),
-        "Fix: missing AOT emitter must report target-not-enabled, got {err:?}."
+        "Fix: missing target compiler must report target-not-enabled, got {err:?}."
     );
 }
 
@@ -43,7 +43,7 @@ fn compile_requires_linked_target_emitter() {
 fn launcher_requires_linked_target_emitter() {
     let artifact = minimal_ptx_artifact_for_template_test();
     let opts = LauncherOpts::default();
-    let err = emit_launcher_rust(&artifact, &opts)
+    let err = emit_launcher_rust(&artifact, Target::Ptx, &opts)
         .expect_err("Fix: target launcher files must come from linked driver crates.");
     assert!(
         matches!(err, LauncherError::TargetNotEnabled("secondary_text")),
@@ -51,6 +51,6 @@ fn launcher_requires_linked_target_emitter() {
     );
 }
 
-fn minimal_ptx_artifact_for_template_test() -> vyre_aot::CompiledArtifact {
+fn minimal_ptx_artifact_for_template_test() -> vyre_aot::ArtifactEnvelope {
     common::compiled_artifact()
 }

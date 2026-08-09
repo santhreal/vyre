@@ -10,7 +10,8 @@ use std::path::PathBuf;
 use thiserror::Error;
 use vyre_driver::aot::{AotLauncherRequest, LauncherDependency};
 
-use crate::artifact::CompiledArtifact;
+use crate::artifact::Target;
+use vyre_megakernel::ArtifactEnvelope;
 
 /// Options controlling launcher emission.
 #[derive(Debug, Clone)]
@@ -44,6 +45,10 @@ pub enum LauncherError {
     /// The target-owned launcher emitter rejected the request.
     #[error("vyre-aot launcher: target emitter failed: {0}")]
     Backend(String),
+
+    /// The envelope does not carry exactly one payload for the selected target.
+    #[error("vyre-aot launcher: invalid artifact envelope: {0}")]
+    InvalidArtifact(String),
 }
 
 /// Emit the Rust launcher source tree.
@@ -57,10 +62,21 @@ pub enum LauncherError {
 /// no linked launcher emitter, or [`LauncherError::Backend`] when that emitter
 /// rejects the request.
 pub fn emit_launcher_rust(
-    artifact: &CompiledArtifact,
+    envelope: &ArtifactEnvelope,
+    selected_target: Target,
     opts: &LauncherOpts,
 ) -> Result<BTreeMap<PathBuf, String>, LauncherError> {
-    let target = artifact.target.aot_target_id();
+    let target = selected_target.aot_target_id();
+    let matching_payloads = envelope
+        .target_payloads()
+        .iter()
+        .filter(|payload| payload.format().identity() == target)
+        .count();
+    if matching_payloads != 1 {
+        return Err(LauncherError::InvalidArtifact(format!(
+            "expected one `{target}` payload, found {matching_payloads}"
+        )));
+    }
     let request = AotLauncherRequest {
         target,
         crate_name: &opts.crate_name,
@@ -105,6 +121,9 @@ lzma-rs = "0.3"
 sha2 = "0.10"
 "#,
     );
+    dependencies.push_str("vyre-megakernel = \"=");
+    dependencies.push_str(env!("CARGO_PKG_VERSION"));
+    dependencies.push_str("\"\n");
     for dep in deps {
         dependencies.push_str(dep.name);
         dependencies.push_str(" = ");
@@ -173,9 +192,9 @@ The release binary is heavily size-optimized:
 {name} <bundle_dir>
 ```
 
-Reads `manifest.json`, `kernel.<ext>.lzma`, and `weights.brotli` from the
-bundle directory. Allocates buffers, uploads weights, launches the kernel,
-and prints the final metrics record on completion.
+Reads `manifest.json`, the authenticated compiler envelope, and
+`weights.brotli` from the bundle directory. Projects target bytes and ABI
+bindings from the envelope before allocation and submission.
 
 Target-owned collective support is {collective_status} in this launcher.
 "#,
@@ -197,50 +216,9 @@ mod tests {
             cargo.contains("sha2 = \"0.10\""),
             "Fix: generated launchers must include sha2 so runtime artifact integrity checks compile."
         );
-    }
-
-    #[test]
-    fn emitted_artifact_loader_verifies_payload_hashes_and_rejects_path_escape() {
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("verify_sha256_hex(")
-                && EMIT_ARTIFACT_LOADER.contains("SHA-256 mismatch"),
-            "Fix: generated launchers must verify decompressed kernel and weight bytes before CUDA load/upload."
-        );
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("validate_bundle_relative_path")
-                && EMIT_ARTIFACT_LOADER.contains("Component::ParentDir"),
-            "Fix: generated launchers must reject manifest paths that escape the bundle root."
-        );
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("read_bundle_file(dir, &manifest.kernel_file)")
-                && EMIT_ARTIFACT_LOADER.contains("read_bundle_file(dir, &manifest.weights_file)"),
-            "Fix: generated launchers must route artifact reads through the validated bundle path helper."
-        );
-    }
-
-    #[test]
-    fn emitted_artifact_loader_preflights_manifest_contract_before_cuda_runtime_work() {
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("validate_manifest_contract(&manifest)?")
-                && EMIT_ARTIFACT_LOADER.contains("MANIFEST_SCHEMA_VERSION")
-                && EMIT_ARTIFACT_LOADER.contains("vyre-aot-manifest-v1"),
-            "Fix: generated launchers must reject incompatible manifest schemas before reading payloads."
-        );
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("validate_dispatch_geometry(&manifest.dispatch)")
-                && EMIT_ARTIFACT_LOADER.contains("runtime-grid placeholders are not supported"),
-            "Fix: generated launchers must reject zero dispatch axes before CUDA module load."
-        );
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("validate_buffer_table(&manifest.buffers)")
-                && EMIT_ARTIFACT_LOADER.contains("both use binding")
-                && EMIT_ARTIFACT_LOADER.contains("metrics records are u32 words"),
-            "Fix: generated launchers must enforce the manifest buffer ABI before CUDA allocation."
-        );
-        assert!(
-            EMIT_ARTIFACT_LOADER.contains("validate_sha256_manifest_field(\"kernel\"")
-                && EMIT_ARTIFACT_LOADER.contains("vsa_fingerprint"),
-            "Fix: generated launchers must preflight digest fields and semantic fingerprints."
-        );
+        assert!(cargo.contains(&format!(
+            "vyre-megakernel = \"={}\"",
+            env!("CARGO_PKG_VERSION")
+        )));
     }
 }
