@@ -1,6 +1,6 @@
 #![allow(unsafe_code)]
+//! Benchmark library types and backend registration support.
 
-#![doc = include_str!("../ARCHITECTURE.md")]
 
 #[cfg(not(target_os = "macos"))]
 use vyre_driver_cuda as _;
