@@ -5,7 +5,7 @@ package = "vyre-megakernel"
 path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
-responsibility = "Compile validated typed Program graphs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy."
+responsibility = "Compile validated typed ProgramGraph, ExternalFacts, and SearchBudget requests into canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy."
 allowed_dependencies = ["vyre-foundation"]
 
 [[crate]]
@@ -182,7 +182,7 @@ path = "vyre-runtime"
 owner = "runtime"
 layer = "runtime"
 responsibility = "Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-self-substrate"]
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-self-substrate"]
 
 [[crate]]
 package = "vyre-libs"
@@ -206,7 +206,7 @@ path = "vyre-aot"
 owner = "aot-artifacts"
 layer = "packaging"
 responsibility = "Plan and package ahead-of-time artifacts without owning live backend execution."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-primitives", "vyre-spec"]
+allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-primitives", "vyre-spec"]
 
 [[crate]]
 package = "vyre-frontend-c"

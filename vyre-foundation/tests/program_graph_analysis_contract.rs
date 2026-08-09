@@ -5,11 +5,11 @@
 use proptest::prelude::*;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphNodeId, GraphOutput, GraphValueId,
-    Program, ProgramGraph, ProgramGraphError, ShapeDim, TensorContract, ValueLifetime,
+    Program, ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
 
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> TensorContract {
-    TensorContract {
+fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Symbol("tokens".into()), ShapeDim::Known(8)],
         access,
@@ -68,7 +68,7 @@ fn linear_graph(node_count: usize) -> ProgramGraph {
                     buffer: "output".into(),
                     name: output_name,
                     contract: contract(BufferAccess::ReadWrite, output_lifetime),
-                    state_successor_of: None,
+                    retained_successor_of: None,
                 }],
             )
             .expect("Fix: analysis fixture node must connect");
@@ -130,11 +130,11 @@ fn non_invocation_lifetimes_always_receive_dedicated_storage() {
         .add_external_values(vec![
             (
                 "weight".into(),
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             ),
             (
                 "state".into(),
-                contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState),
+                contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
             ),
         ])
         .expect("Fix: dedicated values must register");
@@ -153,7 +153,7 @@ fn non_invocation_lifetimes_always_receive_dedicated_storage() {
 /// Proves loop-carried state remains dedicated while predecessor and successor liveness meet at the update node.
 #[test]
 fn state_transition_analysis_preserves_explicit_generations() {
-    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState);
+    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
     let mut graph = ProgramGraph::new();
     let prior = graph
         .add_external_value("state.0", state_contract.clone())
@@ -180,7 +180,7 @@ fn state_transition_analysis_preserves_explicit_generations() {
                 buffer: "state".into(),
                 name: "state.1".into(),
                 contract: state_contract,
-                state_successor_of: Some(prior),
+                retained_successor_of: Some(prior),
             }],
         )
         .expect("Fix: state successor must connect");
@@ -271,7 +271,7 @@ proptest! {
                     buffer: "output".into(),
                     name: "unreachable".into(),
                     contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
-                    state_successor_of: None,
+                    retained_successor_of: None,
                 }],
             )
             .expect_err("Fix: dangling generated identity must fail");

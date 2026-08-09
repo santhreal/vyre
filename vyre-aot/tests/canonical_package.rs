@@ -8,11 +8,11 @@ use vyre_aot::{
     TargetResourceMemory,
 };
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, TensorContract,
+    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, ArtifactRoute, CompileOptions, MegakernelArtifactEnvelope, ValidatedCompileRequest,
+    compile, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget,
 };
 
 fn compiled_artifact() -> CompiledArtifact {
@@ -20,18 +20,18 @@ fn compiled_artifact() -> CompiledArtifact {
     graph
         .add_external_value(
             "params",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(16)],
                 access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::ImmutableWeight,
+                lifetime: ValueLifetime::Invocation,
             },
         )
         .expect("parameter resource must be valid");
     graph
         .add_external_value(
             "out",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(4)],
                 access: BufferAccess::WriteOnly,
@@ -54,10 +54,13 @@ fn compiled_artifact() -> CompiledArtifact {
             Vec::new(),
         )
         .expect("entry node must be valid");
-    let request = ValidatedCompileRequest::new(
+    let request = CompileRequest::new(
         graph,
-        CompileOptions::new(ArtifactRoute::Static, BTreeMap::new(), 1_000_000),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
     )
+    .validate()
     .expect("neutral request must validate");
     let neutral = compile(&request).expect("neutral request must compile");
     let node = neutral.nodes()[0].id;
@@ -100,17 +103,12 @@ fn compiled_artifact() -> CompiledArtifact {
         target_bytes,
     )
     .expect("target payload must bind to neutral artifact");
-    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+    let mut envelope = ArtifactEnvelope::new(neutral);
     envelope
         .attach_target_payload(payload)
         .expect("target payload must attach");
-    CompiledArtifact::new(
-        Target::Ptx,
-        envelope,
-        "0.7.2",
-        vec![1, 2, 3, 4, 5, 6, 7, 8],
-    )
-    .expect("AOT package handle must admit matching payload")
+    CompiledArtifact::new(Target::Ptx, envelope, "0.7.2", vec![1, 2, 3, 4, 5, 6, 7, 8])
+        .expect("AOT package handle must admit matching payload")
 }
 
 /// Regression: AOT package/read must preserve canonical IDs, target bytes, and manifest identities.
@@ -160,5 +158,8 @@ fn package_and_read_round_trip_the_canonical_envelope() {
     );
     assert_eq!(decoded.envelope().neutral().resources()[0].value.0, 0);
     assert_eq!(decoded.envelope().neutral().resources()[1].value.0, 1);
-    assert_eq!(decoded.envelope().neutral().geometry()[0].workgroup_size, [4, 1, 1]);
+    assert_eq!(
+        decoded.envelope().neutral().geometry()[0].workgroup_size,
+        [4, 1, 1]
+    );
 }

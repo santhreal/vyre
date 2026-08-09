@@ -1,8 +1,9 @@
 use thiserror::Error;
 use vyre_megakernel::{
-    CompileError, Diagnostic, MegakernelArtifact, MegakernelArtifactEnvelope, TargetPayload,
-    TargetPayloadFormat,
+    Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetPayload, TargetPayloadFormat,
 };
+
+use crate::pipeline_cache::{PipelineCacheStore, PipelineFingerprint};
 
 /// Failure to authenticate an artifact envelope or select its exact required payload.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -35,20 +36,20 @@ impl From<CompileError> for ArtifactAdmissionError {
 /// Authenticated canonical envelope with one caller-selected exact payload.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AdmittedArtifact {
-    envelope: MegakernelArtifactEnvelope,
+    envelope: ArtifactEnvelope,
     target_payload_index: usize,
 }
 
 impl AdmittedArtifact {
     /// Borrow the authenticated canonical envelope.
     #[must_use]
-    pub const fn envelope(&self) -> &MegakernelArtifactEnvelope {
+    pub const fn envelope(&self) -> &ArtifactEnvelope {
         &self.envelope
     }
 
     /// Borrow the canonical backend-neutral artifact.
     #[must_use]
-    pub const fn neutral(&self) -> &MegakernelArtifact {
+    pub const fn neutral(&self) -> &Artifact {
         self.envelope.neutral()
     }
 
@@ -60,7 +61,7 @@ impl AdmittedArtifact {
 
     /// Consume the admission result and recover its owned canonical envelope.
     #[must_use]
-    pub fn into_envelope(self) -> MegakernelArtifactEnvelope {
+    pub fn into_envelope(self) -> ArtifactEnvelope {
         self.envelope
     }
 }
@@ -70,16 +71,44 @@ pub fn admit_artifact(
     envelope_bytes: &[u8],
     required_format: &TargetPayloadFormat,
 ) -> Result<AdmittedArtifact, ArtifactAdmissionError> {
-    let envelope = MegakernelArtifactEnvelope::from_bytes(envelope_bytes)?;
-    let selected = envelope.require_target_payload(required_format)?;
-    let target_payload_index = envelope
-        .target_payloads()
-        .iter()
-        .position(|payload| std::ptr::eq(payload, selected))
-        .expect("canonical payload selection must borrow an attached payload");
+    let envelope = ArtifactEnvelope::from_bytes(envelope_bytes)?;
+    admit_envelope(envelope, required_format)
+}
 
+/// Authenticate an already-decoded canonical envelope and require one exact payload format.
+///
+/// Prefer this when a producer such as AOT packaging has already decoded the envelope
+/// and only the exact target-format selection remains.
+pub fn admit_envelope(
+    envelope: ArtifactEnvelope,
+    required_format: &TargetPayloadFormat,
+) -> Result<AdmittedArtifact, ArtifactAdmissionError> {
+    let target_payload_index = envelope.require_target_payload_index(required_format)?;
     Ok(AdmittedArtifact {
         envelope,
         target_payload_index,
     })
+}
+
+/// Load verified cache payload bytes and admit them as a canonical envelope.
+///
+/// `DiskCache` / `PipelineCacheStore` are format-agnostic blob stores. AOT
+/// writes `ArtifactEnvelope` bytes as the payload (plus the store's
+/// own BLAKE3 footer, stripped by [`PipelineCacheStore::get`]). Callers that
+/// treat a cache hit as executable MUST run this helper (or
+/// [`admit_artifact`] on the payload) before dispatch. A miss is `Ok(None)`.
+///
+/// # Errors
+///
+/// Returns [`ArtifactAdmissionError`] when payload bytes are present but are
+/// not an authentic envelope with the required target format.
+pub fn admit_cached_artifact(
+    store: &dyn PipelineCacheStore,
+    fingerprint: &PipelineFingerprint,
+    required_format: &TargetPayloadFormat,
+) -> Result<Option<AdmittedArtifact>, ArtifactAdmissionError> {
+    let Some(payload) = store.get(fingerprint) else {
+        return Ok(None);
+    };
+    admit_artifact(&payload, required_format).map(Some)
 }

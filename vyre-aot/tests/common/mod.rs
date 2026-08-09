@@ -5,11 +5,11 @@ use vyre_aot::{
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, TensorContract,
+    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, ArtifactRoute, CompileOptions, MegakernelArtifactEnvelope, ValidatedCompileRequest,
+    compile, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget,
 };
 
 pub(crate) fn compiled_artifact() -> CompiledArtifact {
@@ -21,18 +21,18 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifa
     graph
         .add_external_value(
             "params",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(256)],
                 access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::ImmutableWeight,
+                lifetime: ValueLifetime::Invocation,
             },
         )
         .unwrap();
     graph
         .add_external_value(
             "out",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(64)],
                 access: BufferAccess::WriteOnly,
@@ -55,10 +55,13 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifa
             Vec::new(),
         )
         .unwrap();
-    let request = ValidatedCompileRequest::new(
+    let request = CompileRequest::new(
         graph,
-        CompileOptions::new(ArtifactRoute::Static, BTreeMap::new(), 1_000_000),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
     )
+    .validate()
     .unwrap();
     let neutral = compile(&request).unwrap();
     let node = neutral.nodes()[0].id;
@@ -100,7 +103,7 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> CompiledArtifa
         b"target-payload-fixture".to_vec(),
     )
     .unwrap();
-    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+    let mut envelope = ArtifactEnvelope::new(neutral);
     envelope.attach_target_payload(payload).unwrap();
     CompiledArtifact::new(
         Target::Ptx,

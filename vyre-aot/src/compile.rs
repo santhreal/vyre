@@ -5,11 +5,11 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 use vyre_foundation::ir::{
     inline_calls_with_resolver, BufferAccess, MemoryKind, OpResolver, Program, ProgramGraph,
-    ShapeDim, TensorContract, ValueLifetime,
+    ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_megakernel::{
-    ArtifactRoute, CompileOptions, MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory, ValidatedCompileRequest,
+    ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetEntryPoint,
+    TargetPayload, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
 use crate::artifact::{target_payload_format, CompiledArtifact, Target};
@@ -94,17 +94,19 @@ pub fn compile_with_resolver(
         dynamic_shared_bytes: 0,
         resource_bindings: bindings,
     };
-    let format = target_payload_format(target).map_err(|source| CompileError::CanonicalArtifact {
-        stage: "target-format",
-        source,
-    })?;
-    let payload = TargetPayload::new(&neutral, format, vec![entry], target_bytes).map_err(
-        |source| CompileError::CanonicalArtifact {
-            stage: "target-payload",
+    let format =
+        target_payload_format(target).map_err(|source| CompileError::CanonicalArtifact {
+            stage: "target-format",
             source,
-        },
-    )?;
-    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+        })?;
+    let payload =
+        TargetPayload::new(&neutral, format, vec![entry], target_bytes).map_err(|source| {
+            CompileError::CanonicalArtifact {
+                stage: "target-payload",
+                source,
+            }
+        })?;
+    let mut envelope = ArtifactEnvelope::new(neutral);
     envelope
         .attach_target_payload(payload)
         .map_err(|source| CompileError::CanonicalArtifact {
@@ -119,15 +121,13 @@ pub fn compile_with_resolver(
     })
 }
 
-fn compile_neutral_artifact(
-    program: &Program,
-) -> Result<vyre_megakernel::MegakernelArtifact, CompileError> {
+fn compile_neutral_artifact(program: &Program) -> Result<vyre_megakernel::Artifact, CompileError> {
     let mut graph = ProgramGraph::new();
     for buffer in program.buffers() {
         graph
             .add_external_value(
                 buffer.name(),
-                TensorContract {
+                ValueContract {
                     dtype: buffer.element(),
                     shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
                     access: buffer.access(),
@@ -148,14 +148,13 @@ fn compile_neutral_artifact(
                 "optimized Program cannot enter the canonical graph: {error}"
             ))
         })?;
-    let request = ValidatedCompileRequest::new(
+    let request = CompileRequest::new(
         graph,
-        CompileOptions::new(
-            ArtifactRoute::Static,
-            BTreeMap::new(),
-            MAX_NEUTRAL_ARTIFACT_BYTES,
-        ),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        MAX_NEUTRAL_ARTIFACT_BYTES,
     )
+    .validate()
     .map_err(|source| CompileError::CanonicalArtifact {
         stage: "neutral-request",
         source,
@@ -177,7 +176,7 @@ fn derive_dispatch_grid(program: &Program) -> Result<[u32; 3], CompileError> {
 
 fn collect_resource_bindings(
     program: &Program,
-    neutral: &vyre_megakernel::MegakernelArtifact,
+    neutral: &vyre_megakernel::Artifact,
 ) -> Result<Vec<TargetResourceBinding>, CompileError> {
     program
         .buffers()
@@ -203,13 +202,11 @@ fn collect_resource_bindings(
         .collect()
 }
 
-fn resource_lifetime(access: BufferAccess, memory: MemoryKind) -> ValueLifetime {
-    match (access, memory) {
-        (BufferAccess::ReadOnly | BufferAccess::Uniform, MemoryKind::Uniform | MemoryKind::Push | MemoryKind::Readonly) => {
-            ValueLifetime::ImmutableWeight
-        }
-        (BufferAccess::WriteOnly, _) => ValueLifetime::Output,
-        (BufferAccess::ReadWrite, _) => ValueLifetime::SequenceState,
+fn resource_lifetime(access: BufferAccess, _memory: MemoryKind) -> ValueLifetime {
+    match access {
+        BufferAccess::WriteOnly => ValueLifetime::Output,
+        BufferAccess::ReadWrite => ValueLifetime::Retained,
+        BufferAccess::ReadOnly | BufferAccess::Uniform => ValueLifetime::Invocation,
         _ => ValueLifetime::Invocation,
     }
 }
@@ -253,7 +250,7 @@ pub(crate) fn artifact_fixture(program: &Program, target_bytes: Vec<u8>) -> Comp
         target_bytes,
     )
     .unwrap();
-    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+    let mut envelope = ArtifactEnvelope::new(neutral);
     envelope.attach_target_payload(payload).unwrap();
     CompiledArtifact::new(Target::Ptx, envelope, VERSION, Vec::new()).unwrap()
 }
@@ -302,9 +299,8 @@ mod tests {
             ],
         );
 
-        let err = derive_dispatch_grid(&program).expect_err(
-            "Fix: AOT must reject zero workgroup axes before target payload emission.",
-        );
+        let err = derive_dispatch_grid(&program)
+            .expect_err("Fix: AOT must reject zero workgroup axes before target payload emission.");
 
         assert!(
             err.to_string().contains("workgroup dimensions must be non-zero"),

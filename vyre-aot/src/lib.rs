@@ -42,8 +42,8 @@ pub use compile::{compile, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
 pub use vyre_megakernel::{
-    MegakernelArtifact, MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload,
-    TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    Artifact, ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
 /// Crate version surfaced into emitted artifacts and manifests.

@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use thiserror::Error;
 
 use super::program_graph::{
-    GraphNodeId, GraphValueId, LivenessInterval, ProgramGraph, TensorContract, ValueLifetime,
+    GraphNodeId, GraphValueId, LivenessInterval, ProgramGraph, ValueContract, ValueLifetime,
 };
 
 /// Allocation decision for one graph value.
@@ -195,7 +195,7 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
                 });
             }
         }
-        if let Some(prior_id) = value.state_successor_of {
+        if let Some(prior_id) = value.retained_successor_of {
             let prior = graph.values().get(prior_id.0 as usize).ok_or(
                 ProgramGraphAnalysisError::StateTransition {
                     value: value.id,
@@ -209,7 +209,7 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
                     prior: prior_id,
                 })?;
             if prior.contract != value.contract
-                || value.contract.lifetime != ValueLifetime::SequenceState
+                || value.contract.lifetime != ValueLifetime::Retained
                 || !prior.consumers.contains(&producer)
             {
                 return Err(ProgramGraphAnalysisError::StateTransition {
@@ -273,7 +273,7 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
             if value.producer != Some(node.id)
                 || value.name != port.name
                 || value.contract != port.contract
-                || value.state_successor_of != port.state_successor_of
+                || value.retained_successor_of != port.retained_successor_of
             {
                 return Err(ProgramGraphAnalysisError::OutputContract {
                     node: node.id,
@@ -285,7 +285,7 @@ fn validate_graph(graph: &ProgramGraph) -> Result<(), ProgramGraphAnalysisError>
     Ok(())
 }
 
-fn input_contract_matches(actual: &TensorContract, expected: &TensorContract) -> bool {
+fn input_contract_matches(actual: &ValueContract, expected: &ValueContract) -> bool {
     actual.dtype == expected.dtype
         && actual.shape == expected.shape
         && actual.lifetime == expected.lifetime

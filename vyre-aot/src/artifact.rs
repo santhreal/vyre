@@ -2,8 +2,7 @@
 
 pub use vyre_driver::Target;
 use vyre_megakernel::{
-    CompileError as EnvelopeError, MegakernelArtifactEnvelope, TargetPayload,
-    TargetPayloadFormat,
+    ArtifactEnvelope, CompileError as EnvelopeError, TargetPayload, TargetPayloadFormat,
 };
 
 /// Target payload format version emitted by this AOT package revision.
@@ -14,7 +13,7 @@ pub const AOT_TARGET_PAYLOAD_FORMAT_VERSION: u16 = 1;
 pub struct CompiledArtifact {
     /// Concrete target selected through the driver registry.
     pub target: Target,
-    envelope: MegakernelArtifactEnvelope,
+    envelope: ArtifactEnvelope,
     aot_version: String,
     vsa_fingerprint: Vec<u32>,
 }
@@ -23,7 +22,7 @@ impl CompiledArtifact {
     /// Construct an AOT package only when the canonical envelope carries the selected target.
     pub fn new(
         target: Target,
-        envelope: MegakernelArtifactEnvelope,
+        envelope: ArtifactEnvelope,
         aot_version: impl Into<String>,
         vsa_fingerprint: Vec<u32>,
     ) -> Result<Self, EnvelopeError> {
@@ -38,7 +37,7 @@ impl CompiledArtifact {
 
     /// Canonical neutral artifact and attached target payloads.
     #[must_use]
-    pub const fn envelope(&self) -> &MegakernelArtifactEnvelope {
+    pub const fn envelope(&self) -> &ArtifactEnvelope {
         &self.envelope
     }
 

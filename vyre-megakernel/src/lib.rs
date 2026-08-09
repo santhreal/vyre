@@ -1,16 +1,24 @@
 //! Backend-neutral compilation from validated typed graphs to immutable artifacts.
 //!
-//! This crate owns canonical artifact construction only. Admission, execution,
-//! and lifecycle policy belong to consumers above this boundary.
+//! # Ownership
+//!
+//! This crate owns the whole-program compile seam:
+//! - input: a validated typed [`ProgramGraph`], immutable [`ExternalFacts`], and
+//!   explicit [`SearchBudget`]
+//! - output: one versioned immutable [`Artifact`] plus optional [`TargetPayload`]
+//!   values in an [`ArtifactEnvelope`]
+//!
+//! Device admission, materialization, submission, queues, residency, and recovery
+//! are consumers of this compiler product and do not alter artifact identity.
 
 #![forbid(unsafe_code)]
 
 mod envelope;
 
 pub use envelope::{
-    MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
-    ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
+    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
+    TargetResourceBinding, TargetResourceMemory, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+    TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -19,17 +27,17 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use vyre_foundation::ir::{
-    GraphNodeId, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
+    BufferAccess, DataType, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
 };
 
 /// Current canonical artifact schema.
-pub const ARTIFACT_SCHEMA_VERSION: u16 = 1;
+pub const ARTIFACT_SCHEMA_VERSION: u16 = 2;
 const ARTIFACT_MAGIC: &[u8; 4] = b"VMK0";
 const ARTIFACT_HEADER_BYTES: usize = 10;
 const ARTIFACT_DIGEST_BYTES: usize = 32;
-const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v1\0";
-const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v1\0";
-const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v1\0";
+const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v2\0";
+const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
+const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
 
 /// Stable 256-bit content identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -41,16 +49,6 @@ impl Digest {
     pub const fn as_bytes(&self) -> &[u8; 32] {
         &self.0
     }
-}
-
-/// Intended execution lifetime encoded without selecting an execution substrate.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ArtifactRoute {
-    /// Compile an artifact whose resources may be released after one completion.
-    Static,
-    /// Compile an artifact whose retained resources may span multiple submissions.
-    Persistent,
 }
 
 /// Canonical node identity inside an artifact.
@@ -82,9 +80,7 @@ pub enum DependencyKind {
     /// A produced value is consumed by another node.
     Data,
     /// A retained value is replaced by a type-preserving successor.
-    State,
-    /// Caller-supplied semantic ordering not represented by a value flow.
-    Order,
+    Retained,
     /// A value must exist beyond its producing fusion group.
     Materialization,
 }
@@ -98,128 +94,174 @@ pub struct DependencyEdge {
     pub to: DependencyEndpoint,
     /// Stable semantic edge kind.
     pub kind: DependencyKind,
-    /// Connected value for data, state, and materialization edges.
+    /// Connected value for data, retained, and materialization edges.
     pub value: Option<ArtifactValueId>,
 }
 
-/// Caller-proven semantic order between two stable graph node names.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct OrderConstraint {
-    /// Stable predecessor node name.
-    pub before: String,
-    /// Stable successor node name.
-    pub after: String,
+/// Explicit bounds for one whole-program schedule search.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SearchBudget {
+    /// Maximum legal candidates examined by the open cost model.
+    pub max_candidates: u32,
+    /// Maximum abstract CPU work units consumed by analysis and search.
+    pub max_cpu_work: u64,
+    /// Maximum target compilations used for finalist evaluation.
+    pub max_target_compilations: u32,
+    /// Maximum on-device measurements used for finalist evaluation.
+    pub max_measurements: u32,
+    /// Maximum elapsed search time in nanoseconds.
+    pub max_elapsed_ns: u64,
 }
 
-/// Proof input permitting two directly dependent nodes to share a fusion group.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct FusionPermission {
-    /// Stable predecessor node name.
-    pub before: String,
-    /// Stable successor node name.
-    pub after: String,
-    /// Identity of the semantic-legality evidence supplied below this boundary.
-    pub legality_digest: Digest,
-}
-
-/// Immutable compilation inputs plus an admission-only artifact byte bound.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CompileOptions {
-    /// Intended artifact lifetime.
-    pub route: ArtifactRoute,
-    /// Exact value for every symbolic graph dimension.
-    pub symbolic_bindings: BTreeMap<String, u64>,
-    /// Additional semantic ordering constraints.
-    pub order_constraints: Vec<OrderConstraint>,
-    /// Explicit semantic fusion permissions.
-    pub fusion_permissions: Vec<FusionPermission>,
-    /// Maximum accepted canonical artifact byte length.
-    pub max_artifact_bytes: u64,
-}
-
-impl CompileOptions {
-    /// Create options with no additional order or fusion facts.
+impl SearchBudget {
+    /// Construct an explicit bounded search budget.
     #[must_use]
-    pub fn new(
-        route: ArtifactRoute,
-        symbolic_bindings: BTreeMap<String, u64>,
-        max_artifact_bytes: u64,
+    pub const fn new(
+        max_candidates: u32,
+        max_cpu_work: u64,
+        max_target_compilations: u32,
+        max_measurements: u32,
+        max_elapsed_ns: u64,
     ) -> Self {
         Self {
-            route,
-            symbolic_bindings,
-            order_constraints: Vec::new(),
-            fusion_permissions: Vec::new(),
-            max_artifact_bytes,
+            max_candidates,
+            max_cpu_work,
+            max_target_compilations,
+            max_measurements,
+            max_elapsed_ns,
         }
     }
 }
 
-/// A graph and complete immutable inputs that passed request validation.
-pub struct ValidatedCompileRequest {
-    graph: ProgramGraph,
-    options: CompileOptions,
+/// Stable external semantic facts not encoded by graph topology.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExternalFacts {
+    /// Digest of validated semantic configuration outside the graph.
+    pub configuration_digest: Digest,
+    /// Exact value for every symbolic graph dimension.
+    pub symbolic_bindings: BTreeMap<String, u64>,
+    /// Verified content identity for every constant graph value.
+    pub constant_identities: BTreeMap<GraphValueId, Digest>,
 }
 
-impl ValidatedCompileRequest {
-    /// Validate graph programs, symbolic bindings, and named constraints atomically.
-    pub fn new(graph: ProgramGraph, mut options: CompileOptions) -> Result<Self, CompileError> {
-        if options.max_artifact_bytes == 0 {
+impl ExternalFacts {
+    /// Construct external facts with no constant identities.
+    #[must_use]
+    pub fn new(configuration_digest: Digest, symbolic_bindings: BTreeMap<String, u64>) -> Self {
+        Self {
+            configuration_digest,
+            symbolic_bindings,
+            constant_identities: BTreeMap::new(),
+        }
+    }
+}
+
+/// Unvalidated whole-program compilation request.
+pub struct CompileRequest {
+    graph: ProgramGraph,
+    facts: ExternalFacts,
+    search_budget: SearchBudget,
+    max_artifact_bytes: u64,
+}
+
+impl CompileRequest {
+    /// Construct a request. Call [`Self::validate`] before compilation.
+    #[must_use]
+    pub const fn new(
+        graph: ProgramGraph,
+        facts: ExternalFacts,
+        search_budget: SearchBudget,
+        max_artifact_bytes: u64,
+    ) -> Self {
+        Self {
+            graph,
+            facts,
+            search_budget,
+            max_artifact_bytes,
+        }
+    }
+
+    /// Validate topology, programs, external facts, and resource bounds.
+    pub fn validate(self) -> Result<ValidatedCompileRequest, CompileError> {
+        if self.max_artifact_bytes == 0 {
             return Err(failure(
                 DiagnosticCode::ArtifactLimit,
-                "options.max_artifact_bytes",
+                "request.max_artifact_bytes",
                 "artifact byte limit must be greater than zero",
                 "supply a positive bounded artifact byte limit",
             ));
         }
-        for node in graph.nodes() {
+        if self.search_budget.max_candidates == 0
+            || self.search_budget.max_cpu_work == 0
+            || self.search_budget.max_elapsed_ns == 0
+        {
+            return Err(failure(
+                DiagnosticCode::InvalidSearchBudget,
+                "request.search_budget",
+                "candidate, CPU-work, and elapsed-work bounds must be positive",
+                "supply explicit positive bounds for every mandatory search dimension",
+            ));
+        }
+        self.graph.analyze().map_err(|error| {
+            failure(
+                DiagnosticCode::InvalidProgram,
+                "request.graph",
+                error.to_string(),
+                "supply a structurally valid acyclic ProgramGraph",
+            )
+        })?;
+        for node in self.graph.nodes() {
             node.program.validate().map_err(|error| {
                 failure(
                     DiagnosticCode::InvalidProgram,
-                    format!("graph.nodes[{}].program", node.name),
+                    format!("request.graph.nodes[{}].program", node.id.0),
                     error.to_string(),
                     "supply a structurally valid typed program",
                 )
             })?;
         }
-        validate_bindings(&graph, &options.symbolic_bindings)?;
-        options.order_constraints.sort();
-        options.fusion_permissions.sort();
-        reject_duplicates(&options.order_constraints, "options.order_constraints")?;
-        reject_duplicates(&options.fusion_permissions, "options.fusion_permissions")?;
-        let names: BTreeSet<&str> = graph.nodes().iter().map(|node| node.name.as_str()).collect();
-        for (index, edge) in options.order_constraints.iter().enumerate() {
-            validate_named_edge(&names, &edge.before, &edge.after, format!("options.order_constraints[{index}]"))?;
-        }
-        for (index, permission) in options.fusion_permissions.iter().enumerate() {
-            validate_named_edge(
-                &names,
-                &permission.before,
-                &permission.after,
-                format!("options.fusion_permissions[{index}]"),
-            )?;
-            if permission.legality_digest.0 == [0; 32] {
-                return Err(failure(
-                    DiagnosticCode::MissingFusionEvidence,
-                    format!("options.fusion_permissions[{index}].legality_digest"),
-                    "fusion legality identity must not be the all-zero sentinel",
-                    "supply the digest of validated semantic-legality evidence",
-                ));
-            }
-        }
-        Ok(Self { graph, options })
+        validate_bindings(&self.graph, &self.facts.symbolic_bindings)?;
+        validate_constant_identities(&self.graph, &self.facts.constant_identities)?;
+        Ok(ValidatedCompileRequest {
+            graph: self.graph,
+            facts: self.facts,
+            search_budget: self.search_budget,
+            max_artifact_bytes: self.max_artifact_bytes,
+        })
     }
+}
 
+/// A graph and complete immutable facts that passed request validation.
+pub struct ValidatedCompileRequest {
+    graph: ProgramGraph,
+    facts: ExternalFacts,
+    search_budget: SearchBudget,
+    max_artifact_bytes: u64,
+}
+
+impl ValidatedCompileRequest {
     /// Borrow the validated source graph.
     #[must_use]
     pub const fn graph(&self) -> &ProgramGraph {
         &self.graph
     }
 
-    /// Borrow the validated immutable options.
+    /// Borrow validated external semantic facts.
     #[must_use]
-    pub const fn options(&self) -> &CompileOptions {
-        &self.options
+    pub const fn facts(&self) -> &ExternalFacts {
+        &self.facts
+    }
+
+    /// Return the explicit bounded-search policy.
+    #[must_use]
+    pub const fn search_budget(&self) -> SearchBudget {
+        self.search_budget
+    }
+
+    /// Return the maximum accepted artifact byte length.
+    #[must_use]
+    pub const fn max_artifact_bytes(&self) -> u64 {
+        self.max_artifact_bytes
     }
 }
 
@@ -233,18 +275,6 @@ pub enum DiagnosticCode {
     MissingSymbol,
     /// A binding was supplied for no graph symbol.
     UnknownSymbol,
-    /// A named edge endpoint did not exist.
-    UnknownNode,
-    /// An edge pointed from a node to itself.
-    SelfEdge,
-    /// The same request fact appeared more than once.
-    DuplicateFact,
-    /// Fusion evidence used the reserved empty identity.
-    MissingFusionEvidence,
-    /// Fusion was requested without a direct dependency.
-    UnconnectedFusion,
-    /// Fused groups made the dependency quotient cyclic.
-    FusionCycle,
     /// An ordering constraint made the dependency graph cyclic.
     DependencyCycle,
     /// Checked size arithmetic overflowed.
@@ -269,6 +299,12 @@ pub enum DiagnosticCode {
     TargetPayloadAssociationMismatch,
     /// No attached target payload satisfies the required format identity.
     IncompatibleTargetPayload,
+    /// Mandatory schedule-search bounds are zero or otherwise invalid.
+    InvalidSearchBudget,
+    /// A constant graph value has no verified content identity.
+    MissingConstantIdentity,
+    /// A constant identity was supplied for a non-constant graph value.
+    UnknownConstantIdentity,
 }
 
 impl DiagnosticCode {
@@ -279,12 +315,6 @@ impl DiagnosticCode {
             Self::InvalidProgram => "MKC001_INVALID_PROGRAM",
             Self::MissingSymbol => "MKC002_MISSING_SYMBOL",
             Self::UnknownSymbol => "MKC003_UNKNOWN_SYMBOL",
-            Self::UnknownNode => "MKC004_UNKNOWN_NODE",
-            Self::SelfEdge => "MKC005_SELF_EDGE",
-            Self::DuplicateFact => "MKC006_DUPLICATE_FACT",
-            Self::MissingFusionEvidence => "MKC007_MISSING_FUSION_EVIDENCE",
-            Self::UnconnectedFusion => "MKC008_UNCONNECTED_FUSION",
-            Self::FusionCycle => "MKC009_FUSION_CYCLE",
             Self::DependencyCycle => "MKC010_DEPENDENCY_CYCLE",
             Self::ResourceOverflow => "MKC011_RESOURCE_OVERFLOW",
             Self::UnsizedResource => "MKC012_UNSIZED_RESOURCE",
@@ -297,6 +327,9 @@ impl DiagnosticCode {
             Self::TargetPayloadDigestMismatch => "MKC019_TARGET_PAYLOAD_DIGEST_MISMATCH",
             Self::TargetPayloadAssociationMismatch => "MKC020_TARGET_PAYLOAD_ASSOCIATION_MISMATCH",
             Self::IncompatibleTargetPayload => "MKC021_INCOMPATIBLE_TARGET_PAYLOAD",
+            Self::InvalidSearchBudget => "MKC022_INVALID_SEARCH_BUDGET",
+            Self::MissingConstantIdentity => "MKC023_MISSING_CONSTANT_IDENTITY",
+            Self::UnknownConstantIdentity => "MKC024_UNKNOWN_CONSTANT_IDENTITY",
         }
     }
 }
@@ -338,9 +371,9 @@ impl fmt::Display for Diagnostic {
 /// Canonical executable-node payload.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NodeRecord {
-    /// Canonical name-sorted node identity.
+    /// Graph node identity preserved from [`ProgramGraph`].
     pub id: ArtifactNodeId,
-    /// Stable graph node name.
+    /// Stable diagnostic name; graph ID assignment never depends on lexical order.
     pub name: String,
     /// Canonical versioned program wire bytes.
     pub program: Vec<u8>,
@@ -359,13 +392,13 @@ pub struct GeometryRecord {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceLifetime {
-    /// Immutable input retained by consumers.
-    Immutable,
+    /// Immutable constant input.
+    Constant,
     /// Temporary value for one submission.
     Invocation,
-    /// Mutable retained state.
+    /// Mutable value retained across submissions.
     Retained,
-    /// Observable graph output.
+    /// Caller-visible graph output.
     Output,
 }
 
@@ -397,14 +430,61 @@ pub struct ResourceEnvelope {
     pub peak_live_bytes: u64,
 }
 
-/// Canonical group formed only from caller-proven fusion permissions.
+/// Canonical neutral resource access.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AbiAccess {
+    /// Read-only resource.
+    ReadOnly,
+    /// Write-only resource.
+    WriteOnly,
+    /// Read-write resource.
+    ReadWrite,
+    /// Uniform read-only resource.
+    Uniform,
+}
+
+/// One canonical resource slot in the whole-program ABI.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResourceAbiRecord {
+    /// Dense canonical slot.
+    pub slot: u32,
+    /// Typed graph value occupying this slot.
+    pub value: ArtifactValueId,
+    /// Element representation.
+    pub dtype: DataType,
+    /// Required access.
+    pub access: AbiAccess,
+}
+
+/// One canonical executable entry in the whole-program ABI.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntryAbiRecord {
+    /// Typed graph node implemented by this entry.
+    pub node: ArtifactNodeId,
+    /// Input value identities in Program buffer order.
+    pub inputs: Vec<ArtifactValueId>,
+    /// Output value identities in Program buffer order.
+    pub outputs: Vec<ArtifactValueId>,
+}
+
+/// Canonical resource and entry ABI projected to every target payload.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArtifactAbi {
+    /// Dense resource slots.
+    pub resources: Vec<ResourceAbiRecord>,
+    /// Executable entries.
+    pub entries: Vec<EntryAbiRecord>,
+}
+
+/// Canonical compiler-selected fusion group.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FusionRecord {
     /// Stable group identity.
     pub id: FusionGroupId,
-    /// Name-sorted group members.
+    /// Typed group members.
     pub members: Vec<ArtifactNodeId>,
-    /// Sorted semantic-legality evidence identities used to form the group.
+    /// Compiler-derived semantic-legality identities used to form the group.
     pub legality: Vec<Digest>,
 }
 
@@ -428,7 +508,7 @@ pub enum MaterializationReason {
     /// Value is observable after artifact completion.
     Output,
     /// Value is retained for a later submission.
-    RetainedState,
+    Retained,
 }
 
 /// Canonical value materialization fact.
@@ -442,6 +522,21 @@ pub struct MaterializationRecord {
     pub stage: u32,
     /// Stable semantic reason.
     pub reason: MaterializationReason,
+}
+
+/// Immutable compiler-selected whole-program plan.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SelectedPlan {
+    /// Selected fusion groups.
+    pub fusion: Vec<FusionRecord>,
+    /// Required dependency-completion boundaries.
+    pub barriers: Vec<BarrierRecord>,
+    /// Required cross-stage value materializations.
+    pub materializations: Vec<MaterializationRecord>,
+    /// Number of legal candidates examined.
+    pub candidates_explored: u32,
+    /// Search bounds under which this plan was selected.
+    pub search_budget: SearchBudget,
 }
 
 /// Deterministic identities establishing how an artifact was produced.
@@ -459,36 +554,28 @@ pub struct Provenance {
 #[serde(deny_unknown_fields)]
 struct ArtifactPayload {
     schema_version: u16,
-    route: ArtifactRoute,
     nodes: Vec<NodeRecord>,
     dependencies: Vec<DependencyEdge>,
-    fusion: Vec<FusionRecord>,
-    barriers: Vec<BarrierRecord>,
+    selected_plan: SelectedPlan,
+    abi: ArtifactAbi,
     resources: Vec<ResourceRecord>,
     resource_envelope: ResourceEnvelope,
     geometry: Vec<GeometryRecord>,
-    materializations: Vec<MaterializationRecord>,
     provenance: Provenance,
 }
 
-/// Versioned immutable canonical artifact.
+/// Versioned immutable canonical whole-program compiler result.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MegakernelArtifact {
+pub struct Artifact {
     payload: ArtifactPayload,
     digest: Digest,
 }
 
-impl MegakernelArtifact {
+impl Artifact {
     /// Artifact schema version.
     #[must_use]
     pub const fn schema_version(&self) -> u16 {
         self.payload.schema_version
-    }
-
-    /// Intended artifact route.
-    #[must_use]
-    pub const fn route(&self) -> ArtifactRoute {
-        self.payload.route
     }
 
     /// Canonical node records.
@@ -506,13 +593,13 @@ impl MegakernelArtifact {
     /// Canonical fusion groups.
     #[must_use]
     pub fn fusion(&self) -> &[FusionRecord] {
-        &self.payload.fusion
+        &self.payload.selected_plan.fusion
     }
 
     /// Canonical barrier boundaries.
     #[must_use]
     pub fn barriers(&self) -> &[BarrierRecord] {
-        &self.payload.barriers
+        &self.payload.selected_plan.barriers
     }
 
     /// Canonical resource records.
@@ -536,7 +623,19 @@ impl MegakernelArtifact {
     /// Canonical materialization records.
     #[must_use]
     pub fn materializations(&self) -> &[MaterializationRecord] {
-        &self.payload.materializations
+        &self.payload.selected_plan.materializations
+    }
+
+    /// Compiler-selected plan with recorded search bounds.
+    #[must_use]
+    pub const fn selected_plan(&self) -> &SelectedPlan {
+        &self.payload.selected_plan
+    }
+
+    /// Canonical neutral resource and entry ABI.
+    #[must_use]
+    pub const fn abi(&self) -> &ArtifactAbi {
+        &self.payload.abi
     }
 
     /// Deterministic artifact provenance.
@@ -599,7 +698,10 @@ impl MegakernelArtifact {
             return Err(failure(
                 DiagnosticCode::MalformedArtifact,
                 "artifact.body_length",
-                format!("framing declares {expected_len} bytes but received {}", bytes.len()),
+                format!(
+                    "framing declares {expected_len} bytes but received {}",
+                    bytes.len()
+                ),
                 "supply exactly one complete canonical artifact",
             ));
         }
@@ -638,7 +740,7 @@ impl MegakernelArtifact {
                 DiagnosticCode::MalformedArtifact,
                 "artifact.body",
                 "artifact body is valid JSON but not canonical JSON",
-                "use the canonical bytes emitted by MegakernelArtifact::to_bytes",
+                "use the canonical bytes emitted by Artifact::to_bytes",
             ));
         }
         Ok(Self {
@@ -649,94 +751,64 @@ impl MegakernelArtifact {
 }
 
 /// Compile one validated typed graph into a canonical backend-neutral artifact.
-pub fn compile(request: &ValidatedCompileRequest) -> Result<MegakernelArtifact, CompileError> {
-    let canonical_graph = canonical_graph(&request.graph)?;
-    let canonical_wire = canonical_graph.to_wire().map_err(|error| {
+pub fn compile(request: &ValidatedCompileRequest) -> Result<Artifact, CompileError> {
+    let canonical_wire = request.graph.to_wire().map_err(|error| {
         failure(
             DiagnosticCode::InvalidProgram,
-            "graph",
+            "request.graph",
             error.to_string(),
             "supply a graph representable by the canonical foundation wire format",
         )
     })?;
     let source_graph = domain_digest(SOURCE_DIGEST_DOMAIN, &canonical_wire);
 
-    let mut nodes_by_name: Vec<_> = request.graph.nodes().iter().collect();
-    nodes_by_name.sort_by(|left, right| left.name.cmp(&right.name));
-    let node_ids: BTreeMap<&str, ArtifactNodeId> = nodes_by_name
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
-            u32::try_from(index)
-                .map(|id| (node.name.as_str(), ArtifactNodeId(id)))
-                .map_err(|_| overflow("graph.nodes", "node identity exceeds u32"))
-        })
-        .collect::<Result<_, _>>()?;
-
-    let mut values_by_name: Vec<_> = request.graph.values().iter().collect();
-    values_by_name.sort_by(|left, right| left.name.cmp(&right.name));
-    let value_ids: BTreeMap<&str, ArtifactValueId> = values_by_name
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            u32::try_from(index)
-                .map(|id| (value.name.as_str(), ArtifactValueId(id)))
-                .map_err(|_| overflow("graph.values", "value identity exceeds u32"))
-        })
-        .collect::<Result<_, _>>()?;
-    let value_name_by_old: BTreeMap<GraphValueId, &str> = request
-        .graph
-        .values()
-        .iter()
-        .map(|value| (value.id, value.name.as_str()))
-        .collect();
-    let old_node_name: BTreeMap<GraphNodeId, &str> = request
+    let nodes = request
         .graph
         .nodes()
-        .iter()
-        .map(|node| (node.id, node.name.as_str()))
-        .collect();
-
-    let nodes = nodes_by_name
         .iter()
         .map(|node| {
             let program = node.program.canonical_wire_bytes().map_err(|error| {
                 failure(
                     DiagnosticCode::InvalidProgram,
-                    format!("graph.nodes[{}].program", node.name),
+                    format!("request.graph.nodes[{}].program", node.id.0),
                     error.to_string(),
                     "supply canonical-wire-compatible typed IR",
                 )
             })?;
             Ok(NodeRecord {
-                id: node_ids[node.name.as_str()],
+                id: ArtifactNodeId(node.id.0),
                 name: node.name.clone(),
                 program,
             })
         })
         .collect::<Result<Vec<_>, CompileError>>()?;
-    let geometry = nodes_by_name
+    let geometry = request
+        .graph
+        .nodes()
         .iter()
         .map(|node| GeometryRecord {
-            node: node_ids[node.name.as_str()],
+            node: ArtifactNodeId(node.id.0),
             workgroup_size: node.program.workgroup_size,
         })
         .collect::<Vec<_>>();
 
     let mut dependencies = Vec::new();
     for value in request.graph.values() {
-        let value_id = value_ids[value.name.as_str()];
+        let value_id = ArtifactValueId(value.id.0);
         if let Some(producer) = value.producer {
-            let from = ArtifactNodeId(node_ids[old_node_name[&producer]].0);
+            let from = ArtifactNodeId(producer.0);
             for consumer in &value.consumers {
                 dependencies.push(DependencyEdge {
                     from: DependencyEndpoint::Node(from),
-                    to: DependencyEndpoint::Node(node_ids[old_node_name[consumer]]),
+                    to: DependencyEndpoint::Node(ArtifactNodeId(consumer.0)),
                     kind: DependencyKind::Data,
                     value: Some(value_id),
                 });
             }
-            if matches!(value.contract.lifetime, ValueLifetime::Output | ValueLifetime::SequenceState) {
+            if matches!(
+                value.contract.lifetime,
+                ValueLifetime::Output | ValueLifetime::Retained
+            ) {
                 dependencies.push(DependencyEdge {
                     from: DependencyEndpoint::Node(from),
                     to: DependencyEndpoint::Value(value_id),
@@ -745,60 +817,48 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<MegakernelArtifact, 
                 });
             }
         }
-        if let (Some(prior), Some(successor_node)) = (value.state_successor_of, value.producer) {
+        if let (Some(prior), Some(successor_node)) = (value.retained_successor_of, value.producer) {
             let prior = &request.graph.values()[prior.0 as usize];
-            if let Some(prior_node) = prior.producer {
-                if prior_node != successor_node {
-                    dependencies.push(DependencyEdge {
-                        from: DependencyEndpoint::Node(node_ids[old_node_name[&prior_node]]),
-                        to: DependencyEndpoint::Node(node_ids[old_node_name[&successor_node]]),
-                        kind: DependencyKind::State,
-                        value: Some(value_id),
-                    });
-                }
-            }
+            let from = prior
+                .producer
+                .map(|node| DependencyEndpoint::Node(ArtifactNodeId(node.0)))
+                .unwrap_or_else(|| DependencyEndpoint::Value(ArtifactValueId(prior.id.0)));
+            dependencies.push(DependencyEdge {
+                from,
+                to: DependencyEndpoint::Node(ArtifactNodeId(successor_node.0)),
+                kind: DependencyKind::Retained,
+                value: Some(value_id),
+            });
         }
-    }
-    for edge in &request.options.order_constraints {
-        dependencies.push(DependencyEdge {
-            from: DependencyEndpoint::Node(node_ids[edge.before.as_str()]),
-            to: DependencyEndpoint::Node(node_ids[edge.after.as_str()]),
-            kind: DependencyKind::Order,
-            value: None,
-        });
     }
     dependencies.sort();
     dependencies.dedup();
     ensure_node_dag(nodes.len(), &dependencies, DiagnosticCode::DependencyCycle)?;
 
-    let (fusion, node_groups) = build_fusion(
-        &nodes,
-        &geometry,
-        &dependencies,
-        &request.options.fusion_permissions,
-        &node_ids,
-    )?;
+    let fusion = nodes
+        .iter()
+        .map(|node| FusionRecord {
+            id: FusionGroupId(node.id.0),
+            members: vec![node.id],
+            legality: Vec::new(),
+        })
+        .collect::<Vec<_>>();
+    let node_groups = nodes
+        .iter()
+        .map(|node| FusionGroupId(node.id.0))
+        .collect::<Vec<_>>();
     let group_stages = group_stages(fusion.len(), &dependencies, &node_groups)?;
     let barriers = build_barriers(&dependencies, &node_groups, &group_stages)?;
-    let materializations = build_materializations(
-        &request.graph,
-        &value_ids,
-        &old_node_name,
-        &node_ids,
-        &node_groups,
-        &group_stages,
-    );
+    let materializations = build_materializations(&request.graph, &node_groups, &group_stages);
     let (resources, resource_envelope) = build_resources(
         &request.graph,
-        &request.options.symbolic_bindings,
-        &value_ids,
-        &old_node_name,
-        &node_ids,
+        &request.facts.symbolic_bindings,
         &node_groups,
         &group_stages,
     )?;
-    let request_bytes = serde_json::to_vec(&RequestIdentity::from(&request.options))
-        .map_err(serialization_failure)?;
+    let abi = build_abi(&request.graph)?;
+    let request_bytes =
+        serde_json::to_vec(&RequestIdentity::from(request)).map_err(serialization_failure)?;
     let provenance = Provenance {
         source_graph,
         request: domain_digest(REQUEST_DIGEST_DOMAIN, &request_bytes),
@@ -806,32 +866,39 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<MegakernelArtifact, 
     };
     let payload = ArtifactPayload {
         schema_version: ARTIFACT_SCHEMA_VERSION,
-        route: request.options.route,
         nodes,
         dependencies,
-        fusion,
-        barriers,
+        selected_plan: SelectedPlan {
+            fusion,
+            barriers,
+            materializations,
+            candidates_explored: 1,
+            search_budget: request.search_budget,
+        },
+        abi,
         resources,
         resource_envelope,
         geometry,
-        materializations,
         provenance,
     };
     let bytes = encode_payload(&payload)?;
     let byte_len = u64::try_from(bytes.len())
         .map_err(|_| overflow("artifact", "artifact length exceeds u64"))?;
-    if byte_len > request.options.max_artifact_bytes {
+    if byte_len > request.max_artifact_bytes {
         return Err(failure(
             DiagnosticCode::ArtifactLimit,
             "artifact",
-            format!("canonical artifact is {byte_len} bytes; limit is {}", request.options.max_artifact_bytes),
+            format!(
+                "canonical artifact is {byte_len} bytes; limit is {}",
+                request.max_artifact_bytes
+            ),
             "raise the explicit artifact bound or reduce the source graph",
         ));
     }
     let digest: [u8; 32] = bytes[bytes.len() - ARTIFACT_DIGEST_BYTES..]
         .try_into()
         .expect("encoded digest length");
-    Ok(MegakernelArtifact {
+    Ok(Artifact {
         payload,
         digest: Digest(digest),
     })
@@ -839,19 +906,24 @@ pub fn compile(request: &ValidatedCompileRequest) -> Result<MegakernelArtifact, 
 
 #[derive(Serialize)]
 struct RequestIdentity<'a> {
-    route: ArtifactRoute,
+    configuration_digest: Digest,
     symbolic_bindings: &'a BTreeMap<String, u64>,
-    order_constraints: &'a [OrderConstraint],
-    fusion_permissions: &'a [FusionPermission],
+    constant_identities: Vec<(u32, Digest)>,
+    search_budget: SearchBudget,
 }
 
-impl<'a> From<&'a CompileOptions> for RequestIdentity<'a> {
-    fn from(options: &'a CompileOptions) -> Self {
+impl<'a> From<&'a ValidatedCompileRequest> for RequestIdentity<'a> {
+    fn from(request: &'a ValidatedCompileRequest) -> Self {
         Self {
-            route: options.route,
-            symbolic_bindings: &options.symbolic_bindings,
-            order_constraints: &options.order_constraints,
-            fusion_permissions: &options.fusion_permissions,
+            configuration_digest: request.facts.configuration_digest,
+            symbolic_bindings: &request.facts.symbolic_bindings,
+            constant_identities: request
+                .facts
+                .constant_identities
+                .iter()
+                .map(|(id, digest)| (id.0, *digest))
+                .collect(),
+            search_budget: request.search_budget,
         }
     }
 }
@@ -869,18 +941,24 @@ fn validate_bindings(
             ShapeDim::Symbol(symbol) => Some(symbol.as_str()),
         })
         .collect();
-    if let Some(symbol) = symbols.iter().find(|symbol| !bindings.contains_key(**symbol)) {
+    if let Some(symbol) = symbols
+        .iter()
+        .find(|symbol| !bindings.contains_key(**symbol))
+    {
         return Err(failure(
             DiagnosticCode::MissingSymbol,
-            format!("options.symbolic_bindings.{symbol}"),
+            format!("request.facts.symbolic_bindings.{symbol}"),
             "graph symbol has no exact extent",
             "bind every symbolic graph dimension before compilation",
         ));
     }
-    if let Some(symbol) = bindings.keys().find(|symbol| !symbols.contains(symbol.as_str())) {
+    if let Some(symbol) = bindings
+        .keys()
+        .find(|symbol| !symbols.contains(symbol.as_str()))
+    {
         return Err(failure(
             DiagnosticCode::UnknownSymbol,
-            format!("options.symbolic_bindings.{symbol}"),
+            format!("request.facts.symbolic_bindings.{symbol}"),
             "binding does not occur in the graph",
             "remove stale bindings or use the graph's exact symbol name",
         ));
@@ -888,202 +966,80 @@ fn validate_bindings(
     Ok(())
 }
 
-fn reject_duplicates<T: Ord>(values: &[T], path: &str) -> Result<(), CompileError> {
-    if values.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(failure(
-            DiagnosticCode::DuplicateFact,
-            path,
-            "request contains a duplicate canonical fact",
-            "supply each order constraint or fusion permission exactly once",
-        ));
-    }
-    Ok(())
-}
-
-fn validate_named_edge(
-    names: &BTreeSet<&str>,
-    before: &str,
-    after: &str,
-    path: String,
+fn validate_constant_identities(
+    graph: &ProgramGraph,
+    identities: &BTreeMap<GraphValueId, Digest>,
 ) -> Result<(), CompileError> {
-    if !names.contains(before) {
+    let constants = graph
+        .values()
+        .iter()
+        .filter(|value| value.contract.lifetime == ValueLifetime::Constant)
+        .map(|value| value.id)
+        .collect::<BTreeSet<_>>();
+    if let Some(id) = constants.iter().find(|id| !identities.contains_key(*id)) {
         return Err(failure(
-            DiagnosticCode::UnknownNode,
-            format!("{path}.before"),
-            format!("node `{before}` does not exist"),
-            "use a stable node name from the validated graph",
+            DiagnosticCode::MissingConstantIdentity,
+            format!("request.facts.constant_identities.{}", id.0),
+            "constant graph value has no verified content identity",
+            "supply one digest keyed by the constant GraphValueId",
         ));
     }
-    if !names.contains(after) {
+    if let Some(id) = identities.keys().find(|id| !constants.contains(id)) {
         return Err(failure(
-            DiagnosticCode::UnknownNode,
-            format!("{path}.after"),
-            format!("node `{after}` does not exist"),
-            "use a stable node name from the validated graph",
-        ));
-    }
-    if before == after {
-        return Err(failure(
-            DiagnosticCode::SelfEdge,
-            path,
-            format!("node `{before}` cannot depend on itself"),
-            "remove the self edge or name two distinct nodes",
+            DiagnosticCode::UnknownConstantIdentity,
+            format!("request.facts.constant_identities.{}", id.0),
+            "constant identity names a non-constant or missing graph value",
+            "remove stale identities and key constant content by GraphValueId",
         ));
     }
     Ok(())
 }
 
-fn canonical_graph(graph: &ProgramGraph) -> Result<ProgramGraph, CompileError> {
-    let mut result = ProgramGraph::new();
-    let mut value_map = BTreeMap::<GraphValueId, GraphValueId>::new();
-    let mut external: Vec<_> = graph.values().iter().filter(|value| value.producer.is_none()).collect();
-    external.sort_by(|left, right| left.name.cmp(&right.name));
-    for value in external {
-        let id = result
-            .add_external_value(value.name.clone(), value.contract.clone())
-            .map_err(graph_failure)?;
-        value_map.insert(value.id, id);
-    }
-    let mut pending: BTreeMap<&str, _> = graph.nodes().iter().map(|node| (node.name.as_str(), node)).collect();
-    while !pending.is_empty() {
-        let ready_name = pending
-            .iter()
-            .find(|(_, node)| node.inputs.iter().all(|input| value_map.contains_key(&input.value)))
-            .map(|(name, _)| *name)
-            .ok_or_else(|| failure(
-                DiagnosticCode::DependencyCycle,
-                "graph",
-                "no canonical topological node is available",
-                "remove cyclic semantic ordering",
-            ))?;
-        let node = pending.remove(ready_name).expect("selected pending node");
-        let mut inputs = node.inputs.clone();
-        inputs.sort_by(|left, right| left.buffer.cmp(&right.buffer).then_with(|| left.value.cmp(&right.value)));
-        for input in &mut inputs {
-            input.value = value_map[&input.value];
-        }
-        let old_by_name: BTreeMap<&str, GraphValueId> = node
-            .outputs
-            .iter()
-            .zip(&node.output_ports)
-            .map(|(id, port)| (port.name.as_str(), *id))
-            .collect();
-        let mut outputs = node.output_ports.clone();
-        outputs.sort_by(|left, right| left.name.cmp(&right.name));
-        for output in &mut outputs {
-            output.state_successor_of = output.state_successor_of.map(|prior| value_map[&prior]);
-        }
-        let (_, new_ids) = result
-            .add_node(
-                node.name.clone(),
-                node.program.canonicalized(),
-                inputs,
-                outputs.clone(),
-            )
-            .map_err(graph_failure)?;
-        for (output, new_id) in outputs.iter().zip(new_ids) {
-            value_map.insert(old_by_name[output.name.as_str()], new_id);
-        }
-    }
-    Ok(result)
-}
-
-fn graph_failure(error: vyre_foundation::ir::ProgramGraphError) -> CompileError {
-    failure(
-        DiagnosticCode::InvalidProgram,
-        "graph",
-        error.to_string(),
-        "supply a canonical-wire-compatible validated graph",
-    )
-}
-
-fn build_fusion(
-    nodes: &[NodeRecord],
-    geometry: &[GeometryRecord],
-    dependencies: &[DependencyEdge],
-    permissions: &[FusionPermission],
-    node_ids: &BTreeMap<&str, ArtifactNodeId>,
-) -> Result<(Vec<FusionRecord>, Vec<FusionGroupId>), CompileError> {
-    let mut parent: Vec<usize> = (0..nodes.len()).collect();
-    let direct: BTreeSet<(ArtifactNodeId, ArtifactNodeId)> = dependencies
+fn build_abi(graph: &ProgramGraph) -> Result<ArtifactAbi, CompileError> {
+    let resources = graph
+        .values()
         .iter()
-        .filter_map(|edge| match (edge.from, edge.to) {
-            (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) => Some((from, to)),
-            _ => None,
+        .map(|value| {
+            let access = match value.contract.access.clone() {
+                BufferAccess::ReadOnly => AbiAccess::ReadOnly,
+                BufferAccess::WriteOnly => AbiAccess::WriteOnly,
+                BufferAccess::ReadWrite => AbiAccess::ReadWrite,
+                BufferAccess::Uniform => AbiAccess::Uniform,
+                unsupported => {
+                    return Err(failure(
+                        DiagnosticCode::InvalidProgram,
+                        format!("request.graph.values[{}].contract.access", value.id.0),
+                        format!("access {unsupported:?} has no artifact ABI representation"),
+                        "lower workgroup/private resources inside the node Program",
+                    ))
+                }
+            };
+            Ok(ResourceAbiRecord {
+                slot: value.id.0,
+                value: ArtifactValueId(value.id.0),
+                dtype: value.contract.dtype.clone(),
+                access,
+            })
+        })
+        .collect::<Result<Vec<_>, CompileError>>()?;
+    let entries = graph
+        .nodes()
+        .iter()
+        .map(|node| EntryAbiRecord {
+            node: ArtifactNodeId(node.id.0),
+            inputs: node
+                .inputs
+                .iter()
+                .map(|input| ArtifactValueId(input.value.0))
+                .collect(),
+            outputs: node
+                .outputs
+                .iter()
+                .map(|output| ArtifactValueId(output.0))
+                .collect(),
         })
         .collect();
-    for (index, permission) in permissions.iter().enumerate() {
-        let before = node_ids[permission.before.as_str()];
-        let after = node_ids[permission.after.as_str()];
-        if !direct.contains(&(before, after)) {
-            return Err(failure(
-                DiagnosticCode::UnconnectedFusion,
-                format!("options.fusion_permissions[{index}]"),
-                "fusion permission does not follow a direct dependency",
-                "supply evidence only for directly dependent nodes",
-            ));
-        }
-        if geometry[before.0 as usize].workgroup_size != geometry[after.0 as usize].workgroup_size {
-            return Err(failure(
-                DiagnosticCode::UnconnectedFusion,
-                format!("options.fusion_permissions[{index}]"),
-                "fusion permission spans unequal program-declared geometry",
-                "retain separate groups or align semantic geometry before compilation",
-            ));
-        }
-        union(&mut parent, before.0 as usize, after.0 as usize);
-    }
-    for index in 0..parent.len() {
-        parent[index] = find(&mut parent, index);
-    }
-    let mut members = BTreeMap::<usize, Vec<ArtifactNodeId>>::new();
-    for (index, root) in parent.iter().copied().enumerate() {
-        members.entry(root).or_default().push(ArtifactNodeId(index as u32));
-    }
-    let mut groups: Vec<_> = members.into_values().collect();
-    groups.sort_by_key(|group| group[0]);
-    let mut node_groups = vec![FusionGroupId(0); nodes.len()];
-    let fusion = groups
-        .into_iter()
-        .enumerate()
-        .map(|(index, group)| {
-            let id = FusionGroupId(index as u32);
-            for node in &group {
-                node_groups[node.0 as usize] = id;
-            }
-            let node_set: BTreeSet<_> = group.iter().copied().collect();
-            let mut legality: Vec<_> = permissions
-                .iter()
-                .filter(|permission| {
-                    node_set.contains(&node_ids[permission.before.as_str()])
-                        && node_set.contains(&node_ids[permission.after.as_str()])
-                })
-                .map(|permission| permission.legality_digest)
-                .collect();
-            legality.sort();
-            legality.dedup();
-            FusionRecord { id, members: group, legality }
-        })
-        .collect::<Vec<_>>();
-    ensure_group_dag(fusion.len(), dependencies, &node_groups, DiagnosticCode::FusionCycle)?;
-    Ok((fusion, node_groups))
-}
-
-fn find(parent: &mut [usize], mut index: usize) -> usize {
-    while parent[index] != index {
-        parent[index] = parent[parent[index]];
-        index = parent[index];
-    }
-    index
-}
-
-fn union(parent: &mut [usize], left: usize, right: usize) {
-    let left = find(parent, left);
-    let right = find(parent, right);
-    if left != right {
-        let (root, child) = if left < right { (left, right) } else { (right, left) };
-        parent[child] = root;
-    }
+    Ok(ArtifactAbi { resources, entries })
 }
 
 fn ensure_node_dag(
@@ -1101,14 +1057,16 @@ fn ensure_group_dag(
     node_groups: &[FusionGroupId],
     code: DiagnosticCode,
 ) -> Result<(), CompileError> {
-    group_stages_inner(count, dependencies, node_groups).map(|_| ()).map_err(|_| {
-        failure(
-            code,
-            "artifact.dependencies",
-            "dependency quotient contains a cycle",
-            "remove the cyclic order constraint or fusion permission",
-        )
-    })
+    group_stages_inner(count, dependencies, node_groups)
+        .map(|_| ())
+        .map_err(|_| {
+            failure(
+                code,
+                "artifact.dependencies",
+                "dependency graph contains a cycle",
+                "remove the cyclic semantic dependency",
+            )
+        })
 }
 
 fn group_stages(
@@ -1118,10 +1076,10 @@ fn group_stages(
 ) -> Result<Vec<u32>, CompileError> {
     group_stages_inner(count, dependencies, node_groups).map_err(|_| {
         failure(
-            DiagnosticCode::FusionCycle,
-            "artifact.fusion",
-            "fused dependency quotient contains a cycle",
-            "remove a fusion permission that spans an intervening dependency",
+            DiagnosticCode::DependencyCycle,
+            "artifact.dependencies",
+            "selected-plan dependency graph contains a cycle",
+            "fix compiler legality before plan selection",
         )
     })
 }
@@ -1134,7 +1092,8 @@ fn group_stages_inner(
     let mut outgoing = vec![BTreeSet::<usize>::new(); count];
     let mut indegree = vec![0usize; count];
     for edge in dependencies {
-        let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to) else {
+        let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to)
+        else {
             continue;
         };
         let from = node_groups[from.0 as usize].0 as usize;
@@ -1173,13 +1132,19 @@ fn build_barriers(
     for after_stage in 1..=max_stage {
         let mut edge_ids = Vec::new();
         for (index, edge) in dependencies.iter().enumerate() {
-            let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) = (edge.from, edge.to) else {
+            let (DependencyEndpoint::Node(from), DependencyEndpoint::Node(to)) =
+                (edge.from, edge.to)
+            else {
                 continue;
             };
             let from_stage = stages[node_groups[from.0 as usize].0 as usize];
             let to_stage = stages[node_groups[to.0 as usize].0 as usize];
             if from_stage < after_stage && to_stage == after_stage {
-                edge_ids.push(u32::try_from(index).map_err(|_| overflow("artifact.dependencies", "edge identity exceeds u32"))?);
+                edge_ids.push(
+                    u32::try_from(index).map_err(|_| {
+                        overflow("artifact.dependencies", "edge identity exceeds u32")
+                    })?,
+                );
             }
         }
         barriers.push(BarrierRecord {
@@ -1193,31 +1158,30 @@ fn build_barriers(
 
 fn build_materializations(
     graph: &ProgramGraph,
-    value_ids: &BTreeMap<&str, ArtifactValueId>,
-    old_node_name: &BTreeMap<GraphNodeId, &str>,
-    node_ids: &BTreeMap<&str, ArtifactNodeId>,
     node_groups: &[FusionGroupId],
     stages: &[u32],
 ) -> Vec<MaterializationRecord> {
     let mut records = Vec::new();
     for value in graph.values() {
-        let Some(producer) = value.producer else { continue };
-        let producer_node = node_ids[old_node_name[&producer]];
+        let Some(producer) = value.producer else {
+            continue;
+        };
+        let producer_node = ArtifactNodeId(producer.0);
         let producer_group = node_groups[producer_node.0 as usize];
         let producer_stage = stages[producer_group.0 as usize];
         let cross_group = value.consumers.iter().any(|consumer| {
-            let consumer_node = node_ids[old_node_name[consumer]];
+            let consumer_node = ArtifactNodeId(consumer.0);
             node_groups[consumer_node.0 as usize] != producer_group
         });
         let reason = match value.contract.lifetime {
             ValueLifetime::Output => Some(MaterializationReason::Output),
-            ValueLifetime::SequenceState => Some(MaterializationReason::RetainedState),
+            ValueLifetime::Retained => Some(MaterializationReason::Retained),
             _ if cross_group => Some(MaterializationReason::CrossGroupUse),
             _ => None,
         };
         if let Some(reason) = reason {
             records.push(MaterializationRecord {
-                value: value_ids[value.name.as_str()],
+                value: ArtifactValueId(value.id.0),
                 producer: producer_group,
                 stage: producer_stage,
                 reason,
@@ -1228,13 +1192,9 @@ fn build_materializations(
     records
 }
 
-#[allow(clippy::too_many_arguments)]
 fn build_resources(
     graph: &ProgramGraph,
     bindings: &BTreeMap<String, u64>,
-    value_ids: &BTreeMap<&str, ArtifactValueId>,
-    old_node_name: &BTreeMap<GraphNodeId, &str>,
-    node_ids: &BTreeMap<&str, ArtifactNodeId>,
     node_groups: &[FusionGroupId],
     stages: &[u32],
 ) -> Result<(Vec<ResourceRecord>, ResourceEnvelope), CompileError> {
@@ -1280,30 +1240,29 @@ fn build_resources(
             )
         })?;
         let producer_stage = value.producer.map_or(0, |producer| {
-            let node = node_ids[old_node_name[&producer]];
-            stages[node_groups[node.0 as usize].0 as usize]
+            stages[node_groups[producer.0 as usize].0 as usize]
         });
         let mut last_stage = value
             .consumers
             .iter()
-            .map(|consumer| {
-                let node = node_ids[old_node_name[consumer]];
-                stages[node_groups[node.0 as usize].0 as usize]
-            })
+            .map(|consumer| stages[node_groups[consumer.0 as usize].0 as usize])
             .max()
             .unwrap_or(producer_stage);
-        if matches!(value.contract.lifetime, ValueLifetime::Output | ValueLifetime::SequenceState) {
+        if matches!(
+            value.contract.lifetime,
+            ValueLifetime::Output | ValueLifetime::Retained
+        ) {
             last_stage = last_stage.max(final_stage);
         }
         resources.push(ResourceRecord {
-            value: value_ids[value.name.as_str()],
+            value: ArtifactValueId(value.id.0),
             name: value.name.clone(),
             element_count,
             byte_count,
             lifetime: match value.contract.lifetime {
-                ValueLifetime::ImmutableWeight => ResourceLifetime::Immutable,
+                ValueLifetime::Constant => ResourceLifetime::Constant,
                 ValueLifetime::Invocation => ResourceLifetime::Invocation,
-                ValueLifetime::SequenceState => ResourceLifetime::Retained,
+                ValueLifetime::Retained => ResourceLifetime::Retained,
                 ValueLifetime::Output => ResourceLifetime::Output,
             },
             first_stage: producer_stage,
@@ -1313,7 +1272,10 @@ fn build_resources(
     resources.sort_by_key(|resource| resource.value);
     let total_bytes = resources.iter().try_fold(0u64, |total, resource| {
         total.checked_add(resource.byte_count).ok_or_else(|| {
-            overflow("artifact.resource_envelope.total_bytes", "resource sum exceeds u64")
+            overflow(
+                "artifact.resource_envelope.total_bytes",
+                "resource sum exceeds u64",
+            )
         })
     })?;
     let mut peak_live_bytes = 0u64;
@@ -1323,18 +1285,30 @@ fn build_resources(
             .filter(|resource| resource.first_stage <= stage && stage <= resource.last_stage)
             .try_fold(0u64, |total, resource| {
                 total.checked_add(resource.byte_count).ok_or_else(|| {
-                    overflow("artifact.resource_envelope.peak_live_bytes", "live resource sum exceeds u64")
+                    overflow(
+                        "artifact.resource_envelope.peak_live_bytes",
+                        "live resource sum exceeds u64",
+                    )
                 })
             })?;
         peak_live_bytes = peak_live_bytes.max(live);
     }
-    Ok((resources, ResourceEnvelope { total_bytes, peak_live_bytes }))
+    Ok((
+        resources,
+        ResourceEnvelope {
+            total_bytes,
+            peak_live_bytes,
+        },
+    ))
 }
 
 fn encode_payload(payload: &ArtifactPayload) -> Result<Vec<u8>, CompileError> {
     let body = serde_json::to_vec(payload).map_err(serialization_failure)?;
     let body_len = u32::try_from(body.len()).map_err(|_| {
-        overflow("artifact.body", "canonical body exceeds the u32 framing limit")
+        overflow(
+            "artifact.body",
+            "canonical body exceeds the u32 framing limit",
+        )
     })?;
     let digest = artifact_digest(payload.schema_version, &body);
     let capacity = ARTIFACT_HEADER_BYTES

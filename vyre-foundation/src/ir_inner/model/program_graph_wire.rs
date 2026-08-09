@@ -3,12 +3,12 @@
 use super::program::Program;
 use super::program_graph::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError, ShapeDim,
-    TensorContract, ValueLifetime,
+    ValueContract, ValueLifetime,
 };
 use super::types::{BufferAccess, DataType};
 
 const MAGIC: &[u8; 4] = b"VGR0";
-const VERSION: u16 = 1;
+const VERSION: u16 = 2;
 const MAX_GRAPH_WIRE_BYTES: usize = 256 * 1024 * 1024;
 const MAX_GRAPH_ITEMS: usize = 1_000_000;
 const MAX_PORTS_PER_NODE: usize = 1_000_000;
@@ -20,7 +20,7 @@ impl ProgramGraph {
     /// Encode this connected composition into canonical versioned bytes.
     ///
     /// Each node keeps its existing VIR0 [`Program`] encoding. Graph framing
-    /// adds only stable names, identities, typed ports, and state transitions.
+    /// adds stable diagnostic names, typed identities, ports, and retained transitions.
     pub fn to_wire(&self) -> Result<Vec<u8>, ProgramGraphError> {
         let mut bytes = Vec::new();
         bytes.extend_from_slice(MAGIC);
@@ -68,7 +68,7 @@ impl ProgramGraph {
                 if value.producer != Some(node.id)
                     || value.name != output.name
                     || value.contract != output.contract
-                    || value.state_successor_of != output.state_successor_of
+                    || value.retained_successor_of != output.retained_successor_of
                 {
                     return Err(wire_error(format!(
                         "node `{}` output `{}` disagrees with graph value {:?}",
@@ -78,7 +78,7 @@ impl ProgramGraph {
                 put_string(&mut bytes, &output.buffer)?;
                 put_string(&mut bytes, &output.name)?;
                 put_contract(&mut bytes, &output.contract)?;
-                match output.state_successor_of {
+                match output.retained_successor_of {
                     Some(prior) => {
                         bytes.push(1);
                         bytes.extend_from_slice(&prior.0.to_le_bytes());
@@ -143,12 +143,12 @@ impl ProgramGraph {
                 let buffer = reader.string()?;
                 let output_name = reader.string()?;
                 let contract = reader.contract()?;
-                let state_successor_of = match reader.u8()? {
+                let retained_successor_of = match reader.u8()? {
                     0 => None,
                     1 => Some(GraphValueId(reader.u32()?)),
                     tag => {
                         return Err(wire_error(format!(
-                            "state successor tag is {tag}; expected 0 or 1"
+                            "retained successor tag is {tag}; expected 0 or 1"
                         )))
                     }
                 };
@@ -156,7 +156,7 @@ impl ProgramGraph {
                     buffer,
                     name: output_name,
                     contract,
-                    state_successor_of,
+                    retained_successor_of,
                 });
             }
             graph.add_node(name, program, inputs, outputs)?;
@@ -171,7 +171,7 @@ impl ProgramGraph {
     }
 }
 
-fn put_contract(bytes: &mut Vec<u8>, contract: &TensorContract) -> Result<(), ProgramGraphError> {
+fn put_contract(bytes: &mut Vec<u8>, contract: &ValueContract) -> Result<(), ProgramGraphError> {
     let dtype = serde_json::to_vec(&contract.dtype)
         .map_err(|error| wire_error(format!("dtype encode failed: {error}")))?;
     if dtype.len() > MAX_DTYPE_BYTES {
@@ -196,9 +196,9 @@ fn put_contract(bytes: &mut Vec<u8>, contract: &TensorContract) -> Result<(), Pr
     }
     bytes.push(access_tag(contract.access.clone())?);
     bytes.push(match contract.lifetime {
-        ValueLifetime::ImmutableWeight => 0,
+        ValueLifetime::Constant => 0,
         ValueLifetime::Invocation => 1,
-        ValueLifetime::SequenceState => 2,
+        ValueLifetime::Retained => 2,
         ValueLifetime::Output => 3,
     });
     Ok(())
@@ -312,7 +312,7 @@ impl<'a> Reader<'a> {
             .map_err(|error| wire_error(format!("graph name is not UTF-8: {error}")))
     }
 
-    fn contract(&mut self) -> Result<TensorContract, ProgramGraphError> {
+    fn contract(&mut self) -> Result<ValueContract, ProgramGraphError> {
         let dtype_bytes = self.bytes(MAX_DTYPE_BYTES, "dtype bytes")?;
         let dtype: DataType = serde_json::from_slice(dtype_bytes)
             .map_err(|error| wire_error(format!("dtype decode failed: {error}")))?;
@@ -337,13 +337,13 @@ impl<'a> Reader<'a> {
             tag => return Err(wire_error(format!("unknown buffer access tag {tag}"))),
         };
         let lifetime = match self.u8()? {
-            0 => ValueLifetime::ImmutableWeight,
+            0 => ValueLifetime::Constant,
             1 => ValueLifetime::Invocation,
-            2 => ValueLifetime::SequenceState,
+            2 => ValueLifetime::Retained,
             3 => ValueLifetime::Output,
             tag => return Err(wire_error(format!("unknown value lifetime tag {tag}"))),
         };
-        Ok(TensorContract {
+        Ok(ValueContract {
             dtype,
             shape,
             access,

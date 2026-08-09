@@ -101,7 +101,7 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program_graph::{
         GraphInput, GraphNodeId, GraphOutput, GraphValueId, LivenessInterval, ProgramGraph,
-        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, TensorContract,
+        ProgramGraphError, ProgramGraphNode, ProgramGraphValue, ShapeDim, ValueContract,
         ValueLifetime,
     };
     /// Per-Node-variant bit-position constants for `ProgramStats::node_kinds_present`.

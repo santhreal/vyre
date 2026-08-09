@@ -1,4 +1,4 @@
-//! Typed connections between reusable [`Program`](super::program::Program) values.
+//! Typed connections between reusable [`Program`] values.
 //!
 //! `ProgramGraph` is composition metadata over existing Vyre IR. It is not a
 //! second neural IR: every executable node remains an ordinary `Program`.
@@ -11,7 +11,7 @@ use thiserror::Error;
 use super::program::Program;
 use super::types::{BufferAccess, DataType};
 
-/// Canonical graph-local identity for one connected tensor value.
+/// Canonical graph-local identity for one connected semantic value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct GraphValueId(pub u32);
 
@@ -19,7 +19,7 @@ pub struct GraphValueId(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct GraphNodeId(pub u32);
 
-/// One tensor dimension, either statically known or bound by graph configuration.
+/// One value dimension, either statically known or bound by graph configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShapeDim {
     /// Exact element extent.
@@ -28,29 +28,29 @@ pub enum ShapeDim {
     Symbol(String),
 }
 
-/// Lifetime class used by scheduling, residency, and cache planning.
+/// Semantic lifetime class used by compilation and runtime binding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ValueLifetime {
-    /// Immutable checkpoint or constant data shared by every sequence.
-    ImmutableWeight,
-    /// One invocation's temporary value.
+    /// Immutable constant data shared by every invocation.
+    Constant,
+    /// Temporary data valid for one invocation.
     Invocation,
-    /// Mutable state retained across prefill and decode transitions.
-    SequenceState,
-    /// Operator-visible graph result.
+    /// Mutable data retained across submissions.
+    Retained,
+    /// Caller-visible graph result.
     Output,
 }
 
-/// Complete type contract for a connected graph value.
+/// Complete semantic contract for a connected graph value.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TensorContract {
+pub struct ValueContract {
     /// Element representation.
     pub dtype: DataType,
-    /// Ordered tensor dimensions.
+    /// Ordered value dimensions.
     pub shape: Vec<ShapeDim>,
     /// Access required from the bound Program buffer.
     pub access: BufferAccess,
-    /// Residency and mutation lifetime.
+    /// Semantic lifetime.
     pub lifetime: ValueLifetime,
 }
 
@@ -62,7 +62,7 @@ pub struct GraphInput {
     /// Connected graph value.
     pub value: GraphValueId,
     /// Contract expected by this consumer port.
-    pub contract: TensorContract,
+    pub contract: ValueContract,
 }
 
 /// Declare one Program output and its graph-level contract.
@@ -72,10 +72,10 @@ pub struct GraphOutput {
     pub buffer: String,
     /// Stable graph value name.
     pub name: String,
-    /// Connected tensor contract.
-    pub contract: TensorContract,
-    /// Prior sequence-state value replaced by this output.
-    pub state_successor_of: Option<GraphValueId>,
+    /// Connected value contract.
+    pub contract: ValueContract,
+    /// Prior retained value replaced by this output.
+    pub retained_successor_of: Option<GraphValueId>,
 }
 
 /// One executable Program and its typed graph connections.
@@ -83,7 +83,7 @@ pub struct GraphOutput {
 pub struct ProgramGraphNode {
     /// Canonical node identity.
     pub id: GraphNodeId,
-    /// Stable model-level node name.
+    /// Stable semantic node name used only for display and diagnostics.
     pub name: String,
     /// Existing executable Vyre IR.
     pub program: Program,
@@ -100,16 +100,16 @@ pub struct ProgramGraphNode {
 pub struct ProgramGraphValue {
     /// Canonical value identity.
     pub id: GraphValueId,
-    /// Stable model-level value name.
+    /// Stable semantic value name used only for display and diagnostics.
     pub name: String,
     /// Type, shape, access, and lifetime contract.
-    pub contract: TensorContract,
-    /// Producing node, or `None` for graph inputs and immutable weights.
+    pub contract: ValueContract,
+    /// Producing node, or `None` for graph inputs and constants.
     pub producer: Option<GraphNodeId>,
     /// Nodes that consume this value.
     pub consumers: Vec<GraphNodeId>,
-    /// Prior state value when this value is a state transition.
-    pub state_successor_of: Option<GraphValueId>,
+    /// Prior retained value when this value replaces retained state.
+    pub retained_successor_of: Option<GraphValueId>,
 }
 
 /// Inclusive node-index interval during which one value must remain live.
@@ -141,9 +141,7 @@ pub enum ProgramGraphError {
         buffer: String,
     },
     /// Program buffer element/access metadata disagrees with the graph value.
-    #[error(
-        "program node `{node}` buffer `{buffer}` disagrees with its tensor contract: {reason}"
-    )]
+    #[error("program node `{node}` buffer `{buffer}` disagrees with its value contract: {reason}")]
     BufferContract {
         /// Stable graph node name.
         node: String,
@@ -164,16 +162,16 @@ pub enum ProgramGraphError {
         /// Connected value identity.
         value: GraphValueId,
         /// Producer or external-value contract.
-        actual: TensorContract,
+        actual: ValueContract,
         /// Consumer-declared contract.
-        expected: TensorContract,
+        expected: ValueContract,
     },
-    /// A sequence-state transition is not type preserving.
-    #[error("state output `{output}` is not a type-preserving successor of {prior:?}")]
-    InvalidStateTransition {
+    /// A retained-value transition is not type preserving.
+    #[error("retained output `{output}` is not a type-preserving successor of {prior:?}")]
+    InvalidRetainedTransition {
         /// Produced graph value name.
         output: String,
-        /// Prior state value.
+        /// Prior retained value.
         prior: GraphValueId,
     },
     /// A node binds one Program buffer more than once.
@@ -192,12 +190,12 @@ pub enum ProgramGraphError {
         /// Repeated graph value.
         value: GraphValueId,
     },
-    /// A state successor does not consume the prior state it replaces.
-    #[error("state output `{output}` names {prior:?} without consuming that prior state")]
-    DanglingStateTransition {
+    /// A retained successor does not consume the prior value it replaces.
+    #[error("retained output `{output}` names {prior:?} without consuming that prior value")]
+    MissingRetainedInput {
         /// Produced graph value name.
         output: String,
-        /// Unconsumed prior state.
+        /// Unconsumed prior retained value.
         prior: GraphValueId,
     },
     /// Graph identity exceeded the wire-stable u32 range.
@@ -223,11 +221,11 @@ impl ProgramGraph {
         Self::default()
     }
 
-    /// Register a graph input, immutable weight, or initial sequence state.
+    /// Register a graph input, constant, or initial retained value.
     pub fn add_external_value(
         &mut self,
         name: impl Into<String>,
-        contract: TensorContract,
+        contract: ValueContract,
     ) -> Result<GraphValueId, ProgramGraphError> {
         self.push_value(name.into(), contract, None, None)
     }
@@ -238,7 +236,7 @@ impl ProgramGraph {
     /// graph collection changes.
     pub fn add_external_values(
         &mut self,
-        values: Vec<(String, TensorContract)>,
+        values: Vec<(String, ValueContract)>,
     ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
         let mut batch_names = BTreeSet::new();
         let mut ids = Vec::with_capacity(values.len());
@@ -264,7 +262,7 @@ impl ProgramGraph {
                 contract,
                 producer: None,
                 consumers: Vec::new(),
-                state_successor_of: None,
+                retained_successor_of: None,
             });
         }
         Ok(ids)
@@ -273,8 +271,8 @@ impl ProgramGraph {
     /// Append one Program node after all of its producers.
     ///
     /// Construction order is the topological schedule. This makes cycles
-    /// unrepresentable except for explicit, type-preserving sequence-state
-    /// transitions declared through `state_successor_of`.
+    /// unrepresentable except for explicit, type-preserving retained-value
+    /// transitions declared through `retained_successor_of`.
     pub fn add_node(
         &mut self,
         name: impl Into<String>,
@@ -347,33 +345,33 @@ impl ProgramGraph {
             )?;
         }
         for output in &outputs {
-            if let Some(prior_id) = output.state_successor_of {
+            if let Some(prior_id) = output.retained_successor_of {
                 let prior = self
                     .values
                     .get(prior_id.0 as usize)
                     .ok_or(ProgramGraphError::MissingValue(prior_id))?;
                 if !inputs.iter().any(|input| input.value == prior_id) {
-                    return Err(ProgramGraphError::DanglingStateTransition {
+                    return Err(ProgramGraphError::MissingRetainedInput {
                         output: output.name.clone(),
                         prior: prior_id,
                     });
                 }
-                if prior.contract.lifetime != ValueLifetime::SequenceState
-                    || output.contract.lifetime != ValueLifetime::SequenceState
+                if prior.contract.lifetime != ValueLifetime::Retained
+                    || output.contract.lifetime != ValueLifetime::Retained
                     || prior.contract != output.contract
                 {
-                    return Err(ProgramGraphError::InvalidStateTransition {
+                    return Err(ProgramGraphError::InvalidRetainedTransition {
                         output: output.name.clone(),
                         prior: prior_id,
                     });
                 }
             }
-            let state_rebind = output.state_successor_of.is_some_and(|prior| {
+            let retained_rebind = output.retained_successor_of.is_some_and(|prior| {
                 inputs
                     .iter()
                     .any(|input| input.buffer == output.buffer && input.value == prior)
             });
-            if !bound.insert(output.buffer.as_str()) && !state_rebind {
+            if !bound.insert(output.buffer.as_str()) && !retained_rebind {
                 return Err(ProgramGraphError::DuplicatePort {
                     node: name,
                     buffer: output.buffer.clone(),
@@ -406,7 +404,7 @@ impl ProgramGraph {
                 contract: output.contract,
                 producer: Some(node_id),
                 consumers: Vec::new(),
-                state_successor_of: output.state_successor_of,
+                retained_successor_of: output.retained_successor_of,
             });
         }
         self.nodes.push(ProgramGraphNode {
@@ -463,9 +461,9 @@ impl ProgramGraph {
     fn push_value(
         &mut self,
         name: String,
-        contract: TensorContract,
+        contract: ValueContract,
         producer: Option<GraphNodeId>,
-        state_successor_of: Option<GraphValueId>,
+        retained_successor_of: Option<GraphValueId>,
     ) -> Result<GraphValueId, ProgramGraphError> {
         self.ensure_name_available(&name)?;
         let id = GraphValueId(
@@ -479,7 +477,7 @@ impl ProgramGraph {
             contract,
             producer,
             consumers: Vec::new(),
-            state_successor_of,
+            retained_successor_of,
         });
         Ok(id)
     }
@@ -502,7 +500,7 @@ fn validate_buffer(
     node: &str,
     program: &Program,
     buffer_name: &str,
-    contract: &TensorContract,
+    contract: &ValueContract,
     role: PortRole,
 ) -> Result<(), ProgramGraphError> {
     let buffer = program

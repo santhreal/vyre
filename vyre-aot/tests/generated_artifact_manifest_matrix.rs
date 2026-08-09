@@ -41,7 +41,7 @@ fn generated_canonical_envelopes_round_trip() {
 
     for seed in 0..512_u32 {
         let envelope_bytes = artifact.envelope().to_bytes().unwrap();
-        let decoded = vyre_megakernel::MegakernelArtifactEnvelope::from_bytes(&envelope_bytes)
+        let decoded = vyre_megakernel::ArtifactEnvelope::from_bytes(&envelope_bytes)
             .expect("generated canonical envelope must parse");
         let payload = decoded
             .require_target_payload(&vyre_aot::target_payload_format(Target::Ptx).unwrap())
@@ -69,8 +69,7 @@ fn generated_manifests_round_trip_canonical_identity_fields() {
         );
         assert_eq!(
             decoded.target_payload_digest_hex,
-            generated_manifest(seed.wrapping_mul(0x9e37_79b9), &artifact)
-                .target_payload_digest_hex
+            generated_manifest(seed.wrapping_mul(0x9e37_79b9), &artifact).target_payload_digest_hex
         );
     }
 }

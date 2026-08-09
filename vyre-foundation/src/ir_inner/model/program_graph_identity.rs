@@ -8,19 +8,19 @@ use super::program_graph::{ProgramGraph, ProgramGraphError, ShapeDim, ValueLifet
 use super::program_graph_analysis::ProgramGraphAnalysisError;
 
 /// Current domain-separated composition identity format.
-pub const PROGRAM_GRAPH_IDENTITY_VERSION: u16 = 1;
+pub const PROGRAM_GRAPH_IDENTITY_VERSION: u16 = 2;
 
 /// Stable caller-supplied facts outside graph topology.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProgramGraphIdentityContext {
     /// Version of the consuming compiled-artifact schema.
     pub artifact_schema_version: u32,
-    /// Digest of the complete validated model configuration.
-    pub model_configuration_digest: [u8; 32],
+    /// Digest of complete validated semantic configuration outside the graph.
+    pub configuration_digest: [u8; 32],
     /// Exact concrete value for every symbolic graph dimension.
     pub symbolic_bindings: BTreeMap<String, u64>,
-    /// Exact verified content digest for every immutable graph value.
-    pub immutable_weight_identities: BTreeMap<String, [u8; 32]>,
+    /// Exact verified content digest for every constant graph value.
+    pub constant_identities: BTreeMap<String, [u8; 32]>,
 }
 
 /// Versioned identity suitable for compiled-artifact and residency keys.
@@ -61,16 +61,16 @@ pub enum ProgramGraphIdentityError {
         /// Unexpected symbol.
         symbol: String,
     },
-    /// An immutable graph value has no verified content identity.
-    #[error("program graph identity is missing immutable weight `{name}`")]
-    MissingWeight {
-        /// Missing immutable value name.
+    /// A constant graph value has no verified content identity.
+    #[error("program graph identity is missing constant identity `{name}`")]
+    MissingConstantIdentity {
+        /// Missing constant value name.
         name: String,
     },
-    /// Context includes an identity for a non-weight graph value.
-    #[error("program graph identity has unexpected immutable weight `{name}`")]
-    UnexpectedWeight {
-        /// Unexpected immutable value name.
+    /// Context includes an identity for a non-constant graph value.
+    #[error("program graph identity has unexpected constant identity `{name}`")]
+    UnexpectedConstantIdentity {
+        /// Unexpected constant value name.
         name: String,
     },
     /// A length does not fit the stable u64 framing.
@@ -81,8 +81,8 @@ pub enum ProgramGraphIdentityError {
 impl ProgramGraph {
     /// Derive canonical composition identity from graph and external provenance.
     ///
-    /// Mutable sequence-state contents are deliberately absent. State schemas and
-    /// transitions remain part of the graph bytes, so cache growth does not churn
+    /// Mutable retained contents are deliberately absent. Retained schemas and
+    /// transitions remain part of the graph bytes, so state changes do not churn
     /// compiled-artifact identity while a contract change does.
     pub fn identity(
         &self,
@@ -100,14 +100,14 @@ impl ProgramGraph {
         hasher.update(&PROGRAM_GRAPH_IDENTITY_VERSION.to_le_bytes());
         hasher.update(&context.artifact_schema_version.to_le_bytes());
         update_bytes(&mut hasher, &graph_wire)?;
-        hasher.update(&context.model_configuration_digest);
+        hasher.update(&context.configuration_digest);
         update_count(&mut hasher, context.symbolic_bindings.len())?;
         for (symbol, value) in &context.symbolic_bindings {
             update_bytes(&mut hasher, symbol.as_bytes())?;
             hasher.update(&value.to_le_bytes());
         }
-        update_count(&mut hasher, context.immutable_weight_identities.len())?;
-        for (name, identity) in &context.immutable_weight_identities {
+        update_count(&mut hasher, context.constant_identities.len())?;
+        for (name, identity) in &context.constant_identities {
             update_bytes(&mut hasher, name.as_bytes())?;
             hasher.update(identity);
         }
@@ -146,22 +146,24 @@ fn validate_context(
         }
     }
 
-    let weights = graph
+    let constants = graph
         .values()
         .iter()
-        .filter(|value| value.contract.lifetime == ValueLifetime::ImmutableWeight)
+        .filter(|value| value.contract.lifetime == ValueLifetime::Constant)
         .map(|value| value.name.as_str())
         .collect::<BTreeSet<_>>();
-    for name in &weights {
-        if !context.immutable_weight_identities.contains_key(*name) {
-            return Err(ProgramGraphIdentityError::MissingWeight {
+    for name in &constants {
+        if !context.constant_identities.contains_key(*name) {
+            return Err(ProgramGraphIdentityError::MissingConstantIdentity {
                 name: (*name).to_owned(),
             });
         }
     }
-    for name in context.immutable_weight_identities.keys() {
-        if !weights.contains(name.as_str()) {
-            return Err(ProgramGraphIdentityError::UnexpectedWeight { name: name.clone() });
+    for name in context.constant_identities.keys() {
+        if !constants.contains(name.as_str()) {
+            return Err(ProgramGraphIdentityError::UnexpectedConstantIdentity {
+                name: name.clone(),
+            });
         }
     }
     Ok(())

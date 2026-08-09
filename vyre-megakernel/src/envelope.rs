@@ -2,19 +2,21 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{failure, ArtifactNodeId, ArtifactValueId, CompileError, DiagnosticCode, Digest, MegakernelArtifact};
+use crate::{
+    failure, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, DiagnosticCode, Digest,
+};
 
 /// Current schema for the artifact envelope that carries neutral data and target payloads.
-pub const ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16 = 1;
+pub const ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16 = 2;
 /// Current schema for one target payload attachment.
-pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 1;
+pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 2;
 
 const ENVELOPE_MAGIC: &[u8; 4] = b"VME0";
 const TARGET_PAYLOAD_MAGIC: &[u8; 4] = b"VTP0";
 const FRAME_HEADER_BYTES: usize = 10;
 const DIGEST_BYTES: usize = 32;
-const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v1\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v1\0";
+const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
+const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v2\0";
 
 /// Versioned identity of target bytes without assigning concrete target semantics.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -88,7 +90,7 @@ pub enum TargetResourceAccess {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TargetResourceBinding {
-    /// Canonical resource identity from [`MegakernelArtifact::resources`].
+    /// Canonical resource identity from [`Artifact::resources`].
     pub resource: ArtifactValueId,
     /// Target entry binding slot.
     pub slot: u32,
@@ -134,7 +136,7 @@ pub struct TargetPayload {
 impl TargetPayload {
     /// Validate and bind target bytes to an exact neutral artifact.
     pub fn new(
-        neutral: &MegakernelArtifact,
+        neutral: &Artifact,
         format: TargetPayloadFormat,
         mut entries: Vec<TargetEntryPoint>,
         bytes: Vec<u8>,
@@ -237,7 +239,8 @@ impl TargetPayload {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()] {
+        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
+        {
             return Err(failure(
                 DiagnosticCode::MalformedTargetPayload,
                 "target_payload.body",
@@ -262,15 +265,15 @@ struct EnvelopeBody {
 
 /// Canonical versioned envelope containing one neutral artifact and target attachments.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MegakernelArtifactEnvelope {
-    neutral: MegakernelArtifact,
+pub struct ArtifactEnvelope {
+    neutral: Artifact,
     target_payloads: Vec<TargetPayload>,
 }
 
-impl MegakernelArtifactEnvelope {
+impl ArtifactEnvelope {
     /// Start an envelope around one authenticated neutral artifact.
     #[must_use]
-    pub fn new(neutral: MegakernelArtifact) -> Self {
+    pub fn new(neutral: Artifact) -> Self {
         Self {
             neutral,
             target_payloads: Vec::new(),
@@ -279,7 +282,7 @@ impl MegakernelArtifactEnvelope {
 
     /// Canonical neutral artifact.
     #[must_use]
-    pub const fn neutral(&self) -> &MegakernelArtifact {
+    pub const fn neutral(&self) -> &Artifact {
         &self.neutral
     }
 
@@ -292,7 +295,11 @@ impl MegakernelArtifactEnvelope {
     /// Attach a validated target payload to its exact neutral artifact.
     pub fn attach_target_payload(&mut self, payload: TargetPayload) -> Result<(), CompileError> {
         validate_target_payload(&self.neutral, &payload)?;
-        if self.target_payloads.iter().any(|existing| existing.format() == payload.format()) {
+        if self
+            .target_payloads
+            .iter()
+            .any(|existing| existing.format() == payload.format())
+        {
             return Err(failure(
                 DiagnosticCode::MalformedTargetPayload,
                 "envelope.target_payloads",
@@ -305,17 +312,22 @@ impl MegakernelArtifactEnvelope {
             ));
         }
         self.target_payloads.push(payload);
-        self.target_payloads.sort_by(|left, right| left.format().cmp(right.format()));
+        self.target_payloads
+            .sort_by(|left, right| left.format().cmp(right.format()));
         Ok(())
     }
 
-    /// Return the payload compatible with one exact format identity and version.
-    pub fn require_target_payload(
+    /// Return the canonical index of the payload compatible with one exact format.
+    pub fn require_target_payload_index(
         &self,
         required: &TargetPayloadFormat,
-    ) -> Result<&TargetPayload, CompileError> {
-        if let Some(payload) = self.target_payloads.iter().find(|payload| payload.format() == required) {
-            return Ok(payload);
+    ) -> Result<usize, CompileError> {
+        if let Some(index) = self
+            .target_payloads
+            .iter()
+            .position(|payload| payload.format() == required)
+        {
+            return Ok(index);
         }
         if let Some(payload) = self
             .target_payloads
@@ -337,9 +349,28 @@ impl MegakernelArtifactEnvelope {
         Err(failure(
             DiagnosticCode::IncompatibleTargetPayload,
             "envelope.target_payloads.format.identity",
-            format!("required target payload format {} is absent", required.identity()),
+            format!(
+                "required target payload format {} is absent",
+                required.identity()
+            ),
             "attach a compatible payload or materialize one from the neutral artifact",
         ))
+    }
+
+    /// Return the payload compatible with one exact format identity and version.
+    pub fn require_target_payload(
+        &self,
+        required: &TargetPayloadFormat,
+    ) -> Result<&TargetPayload, CompileError> {
+        let index = self.require_target_payload_index(required)?;
+        self.target_payloads.get(index).ok_or_else(|| {
+            failure(
+                DiagnosticCode::MalformedArtifact,
+                "envelope.target_payloads",
+                "validated target payload index is outside the canonical attachment set",
+                "discard the artifact and regenerate its canonical envelope",
+            )
+        })
     }
 
     /// Encode the complete authenticated artifact envelope.
@@ -389,15 +420,16 @@ impl MegakernelArtifactEnvelope {
             ));
         }
         let canonical = serde_json::to_vec(&body).map_err(serialization_failure)?;
-        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()] {
+        if canonical.as_slice() != &bytes[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + canonical.len()]
+        {
             return Err(failure(
                 DiagnosticCode::MalformedArtifact,
                 "envelope.body",
                 "envelope body is not canonical JSON",
-                "use bytes emitted by MegakernelArtifactEnvelope::to_bytes",
+                "use bytes emitted by ArtifactEnvelope::to_bytes",
             ));
         }
-        let neutral = MegakernelArtifact::from_bytes(&body.neutral_artifact)?;
+        let neutral = Artifact::from_bytes(&body.neutral_artifact)?;
         let mut envelope = Self::new(neutral);
         for payload_bytes in body.target_payloads {
             envelope.attach_target_payload(TargetPayload::from_bytes(&payload_bytes)?)?;
@@ -407,7 +439,7 @@ impl MegakernelArtifactEnvelope {
 }
 
 fn validate_target_payload(
-    neutral: &MegakernelArtifact,
+    neutral: &Artifact,
     payload: &TargetPayload,
 ) -> Result<(), CompileError> {
     if payload.schema_version() != TARGET_PAYLOAD_SCHEMA_VERSION {
@@ -443,10 +475,7 @@ fn validate_target_payload(
     Ok(())
 }
 
-fn validate_entries(
-    neutral: &MegakernelArtifact,
-    entries: &[TargetEntryPoint],
-) -> Result<(), CompileError> {
+fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<(), CompileError> {
     if entries.is_empty() {
         return Err(failure(
             DiagnosticCode::MalformedTargetPayload,
@@ -482,7 +511,11 @@ fn validate_entries(
                 "associate the target entry with a canonical neutral node identity",
             ));
         }
-        if !neutral.geometry().iter().any(|geometry| geometry.node == entry.node) {
+        if !neutral
+            .geometry()
+            .iter()
+            .any(|geometry| geometry.node == entry.node)
+        {
             return Err(failure(
                 DiagnosticCode::TargetPayloadAssociationMismatch,
                 format!("{path}.node"),
@@ -514,11 +547,18 @@ fn validate_entries(
                 return Err(failure(
                     DiagnosticCode::MalformedTargetPayload,
                     format!("{binding_path}.resource"),
-                    format!("canonical resource {} is bound more than once", binding.resource.0),
+                    format!(
+                        "canonical resource {} is bound more than once",
+                        binding.resource.0
+                    ),
                     "associate each canonical resource with at most one entry binding",
                 ));
             }
-            if !neutral.resources().iter().any(|resource| resource.value == binding.resource) {
+            if !neutral
+                .resources()
+                .iter()
+                .any(|resource| resource.value == binding.resource)
+            {
                 return Err(failure(
                     DiagnosticCode::TargetPayloadAssociationMismatch,
                     format!("{binding_path}.resource"),
@@ -606,7 +646,10 @@ fn decode_frame<'a>(
         return Err(failure(
             DiagnosticCode::MalformedArtifact,
             format!("{path}.body_length"),
-            format!("framing declares {expected_len} bytes but received {}", bytes.len()),
+            format!(
+                "framing declares {expected_len} bytes but received {}",
+                bytes.len()
+            ),
             "supply exactly one complete canonical frame",
         ));
     }
@@ -628,7 +671,11 @@ fn decode_frame<'a>(
 
 fn body_digest<T: Serialize>(domain: &[u8], body: &T) -> Result<Digest, CompileError> {
     let body = serde_json::to_vec(body).map_err(serialization_failure)?;
-    Ok(Digest(digest_bytes(domain, TARGET_PAYLOAD_SCHEMA_VERSION, &body)))
+    Ok(Digest(digest_bytes(
+        domain,
+        TARGET_PAYLOAD_SCHEMA_VERSION,
+        &body,
+    )))
 }
 
 fn digest_bytes(domain: &[u8], version: u16, body: &[u8]) -> [u8; 32] {

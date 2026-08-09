@@ -211,16 +211,14 @@ pub fn read_bundle_artifact(
             "canonical envelope SHA-256 does not match manifest identity".to_string(),
         ));
     }
-    let envelope = vyre_megakernel::MegakernelArtifactEnvelope::from_bytes(&envelope_bytes)?;
+    let envelope = vyre_megakernel::ArtifactEnvelope::from_bytes(&envelope_bytes)?;
     let artifact = CompiledArtifact::new(
         manifest.target,
         envelope,
         manifest.aot_version.clone(),
         manifest.vsa_fingerprint.clone(),
     )?;
-    if digest_hex(artifact.envelope().neutral().digest())
-        != manifest.neutral_artifact_digest_hex
-    {
+    if digest_hex(artifact.envelope().neutral().digest()) != manifest.neutral_artifact_digest_hex {
         return Err(BundleError::InvalidArtifact(
             "neutral artifact digest does not match manifest identity".to_string(),
         ));
@@ -348,9 +346,7 @@ fn validate_weight_payload_fits_first_finite_resource(
         return Ok(());
     }
     let weight_bytes = u64::try_from(weights.len()).map_err(|error| {
-        BundleError::InvalidArtifact(format!(
-            "weights payload length cannot fit u64: {error}"
-        ))
+        BundleError::InvalidArtifact(format!("weights payload length cannot fit u64: {error}"))
     })?;
     if weight_bytes > first.byte_count {
         return Err(BundleError::InvalidArtifact(format!(

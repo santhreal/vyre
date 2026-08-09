@@ -9,7 +9,7 @@ use vyre_foundation::ir::model::program_graph_identity::{
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
-    TensorContract, ValueLifetime,
+    ValueContract, ValueLifetime,
 };
 
 fn tensor(
@@ -17,8 +17,8 @@ fn tensor(
     shape: Vec<ShapeDim>,
     access: BufferAccess,
     lifetime: ValueLifetime,
-) -> TensorContract {
-    TensorContract {
+) -> ValueContract {
+    ValueContract {
         dtype,
         shape,
         access,
@@ -35,7 +35,7 @@ fn model_graph(hidden: u64, local_prefix: &str) -> ProgramGraph {
                 DataType::BF16,
                 vec![ShapeDim::Known(hidden), ShapeDim::Known(hidden)],
                 BufferAccess::ReadOnly,
-                ValueLifetime::ImmutableWeight,
+                ValueLifetime::Constant,
             ),
         )
         .expect("Fix: identity fixture weight must register");
@@ -83,7 +83,7 @@ fn model_graph(hidden: u64, local_prefix: &str) -> ProgramGraph {
                         DataType::BF16,
                         vec![ShapeDim::Known(hidden), ShapeDim::Known(hidden)],
                         BufferAccess::ReadOnly,
-                        ValueLifetime::ImmutableWeight,
+                        ValueLifetime::Constant,
                     ),
                 },
             ],
@@ -96,7 +96,7 @@ fn model_graph(hidden: u64, local_prefix: &str) -> ProgramGraph {
                     BufferAccess::ReadWrite,
                     ValueLifetime::Output,
                 ),
-                state_successor_of: None,
+                retained_successor_of: None,
             }],
         )
         .expect("Fix: identity fixture node must connect");
@@ -106,9 +106,9 @@ fn model_graph(hidden: u64, local_prefix: &str) -> ProgramGraph {
 fn context() -> ProgramGraphIdentityContext {
     ProgramGraphIdentityContext {
         artifact_schema_version: 7,
-        model_configuration_digest: [0xA5; 32],
+        configuration_digest: [0xA5; 32],
         symbolic_bindings: BTreeMap::from([("batch".into(), 4)]),
-        immutable_weight_identities: BTreeMap::from([("weight".into(), [0x5A; 32])]),
+        constant_identities: BTreeMap::from([("weight".into(), [0x5A; 32])]),
     }
 }
 
@@ -122,8 +122,8 @@ fn canonical_composition_identity_matches_frozen_digest() {
     assert_eq!(
         identity.digest,
         [
-            80, 47, 121, 145, 193, 101, 157, 204, 7, 222, 239, 192, 167, 227, 67, 148, 35, 245,
-            172, 69, 62, 46, 79, 182, 69, 157, 205, 151, 199, 182, 124, 48,
+            128, 253, 86, 56, 126, 206, 127, 140, 199, 42, 50, 6, 50, 55, 18, 228, 217, 157, 21,
+            58, 202, 82, 10, 210, 203, 74, 221, 171, 137, 28, 46, 105,
         ]
     );
 }
@@ -195,16 +195,16 @@ fn topology_and_local_program_bindings_change_identity() {
                         BufferAccess::ReadWrite,
                         ValueLifetime::Output,
                     ),
-                    state_successor_of: None,
+                    retained_successor_of: None,
                 }],
             )
             .expect("Fix: reordered fixture node must connect");
     }
     let empty_context = ProgramGraphIdentityContext {
         artifact_schema_version: 7,
-        model_configuration_digest: [0xA5; 32],
+        configuration_digest: [0xA5; 32],
         symbolic_bindings: BTreeMap::new(),
-        immutable_weight_identities: BTreeMap::new(),
+        constant_identities: BTreeMap::new(),
     };
     let reversed_identity = reversed
         .identity(&empty_context)
@@ -231,7 +231,7 @@ fn every_external_provenance_change_invalidates_identity() {
     );
 
     let mut changed_config = baseline_context.clone();
-    changed_config.model_configuration_digest[0] ^= 1;
+    changed_config.configuration_digest[0] ^= 1;
     assert_ne!(
         baseline,
         graph
@@ -241,7 +241,7 @@ fn every_external_provenance_change_invalidates_identity() {
 
     let mut changed_weight = baseline_context.clone();
     changed_weight
-        .immutable_weight_identities
+        .constant_identities
         .get_mut("weight")
         .expect("Fix: fixture weight exists")[0] ^= 1;
     assert_ne!(
@@ -278,15 +278,15 @@ fn mutable_cache_growth_does_not_change_composition_identity() {
                 DataType::F32,
                 vec![ShapeDim::Known(128), ShapeDim::Known(8)],
                 BufferAccess::ReadWrite,
-                ValueLifetime::SequenceState,
+                ValueLifetime::Retained,
             ),
         )
         .expect("Fix: cache schema must register");
     let cache_context = ProgramGraphIdentityContext {
         artifact_schema_version: 1,
-        model_configuration_digest: [7; 32],
+        configuration_digest: [7; 32],
         symbolic_bindings: BTreeMap::new(),
-        immutable_weight_identities: BTreeMap::new(),
+        constant_identities: BTreeMap::new(),
     };
     let before = graph
         .identity(&cache_context)
@@ -324,16 +324,16 @@ fn symbolic_binding_set_must_match_graph_exactly() {
 fn immutable_weight_set_must_match_graph_exactly() {
     let graph = model_graph(8, "projection");
     let mut missing = context();
-    missing.immutable_weight_identities.clear();
+    missing.constant_identities.clear();
     assert!(
-        matches!(graph.identity(&missing), Err(ProgramGraphIdentityError::MissingWeight { name }) if name == "weight")
+        matches!(graph.identity(&missing), Err(ProgramGraphIdentityError::MissingConstantIdentity { name }) if name == "weight")
     );
 
     let mut extra = context();
     extra
-        .immutable_weight_identities
+        .constant_identities
         .insert("vision.weight".into(), [1; 32]);
     assert!(
-        matches!(graph.identity(&extra), Err(ProgramGraphIdentityError::UnexpectedWeight { name }) if name == "vision.weight")
+        matches!(graph.identity(&extra), Err(ProgramGraphIdentityError::UnexpectedConstantIdentity { name }) if name == "vision.weight")
     );
 }

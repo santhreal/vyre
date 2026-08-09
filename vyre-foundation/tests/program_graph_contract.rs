@@ -4,11 +4,11 @@
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, GraphValueId, Node, Program,
-    ProgramGraph, ProgramGraphError, ShapeDim, TensorContract, ValueLifetime,
+    ProgramGraph, ProgramGraphError, ShapeDim, ValueContract, ValueLifetime,
 };
 
-fn contract(access: BufferAccess, lifetime: ValueLifetime) -> TensorContract {
-    TensorContract {
+fn contract(access: BufferAccess, lifetime: ValueLifetime) -> ValueContract {
+    ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Symbol("tokens".into()), ShapeDim::Known(8)],
         access,
@@ -55,21 +55,21 @@ fn two_input_program(first: &str, second: &str) -> Program {
 }
 
 fn stateful_wire_graph() -> ProgramGraph {
-    let state_contract = TensorContract {
+    let state_contract = ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Symbol("batch".into()), ShapeDim::Known(8)],
         access: BufferAccess::ReadWrite,
-        lifetime: ValueLifetime::SequenceState,
+        lifetime: ValueLifetime::Retained,
     };
     let mut graph = ProgramGraph::new();
     graph
         .add_external_value(
             "weight",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::BF16,
                 shape: vec![ShapeDim::Known(2), ShapeDim::Known(4)],
                 access: BufferAccess::ReadOnly,
-                lifetime: ValueLifetime::ImmutableWeight,
+                lifetime: ValueLifetime::Constant,
             },
         )
         .expect("Fix: wire fixture weight must register");
@@ -98,7 +98,7 @@ fn stateful_wire_graph() -> ProgramGraph {
                 buffer: "cache".into(),
                 name: "cache.1".into(),
                 contract: state_contract,
-                state_successor_of: Some(state),
+                retained_successor_of: Some(state),
             }],
         )
         .expect("Fix: wire fixture state transition must connect");
@@ -128,7 +128,7 @@ fn connected_programs_have_exact_schedule_and_liveness() {
                 buffer: "hidden".into(),
                 name: "hidden.0".into(),
                 contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
-                state_successor_of: None,
+                retained_successor_of: None,
             }],
         )
         .expect("Fix: first graph node must connect");
@@ -145,7 +145,7 @@ fn connected_programs_have_exact_schedule_and_liveness() {
                 buffer: "logits".into(),
                 name: "logits".into(),
                 contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
-                state_successor_of: None,
+                retained_successor_of: None,
             }],
         )
         .expect("Fix: second graph node must connect");
@@ -204,7 +204,7 @@ fn incompatible_tensor_contract_fails_closed() {
     let value = graph
         .add_external_value(
             "input",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(8)],
                 access: BufferAccess::ReadOnly,
@@ -219,7 +219,7 @@ fn incompatible_tensor_contract_fails_closed() {
             vec![GraphInput {
                 buffer: "input".into(),
                 value,
-                contract: TensorContract {
+                contract: ValueContract {
                     dtype: DataType::U32,
                     shape: vec![ShapeDim::Known(8)],
                     access: BufferAccess::ReadOnly,
@@ -238,7 +238,7 @@ fn incompatible_tensor_contract_fails_closed() {
 /// Locks decode state to an explicit type-preserving successor edge.
 #[test]
 fn sequence_state_transition_preserves_contract() {
-    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState);
+    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
     let mut graph = ProgramGraph::new();
     let state = graph
         .add_external_value("cache.0", state_contract.clone())
@@ -266,12 +266,12 @@ fn sequence_state_transition_preserves_contract() {
                 buffer: "cache".into(),
                 name: "cache.1".into(),
                 contract: state_contract,
-                state_successor_of: Some(state),
+                retained_successor_of: Some(state),
             }],
         )
         .expect("Fix: exact state successors must connect");
     assert_eq!(
-        graph.values()[outputs[0].0 as usize].state_successor_of,
+        graph.values()[outputs[0].0 as usize].retained_successor_of,
         Some(state)
     );
 }
@@ -283,7 +283,7 @@ fn incompatible_sequence_state_transition_fails_closed() {
     let state = graph
         .add_external_value(
             "cache.0",
-            contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState),
+            contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
         )
         .expect("Fix: initial state must be valid");
     let program = Program::wrapped(
@@ -303,22 +303,22 @@ fn incompatible_sequence_state_transition_fails_closed() {
             vec![GraphInput {
                 buffer: "cache".into(),
                 value: state,
-                contract: contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState),
+                contract: contract(BufferAccess::ReadWrite, ValueLifetime::Retained),
             }],
             vec![GraphOutput {
                 buffer: "cache".into(),
                 name: "cache.1".into(),
-                contract: TensorContract {
+                contract: ValueContract {
                     shape: vec![ShapeDim::Known(9)],
-                    ..contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState)
+                    ..contract(BufferAccess::ReadWrite, ValueLifetime::Retained)
                 },
-                state_successor_of: Some(state),
+                retained_successor_of: Some(state),
             }],
         )
         .expect_err("Fix: state shape changes must fail");
     assert_eq!(
         error,
-        ProgramGraphError::InvalidStateTransition {
+        ProgramGraphError::InvalidRetainedTransition {
             output: "cache.1".into(),
             prior: state,
         }
@@ -332,14 +332,14 @@ fn duplicate_names_fail_closed() {
     graph
         .add_external_value(
             "shared",
-            contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+            contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
         )
         .expect("Fix: first name must be accepted");
     assert_eq!(
         graph
             .add_external_value(
                 "shared",
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             )
             .expect_err("Fix: duplicate value names must fail"),
         ProgramGraphError::DuplicateName("shared".into())
@@ -385,7 +385,7 @@ fn failed_node_validation_does_not_reserve_node_identity() {
                 buffer: "output".into(),
                 name: "output".into(),
                 contract: contract(BufferAccess::ReadWrite, ValueLifetime::Output),
-                state_successor_of: None,
+                retained_successor_of: None,
             }],
         )
         .expect("Fix: failed construction must leave its node name reusable");
@@ -418,16 +418,16 @@ fn failed_output_validation_rolls_back_every_graph_collection() {
                     buffer: "first".into(),
                     name: "first.value".into(),
                     contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation),
-                    state_successor_of: None,
+                    retained_successor_of: None,
                 },
                 GraphOutput {
                     buffer: "second".into(),
                     name: "second.value".into(),
-                    contract: TensorContract {
+                    contract: ValueContract {
                         dtype: DataType::U32,
                         ..contract(BufferAccess::ReadWrite, ValueLifetime::Invocation)
                     },
-                    state_successor_of: None,
+                    retained_successor_of: None,
                 },
             ],
         )
@@ -440,7 +440,7 @@ fn failed_output_validation_rolls_back_every_graph_collection() {
         graph
             .add_external_value(
                 "first.value",
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             )
             .expect("Fix: failed outputs must not reserve names"),
         GraphValueId(1)
@@ -448,7 +448,7 @@ fn failed_output_validation_rolls_back_every_graph_collection() {
     graph
         .add_external_value(
             "split",
-            contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+            contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
         )
         .expect("Fix: failed node must not reserve its name");
 }
@@ -479,13 +479,13 @@ fn duplicate_output_names_leave_graph_unchanged() {
                         buffer: "first".into(),
                         name: "duplicate".into(),
                         contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation,),
-                        state_successor_of: None,
+                        retained_successor_of: None,
                     },
                     GraphOutput {
                         buffer: "second".into(),
                         name: "duplicate".into(),
                         contract: contract(BufferAccess::ReadWrite, ValueLifetime::Invocation,),
-                        state_successor_of: None,
+                        retained_successor_of: None,
                     },
                 ],
             )
@@ -499,7 +499,7 @@ fn duplicate_output_names_leave_graph_unchanged() {
         graph
             .add_external_value(
                 "duplicate",
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             )
             .expect("Fix: duplicate failed outputs must not reserve names"),
         GraphValueId(1)
@@ -514,11 +514,11 @@ fn external_value_batch_commits_in_declaration_order() {
         .add_external_values(vec![
             (
                 "weight.a".into(),
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             ),
             (
                 "weight.b".into(),
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             ),
         ])
         .expect("Fix: unique external batch must register");
@@ -542,11 +542,11 @@ fn duplicate_external_batch_name_rolls_back_all_values() {
             .add_external_values(vec![
                 (
                     "weight".into(),
-                    contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                    contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 ),
                 (
                     "weight".into(),
-                    contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                    contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 ),
             ])
             .expect_err("Fix: duplicate batch name must fail"),
@@ -557,7 +557,7 @@ fn duplicate_external_batch_name_rolls_back_all_values() {
         graph
             .add_external_value(
                 "weight",
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             )
             .expect("Fix: rejected batch must not reserve its first name"),
         GraphValueId(0)
@@ -571,7 +571,7 @@ fn existing_name_collision_rolls_back_external_batch() {
     graph
         .add_external_value(
             "existing",
-            contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+            contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
         )
         .expect("Fix: existing fixture value must register");
     let before = graph.values().to_vec();
@@ -580,11 +580,11 @@ fn existing_name_collision_rolls_back_external_batch() {
             .add_external_values(vec![
                 (
                     "new".into(),
-                    contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                    contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 ),
                 (
                     "existing".into(),
-                    contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                    contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
                 ),
             ])
             .expect_err("Fix: existing name collision must reject the whole batch"),
@@ -595,7 +595,7 @@ fn existing_name_collision_rolls_back_external_batch() {
         graph
             .add_external_value(
                 "new",
-                contract(BufferAccess::ReadOnly, ValueLifetime::ImmutableWeight),
+                contract(BufferAccess::ReadOnly, ValueLifetime::Constant),
             )
             .expect("Fix: rejected batch must leave earlier names reusable"),
         GraphValueId(1)
@@ -605,7 +605,7 @@ fn existing_name_collision_rolls_back_external_batch() {
 /// Prevents a consumer from flattening or reshaping a connected value implicitly.
 #[test]
 fn consumer_rank_drift_fails_before_graph_mutation() {
-    let producer_contract = TensorContract {
+    let producer_contract = ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Known(2), ShapeDim::Known(4)],
         access: BufferAccess::ReadOnly,
@@ -630,7 +630,7 @@ fn consumer_rank_drift_fails_before_graph_mutation() {
             vec![GraphInput {
                 buffer: "input".into(),
                 value,
-                contract: TensorContract {
+                contract: ValueContract {
                     shape: vec![ShapeDim::Known(8)],
                     ..producer_contract.clone()
                 },
@@ -652,7 +652,7 @@ fn consumer_rank_drift_fails_before_graph_mutation() {
 /// Prevents a statically sized graph port from binding a shorter Program buffer.
 #[test]
 fn static_shape_element_count_must_match_program_buffer() {
-    let exact = TensorContract {
+    let exact = ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Known(8)],
         access: BufferAccess::ReadOnly,
@@ -725,7 +725,7 @@ fn duplicate_input_value_alias_fails_closed() {
 /// Prevents a state output from replacing state that the node never consumed.
 #[test]
 fn dangling_state_successor_fails_closed() {
-    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::SequenceState);
+    let state_contract = contract(BufferAccess::ReadWrite, ValueLifetime::Retained);
     let mut graph = ProgramGraph::new();
     let consumed = graph
         .add_external_value("state.consumed", state_contract.clone())
@@ -741,7 +741,7 @@ fn dangling_state_successor_fails_closed() {
                 vec![GraphInput {
                     buffer: "input".into(),
                     value: consumed,
-                    contract: TensorContract {
+                    contract: ValueContract {
                         access: BufferAccess::ReadOnly,
                         ..state_contract.clone()
                     },
@@ -750,11 +750,11 @@ fn dangling_state_successor_fails_closed() {
                     buffer: "output".into(),
                     name: "state.next".into(),
                     contract: state_contract,
-                    state_successor_of: Some(dangling),
+                    retained_successor_of: Some(dangling),
                 }],
             )
             .expect_err("Fix: unconsumed state successor must fail"),
-        ProgramGraphError::DanglingStateTransition {
+        ProgramGraphError::MissingRetainedInput {
             output: "state.next".into(),
             prior: dangling,
         }
@@ -790,7 +790,7 @@ fn program_access_must_satisfy_consumer_contract() {
 /// Prevents hostile static dimensions from overflowing shape arithmetic.
 #[test]
 fn static_shape_product_overflow_fails_closed() {
-    let overflowing = TensorContract {
+    let overflowing = ValueContract {
         dtype: DataType::F32,
         shape: vec![ShapeDim::Known(u64::MAX), ShapeDim::Known(2)],
         access: BufferAccess::ReadOnly,
@@ -840,7 +840,7 @@ fn graph_wire_round_trip_preserves_typed_topology_and_programs() {
     );
     assert_eq!(decoded.nodes()[0].output_ports[0].buffer, "cache");
     assert_eq!(
-        decoded.nodes()[0].output_ports[0].state_successor_of,
+        decoded.nodes()[0].output_ports[0].retained_successor_of,
         Some(GraphValueId(1))
     );
 }
@@ -872,14 +872,14 @@ fn malformed_graph_wire_frames_fail_closed() {
         .contains("magic mismatch"));
 
     let mut bad_version = bytes.clone();
-    bad_version[4..6].copy_from_slice(&2_u16.to_le_bytes());
+    bad_version[4..6].copy_from_slice(&3_u16.to_le_bytes());
     assert!(ProgramGraph::from_wire(&bad_version)
         .expect_err("Fix: unknown version must fail")
         .to_string()
-        .contains("unsupported graph wire version 2"));
+        .contains("unsupported graph wire version 3"));
 
     assert!(ProgramGraph::from_wire(&bytes[..bytes.len() - 1])
-        .expect_err("Fix: truncated state identity must fail")
+        .expect_err("Fix: truncated retained identity must fail")
         .to_string()
         .contains("truncated graph wire input"));
 
@@ -896,7 +896,7 @@ fn malformed_graph_wire_frames_fail_closed() {
 fn oversized_graph_wire_counts_fail_before_allocation() {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"VGR0");
-    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
     bytes.extend_from_slice(&u32::MAX.to_le_bytes());
     let error = ProgramGraph::from_wire(&bytes)
         .expect_err("Fix: hostile external count must fail before allocation");
@@ -905,16 +905,16 @@ fn oversized_graph_wire_counts_fail_before_allocation() {
         .contains("external value count is 4294967295; maximum is 1000000"));
 }
 
-/// Prevents wire data from introducing a state edge to a nonexistent value.
+/// Prevents wire data from introducing a retained edge to a nonexistent value.
 #[test]
-fn graph_wire_dangling_state_identity_fails_validation() {
+fn graph_wire_dangling_retained_identity_fails_validation() {
     let mut bytes = stateful_wire_graph()
         .to_wire()
         .expect("Fix: wire fixture must encode");
     let prior_start = bytes.len() - 4;
     bytes[prior_start..].copy_from_slice(&99_u32.to_le_bytes());
     assert_eq!(
-        ProgramGraph::from_wire(&bytes).expect_err("Fix: nonexistent state identity must fail"),
+        ProgramGraph::from_wire(&bytes).expect_err("Fix: nonexistent retained identity must fail"),
         ProgramGraphError::MissingValue(GraphValueId(99))
     );
 }

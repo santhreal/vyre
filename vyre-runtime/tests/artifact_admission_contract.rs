@@ -3,28 +3,30 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, TensorContract,
+    BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, ArtifactNodeId, ArtifactRoute, ArtifactValueId, CompileOptions, DiagnosticCode, Digest,
-    MegakernelArtifact, MegakernelArtifactEnvelope, TargetEntryPoint, TargetPayload,
+    compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest,
+    DiagnosticCode, Digest, ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload,
     TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
-    ValidatedCompileRequest,
 };
-use vyre_runtime::artifact_admission::{admit_artifact, ArtifactAdmissionError};
+use vyre_runtime::{
+    admit_artifact, admit_cached_artifact, admit_envelope, ArtifactAdmissionError,
+    InMemoryPipelineCache, PipelineCacheStore, PipelineFingerprint,
+};
 
 const FRAME_HEADER_BYTES: usize = 10;
 const FRAME_DIGEST_BYTES: usize = 32;
-const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v1\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v1\0";
+const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
+const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v2\0";
 
-fn neutral_artifact(workgroup_size: [u32; 3]) -> MegakernelArtifact {
+fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
     let mut graph = ProgramGraph::new();
     graph
         .add_external_value(
             "input",
-            TensorContract {
+            ValueContract {
                 dtype: DataType::U32,
                 shape: vec![ShapeDim::Known(8)],
                 access: BufferAccess::ReadOnly,
@@ -44,10 +46,13 @@ fn neutral_artifact(workgroup_size: [u32; 3]) -> MegakernelArtifact {
             Vec::new(),
         )
         .expect("fixture node must be valid");
-    let request = ValidatedCompileRequest::new(
+    let request = CompileRequest::new(
         graph,
-        CompileOptions::new(ArtifactRoute::Static, BTreeMap::new(), 1_000_000),
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
     )
+    .validate()
     .expect("fixture request must validate");
     compile(&request).expect("fixture request must compile")
 }
@@ -71,20 +76,13 @@ fn entry() -> TargetEntryPoint {
     }
 }
 
-fn payload(
-    neutral: &MegakernelArtifact,
-    payload_format: TargetPayloadFormat,
-    bytes: &[u8],
-) -> TargetPayload {
+fn payload(neutral: &Artifact, payload_format: TargetPayloadFormat, bytes: &[u8]) -> TargetPayload {
     TargetPayload::new(neutral, payload_format, vec![entry()], bytes.to_vec())
         .expect("fixture payload must be valid")
 }
 
-fn envelope_bytes(
-    neutral: MegakernelArtifact,
-    payloads: impl IntoIterator<Item = TargetPayload>,
-) -> Vec<u8> {
-    let mut envelope = MegakernelArtifactEnvelope::new(neutral);
+fn envelope_bytes(neutral: Artifact, payloads: impl IntoIterator<Item = TargetPayload>) -> Vec<u8> {
+    let mut envelope = ArtifactEnvelope::new(neutral);
     for payload in payloads {
         envelope
             .attach_target_payload(payload)
@@ -93,12 +91,7 @@ fn envelope_bytes(
     envelope.to_bytes().expect("fixture envelope must encode")
 }
 
-fn assert_diagnostic(
-    error: &ArtifactAdmissionError,
-    code: DiagnosticCode,
-    path: &str,
-    fix: &str,
-) {
+fn assert_diagnostic(error: &ArtifactAdmissionError, code: DiagnosticCode, path: &str, fix: &str) {
     let diagnostic = error.diagnostic();
     assert_eq!(diagnostic.code, code);
     assert_eq!(diagnostic.path, path);
@@ -106,7 +99,8 @@ fn assert_diagnostic(
 }
 
 fn frame_body(frame: &[u8]) -> &[u8] {
-    let body_len = u32::from_le_bytes(frame[6..10].try_into().expect("fixed header slice")) as usize;
+    let body_len =
+        u32::from_le_bytes(frame[6..10].try_into().expect("fixed header slice")) as usize;
     &frame[FRAME_HEADER_BYTES..FRAME_HEADER_BYTES + body_len]
 }
 
@@ -147,7 +141,7 @@ fn replace_nested_payload(
     let original_json = serde_json::to_vec(original_payload).expect("bytes must serialize");
     let replacement_json = serde_json::to_vec(replacement_payload).expect("bytes must serialize");
     let body = replace_once(frame_body(envelope), &original_json, &replacement_json);
-    encode_frame(b"VME0", 1, ENVELOPE_DIGEST_DOMAIN, &body)
+    encode_frame(b"VME0", 2, ENVELOPE_DIGEST_DOMAIN, &body)
 }
 
 fn reassociate_payload(
@@ -158,7 +152,7 @@ fn reassociate_payload(
     let original_json = serde_json::to_vec(&original_neutral).expect("digest must serialize");
     let replacement_json = serde_json::to_vec(&replacement_neutral).expect("digest must serialize");
     let body = replace_once(frame_body(payload), &original_json, &replacement_json);
-    encode_frame(b"VTP0", 1, TARGET_PAYLOAD_DIGEST_DOMAIN, &body)
+    encode_frame(b"VTP0", 2, TARGET_PAYLOAD_DIGEST_DOMAIN, &body)
 }
 
 /// Regression: admission returns the exact requested bytes and canonical neutral identity.
@@ -209,8 +203,8 @@ fn canonical_serialization_round_trip_is_deterministic() {
 #[test]
 fn rejects_malformed_truncated_and_corrupted_envelopes() {
     let required = format("test.target-a", 1);
-    let malformed = admit_artifact(b"not an envelope", &required)
-        .expect_err("short malformed bytes must fail");
+    let malformed =
+        admit_artifact(b"not an envelope", &required).expect_err("short malformed bytes must fail");
     assert_diagnostic(
         &malformed,
         DiagnosticCode::MalformedArtifact,
@@ -224,8 +218,8 @@ fn rejects_malformed_truncated_and_corrupted_envelopes() {
         [payload(&neutral, required.clone(), &[1, 2, 3])],
     );
     truncated.pop();
-    let truncated_error = admit_artifact(&truncated, &required)
-        .expect_err("truncated canonical bytes must fail");
+    let truncated_error =
+        admit_artifact(&truncated, &required).expect_err("truncated canonical bytes must fail");
     assert_diagnostic(
         &truncated_error,
         DiagnosticCode::MalformedArtifact,
@@ -257,7 +251,7 @@ fn rejects_envelope_framing_version_skew() {
         neutral.clone(),
         [payload(&neutral, required.clone(), &[1, 2, 3])],
     );
-    bytes[4..6].copy_from_slice(&2_u16.to_le_bytes());
+    bytes[4..6].copy_from_slice(&3_u16.to_le_bytes());
 
     let error = admit_artifact(&bytes, &required).expect_err("unknown envelope schema must fail");
     assert_diagnostic(
@@ -322,8 +316,7 @@ fn rejects_corrupted_nested_payload_through_canonical_decode() {
     let envelope = envelope_bytes(neutral, [target]);
     let mut corrupted_target = target_bytes.clone();
     corrupted_target[FRAME_HEADER_BYTES] ^= 1;
-    let corrupted_envelope =
-        replace_nested_payload(&envelope, &target_bytes, &corrupted_target);
+    let corrupted_envelope = replace_nested_payload(&envelope, &target_bytes, &corrupted_target);
 
     let error = admit_artifact(&corrupted_envelope, &required)
         .expect_err("nested payload corruption must fail its canonical digest");
@@ -356,5 +349,115 @@ fn rejects_payload_association_mismatch_through_canonical_decode() {
         DiagnosticCode::TargetPayloadAssociationMismatch,
         "target_payload.neutral_artifact",
         "discard the payload and materialize bytes from this exact neutral artifact",
+    );
+}
+
+/// Regression: already-decoded envelopes must admit through the same exact-format index path.
+#[test]
+fn admits_owned_envelope_by_exact_format_index() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let required = format("test.target-b", 4);
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [
+            payload(&neutral, format("test.target-a", 1), &[1, 2, 3]),
+            payload(&neutral, required.clone(), &[9, 8, 7, 6]),
+        ],
+    );
+    let envelope = ArtifactEnvelope::from_bytes(&bytes).expect("fixture envelope must decode");
+
+    let admitted =
+        admit_envelope(envelope, &required).expect("exact owned-envelope format must admit");
+
+    assert_eq!(admitted.neutral().digest(), neutral.digest());
+    assert_eq!(admitted.target_payload().format(), &required);
+    assert_eq!(admitted.target_payload().bytes(), &[9, 8, 7, 6]);
+}
+
+/// Regression: producer-packaged envelopes (AOT shape) must admit without recompilation.
+///
+/// This locks the compile → envelope bytes → `admit_artifact` seam used by AOT packages
+/// and runtime-cache blobs. It intentionally stays on the canonical envelope types so
+/// runtime tests do not take a reverse dependency on `vyre-aot`.
+#[test]
+fn packaged_envelope_admits_through_runtime_without_recompile() {
+    let neutral = neutral_artifact([64, 1, 1]);
+    let expected_neutral = neutral.digest();
+    let node = neutral.nodes()[0].id;
+    let resource = neutral.resources()[0].value;
+    // Match the AOT package payload format identity contract (`Target::Ptx.aot_target_id()` + version 1).
+    let required = format("secondary_text", 1);
+    let attached = TargetPayload::new(
+        &neutral,
+        required.clone(),
+        vec![TargetEntryPoint {
+            name: "main".into(),
+            node,
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: vec![TargetResourceBinding {
+                resource,
+                slot: 0,
+                memory: TargetResourceMemory::Global,
+                access: TargetResourceAccess::ReadOnly,
+            }],
+        }],
+        b"target-payload-fixture".to_vec(),
+    )
+    .expect("packaged fixture payload must bind");
+    let expected_payload = attached.digest();
+    let envelope_bytes = envelope_bytes(neutral, [attached]);
+
+    let admitted = admit_artifact(&envelope_bytes, &required)
+        .expect("packaged envelope must admit at the runtime boundary");
+    let owned = admit_envelope(
+        ArtifactEnvelope::from_bytes(&envelope_bytes).expect("packaged envelope must re-decode"),
+        &required,
+    )
+    .expect("owned packaged envelope must admit identically");
+
+    assert_eq!(admitted.neutral().digest(), expected_neutral);
+    assert_eq!(admitted.target_payload().digest(), expected_payload);
+    assert_eq!(admitted.target_payload().format(), &required);
+    assert_eq!(admitted.target_payload().bytes(), b"target-payload-fixture");
+    assert_eq!(owned.neutral().digest(), expected_neutral);
+    assert_eq!(owned.target_payload().digest(), expected_payload);
+}
+
+/// Regression: DiskCache/AOT payload hits must admit through the envelope seam.
+///
+/// `PipelineCacheStore` returns verified payload bytes only. Treating those
+/// bytes as executable without admission is the ARCH-001/010 bypass.
+#[test]
+fn cached_envelope_payload_admits_and_miss_is_none() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let required = format("test.cache-target", 1);
+    let bytes = envelope_bytes(
+        neutral.clone(),
+        [payload(&neutral, required.clone(), &[4, 5, 6, 7])],
+    );
+    let fp = PipelineFingerprint([0xAB; 32]);
+    let store = InMemoryPipelineCache::default();
+    store.put(fp, bytes);
+
+    let admitted = admit_cached_artifact(&store, &fp, &required)
+        .expect("cached envelope payload must admit")
+        .expect("cache hit must yield Some");
+    assert_eq!(admitted.neutral().digest(), neutral.digest());
+    assert_eq!(admitted.target_payload().bytes(), &[4, 5, 6, 7]);
+
+    let miss_fp = PipelineFingerprint([0xCD; 32]);
+    let miss = admit_cached_artifact(&store, &miss_fp, &required)
+        .expect("cache miss must not be an admission error");
+    assert!(miss.is_none(), "missing fingerprint must return Ok(None)");
+
+    // Garbage payload is a hit at the blob layer but fails admission.
+    let bad_fp = PipelineFingerprint([0xEF; 32]);
+    store.put(bad_fp, b"not-an-envelope".to_vec());
+    let err = admit_cached_artifact(&store, &bad_fp, &required)
+        .expect_err("non-envelope cache payload must fail admission");
+    assert!(
+        !err.to_string().is_empty(),
+        "admission error must carry diagnostics"
     );
 }
