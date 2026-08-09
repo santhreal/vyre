@@ -499,6 +499,32 @@ fn artifact_byte_limit_is_inclusive_and_checked() {
     assert_eq!(error.diagnostic.code, DiagnosticCode::ArtifactLimit);
 }
 
+/// WHY: neutral whole-program compilation validates subgroup semantics without
+/// pretending that target-independent validation is a backend capability decision.
+#[test]
+fn compile_request_accepts_semantically_valid_subgroup_ir() {
+    let program = Program::wrapped(
+        vec![BufferDecl::read_write("out", 0, DataType::U32).with_count(1)],
+        [32, 1, 1],
+        vec![Node::store(
+            "out",
+            Expr::u32(0),
+            Expr::subgroup_add(Expr::u32(1)),
+        )],
+    );
+    let graph = ProgramGraph::from_program("subgroup", program).unwrap();
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        budget(),
+        LIMIT,
+    )
+    .validate()
+    .expect("neutral compiler validation must accept subgroup semantics");
+
+    compile(&request).expect("semantically valid subgroup IR must compile neutrally");
+}
+
 /// WHY: resource arithmetic must never wrap.
 #[test]
 fn resource_shape_overflow_has_stable_diagnostic() {

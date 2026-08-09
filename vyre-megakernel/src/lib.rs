@@ -33,7 +33,7 @@ pub use envelope::{
     TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use target::{
-    artifact_abi, compile_selected_modules, fuse_selected_module, selected_modules,
+    artifact_abi, attach_target, compile_selected_modules, fuse_selected_module, selected_modules,
     EmittedTargetModule, SelectedModule, TargetCompileError, TargetCompiler, TargetModuleBundle,
     TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
@@ -46,6 +46,7 @@ use thiserror::Error;
 use vyre_foundation::ir::{
     BufferAccess, DataType, GraphValueId, ProgramGraph, ShapeDim, ValueLifetime,
 };
+use vyre_foundation::validate::{validate_with_options, BackendCapabilities, ValidationOptions};
 
 /// Current canonical artifact schema.
 pub const ARTIFACT_SCHEMA_VERSION: u16 = 4;
@@ -55,6 +56,20 @@ const ARTIFACT_DIGEST_BYTES: usize = 32;
 const ARTIFACT_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-artifact-v4\0";
 const SOURCE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-source-v2\0";
 const REQUEST_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-request-v2\0";
+const COMPILER_IR_CAPABILITIES: BackendCapabilities = BackendCapabilities {
+    supports_subgroup_ops: true,
+    supports_indirect_dispatch: true,
+    supports_specialization_constants: true,
+    supports_distributed_collectives: true,
+    has_mul_high: true,
+    has_dual_issue_fp32_int32: true,
+    has_tensor_core_int: true,
+    has_native_f16: true,
+    has_warp_shuffle: true,
+    has_shared_memory: true,
+    has_transcendental_polynomial_emit: true,
+    max_native_int_width: u32::MAX,
+};
 
 /// Stable 256-bit content identity.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -242,14 +257,24 @@ impl CompileRequest {
             )
         })?;
         for node in self.graph.nodes() {
-            node.program.validate().map_err(|error| {
-                failure(
+            let report = validate_with_options(
+                &node.program,
+                ValidationOptions::universal().with_backend_capabilities(COMPILER_IR_CAPABILITIES),
+            );
+            if !report.errors.is_empty() {
+                let message = report
+                    .errors
+                    .iter()
+                    .map(|error| error.message())
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                return Err(failure(
                     DiagnosticCode::InvalidProgram,
                     format!("request.graph.nodes[{}].program", node.id.0),
-                    error.to_string(),
-                    "supply a structurally valid typed program",
-                )
-            })?;
+                    message,
+                    "supply semantically valid typed IR; target capability support is checked by the selected target compiler",
+                ));
+            }
         }
         validate_bindings(&self.graph, &self.facts.symbolic_bindings)?;
         validate_constant_identities(&self.graph, &self.facts.constant_identities)?;

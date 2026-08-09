@@ -1,30 +1,10 @@
-//! Common abstractions over the matching engines in `vyre-libs`.
+//! Cache abstractions and reference contracts for scan engines.
 //!
-//! Every concrete engine in this crate (`GpuLiteralSet`, `DirectGpuScanner`,
-//! `ScanSession`, future ones for parsers / taint flow / anomaly scoring)
-//! ships the same shape of public API:
-//!
-//!   1. A `compile(...)` constructor that takes some pattern set.
-//!   2. A `scan(&backend, &haystack, max_matches)` GPU dispatch.
-//!   3. A `reference_scan(&haystack)` parity reference.
-//!   4. A `to_bytes()` / `from_bytes(...)` cache pair.
-//!
-//! Until now each engine duplicated the trait shape ad-hoc. This module
-//! is the lego-block fix: one set of traits, one generic
-//! `cached_load_or_compile` helper, every engine plugs in.
-//!
-//! # Why two traits, not one
-//!
-//! - [`MatchScan`] is dyn-safe (no associated types, no `Sized`). Consumers
-//!   can store `Box<dyn MatchScan>` to swap engines at runtime  -  scanner
-//!   backend selection becomes a runtime
-//!   trait-object swap instead of a hardcoded match arm.
-//! - [`MatchEngineCache`] keeps typed errors (each engine's own
-//!   `WireError` enum with its specific variants), so the cache layer's
-//!   error messages stay actionable. Object-safety isn't needed here:
-//!   cache wiring always knows the concrete type at compile time.
-//!
-//! Engines implement BOTH; consumers pick whichever fits their call site.
+//! [`MatchEngineCache`] owns typed serialization and the shared cache lifecycle.
+//! [`MatchScan`] is the lower-level raw-dispatch contract for literal-set engines.
+//! [`crate::ScanSession`] intentionally implements only the cache contract: its
+//! production execution uses [`crate::MaterializedScanSession`] and canonical
+//! artifact submission.
 //!
 //! # Cache wiring rule (Torvalds-style: do it once)
 //!
@@ -391,45 +371,6 @@ mod direct_gpu_impls {
 mod rule_pipeline_impls {
     use super::*;
     use crate::session::{PipelineWireError, ScanSession};
-
-    impl MatchScan for ScanSession {
-        fn scan(
-            &self,
-            backend: &dyn VyreBackend,
-            haystack: &[u8],
-            max_matches: u32,
-        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-            ScanSession::scan(self, backend, haystack, max_matches)
-        }
-
-        fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
-            ScanSession::reference_scan(self, haystack)
-        }
-
-        fn try_reference_scan(
-            &self,
-            haystack: &[u8],
-        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-            // Forward to the inherent fallible scan, NOT the default, the
-            // default would call the panicking infallible `reference_scan`,
-            // turning a recoverable >u32 haystack into an abort.
-            ScanSession::try_reference_scan(self, haystack)
-        }
-
-        fn cache_key(&self) -> String {
-            // Deterministic hash via vyre's FNV-1a primitive  -  see the
-            // `GpuLiteralSet::cache_key` implementation for why
-            // `DefaultHasher` is the wrong choice here (per-process
-            // SipHash seed defeats persistent caching).
-            let header = [self.compiled.plan.num_states, self.compiled.plan.input_len];
-            let h = fnv1a64_word_slices([
-                header.as_slice(),
-                self.compiled.transition_table.as_slice(),
-                self.compiled.epsilon_table.as_slice(),
-            ]);
-            format!("pipe-{h:016x}")
-        }
-    }
 
     impl MatchEngineCache for ScanSession {
         type WireError = PipelineWireError;

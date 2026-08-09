@@ -62,25 +62,8 @@ pub fn compile_with_resolver(
     };
     let neutral = compile_neutral_artifact(&inlined)?;
     let compiler = registered_target_compiler(target)?;
-    attach_target(neutral, compiler.as_ref())
-}
-
-/// Attach one target payload produced from the exact canonical neutral artifact.
-pub fn attach_target(
-    neutral: Artifact,
-    compiler: &dyn TargetCompiler,
-) -> Result<ArtifactEnvelope, CompileError> {
-    let payload = compiler
-        .compile(&neutral)
-        .map_err(|error| CompileError::TargetCompilation(error.to_string()))?;
-    let mut envelope = ArtifactEnvelope::new(neutral);
-    envelope
-        .attach_target_payload(payload)
-        .map_err(|source| CompileError::CanonicalArtifact {
-            stage: "payload-association",
-            source,
-        })?;
-    Ok(envelope)
+    vyre_megakernel::attach_target(neutral, compiler.as_ref())
+        .map_err(|error| CompileError::TargetCompilation(error.to_string()))
 }
 
 fn registered_target_compiler(target: Target) -> Result<Box<dyn TargetCompiler>, CompileError> {

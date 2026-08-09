@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 use vyre_driver::{BackendRegistration, BindingSet, BoundResource, Completion};
 use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
-use vyre_megakernel::{ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 use vyre_runtime::{ArtifactSession, ArtifactSessionError};
 
 const MAX_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
@@ -55,18 +55,13 @@ impl ProductionSession {
         .map_err(|error| ProductionError::Compile(error.to_string()))?;
         let neutral = vyre_megakernel::compile(&request)
             .map_err(|error| ProductionError::Compile(error.to_string()))?;
+        let neutral_digest = neutral.digest();
         let target_compiler = registration
             .target_compiler()
             .map_err(|error| ProductionError::Target(error.to_string()))?;
-        let target = target_compiler
-            .compile(&neutral)
+        let envelope = vyre_megakernel::attach_target(neutral, target_compiler.as_ref())
             .map_err(|error| ProductionError::Target(error.to_string()))?;
-        let neutral_digest = neutral.digest();
-        let payload_digest = target.digest();
-        let mut envelope = ArtifactEnvelope::new(neutral);
-        envelope
-            .attach_target_payload(target)
-            .map_err(|error| ProductionError::Target(error.to_string()))?;
+        let payload_digest = envelope.target_payloads()[0].digest();
         let bytes = envelope
             .to_bytes()
             .map_err(|error| ProductionError::Target(error.to_string()))?;

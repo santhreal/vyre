@@ -16,7 +16,7 @@ pub mod manifest;
 
 pub use artifact::Target;
 pub use bundle::{bundle, package_artifact, read_bundle_artifact, BundleError, DeploymentBundle};
-pub use compile::{attach_target, compile, compile_with_resolver, CompileError};
+pub use compile::{compile, compile_with_resolver, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
 pub use vyre_megakernel::{

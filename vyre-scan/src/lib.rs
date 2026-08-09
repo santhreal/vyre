@@ -17,6 +17,7 @@ pub use vyre_libs::scan::{
     regex_anchored_window, regex_compile, regex_dfa, regex_region_admission, substring,
 };
 
+pub mod artifact_session;
 pub mod direct_gpu;
 pub mod dispatch_io;
 pub mod engine;
@@ -28,6 +29,7 @@ pub mod resident;
 pub mod resident_presence;
 pub mod session;
 
+pub use artifact_session::{ScanArtifactError, ScanArtifactSession};
 pub use direct_gpu::DirectGpuScanner;
 pub use dispatch_io::{
     byte_scan_dispatch_config, candidate_start_dispatch_config, haystack_len_u32,
@@ -58,4 +60,6 @@ pub use pipeline::{Pipeline, PostProcessFn};
 pub use region_evidence_pipeline::{RegionEvidenceError, RegionEvidencePipeline};
 pub use resident::ResidentScanSession;
 pub use resident_presence::ResidentPresencePipeline;
-pub use session::{build as build_scan_session, PipelineWireError, ScanSession};
+pub use session::{
+    build as build_scan_session, MaterializedScanSession, PipelineWireError, ScanSession,
+};

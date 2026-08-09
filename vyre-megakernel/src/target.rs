@@ -4,9 +4,9 @@ use thiserror::Error;
 use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 
 use crate::{
-    AbiAccess, Artifact, ArtifactAbi, ArtifactNodeId, CompileError, FusionGroupId, FusionRecord,
-    ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory,
+    AbiAccess, Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, CompileError,
+    FusionGroupId, FusionRecord, ResourceLifetime, TargetEntryPoint, TargetPayload,
+    TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
 /// One compiler-selected group decoded into verified semantic modules.
@@ -119,6 +119,20 @@ pub trait TargetCompiler: Send + Sync {
 
     /// Compile every selected module and project the canonical artifact ABI.
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError>;
+}
+/// Compile and attach one target payload to its exact neutral artifact.
+///
+/// This is the only orchestration boundary from a pure target compiler facet to
+/// an authenticated deployable envelope. It does not acquire a device or
+/// materialize native handles.
+pub fn attach_target(
+    artifact: Artifact,
+    compiler: &dyn TargetCompiler,
+) -> Result<ArtifactEnvelope, TargetCompileError> {
+    let payload = compiler.compile(&artifact)?;
+    let mut envelope = ArtifactEnvelope::new(artifact);
+    envelope.attach_target_payload(payload)?;
+    Ok(envelope)
 }
 
 /// Decode compiler-selected modules from one authenticated neutral artifact.

@@ -7,10 +7,11 @@ use vyre_foundation::ir::{
     ValueLifetime,
 };
 use vyre_megakernel::{
-    compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest,
-    DiagnosticCode, Digest, ExternalFacts, FusionGroupId, SearchBudget, TargetEntryPoint,
-    TargetModuleBundle, TargetModuleImage, TargetPayload, TargetPayloadFormat,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    attach_target, compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
+    CompileRequest, DiagnosticCode, Digest, ExternalFacts, FusionGroupId, SearchBudget,
+    TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
+    TargetPayload, TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding,
+    TargetResourceMemory,
 };
 
 fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
@@ -51,6 +52,37 @@ fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
 
 fn format(version: u16) -> TargetPayloadFormat {
     TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
+}
+struct FixtureCompiler {
+    format: TargetPayloadFormat,
+}
+
+impl TargetCompiler for FixtureCompiler {
+    fn format(&self) -> &TargetPayloadFormat {
+        &self.format
+    }
+
+    fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
+        TargetPayload::new(artifact, self.format.clone(), vec![entry()], vec![4, 2])
+            .map_err(Into::into)
+    }
+}
+
+/// WHY: every product must associate pure target output through one authenticated envelope seam.
+#[test]
+fn target_compiler_attaches_exactly_one_authenticated_payload() {
+    let neutral = neutral_artifact([8, 1, 1]);
+    let neutral_digest = neutral.digest();
+    let compiler = FixtureCompiler { format: format(9) };
+
+    let envelope = attach_target(neutral, &compiler).expect("target attachment must succeed");
+
+    assert_eq!(envelope.neutral().digest(), neutral_digest);
+    let payload = envelope
+        .require_target_payload(compiler.format())
+        .expect("compiler format must be attached");
+    assert_eq!(payload.neutral_artifact(), neutral_digest);
+    assert_eq!(payload.bytes(), &[4, 2]);
 }
 
 fn entry() -> TargetEntryPoint {

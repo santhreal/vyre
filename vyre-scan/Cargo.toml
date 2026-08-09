@@ -18,10 +18,13 @@ workspace = true
 [dependencies]
 vyre-driver.workspace = true
 vyre-foundation.workspace = true
+vyre-megakernel.workspace = true
+vyre-runtime.workspace = true
 vyre-libs = { workspace = true, features = ["full", "matching-regex"] }
 vyre-primitives.workspace = true
 bytemuck.workspace = true
 smallvec.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

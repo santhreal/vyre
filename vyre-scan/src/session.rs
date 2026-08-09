@@ -1,25 +1,12 @@
-//! Mega-scan integrator.
+//! Canonical NFA scan product lifecycle.
 //!
-//! Fuses the G-stack innovations into one `ScanSession` that program-analysis consumer
-//! dispatches. Right now the integrator wires G1 (subgroup-cooperative
-//! NFA scan) end-to-end. As G2-G10 land their composition hooks here,
-//! keeping one authoritative entry point for every scan configuration.
-//!
-//! # Why a single entry point
-//!
-//! Each innovation has its own buffer contracts (lane-major NFA
-//! transition tables, CHD perfect-hash buckets, persistent-engine
-//! work queues, etc.). Attempting to wire those inside program-analysis consumer would
-//! push backend-specific knowledge into the language compiler  -
-//! exactly the coupling vyre's layer boundaries exist to prevent.
-//! `ScanSession::new` holds the composition rules; callers hand in
-//! patterns + input, the integrator returns a ready-to-dispatch
-//! `Program` plus the host-side bit-tables the Program expects to
-//! find at its declared storage buffers.
+//! [`ScanSession`] owns the substrate-neutral [`ScanProgram`]. Its
+//! [`ScanSession::materialize`] boundary compiles the program as a validated graph,
+//! attaches authenticated target bytes, and creates a typed artifact session.
+//! [`MaterializedScanSession`] submits compiler-owned ABI values and decodes typed
+//! completion readback. The explicit reference scan remains an independent CPU oracle.
 
-use vyre_driver::VyreBackend;
-#[cfg(test)]
-use vyre_foundation::ir::Program;
+use vyre_driver::BackendRegistration;
 use vyre_foundation::match_result::Match;
 use vyre_libs::scan::ScanProgram;
 
@@ -27,7 +14,13 @@ use super::nfa;
 
 const NFA_LANES: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP;
 
-/// A ready-to-dispatch pipeline produced by the integrator.
+/// A scan program compiled, authenticated, and materialized for one registered target.
+pub struct MaterializedScanSession {
+    compiled: ScanProgram,
+    artifact: crate::ScanArtifactSession,
+}
+
+/// Substrate-neutral scan program and immutable scan tables.
 #[derive(Debug, Clone)]
 pub struct ScanSession {
     /// Substrate-neutral program and immutable scan tables.
@@ -35,97 +28,75 @@ pub struct ScanSession {
 }
 
 impl ScanSession {
-    /// Dispatch this pipeline against `haystack` using the provided
-    /// `backend`, returning up to `max_matches` matches.
-    ///
-    /// This is the regex-multimatch counterpart of
-    /// [`crate::GpuLiteralSet::scan`]  -  same backend trait,
-    /// same hit-buffer encoding (slot 0 = atomic counter, then triples
-    /// of `(pattern_id, start, end)`), so callers can swap the two
-    /// matchers without changing post-processing code.
-    ///
-    /// Equivalent to [`Self::scan_bounded`] with `max_scan_bytes =
-    /// u32::MAX` - every workgroup walks to the end of the haystack
-    /// (O(N²) total work). Use [`Self::scan_bounded`] when the longest
-    /// possible match is known to bound per-workgroup work and make
-    /// the kernel O(N × max_scan_bytes).
-    ///
-    /// # Errors
-    /// Returns [`vyre_driver::BackendError`] on dispatch or readback failure.
-    /// Returns an error wrapping the message
-    /// `"haystack length exceeds u32 capacity"` when `haystack.len()`
-    /// cannot be encoded as `u32`  -  split the input first.
-    pub fn scan<B: VyreBackend + ?Sized>(
+    /// Compile, target-compile, authenticate, and materialize this scan program.
+    pub fn materialize(
         &self,
-        backend: &B,
+        registration: &'static BackendRegistration,
+    ) -> Result<MaterializedScanSession, crate::ScanArtifactError> {
+        let artifact = crate::ScanArtifactSession::compile(&self.compiled.program, registration)?;
+        Ok(MaterializedScanSession {
+            compiled: self.compiled.clone(),
+            artifact,
+        })
+    }
+}
+
+impl MaterializedScanSession {
+    /// Neutral artifact identity shared by every device generation.
+    #[must_use]
+    pub const fn artifact_digest(&self) -> vyre_megakernel::Digest {
+        self.artifact.artifact_digest()
+    }
+
+    /// Authenticated target payload identity materialized by this session.
+    #[must_use]
+    pub const fn payload_digest(&self) -> vyre_megakernel::Digest {
+        self.artifact.payload_digest()
+    }
+
+    /// Scan the complete haystack and return at most `max_matches` matches.
+    pub fn scan(
+        &self,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<Match>, crate::ScanArtifactError> {
         let mut matches = Vec::new();
-        self.scan_into(backend, haystack, max_matches, &mut matches)?;
+        self.scan_into(haystack, max_matches, &mut matches)?;
         Ok(matches)
     }
 
-    /// Dispatch this pipeline with a per-workgroup cursor cap. Each
-    /// workgroup walks bytes from its `WorkgroupId(0)` start to
-    /// `min(haystack_len, start + max_scan_bytes)`. Returns up to
-    /// `max_matches` matches.
-    ///
-    /// Pass the longest possible match length over the pipeline's
-    /// pattern set as `max_scan_bytes` to drop per-shard cost from
-    /// O(N²) (every workgroup scans to end-of-haystack) to O(N ×
-    /// max_scan_bytes). For bounded detector regexes that bound
-    /// is ~80-200 bytes; the resulting 62 MiB-shard cost drops from
-    /// ~30 s to a few milliseconds.
-    ///
-    /// # Errors
-    /// Same as [`Self::scan`].
-    pub fn scan_bounded<B: VyreBackend + ?Sized>(
+    /// Scan with a per-workgroup cursor cap.
+    pub fn scan_bounded(
         &self,
-        backend: &B,
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<Match>, crate::ScanArtifactError> {
         let mut matches = Vec::new();
-        self.scan_bounded_into(backend, haystack, max_matches, max_scan_bytes, &mut matches)?;
+        self.scan_bounded_into(haystack, max_matches, max_scan_bytes, &mut matches)?;
         Ok(matches)
     }
 
-    /// Dispatch this pipeline and decode matches into caller-owned scratch.
-    ///
-    /// This removes the per-dispatch result-vector allocation from hot scan
-    /// loops while preserving the exact wire layout and sorted output contract
-    /// of [`Self::scan`].
-    ///
-    /// # Errors
-    /// Returns [`vyre_driver::BackendError`] on dispatch or readback failure.
-    pub fn scan_into<B: VyreBackend + ?Sized>(
+    /// Scan into caller-owned match storage.
+    pub fn scan_into(
         &self,
-        backend: &B,
         haystack: &[u8],
         max_matches: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre_driver::BackendError> {
-        self.scan_bounded_into(backend, haystack, max_matches, u32::MAX, matches)
+    ) -> Result<(), crate::ScanArtifactError> {
+        self.scan_bounded_into(haystack, max_matches, u32::MAX, matches)
     }
 
-    /// Per-workgroup-bounded counterpart of [`Self::scan_into`]. See
-    /// [`Self::scan_bounded`] for the bound's semantics.
-    ///
-    /// # Errors
-    /// Same as [`Self::scan_into`].
-    pub fn scan_bounded_into<B: VyreBackend + ?Sized>(
+    /// Bounded scan into caller-owned match storage.
+    pub fn scan_bounded_into(
         &self,
-        backend: &B,
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
         matches: &mut Vec<Match>,
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), crate::ScanArtifactError> {
         let mut scratch = crate::dispatch_io::ScanDispatchScratch::default();
         self.scan_bounded_into_with_scratch(
-            backend,
             haystack,
             max_matches,
             max_scan_bytes,
@@ -134,86 +105,62 @@ impl ScanSession {
         )
     }
 
-    /// Per-workgroup-bounded scan that reuses caller-owned match and byte
-    /// staging scratch.
-    ///
-    /// This is the hot-loop API for regex/NFA scans: `matches` reuses decoded
-    /// match storage, `scratch.haystack_bytes` reuses packed haystack bytes, and
-    /// `scratch.hit_bytes` reuses the zeroed hit buffer.
-    ///
-    /// # Errors
-    /// Same as [`Self::scan_bounded_into`].
-    pub fn scan_bounded_into_with_scratch<B: VyreBackend + ?Sized>(
+    /// Bounded scan that reuses caller-owned staging storage.
+    pub fn scan_bounded_into_with_scratch(
         &self,
-        backend: &B,
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
         matches: &mut Vec<Match>,
         scratch: &mut crate::dispatch_io::ScanDispatchScratch,
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), crate::ScanArtifactError> {
         use crate::dispatch_io;
 
         matches.clear();
         let haystack_len = dispatch_io::scan_guard(
             haystack,
-            "ScanSession::scan",
+            "MaterializedScanSession::scan",
             dispatch_io::DEFAULT_MAX_SCAN_BYTES,
         )?;
-
-        // Buffer order matches the BufferDecl declarations in
-        // `nfa::nfa_scan`: input, nfa_transition, nfa_epsilon, hits,
-        // nfa_haystack_len, nfa_max_scan_bytes. The hit buffer
-        // pre-allocates `max_matches * 3 + 1` u32 slots (slot 0 =
-        // atomic counter, then triples). `nfa_haystack_len` is a 1-u32
-        // input the kernel reads at runtime so a single compiled
-        // program services every haystack size from zero up to its
-        // declared capacity. `nfa_max_scan_bytes` caps each workgroup's
-        // cursor walk so the kernel is O(N × bound) instead of O(N²).
-        zeroed_hit_buffer_into(max_matches, &mut scratch.hit_bytes)?;
+        let buffers = self.compiled.program.buffers();
+        let input_name = buffers[0].name();
+        let hit_name = buffers[3].name();
+        let match_capacity = buffers[3].count().saturating_sub(1) / 3;
+        if max_matches > match_capacity {
+            return Err(vyre_driver::BackendError::new(format!(
+                "scan artifact max_matches {max_matches} exceeds compiled hit capacity {match_capacity}. Fix: lower max_matches or build a scan program with a larger canonical hit ABI."
+            ))
+            .into());
+        }
+        zeroed_hit_buffer_into(match_capacity, &mut scratch.hit_bytes)?;
         dispatch_io::pack_haystack_u32_into(haystack, &mut scratch.haystack_bytes)?;
-        let hit_bytes = scratch.hit_bytes.as_slice();
-        let haystack_bytes = scratch.haystack_bytes.as_slice();
         let transition_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.transition_table);
         let epsilon_bytes = dispatch_io::u32_words_as_le_bytes(&self.compiled.epsilon_table);
         let haystack_len_bytes = haystack_len.to_le_bytes();
         let max_scan_bytes_bytes = max_scan_bytes.to_le_bytes();
 
-        let config = dispatch_io::candidate_start_dispatch_config(haystack_len);
-
-        let borrowed_inputs: smallvec::SmallVec<[&[u8]; 6]> = [
-            haystack_bytes,
-            transition_bytes.as_ref(),
-            epsilon_bytes.as_ref(),
-            hit_bytes,
-            haystack_len_bytes.as_slice(),
-            max_scan_bytes_bytes.as_slice(),
-        ]
-        .into_iter()
-        .collect();
-        let outputs =
-            backend.dispatch_borrowed(&self.compiled.program, &borrowed_inputs, &config)?;
-
-        // The hit buffer is the only ReadWrite storage in the program;
-        // backends return outputs in declaration order, so it lives at
-        // index 0 of `outputs`.
-        let hit_bytes = dispatch_io::try_output_bytes(&outputs, 0, "ScanSession hit buffer")?;
-        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "ScanSession hit buffer")?;
-        // Triples start at byte 4 (after the atomic counter). The counter is an
-        // atomic incremented for every match found, including matches past slot
-        // `max_matches` the kernel could not write, so a count over the cap means
-        // matches were dropped. Fail closed rather than silently decode the
-        // truncated prefix (Law 10).
+        let completion = self.artifact.submit([
+            (input_name, scratch.haystack_bytes.as_slice()),
+            ("nfa_transition", transition_bytes.as_ref()),
+            ("nfa_epsilon", epsilon_bytes.as_ref()),
+            (hit_name, scratch.hit_bytes.as_slice()),
+            ("nfa_haystack_len", haystack_len_bytes.as_slice()),
+            ("nfa_max_scan_bytes", max_scan_bytes_bytes.as_slice()),
+        ])?;
+        let hit_bytes = self.artifact.completion_value(&completion, hit_name)?;
+        let count = dispatch_io::try_read_u32_prefix(hit_bytes, "scan artifact hit buffer")?;
         dispatch_io::try_unpack_match_triples_capped_into(
             &hit_bytes[4..],
             count,
             max_matches,
-            "ScanSession hit buffer",
+            "scan artifact hit buffer",
             matches,
         )?;
         Ok(())
     }
+}
 
+impl ScanSession {
     /// Compute matches against `haystack` on the CPU using the same NFA
     /// the GPU program runs. Mirrors [`super::GpuLiteralSet::reference_scan`]
     ///  -  same `Match` type, same sort, so any consumer can write a
@@ -731,98 +678,6 @@ impl ScanSession {
 mod tests {
     use super::*;
 
-    #[derive(Clone)]
-    struct RuleReadbackBackend {
-        outputs: Vec<Vec<u8>>,
-    }
-
-    impl vyre_driver::backend::private::Sealed for RuleReadbackBackend {}
-
-    impl VyreBackend for RuleReadbackBackend {
-        fn id(&self) -> &'static str {
-            "rule-readback-test"
-        }
-
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &vyre_driver::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-            Ok(self.outputs.clone())
-        }
-
-        fn dispatch_borrowed(
-            &self,
-            _program: &Program,
-            _inputs: &[&[u8]],
-            _config: &vyre_driver::DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-            Ok(self.outputs.clone())
-        }
-    }
-
-    fn hit_buffer_bytes(count: u32, triples: &[u8]) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(4 + triples.len());
-        bytes.extend_from_slice(&count.to_le_bytes());
-        bytes.extend_from_slice(triples);
-        bytes
-    }
-
-    fn match_triple_bytes(pattern_id: u32, start: u32, end: u32) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(12);
-        bytes.extend_from_slice(&pattern_id.to_le_bytes());
-        bytes.extend_from_slice(&start.to_le_bytes());
-        bytes.extend_from_slice(&end.to_le_bytes());
-        bytes
-    }
-
-    #[test]
-    fn scan_fails_closed_when_kernel_count_exceeds_cap() {
-        // Law 10 regression at the ScanSession decode call site: the kernel's
-        // atomic counter reports 9 hits into a buffer sized for the cap of 4
-        // triples. The capped decode must error (naming the overflow and the 5
-        // dropped matches) instead of silently returning the truncated 4, a
-        // false negative the caller could not detect.
-        let pipe = build(&["ab"], "input", "hits", 16);
-        let triples: Vec<u8> = (0..4u32)
-            .flat_map(|i| match_triple_bytes(0, i, i + 2))
-            .collect();
-        let backend = RuleReadbackBackend {
-            outputs: vec![hit_buffer_bytes(9, &triples)],
-        };
-        let mut matches = vec![Match::new(7, 7, 7)];
-        let err = pipe
-            .scan_into(&backend, b"abab", 4, &mut matches)
-            .expect_err("count 9 over cap 4 must fail closed, not truncate to 4");
-        let msg = err.to_string();
-        assert!(
-            msg.contains("ScanSession hit buffer")
-                && msg.contains("exceeds the output-buffer cap 4")
-                && msg.contains("drop 5 match(es)")
-                && matches.is_empty(),
-            "ScanSession must surface the dropped-match overflow and expose no partial set: {msg}"
-        );
-    }
-
-    #[test]
-    fn scan_decodes_exact_set_within_cap() {
-        // The positive twin: a count within the cap decodes the real triples
-        // verbatim (assert concrete values, never is_empty), proving the guard
-        // does not reject legitimate in-bounds results.
-        let pipe = build(&["ab"], "input", "hits", 16);
-        let mut triples = Vec::new();
-        triples.extend_from_slice(&match_triple_bytes(0, 1, 3));
-        triples.extend_from_slice(&match_triple_bytes(1, 2, 4));
-        let backend = RuleReadbackBackend {
-            outputs: vec![hit_buffer_bytes(2, &triples)],
-        };
-        let mut matches = vec![Match::new(9, 9, 9)];
-        pipe.scan_into(&backend, b"abab", 8, &mut matches)
-            .expect("count 2 within cap 8 must decode");
-        assert_eq!(matches, vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]);
-    }
-
     #[test]
     fn integrator_returns_primitive_compatible_tables() {
         let pipe = build(&["abc"], "input", "hits", 16);
@@ -957,14 +812,10 @@ mod tests {
     }
 
     #[test]
-    fn rule_pipeline_reference_scan_forwards_through_fallible_and_trait_object() {
-        // The infallible wrapper, the inherent fallible scan, and the
-        // `dyn MatchScan` fallible method must all yield the SAME real matches.
-        // This pins that the trait override forwards to the real fallible
-        // stepper (not the panicking default) and that the infallible wrapper
-        // returns the fallible result verbatim, asserted on concrete triples,
-        // never `is_empty`.
-        use crate::engine::MatchScan;
+    fn rule_pipeline_reference_scan_matches_fallible_variant() {
+        // The infallible wrapper and inherent fallible scan must yield the same
+        // concrete triples. Production artifact execution has a separate typed
+        // session and does not share this explicit reference oracle.
 
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
         let haystack = b"zabc";
@@ -974,17 +825,11 @@ mod tests {
         let fallible = pipe
             .try_reference_scan(haystack)
             .expect("Fix: small-haystack reference scan must succeed");
-        let via_trait = MatchScan::try_reference_scan(&pipe, haystack)
-            .expect("Fix: trait-object reference scan must succeed");
 
         assert_eq!(infallible, expected, "infallible reference_scan content");
         assert_eq!(
             fallible, expected,
             "inherent try_reference_scan must match infallible result verbatim"
-        );
-        assert_eq!(
-            via_trait, expected,
-            "dyn MatchScan::try_reference_scan must forward to the real fallible stepper, not the panicking default"
         );
     }
 
@@ -1054,94 +899,6 @@ mod tests {
         assert_eq!(scratch.len(), (3 * 3 + 1) * 4);
         assert!(scratch.iter().all(|&byte| byte == 0));
         assert!(scratch.capacity() >= retained);
-    }
-
-    #[test]
-    fn rule_pipeline_scan_rejects_missing_hit_output_slot() {
-        let pipe = build(&["ab"], "input", "hits", 16);
-        let backend = RuleReadbackBackend {
-            outputs: Vec::new(),
-        };
-        let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = pipe
-            .scan_into(&backend, b"ab", 1, &mut matches)
-            .expect_err("missing ScanSession hit output must fail");
-
-        let msg = err.to_string();
-        assert!(
-            matches.is_empty(),
-            "scan errors must not expose stale matches"
-        );
-        assert!(
-            msg.contains("ScanSession hit buffer") && msg.contains("output index 0"),
-            "ScanSession missing-output error must identify the omitted slot: {msg}"
-        );
-    }
-
-    #[test]
-    fn rule_pipeline_scan_rejects_short_hit_counter_readback() {
-        let pipe = build(&["ab"], "input", "hits", 16);
-        let backend = RuleReadbackBackend {
-            outputs: vec![vec![1, 2, 3]],
-        };
-        let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = pipe
-            .scan_into(&backend, b"ab", 1, &mut matches)
-            .expect_err("short ScanSession counter readback must fail");
-
-        let msg = err.to_string();
-        assert!(
-            matches.is_empty(),
-            "scan errors must not expose stale matches"
-        );
-        assert!(
-            msg.contains("ScanSession hit buffer") && msg.contains("requires 4 bytes"),
-            "ScanSession counter error must name the malformed hit buffer: {msg}"
-        );
-    }
-
-    #[test]
-    fn rule_pipeline_scan_rejects_match_payload_shorter_than_reported_count() {
-        let pipe = build(&["ab"], "input", "hits", 16);
-        let backend = RuleReadbackBackend {
-            outputs: vec![hit_buffer_bytes(2, &match_triple_bytes(0, 0, 2))],
-        };
-        let mut matches = vec![Match::new(99, 1, 2)];
-
-        let err = pipe
-            .scan_into(&backend, b"ab", 2, &mut matches)
-            .expect_err("short ScanSession match payload must fail");
-
-        let msg = err.to_string();
-        assert!(
-            matches.is_empty(),
-            "scan errors must not expose stale matches"
-        );
-        assert!(
-            msg.contains("readback was 12 byte(s)")
-                && msg.contains("count=2")
-                && msg.contains("requires 24 byte(s)"),
-            "ScanSession match-payload error must identify observed and required bytes: {msg}"
-        );
-    }
-
-    #[test]
-    fn rule_pipeline_reference_scan_state_is_stack_backed() {
-        let production = include_str!("session.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: session.rs must contain production section");
-
-        assert!(
-            production.contains("let mut state = [0_u32; NFA_LANES];")
-                && production.contains("let mut next = [0_u32; NFA_LANES];")
-                && production.contains("next.fill(0);")
-                && !production.contains("vec![0_u32;")
-                && !production.contains("Vec::with_capacity"),
-            "Fix: ScanSession scan and wire paths must use checked shared reservation helpers instead of nested subgroup vector allocation or infallible capacity allocation."
-        );
     }
 
     /// Contract: the compiled program declares the canonical

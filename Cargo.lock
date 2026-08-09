@@ -4020,14 +4020,17 @@ dependencies = [
  "proptest",
  "smallvec",
  "tempfile",
+ "thiserror 2.0.19",
  "tracing",
  "vyre-driver",
  "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-runtime",
 ]
 
 [[package]]

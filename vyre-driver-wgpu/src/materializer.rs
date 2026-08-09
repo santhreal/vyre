@@ -13,11 +13,13 @@ use vyre_megakernel::{
     TargetModuleBundle, TargetPayload, TargetPayloadFormat,
 };
 
+use crate::descriptor_mapping::{descriptor_bind_group, descriptor_buffer_access};
 use crate::pipeline::WgpuPipeline;
 use crate::target_compiler::{
     WgpuTargetModule, WGPU_TARGET_FORMAT_VERSION, WGPU_TARGET_MODULE_SCHEMA_VERSION,
 };
 use crate::{WgpuBackend, WGPU_BACKEND_ID};
+use vyre_lower::TRAP_SIDECAR_NAME;
 
 struct WgpuDevice {
     identity: DeviceIdentity,
@@ -100,6 +102,21 @@ impl ArtifactMaterializer for WgpuMaterializer {
                     "WGSL target module does not define compute entry point `main`",
                 ));
             }
+            let input_slots = target
+                .descriptor
+                .bindings
+                .slots
+                .iter()
+                .filter(|slot| {
+                    descriptor_bind_group(slot.memory_class).is_some()
+                        && slot.name != TRAP_SIDECAR_NAME
+                })
+                .map(|slot| ArtifactInputSlot {
+                    name: slot.name.clone(),
+                    required: descriptor_buffer_access(slot.visibility)
+                        != vyre_foundation::ir::BufferAccess::WriteOnly,
+                })
+                .collect();
             let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
             let pipeline = WgpuPipeline::compile_target_with_device_queue(
                 &program,
@@ -114,7 +131,11 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 Arc::clone(&self.backend.pipeline_cache),
                 Arc::clone(&self.backend.bind_group_layout_cache),
             )?;
-            modules.push(WgpuExecutableModule { program, pipeline });
+            modules.push(WgpuExecutableModule {
+                program,
+                pipeline,
+                input_slots,
+            });
         }
         Ok(Box::new(WgpuArtifactInstance {
             artifact: artifact.digest(),
@@ -143,9 +164,15 @@ impl ArtifactMaterializer for WgpuMaterializer {
     }
 }
 
+struct ArtifactInputSlot {
+    name: String,
+    required: bool,
+}
+
 struct WgpuExecutableModule {
     program: Arc<Program>,
     pipeline: Arc<WgpuPipeline>,
+    input_slots: Vec<ArtifactInputSlot>,
 }
 
 struct WgpuArtifactInstance {
@@ -209,26 +236,19 @@ impl WgpuArtifactInstance {
         let mut has_device_timing = false;
         for module in &self.modules {
             let plan = BindingPlan::build(&module.program)?;
-            let input_count = plan
-                .bindings
-                .iter()
-                .filter_map(|binding| binding.input_index)
-                .max()
-                .map_or(0, |index| index + 1);
-            let mut inputs = vec![&[][..]; input_count];
-            for binding in &plan.bindings {
-                let Some(input_index) = binding.input_index else {
-                    continue;
-                };
-                let buffer = &module.program.buffers()[binding.buffer_index];
-                let value = self.value_for_buffer(buffer.name())?;
-                inputs[input_index] = state.get(&value).map(Vec::as_slice).ok_or_else(|| {
-                    invalid_module(&format!(
-                        "canonical artifact value {} for Program buffer `{}` is unbound",
-                        value.0,
-                        buffer.name()
-                    ))
-                })?;
+            let mut inputs = Vec::with_capacity(module.input_slots.len());
+            for slot in &module.input_slots {
+                let value = self.value_for_buffer(&slot.name)?;
+                match state.get(&value) {
+                    Some(bytes) => inputs.push(bytes.as_slice()),
+                    None if !slot.required => inputs.push(&[]),
+                    None => {
+                        return Err(invalid_module(&format!(
+                            "canonical artifact value {} for target binding `{}` is unbound",
+                            value.0, slot.name
+                        )));
+                    }
+                }
             }
             let dispatched = match module.pipeline.dispatch_borrowed_timed(&inputs, &config) {
                 Err(_) if self.lost.load(Ordering::Acquire) => {
