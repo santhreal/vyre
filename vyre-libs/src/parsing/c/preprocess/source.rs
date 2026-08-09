@@ -130,9 +130,6 @@ pub fn parse_c_include_request(
 /// Returns a diagnostic when token streams are inconsistent, a directive span
 /// is invalid, an include payload is malformed, or the source manager rejects
 /// a load.
-#[deprecated(
-    note = "CPU reference oracle only; production include loading must use the GPU preprocessor pipeline source-manager path"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c_preprocessor_load_includes<M: CPreprocessorSourceManager>(
     tok_types: &[u32],

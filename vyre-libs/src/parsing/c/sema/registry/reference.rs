@@ -7,9 +7,6 @@ use crate::parsing::c::sema::lookup::{
 /// Compute the same mapping in the explicit CPU oracle for conformance and
 /// witness generation.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production C semantic scope analysis must dispatch c_sema_scope* builders"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_scope_tree(
     tok_types: &[u32],

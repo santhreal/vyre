@@ -118,7 +118,6 @@ mod architecture_tests {
     fn line_calls_or_imports_oracle(line: &str) -> bool {
         let trimmed = line.trim();
         if trimmed.is_empty()
-            || trimmed.starts_with("#[deprecated")
             || trimmed.starts_with("pub fn reference_")
             || trimmed.starts_with("pub fn try_reference_")
             || trimmed.starts_with("fn reference_")

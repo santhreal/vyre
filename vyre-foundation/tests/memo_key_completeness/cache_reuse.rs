@@ -219,18 +219,6 @@ fn program_facts_cache_serves_wrong_node_count_and_indices() {
 /// either passes IR the backend cannot compile or rejects IR that is fine, and
 /// in both directions the diagnostic points at the wrong program.
 ///
-/// It was LATENT rather than live for a reason worth keeping on the record,
-/// because it is a property of callers rather than of the cache:
-/// `Program::validate()` has no production callers. Production validates
-/// through the uncached free function `vyre_foundation::validate::validate`,
-/// which recomputes every time and reads the buffer fields directly.
-/// Independently confirmed with the owner of the digest work:
-/// `mark_structurally_validated` has zero callers outside its own module, and
-/// the two in-module callers are `validate()` itself and a `#[deprecated]`
-/// shim. One production call to `Program::validate()` instead of
-/// `validate::validate`, which looks like a pure optimization, would have made
-/// it live.
-///
 /// What breaks if this regresses: the two fixtures below differ ONLY in a field
 /// that decides their verdict. If their keys collide again, a cached PASS can
 /// be served for the program that must FAIL. Assert the verdicts with exact

@@ -5,7 +5,6 @@
 //! oracle witnesses and hostile corpus diagnosis.
 
 #![allow(missing_docs)] // Internal oracle helpers are documented at the owning module boundary.
-#![allow(deprecated)]
 use crate::parsing::c::lex::tokens::*;
 use vyre_foundation::ir::Expr;
 
@@ -13,9 +12,6 @@ use super::expr_shape::*;
 use super::ref_decode_err::*;
 use super::*;
 
-#[deprecated(
-    note = "CPU oracle only; production expression-shape construction must dispatch c11_build_expression_shape_nodes* builders"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_c11_build_expression_shape_nodes(
     raw_vast_node_bytes: &[u8],
@@ -39,9 +35,6 @@ pub fn try_reference_c11_build_expression_shape_nodes(
 
 /// CPU oracle for `c11_build_expression_shape_nodes`.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production expression-shape construction must dispatch c11_build_expression_shape_nodes* builders"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c11_build_expression_shape_nodes(
     raw_vast_node_bytes: &[u8],

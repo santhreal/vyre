@@ -28,20 +28,16 @@ pub use classify::{
 pub use expr_shape::{
     c11_build_expression_shape_nodes, c11_build_expression_shape_nodes_no_conditional,
 };
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ref_classify::{
     reference_c11_classify_vast_node_kinds, try_reference_c11_classify_vast_node_kinds,
 };
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ref_decode_err::{reference_c11_build_vast_nodes, CReferenceDecodeError};
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ref_expr_shape::{
     reference_c11_build_expression_shape_nodes, try_reference_c11_build_expression_shape_nodes,
 };
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ref_typedef::{
     reference_c11_annotate_typedef_names, try_reference_c11_annotate_typedef_names,

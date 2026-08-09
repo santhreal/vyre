@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use super::reference::{
     brace_scope_id_for_node, brace_scope_parent_id_for_node, function_parameter_scope,
     reference_scope_tree,

@@ -13,7 +13,6 @@ mod reference;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod witness;
 
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use reference::reference_scope_tree;
 

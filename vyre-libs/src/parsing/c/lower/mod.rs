@@ -17,7 +17,6 @@ pub(crate) fn valid_node_index_expr(
     )
 }
 
-#[allow(deprecated)]
 pub use ast_to_pg_nodes::{
     c_lower_ast_to_pg_nodes, c_lower_ast_to_pg_semantic_graph, PgReferenceDecodeError,
     SemanticPgReference, C_AST_PG_CATEGORY_CONTROL, C_AST_PG_CATEGORY_DECLARATION,
@@ -41,7 +40,6 @@ pub use ast_to_pg_nodes::{
     C_AST_PG_ROLE_STATEMENT_EXPR, C_AST_PG_ROLE_STATIC_ASSERT_DECL, C_AST_PG_ROLE_SWITCH,
     C_AST_PG_ROLE_TYPEDEF_DECL, C_AST_PG_ROLE_UNREACHABLE, C_AST_PG_SEMANTIC_NODE_STRIDE_U32,
 };
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use ast_to_pg_nodes::{
     reference_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph, try_reference_ast_to_pg_nodes,

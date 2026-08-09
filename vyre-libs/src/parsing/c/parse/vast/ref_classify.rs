@@ -12,9 +12,6 @@ use super::ref_decode_err::*;
 use super::ref_typedef::*;
 use super::*;
 
-#[deprecated(
-    note = "CPU oracle only; production VAST classification must dispatch c11_classify_vast_node_kinds* builders"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_c11_classify_vast_node_kinds(
     vast_node_bytes: &[u8],
@@ -27,10 +24,6 @@ pub fn try_reference_c11_classify_vast_node_kinds(
 
 /// CPU oracle for `c11_classify_vast_node_kinds`.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production VAST classification must dispatch c11_classify_vast_node_kinds* builders"
-)]
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c11_classify_vast_node_kinds(vast_node_bytes: &[u8]) -> Vec<u8> {
     try_reference_c11_classify_vast_node_kinds(vast_node_bytes).unwrap_or_else(|error| {

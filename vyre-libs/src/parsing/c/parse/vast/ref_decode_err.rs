@@ -11,9 +11,6 @@ use super::expr_shape::*;
 use super::ref_expr_shape::*;
 use super::*;
 
-#[deprecated(
-    note = "CPU oracle only; production VAST construction must dispatch c11_build_vast_nodes"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c11_build_vast_nodes(
     tok_types: &[u32],

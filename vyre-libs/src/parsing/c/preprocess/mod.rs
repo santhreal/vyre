@@ -402,9 +402,6 @@ fn classify_phase2_preprocessor_directive(
 /// Returns a diagnostic when token streams are inconsistent, a directive span
 /// is outside `source`, or the current payload evaluator cannot parse a
 /// conditional expression.
-#[deprecated(
-    note = "CPU reference oracle only; production C preprocessing must use the GPU directive metadata pipeline"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c_preprocessor_directive_metadata(
     tok_types: &[u32],

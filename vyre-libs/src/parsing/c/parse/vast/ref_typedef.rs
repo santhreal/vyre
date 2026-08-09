@@ -56,9 +56,6 @@ pub(super) fn reference_typed_kind(vast_nodes: &[u32], node_idx: usize) -> u32 {
     typed_kind::reference_typed_kind(vast_nodes, node_idx)
 }
 
-#[deprecated(
-    note = "CPU oracle only; production typedef annotation must dispatch c11_annotate_typedef_names* builders"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_c11_annotate_typedef_names(
     vast_node_bytes: &[u8],
@@ -73,10 +70,6 @@ pub fn try_reference_c11_annotate_typedef_names(
 
 /// CPU oracle for `c11_annotate_typedef_names`.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production typedef annotation must dispatch c11_annotate_typedef_names* builders"
-)]
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c11_annotate_typedef_names(vast_node_bytes: &[u8], haystack: &[u8]) -> Vec<u8> {
     try_reference_c11_annotate_typedef_names(vast_node_bytes, haystack).unwrap_or_else(|error| {

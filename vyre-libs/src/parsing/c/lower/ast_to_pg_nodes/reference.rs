@@ -28,9 +28,6 @@ pub(super) fn u32_words_to_bytes(words: &[u32]) -> Vec<u8> {
 ///
 /// Returns [`PgReferenceDecodeError`] when the input is not aligned to `u32`
 /// words or does not contain complete VAST rows.
-#[deprecated(
-    note = "CPU oracle only; production AST-to-PG lowering must dispatch c_lower_ast_to_pg_nodes"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_ast_to_pg_nodes(
     vast_node_bytes: &[u8],
@@ -51,9 +48,6 @@ pub fn try_reference_ast_to_pg_nodes(
 ///
 /// Returns [`PgReferenceDecodeError`] when the input is not aligned to `u32`
 /// words or does not contain complete VAST rows.
-#[deprecated(
-    note = "CPU oracle only; production semantic AST-to-PG lowering must dispatch c_lower_ast_to_pg_semantic_graph"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_ast_to_pg_semantic_graph(
     vast_node_bytes: &[u8],
@@ -70,10 +64,6 @@ pub fn try_reference_ast_to_pg_semantic_graph(
 
 /// Compute the same mapping as `c_lower_ast_to_pg_nodes` in the explicit CPU oracle.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production AST-to-PG lowering must dispatch c_lower_ast_to_pg_nodes"
-)]
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_ast_to_pg_nodes(vast_node_bytes: &[u8]) -> Vec<u8> {
     try_reference_ast_to_pg_nodes(vast_node_bytes).unwrap_or_else(|_| {
@@ -83,10 +73,6 @@ pub fn reference_ast_to_pg_nodes(vast_node_bytes: &[u8]) -> Vec<u8> {
 
 /// Compute semantic PG node and edge witnesses in the explicit CPU oracle.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production semantic AST-to-PG lowering must dispatch c_lower_ast_to_pg_semantic_graph"
-)]
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_ast_to_pg_semantic_graph(vast_node_bytes: &[u8]) -> SemanticPgReference {
     try_reference_ast_to_pg_semantic_graph(vast_node_bytes).unwrap_or_else(|_| {

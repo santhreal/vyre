@@ -1,7 +1,5 @@
 //! Witness fixtures for AST→PG lowering tests.
 
-#![allow(deprecated)]
-
 use crate::parsing::c::parse::vast::*;
 
 use super::reference::*;

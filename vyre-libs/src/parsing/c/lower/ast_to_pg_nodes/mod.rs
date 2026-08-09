@@ -20,7 +20,6 @@ pub use gpu_program::{
     c_lower_ast_to_pg_semantic_graph_with_pg_no_control_resolution, PgReferenceDecodeError,
     SemanticPgReference,
 };
-#[allow(deprecated)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use reference::{
     reference_ast_to_pg_nodes, reference_ast_to_pg_semantic_graph, try_reference_ast_to_pg_nodes,

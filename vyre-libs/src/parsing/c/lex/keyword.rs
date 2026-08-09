@@ -127,9 +127,6 @@ pub fn c_keyword_map_words() -> Vec<u32> {
 
 /// Explicit CPU oracle for keyword promotion over extracted token streams.
 #[must_use]
-#[deprecated(
-    note = "CPU oracle only; production C keyword promotion must dispatch the GPU keyword pass"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c_keyword_types(
     tok_types: &[u32],
@@ -486,7 +483,6 @@ fn keyword_packed_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(deprecated)]
 
     use super::*;
 

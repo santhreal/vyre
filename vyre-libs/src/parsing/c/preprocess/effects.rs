@@ -188,9 +188,6 @@ pub fn classify_c_preprocessor_side_effect(
 ///
 /// Returns a diagnostic when token streams are inconsistent or a directive span
 /// is invalid.
-#[deprecated(
-    note = "CPU reference oracle only; production side-effect metadata must use GPU preprocessor classification"
-)]
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn reference_c_preprocessor_side_effect_metadata(
     tok_types: &[u32],

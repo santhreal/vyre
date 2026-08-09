@@ -19,9 +19,7 @@ pub mod walk;
 
 pub use lazy_scope::{DeclKind, LazyScopeTable, ScopeFrameId};
 #[cfg(any(test, feature = "cpu-parity"))]
-#[allow(deprecated)]
 pub use registry::reference_scope_tree;
-#[allow(deprecated)]
 pub use registry::{
     c_sema_scope, c_sema_scope_packed_haystack, c_sema_scope_symbols_packed_haystack,
 };
