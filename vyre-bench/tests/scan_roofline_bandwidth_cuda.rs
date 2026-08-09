@@ -11,9 +11,9 @@
 //! This is an HONEST, non-root roofline datum, clearly sourced from timing rather
 //! than presented as Nsight counters. Runs on the real GPU; skips with none.
 
+use vyre::scan::GpuLiteralSet;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
@@ -47,7 +47,7 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
 
     let session = matcher
         .prepare_resident_fused_scan(
-            &backend,
+            "cuda",
             HAYSTACK_BYTES + 64,
             region_starts.len() as u32,
             max_matches,
@@ -60,7 +60,6 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
     let mut scratch: Vec<u8> = Vec::new();
     session
         .scan_into(
-            &backend,
             &haystack,
             &region_starts,
             0,
@@ -72,7 +71,6 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
 
     let timed = session
         .scan_into_timed(
-            &backend,
             &haystack,
             &region_starts,
             0,
@@ -81,7 +79,7 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
             &mut scratch,
         )
         .expect("timed resident fused scan");
-    session.free(&backend).expect("free resident session");
+    session.free().expect("free resident session");
 
     let Some(device_ns) = timed.device_ns else {
         panic!("the CUDA backend must report device time for the roofline measurement");

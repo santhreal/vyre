@@ -192,13 +192,13 @@ impl BenchCase for LiteralSetPagedCorpus {
                 "prepared paged-corpus payload had the wrong type".to_string(),
             )
         })?;
-        let backend = ctx.preferred_backend.as_ref();
+        let backend_id = ctx.preferred_registration.id;
         let files = file_view(&prepared.haystack);
 
         // Warm, then time the SYNC paged scan.
         let mut sync_result = scan_paged_fused(
             &prepared.engine,
-            backend,
+            backend_id,
             &files,
             WINDOW_BUDGET_BYTES,
             prepared.max_matches,
@@ -208,7 +208,7 @@ impl BenchCase for LiteralSetPagedCorpus {
         for _ in 0..ITERS {
             sync_result = scan_paged_fused(
                 &prepared.engine,
-                backend,
+                backend_id,
                 &files,
                 WINDOW_BUDGET_BYTES,
                 prepared.max_matches,
@@ -220,7 +220,7 @@ impl BenchCase for LiteralSetPagedCorpus {
         // Time the ASYNC pipelined paged scan.
         let mut async_result = scan_paged_fused_async(
             &prepared.engine,
-            backend,
+            backend_id,
             &files,
             WINDOW_BUDGET_BYTES,
             prepared.max_matches,
@@ -230,7 +230,7 @@ impl BenchCase for LiteralSetPagedCorpus {
         for _ in 0..ITERS {
             async_result = scan_paged_fused_async(
                 &prepared.engine,
-                backend,
+                backend_id,
                 &files,
                 WINDOW_BUDGET_BYTES,
                 prepared.max_matches,

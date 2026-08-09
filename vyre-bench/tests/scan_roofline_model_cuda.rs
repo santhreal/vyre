@@ -16,9 +16,9 @@
 //! ncu-gated. The model (both ceilings + ridge) and the memory-axis operating point +
 //! bound verdict are complete and honest here. Runs on the real GPU; skips with none.
 
+use vyre::scan::GpuLiteralSet;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::match_result::Match;
-use vyre::scan::GpuLiteralSet;
 
 #[test]
 fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
@@ -65,7 +65,7 @@ fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
 
     let session = matcher
         .prepare_resident_fused_scan(
-            &backend,
+            "cuda",
             HAYSTACK_BYTES + 64,
             region_starts.len() as u32,
             max_matches,
@@ -78,7 +78,6 @@ fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
     // Warm dispatch (tables resident, caches primed), then the timed measurement.
     session
         .scan_into(
-            &backend,
             &haystack,
             &region_starts,
             0,
@@ -89,7 +88,6 @@ fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
         .expect("warm resident fused scan");
     let timed = session
         .scan_into_timed(
-            &backend,
             &haystack,
             &region_starts,
             0,
@@ -98,7 +96,7 @@ fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
             &mut scratch,
         )
         .expect("timed resident fused scan");
-    session.free(&backend).expect("free resident session");
+    session.free().expect("free resident session");
 
     let Some(device_ns) = timed.device_ns else {
         panic!("the CUDA backend must report device time for the roofline measurement");
