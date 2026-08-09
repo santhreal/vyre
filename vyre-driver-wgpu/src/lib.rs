@@ -40,6 +40,7 @@ pub mod runtime;
 pub mod spirv_backend;
 mod staging_reserve;
 mod stats;
+mod target_compiler;
 mod thread_pool;
 mod wait_backoff;
 
@@ -210,7 +211,7 @@ inventory::submit! {
             Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
         }),
         supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
-        target_compiler: None,
+        target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: None,
     }
 }

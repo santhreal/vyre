@@ -8,8 +8,9 @@ use vyre_foundation::ir::{
 };
 use vyre_megakernel::{
     compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest,
-    DiagnosticCode, Digest, ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload,
-    TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    DiagnosticCode, Digest, ExternalFacts, FusionGroupId, SearchBudget, TargetEntryPoint,
+    TargetModuleBundle, TargetModuleImage, TargetPayload, TargetPayloadFormat,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 
 fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
@@ -170,4 +171,32 @@ fn corrupted_target_payload_identity_is_rejected() {
         DiagnosticCode::TargetPayloadDigestMismatch
     );
     assert_eq!(error.diagnostic.path, "target_payload.digest");
+}
+
+/// WHY: authenticated payload bytes must not admit duplicate or out-of-order selected modules.
+#[test]
+fn target_module_bundle_rejects_noncanonical_module_order() {
+    let image = |stage, group| TargetModuleImage {
+        group: FusionGroupId(group),
+        stage,
+        entry_point: format!("group_{group}"),
+        bytes: vec![group as u8],
+    };
+    for modules in [
+        vec![image(1, 0), image(0, 1)],
+        vec![image(0, 1), image(0, 0)],
+        vec![image(0, 0), image(0, 0)],
+    ] {
+        let bytes = serde_json::to_vec(&TargetModuleBundle {
+            schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+            modules,
+        })
+        .expect("fixture bundle must encode");
+        let error = TargetModuleBundle::from_bytes(&bytes)
+            .expect_err("noncanonical stage/group order must fail admission");
+        assert!(
+            error.to_string().contains("canonical stage/group order"),
+            "unexpected admission error: {error}"
+        );
+    }
 }

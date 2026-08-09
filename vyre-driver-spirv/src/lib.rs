@@ -25,6 +25,7 @@
 
 /// Canonical lowering and emitter adapter.
 pub mod backend;
+mod materializer;
 mod target_compiler;
 /// Vulkan compute dispatch implementation.
 mod vulkan;
@@ -278,7 +279,7 @@ inventory::submit! {
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
-        materializer: None,
+        materializer: Some(materializer::materializer_factory),
     }
 }
 

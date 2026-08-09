@@ -29,6 +29,7 @@ matching-nfa = ["vyre-libs/matching-nfa"]
 [dependencies]
 vyre-driver = { workspace = true, features = ["self-substrate-adapters"] }
 vyre-foundation = { workspace = true }
+vyre-megakernel = { workspace = true }
 vyre-self-substrate = { workspace = true, features = ["logic"] }
 vyre-spec = { workspace = true }
 vyre-lower.workspace = true

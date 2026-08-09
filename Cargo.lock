@@ -3404,6 +3404,7 @@ dependencies = [
  "thiserror 2.0.19",
  "vyre-driver",
  "vyre-foundation",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
  "vyre-test-support",
@@ -3572,6 +3573,7 @@ dependencies = [
  "vyre-foundation",
  "vyre-intrinsics",
  "vyre-macros",
+ "vyre-megakernel",
  "vyre-reference",
  "vyre-self-substrate",
  "vyre-spec",
@@ -3602,6 +3604,7 @@ dependencies = [
  "vyre-frontend-rust",
  "vyre-libs",
  "vyre-lower",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-self-substrate",
@@ -3622,6 +3625,7 @@ dependencies = [
  "vyre-emit-metal",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-megakernel",
 ]
 
 [[package]]
@@ -3641,13 +3645,13 @@ version = "0.7.2"
 dependencies = [
  "ash",
  "inventory",
- "naga",
  "smallvec",
  "tempfile",
  "vyre-driver",
- "vyre-emit-naga",
+ "vyre-emit-spirv",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-megakernel",
  "vyre-reference",
  "vyre-spec",
 ]
@@ -3694,6 +3698,7 @@ dependencies = [
  "vyre-harness",
  "vyre-libs",
  "vyre-lower",
+ "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
@@ -4023,6 +4028,7 @@ dependencies = [
  "vyre-driver",
  "vyre-driver-reference",
  "vyre-foundation",
+ "vyre-megakernel",
  "vyre-self-substrate",
  "vyre-test-support",
 ]

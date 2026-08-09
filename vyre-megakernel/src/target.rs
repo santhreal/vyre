@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 use vyre_foundation::{execution_plan::fusion::merge_programs_shared, ir::Program};
 
 use crate::{
-    Artifact, ArtifactAbi, ArtifactNodeId, CompileError, FusionGroupId, FusionRecord,
-    TargetPayload, TargetPayloadFormat,
+    AbiAccess, Artifact, ArtifactAbi, ArtifactNodeId, CompileError, FusionGroupId, FusionRecord,
+    ResourceLifetime, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
+    TargetResourceBinding, TargetResourceMemory,
 };
 
 /// One compiler-selected group decoded into verified semantic modules.
@@ -72,6 +74,13 @@ impl TargetModuleBundle {
                 bundle.schema_version, TARGET_MODULE_BUNDLE_SCHEMA_VERSION
             )));
         }
+        if bundle.modules.windows(2).any(|modules| {
+            (modules[0].stage, modules[0].group) >= (modules[1].stage, modules[1].group)
+        }) {
+            return Err(TargetCompileError::ModuleBundle(
+                "module bundle is not in canonical stage/group order".to_string(),
+            ));
+        }
         let canonical = bundle.to_bytes()?;
         if canonical != bytes {
             return Err(TargetCompileError::ModuleBundle(
@@ -137,6 +146,90 @@ pub fn fuse_selected_module(module: &SelectedModule) -> Result<Program, TargetCo
             module.group.0
         ))
     })
+}
+
+/// Compile all selected groups through one target emitter and package canonical bytes.
+pub fn compile_selected_modules(
+    artifact: &Artifact,
+    format: TargetPayloadFormat,
+    mut emit: impl FnMut(&Program) -> Result<Vec<u8>, TargetCompileError>,
+) -> Result<TargetPayload, TargetCompileError> {
+    let modules = selected_modules(artifact)?;
+    let bindings = resource_bindings(artifact);
+    let mut images = Vec::with_capacity(modules.len());
+    let mut entries = Vec::with_capacity(modules.len());
+    for module in modules {
+        let program = fuse_selected_module(&module)?;
+        let bytes = emit(&program)?;
+        let entry_point = "main".to_string();
+        let node = *module.nodes.first().ok_or_else(|| {
+            TargetCompileError::InvalidArtifact(format!(
+                "fusion group {} has no member node",
+                module.group.0
+            ))
+        })?;
+        entries.push(TargetEntryPoint {
+            name: entry_point.clone(),
+            node,
+            grid_size: dispatch_grid(artifact, program.workgroup_size),
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings.clone(),
+        });
+        images.push(TargetModuleImage {
+            group: module.group,
+            stage: module.stage,
+            entry_point,
+            bytes,
+        });
+    }
+    let bytes = TargetModuleBundle::new(images).to_bytes()?;
+    TargetPayload::new(artifact, format, entries, bytes).map_err(Into::into)
+}
+
+fn resource_bindings(artifact: &Artifact) -> Vec<TargetResourceBinding> {
+    let constant_values = artifact
+        .resources()
+        .iter()
+        .filter(|resource| resource.lifetime == ResourceLifetime::Constant)
+        .map(|resource| resource.value)
+        .collect::<HashSet<_>>();
+    artifact
+        .abi()
+        .resources
+        .iter()
+        .map(|resource| TargetResourceBinding {
+            resource: resource.value,
+            slot: resource.slot,
+            memory: if resource.access == AbiAccess::Uniform
+                || constant_values.contains(&resource.value)
+            {
+                TargetResourceMemory::Constant
+            } else {
+                TargetResourceMemory::Global
+            },
+            access: match resource.access {
+                AbiAccess::ReadOnly | AbiAccess::Uniform => TargetResourceAccess::ReadOnly,
+                AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
+                AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
+            },
+        })
+        .collect()
+}
+
+fn dispatch_grid(artifact: &Artifact, workgroup: [u32; 3]) -> [u32; 3] {
+    let elements = artifact
+        .resources()
+        .iter()
+        .map(|resource| resource.element_count)
+        .max()
+        .unwrap_or(1)
+        .max(1);
+    let threads = u64::from(workgroup[0])
+        .saturating_mul(u64::from(workgroup[1]))
+        .saturating_mul(u64::from(workgroup[2]))
+        .max(1);
+    let groups = elements.saturating_add(threads - 1) / threads;
+    [u32::try_from(groups).unwrap_or(u32::MAX), 1, 1]
 }
 
 /// Canonical ABI supplied unchanged to every target compiler.

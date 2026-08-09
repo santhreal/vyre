@@ -1,11 +1,9 @@
 #![allow(unsafe_code)]
 //! Native Metal backend registration boundary.
 //!
-//! The crate is intentionally platform-honest:
-//!
-//! - Apple targets compile and register the `metal` backend.
-//! - Non-Apple targets compile the crate but do not register a backend.
-//! - `acquire()` on non-Apple targets returns an actionable unsupported error.
+//! The pure target compiler is registered on every host. Native device
+//! materialization is registered only on Apple targets; `acquire()` on other
+//! targets returns an actionable unsupported error.
 
 use vyre_driver::backend::{BackendError, VyreBackend};
 
@@ -14,6 +12,7 @@ pub const METAL_BACKEND_ID: &str = "metal";
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod runtime;
+mod target_compiler;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use runtime::MetalBackend;
@@ -49,13 +48,12 @@ pub fn acquire() -> Result<Box<dyn VyreBackend>, BackendError> {
     })
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 inventory::submit! {
     vyre_driver::backend::BackendRegistration {
         id: METAL_BACKEND_ID,
         factory: acquire,
         supported_ops: vyre_driver::backend::core_supported_ops,
-        target_compiler: None,
+        target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: None,
     }
 }

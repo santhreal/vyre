@@ -5,12 +5,16 @@ use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
+use vyre_driver::BindingSet;
 use vyre_driver_spirv::SpirvBackend;
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
-    ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
+    ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+use vyre_megakernel::{
+    CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle, TargetPayload,
+    TargetPayloadFormat,
+};
 
 fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
     assert!(
@@ -52,42 +56,45 @@ fn assert_spirv_structural_invariants(label: &str, words: &[u32]) {
 
 fn program() -> Program {
     Program::wrapped(
-        vec![BufferDecl::storage(
-            "out",
-            0,
-            BufferAccess::ReadWrite,
-            DataType::U32,
-        )],
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [64, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(1))],
     )
 }
 
-fn artifact() -> vyre_megakernel::Artifact {
+fn artifact_with_configuration(configuration: u8) -> vyre_megakernel::Artifact {
     let mut graph = ProgramGraph::new();
     graph
-        .add_external_value(
-            "out",
-            ValueContract {
-                dtype: DataType::U32,
-                shape: vec![ShapeDim::Known(1)],
-                access: BufferAccess::ReadWrite,
-                lifetime: ValueLifetime::Invocation,
-            },
+        .add_node(
+            "main",
+            program(),
+            Vec::new(),
+            vec![GraphOutput {
+                buffer: "out".into(),
+                name: "out".into(),
+                contract: ValueContract {
+                    dtype: DataType::U32,
+                    shape: vec![ShapeDim::Known(1)],
+                    access: BufferAccess::ReadWrite,
+                    lifetime: ValueLifetime::Output,
+                },
+                retained_successor_of: None,
+            }],
         )
-        .unwrap();
-    graph
-        .add_node("main", program(), Vec::new(), Vec::new())
         .unwrap();
     let request = CompileRequest::new(
         graph,
-        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        ExternalFacts::new(Digest([configuration; 32]), BTreeMap::new()),
         SearchBudget::new(1, 1, 0, 0, 1),
         1_000_000,
     )
     .validate()
     .unwrap();
     vyre_megakernel::compile(&request).unwrap()
+}
+
+fn artifact() -> vyre_megakernel::Artifact {
+    artifact_with_configuration(0)
 }
 
 #[test]
@@ -117,11 +124,112 @@ fn registered_target_compiler_emits_spirv_module_bundle() {
     let payload = compiler.compile(&artifact).expect("artifact must compile");
     let bundle = TargetModuleBundle::from_bytes(payload.bytes()).expect("bundle must decode");
     assert_eq!(bundle.modules.len(), 1);
+    assert_eq!(bundle.modules[0].entry_point, "main");
+    assert_eq!(payload.entries()[0].name, "main");
     assert_eq!(
         &bundle.modules[0].bytes[..4],
         &0x0723_0203_u32.to_le_bytes()
     );
     assert_eq!(payload.neutral_artifact(), artifact.digest());
+}
+
+/// WHY: materialization and submission must execute authenticated payload bytes without recompiling.
+#[test]
+fn registered_materializer_executes_artifact_instance() {
+    let registration = vyre_driver::backend::registered_backends()
+        .iter()
+        .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
+        .expect("SPIR-V registration must be force-linked");
+    let compiler = registration.target_compiler().unwrap();
+    let materializer = registration
+        .materializer()
+        .expect("Vulkan device materializer must acquire on the GPU-required host");
+    let artifact = artifact();
+    let payload = compiler.compile(&artifact).unwrap();
+    let instance = materializer.materialize(&artifact, &payload).unwrap();
+    let wrong_artifact = artifact_with_configuration(1);
+    assert!(
+        materializer.materialize(&wrong_artifact, &payload).is_err(),
+        "payload association mismatch must fail before native materialization"
+    );
+    let wrong_format = TargetPayload::new(
+        &artifact,
+        TargetPayloadFormat::new("not-spv", 1).unwrap(),
+        payload.entries().to_vec(),
+        payload.bytes().to_vec(),
+    )
+    .unwrap();
+    assert!(
+        materializer.materialize(&artifact, &wrong_format).is_err(),
+        "payload format mismatch must fail before native materialization"
+    );
+    let malformed = TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.entries().to_vec(),
+        vec![1],
+    )
+    .unwrap();
+    assert!(
+        materializer.materialize(&artifact, &malformed).is_err(),
+        "malformed module bytes must fail before native materialization"
+    );
+    let mut invalid_spirv_bundle = TargetModuleBundle::from_bytes(payload.bytes()).unwrap();
+    invalid_spirv_bundle.modules[0].bytes[..4].copy_from_slice(&0_u32.to_le_bytes());
+    let invalid_spirv = TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.entries().to_vec(),
+        invalid_spirv_bundle.to_bytes().unwrap(),
+    )
+    .unwrap();
+    assert!(
+        materializer.materialize(&artifact, &invalid_spirv).is_err(),
+        "invalid SPIR-V magic must fail before native materialization"
+    );
+    let empty_bundle = TargetModuleBundle::new(Vec::new());
+    let missing_module = TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.entries().to_vec(),
+        empty_bundle.to_bytes().unwrap(),
+    )
+    .unwrap();
+    assert!(
+        materializer
+            .materialize(&artifact, &missing_module)
+            .is_err(),
+        "module count mismatch must fail before native materialization"
+    );
+    let mut wrong_bundle = TargetModuleBundle::from_bytes(payload.bytes()).unwrap();
+    wrong_bundle.modules[0].group.0 += 1;
+    let wrong_group = TargetPayload::new(
+        &artifact,
+        payload.format().clone(),
+        payload.entries().to_vec(),
+        wrong_bundle.to_bytes().unwrap(),
+    )
+    .unwrap();
+    assert!(
+        materializer.materialize(&artifact, &wrong_group).is_err(),
+        "selected group mismatch must fail before native materialization"
+    );
+    assert!(
+        instance
+            .submit(BindingSet::new(wrong_artifact.digest()))
+            .is_err(),
+        "binding association mismatch must fail before submission"
+    );
+    let completion = instance
+        .submit(BindingSet::new(artifact.digest()))
+        .unwrap()
+        .wait()
+        .unwrap();
+    assert_eq!(completion.artifact, artifact.digest());
+    assert_eq!(
+        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
+        Some(&1_u32.to_le_bytes().to_vec())
+    );
 }
 
 #[test]

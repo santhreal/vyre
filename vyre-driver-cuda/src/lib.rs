@@ -82,6 +82,7 @@ mod stream;
 /// A fixed synthetic device envelope for context-free estimator tests. Not a
 /// probe, and not this machine's values: never derive a hardware decision from it.
 pub mod synthetic_device_caps;
+mod target_compiler;
 /// CUDA execution planning for unified token/fact graph frontier waves.
 pub mod token_fact_frontier_execution;
 /// Adapter from unified token/fact graph layouts to CUDA resident bytes.
@@ -1137,7 +1138,7 @@ inventory::submit! {
         id: CUDA_BACKEND_ID,
         factory: cuda_factory,
         supported_ops: cuda_supported_ops,
-        target_compiler: None,
+        target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: None,
     }
 }

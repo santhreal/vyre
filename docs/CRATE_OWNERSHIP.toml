@@ -45,16 +45,16 @@ package = "vyre-driver-metal"
 path = "vyre-driver-metal"
 owner = "metal-driver"
 layer = "concrete-backend"
-responsibility = "Own native Apple device acquisition, lowering integration, dispatch, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-metal", "vyre-foundation", "vyre-lower"]
+responsibility = "Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-metal", "vyre-foundation", "vyre-lower", "vyre-megakernel"]
 
 [[crate]]
 package = "vyre-driver-wgpu"
 path = "vyre-driver-wgpu"
 owner = "portable-driver"
 layer = "concrete-backend"
-responsibility = "Own portable GPU acquisition, lowering, dispatch, graph execution, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-self-substrate", "vyre-spec"]
+responsibility = "Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
 
 [[crate]]
 package = "vyre-driver-spirv"
@@ -69,8 +69,8 @@ package = "vyre-driver-cuda"
 path = "vyre-driver-cuda"
 owner = "cuda-driver"
 layer = "concrete-backend"
-responsibility = "Own native NVIDIA device acquisition, lowering, dispatch, graphs, and release-path evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-ptx", "vyre-foundation", "vyre-lower", "vyre-self-substrate", "vyre-spec"]
+responsibility = "Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence."
+allowed_dependencies = ["vyre-driver", "vyre-emit-ptx", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
 
 [[crate]]
 package = "vyre-driver-reference"

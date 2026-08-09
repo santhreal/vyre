@@ -27,6 +27,7 @@ cuda = []
 [dependencies]
 vyre-driver = { workspace = true }
 vyre-foundation = { workspace = true }
+vyre-megakernel = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-lower.workspace = true
 vyre-emit-ptx.workspace = true
