@@ -23,14 +23,6 @@ pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
         .filter(|entry| entry.tier == OperationTier::Library)
 }
 
-/// Resolve the semantic operation's registered f32 ULP tolerance.
-#[must_use]
-pub fn tolerance_for_id(id: &str) -> u32 {
-    OperationRegistry::global()
-        .get(id)
-        .map_or(0, OpEntry::tolerance)
-}
-
 /// Fixpoint metadata consumed by upper execution harnesses.
 #[derive(Clone, Debug)]
 pub struct FixpointContract {

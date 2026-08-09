@@ -4,8 +4,8 @@
 //! bounded ULP window because GPU backends may contract multiply-add
 //! sequences and may use native approximate transcendental instructions.
 
-use super::tolerance_for_id;
 use vyre_foundation::ir::{DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::operation::OperationRegistry;
 
 /// Maximum accepted reference-oracle error against correctly-rounded f32
 /// transcendentals.
@@ -46,7 +46,10 @@ pub fn f32_ulp_tolerance(program: &Program) -> u32 {
 /// Combine an op-id-specific tolerance with the program-level f32 policy.
 #[must_use]
 pub fn effective_tolerance(op_id: &str, program: &Program) -> u32 {
-    tolerance_for_id(op_id).max(f32_ulp_tolerance(program))
+    OperationRegistry::global()
+        .get(op_id)
+        .map_or(0, |entry| entry.tolerance())
+        .max(f32_ulp_tolerance(program))
 }
 
 fn program_has_transcendental(program: &Program) -> bool {

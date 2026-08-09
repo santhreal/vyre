@@ -50,8 +50,7 @@ fn library_fixtures_are_canonical_semantic_registrations() {
             "{id}"
         );
     }
-    assert_eq!(
-        vyre_libs::fixture_catalog::tolerance_for_id("unknown-operation"),
-        0
-    );
+    assert!(OperationRegistry::global()
+        .get("unknown-operation")
+        .is_none());
 }
