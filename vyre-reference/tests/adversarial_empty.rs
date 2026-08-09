@@ -12,8 +12,7 @@ fn empty_wrapped_program_returns_no_outputs() {
 
 #[test]
 fn raw_empty_program_is_rejected_with_region_context() {
-    #[allow(deprecated)]
-    let program = Program::new(Vec::new(), [1, 1, 1], Vec::new());
+    let program = Program::from_raw_parts(Vec::new(), [1, 1, 1], Vec::new());
     let err = reference_eval(&program, &[]).expect_err("Fix: raw empty Program must be rejected");
     let message = err.to_string();
     assert!(

@@ -29,9 +29,8 @@ fn program_with_body(body: Vec<Node>) -> Program {
     Program::wrapped(vec![test_output_buffer()], [1, 1, 1], body)
 }
 
-#[allow(deprecated)]
 fn raw_program_with_body(body: Vec<Node>) -> Program {
-    Program::new(vec![test_output_buffer()], [1, 1, 1], body)
+    Program::from_raw_parts(vec![test_output_buffer()], [1, 1, 1], body)
 }
 
 fn store_program(expr: Expr) -> Program {

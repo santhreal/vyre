@@ -2,9 +2,8 @@
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 
-#[allow(deprecated)]
 fn raw_program() -> Program {
-    Program::new(
+    Program::from_raw_parts(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(7)), Node::Return],

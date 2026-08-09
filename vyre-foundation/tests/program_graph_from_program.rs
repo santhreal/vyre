@@ -6,7 +6,7 @@ use vyre_foundation::ir::{BufferDecl, DataType, Program, ProgramGraph, ValueLife
 /// output, while an ordinary read-write buffer carries retained state into the next invocation.
 #[test]
 fn output_marker_takes_precedence_over_read_write_access_for_graph_lifetime() {
-    let program = Program::new(
+    let program = Program::from_raw_parts(
         vec![
             BufferDecl::read_write("state", 0, DataType::U32).with_count(1),
             BufferDecl::output("result", 1, DataType::U32).with_count(1),

@@ -11,14 +11,12 @@ macro_rules! define_raw_program_constructor {
     () => {
         /// Create a program that preserves raw top-level entry nodes.
         ///
-        /// Use [`Program::wrapped`] for runnable programs. This raw constructor
-        /// remains available for wire decoding and negative validation tests.
-        #[deprecated(
-            note = "Program::new preserves raw top-level entry nodes. Use Program::wrapped for runnable programs; reserve Program::new for wire decode and negative tests."
-        )]
+        /// This constructor is reserved for wire decoding, reference adapters,
+        /// and negative validation tests. Use [`Program::wrapped`] for runnable
+        /// programs.
         #[must_use]
         #[inline]
-        pub fn new(
+        pub fn from_raw_parts(
             buffers: Vec<BufferDecl>,
             workgroup_size: [u32; 3],
             entry: Vec<Node>,

@@ -383,10 +383,9 @@ fn prewarm_reports_backend_cache_telemetry() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn compile_rejects_non_region_programs() {
     let backend = Arc::new(CountingBackend::default());
-    let program = Program::new(
+    let program = Program::from_raw_parts(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(9)), Node::Return],

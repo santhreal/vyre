@@ -688,21 +688,6 @@ impl Program {
             .is_some_and(|set| set.contains(self.validation_cache_key(backend_id).as_str()))
     }
 
-    /// Deprecated: use `is_structurally_validated` or `is_validated_on`.
-    #[deprecated(note = "use is_structurally_validated or is_validated_on")]
-    #[must_use]
-    #[inline]
-    pub fn is_validated(&self) -> bool {
-        self.is_structurally_validated()
-    }
-
-    /// Deprecated: use `mark_structurally_validated` or `mark_validated_on`.
-    #[deprecated(note = "use mark_structurally_validated or mark_validated_on")]
-    #[inline]
-    pub fn mark_validated(&self) {
-        self.mark_structurally_validated();
-    }
-
     /// Validate the program and cache the successful result on the program.
     ///
     /// # Errors

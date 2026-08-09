@@ -28,13 +28,10 @@ pub trait CategoryAOp {
 /// `DialectRegistry::get_lowering(ReferenceBackend)` dispatches to it
 /// directly rather than going through this sentinel.
 ///
-/// AUDIT_2026-05-23: Deprecated - CPU sentinels are fallback holes.
-/// Category C ops must implement typed GPU lowerings instead.
-#[deprecated(
-    note = "structured_intrinsic_cpu is a non-executable fallback sentinel. Implement typed GPU lowering for the op."
-)]
+/// Category C registrations store this private function through
+/// [`SENTINEL_CPU_REF`]; dispatchers refuse that identity before invocation.
 #[inline(never)]
-pub fn structured_intrinsic_cpu(input: &[u8], output: &mut Vec<u8>) {
+fn structured_intrinsic_cpu(input: &[u8], output: &mut Vec<u8>) {
     let _ = input;
     output.clear();
     // Keep this body from compiling to the same instructions as anyone else's.
@@ -71,7 +68,6 @@ static SENTINEL_BODY_MARKER: u8 = 0xA7;
 /// the sentinel, which clears the output and returns `Ok(())`, handing the
 /// caller an empty byte vector that looks like a successful CPU reference
 /// result. That is precisely the fail-open the sentinel exists to prevent.
-#[allow(deprecated)]
 pub static SENTINEL_CPU_REF: CpuFn = structured_intrinsic_cpu;
 
 /// True when [`structured_intrinsic_cpu`] is set as an op's CPU lowering.
@@ -84,17 +80,7 @@ pub fn is_cpu_reference_sentinel(f: CpuFn) -> bool {
     std::ptr::fn_addr_eq(f, SENTINEL_CPU_REF)
 }
 
-/// Compatibility wrapper for older conformance tooling.
-#[deprecated(
-    note = "use is_cpu_reference_sentinel; CPU reference sentinels are explicit oracles, not runtime fallbacks"
-)]
-#[must_use]
-pub fn is_fallback_cpu_ref(f: CpuFn) -> bool {
-    is_cpu_reference_sentinel(f)
-}
-
 #[cfg(test)]
-#[allow(deprecated)]
 mod tests {
     use super::*;
 

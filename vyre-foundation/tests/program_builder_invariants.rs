@@ -31,9 +31,8 @@ fn empty_program_is_explicit_noop() {
 }
 
 #[test]
-#[allow(deprecated)]
-fn new_program_preserves_workgroup_size() {
-    let prog = Program::new(
+fn raw_program_preserves_workgroup_size() {
+    let prog = Program::from_raw_parts(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [8, 4, 2],
         vec![Node::Return],

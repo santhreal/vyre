@@ -186,9 +186,8 @@ fn output_byte_range_past_end_is_rejected_with_named_error() {
 }
 
 #[test]
-#[allow(deprecated)]
-fn unwrapped_deprecated_constructor_rejected_by_plan() {
-    let program = Program::new(vec![], [1, 1, 1], vec![Node::Return]);
+fn unwrapped_raw_program_is_rejected_by_plan() {
+    let program = Program::from_raw_parts(vec![], [1, 1, 1], vec![Node::Return]);
     let err = plan(&program).expect_err("unwrapped program must not plan");
     assert!(
         matches!(err, PlanError::NonCanonicalProgram { .. }),

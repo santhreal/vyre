@@ -85,8 +85,7 @@ fn stats_matches_old_multi_walk_batch() {
 
 #[test]
 fn stats_matches_old_multi_walk_region_chain() {
-    #[allow(deprecated)]
-    let program = Program::new(
+    let program = Program::from_raw_parts(
         vec![],
         [1, 1, 1],
         vec![
@@ -171,10 +170,7 @@ fn stats_cache_hit_returns_same_reference() {
 fn node_kinds_present_bit_positions_match_program_soa_node_kind() {
     use crate::optimizer::program_soa::{kind_mask, NodeKind};
     assert_eq!(NODE_KIND_LET, kind_mask(NodeKind::Let));
-    assert_eq!(
-        super::stats::NODE_KIND_ASSIGN,
-        kind_mask(NodeKind::Assign)
-    );
+    assert_eq!(super::stats::NODE_KIND_ASSIGN, kind_mask(NodeKind::Assign));
     assert_eq!(NODE_KIND_STORE, kind_mask(NodeKind::Store));
     assert_eq!(super::stats::NODE_KIND_IF, kind_mask(NodeKind::If));
     assert_eq!(NODE_KIND_LOOP, kind_mask(NodeKind::Loop));
@@ -195,19 +191,13 @@ fn node_kinds_present_bit_positions_match_program_soa_node_kind() {
         kind_mask(NodeKind::AsyncWait)
     );
     assert_eq!(super::stats::NODE_KIND_TRAP, kind_mask(NodeKind::Trap));
-    assert_eq!(
-        super::stats::NODE_KIND_RESUME,
-        kind_mask(NodeKind::Resume)
-    );
+    assert_eq!(super::stats::NODE_KIND_RESUME, kind_mask(NodeKind::Resume));
     assert_eq!(NODE_KIND_RETURN, kind_mask(NodeKind::Return));
     assert_eq!(
         super::stats::NODE_KIND_BARRIER,
         kind_mask(NodeKind::Barrier)
     );
-    assert_eq!(
-        super::stats::NODE_KIND_BLOCK,
-        kind_mask(NodeKind::Block)
-    );
+    assert_eq!(super::stats::NODE_KIND_BLOCK, kind_mask(NodeKind::Block));
     assert_eq!(NODE_KIND_REGION, kind_mask(NodeKind::Region));
     assert_eq!(
         super::stats::NODE_KIND_ALL_REDUCE,
@@ -225,8 +215,5 @@ fn node_kinds_present_bit_positions_match_program_soa_node_kind() {
         super::stats::NODE_KIND_BROADCAST,
         kind_mask(NodeKind::Broadcast)
     );
-    assert_eq!(
-        super::stats::NODE_KIND_OPAQUE,
-        kind_mask(NodeKind::Opaque)
-    );
+    assert_eq!(super::stats::NODE_KIND_OPAQUE, kind_mask(NodeKind::Opaque));
 }

@@ -3,17 +3,16 @@
 //! Vyre's three-layer validation cache MUST stay distinct across
 //! backends:
 //!
-//!   1. `program.is_validated()`  -  fast atomic, STRUCTURAL only
-//!      (wire format, IR shape, buffer bindings). Backend-agnostic.
+//!   1. `program.is_structurally_validated()`  -  fast atomic structural state
+//!      covering wire format, IR shape, and buffer bindings.
 //!   2. `WgpuBackend::validation_cache: DashSet<blake3::Hash>`  -
 //!      per-backend, covers capability checks (SUBGROUP
 //!      availability, workgroup-size limits, feature flags).
 //!   3. `vyre_driver::backend::validation::validate_program(program,
 //!      backend)`  -  the real validator.
 //!
-//! A backend MUST NOT consume is_validated() as a shortcut past its
-//! own capability checks, and its capability cache MUST be keyed so
-//! cross-backend dispatches miss (even if program_hash collides).
+//! A backend MUST NOT consume structural validation as a shortcut past its own
+//! capability checks. Capability-cache keys include the backend identity.
 //!
 //! This test is the regression gate: any future "simplification"
 //! that makes validation process-wide instead of per-backend trips
@@ -66,31 +65,26 @@ fn backend_ids_are_distinct() {
 }
 
 #[test]
-fn is_validated_does_not_substitute_for_capability_check() {
+fn structural_validation_does_not_substitute_for_capability_check() {
     // Contract: a program that WgpuBackend has validated (flag may
     // or may not be set depending on whether validation covered
     // structural-only) MUST trigger independent capability checks on
     // any other backend. This test documents the contract; the
     // engine-side enforcement is: ReducedBackend MUST run validation
     // when handed the same program, regardless of
-    // `program.is_validated()` state.
+    // `program.is_structurally_validated()` state.
     let wgpu = WgpuBackend::acquire().expect("Fix: GPU required for cross-backend test");
     let program = vyre::Program::empty();
     wgpu.dispatch(&program, &[], &vyre::DispatchConfig::default())
         .expect("wgpu dispatch of empty program must succeed");
 
-    // If transcendental parity6 regresses by making is_validated a global shortcut,
-    // a future refactor that reads `program.is_validated()` in
-    // ReducedBackend::dispatch before running its own checks would
-    // let unsupported programs through. The assertion here is the
-    // contract: backends that refuse a program (because of their
-    // reduced capabilities) must still return a structured error,
-    // never silently succeed by reading the flag.
+    // A global structural-validation shortcut would let unsupported programs
+    // through. Reduced-capability backends must still return a structured error.
     let reduced = ReducedBackend { id: "reduced" };
     let result = reduced.dispatch(&program, &[], &vyre::DispatchConfig::default());
     assert!(
         result.is_err(),
         "transcendental parity6: reduced backend must refuse dispatch of a program validated elsewhere; \
-         never read Program::is_validated() as a capability shortcut"
+         never use structural validation as a capability shortcut"
     );
 }
