@@ -32,6 +32,7 @@ use std::io::Read;
 use std::ops::Range;
 use std::path::Path;
 
+#[cfg(test)]
 use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 
@@ -1071,8 +1072,8 @@ pub struct PatternShard<'a> {
 
 /// Scan `haystack` with a pattern database STRIPED across shards: each shard holds a
 /// disjoint subset of the rules, runs on its assigned device
-/// (`backends[shard_index % backends.len()]`), and its local matches are remapped
-/// into the GLOBAL rule numbering and merged into one canonical report (stable-sorted
+/// (`backend_ids[shard_index % backend_ids.len()]`), and its local matches are
+/// remapped into the GLOBAL rule numbering and merged into one canonical report
 /// by `(pattern_id, start, end)`).
 ///
 /// Because literal matching is independent per rule, the union of disjoint rule
@@ -1084,24 +1085,24 @@ pub struct PatternShard<'a> {
 /// stripe / remap / merge architecture.
 ///
 /// # Errors
-/// [`vyre_driver::BackendError`] if `backends` is empty (fail closed), if any shard emits a
-/// local pattern id with no entry in its `global_pattern_ids` (a malformed shard map
+/// [`vyre_driver::BackendError`] if `backend_ids` is empty (fail closed), if any
+/// shard emits a local pattern id with no entry in its `global_pattern_ids`
 ///: fail closed rather than drop or mis-attribute the finding, Law 10), or on any
 /// shard's scan failure.
 pub fn scan_pattern_sharded(
     shards: &[PatternShard<'_>],
-    backends: &[&dyn VyreBackend],
+    backend_ids: &[&str],
     haystack: &[u8],
 ) -> Result<Vec<Match>, vyre_driver::BackendError> {
-    if backends.is_empty() {
+    if backend_ids.is_empty() {
         return Err(vyre_driver::BackendError::new(
-            "scan_pattern_sharded: the backend set is empty. Fix: pass at least one device backend to stripe the rule database across.".to_string(),
+            "scan_pattern_sharded: the backend ID set is empty. Fix: pass at least one registered backend ID to stripe the rule database across.".to_string(),
         ));
     }
     let mut merged: Vec<Match> = Vec::new();
     for (index, shard) in shards.iter().enumerate() {
-        let backend = backends[index % backends.len()];
-        let local_matches = shard.matcher.scan_all(backend, haystack)?;
+        let backend_id = backend_ids[index % backend_ids.len()];
+        let local_matches = shard.matcher.scan_all(backend_id, haystack)?;
         for mut hit in local_matches {
             let Some(&global_id) = shard.global_pattern_ids.get(hit.pattern_id as usize) else {
                 return Err(vyre_driver::BackendError::new(format!(
@@ -1847,7 +1848,7 @@ mod tests {
         let mut single_matches: Vec<Match> = Vec::new();
         let single_presence = matcher
             .scan_presence_and_positions_by_region(
-                backend.as_ref(),
+                "wgpu",
                 &whole,
                 &region_starts,
                 0,
@@ -2431,7 +2432,7 @@ mod tests {
             b"AKIA here, a secret token, and AB plus another secret and a token trailing";
 
         // Ground truth: scan the whole rule database at once (global numbering).
-        let mut expected = full.scan_all(device, haystack).expect("full scan");
+        let mut expected = full.scan_all("wgpu", haystack).expect("full scan");
         expected.sort_unstable();
         assert!(!expected.is_empty(), "the corpus must match some rules");
 
@@ -2452,14 +2453,14 @@ mod tests {
 
         // 1-device set: all shards on the one device.
         let striped_one =
-            scan_pattern_sharded(&shards, &[device], haystack).expect("striped scan (1 device)");
+            scan_pattern_sharded(&shards, &["wgpu"], haystack).expect("striped scan (1 device)");
         assert_eq!(
             striped_one, expected,
             "striped rule-database scan must equal the full-database scan"
         );
 
         // 2-device set: shard 0 → device 0, shard 1 → device 1 (same GPU here).
-        let striped_two = scan_pattern_sharded(&shards, &[device, device], haystack)
+        let striped_two = scan_pattern_sharded(&shards, &["wgpu", "wgpu"], haystack)
             .expect("striped scan (2 devices)");
         assert_eq!(
             striped_two, expected,
@@ -2479,7 +2480,7 @@ mod tests {
             matcher: &bad_matcher,
             global_pattern_ids: &[0], // missing the mapping for local id 1 (token)
         }];
-        let error = scan_pattern_sharded(&bad, &[device], b"a token here")
+        let error = scan_pattern_sharded(&bad, &["wgpu"], b"a token here")
             .expect_err("a malformed shard map must fail closed, not drop the finding");
         assert!(
             error.to_string().contains("global_pattern_ids"),
