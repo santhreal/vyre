@@ -2,6 +2,86 @@
 
 use super::*;
 
+#[derive(Debug)]
+struct ObserveLateRewrite;
+
+impl crate::optimizer::private::Sealed for ObserveLateRewrite {}
+
+impl ProgramPass for ObserveLateRewrite {
+    fn metadata(&self) -> PassMetadata {
+        PassMetadata::new("a_observe_late_rewrite", &[], &[])
+    }
+
+    fn analyze(&self, _program: &Program) -> PassAnalysis {
+        PassAnalysis::RUN
+    }
+
+    fn transform(&self, program: Program) -> PassResult {
+        if program.entry_op_id.as_deref() == Some("late-rewrite") {
+            PassResult {
+                program: program.with_entry_op_id("fixed-point"),
+                changed: true,
+            }
+        } else {
+            PassResult::unchanged(program)
+        }
+    }
+
+    fn fingerprint(&self, _program: &Program) -> u64 {
+        0
+    }
+}
+
+#[derive(Debug)]
+struct IntroduceLateRewrite;
+
+impl crate::optimizer::private::Sealed for IntroduceLateRewrite {}
+
+impl ProgramPass for IntroduceLateRewrite {
+    fn metadata(&self) -> PassMetadata {
+        PassMetadata::new("z_introduce_late_rewrite", &[], &[])
+    }
+
+    fn analyze(&self, _program: &Program) -> PassAnalysis {
+        PassAnalysis::RUN
+    }
+
+    fn transform(&self, program: Program) -> PassResult {
+        if program.entry_op_id.is_none() {
+            PassResult {
+                program: program.with_entry_op_id("late-rewrite"),
+                changed: true,
+            }
+        } else {
+            PassResult::unchanged(program)
+        }
+    }
+
+    fn fingerprint(&self, _program: &Program) -> u64 {
+        0
+    }
+}
+
+/// WHY: any landed rewrite can create an opportunity for an earlier pass,
+/// even when the later pass omitted an invalidation tag for that interaction.
+#[test]
+fn late_rewrite_restarts_the_complete_pass_schedule() {
+    let scheduler = PassScheduler::with_passes(vec![
+        ProgramPassKind::new(ObserveLateRewrite),
+        ProgramPassKind::new(IntroduceLateRewrite),
+    ]);
+
+    let optimized = scheduler
+        .run(trivial_program())
+        .expect("complete pass schedule must reach its fixed point");
+    assert_eq!(optimized.entry_op_id.as_deref(), Some("fixed-point"));
+
+    let optimized_twice = scheduler
+        .run(optimized.clone())
+        .expect("fixed-point output must remain optimizable");
+    assert_eq!(optimized_twice, optimized);
+}
+
 #[test]
 fn single_pass_converges() {
     let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(ConstFold)]);

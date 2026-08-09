@@ -131,19 +131,6 @@ impl PassScheduler {
         }
     }
 
-    fn mark_invalidated_pass_flags(&self, invalidated: &[&'static str], next_dirty: &mut [bool]) {
-        let index = self.dirty_trigger_index();
-        for &tag in invalidated {
-            if let Some(triggered) = index.get(tag) {
-                for &pass_index in triggered {
-                    if let Some(slot) = next_dirty.get_mut(pass_index) {
-                        *slot = true;
-                    }
-                }
-            }
-        }
-    }
-
     /// Execute the scheduled passes repeatedly until convergence or max iterations are reached.
     ///
     /// # Errors
@@ -334,10 +321,7 @@ impl PassScheduler {
                                 } else {
                                     changed = true;
                                     changed_by = Some(pass.pass_id());
-                                    self.mark_invalidated_pass_flags(
-                                        metadata.invalidates,
-                                        next_dirty,
-                                    );
+                                    next_dirty.fill(true);
                                     result.program
                                 }
                             } else {
@@ -351,7 +335,7 @@ impl PassScheduler {
                     if result.changed {
                         changed = true;
                         changed_by = Some(pass.pass_id());
-                        self.mark_invalidated_pass_flags(metadata.invalidates, next_dirty);
+                        next_dirty.fill(true);
                     }
                     result.program
                 };
@@ -654,7 +638,7 @@ impl PassScheduler {
                     changed = true;
                     changed_by = Some(pass.pass_id());
                     metric.fact_substrate_invalidated = fact_state.invalidate();
-                    self.mark_invalidated_pass_flags(metadata.invalidates, next_dirty);
+                    next_dirty.fill(true);
                 }
             }
             metrics.push(metric);

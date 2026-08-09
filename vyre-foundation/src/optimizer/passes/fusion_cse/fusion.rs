@@ -1,6 +1,6 @@
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::rewrite::push_expr_children;
-use crate::optimizer::{fingerprint_program, vyre_pass, PassAnalysis, PassResult};
+use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
 use std::sync::Arc;
@@ -27,18 +27,9 @@ impl Fusion {
     #[must_use]
     #[inline]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Fusion operates on Regions; without any Region the
-        // duplicate-scan walk would always be empty.
-        if !program
-            .stats()
-            .has_any_node_kind(crate::ir::stats::NODE_KIND_REGION)
-        {
-            return PassAnalysis::SKIP;
-        }
-        // Iterate the pre-computed region column on ProgramFacts instead
-        // of recursing through every node: O(regions) vs O(nodes), and
-        // facts is already cached on the program by other passes in the
-        // pipeline.
+        // Iterate the pre-computed region column instead of recursing through
+        // every node. Statement-shaped entries have no regions but still need
+        // scalar fusion before top-level reconciliation wraps them again.
         let facts = crate::optimizer::program_soa::ProgramFacts::build_cached(program);
         let mut counts: FxHashMap<&str, u32> = FxHashMap::default();
         for region in facts.regions() {
@@ -62,17 +53,16 @@ impl Fusion {
         reason = "pass transform consumes Program to preserve the ProgramPass ownership contract"
     )]
     pub fn transform(program: Program) -> PassResult {
-        let before_fp = fingerprint_program(&program);
         let fused = fuse_nodes(program.entry(), program.buffers(), &program);
+        // Canonical fingerprints intentionally erase semantically transparent
+        // statement ordering. Pass scheduling needs exact structural change
+        // detection so a rewrite that reorders statements re-runs earlier passes.
+        let changed = program.entry() != fused.as_slice();
         // Reuse the buffer Arc + buffer_index instead of rebuilding via
         // Program::wrapped (which deep-clones buffers and re-interns names).
         // entry_op_id and non_composable_with_self are already preserved by
         // with_rewritten_entry.
-        let optimized = program.with_rewritten_wrapped_entry(fused);
-        // VYRE_OPTIMIZER LOW-02: `from_programs` runs full `Program` PartialEq
-        // (O(N) structural walk). Content-addressed fingerprint already hashes
-        // canonical wire bytes; reuse it for the changed bit.
-        let changed = fingerprint_program(&optimized) != before_fp;
+        let optimized = program.with_rewritten_entry(fused);
         PassResult {
             program: optimized,
             changed,

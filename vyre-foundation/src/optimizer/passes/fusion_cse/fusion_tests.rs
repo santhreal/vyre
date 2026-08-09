@@ -7,6 +7,54 @@ use crate::optimizer::passes::fusion_cse::fusion::{
 };
 use crate::optimizer::{PassScheduler, ProgramPassKind};
 
+/// WHY: region inlining can expose a statement-shaped root before fusion.
+/// Fusion must still run there or the reconciled wrapper creates new work on
+/// the next whole-program optimizer invocation.
+#[test]
+fn statement_shaped_entry_runs_fusion_before_top_level_reconciliation() {
+    let nodes = vec![
+        Node::let_bind("snapshot", Expr::load("state", Expr::u32(0))),
+        Node::let_bind("mutable", Expr::u32(0)),
+        Node::assign("mutable", Expr::u32(1)),
+        Node::if_then(
+            Expr::gt(Expr::var("snapshot"), Expr::u32(0)),
+            Vec::new(),
+        ),
+    ];
+    let program = Program::wrapped(
+        vec![BufferDecl::read("state", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        nodes.clone(),
+    )
+    .with_rewritten_entry(nodes);
+
+    let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(Fusion)]);
+    let optimized = scheduler
+        .run(program)
+        .expect("fusion must converge for a statement-shaped entry");
+    let body = match optimized.entry() {
+        [Node::Region { body, .. }] => body.as_ref(),
+        entry => panic!("top-level reconciliation must restore the root region, got {entry:?}"),
+    };
+
+    assert!(matches!(
+        body.as_slice(),
+        [
+            Node::Let { name: mutable, .. },
+            Node::Assign {
+                name: assigned, ..
+            },
+            Node::Let { name: snapshot, .. },
+            Node::If { .. },
+        ] if mutable == "mutable" && assigned == "mutable" && snapshot == "snapshot"
+    ));
+
+    let optimized_again = scheduler
+        .run(optimized.clone())
+        .expect("fusion must remain converged after top-level reconciliation");
+    assert_eq!(optimized_again, optimized);
+}
+
 #[test]
 fn preserves_happens_before_for_load_followed_by_write() {
     let program = Program::wrapped(

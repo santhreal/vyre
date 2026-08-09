@@ -35,14 +35,6 @@ fn universal_cat_a_harness() {
             entry.id
         );
 
-        let optimized_once = optimize(program.clone()).expect("registered optimizer must converge");
-        let optimized_twice =
-            optimize(optimized_once.clone()).expect("registered optimizer must converge");
-        assert_eq!(
-            optimized_once, optimized_twice,
-            "[harness] {}: optimize(optimize(p)) must equal optimize(p)",
-            entry.id
-        );
 
         let fingerprint = blake3::hash(&wire);
         println!(
@@ -54,6 +46,22 @@ fn universal_cat_a_harness() {
 
         check_oracle(entry, &program, fingerprint);
         check_registered_backends(entry, &program);
+    }
+}
+/// WHY: every registered semantic program must already be at the optimizer
+/// fixed point after one invocation, independent of oracle/backend checks.
+#[test]
+fn registered_optimizer_is_idempotent_for_all_cat_a_entries() {
+    for entry in all_entries() {
+        let program = build_program(entry);
+        let optimized_once = optimize(program).expect("registered optimizer must converge");
+        let optimized_twice =
+            optimize(optimized_once.clone()).expect("registered optimizer must converge");
+        assert_eq!(
+            optimized_once, optimized_twice,
+            "[harness] {}: optimize(optimize(p)) must equal optimize(p)",
+            entry.id
+        );
     }
 }
 
