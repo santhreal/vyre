@@ -818,7 +818,7 @@ mod tests {
         classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
         classic_ac_compile,
     };
-    use crate::scan::{pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
     /// Behavioral Law-10 regression guard: the infallible suffix3 prefilter builder
     /// must wire the REAL DFA (delegating to the `try_` Ok program), never a

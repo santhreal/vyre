@@ -126,8 +126,8 @@ mod tests {
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
-    use crate::scan::{pack_haystack_u32, pack_u32_slice};
     use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
+    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
     fn suffix2_candidate(
         previous: u8,

@@ -37,6 +37,8 @@ use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::append_match;
+#[cfg(test)]
+use crate::scan::regex_anchored_window::canonicalize_leftmost_longest;
 use crate::scan::regex_anchored_window::AnchoredWindowValidator;
 use crate::scan::regex_region_admission::{regex_admission_presence_words, region_of};
 
@@ -74,7 +76,7 @@ pub fn fused_region_evidence_reference(
     if !haystack.is_empty() {
         let validator = AnchoredWindowValidator::new(dfa);
         let origins: Vec<u32> = (0..haystack.len() as u32).collect();
-        for m in validator.validate_candidates(haystack, &origins) {
+        for m in validator.validate_candidates_leftmost_longest(haystack, &origins) {
             let region = region_of(m.start + region_base, region_starts);
             let word = region * words + (m.pattern_id >> 5) as usize;
             let bit = 1u32 << (m.pattern_id & 31);
@@ -254,7 +256,7 @@ pub fn fused_region_evidence_program(
 mod tests {
     use super::*;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
-    use crate::scan::{pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
     fn dfa_for(patterns: &[&str]) -> CompiledDfa {
         build_regex_dfa_pipeline(patterns, 4096, 16_384)
@@ -395,8 +397,7 @@ mod tests {
             .chunks_exact(3)
             .map(|c| Match::new(c[0], c[1], c[2]))
             .collect();
-        positions.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
-        positions.dedup();
+        canonicalize_leftmost_longest(&mut positions);
         let admission: Vec<u32> = words_of(&outputs[3])
             .into_iter()
             .take(bitmap_words)

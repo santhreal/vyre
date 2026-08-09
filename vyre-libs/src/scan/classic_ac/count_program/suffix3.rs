@@ -220,8 +220,8 @@ mod tests {
         classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
         classic_ac_compile, classic_ac_scan_counts, CLASSIC_AC_SUFFIX2_MASK_WORDS,
     };
-    use crate::scan::{pack_haystack_u32, pack_u32_slice};
     use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
+    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
     #[test]
     fn suffix3_bloom_marks_inserted_short_and_long_pattern_suffixes() {

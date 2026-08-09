@@ -79,7 +79,7 @@ pub fn regex_admission_by_region_reference(
     }
     let validator = AnchoredWindowValidator::new(dfa);
     let origins: Vec<u32> = (0..haystack.len() as u32).collect();
-    for m in validator.validate_candidates(haystack, &origins) {
+    for m in validator.validate_candidates_leftmost_longest(haystack, &origins) {
         let region = region_of(m.start + region_base, region_starts);
         let word = region * words + (m.pattern_id >> 5) as usize;
         presence[word] |= 1u32 << (m.pattern_id & 31);
@@ -320,7 +320,7 @@ pub fn regex_admission_by_region_program(
 mod tests {
     use super::*;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
-    use crate::scan::{pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
     const MAX_MATCHES: u32 = 4096;
     const MAX_DFA_STATES: usize = 16_384;

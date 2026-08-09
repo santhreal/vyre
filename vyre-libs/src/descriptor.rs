@@ -142,7 +142,7 @@ mod tests {
     #[cfg(feature = "math-linalg")]
     #[test]
     fn descriptor_summarizes_matmul() {
-        use crate::math::matmul;
+        use crate::math::linalg::matmul;
         let program = matmul("a", "b", "out", 4, 8, 16);
         let desc = ProgramDescriptor::from_program(&program);
         assert_eq!(desc.buffer_count, 3);

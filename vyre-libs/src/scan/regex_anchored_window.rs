@@ -35,6 +35,29 @@ use vyre_primitives::matching::CompiledDfa;
 use crate::region::wrap_anonymous;
 use crate::scan::builders::{append_match, load_packed_byte};
 
+/// Collapse raw accepting ends to one longest match per `(start, pattern_id)`.
+///
+/// GPU extraction intentionally emits accepting states without per-pattern
+/// scratch. Every host result path applies this in-place contract before
+/// exposing token findings.
+pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<Match>) {
+    matches.sort_unstable_by_key(|m| (m.start, m.pattern_id, m.end));
+    let mut write = 0usize;
+    for read in 0..matches.len() {
+        let current = matches[read];
+        if write > 0
+            && matches[write - 1].start == current.start
+            && matches[write - 1].pattern_id == current.pattern_id
+        {
+            matches[write - 1] = current;
+        } else {
+            matches[write] = current;
+            write += 1;
+        }
+    }
+    matches.truncate(write);
+    matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+}
 /// Validates candidate origins against an anchored regex [`CompiledDfa`],
 /// extracting the full `(pattern_id, start, end)` match set that begins at each
 /// origin.
@@ -200,8 +223,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         for &origin in origins {
             self.validate_candidate_leftmost_longest(haystack, origin, &mut matches);
         }
-        matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
-        matches.dedup();
+        canonicalize_leftmost_longest(&mut matches);
         matches
     }
 }
@@ -620,7 +642,7 @@ mod tests {
     /// Proves the emitted kernel and CPU oracle implement identical anchored-window semantics.
     #[test]
     fn extract_program_reference_eval_matches_cpu_oracle() {
-        use crate::scan::{pack_haystack_u32, pack_u32_slice};
+        use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
 
         let patterns = ["abc", "abcde", "bcd", "x"];
         let dfa = validator_for(&patterns);
