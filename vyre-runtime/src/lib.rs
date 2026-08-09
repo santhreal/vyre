@@ -147,8 +147,7 @@ pub use tenant::{
 pub use pipeline_cache::RemoteCache;
 pub use pipeline_cache::{
     DiskCache, DiskCacheError, InMemoryPipelineCache, LayeredPipelineCache,
-    PersistentPipelineCacheStore, PipelineCacheMetricError, PipelineCacheMetrics,
-    PipelineCacheStore, PipelineFingerprint,
+    PipelineCacheMetricError, PipelineCacheMetrics, PipelineCacheStore, PipelineFingerprint,
 };
 
 pub use artifact_admission::{

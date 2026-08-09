@@ -1,9 +1,10 @@
 //! Public megakernel IO APIs must surface malformed queue errors.
 
-use vyre_runtime::resident_work_queue::io::{complete_io_request, poll_io_requests};
+use vyre_runtime::resident_work_queue::io::{complete_io_request, try_poll_io_requests};
 #[test]
 fn public_poll_rejects_misaligned_queue_view() {
-    let err = poll_io_requests(&[0u8; 3]).expect_err("public poll must not hide bad queue views");
+    let err =
+        try_poll_io_requests(&[0u8; 3]).expect_err("public poll must not hide bad queue views");
     let msg = err.to_string();
     assert!(
         msg.contains("Fix:") && msg.contains("4-byte aligned"),

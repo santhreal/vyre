@@ -158,13 +158,6 @@ pub fn claim_io_requests_into(
     try_claim_io_requests_into(io_queue_bytes, requests)
 }
 
-/// Public alias for [`try_poll_io_requests`] (legacy name kept for compatibility).
-///
-/// # Errors
-/// See [`try_poll_io_requests`].
-pub fn poll_io_requests(io_queue_bytes: &[u8]) -> Result<Vec<IoRequest>, PipelineError> {
-    try_poll_io_requests(io_queue_bytes)
-}
 fn poll_io_requests_words(
     words: &[u32],
     view: IoQueueView,

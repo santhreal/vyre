@@ -20,15 +20,6 @@ pub const BATCH_FENCE: u32 = 7;
 /// substrate; it does not know what "the resource" is  -  that is the
 /// consumer's domain. See the boundary rule in AGENTS.md.
 pub const LOAD_MISS: u32 = 0x0000_FFFD;
-/// Deprecated alias retained for source-level compatibility. Will be
-/// removed once all in-tree consumers have migrated; new code must use
-/// [`LOAD_MISS`].
-#[deprecated(
-    since = "0.5.0",
-    note = "vyre is a generic GPU substrate  -  use `LOAD_MISS`. The wire \
-            format is unchanged; only the symbolic name moves."
-)]
-pub const EXPERT_LOAD_MISS: u32 = LOAD_MISS;
 /// Packed slot: one outer ring slot carries several inner ops.
 pub const PACKED_SLOT: u32 = 0x8000_0001;
 /// Write one PRINTF event to the debug log.

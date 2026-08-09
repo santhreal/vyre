@@ -71,9 +71,8 @@ pub trait RingConsumer {
     ///
     /// The default implementation walks the ring through [`Self::read_slot`].
     /// Specialized consumers backed by a device/control-buffer counter may
-    /// override this method to avoid host reads. Unlike [`Self::done_count`],
-    /// this surface reports malformed slot bytes and host arithmetic overflow
-    /// as [`ProtocolError`] instead of panicking.
+    /// override this method to avoid host reads. Malformed slot bytes and host
+    /// arithmetic overflow remain observable as [`ProtocolError`].
     fn try_done_count(&self) -> Result<u32, ProtocolError> {
         let mut acc = 0u32;
         let mut buf = [0u8; SLOT_BYTES];
@@ -89,17 +88,6 @@ pub trait RingConsumer {
             }
         }
         Ok(acc)
-    }
-
-    /// Compatibility-only lossy count of slots currently in `DONE` status.
-    ///
-    /// Runtime paths must call [`Self::try_done_count`] so malformed snapshots
-    /// and host arithmetic overflow remain observable as [`ProtocolError`].
-    #[deprecated(
-        note = "use RingConsumer::try_done_count so malformed ring snapshots do not collapse to zero"
-    )]
-    fn done_count(&self) -> u32 {
-        self.try_done_count().unwrap_or(0)
     }
 
     /// Number of slots in the underlying ring.

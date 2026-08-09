@@ -39,7 +39,7 @@ pub use encode::{
 };
 pub use helpers::io_completion_poll_body;
 pub use poll::{
-    claim_io_requests_into, poll_io_requests, try_claim_io_requests_into, try_poll_io_requests,
+    claim_io_requests_into, try_claim_io_requests_into, try_poll_io_requests,
     try_poll_io_requests_into,
 };
 pub use queue::ResidentIoQueue;

@@ -44,9 +44,6 @@ pub struct DiskCacheDurabilityReport {
 /// pipeline artifacts to survive process restarts.
 static DISK_CACHE_TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Alias for the disk-backed pipeline cache store.
-pub type PersistentPipelineCacheStore = DiskCache;
-
 // On-disk layout:
 //   <payload bytes..>  <32-byte blake3 footer>
 // Total file size = payload.len() + 32. Get verifies the footer
@@ -374,31 +371,6 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
 mod tests {
     use super::*;
     use crate::pipeline_cache::test_helpers::{tiny_artifact, unique_u64};
-
-    #[test]
-    fn persistent_alias_disk_cache_persists_across_store_reopen() {
-        let root = std::env::temp_dir().join(format!(
-            "vyre-pipeline-cache-test-{}-{}",
-            std::process::id(),
-            unique_u64()
-        ));
-        let fp = PipelineFingerprint::of(&tiny_artifact());
-
-        let first = DiskCache::new(&root)
-            .expect("Fix: test must create disk cache directory; restore temp-dir access.");
-        first.put(fp, b"compiled-pipeline".to_vec());
-        drop(first);
-
-        let reopened =
-            PersistentPipelineCacheStore::new(&root).expect("Fix: disk cache must reopen.");
-        assert_eq!(
-            reopened.get(&fp).as_deref(),
-            Some(&b"compiled-pipeline"[..]),
-            "Fix: disk pipeline cache must persist artifacts across process-local store reconstruction"
-        );
-
-        std::fs::remove_dir_all(root).expect("Fix: disk cache test root cleanup must succeed");
-    }
 
     #[test]
     fn disk_cache_persists_across_store_reopen() {

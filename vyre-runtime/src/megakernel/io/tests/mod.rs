@@ -2,8 +2,8 @@ use super::super::protocol::slot;
 use super::helpers::try_queue_word_index;
 use super::{
     claim_io_requests_into, complete_io_request, complete_io_requests_batch, encode_empty_io_queue,
-    io_completion_poll_body, io_op, io_status, io_word, poll_io_requests,
-    try_claim_io_requests_into, try_encode_empty_io_queue_into, try_poll_io_requests_into,
+    io_completion_poll_body, io_op, io_status, io_word, try_claim_io_requests_into,
+    try_encode_empty_io_queue_into, try_poll_io_requests, try_poll_io_requests_into,
     ResidentIoQueue, IO_SLOT_COUNT, IO_SLOT_WORDS,
 };
 use crate::PipelineError;
@@ -11,7 +11,7 @@ use crate::PipelineError;
 #[test]
 fn empty_io_queue_has_no_requests() {
     let buf = encode_empty_io_queue(4).unwrap();
-    let reqs = poll_io_requests(&buf)
+    let reqs = try_poll_io_requests(&buf)
         .expect("Fix: empty aligned queue must poll; restore this invariant before continuing.");
     assert!(reqs.is_empty());
 }
@@ -52,7 +52,7 @@ fn published_io_slot_is_detected() {
     write_word(&mut buf, io_word::STATUS, slot::PUBLISHED);
     write_word(&mut buf, io_word::TAG, 42);
 
-    let reqs = poll_io_requests(&buf).expect(
+    let reqs = try_poll_io_requests(&buf).expect(
         "Fix: published aligned queue must poll; restore this invariant before continuing.",
     );
     assert_eq!(reqs.len(), 1);
@@ -405,7 +405,7 @@ fn submit_dma_read_publishes_read_request() {
     let mut queue = ResidentIoQueue::new(4).unwrap();
     queue.submit_dma_read(2, 10, 20, 4096, 99).unwrap();
 
-    let reqs = poll_io_requests(queue.as_bytes()).unwrap();
+    let reqs = try_poll_io_requests(queue.as_bytes()).unwrap();
     assert_eq!(reqs.len(), 1);
     assert_eq!(reqs[0].slot_idx, 2);
     assert_eq!(reqs[0].op_type, io_op::READ);

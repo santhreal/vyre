@@ -268,22 +268,5 @@ pub fn try_slot_word_index(slot: u32, word: u32) -> Result<usize, ProtocolError>
         })
 }
 
-/// Deprecated alias for [`encode_load_miss`]. The old MoE-specific
-/// parameter name was a boundary violation  -  vyre is a generic GPU
-/// substrate. New code must use [`encode_load_miss`]; this shim will
-/// be removed once consumers have migrated.
-#[deprecated(since = "0.5.0", note = "use `encode_load_miss`")]
-#[must_use]
-pub fn encode_expert_miss(resource_id: u32, prefetch: bool) -> Vec<u8> {
-    encode_load_miss(resource_id, prefetch)
-}
-
-/// Deprecated alias for [`decode_load_miss`]; see [`encode_expert_miss`].
-#[deprecated(since = "0.5.0", note = "use `decode_load_miss`")]
-#[must_use]
-pub fn decode_expert_miss(ring_bytes: &[u8], slot: u32) -> Option<(u32, bool)> {
-    decode_load_miss(ring_bytes, slot)
-}
-
 #[cfg(test)]
 mod tests;
