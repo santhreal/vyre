@@ -2018,7 +2018,7 @@ impl GpuLiteralSet {
     /// resident `scan_into_timed`.
     ///
     /// The decoded matches are identical to [`Self::scan_into`]'s (same program,
-    /// same inputs, only `dispatch_borrowed_timed` vs `dispatch_borrowed`
+    /// same inputs, only timed artifact submission vs artifact submission
     /// differs). This reuses the one owned-buffer prepare path
     /// ([`Self::prepare_scan_dispatch`]); the untimed hot path
     /// ([`Self::scan_into_with_scratch`]) is untouched and pays no timing cost.
@@ -2026,9 +2026,8 @@ impl GpuLiteralSet {
     /// chunk exceeds `max_matches` rather than auto-resizing.
     ///
     /// # Errors
-    /// See [`Self::scan_into`]. On a backend whose `dispatch_borrowed_timed` only
-    /// records host wall time, the result's `device_ns` is `None` (loud absence,
-    /// not a fabricated zero).
+    /// See [`Self::scan_into`]. When the target reports only host wall time, the
+    /// result's `device_ns` is `None` (loud absence, not a fabricated zero).
     pub fn scan_into_timed(
         &self,
         backend: &str,
@@ -2057,8 +2056,8 @@ impl GpuLiteralSet {
     ///
     /// This is the position-scan sibling of [`Self::scan_presence_async`]. On a
     /// backend that genuinely pipelines host/device work (wgpu, cuda) the GPU scan
-    /// executes while the caller does host work; on the synchronous default in
-    /// [`vyre_driver::VyreBackend::dispatch_async`] the handle is trivially ready and this is
+    /// executes while the caller does host work; when a target completes synchronously,
+    /// the artifact submission handle is already ready and this is
     /// equivalent (same triples, no overlap, no silent change of result).
     ///
     /// Reuses the one owned-buffer prepare path ([`Self::prepare_scan_dispatch`]),
@@ -2221,13 +2220,12 @@ impl GpuLiteralSet {
     /// (Law 10: a summed wall-time would misattribute two GPU launches as one).
     ///
     /// The returned matches are byte-for-byte identical to [`Self::scan_all`]'s
-    /// (same programs, same inputs; only `dispatch_borrowed_timed` vs
-    /// `dispatch_borrowed` differs). The untimed hot path is untouched.
+    /// (same programs, same inputs; only timed artifact submission vs
+    /// artifact submission differs). The untimed hot path is untouched.
     ///
     /// # Errors
-    /// See [`Self::scan_all`]. On a backend whose `dispatch_borrowed_timed` only
-    /// records host wall time, `device_ns` is `None` (loud absence, not a
-    /// fabricated zero).
+    /// See [`Self::scan_all`]. When the target reports only host wall time,
+    /// `device_ns` is `None` (loud absence, not a fabricated zero).
     pub fn scan_all_timed(
         &self,
         backend: &str,
@@ -2678,7 +2676,7 @@ impl GpuLiteralSet {
     ///
     /// The returned bitmap is byte-for-byte identical to
     /// [`Self::scan_presence_by_region`]'s (same program, same inputs); only the
-    /// dispatch call differs (`dispatch_borrowed_timed` vs `dispatch_borrowed`).
+    /// dispatch call differs (timed artifact submission vs artifact submission).
     /// The returned result's `outputs` are the same raw presence bytes already
     /// decoded into the returned bitmap (mirrors the resident `scan_into_timed`
     /// contract). This reuses the one owned-buffer prepare path
@@ -2686,9 +2684,8 @@ impl GpuLiteralSet {
     /// untouched and pays no timing cost.
     ///
     /// # Errors
-    /// See [`Self::scan_presence_by_region`]. On a backend whose
-    /// `dispatch_borrowed_timed` only records host wall time, `device_ns` is
-    /// `None` (loud absence, not a fabricated zero).
+    /// See [`Self::scan_presence_by_region`]. When the target reports only host
+    /// wall time, `device_ns` is `None` (loud absence, not a fabricated zero).
     pub fn scan_presence_by_region_timed(
         &self,
         backend: &str,
@@ -2721,10 +2718,9 @@ impl GpuLiteralSet {
     /// [`PendingPresenceByRegion::await_words`].
     ///
     /// On a backend that genuinely pipelines host/device work (wgpu, cuda) the GPU
-    /// scan executes while the caller does host work; on a backend that cannot
-    /// (the synchronous default in [`vyre_driver::VyreBackend::dispatch_async`]) the handle is
-    /// trivially ready and this is equivalent, same bitmap, no overlap, no silent
-    /// change of result. See [`vyre_driver::backend::PendingDispatch`].
+    /// scan executes while the caller does host work; when a target completes synchronously, the artifact submission handle is
+    /// already ready and this is equivalent, same bitmap, no overlap, no silent
+    /// change of result. See [`vyre_driver::Submission`].
     ///
     /// Unlike the synchronous entry there is NO `scratch` parameter: the async
     /// dispatch ABI is `&[Vec<u8>]`, so inputs are built into OWNED buffers that
@@ -2965,12 +2961,12 @@ impl GpuLiteralSet {
     ///
     /// The returned bitmap is byte-for-byte identical to [`Self::scan_presence`]'s
     /// (same program, same inputs); only the dispatch call differs
-    /// (`dispatch_borrowed_timed` vs `dispatch_borrowed`). This reuses the one
+    /// (timed artifact submission vs artifact submission). This reuses the one
     /// owned-buffer prepare path (the internal `build_presence_dispatch`); the untimed
     /// hot path is untouched and pays no timing cost.
     ///
     /// # Errors
-    /// See [`Self::scan_presence`]. On a backend whose `dispatch_borrowed_timed`
+    /// See [`Self::scan_presence`]. On a backend whose timed artifact submission
     /// only records host wall time, `device_ns` is `None` (loud absence, not a
     /// fabricated zero).
     pub fn scan_presence_timed(
@@ -2999,8 +2995,8 @@ impl GpuLiteralSet {
     /// This is the global-presence sibling of
     /// [`Self::scan_presence_by_region_async`]. On a backend that genuinely
     /// pipelines host/device work (wgpu, cuda) the GPU scan executes while the
-    /// caller does host work; on the synchronous default in
-    /// [`vyre_driver::VyreBackend::dispatch_async`] the handle is trivially ready and this is
+    /// caller does host work; when a target completes synchronously,
+    /// the artifact submission handle is already ready and this is
     /// equivalent (same bitmap, no overlap, no silent change of result).
     ///
     /// Inputs are built into OWNED buffers (through the shared
@@ -3387,7 +3383,7 @@ impl GpuLiteralSet {
     ///
     /// Both outputs are byte-for-byte identical to the untimed
     /// [`Self::scan_presence_and_positions_by_region`] (same program, same inputs;
-    /// only `dispatch_borrowed_timed` vs `dispatch_borrowed` differs). Reuses the
+    /// only timed artifact submission vs artifact submission differs). Reuses the
     /// one owned-buffer prepare path
     /// (the internal `build_presence_and_positions_by_region_dispatch`); the untimed hot
     /// path is untouched and pays no timing cost. The same overflow contract holds:
@@ -3395,9 +3391,9 @@ impl GpuLiteralSet {
     /// truncated decode.
     ///
     /// # Errors
-    /// See [`Self::scan_presence_and_positions_by_region`]. On a backend whose
-    /// `dispatch_borrowed_timed` only records host wall time, `device_ns` is `None`
-    /// (loud absence, not a fabricated zero).
+    /// See [`Self::scan_presence_and_positions_by_region`]. When the target
+    /// reports only host wall time, `device_ns` is `None` (loud absence, not a
+    /// fabricated zero).
     pub fn scan_presence_and_positions_by_region_timed(
         &self,
         backend: &str,
@@ -3463,8 +3459,8 @@ impl GpuLiteralSet {
     /// `(pid, start, end)` triples) via [`PendingFusedRegion::await_into`].
     ///
     /// On a backend that genuinely pipelines host/device work (wgpu, cuda) the GPU
-    /// scan executes while the caller does host work; on the synchronous default in
-    /// [`vyre_driver::VyreBackend::dispatch_async`] the handle is trivially ready, same outputs,
+    /// scan executes while the caller does host work; when a target completes synchronously,
+    /// the artifact submission handle is already ready, same outputs,
     /// no overlap, no silent change of result. Reuses the one owned-buffer prepare
     /// path (the internal `build_presence_and_positions_by_region_dispatch`); the
     /// [`PendingFusedRegion`] retains the owned inputs until the decode. The same
@@ -3574,7 +3570,7 @@ impl GpuLiteralSet {
 
     /// TIMED sibling of [`Self::dispatch_literal_scan_outputs`]: identical staging
     /// and binding order (through the shared [`Self::literal_scan_borrowed_inputs`]
-    /// owner), but calls `dispatch_borrowed_timed` so the raw `[count, matches]`
+    /// owner), but calls timed artifact submission so the raw `[count, matches]`
     /// outputs arrive inside a [`vyre_driver::TimedDispatchResult`]. The untimed
     /// path is byte-identical and pays no timing cost.
     fn dispatch_literal_scan_outputs_timed(

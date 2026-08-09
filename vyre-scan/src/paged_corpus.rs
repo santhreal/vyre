@@ -32,8 +32,6 @@ use std::io::Read;
 use std::ops::Range;
 use std::path::Path;
 
-#[cfg(test)]
-use vyre_driver::VyreBackend;
 use vyre_foundation::match_result::Match;
 
 use crate::literal_set::{GpuLiteralSet, PendingResidentFusedRegion};
@@ -2001,14 +1999,9 @@ mod tests {
     fn sharded_fused_scan_equals_single_device_across_device_set_sizes_on_gpu() {
         use vyre_driver_wgpu::WgpuBackend;
 
-        let backend = match WgpuBackend::shared() {
-            Ok(backend) => backend,
-            Err(error) => {
-                eprintln!("no wgpu backend ({error}); skipping sharded fused GPU parity test");
-                return;
-            }
-        };
-        let device: &dyn VyreBackend = backend.as_ref();
+        WgpuBackend::shared().expect(
+            "WGPU backend must be available for sharded fused GPU parity. Fix: configure the GPU adapter before running this test.",
+        );
 
         let patterns: &[&[u8]] = &[b"XYZ", b"secret", b"AB"];
         let matcher = GpuLiteralSet::compile(patterns);
@@ -2110,14 +2103,9 @@ mod tests {
     fn parallel_sharded_dispatch_across_four_concurrent_handles_equals_single_shot_on_gpu() {
         use vyre_driver_wgpu::WgpuBackend;
 
-        let backend = match WgpuBackend::shared() {
-            Ok(backend) => backend,
-            Err(error) => {
-                eprintln!("no wgpu backend ({error}); skipping parallel sharded stress test");
-                return;
-            }
-        };
-        let device: &dyn VyreBackend = backend.as_ref();
+        WgpuBackend::shared().expect(
+            "WGPU backend must be available for parallel sharded stress. Fix: configure the GPU adapter before running this test.",
+        );
 
         let patterns: &[&[u8]] = &[b"XYZ", b"secret", b"AB"];
         let matcher = GpuLiteralSet::compile(patterns);
@@ -2327,14 +2315,9 @@ mod tests {
     fn sharded_timed_scan_reports_honest_per_shard_timing_on_gpu() {
         use vyre_driver_wgpu::WgpuBackend;
 
-        let backend = match WgpuBackend::shared() {
-            Ok(backend) => backend,
-            Err(error) => {
-                eprintln!("no wgpu backend ({error}); skipping sharded timed GPU test");
-                return;
-            }
-        };
-        let device: &dyn VyreBackend = backend.as_ref();
+        WgpuBackend::shared().expect(
+            "WGPU backend must be available for sharded timing. Fix: configure the GPU adapter before running this test.",
+        );
 
         let patterns: &[&[u8]] = &[b"XYZ", b"secret", b"AB"];
         let matcher = GpuLiteralSet::compile(patterns);
@@ -2416,14 +2399,9 @@ mod tests {
     fn pattern_sharded_scan_equals_full_rule_database_on_gpu() {
         use vyre_driver_wgpu::WgpuBackend;
 
-        let backend = match WgpuBackend::shared() {
-            Ok(backend) => backend,
-            Err(error) => {
-                eprintln!("no wgpu backend ({error}); skipping pattern-sharded GPU parity test");
-                return;
-            }
-        };
-        let device: &dyn VyreBackend = backend.as_ref();
+        WgpuBackend::shared().expect(
+            "WGPU backend must be available for pattern sharding parity. Fix: configure the GPU adapter before running this test.",
+        );
 
         // Full rule database: global ids 0..4.
         let full_patterns: &[&[u8]] = &[b"AKIA", b"secret", b"token", b"AB"];

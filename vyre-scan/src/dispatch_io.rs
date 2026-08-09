@@ -1,31 +1,15 @@
-//! Shared GPU dispatch primitives for matching engines.
+//! Shared scan artifact staging and readback primitives.
 //!
-//! Every high-level matcher in `vyre-libs::matching` (`GpuLiteralSet`,
-//! `ScanSession`, future ones) needs the same four operations to talk
-//! to a `VyreBackend`:
+//! High-level matchers use these helpers around [`crate::ScanArtifactSession`]:
+//! - pack haystack bytes into `u32` words;
+//! - encode `u32` storage buffers as little-endian bytes;
+//! - reject lengths that exceed the typed IR wire bound;
+//! - compute invocation geometry from the program workgroup size.
 //!
-//!   1. Pack a haystack `&[u8]` into `u32` words for the read-only
-//!      input storage buffer.
-//!   2. Encode an arbitrary `&[u32]` slice as little-endian bytes for
-//!      a storage buffer.
-//!   3. Validate the haystack's length fits in `u32` (the wire-format
-//!      bound that vyre's IR enforces) and return a typed
-//!      `BackendError` with an actionable `Fix:` message otherwise.
-//!   4. Compute the per-axis grid geometry that maps haystack bytes
-//!      onto the program's `workgroup_size[0]` lane fan-out.
-//!
-//! Each of those was duplicated 2x as I added the second matcher
-//! (`ScanSession::scan`). Centralising them here makes the *next*
-//! matcher (parser combinators, taint-flow scan, custom regex
-//! compositions in downstream crates) free to compose  -  write the unique
-//! plumbing, reuse the shared four.
-//!
-//! The output-layout step is intentionally **not** centralised:
-//! `GpuLiteralSet` uses a two-buffer layout (`match_count` + `matches`),
-//! while `ScanSession` uses a single hit buffer with embedded counter.
-//! Once the caller has isolated the counter and match-triple byte range,
-//! decoding is shared so every engine rejects malformed readbacks the same
-//! way.
+//! Output layout remains product-specific. `GpuLiteralSet` uses a match count
+//! and match-triple buffer, while `ScanSession` uses one hit buffer with an
+//! embedded counter. Shared decoders validate both layouts after authenticated
+//! artifact completion.
 
 use std::borrow::Cow;
 
@@ -38,8 +22,8 @@ const MATCH_TRIPLE_BYTES: usize = 12;
 ///
 /// Engines that repeatedly scan many haystacks can keep one scratch value per
 /// worker thread and pass it through `*_with_scratch` APIs. This removes the
-/// fixed haystack-packing allocation from every dispatch while preserving the
-/// same borrowed-input backend contract.
+/// fixed haystack-packing allocation from every submission while preserving the
+/// canonical artifact input ABI.
 #[derive(Debug, Default)]
 pub struct ScanDispatchScratch {
     /// Packed little-endian `u32` haystack bytes.
@@ -67,7 +51,7 @@ pub fn pack_haystack_u32(haystack: &[u8]) -> Vec<u8> {
         Ok(packed) => packed,
         Err(error) => {
             panic!(
-                "vyre-libs scan dispatch pack_haystack_u32 failed: {error}. \
+                "vyre-scan pack_haystack_u32 failed: {error}. \
                  returning an empty packed buffer would make the GPU scan an empty haystack and silently report the input as clean; \
                  use try_pack_haystack_u32 and split the haystack before dispatch."
             )
