@@ -2069,21 +2069,6 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
-family = "vyre-libs::parsing::c11_build_cfg_and_gotos"
-tier = "libs"
-owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::c11_build_cfg_and_gotos"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
 family = "vyre-libs::parsing::c11_build_expression_shape_nodes"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
@@ -2118,21 +2103,6 @@ family = "vyre-libs::parsing::c11_classify_vast_node_kinds"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
 ops = ["vyre-libs::parsing::c11_classify_vast_node_kinds"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
-family = "vyre-libs::parsing::c11_compute_alignments"
-tier = "libs"
-owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::c11_compute_alignments"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
 foundation_ir = "supported"
@@ -2524,55 +2494,10 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
-family = "vyre-libs::parsing::opt_lower_elf"
-tier = "libs"
-owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::opt_lower_elf"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
 family = "vyre-libs::parsing::opt_propagate_type_specifiers"
 tier = "libs"
 owners = ["vyre-libs/src/parsing"]
 ops = ["vyre-libs::parsing::opt_propagate_type_specifiers"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
-family = "vyre-libs::parsing::opt_stack_layout_generation"
-tier = "libs"
-owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::opt_stack_layout_generation"]
-registry_sources = ["vyre-harness"]
-reference = "supported"
-foundation_ir = "supported"
-cuda = "supported"
-wgpu = "supported"
-spirv = "experimental"
-release_blocking_notes = "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace."
-tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_matrix_truth.rs"]
-bench_targets = []
-
-[[op]]
-family = "vyre-libs::parsing::opt_x86_64_register_allocation"
-tier = "libs"
-owners = ["vyre-libs/src/parsing"]
-ops = ["vyre-libs::parsing::opt_x86_64_register_allocation"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
 foundation_ir = "supported"
@@ -2959,10 +2884,10 @@ tests = ["vyre-libs/tests/universal_harness.rs", "conform/vyre-conform/tests/op_
 bench_targets = []
 
 [[op]]
-family = "vyre-libs::security::dominator_tree"
+family = "vyre-libs::security::dominance_predecessors"
 tier = "libs"
 owners = ["vyre-libs/src/security"]
-ops = ["vyre-libs::security::dominator_tree"]
+ops = ["vyre-libs::security::dominance_predecessors"]
 registry_sources = ["vyre-harness"]
 reference = "supported"
 foundation_ir = "supported"

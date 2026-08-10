@@ -8,10 +8,10 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
 use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
+use vyre_foundation::operation::OperationTier;
 use vyre_harness::classify_op_id;
 
 use crate::conformance_matrix::read_conformance_required_op_matrix;
-use crate::release_backend_rows::RUNTIME_DIALECT_CONTRACT_OPS;
 
 const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
 const MAX_SCHEMA_BYTES: u64 = 16_777_216;
@@ -89,9 +89,12 @@ pub(crate) struct CompositionStep {
 
 struct LiveEntry {
     id: &'static str,
+    signature: Option<&'static vyre_foundation::dialect_lookup::Signature>,
+    tier: OperationTier,
     build: Option<fn() -> Program>,
     category: Option<&'static str>,
     has_inputs: bool,
+    laws: &'static [&'static str],
     has_expected: bool,
     tolerance_ulp: u32,
 }
@@ -99,6 +102,62 @@ struct LiveEntry {
 impl LiveEntry {
     fn program(&self) -> Option<Program> {
         self.build.map(|build| build().with_entry_op_id(self.id))
+    }
+}
+fn signature_from_program(program: &Program) -> OperationSignature {
+    OperationSignature {
+        kind: "program_buffers".to_string(),
+        buffers: program
+            .buffers()
+            .iter()
+            .map(|buffer| BufferSignature {
+                binding: buffer.binding,
+                name: buffer.name.to_string(),
+                access: format!("{:?}", buffer.access),
+                memory: format!("{:?}", buffer.kind),
+                element: format!("{:?}", buffer.element),
+                count: buffer.count,
+                pipeline_live_out: buffer.pipeline_live_out,
+            })
+            .collect(),
+        inputs: Vec::new(),
+        outputs: Vec::new(),
+        attributes: Vec::new(),
+        bytes_extraction: program
+            .buffers()
+            .iter()
+            .any(|buffer| buffer.bytes_extraction),
+    }
+}
+
+fn signature_from_declaration(
+    signature: &vyre_foundation::dialect_lookup::Signature,
+) -> OperationSignature {
+    OperationSignature {
+        kind: "dialect_parameters".to_string(),
+        buffers: Vec::new(),
+        inputs: signature
+            .inputs
+            .iter()
+            .map(|parameter| TypedParameter {
+                name: parameter.name.to_string(),
+                data_type: parameter.ty.to_string(),
+            })
+            .collect(),
+        outputs: signature
+            .outputs
+            .iter()
+            .map(|parameter| TypedParameter {
+                name: parameter.name.to_string(),
+                data_type: parameter.ty.to_string(),
+            })
+            .collect(),
+        attributes: signature
+            .attrs
+            .iter()
+            .map(|attribute| format!("{attribute:?}"))
+            .collect(),
+        bytes_extraction: signature.bytes_extraction,
     }
 }
 
@@ -203,52 +262,25 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             .or_default()
             .insert(registration.law.name().to_string());
     }
-    let mut opdefs = BTreeMap::new();
-    for registration in inventory::iter::<vyre_driver::registry::dialect::OpDefRegistration>() {
-        let definition = (registration.op)();
-        let id = definition.id;
-        for law in definition.laws {
-            declared_laws
-                .entry(id)
-                .or_default()
-                .insert(law.name().to_string());
-        }
-        if opdefs.insert(id, definition).is_some() {
-            errors.push(format!("duplicate live operation definition `{id}`"));
-        }
-    }
 
     let live = vyre_harness::all_entries()
         .map(|entry| LiveEntry {
             id: entry.id,
+            signature: entry.signature.as_ref(),
+            tier: entry.tier,
             build: entry.build,
             category: entry.category(),
             has_inputs: entry.test_inputs.is_some(),
             has_expected: entry.expected_output.is_some(),
             tolerance_ulp: entry.tolerance(),
+            laws: entry.laws,
         })
         .collect::<Vec<_>>();
-    let mut runtime_defs = Vec::with_capacity(RUNTIME_DIALECT_CONTRACT_OPS.len());
-    for id in RUNTIME_DIALECT_CONTRACT_OPS {
-        match opdefs.remove(id) {
-            Some(definition) => runtime_defs.push(definition),
-            None => errors.push(format!(
-                "runtime operation `{id}` has no live OpDef registration"
-            )),
-        }
-    }
-    runtime_defs.sort_by_key(|definition| definition.id);
-
-    let mut all_ids: BTreeSet<&str> = live.iter().map(|entry| entry.id).collect();
-    all_ids.extend(runtime_defs.iter().map(|definition| definition.id));
-    let mut records = Vec::with_capacity(live.len() + runtime_defs.len());
-    if all_ids.len() != live.len() + runtime_defs.len() {
+    let all_ids: BTreeSet<&str> = live.iter().map(|entry| entry.id).collect();
+    let mut records = Vec::with_capacity(live.len());
+    if all_ids.len() != live.len() {
         let mut seen = BTreeSet::new();
-        for id in live
-            .iter()
-            .map(|entry| entry.id)
-            .chain(runtime_defs.iter().map(|definition| definition.id))
-        {
+        for id in live.iter().map(|entry| entry.id) {
             if !seen.insert(id) {
                 errors.push(format!("duplicate live operation id `{id}`"));
             }
@@ -261,56 +293,49 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             .filter(|value| !value.trim().is_empty())
             .map(str::to_string)
             .unwrap_or_else(|| category_from_id(entry.id));
-        let program = entry
-            .program()
-            .expect("Fix: canonical operation must provide a neutral builder");
-        let signature = OperationSignature {
-            kind: "program_buffers".to_string(),
-            buffers: program
-                .buffers()
-                .iter()
-                .map(|buffer| BufferSignature {
-                    binding: buffer.binding,
-                    name: buffer.name.to_string(),
-                    access: format!("{:?}", buffer.access),
-                    memory: format!("{:?}", buffer.kind),
-                    element: format!("{:?}", buffer.element),
-                    count: buffer.count,
-                    pipeline_live_out: buffer.pipeline_live_out,
-                })
-                .collect(),
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-            attributes: Vec::new(),
-            bytes_extraction: program
-                .buffers()
-                .iter()
-                .any(|buffer| buffer.bytes_extraction),
+        let (signature, composition_chain, reference_eval) = if let Some(program) = entry.program()
+        {
+            let mut composition_chain = Vec::new();
+            for node in program.entry() {
+                collect_composition(node, 0, &all_ids, &mut composition_chain);
+            }
+            validate_composition(entry.id, &composition_chain, &mut errors);
+            (signature_from_program(&program), composition_chain, true)
+        } else if let Some(signature) = entry.signature {
+            (signature_from_declaration(signature), Vec::new(), false)
+        } else {
+            errors.push(format!(
+                "canonical operation `{}` has neither a neutral builder nor a declared signature",
+                entry.id
+            ));
+            continue;
         };
-        let mut composition_chain = Vec::new();
-        for node in program.entry() {
-            collect_composition(node, 0, &all_ids, &mut composition_chain);
-        }
-        validate_composition(entry.id, &composition_chain, &mut errors);
 
-        let laws = declared_laws
-            .remove(entry.id)
-            .unwrap_or_default()
-            .into_iter()
-            .collect();
+        let mut laws = declared_laws.remove(entry.id).unwrap_or_default();
+        laws.extend(entry.laws.iter().map(|law| (*law).to_string()));
+        let laws = laws.into_iter().collect();
 
         let tier = classify_op_id(entry.id).matrix_value().to_string();
         if tier == "unknown" {
             errors.push(format!("operation `{}` has an unknown tier", entry.id));
         }
-        let features = feature_route(entry.id, &category);
+        let runtime_operation = matches!(entry.tier, OperationTier::Runtime);
+        let features = if runtime_operation {
+            vec!["default".to_string()]
+        } else {
+            feature_route(entry.id, &category)
+        };
         if features.is_empty() {
             errors.push(format!(
                 "operation `{}` has no enabling feature route",
                 entry.id
             ));
         }
-        let crate_name = entry.id.split("::").next().unwrap_or("");
+        let crate_name = if runtime_operation {
+            "vyre-driver"
+        } else {
+            entry.id.split("::").next().unwrap_or("")
+        };
         match manifest_features.get(crate_name) {
             Some(available) => {
                 for feature in &features {
@@ -343,7 +368,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             signature,
             features,
             oracle: OracleContract {
-                reference_eval: true,
+                reference_eval,
                 fixture_inputs: entry.has_inputs,
                 expected_output: entry.has_expected,
                 tolerance_ulp: entry.tolerance_ulp,
@@ -351,73 +376,6 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             backend_support: support,
             laws,
             composition_chain,
-        });
-    }
-    if manifest_features
-        .get("vyre-driver")
-        .is_none_or(|features| !features.contains("default"))
-    {
-        errors.push(
-            "runtime operations require the declared `vyre-driver/default` feature route"
-                .to_string(),
-        );
-    }
-    for definition in runtime_defs {
-        let id = definition.id;
-        let signature = OperationSignature {
-            kind: "dialect_parameters".to_string(),
-            buffers: Vec::new(),
-            inputs: definition
-                .signature
-                .inputs
-                .iter()
-                .map(|parameter| TypedParameter {
-                    name: parameter.name.to_string(),
-                    data_type: parameter.ty.to_string(),
-                })
-                .collect(),
-            outputs: definition
-                .signature
-                .outputs
-                .iter()
-                .map(|parameter| TypedParameter {
-                    name: parameter.name.to_string(),
-                    data_type: parameter.ty.to_string(),
-                })
-                .collect(),
-            attributes: definition
-                .signature
-                .attrs
-                .iter()
-                .map(|attribute| format!("{attribute:?}"))
-                .collect(),
-            bytes_extraction: definition.signature.bytes_extraction,
-        };
-        let support = backend_rows.remove(id).unwrap_or_default();
-        for backend in ["reference", "cuda", "wgpu"] {
-            if !support.contains_key(backend) {
-                errors.push(format!("operation `{id}` has no `{backend}` support row"));
-            }
-        }
-        records.push(OperationRecord {
-            id: id.to_string(),
-            tier: classify_op_id(id).matrix_value().to_string(),
-            category: definition.dialect.to_string(),
-            signature,
-            features: vec!["default".to_string()],
-            oracle: OracleContract {
-                reference_eval: false,
-                fixture_inputs: false,
-                expected_output: false,
-                tolerance_ulp: 0,
-            },
-            backend_support: support,
-            laws: declared_laws
-                .remove(id)
-                .unwrap_or_default()
-                .into_iter()
-                .collect(),
-            composition_chain: Vec::new(),
         });
     }
     records.sort_by(|left, right| left.id.cmp(&right.id));

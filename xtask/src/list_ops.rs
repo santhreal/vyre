@@ -1,122 +1,200 @@
-//! `cargo xtask list-ops`  -  walk the central op registries and print
-//! the complete catalog grouped by tier.
-//!
-//! Walks: `vyre-libs`, `vyre-intrinsics`, and `vyre-primitives` (Tier 2.5,
-//! requires `inventory-registry` on the primitives crate). IDs are
-//! de-duplicated per tier; some Tier-2.5 builders intentionally register
-//! under the `vyre-libs::` namespace (compat shims)  -  they appear under the
-//! tier that matches their prefix, not the crate that submitted them.
+//! `cargo xtask list-ops` renders the canonical live operation schema as Markdown.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-/// Tier classification based on op ID prefixes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(clippy::enum_variant_names)]
-enum Tier {
-    Tier2Intrinsics,   // vyre-intrinsics::*
-    Tier2_5Primitives, // vyre-primitives::*
-    Tier3Libraries,    // vyre-libs::<domain>::*
-    Tier4Composites,   // vyre-libs::composite::*
-    Unknown,
-}
-
-impl Tier {
-    fn as_str(&self) -> &'static str {
-        match self {
-            Tier::Tier2Intrinsics => "Tier 2  -  Hardware Intrinsics (Naga-required)",
-            Tier::Tier2_5Primitives => "Tier 2.5  -  Primitive LEGO Blocks (Generic)",
-            Tier::Tier3Libraries => "Tier 3  -  Domain Libraries (Pure Cat-A)",
-            Tier::Tier4Composites => "Tier 4  -  Composite Multi-Step Ops",
-            Tier::Unknown => "Unknown Tier",
-        }
-    }
-}
+use crate::operation_schema::{self, OperationRecord};
 
 pub(crate) fn run(args: &[String]) {
-    let out_path = parse_write_flag(args);
-    let mut catalog: BTreeMap<Tier, BTreeSet<String>> = BTreeMap::new();
-
-    for entry in vyre_libs::harness::all_entries() {
-        catalog
-            .entry(classify_id(entry.id))
-            .or_default()
-            .insert(entry.id.to_string());
-    }
-
-    for entry in vyre_intrinsics::harness::all_entries() {
-        catalog
-            .entry(Tier::Tier2Intrinsics)
-            .or_default()
-            .insert(entry.id.to_string());
-    }
-
-    // Tier 2.5: LEGO primitives (requires `vyre-primitives` with `inventory-registry`).
-    for entry in vyre_primitives::harness::all_entries() {
-        catalog
-            .entry(classify_id(entry.id))
-            .or_default()
-            .insert(entry.id.to_string());
-    }
-
-    let body = build_markdown(&catalog);
-    print!("{body}");
-    if let Some(path) = out_path {
-        if let Some(parent) = Path::new(&path).parent() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                eprintln!("Fix: create_dir_all {parent:?}: {e}");
+    let (out_path, check) = parse_args(args);
+    let schema = operation_schema::build().unwrap_or_else(|errors| {
+        for error in errors {
+            eprintln!("Fix: {error}");
+        }
+        std::process::exit(1);
+    });
+    let body = build_markdown(&schema.operations);
+    if check {
+        let path = out_path.unwrap_or_else(default_inventory_path);
+        match fs::read_to_string(&path) {
+            Ok(current) if current == body => {
+                println!("list-ops: schema-derived inventory agrees");
+            }
+            Ok(_) => {
+                eprintln!(
+                    "Fix: {} differs from the canonical operation schema",
+                    path.display()
+                );
+                std::process::exit(1);
+            }
+            Err(error) => {
+                eprintln!(
+                    "Fix: read {} before list-ops check: {error}",
+                    path.display()
+                );
                 std::process::exit(1);
             }
         }
-        if let Err(e) = fs::write(&path, &body) {
-            eprintln!("Fix: write {}: {e}", path);
+    } else if let Some(path) = out_path {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap_or_else(|error| {
+                eprintln!("Fix: create {}: {error}", parent.display());
+                std::process::exit(1);
+            });
+        }
+        fs::write(&path, &body).unwrap_or_else(|error| {
+            eprintln!("Fix: write {}: {error}", path.display());
             std::process::exit(1);
-        }
-        eprintln!("Wrote {path} (op inventory snapshot).");
-    }
-}
-
-fn parse_write_flag(args: &[String]) -> Option<String> {
-    for w in args.windows(2) {
-        if w[0] == "--write" {
-            return Some(w[1].clone());
-        }
-    }
-    None
-}
-
-fn build_markdown(catalog: &BTreeMap<Tier, BTreeSet<String>>) -> String {
-    use std::fmt::Write;
-    let mut s = String::new();
-    let _ = writeln!(
-        s,
-        "Vyre Operation Catalog\n\
-         ======================\n\
-         \n\
-         Auto-generated: `cargo_full run --bin xtask -- list-ops` (xtask; walks inventory).\n"
-    );
-    for (tier, ids) in catalog {
-        let mut v: Vec<_> = ids.iter().cloned().collect();
-        v.sort();
-        let _ = writeln!(s, "\n{} [{} ops]", tier.as_str(), v.len());
-        for id in v {
-            let _ = writeln!(s, "  - `{id}`");
-        }
-    }
-    s
-}
-
-fn classify_id(id: &str) -> Tier {
-    if id.starts_with("vyre-intrinsics::") {
-        Tier::Tier2Intrinsics
-    } else if id.starts_with("vyre-primitives::") {
-        Tier::Tier2_5Primitives
-    } else if id.starts_with("vyre-libs::composite::") {
-        Tier::Tier4Composites
-    } else if id.starts_with("vyre-libs::") {
-        Tier::Tier3Libraries
+        });
+        eprintln!(
+            "Wrote {} from the canonical operation schema.",
+            path.display()
+        );
     } else {
-        Tier::Unknown
+        print!("{body}");
     }
+}
+
+fn parse_args(args: &[String]) -> (Option<PathBuf>, bool) {
+    let mut path = None;
+    let mut check = false;
+    let mut index = 2;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--write" => {
+                index += 1;
+                path = Some(PathBuf::from(args.get(index).unwrap_or_else(|| {
+                    eprintln!("Fix: --write needs a path");
+                    std::process::exit(2);
+                })));
+            }
+            "--check" => check = true,
+            other => {
+                eprintln!("Fix: unknown list-ops argument `{other}`");
+                std::process::exit(2);
+            }
+        }
+        index += 1;
+    }
+    (path, check)
+}
+
+fn default_inventory_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask must remain under the workspace root")
+        .join("docs/generated/OP_INVENTORY.md")
+}
+
+fn build_markdown(operations: &[OperationRecord]) -> String {
+    use std::fmt::Write;
+
+    let mut by_tier: BTreeMap<&str, Vec<&OperationRecord>> = BTreeMap::new();
+    for operation in operations {
+        by_tier
+            .entry(operation.tier.as_str())
+            .or_default()
+            .push(operation);
+    }
+
+    let mut output = String::new();
+    let _ = writeln!(
+        output,
+        "# Vyre operation inventory\n\n\
+         This file is generated from `docs/generated/OP_SCHEMA.json` by \
+         `cargo_full run --bin xtask -- list-ops --write docs/generated/OP_INVENTORY.md`.\n\
+         The JSON schema is the authority. This page is a browsing view.\n"
+    );
+    let tier_count = by_tier.len();
+    for (index, (tier, rows)) in by_tier.into_iter().enumerate() {
+        let _ = writeln!(output, "## `{tier}` ({} operations)\n", rows.len());
+        output.push_str("| operation | category | signature | features | oracle | backends | laws | composition |\n");
+        output.push_str("| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+        for row in rows {
+            let signature = if row.signature.kind == "program_buffers" {
+                row.signature
+                    .buffers
+                    .iter()
+                    .map(|buffer| {
+                        format!(
+                            "{}:{}:{}:{}",
+                            buffer.binding, buffer.name, buffer.access, buffer.element
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("<br>")
+            } else {
+                let inputs = row
+                    .signature
+                    .inputs
+                    .iter()
+                    .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let outputs = row
+                    .signature
+                    .outputs
+                    .iter()
+                    .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("({inputs}) -> ({outputs})")
+            };
+            let oracle = format!(
+                "reference={} inputs={} expected={} tolerance={} ULP",
+                row.oracle.reference_eval,
+                row.oracle.fixture_inputs,
+                row.oracle.expected_output,
+                row.oracle.tolerance_ulp
+            );
+            let backends = row
+                .backend_support
+                .iter()
+                .map(|(backend, support)| format!("{backend}:{}", support.status))
+                .collect::<Vec<_>>()
+                .join("<br>");
+            let laws = if row.laws.is_empty() {
+                "none declared".to_string()
+            } else {
+                row.laws.join("<br>")
+            };
+            let composition = if row.composition_chain.is_empty() {
+                "leaf".to_string()
+            } else {
+                row.composition_chain
+                    .iter()
+                    .map(|step| {
+                        format!(
+                            "{}{}{}",
+                            "&nbsp;".repeat(step.depth * 2),
+                            step.operation,
+                            if step.registered { "" } else { " (internal)" }
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("<br>")
+            };
+            let _ = writeln!(
+                output,
+                "| `{}` | `{}` | {} | {} | {} | {} | {} | {} |",
+                row.id,
+                row.category,
+                signature,
+                row.features
+                    .iter()
+                    .map(|feature| format!("`{feature}`"))
+                    .collect::<Vec<_>>()
+                    .join("<br>"),
+                oracle,
+                backends,
+                laws,
+                composition
+            );
+        }
+        if index + 1 < tier_count {
+            output.push('\n');
+        }
+    }
+    output
 }

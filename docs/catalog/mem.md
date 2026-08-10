@@ -6,5 +6,5 @@ This page is generated from `docs/generated/OP_SCHEMA.json`. The JSON schema is 
 
 | operation | tier | category | signature | features | oracle | backend support | laws | composition |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `mem.unmap` | `runtime` | `io` | (handle:GpuBufferHandle) -> () | `default` | reference=false inputs=false expected=false tolerance=0 ULP | cuda:experimental<br>reference:not_applicable<br>wgpu:experimental | none declared | leaf |
-| `mem.zerocopy_map` | `runtime` | `io` | (fd:i32) -> (handle:GpuBufferHandle) | `default` | reference=false inputs=false expected=false tolerance=0 ULP | cuda:experimental<br>reference:not_applicable<br>wgpu:experimental | none declared | leaf |
+| `mem.unmap` | `runtime` | `mem` | (handle:GpuBufferHandle) -> () | `default` | reference=false inputs=false expected=false tolerance=0 ULP | cuda:experimental<br>reference:not_applicable<br>wgpu:experimental | none declared | leaf |
+| `mem.zerocopy_map` | `runtime` | `mem` | (fd:i32) -> (handle:GpuBufferHandle) | `default` | reference=false inputs=false expected=false tolerance=0 ULP | cuda:experimental<br>reference:not_applicable<br>wgpu:experimental | none declared | leaf |
