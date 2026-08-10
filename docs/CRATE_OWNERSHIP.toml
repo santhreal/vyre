@@ -21,7 +21,7 @@ package = "vyre-foundation"
 path = "vyre-foundation"
 owner = "foundation-ir"
 layer = "foundation"
-responsibility = "Own the typed IR, validation, optimizer, serialization, and foundational program contracts."
+responsibility = "Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization."
 allowed_dependencies = ["vyre-macros", "vyre-spec"]
 
 [[crate]]
@@ -158,7 +158,7 @@ package = "vyre-runtime"
 path = "vyre-runtime"
 owner = "runtime"
 layer = "runtime"
-responsibility = "Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate."
+responsibility = "Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO."
 allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-self-substrate"]
 
 [[crate]]
@@ -230,7 +230,7 @@ package = "vyre-lower"
 path = "vyre-lower"
 owner = "lowering"
 layer = "lowering"
-responsibility = "Own backend-neutral lowering helpers and pre-emission transforms."
+responsibility = "Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms."
 allowed_dependencies = ["vyre-foundation"]
 
 [[crate]]

@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation
 ```
 
-Own the typed IR, validation, optimizer, serialization, and foundational program contracts.
+Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
 The crate lives at `vyre-foundation`. The `foundation-ir` owner maintains its
 `foundation` testing contract.

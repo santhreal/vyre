@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower
 ```
 
-Own backend-neutral lowering helpers and pre-emission transforms.
+Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
 
 The crate lives at `vyre-lower`. The `lowering` owner maintains its
 `lowering` testing contract.

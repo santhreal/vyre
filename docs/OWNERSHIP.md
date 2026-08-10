@@ -164,7 +164,7 @@ Lower neutral programs into SPIR-V artifacts through the shared emitter path.
 
 ### `vyre-foundation`
 
-Own the typed IR, validation, optimizer, serialization, and foundational program contracts.
+Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization.
 
 - Path: `vyre-foundation`
 - Owner: `foundation-ir`
@@ -236,7 +236,7 @@ Enforce source-level project policies without depending on runtime crates.
 
 ### `vyre-lower`
 
-Own backend-neutral lowering helpers and pre-emission transforms.
+Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
 
 - Path: `vyre-lower`
 - Owner: `lowering`
@@ -281,7 +281,7 @@ Execute programs with the canonical host oracle and produce semantic witnesses.
 
 ### `vyre-runtime`
 
-Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate.
+Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO.
 
 - Path: `vyre-runtime`
 - Owner: `runtime`

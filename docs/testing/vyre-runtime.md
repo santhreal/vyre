@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime
 ```
 
-Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate.
+Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO.
 
 The crate lives at `vyre-runtime`. The `runtime` owner maintains its
 `runtime` testing contract.
