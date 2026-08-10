@@ -188,9 +188,6 @@ fn inspect_json_evidence(evidence: &str, path: &Path, blockers: &mut Vec<String>
     if evidence.ends_with("public-launch-state.json") {
         inspect_public_launch_state_semantics(evidence, &value, blockers);
     }
-    if evidence.ends_with("docs-matrix.json") {
-        inspect_docs_matrix_semantics(evidence, &value, blockers);
-    }
     if evidence.ends_with("bench-release-axes.json") {
         inspect_release_axes_semantics(evidence, path, &value, blockers);
     }

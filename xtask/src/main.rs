@@ -20,7 +20,7 @@ mod conformance_evidence_semantics;
 mod conformance_matrix;
 mod dedup_report;
 mod dep_drift;
-mod docs_matrix;
+mod docs_check;
 mod feature_matrix;
 mod gate1;
 mod hash;
@@ -103,7 +103,7 @@ fn print_help() {
            compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)\n\
            conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage\n\
            dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version\n\
-           docs-matrix [--output PATH]         Generate release documentation evidence matrix\n\
+           docs-check                           Validate manifest-backed documentation lifecycle and generated navigation\n\
            feature-matrix [--output PATH]      Generate Vyre/Weir crate feature evidence matrix\n\
            print-composition <op_id>           Walk an op's Region tree and print its decomposition chain\n\
            trace-f32 <op_id>                   Run an op's test_inputs through vyre-reference and dump expected_output literal\n\
@@ -166,7 +166,7 @@ fn main() {
         "compile" => compile::run(&args),
         "conformance-matrix" => conformance_matrix::run(&args),
         "dep-drift" => dep_drift::run(&args),
-        "docs-matrix" => docs_matrix::run(&args),
+        "docs-check" => docs_check::run(&args),
         "feature-matrix" => feature_matrix::run(&args),
         "print-composition" => print_composition::run(&args),
         "list-ops" => list_ops::run(&args),

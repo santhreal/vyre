@@ -64,29 +64,7 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/tests/gap-suite.json",
             "release/evidence/tests/fuzz-suite.json",
         ],
-        "docs-matrix" => &[
-            "release/evidence/docs/docs-matrix.json",
-            "release/evidence/docs/vyre-readme-contracts.json",
-            "release/evidence/docs/release-notes-version-story.md",
-            "release/evidence/docs/cuda-release-path.md",
-            "release/evidence/docs/wgpu-fallback-proof.md",
-            "release/evidence/docs/megakernel-default-proof.md",
-            "release/evidence/docs/optimization-proof.md",
-            "release/evidence/docs/egraph-saturation.md",
-            "release/evidence/docs/c-parser-linux-proof.md",
-            "release/evidence/docs/distributed-parser-coherence.md",
-            "release/evidence/docs/weir-integration.md",
-            "release/evidence/docs/test-architecture.md",
-            "release/evidence/docs/vyre-readme-proof.md",
-            "release/evidence/docs/weir-readme-proof.md",
-            "release/evidence/docs/parser-doc-proof.md",
-            "release/evidence/docs/benchmark-doc-proof.md",
-            "release/evidence/docs/conformance-doc-proof.md",
-            "release/evidence/docs/release-notes.md",
-            "release/evidence/docs/crate-metadata-proof.md",
-            "release/evidence/docs/release-hygiene-proof.md",
-            "release/evidence/docs/cpu-only-100x-proof.md",
-        ],
+        "docs-check" => &["docs/DOCS.toml", "docs/SUMMARY.md", "docs/INDEX.md"],
         "metadata-matrix" => &["release/evidence/metadata/metadata-matrix.json"],
         "feature-matrix" => &["release/evidence/metadata/feature-matrix.json"],
         "optimization-corpus" => &[
@@ -697,10 +675,10 @@ mod tests {
       "artifact_count": 3,
   "commands": [
     {
-      "generator_command": "xtask docs-matrix",
+      "generator_command": "xtask version-matrix",
       "command_mode": "spawned",
       "required": true,
-      "expected_artifacts": ["release/evidence/docs/docs-matrix.json"],
+      "expected_artifacts": ["release/evidence/metadata/version-matrix.json"],
       "artifact_contracts": [
         {
           "artifact": "release/evidence/docs/not-listed.json",
@@ -791,18 +769,18 @@ mod tests {
   "artifact_count": 2,
   "commands": [
     {
-      "generator_command": "xtask docs-matrix",
+      "generator_command": "xtask version-matrix",
       "command_mode": "spawned",
       "required": true,
-      "expected_artifacts": ["release/evidence/docs/docs-matrix.json"],
+      "expected_artifacts": ["release/evidence/metadata/version-matrix.json"],
       "artifact_contracts": [
         {
-          "artifact": "release/evidence/docs/docs-matrix.json",
+          "artifact": "release/evidence/metadata/version-matrix.json",
           "generator_command": "xtask other",
           "command_mode": "external-artifacts-only",
           "command_required": false,
           "schema_version": 1,
-          "semantic_validator": "docs_matrix::validate",
+          "semantic_validator": "version_matrix::validate",
           "required_fields": ["schema_version"]
         }
       ]

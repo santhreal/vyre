@@ -335,10 +335,10 @@ fn command_specs() -> &'static [CommandSpec] {
             proof_kind: ProofKind::LintGate,
         },
         CommandSpec {
-            command: "docs-matrix",
-            module: "docs_matrix",
+            command: "docs-check",
+            module: "docs_check",
             owner_lane: "coordination",
-            proof_kind: ProofKind::MatrixEvidence,
+            proof_kind: ProofKind::LintGate,
         },
         CommandSpec {
             command: "feature-matrix",

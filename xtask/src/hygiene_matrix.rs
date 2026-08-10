@@ -1267,7 +1267,6 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
     for module in [
         "backend_matrix",
         "conformance_matrix",
-        "docs_matrix",
         "feature_matrix",
         "hygiene_matrix",
         "metadata_matrix",
@@ -2074,7 +2073,6 @@ fn is_hygiene_rule_source(path: &Path) -> bool {
         "jules_tickets/_generate.py",
         "jules_tickets/test_dump.py",
         "xtask/src/backend_matrix.rs",
-        "xtask/src/docs_matrix.rs",
         "xtask/src/feature_matrix.rs",
         "xtask/src/hygiene_matrix.rs",
         "xtask/src/optimization_matrix.rs",

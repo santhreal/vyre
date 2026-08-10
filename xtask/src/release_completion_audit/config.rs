@@ -276,17 +276,13 @@ pub(crate) fn release_checklist() -> Vec<ChecklistItem> {
         },
         ChecklistItem {
             requirement_id: "docs-evidence-linked",
-            explicit_requirement: "User, contributor, benchmark, conformance, parser, optimization, and release docs link to concrete evidence.",
+            explicit_requirement: "Documentation lifecycle, navigation, generated provenance, and book output derive from one manifest.",
             required_artifacts_or_commands: vec![
-                "cargo_full run --bin xtask -- docs-matrix --output release/evidence/docs/docs-matrix.json",
-                "release/evidence/docs/docs-matrix.json",
-                "release/evidence/docs/vyre-readme-contracts.json",
-                "release/evidence/docs/vyre-readme-proof.md",
-                "release/evidence/docs/weir-readme-proof.md",
-                "release/evidence/docs/parser-doc-proof.md",
-                "release/evidence/docs/benchmark-doc-proof.md",
-                "release/evidence/docs/conformance-doc-proof.md",
-                "release/evidence/docs/release-notes.md",
+                "cargo_full run -p xtask --bin xtask -- docs-check",
+                "mdbook build",
+                "docs/DOCS.toml",
+                "docs/SUMMARY.md",
+                "docs/INDEX.md",
             ],
         },
         ChecklistItem {

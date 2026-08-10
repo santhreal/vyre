@@ -4,9 +4,10 @@ This artifact backs `docs-evidence-linked`.
 
 Evidence sources:
 
-Required generated evidence:
+Required documentation authority:
 
-- `release/evidence/docs/docs-matrix.json`
+- `docs/DOCS.toml`
+- `docs/SUMMARY.md`
 - `release/evidence/dataflow-consumer/dataflow-consumer-analysis-api-matrix.json`
 - `release/evidence/dataflow-consumer/dataflow-consumer-readme-contracts.json`
 

@@ -34,7 +34,7 @@ use expected_artifacts::{
 const RELEASE_EVIDENCE_RUN_SCHEMA_VERSION: u32 = 4;
 
 const COMMANDS: &[EvidenceCommand] = &[
-    EvidenceCommand::required(&["docs-matrix"]),
+    EvidenceCommand::required(&["docs-check"]),
     EvidenceCommand::required(&["version-matrix"]),
     EvidenceCommand::required(&["backend-matrix"]),
     EvidenceCommand::required(&["conformance-matrix"]),
@@ -352,20 +352,20 @@ mod tests {
     #[test]
     fn artifact_status_records_generator_owner_and_fingerprints() {
         let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join("release/evidence/docs/docs-matrix.json");
+        let artifact = tmp.path().join("release/evidence/metadata/version-matrix.json");
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(&artifact, b"{\"blockers\":[]}\n").unwrap();
 
         let statuses = inspect_expected_artifacts(
             tmp.path(),
-            &["docs-matrix"],
-            &["release/evidence/docs/docs-matrix.json"],
+            &["version-matrix"],
+            &["release/evidence/metadata/version-matrix.json"],
         );
 
         assert_eq!(statuses.len(), 1);
         let status = &statuses[0];
-        assert_eq!(status.owner_lane, "testing_evidence");
-        assert_eq!(status.generator_command, "xtask docs-matrix");
+        assert_eq!(status.owner_lane, "coordination");
+        assert_eq!(status.generator_command, "xtask version-matrix");
         assert_eq!(status.command_mode, COMMAND_MODE_SPAWNED);
         assert_eq!(status.content_sha256.as_deref().map(str::len), Some(64));
         assert!(status
@@ -384,18 +384,18 @@ mod tests {
     #[test]
     fn artifact_status_rejects_public_boundary_leaks() {
         let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join("release/evidence/docs/docs-matrix.json");
+        let artifact = tmp.path().join("release/evidence/metadata/version-matrix.json");
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(
             &artifact,
-            br#"{"blockers":[],"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
+            br#"{"blockers":[],"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/mnt/shared/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
         )
         .unwrap();
 
         let statuses = inspect_expected_artifacts(
             tmp.path(),
-            &["docs-matrix"],
-            &["release/evidence/docs/docs-matrix.json"],
+            &["version-matrix"],
+            &["release/evidence/metadata/version-matrix.json"],
         );
 
         let blockers = &statuses[0].blockers;
@@ -698,10 +698,10 @@ mod tests {
     #[test]
     fn expected_artifact_registry_counts_commands_and_artifacts() {
         let registry = build_expected_artifact_registry(vec![ReleaseExpectedArtifactCommand::new(
-            "xtask docs-matrix".to_string(),
+            "xtask version-matrix".to_string(),
             true,
             vec![
-                "release/evidence/docs/docs-matrix.json",
+                "release/evidence/metadata/version-matrix.json",
                 "release/evidence/docs/vyre-readme-contracts.json",
             ]
             .into_iter()
@@ -712,7 +712,7 @@ mod tests {
         assert_eq!(registry.schema_version, 2);
         assert_eq!(registry.command_count, 2);
         assert_eq!(registry.artifact_count, 4);
-        assert_eq!(registry.commands[0].generator_command, "xtask docs-matrix");
+        assert_eq!(registry.commands[0].generator_command, "xtask version-matrix");
         assert!(registry.commands[0].required);
         assert_eq!(
             registry.commands[1].expected_artifacts,
@@ -726,7 +726,7 @@ mod tests {
     #[test]
     fn expected_artifact_registry_validation_rejects_drift() {
         let blockers = expected_artifact_registry_blockers(
-            b"{\"schema_version\":0,\"command_count\":2,\"artifact_count\":9,\"commands\":[{\"generator_command\":\"xtask docs-matrix\",\"expected_artifacts\":[]}]}\n",
+            b"{\"schema_version\":0,\"command_count\":2,\"artifact_count\":9,\"commands\":[{\"generator_command\":\"xtask version-matrix\",\"expected_artifacts\":[]}]}\n",
         );
 
         assert!(blockers
@@ -773,18 +773,18 @@ mod tests {
     #[test]
     fn evidence_index_surfaces_missing_provenance_blockers() {
         let record = ReleaseEvidenceCommandRecord {
-            args: vec!["docs-matrix"],
+            args: vec!["version-matrix"],
             required: true,
-            expected_artifacts: vec!["release/evidence/docs/docs-matrix.json"],
+            expected_artifacts: vec!["release/evidence/metadata/version-matrix.json"],
             status: "success".to_string(),
             exit_code: Some(0),
             artifact_statuses: vec![ReleaseEvidenceArtifactStatus {
-                path: "release/evidence/docs/docs-matrix.json".to_string(),
+                path: "release/evidence/metadata/version-matrix.json".to_string(),
                 exists: true,
                 bytes: 12,
                 read_error: None,
                 owner_lane: "testing_evidence",
-                generator_command: "xtask docs-matrix".to_string(),
+                generator_command: "xtask version-matrix".to_string(),
                 command_mode: COMMAND_MODE_SPAWNED,
                 content_sha256: None,
                 source_fingerprint: None,

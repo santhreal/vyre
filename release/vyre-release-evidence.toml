@@ -2,8 +2,8 @@ schema_version = 1
 release_contract_path = "../docs/RELEASE.md"
 
 [release]
-vyre = "0.7.1"
-weir = "0.1.2"
+vyre = "0.7.2"
+weir = "0.1.3"
 
 [[requirements]]
 id = "version-story"
@@ -259,7 +259,9 @@ title = "User, contributor, benchmark, conformance, parser, optimization, and re
 status = "closed"
 minimum_evidence = 8
 evidence = [
-  "evidence/docs/docs-matrix.json",
+  "../docs/DOCS.toml",
+  "../docs/SUMMARY.md",
+  "../docs/INDEX.md",
   "evidence/docs/vyre-readme-contracts.json",
   "evidence/docs/vyre-readme-proof.md",
   "evidence/docs/weir-readme-proof.md",

@@ -290,7 +290,9 @@ fn owner_lane_for_command(command_args: &[&str]) -> &'static str {
         "parser-coherence" => "parser_frontend",
         "weir-matrix" => "flow_weir",
         "source-similar" | "whats-similar" | "lego-audit" | "research-audit" => "testing_evidence",
-        "hygiene-matrix" | "test-matrix" | "docs-matrix" | "release-evidence" => "testing_evidence",
+        "docs-check" | "hygiene-matrix" | "test-matrix" | "release-evidence" => {
+            "testing_evidence"
+        }
         "acceleration-plan-gate" => "testing_evidence",
         "version-matrix" | "metadata-matrix" | "feature-matrix" => "coordination",
         _ => "coordination",

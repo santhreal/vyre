@@ -151,9 +151,9 @@ mod tests {
     /// Locks the shared default path contract when no override is supplied.
     #[test]
     fn no_override_uses_command_default() {
-        let args = vec!["xtask".to_string(), "docs-matrix".to_string()];
+        let args = vec!["xtask".to_string(), "fixture-command".to_string()];
         assert_eq!(
-            parse_output_arg(&args, "docs-matrix", "description", || {
+            parse_output_arg(&args, "fixture-command", "description", || {
                 PathBuf::from("default.json")
             }),
             Ok(PathBuf::from("default.json"))
@@ -165,12 +165,12 @@ mod tests {
     fn explicit_output_overrides_command_default() {
         let args = vec![
             "xtask".to_string(),
-            "docs-matrix".to_string(),
+            "fixture-command".to_string(),
             "--output".to_string(),
             "custom.json".to_string(),
         ];
         assert_eq!(
-            parse_output_arg(&args, "docs-matrix", "description", || {
+            parse_output_arg(&args, "fixture-command", "description", || {
                 PathBuf::from("default.json")
             }),
             Ok(PathBuf::from("custom.json"))
@@ -182,11 +182,11 @@ mod tests {
     fn missing_output_value_fails_with_fix() {
         let args = vec![
             "xtask".to_string(),
-            "docs-matrix".to_string(),
+            "fixture-command".to_string(),
             "--output".to_string(),
         ];
         assert_eq!(
-            parse_output_arg(&args, "docs-matrix", "description", PathBuf::new),
+            parse_output_arg(&args, "fixture-command", "description", PathBuf::new),
             Err("Fix: --output requires a path.".to_string())
         );
     }
@@ -196,12 +196,12 @@ mod tests {
     fn unknown_option_names_owning_command() {
         let args = vec![
             "xtask".to_string(),
-            "docs-matrix".to_string(),
+            "fixture-command".to_string(),
             "--wat".to_string(),
         ];
         assert_eq!(
-            parse_output_arg(&args, "docs-matrix", "description", PathBuf::new),
-            Err("Fix: unknown docs-matrix option `--wat`.".to_string())
+            parse_output_arg(&args, "fixture-command", "description", PathBuf::new),
+            Err("Fix: unknown fixture-command option `--wat`.".to_string())
         );
     }
 

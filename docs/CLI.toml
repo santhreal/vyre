@@ -1,0 +1,133 @@
+schema_version = 1
+
+[[binary]]
+package = "vyre-grammar-gen"
+name = "vyre-grammar-gen"
+readme = "vyre-grammar-gen/README.md"
+audience = "public"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "Input and output paths are explicit command-line arguments."
+failure = "Invalid JSON, malformed LR data, unsupported formats, and filesystem errors return a non-zero status with context."
+exit_codes = "0 on success, 1 on generation or I/O failure, 2 on invalid arguments."
+
+[[binary]]
+package = "vyre-driver-wgpu"
+name = "vyre-wgpu"
+readme = "vyre-driver-wgpu/README.md"
+audience = "public"
+hardware = "The demo requires a Vulkan, Metal, DX12, or WebGPU compute device and never falls back to CPU."
+environment = "Backend diagnostics honor the driver crate's VYRE_WGPU_TIMESTAMPS, VYRE_CACHE_DIR, VYRE_DUMP_KDESC, and VYRE_CAPTURE_FAILED_DESCRIPTOR controls."
+config = "The demo has no config file. Device and dispatch configuration come from the WGPU backend defaults."
+failure = "Invalid arguments, missing devices, lowering failures, dispatch failures, and malformed output return status 1 with an actionable error."
+exit_codes = "0 on help, version, or exact demo success; 1 on argument, device, dispatch, or output failure."
+
+[[binary]]
+package = "vyre-conform"
+name = "vyre-conform"
+readme = "conform/vyre-conform/README.md"
+audience = "internal"
+hardware = "Dispatch and proof commands require every requested backend device. Planning and merge are device independent."
+environment = "VYRE_BACKEND selects a backend. VYRE_CONFORM_PROOF_WORKERS and VYRE_CONFORM_PROOF_* tune proof execution and timing."
+config = "Operation, backend, shard, certificate, and output selections are command-line arguments."
+failure = "Unknown commands, unavailable requested backends, malformed artifacts, conformance mismatches, and I/O failures return non-zero."
+exit_codes = "0 on success or help, 1 on execution failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "audit_rule_contracts"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The command reads the enclosing Santh rules/launch and tests/launch_rule_truth trees."
+failure = "A missing rules tree or incomplete rule contract returns status 1."
+exit_codes = "0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "lint_shape_tests"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "--threshold sets the maximum shape-only test percentage."
+failure = "Incomplete scans, malformed sources, or a threshold violation return status 1."
+exit_codes = "0 within threshold or on help, 1 on scan or threshold failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "public_api_check"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "VYRE_CARGO_RUNNER selects the Cargo wrapper."
+config = "--update refreshes snapshots and --allow-breaking explicitly permits removals."
+failure = "Tool launch, API generation, UTF-8, inventory, compatibility, and snapshot mismatches return status 1."
+exit_codes = "0 on matching or approved updated snapshots, 1 on API failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "scaffold_rule"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "The slug selects directories in the enclosing Santh rule and truth-test trees."
+failure = "Missing slugs and filesystem creation failures return non-zero without claiming success."
+exit_codes = "0 on scaffold creation or help, 1 on filesystem failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "vyre_new_op"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "No accelerator is required."
+environment = "VYRE_SPEC_MAINTAINER=1 permits reserved internal. and test. operation identifiers."
+config = "Operation id, archetype, display name, summary, and category are explicit arguments."
+failure = "Invalid identifiers, archetypes, categories, collisions, and write failures return non-zero."
+exit_codes = "0 on scaffold creation or help, 1 on validation or write failure, 2 on invalid arguments."
+
+[[binary]]
+package = "xtask"
+name = "xtask"
+readme = "xtask/README.md"
+audience = "internal"
+hardware = "Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices."
+environment = "Commands read documented release, backend, benchmark, and Cargo wrapper environment controls."
+config = "Each subcommand documents its manifest, config, input, and output arguments in top-level help and the generated inventory."
+failure = "Unknown commands return non-zero. Each command fails closed when required inputs, devices, or evidence are unavailable."
+exit_codes = "0 on help or command success, 1 on command failure or unknown subcommand, 2 where a subcommand rejects arguments."
+
+[[binary]]
+package = "vyre-bench"
+name = "vyre-bench"
+readme = "vyre-bench/README.md"
+audience = "internal"
+hardware = "Run commands require the explicitly selected backend device. Report validation and comparison are device independent."
+environment = "RAYON_NUM_THREADS configures CPU baselines. VYRE_ALLOW_FEW_SAMPLES=1 permits local smoke runs below the release sample floor."
+config = "Suite, case, backend, sample, budget, report, and output settings are command-line arguments."
+failure = "Unavailable backends, invalid suites or reports, benchmark mismatches, timeouts, and budget violations return non-zero."
+exit_codes = "0 on success or help, 1 on benchmark or validation failure, 2 on invalid arguments."
+
+[[binary]]
+package = "vyre-debug"
+name = "vyre-dbg"
+readme = "vyre-debug/README.md"
+audience = "public"
+hardware = "Descriptor analysis is device independent. Emission and replay requirements depend on the selected artifact and backend."
+environment = "HOME selects the default pipeline cache location used by pipeline-cache-clear."
+config = "Programs, descriptors, traces, and output modes are explicit subcommand arguments."
+failure = "Missing or malformed artifacts, emission failures, and cache filesystem failures return non-zero."
+exit_codes = "0 on success or help, 1 on artifact or operation failure, 2 on invalid arguments."
+
+[[binary]]
+package = "vyre-lints"
+name = "vyre-lints"
+readme = "vyre-lints/README.md"
+audience = "public"
+hardware = "No accelerator is required."
+environment = "No environment variables alter CLI behavior."
+config = "Workspace root, allowlist, format, library roots, and evidence outputs are explicit options."
+failure = "Malformed configuration, unreadable sources, and lint findings return non-zero with file and rule context."
+exit_codes = "0 with no blocking findings or on help, 1 on lint or I/O failure, 2 on invalid arguments."

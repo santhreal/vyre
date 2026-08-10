@@ -6,7 +6,6 @@ mod cpu_only_100x_proof;
 mod crate_metadata;
 mod cuda_first_path;
 mod distributed_parser_coherence;
-mod docs_evidence_linked;
 mod final_completion_audit;
 mod megakernel_default;
 mod optimization_corpus_4096;
@@ -40,7 +39,6 @@ pub(super) fn run_semantic_requirement_checks(
         "distributed-parser-coherence" => {
             distributed_parser_coherence::check(requirement, base_dir, failures)
         }
-        "docs-evidence-linked" => docs_evidence_linked::check(requirement, base_dir, failures),
         "egraph-saturation" => optimization_integration::check(requirement, base_dir, failures),
         "exhaustive-verification" => test_architecture::check(requirement, base_dir, failures),
         "final-completion-audit" => {

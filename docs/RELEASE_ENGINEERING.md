@@ -1,5 +1,8 @@
 # Release engineering
 
+**Status: Superseded.** Use [`docs/RELEASE.md`](RELEASE.md) for the active
+release procedure.
+
 Closes #34 (A.10 release engineering). Complements `docs/GATE_CLOSURE.md`
 (the per-release gate protocol) with the day-to-day shape of
 shipping a version.
@@ -59,7 +62,9 @@ Release evidence anchors:
 - `release/evidence/benchmarks/cpu-only-100x-proof.json`
 - `release/evidence/tests/release-surface-suite-coverage.json`
 - `release/evidence/metadata/metadata-matrix.json`
-- `release/evidence/docs/docs-matrix.json`
+- `docs/DOCS.toml`
+- `docs/SUMMARY.md`
+- `docs/INDEX.md`
 
 ## Release evidence external artifacts
 
