@@ -2,9 +2,9 @@
 mod dispatch_contract_tests;
 
 #[cfg(test)]
-mod part1;
+mod batch_validation;
 #[cfg(test)]
-mod part2;
+mod cpu_reference_and_dispatch;
 
 #[cfg(test)]
 mod dynamic_changed_slot_tests;

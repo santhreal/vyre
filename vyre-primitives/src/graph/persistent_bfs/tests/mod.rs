@@ -1,4 +1,4 @@
 #[cfg(test)]
-mod part1;
+mod behavior_contracts;
 #[cfg(test)]
-mod part2;
+mod validation_and_builders;
