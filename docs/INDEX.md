@@ -22,10 +22,10 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 
 ## Lifecycle counts
 
-- current: 44.
+- current: 41.
 - generated: 72.
 - superseded: 34.
-- archived: 20.
+- archived: 18.
 
 ## Pages
 
@@ -64,17 +64,14 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `superseded` | `history` | `TESTING_PROGRAM.md` | [TESTING_PROGRAM.md](TESTING_PROGRAM.md) |
 | `current` | `guide` | `THESIS.md` | [THESIS.md](THESIS.md) |
 | `superseded` | `history` | `VISION.md` | [VISION.md](VISION.md) |
-| `archived` | `history` | `archive/DRIVER_UNIFICATION_AUDIT.md` | [archive/DRIVER_UNIFICATION_AUDIT.md](archive/DRIVER_UNIFICATION_AUDIT.md) |
 | `archived` | `history` | `archive/HEURISTIC_TO_MATH_TRACKER.md` | [archive/HEURISTIC_TO_MATH_TRACKER.md](archive/HEURISTIC_TO_MATH_TRACKER.md) |
 | `archived` | `history` | `archive/INNOVATION_SWEEP.md` | [archive/INNOVATION_SWEEP.md](archive/INNOVATION_SWEEP.md) |
 | `archived` | `history` | `archive/JULES_PRIMITIVE_MANIFEST.md` | [archive/JULES_PRIMITIVE_MANIFEST.md](archive/JULES_PRIMITIVE_MANIFEST.md) |
 | `archived` | `history` | `archive/MICRO_FLAW_LOG.md` | [archive/MICRO_FLAW_LOG.md](archive/MICRO_FLAW_LOG.md) |
 | `archived` | `history` | `archive/MIGRATION_0.6_TO_0.7.md` | [archive/MIGRATION_0.6_TO_0.7.md](archive/MIGRATION_0.6_TO_0.7.md) |
 | `archived` | `history` | `archive/NAGA_CRITICAL_HOLES.md` | [archive/NAGA_CRITICAL_HOLES.md](archive/NAGA_CRITICAL_HOLES.md) |
-| `archived` | `history` | `archive/NAGA_LOWERING_AUDIT.md` | [archive/NAGA_LOWERING_AUDIT.md](archive/NAGA_LOWERING_AUDIT.md) |
-| `current` | `guide` | `archive/README.md` | [archive/README.md](archive/README.md) |
+| `archived` | `history` | `archive/README.md` | [archive/README.md](archive/README.md) |
 | `archived` | `history` | `archive/UX_SWEEP.md` | [archive/UX_SWEEP.md](archive/UX_SWEEP.md) |
-| `archived` | `history` | `archive/VYRE_CODEBASE_AUDIT.md` | [archive/VYRE_CODEBASE_AUDIT.md](archive/VYRE_CODEBASE_AUDIT.md) |
 | `archived` | `history` | `archive/vision-2026-04-27-essay.md` | [archive/vision-2026-04-27-essay.md](archive/vision-2026-04-27-essay.md) |
 | `generated` | `projection` | `catalog/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
 | `generated` | `projection` | `catalog/bitset.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
@@ -122,8 +119,7 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `generated` | `projection` | `generated/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
 | `current` | `guide` | `inventory-contract.md` | [inventory-contract.md](inventory-contract.md) |
 | `current` | `guide` | `ir-semantics.md` | [ir-semantics.md](ir-semantics.md) |
-| `current` | `guide` | `legacy/README.md` | [legacy/README.md](legacy/README.md) |
-| `archived` | `history` | `legacy/SEPARATION_AUDIT_2026-05-01.md` | [legacy/SEPARATION_AUDIT_2026-05-01.md](legacy/SEPARATION_AUDIT_2026-05-01.md) |
+| `archived` | `history` | `legacy/README.md` | [legacy/README.md](legacy/README.md) |
 | `superseded` | `history` | `lego-block-rule.md` | [lego-block-rule.md](lego-block-rule.md) |
 | `superseded` | `history` | `library-tiers.md` | [library-tiers.md](library-tiers.md) |
 | `current` | `guide` | `lower-vs-emit.md` | [lower-vs-emit.md](lower-vs-emit.md) |
@@ -148,7 +144,6 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `archived` | `history` | `release/v0.4.2.md` | [release/v0.4.2.md](release/v0.4.2.md) |
 | `archived` | `history` | `release/v0.7.0.md` | [release/v0.7.0.md](release/v0.7.0.md) |
 | `archived` | `history` | `release/v0.7.1.md` | [release/v0.7.1.md](release/v0.7.1.md) |
-| `current` | `release` | `release/v0.7.2.md` | [release/v0.7.2.md](release/v0.7.2.md) |
 | `current` | `guide` | `rfcs/0001-region-inline-pass.md` | [rfcs/0001-region-inline-pass.md](rfcs/0001-region-inline-pass.md) |
 | `current` | `guide` | `rfcs/0002-autodiff-ir-transform.md` | [rfcs/0002-autodiff-ir-transform.md](rfcs/0002-autodiff-ir-transform.md) |
 | `current` | `guide` | `rfcs/0003-datatype-quantized.md` | [rfcs/0003-datatype-quantized.md](rfcs/0003-datatype-quantized.md) |

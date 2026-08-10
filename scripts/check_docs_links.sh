@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # Enforce that public documentation never links a target a reader cannot open.
 #
-# docs/INDEX.md is not the only place a broken link hurts. scripts/check_docs_index.sh
-# checks the routing table; this checks every outbound markdown link in every
-# public document, because the defect that motivated it lived one directory down:
-# docs/archive/README.md listed fourteen sibling documents that are gitignored,
-# so the file reads as a complete directory listing to us and as fourteen dead
-# links to everyone else.
+# `docs/DOCS.toml` defines the published active set. This gate checks every
+# outbound Markdown link from that set plus generated navigation. Archived and
+# superseded pages are lifecycle records and are not current claims.
 #
 # Three violation classes, in descending severity:
 #
@@ -16,24 +13,16 @@
 #   MISSING       the target does not exist on disk, for anyone.
 #   GITIGNORED    the target exists here and is excluded from the repository, so
 #                 the link works for the author and fails for every other reader.
-#                 This is the same defect check_docs_index.sh catches in the
-#                 index, generalised to all documents.
+#                 This is the same defect the documentation manifest prevents
+#                 for generated and navigable pages.
 #
 # Anchor fragments are deliberately out of scope. Checking whether #some-heading
 # exists inside a target is a much weaker signal than whether the FILE exists,
 # and folding it in would bury the two classes that matter under heading churn.
 #
-# SCOPE IS A RULE, NOT A LIST. An allowlist of exempt paths is a deferral: it
-# rots the moment someone adds the next file. The rule is that a HISTORICAL
-# RECORD is not gated. A document under docs/archive/ or docs/legacy/ is a
-# snapshot of what was true on the date it was written, so rewriting its links to
-# point at today's documents would falsify the record, and it is honest for a
-# snapshot to reference documents that have since moved or become private. The
-# one exception is the directory's own README.md: that is not a snapshot, it is
-# the current signpost telling a reader the directory is stale and where to go
-# instead, so its links are live claims and are gated like any other live
-# document. This is the same carve-out check_docs_index.sh makes for the
-# per-directory status rule, for the same reason.
+# SCOPE IS DATA. `scripts/docs_manifest.py --list-active` emits the exact
+# current/generated navigation set from `docs/DOCS.toml`. The link gate does not
+# keep a second archive carve-out or filesystem-derived publication list.
 
 set -euo pipefail
 
@@ -76,25 +65,9 @@ normalize_path() {
   printf '%s' "$joined"
 }
 
-# A historical record is a dated snapshot, not a live claim. See the header.
-is_historical_record() {
-  local doc="$1"
-  case "$doc" in
-    docs/archive/* | docs/legacy/*)
-      [[ "$(basename "$doc")" == "README.md" ]] && return 1
-      return 0
-      ;;
-  esac
-  return 1
-}
 
 : > "$sites"
 while IFS= read -r doc; do
-  if git rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-    && git check-ignore -q "$doc"; then
-    continue
-  fi
-  is_historical_record "$doc" && continue
   base="$(dirname "$doc")"
   while IFS= read -r raw; do
     case "$raw" in
@@ -114,7 +87,7 @@ while IFS= read -r doc; do
     printf '%s\t%s\t%s\n' "$doc" "$raw" "$resolved" >> "$sites"
   done < <(grep -oE '\[[^][]*\]\([^()[:space:]]+\)' "$doc" \
     | sed -E 's/^\[[^][]*\]\(//; s/\)$//')
-done < <(find docs -type f -name '*.md' -print | sort)
+done < <(python3 scripts/docs_manifest.py --list-active)
 
 # One batched ignore query. Targets that escape the root would make git fatal,
 # so they are excluded here and reported as OUTSIDE-REPO instead.

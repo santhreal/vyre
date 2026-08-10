@@ -23,6 +23,9 @@ authority and its generated projections in the same change.
 Only `current` and `generated` pages appear in `SUMMARY.md`. Superseded and
 archived pages cannot define current behavior.
 
+Only Git-tracked Markdown is publishable. Ignored and untracked review files do
+not enter the lifecycle manifest or mdBook.
+
 ## Generated outputs
 
 `SUMMARY.md` and `INDEX.md` are generated from `DOCS.toml` by

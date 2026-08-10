@@ -304,15 +304,6 @@ source = "VISION.md"
 nav = false
 
 [[page]]
-path = "archive/DRIVER_UNIFICATION_AUDIT.md"
-title = "Supersession notice"
-status = "archived"
-class = "history"
-section = "Archive"
-source = "archive/DRIVER_UNIFICATION_AUDIT.md"
-nav = false
-
-[[page]]
 path = "archive/HEURISTIC_TO_MATH_TRACKER.md"
 title = "Heuristic to math substrate tracker"
 status = "archived"
@@ -367,22 +358,13 @@ source = "archive/NAGA_CRITICAL_HOLES.md"
 nav = false
 
 [[page]]
-path = "archive/NAGA_LOWERING_AUDIT.md"
-title = "Naga Lowering Coverage Audit"
+path = "archive/README.md"
+title = "Archived documents"
 status = "archived"
 class = "history"
 section = "Archive"
-source = "archive/NAGA_LOWERING_AUDIT.md"
-nav = false
-
-[[page]]
-path = "archive/README.md"
-title = "Archived documents"
-status = "current"
-class = "guide"
-section = "Archive"
 source = "archive/README.md"
-nav = true
+nav = false
 
 [[page]]
 path = "archive/UX_SWEEP.md"
@@ -391,15 +373,6 @@ status = "archived"
 class = "history"
 section = "Archive"
 source = "archive/UX_SWEEP.md"
-nav = false
-
-[[page]]
-path = "archive/VYRE_CODEBASE_AUDIT.md"
-title = "Vyre Codebase Audit: Grounded in Current Source (Mid-Refactor)"
-status = "archived"
-class = "history"
-section = "Archive"
-source = "archive/VYRE_CODEBASE_AUDIT.md"
 nav = false
 
 [[page]]
@@ -828,19 +801,10 @@ nav = true
 [[page]]
 path = "legacy/README.md"
 title = "Legacy documents"
-status = "current"
-class = "guide"
-section = "Legacy"
-source = "legacy/README.md"
-nav = true
-
-[[page]]
-path = "legacy/SEPARATION_AUDIT_2026-05-01.md"
-title = "vyre architecture clarity audit (2026-05-01)"
 status = "archived"
 class = "history"
 section = "Legacy"
-source = "legacy/SEPARATION_AUDIT_2026-05-01.md"
+source = "legacy/README.md"
 nav = false
 
 [[page]]
@@ -1058,15 +1022,6 @@ class = "history"
 section = "Release"
 source = "release/v0.7.1.md"
 nav = false
-
-[[page]]
-path = "release/v0.7.2.md"
-title = "Vyre 0.7.2 / Weir 0.1.3 release notes"
-status = "current"
-class = "release"
-section = "Release"
-source = "release/v0.7.2.md"
-nav = true
 
 [[page]]
 path = "rfcs/0001-region-inline-pass.md"

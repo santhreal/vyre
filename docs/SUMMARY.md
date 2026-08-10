@@ -9,10 +9,6 @@
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)
 
-# Archive
-
-- [Archived documents](archive/README.md)
-
 # Frozen Traits
 
 - [Frozen trait snapshots](frozen-traits/README.md)
@@ -88,20 +84,12 @@
 - [vyre-libs Feature Matrix](vyre-libs-features.md)
 - [vyre-libs op naming](op-naming.md)
 
-# Legacy
-
-- [Legacy documents](legacy/README.md)
-
 # Optimization
 
 - [Optimization Taxonomy](optimization/TAXONOMY.md)
 - [Start Here for Optimization Work](optimization/START_HERE.md)
 - [Vyre optimization control plane](optimization/README.md)
 - [Xtask command matrix](optimization/XTASK_COMMAND_MATRIX.md)
-
-# Release
-
-- [Vyre 0.7.2 / Weir 0.1.3 release notes](release/v0.7.2.md)
 
 # Rfcs
 

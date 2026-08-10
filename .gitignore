@@ -4,6 +4,7 @@ target/
 */target/
 **/target-*/
 conform/fuzz/target/
+/book/
 
 # Cargo lock backup.
 Cargo.lock.old
@@ -91,8 +92,5 @@ __pycache__/
 # should be committed under crate-owned test names with specific assertions.
 **/tests/adversarial_registry_closure.rs
 
-# Private operator all-axes acceleration plan; do not publish to public Vyre repo.
-/docs/optimization/ALL_AXES_ACCELERATION_PLAN.md
-
-# Unified backlog (STANDARD.md)
+# Single private execution queue (STANDARD.md)
 /BACKLOG.md

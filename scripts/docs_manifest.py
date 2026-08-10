@@ -88,6 +88,26 @@ def class_for(path: str, status: str) -> str:
     return "guide"
 
 
+def published_markdown() -> list[Path]:
+    output = subprocess.run(
+        ["git", "ls-files", "--cached", "--", "docs"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    published = []
+    for path in output.stdout.splitlines():
+        candidate = ROOT / path
+        if (
+            path.endswith(".md")
+            and Path(path).name != "SUMMARY.md"
+            and candidate.is_file()
+        ):
+            published.append(candidate)
+    return published
+
+
 def legacy_rows() -> dict[str, str]:
     rows: dict[str, str] = {}
     if MANIFEST.exists():
@@ -113,18 +133,18 @@ def legacy_rows() -> dict[str, str]:
 def bootstrap() -> None:
     old = legacy_rows()
     pages: list[dict[str, object]] = []
-    for file in sorted(DOCS.rglob("*.md")):
+    for file in sorted(published_markdown()):
         path = file.relative_to(DOCS).as_posix()
         if path in {"README.md", "SUMMARY.md"}:
             continue
         if path == "INDEX.md":
             status = "generated"
-        elif path in old:
-            status = old[path]
         elif path.startswith("testing/"):
             status = "generated"
         elif path.startswith(("archive/", "legacy/")):
             status = "archived"
+        elif path in old:
+            status = old[path]
         else:
             raise SystemExit(
                 f"unclassified documentation page {path}; assign a lifecycle before bootstrapping"
@@ -183,16 +203,15 @@ def load_pages() -> tuple[dict[str, object], list[dict[str, object]]]:
     return data, pages
 
 
-def validate(pages: list[dict[str, object]]) -> list[str]:
+def validate(
+    pages: list[dict[str, object]], actual: set[str] | None = None
+) -> list[str]:
     failures: list[str] = []
     paths = [str(page.get("path", "")) for page in pages]
     counts = Counter(paths)
     failures.extend(f"duplicate DOCS.toml page: {path}" for path, count in counts.items() if count > 1)
-    actual = {
-        path.relative_to(DOCS).as_posix()
-        for path in DOCS.rglob("*.md")
-        if path.name != "SUMMARY.md"
-    }
+    if actual is None:
+        actual = {path.relative_to(DOCS).as_posix() for path in published_markdown()}
     declared = set(paths)
     failures.extend(f"unclassified documentation page: {path}" for path in sorted(actual - declared))
     failures.extend(f"DOCS.toml names missing page: {path}" for path in sorted(declared - actual))
@@ -203,6 +222,8 @@ def validate(pages: list[dict[str, object]]) -> list[str]:
         source = str(page.get("source", ""))
         if status not in STATUSES:
             failures.append(f"{path}: invalid lifecycle {status!r}")
+        if path.startswith(("archive/", "legacy/")) and status != "archived":
+            failures.append(f"{path}: historical directories require archived lifecycle")
         if status in {"archived", "superseded"} and nav is not False:
             failures.append(f"{path}: inactive pages must set nav = false")
         if status in {"current", "generated"} and path.endswith(".md") and nav is not True:
@@ -322,16 +343,32 @@ def write_outputs(check: bool) -> int:
     return 0
 
 
+def list_active() -> int:
+    _, pages = load_pages()
+    failures = validate(pages)
+    if failures:
+        print("\n".join(f"docs manifest: {failure}" for failure in failures), file=sys.stderr)
+        return 1
+    print("docs/SUMMARY.md")
+    for page in sorted(pages, key=lambda item: str(item["path"])):
+        if page.get("nav") is True:
+            print(f"docs/{page['path']}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--bootstrap", action="store_true")
     mode.add_argument("--write", action="store_true")
     mode.add_argument("--check", action="store_true")
+    mode.add_argument("--list-active", action="store_true")
     args = parser.parse_args()
     if args.bootstrap:
         bootstrap()
         return 0
+    if args.list_active:
+        return list_active()
     return write_outputs(check=args.check)
 
 
