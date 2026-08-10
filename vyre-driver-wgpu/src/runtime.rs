@@ -5,8 +5,6 @@
 /// Projects a `wgpu::Adapter` into the substrate-neutral
 /// [`vyre_foundation::optimizer::AdapterCaps`] passes read to adapt.
 pub mod adapter_caps_probe;
-/// AOT shader specialization cache.
-pub mod aot;
 /// Tiered caching for device buffers and shader pipelines.
 pub mod cache;
 /// GPU device abstraction and initialization.

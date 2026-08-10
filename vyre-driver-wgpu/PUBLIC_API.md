@@ -251,16 +251,6 @@ pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend(adapter_info:
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend_profile(adapter_info: &wgpu_types::AdapterInfo, device_limits: &wgpu_types::Limits, enabled: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> vyre_driver::device_profile::DeviceProfile
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::probe(adapter: &wgpu::api::adapter::Adapter) -> vyre_foundation::optimizer::ctx::AdapterCaps
 pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::probe_profile(adapter: &wgpu::api::adapter::Adapter) -> vyre_driver::device_profile::DeviceProfile
-pub mod vyre_driver_wgpu::runtime::aot
-pub struct vyre_driver_wgpu::runtime::aot::AotArtifact
-pub vyre_driver_wgpu::runtime::aot::AotArtifact::cache_hit: bool
-pub vyre_driver_wgpu::runtime::aot::AotArtifact::key: alloc::string::String
-pub vyre_driver_wgpu::runtime::aot::AotArtifact::wgsl: alloc::string::String
-pub fn vyre_driver_wgpu::runtime::aot::backend_fingerprint() -> alloc::string::String
-pub fn vyre_driver_wgpu::runtime::aot::cache_dir() -> std::path::PathBuf
-pub fn vyre_driver_wgpu::runtime::aot::cache_key(spec_hash: &str, backend_fingerprint: &str) -> alloc::string::String
-pub fn vyre_driver_wgpu::runtime::aot::load_or_compile(program: &vyre_foundation::ir_inner::model::program::core::Program, fingerprint: &str) -> core::result::Result<vyre_driver_wgpu::runtime::aot::AotArtifact, vyre_driver::backend::error::BackendError>
-pub fn vyre_driver_wgpu::runtime::aot::load_or_compile_with_config(program: &vyre_foundation::ir_inner::model::program::core::Program, fingerprint: &str, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver_wgpu::runtime::aot::AotArtifact, vyre_driver::backend::error::BackendError>
 pub mod vyre_driver_wgpu::runtime::cache
 pub mod vyre_driver_wgpu::runtime::cache::lru
 pub struct vyre_driver_wgpu::runtime::cache::lru::AccessMeta
@@ -610,6 +600,7 @@ pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed(&self, program: &vyre_fo
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_async(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_into(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_resident_async(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, resources: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_resident_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, resources: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::dispatch_with_device_buffers(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&dyn vyre_driver::backend::device_buffer::DeviceBuffer], outputs: &mut [&mut dyn vyre_driver::backend::device_buffer::DeviceBuffer], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::WgpuBackend::download_device_buffer(&self, buffer: &dyn vyre_driver::backend::device_buffer::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
@@ -678,3 +669,4 @@ pub fn vyre_driver_wgpu::WgpuDeviceBuffer::debug_label(&self) -> core::option::O
 pub struct vyre_driver_wgpu::WgpuIR
 pub vyre_driver_wgpu::WgpuIR::pipeline: vyre_driver_wgpu::pipeline::WgpuPipeline
 pub const vyre_driver_wgpu::WGPU_BACKEND_ID: &str
+pub fn vyre_driver_wgpu::artifact_materializer(backend: vyre_driver_wgpu::WgpuBackend) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, vyre_driver::backend::error::BackendError>
