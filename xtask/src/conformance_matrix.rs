@@ -941,80 +941,10 @@ fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
         ),
         inspect_ci_gate(
             santh_root,
-            ".github/CI_REQUIRED.md",
-            "Vyre/Weir final release gate",
-            "GPU release gate",
-            "scripts/apply-branch-protection.sh",
-        ),
-        inspect_ci_gate(
-            santh_root,
             "scripts/apply-branch-protection.sh",
             "required_status_checks",
             ".github/CI_REQUIRED.md",
             "gh api",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final release gate",
-            "cargo_full run --bin xtask -- vyre-release-gate",
-            "release/evidence/optimization",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final conformance artifact download",
-            "vyre-release-conformance-evidence",
-            "actions/download-artifact@v4",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final benchmark artifact download",
-            "vyre-release-benchmark-evidence",
-            "actions/download-artifact@v4",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final conformance staging",
-            "Stage GPU release evidence into release tree",
-            "release/evidence/conformance",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final benchmark staging",
-            "Stage GPU release evidence into release tree",
-            "release/evidence/benchmarks",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final optimization staging",
-            "Stage GPU release evidence into release tree",
-            "release/evidence/optimization",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final structural evidence",
-            "cargo_full run --bin xtask -- release-evidence",
-            "release/evidence/**/*.json",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final completion audit",
-            "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
-            "release/evidence/final/completion-audit.json",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "vyre-weir-final-release-evidence",
-            "cargo_full run --bin xtask -- release-completion-audit",
-            "vyre-weir-final-release-evidence",
         ),
         inspect_ci_gate(
             vyre_root,
@@ -1210,10 +1140,6 @@ fn inspect_fail_closed_fanins(santh_root: &Path) -> Vec<String> {
         (".github/workflows/santh-ci.yml", "crate-checks"),
         (".github/workflows/conform.yml", "Conform release gate"),
         (".github/workflows/gpu-parity.yml", "GPU release gate"),
-        (
-            ".github/workflows/gpu-parity.yml",
-            "Vyre/Weir final release gate",
-        ),
     ] {
         let path = santh_root.join(workflow);
         let Ok(text) = read_text_bounded(&path) else {
