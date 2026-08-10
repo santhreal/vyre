@@ -342,7 +342,7 @@ pub(crate) fn check_single_benchmark_report(
 }
 
 #[cfg(test)]
-mod part3_tests {
+mod benchmark_backend_tests {
     use super::*;
 
     #[test]

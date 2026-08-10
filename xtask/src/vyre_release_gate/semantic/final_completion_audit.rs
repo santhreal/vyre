@@ -200,7 +200,7 @@ fn check_prepublish_launch_state(state: &serde_json::Value, failures: &mut Vec<S
         ("feature_matrix", "pass"),
         ("package_readiness", "pass"),
         ("release_completion_audit", "prepublish-pass"),
-        ("vyre_weir_release_gate", "prepublish-pass"),
+        ("vyre_release_gate", "prepublish-pass"),
     ];
     let prepublish_gates = state.get("prepublish_gates");
     for (gate, expected) in expected_gates {
@@ -284,7 +284,7 @@ mod tests {
                 "feature_matrix": "pass",
                 "package_readiness": "pass",
                 "release_completion_audit": "prepublish-pass",
-                "vyre_weir_release_gate": "prepublish-pass"
+                "vyre_release_gate": "prepublish-pass"
             },
             "external_actions": crate::launch_contract::required_external_actions()
                 .into_iter()

@@ -78,7 +78,7 @@ mod use_paths;
 mod verify_rewrite_proofs;
 mod version_matrix;
 mod vx_plan_table;
-mod vyre_weir_release_gate;
+mod vyre_release_gate;
 mod weir_matrix;
 mod whats_similar;
 
@@ -185,7 +185,7 @@ fn main() {
         "release-conformance" => release_conformance::run(&args),
         "release-completion-audit" => release_completion_audit::run(&args),
         "release-evidence" => release_evidence::run(&args),
-        "vyre-release-gate" => vyre_weir_release_gate::run(&args),
+        "vyre-release-gate" => vyre_release_gate::run(&args),
         "recursion-gate" => recursion_gate::run(&args),
         "research-audit" => research_audit::run(&args),
         "heuristic-audit" => heuristic_audit::run(&args),

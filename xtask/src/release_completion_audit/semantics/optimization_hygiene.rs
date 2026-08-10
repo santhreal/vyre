@@ -300,7 +300,7 @@ fn inspect_optimization_analysis_fixture_semantics(
 
 
 #[cfg(test)]
-mod part5_tests {
+mod optimization_hygiene_tests {
     use super::*;
 
     #[test]

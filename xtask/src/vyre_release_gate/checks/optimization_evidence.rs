@@ -495,7 +495,7 @@ pub(crate) fn check_marker_evidence_has_markers(
 }
 
 #[cfg(test)]
-mod part4_tests {
+mod optimization_evidence_tests {
     use super::*;
 
     #[test]

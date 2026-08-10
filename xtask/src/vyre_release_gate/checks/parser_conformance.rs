@@ -532,7 +532,7 @@ pub(crate) fn check_backend_conformance_report(
 
 
 #[cfg(test)]
-mod part5_tests {
+mod parser_conformance_tests {
     use super::*;
 
     #[test]

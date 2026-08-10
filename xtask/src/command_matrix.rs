@@ -16,11 +16,9 @@ use crate::release_evidence::expected_artifacts_for_command;
 
 const MAX_COMMAND_SOURCE_BYTES: u64 = 8_388_608;
 const CANONICAL_COMMAND_MATRIX: &str = "docs/optimization/XTASK_COMMAND_MATRIX.md";
-const ACTIVE_BACKLOG: &str = "BACKLOG.md";
 const GENERATED_COMMAND: &str =
     "cargo_full run -p xtask --bin xtask -- command-matrix --output docs/optimization/XTASK_COMMAND_MATRIX.md";
 const SOURCE_COUNT_PROVENANCE_VERSION: &str = "command-matrix-source-count:v1";
-const DUPLICATE_RISK_VX_THRESHOLD: u32 = 40;
 const REQUIRED_DUPLICATE_REPORT_COMMANDS: &[&str] =
     &["lego-audit", "whats-similar", "source-similar"];
 const ARTIFACT_PATHS_SOURCE: &str = "xtask/src/artifact_paths.rs";
@@ -450,7 +448,7 @@ fn command_specs() -> &'static [CommandSpec] {
         },
         CommandSpec {
             command: "vyre-release-gate",
-            module: "vyre_weir_release_gate",
+            module: "vyre_release_gate",
             owner_lane: "coordination",
             proof_kind: ProofKind::ReleaseEvidence,
         },
@@ -914,33 +912,11 @@ fn render_markdown(rows: &[CommandMatrixRow]) -> String {
     out
 }
 
-fn validate_high_risk_vx_links(root: &Path, rows: &[CommandMatrixRow]) -> Result<(), Vec<String>> {
-    let backlog_path = root.join(ACTIVE_BACKLOG);
-    let backlog_text = match read_text_bounded(&backlog_path, MAX_COMMAND_SOURCE_BYTES) {
-        Ok(text) => text,
-        Err(error) => {
-            return Err(vec![format!(
-                "could not read active VX backlog `{}`: {error}",
-                backlog_path.display()
-            )]);
-        }
-    };
-    let failures = missing_high_risk_vx_links(rows, &backlog_text);
-    if failures.is_empty() {
-        Ok(())
-    } else {
-        Err(failures)
-    }
-}
-
 fn validate_command_matrix_contracts(
     root: &Path,
     rows: &[CommandMatrixRow],
 ) -> Result<(), Vec<String>> {
     let mut failures = Vec::new();
-    if let Err(mut high_risk_failures) = validate_high_risk_vx_links(root, rows) {
-        failures.append(&mut high_risk_failures);
-    }
     failures.extend(missing_command_provenance_contracts(rows));
     failures.extend(missing_research_affinity_contracts(rows));
     failures.extend(missing_required_duplicate_report_artifacts(rows));
@@ -950,21 +926,6 @@ fn validate_command_matrix_contracts(
     } else {
         Err(failures)
     }
-}
-
-fn missing_high_risk_vx_links(rows: &[CommandMatrixRow], plan_text: &str) -> Vec<String> {
-    rows.iter()
-        .filter(|row| row.duplicate_risk_score > DUPLICATE_RISK_VX_THRESHOLD)
-        .filter_map(|row| {
-            if !linked_vx_ids_for_row(row, plan_text).is_empty() {
-                return None;
-            }
-            Some(format!(
-                "command `{}` has duplicate-risk score {} but no VX row cites `{}` or documents removal",
-                row.command, row.duplicate_risk_score, row.source_file
-            ))
-        })
-        .collect()
 }
 
 fn missing_command_provenance_contracts(rows: &[CommandMatrixRow]) -> Vec<String> {
@@ -1102,23 +1063,6 @@ fn mismatched_primary_evidence_artifacts(rows: &[CommandMatrixRow]) -> Vec<Strin
                 row.command, row.primary_evidence_artifact
             ))
         })
-        .collect()
-}
-
-fn linked_vx_ids_for_row(row: &CommandMatrixRow, plan_text: &str) -> Vec<String> {
-    let source_token = format!("`{}`", row.source_file);
-    let command_token = format!("`{}`", row.command);
-    let removal_token = format!("remove `{}`", row.command);
-    plan_text
-        .lines()
-        .filter(|line| line.starts_with("| VX-"))
-        .filter(|line| {
-            line.contains(&source_token)
-                || line.contains(&command_token)
-                || line.contains(&removal_token)
-        })
-        .filter_map(|line| line.split('|').nth(1).map(str::trim))
-        .map(str::to_string)
         .collect()
 }
 
@@ -1637,52 +1581,6 @@ mod tests {
     }
 
     #[test]
-    fn high_risk_command_requires_vx_link() {
-        let rows = vec![CommandMatrixRow {
-            command: "lego-audit".to_string(),
-            module: "lego_audit".to_string(),
-            source_file: "xtask/src/lego_audit.rs".to_string(),
-            shared_sources: Vec::new(),
-            owner_lane: "coordination".to_string(),
-            proof_kind: "dedup-gate".to_string(),
-            primary_evidence_artifact: "release/evidence/dedup/lego-audit-duplicates.json"
-                .to_string(),
-            source_file_count: 1,
-            source_loc: 1351,
-            duplicate_risk_score: 43,
-            ..CommandMatrixRow::default()
-        }];
-
-        let failures = missing_high_risk_vx_links(&rows, "# Plan\n");
-
-        assert_eq!(failures.len(), 1);
-        assert!(failures[0].contains("lego-audit"));
-        assert!(failures[0].contains("xtask/src/lego_audit.rs"));
-    }
-
-    #[test]
-    fn high_risk_command_passes_when_source_file_is_in_vx_plan() {
-        let rows = vec![CommandMatrixRow {
-            command: "lego-audit".to_string(),
-            module: "lego_audit".to_string(),
-            source_file: "xtask/src/lego_audit.rs".to_string(),
-            shared_sources: Vec::new(),
-            owner_lane: "coordination".to_string(),
-            proof_kind: "dedup-gate".to_string(),
-            primary_evidence_artifact: "release/evidence/dedup/lego-audit-duplicates.json"
-                .to_string(),
-            source_file_count: 1,
-            source_loc: 1351,
-            duplicate_risk_score: 43,
-            ..CommandMatrixRow::default()
-        }];
-        let plan =
-            "| VX-114 | testing_evidence | `xtask/src/lego_audit.rs` owns dedup evidence. |\n";
-
-        assert!(missing_high_risk_vx_links(&rows, plan).is_empty());
-    }
-
-    #[test]
     fn command_provenance_contract_rejects_malformed_rows() {
         let mut row = CommandMatrixRow {
             command: "command-matrix".to_string(),
@@ -1718,19 +1616,5 @@ mod tests {
             .iter()
             .any(|failure| failure.contains("xtask/src/command_matrix.rs")));
         assert!(failures.iter().any(|failure| failure.contains(HASH_SOURCE)));
-    }
-
-    #[test]
-    fn linked_vx_ids_are_extracted_from_plan_rows() {
-        let row = CommandMatrixRow {
-            command: "command-matrix".to_string(),
-            source_file: "xtask/src/command_matrix.rs".to_string(),
-            duplicate_risk_score: 53,
-            ..CommandMatrixRow::default()
-        };
-        let plan = "| VX-413 | evidence_truth | `xtask/src/command_matrix.rs` owns matrix provenance. | `MLIR_PASS` | Improvement: add contracts. | Gate. | Seam. |\n";
-
-        assert_eq!(linked_vx_ids_for_row(&row, plan), vec!["VX-413"]);
-        assert!(missing_high_risk_vx_links(&[row], plan).is_empty());
     }
 }

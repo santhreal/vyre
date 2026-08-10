@@ -689,7 +689,7 @@ fn inspect_suite_artifact_source_fingerprint_freshness(
 }
 
 #[cfg(test)]
-mod part9_tests {
+mod backend_suite_tests {
     use super::*;
 
     #[test]

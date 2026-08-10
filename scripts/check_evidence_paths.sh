@@ -6,8 +6,8 @@
 #
 # WHY THIS EXISTS. Before this gate, nothing validated that the paths named
 # inside release evidence still existed. Exactly two consumers read the findings
-# array workspace-wide, release_completion_audit/semantics/part5.rs and
-# vyre_weir_release_gate/semantic/release_hygiene.rs, and BOTH only compare
+# array workspace-wide, release_completion_audit/semantics/optimization_hygiene.rs and
+# vyre_release_gate/semantic/release_hygiene.rs, and BOTH only compare
 # findings.len() against the summed finding_summary counts. Nothing read
 # findings[].path and nothing stat'd it. release_evidence/artifact_status.rs
 # does stat files, but only the artifact files themselves from a hardcoded

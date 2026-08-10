@@ -439,7 +439,7 @@ fn check_declared_workload_matrix_count(
 
 
 #[cfg(test)]
-mod part2_tests {
+mod workload_evidence_tests {
     use super::*;
 
     #[test]

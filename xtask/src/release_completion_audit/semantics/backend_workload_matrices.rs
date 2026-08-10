@@ -595,7 +595,7 @@ fn inspect_duplicate_array_values(
 }
 
 #[cfg(test)]
-mod part10_tests {
+mod backend_workload_matrix_tests {
     use super::*;
 
     #[test]

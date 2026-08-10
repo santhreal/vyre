@@ -27,11 +27,11 @@ fn check_duplicate_object_rows(
     }
 }
 
-include!("part1.rs");
-include!("part2.rs");
-include!("part3.rs");
-include!("part4.rs");
-include!("part5.rs");
-include!("part6.rs");
-include!("part7.rs");
-include!("part8.rs");
+include!("release_evidence.rs");
+include!("workload_evidence.rs");
+include!("benchmark_backend.rs");
+include!("optimization_evidence.rs");
+include!("parser_conformance.rs");
+include!("benchmark_provenance.rs");
+include!("backend_suite.rs");
+include!("markdown_evidence.rs");

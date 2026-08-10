@@ -220,7 +220,7 @@ fn is_test_suite_evidence(evidence: &str) -> bool {
 }
 
 #[cfg(test)]
-mod part6_tests {
+mod optimization_test_matrix_tests {
     use super::*;
 
     #[test]

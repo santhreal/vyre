@@ -360,7 +360,7 @@ fn inspect_backend_conformance_semantics(
 
 
 #[cfg(test)]
-mod part2_tests {
+mod weir_backend_conformance_tests {
     use super::*;
 
     #[test]

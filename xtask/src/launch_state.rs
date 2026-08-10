@@ -28,7 +28,7 @@ struct PrepublishGates {
     feature_matrix: &'static str,
     package_readiness: &'static str,
     release_completion_audit: &'static str,
-    vyre_weir_release_gate: &'static str,
+    vyre_release_gate: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -66,7 +66,7 @@ pub(crate) fn run(args: &[String]) {
             feature_matrix: "pass",
             package_readiness: "pass",
             release_completion_audit: "prepublish-pass",
-            vyre_weir_release_gate: "prepublish-pass",
+            vyre_release_gate: "prepublish-pass",
         },
         external_actions: vec![
             ExternalAction {

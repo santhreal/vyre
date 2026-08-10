@@ -95,7 +95,7 @@ fn inspect_named_blockers(
 }
 
 #[cfg(test)]
-mod part3_tests {
+mod conformance_evidence_tests {
     use super::*;
 
     #[test]

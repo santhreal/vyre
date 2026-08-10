@@ -442,9 +442,8 @@ fn cpu_100x_workspace_root(path: &std::path::Path) -> Option<&std::path::Path> {
     })
 }
 
-
 #[cfg(test)]
-mod part13_tests {
+mod parser_cpu_version_evidence_tests {
     use super::*;
 
     #[test]
@@ -792,12 +791,7 @@ mod part13_tests {
         })];
         let mut blockers = Vec::new();
 
-        inspect_required_cpu_100x_cases(
-            "cpu-only-100x-proof.json",
-            &proof,
-            &cases,
-            &mut blockers,
-        );
+        inspect_required_cpu_100x_cases("cpu-only-100x-proof.json", &proof, &cases, &mut blockers);
 
         assert!(
             blockers.iter().any(|blocker| blocker.contains(
@@ -963,7 +957,7 @@ fn inspect_version_matrix_semantics(
         .cloned()
         .unwrap_or_default();
     // Derived from the release train; see the same fix in
-    // `vyre_weir_release_gate::semantic::version_story`.
+    // `vyre_release_gate::semantic::version_story`.
     for (package, version, _group) in crate::release_train::required_release_packages() {
         let required_package = format!("{package}@{version}");
         if !required_release_packages

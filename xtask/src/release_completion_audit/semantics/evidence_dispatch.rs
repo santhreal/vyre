@@ -491,7 +491,7 @@ fn required_marker_ids_for_evidence(evidence: &str) -> &'static [&'static str] {
 }
 
 #[cfg(test)]
-mod part1_tests {
+mod evidence_dispatch_tests {
     use super::*;
 
     use std::fs;

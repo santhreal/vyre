@@ -700,7 +700,7 @@ fn check_backend_suite_artifact_status(
 }
 
 #[cfg(test)]
-mod part7_tests {
+mod backend_suite_tests {
     use super::*;
 
     #[test]

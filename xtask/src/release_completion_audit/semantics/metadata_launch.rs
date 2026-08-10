@@ -386,7 +386,7 @@ fn release_evidence_workspace_root(path: &Path) -> Option<&Path> {
 }
 
 #[cfg(test)]
-mod part8_tests {
+mod metadata_launch_tests {
     use super::*;
 
     /// The completion audit must consume the same configured external-action
