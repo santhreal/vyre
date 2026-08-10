@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-spirv
 ```
 
-Lower neutral programs into SPIR-V artifacts through the shared emitter path.
+Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
 
 The crate lives at `vyre-emit-spirv`. The `spirv-emitter` owner maintains its
 `emitter` testing contract.

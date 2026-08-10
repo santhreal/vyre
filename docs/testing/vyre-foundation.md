@@ -110,7 +110,6 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --all-features
 | `test` | `optimizer_rewrite_proof_contracts` | `vyre-foundation/tests/optimizer_rewrite_proof_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test optimizer_rewrite_proof_contracts` |
 | `test` | `optimizer_rewrite_proof_registry_contracts` | `vyre-foundation/tests/optimizer_rewrite_proof_registry_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test optimizer_rewrite_proof_registry_contracts` |
 | `test` | `optimizer_value_dependent_reference_parity` | `vyre-foundation/tests/optimizer_value_dependent_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test optimizer_value_dependent_reference_parity` |
-| `test` | `organization_contracts` | `vyre-foundation/tests/organization_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test organization_contracts` |
 | `test` | `output_set_roundtrip` | `vyre-foundation/tests/output_set_roundtrip.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test output_set_roundtrip` |
 | `test` | `plan_of_record_competition` | `vyre-foundation/tests/plan_of_record_competition.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test plan_of_record_competition` |
 | `test` | `program_builder_invariants` | `vyre-foundation/tests/program_builder_invariants.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-foundation --test program_builder_invariants` |

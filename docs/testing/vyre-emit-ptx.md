@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx
 ```
 
-Lower neutral programs into the primary binary backend text artifact.
+Consume verified lowering products and emit the primary binary backend text artifact.
 
 The crate lives at `vyre-emit-ptx`. The `primary-binary-emitter` owner maintains its
 `emitter` testing contract.

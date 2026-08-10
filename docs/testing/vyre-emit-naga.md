@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-naga
 ```
 
-Lower neutral programs into the primary text emitter representation and related binary targets.
+Consume verified lowering products and emit the primary text representation and related binary targets.
 
 The crate lives at `vyre-emit-naga`. The `primary-text-emitter` owner maintains its
 `emitter` testing contract.

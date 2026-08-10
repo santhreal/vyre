@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-metal
 ```
 
-Lower neutral programs into native Apple shader source through the shared emitter path.
+Consume verified lowering products and emit native Apple shader source through the shared emitter path.
 
 The crate lives at `vyre-emit-metal`. The `metal-emitter` owner maintains its
 `emitter` testing contract.

@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust
 ```
 
-Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends.
+Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution.
 
 The crate lives at `vyre-frontend-rust`. The `rust-frontend` owner maintains its
 `frontend` testing contract.

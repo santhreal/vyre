@@ -24,7 +24,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --all-features
 ## Feature sets
 
 - Default feature members: `optimizer`
-- Available manifest features: `all-solvers`, `analysis`, `cpu-parity`, `data`, `default`, `graph-solvers`, `integration`, `logic`, `math-solvers`, `optimizer`, `scheduling`, `telemetry`
+- Available manifest features: `all-solvers`, `analysis`, `cpu-parity`, `data`, `default`, `graph-solvers`, `logic`, `math-solvers`, `optimizer`, `scheduling`, `telemetry`
 - Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
@@ -61,11 +61,9 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --all-features
 | `test` | `natural_config_gradient_via_reference_parity` | `vyre-self-substrate/tests/natural_config_gradient_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test natural_config_gradient_via_reference_parity` |
 | `test` | `natural_gradient_via_reference_parity` | `vyre-self-substrate/tests/natural_gradient_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test natural_gradient_via_reference_parity` |
 | `test` | `optimizer_bfs_and_softmax_parity` | `vyre-self-substrate/tests/optimizer_bfs_and_softmax_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test optimizer_bfs_and_softmax_parity` |
-| `test` | `organization_contracts` | `vyre-self-substrate/tests/organization_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test organization_contracts` |
 | `test` | `planar_rewrite_via_reference_parity` | `vyre-self-substrate/tests/planar_rewrite_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test planar_rewrite_via_reference_parity` |
 | `test` | `platform_doc_consumer_boundary` | `vyre-self-substrate/tests/platform_doc_consumer_boundary.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test platform_doc_consumer_boundary` |
 | `test` | `predict_impact_via_reference_parity` | `vyre-self-substrate/tests/predict_impact_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test predict_impact_via_reference_parity` |
-| `test` | `public_release_surface` | `vyre-self-substrate/tests/public_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test public_release_surface` |
 | `test` | `quantized_via_reference_parity` | `vyre-self-substrate/tests/quantized_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test quantized_via_reference_parity` |
 | `test` | `reconstruct_path_via_reference_parity` | `vyre-self-substrate/tests/reconstruct_path_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test reconstruct_path_via_reference_parity` |
 | `test` | `reduction_metrics_via_reference_parity` | `vyre-self-substrate/tests/reduction_metrics_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-self-substrate --test reduction_metrics_via_reference_parity` |
