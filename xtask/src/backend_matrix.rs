@@ -232,10 +232,10 @@ const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
         tokens: &["persistent", "dispatch"],
     },
     BackendFeatureRequirement {
-        id: "wgpu-megakernel-dispatcher",
-        relative: "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-        role: "WGPU megakernel dispatcher",
-        tokens: &["megakernel", "dispatch"],
+        id: "runtime-artifact-admission",
+        relative: "vyre-runtime/src/artifact_admission.rs",
+        role: "Canonical runtime artifact admission and materialization",
+        tokens: &["ArtifactSession", "materialize"],
     },
     BackendFeatureRequirement {
         id: "wgpu-readback-ring",
