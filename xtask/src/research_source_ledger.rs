@@ -1,6 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::path::Path;
+use std::collections::BTreeSet;
 
 use serde::Deserialize;
 
@@ -8,14 +6,10 @@ use crate::research_key::is_research_key;
 
 pub(crate) const RESEARCH_SOURCE_LEDGER_PATH: &str =
     "docs/optimization/RESEARCH_SOURCE_LEDGER.toml";
-pub(crate) const COMPETITOR_ISSUE_LEDGER_PATH: &str =
-    "docs/optimization/COMPETITOR_ISSUE_LEDGER.toml";
 const RESEARCH_SOURCE_LEDGER_TOML: &str =
     include_str!("../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
 const RESEARCH_SOURCE_LEDGER_SCHEMA_VERSION: u32 = 1;
 const RESEARCH_SOURCE_LEDGER_ID: &str = "vyre-research-source-ledger";
-const COMPETITOR_ISSUE_LEDGER_SCHEMA_VERSION: u32 = 1;
-const COMPETITOR_ISSUE_LEDGER_ID: &str = "vyre-competitor-issue-ledger";
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct ResearchSourceLedger {
@@ -45,60 +39,6 @@ pub(crate) struct ResearchSourceEntry {
     pub(crate) digest_material: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct CompetitorIssueLedger {
-    schema: Option<CompetitorIssueLedgerSchema>,
-    pub(crate) issues: Option<Vec<CompetitorIssueEntry>>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct CompetitorIssueLedgerSchema {
-    version: Option<u32>,
-    ledger: Option<String>,
-    recorded_on: Option<String>,
-    contract: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub(crate) struct CompetitorIssueEntry {
-    pub(crate) id: Option<String>,
-    pub(crate) source_key: Option<String>,
-    pub(crate) url: Option<String>,
-    pub(crate) issue_type: Option<String>,
-    pub(crate) status: Option<String>,
-    pub(crate) affected_version: Option<String>,
-    pub(crate) labels: Option<Vec<String>>,
-    pub(crate) local_fixture: Option<String>,
-    pub(crate) vx_rows: Option<Vec<String>>,
-    pub(crate) digest_material: Option<String>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct ResearchSourceUnknownVxRow {
-    pub(crate) key: String,
-    pub(crate) vx_row: String,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct CompetitorIssueUnknownVxRow {
-    pub(crate) id: String,
-    pub(crate) vx_row: String,
-}
-
-pub(crate) fn read_research_source_ledger(root: &Path) -> Result<ResearchSourceLedger, String> {
-    let path = root.join(RESEARCH_SOURCE_LEDGER_PATH);
-    let text = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {RESEARCH_SOURCE_LEDGER_PATH}: {error}"))?;
-    parse_research_source_ledger_text(&text)
-}
-
-pub(crate) fn read_competitor_issue_ledger(root: &Path) -> Result<CompetitorIssueLedger, String> {
-    let path = root.join(COMPETITOR_ISSUE_LEDGER_PATH);
-    let text = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {COMPETITOR_ISSUE_LEDGER_PATH}: {error}"))?;
-    parse_competitor_issue_ledger_text(&text)
-}
-
 pub(crate) fn embedded_research_source_keys() -> Result<BTreeSet<String>, String> {
     let ledger = parse_research_source_ledger_text(RESEARCH_SOURCE_LEDGER_TOML)?;
     Ok(research_source_keys(&ledger))
@@ -108,13 +48,6 @@ fn parse_research_source_ledger_text(text: &str) -> Result<ResearchSourceLedger,
     let ledger = crate::toml_config::parse_embedded_toml(RESEARCH_SOURCE_LEDGER_PATH, text)?;
     validate_research_source_ledger_schema(&ledger)?;
     validate_research_source_ledger_rows(&ledger)?;
-    Ok(ledger)
-}
-
-fn parse_competitor_issue_ledger_text(text: &str) -> Result<CompetitorIssueLedger, String> {
-    let ledger = crate::toml_config::parse_embedded_toml(COMPETITOR_ISSUE_LEDGER_PATH, text)?;
-    validate_competitor_issue_ledger_schema(&ledger)?;
-    validate_competitor_issue_ledger_rows(&ledger)?;
     Ok(ledger)
 }
 
@@ -145,41 +78,6 @@ fn validate_research_source_ledger_schema(ledger: &ResearchSourceLedger) -> Resu
     {
         return Err(format!(
             "{RESEARCH_SOURCE_LEDGER_PATH} schema.contract must describe source row reproducibility and release-floor requirements"
-        ));
-    }
-    Ok(())
-}
-
-fn validate_competitor_issue_ledger_schema(ledger: &CompetitorIssueLedger) -> Result<(), String> {
-    let Some(schema) = ledger.schema.as_ref() else {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} is missing [schema]"
-        ));
-    };
-    if schema.version != Some(COMPETITOR_ISSUE_LEDGER_SCHEMA_VERSION) {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} schema.version must be {COMPETITOR_ISSUE_LEDGER_SCHEMA_VERSION}"
-        ));
-    }
-    if schema.ledger.as_deref() != Some(COMPETITOR_ISSUE_LEDGER_ID) {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} schema.ledger must be `{COMPETITOR_ISSUE_LEDGER_ID}`"
-        ));
-    }
-    let recorded_on =
-        required_competitor_schema_field(schema.recorded_on.as_deref(), "recorded_on")?;
-    if !date_yyyy_mm_dd(recorded_on) {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} schema.recorded_on `{recorded_on}` must use YYYY-MM-DD"
-        ));
-    }
-    let contract = required_competitor_schema_field(schema.contract.as_deref(), "contract")?;
-    if !contract.contains("issue row")
-        || !contract.contains("fixture")
-        || !contract.contains("regression")
-    {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} schema.contract must describe issue row fixture and regression requirements"
         ));
     }
     Ok(())
@@ -266,7 +164,7 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
                     "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` has an empty vx_rows entry"
                 ));
             }
-            if !crate::vx_plan_table::is_vx_row_id(vx_row) {
+            if !is_vx_row_id(vx_row) {
                 return Err(format!(
                     "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` vx_rows entry `{vx_row}` must use VX-###"
                 ));
@@ -298,130 +196,6 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
     Ok(())
 }
 
-fn validate_competitor_issue_ledger_rows(ledger: &CompetitorIssueLedger) -> Result<(), String> {
-    let Some(issues) = ledger.issues.as_ref() else {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} has no [[issues]] entries"
-        ));
-    };
-    if issues.is_empty() {
-        return Err(format!(
-            "{COMPETITOR_ISSUE_LEDGER_PATH} has no [[issues]] entries"
-        ));
-    }
-    let mut ids = BTreeSet::new();
-    for (index, issue) in issues.iter().enumerate() {
-        let id = required_competitor_issue_field(issue.id.as_deref(), index, "id")?;
-        if !id
-            .bytes()
-            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'-')
-        {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}].id `{id}` must use uppercase letters, digits, and dashes"
-            ));
-        }
-        if !ids.insert(id.to_string()) {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} duplicates issue id `{id}`"
-            ));
-        }
-        let source_key =
-            required_competitor_issue_field(issue.source_key.as_deref(), index, "source_key")?;
-        if !is_research_key(source_key) {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` has malformed source_key `{source_key}`"
-            ));
-        }
-        let url = required_competitor_issue_field(issue.url.as_deref(), index, "url")?;
-        let normalized_url = normalize_research_source_url(url);
-        if !normalized_url.starts_with("https://") {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` must use a canonical https URL"
-            ));
-        }
-        let issue_type =
-            required_competitor_issue_field(issue.issue_type.as_deref(), index, "issue_type")?;
-        if !allowed_competitor_issue_type(issue_type) {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` has unsupported issue_type `{issue_type}`"
-            ));
-        }
-        let status = required_competitor_issue_field(issue.status.as_deref(), index, "status")?;
-        if !allowed_competitor_issue_status(status) {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` has unsupported status `{status}`"
-            ));
-        }
-        let affected_version = required_competitor_issue_field(
-            issue.affected_version.as_deref(),
-            index,
-            "affected_version",
-        )?;
-        let Some(labels) = issue.labels.as_ref().filter(|labels| !labels.is_empty()) else {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` is missing labels"
-            ));
-        };
-        if labels.iter().any(|label| label.trim().is_empty()) {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` has an empty label"
-            ));
-        }
-        let local_fixture = required_competitor_issue_field(
-            issue.local_fixture.as_deref(),
-            index,
-            "local_fixture",
-        )?;
-        if !local_fixture
-            .bytes()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-        {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` local_fixture `{local_fixture}` must use lowercase letters, digits, and dashes"
-            ));
-        }
-        let Some(vx_rows) = issue.vx_rows.as_ref().filter(|rows| !rows.is_empty()) else {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` is missing vx_rows"
-            ));
-        };
-        let mut issue_vx_rows = BTreeSet::new();
-        for vx_row in vx_rows {
-            validate_vx_row_id(COMPETITOR_ISSUE_LEDGER_PATH, index, id, vx_row)?;
-            if !issue_vx_rows.insert(vx_row.clone()) {
-                return Err(format!(
-                    "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` duplicates vx_rows entry `{vx_row}`"
-                ));
-            }
-        }
-        let digest_material = required_competitor_issue_field(
-            issue.digest_material.as_deref(),
-            index,
-            "digest_material",
-        )?;
-        if !digest_material.contains(id)
-            || !digest_material.contains(source_key)
-            || (!digest_material.contains(url) && !digest_material.contains(&normalized_url))
-            || !digest_material.contains(issue_type)
-            || !digest_material.contains(status)
-            || !digest_material.contains(affected_version)
-            || !digest_material.contains(local_fixture)
-        {
-            return Err(format!(
-                "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` digest_material must include id, source key, URL, issue type, status, affected version, and local fixture"
-            ));
-        }
-        for label in labels {
-            if !digest_material.contains(label) {
-                return Err(format!(
-                    "{COMPETITOR_ISSUE_LEDGER_PATH} issue[{index}] id `{id}` digest_material must include label `{label}`"
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
 /// Validate a research-ledger taxonomy tag by SHAPE rather than against a
 /// hardcoded value set.
 ///
@@ -446,22 +220,6 @@ fn is_research_vocabulary_tag(value: &str) -> bool {
         && !value.starts_with('-')
         && !value.ends_with('-')
         && !value.contains("--")
-}
-
-fn allowed_competitor_issue_type(value: &str) -> bool {
-    matches!(
-        value,
-        "benchmark-telemetry"
-            | "gpu-memory-pressure"
-            | "performance-cliff"
-            | "portability-correctness"
-            | "recall-regression"
-            | "unsupported-construct"
-    )
-}
-
-fn allowed_competitor_issue_status(value: &str) -> bool {
-    matches!(value, "closed" | "documentation" | "open" | "reproduced")
 }
 
 fn required_indexed_field<'a>(
@@ -492,34 +250,17 @@ fn required_schema_field<'a>(raw: Option<&'a str>, field: &str) -> Result<&'a st
         .ok_or_else(|| format!("{RESEARCH_SOURCE_LEDGER_PATH} schema is missing {field}"))
 }
 
-fn required_competitor_schema_field<'a>(
-    raw: Option<&'a str>,
-    field: &str,
-) -> Result<&'a str, String> {
-    raw.map(str::trim)
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| format!("{COMPETITOR_ISSUE_LEDGER_PATH} schema is missing {field}"))
-}
-
-define_required_indexed_field!(
-    required_competitor_issue_field,
-    COMPETITOR_ISSUE_LEDGER_PATH,
-    "issue"
-);
-
-fn validate_vx_row_id(path: &str, index: usize, owner: &str, vx_row: &str) -> Result<(), String> {
-    let vx_row = vx_row.trim();
-    if vx_row.is_empty() {
-        return Err(format!(
-            "{path} issue[{index}] id `{owner}` has an empty vx_rows entry"
-        ));
+fn is_vx_row_id(id: &str) -> bool {
+    let Some(digits) = id.trim().strip_prefix("VX-") else {
+        return false;
+    };
+    if digits.len() < 3 || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return false;
     }
-    if !crate::vx_plan_table::is_vx_row_id(vx_row) {
-        return Err(format!(
-            "{path} issue[{index}] id `{owner}` vx_rows entry `{vx_row}` must use VX-###"
-        ));
+    if digits.len() > 3 && digits.starts_with('0') {
+        return false;
     }
-    Ok(())
+    digits.parse::<u32>().is_ok()
 }
 
 fn date_yyyy_mm_dd(value: &str) -> bool {
@@ -533,32 +274,6 @@ fn date_yyyy_mm_dd(value: &str) -> bool {
             .all(|(index, byte)| index == 4 || index == 7 || byte.is_ascii_digit())
 }
 
-pub(crate) fn research_source_urls_by_key(
-    ledger: &ResearchSourceLedger,
-) -> BTreeMap<String, String> {
-    ledger
-        .sources
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|source| {
-            let key = source.key.as_deref()?;
-            let url = source.url.as_deref()?;
-            Some((key.to_string(), normalize_research_source_url(url)))
-        })
-        .collect()
-}
-
-pub(crate) fn competitor_issue_source_keys(ledger: &CompetitorIssueLedger) -> BTreeSet<String> {
-    ledger
-        .issues
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|issue| issue.source_key.clone())
-        .collect()
-}
-
 fn research_source_keys(ledger: &ResearchSourceLedger) -> BTreeSet<String> {
     ledger
         .sources
@@ -566,66 +281,6 @@ fn research_source_keys(ledger: &ResearchSourceLedger) -> BTreeSet<String> {
         .unwrap_or_default()
         .iter()
         .filter_map(|source| source.key.clone())
-        .collect()
-}
-
-pub(crate) fn unknown_research_source_vx_rows(
-    ledger: &ResearchSourceLedger,
-    known_vx_rows: &BTreeSet<String>,
-) -> Vec<ResearchSourceUnknownVxRow> {
-    ledger
-        .sources
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .flat_map(|source| {
-            let key = source.key.clone().unwrap_or_default();
-            source
-                .vx_rows
-                .as_deref()
-                .unwrap_or_default()
-                .iter()
-                .filter_map(move |vx_row| {
-                    if known_vx_rows.contains(vx_row) {
-                        None
-                    } else {
-                        Some(ResearchSourceUnknownVxRow {
-                            key: key.clone(),
-                            vx_row: vx_row.clone(),
-                        })
-                    }
-                })
-        })
-        .collect()
-}
-
-pub(crate) fn unknown_competitor_issue_vx_rows(
-    ledger: &CompetitorIssueLedger,
-    known_vx_rows: &BTreeSet<String>,
-) -> Vec<CompetitorIssueUnknownVxRow> {
-    ledger
-        .issues
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .flat_map(|issue| {
-            let id = issue.id.clone().unwrap_or_default();
-            issue
-                .vx_rows
-                .as_deref()
-                .unwrap_or_default()
-                .iter()
-                .filter_map(move |vx_row| {
-                    if known_vx_rows.contains(vx_row) {
-                        None
-                    } else {
-                        Some(CompetitorIssueUnknownVxRow {
-                            id: id.clone(),
-                            vx_row: vx_row.clone(),
-                        })
-                    }
-                })
-        })
         .collect()
 }
 
@@ -677,42 +332,6 @@ url = "https://mlir.llvm.org/docs/Passes/"
         .expect_err("Fix: research source ledger parser must reject incomplete source rows.");
 
         assert!(error.contains("source_class"));
-    }
-
-    #[test]
-    fn ledger_reports_unknown_vx_row_references() {
-        let ledger = parse_research_source_ledger_text(
-            r#"
-[schema]
-version = 1
-ledger = "vyre-research-source-ledger"
-recorded_on = "2026-06-10"
-contract = "Each source row records source row reproducibility and release-floor requirements."
-
-[[sources]]
-key = "MLIR_PASS"
-url = "https://mlir.llvm.org/docs/Passes/"
-source_class = "compiler-official-documentation"
-baseline_type = "compiler-pass-infrastructure"
-reproducibility_class = "official-doc"
-artifact_state = "documentation-only"
-release_floor_eligible = true
-artifact_url = "https://mlir.llvm.org/docs/Passes/"
-vx_rows = ["VX-999"]
-digest_material = "MLIR_PASS|https://mlir.llvm.org/docs/Passes/|compiler-official-documentation|compiler-pass-infrastructure|official-doc|documentation-only|release_floor_eligible=true|https://mlir.llvm.org/docs/Passes/"
-"#,
-        )
-        .expect("Fix: complete research source ledger fixture must parse.");
-
-        let findings = unknown_research_source_vx_rows(&ledger, &BTreeSet::new());
-
-        assert_eq!(
-            findings,
-            vec![ResearchSourceUnknownVxRow {
-                key: "MLIR_PASS".to_string(),
-                vx_row: "VX-999".to_string()
-            }]
-        );
     }
 
     #[test]
@@ -984,68 +603,5 @@ digest_material = "MLIR_PASS|https://mlir.llvm.org/docs/Passes/|compiler-officia
         .expect_err("Fix: research source ledger parser must reject duplicate VX row ids.");
 
         assert!(error.contains("duplicates vx_rows entry"));
-    }
-
-    #[test]
-    fn competitor_issue_ledger_rejects_missing_fixture_mapping() {
-        let error = parse_competitor_issue_ledger_text(
-            r#"
-[schema]
-version = 1
-ledger = "vyre-competitor-issue-ledger"
-recorded_on = "2026-06-10"
-contract = "Each issue row records competitor regression fixture mapping requirements."
-
-[[issues]]
-id = "HYPERSCAN-ISSUE-68"
-source_key = "HYPERSCAN"
-url = "https://github.com/intel/hyperscan/issues/68"
-issue_type = "performance-cliff"
-status = "closed"
-affected_version = "4.5.2"
-labels = ["regex-performance-cliff"]
-vx_rows = ["VX-451"]
-digest_material = "HYPERSCAN-ISSUE-68|HYPERSCAN|https://github.com/intel/hyperscan/issues/68|performance-cliff|closed|4.5.2|regex-performance-cliff"
-"#,
-        )
-        .expect_err("Fix: competitor issue ledger must reject rows without fixture ids.");
-
-        assert!(error.contains("local_fixture"));
-    }
-
-    #[test]
-    fn competitor_issue_ledger_reports_unknown_vx_rows() {
-        let ledger = parse_competitor_issue_ledger_text(
-            r#"
-[schema]
-version = 1
-ledger = "vyre-competitor-issue-ledger"
-recorded_on = "2026-06-10"
-contract = "Each issue row records competitor regression fixture mapping requirements."
-
-[[issues]]
-id = "HYPERSCAN-ISSUE-68"
-source_key = "HYPERSCAN"
-url = "https://github.com/intel/hyperscan/issues/68"
-issue_type = "performance-cliff"
-status = "closed"
-affected_version = "4.5.2"
-labels = ["regex-performance-cliff"]
-local_fixture = "hyperscan-anchor-null-performance-cliff"
-vx_rows = ["VX-999"]
-digest_material = "HYPERSCAN-ISSUE-68|HYPERSCAN|https://github.com/intel/hyperscan/issues/68|performance-cliff|closed|4.5.2|regex-performance-cliff|hyperscan-anchor-null-performance-cliff"
-"#,
-        )
-        .expect("Fix: complete competitor issue ledger fixture must parse.");
-
-        let findings = unknown_competitor_issue_vx_rows(&ledger, &BTreeSet::new());
-
-        assert_eq!(
-            findings,
-            vec![CompetitorIssueUnknownVxRow {
-                id: "HYPERSCAN-ISSUE-68".to_string(),
-                vx_row: "VX-999".to_string()
-            }]
-        );
     }
 }

@@ -253,6 +253,7 @@ required_commands = [
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
+  "vyre-core/src/scan/**",
   "vyre-libs/src/scan/**",
   "vyre-libs/src/decode/**",
   "vyre-primitives/src/matching/**",
@@ -268,8 +269,8 @@ required_commands = [
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
+  "vyre-core/src/scan/**",
   "vyre-libs/src/scan/**",
-  "vyre-libs/src/matching/**",
   "vyre-primitives/src/matching/**",
   "vyre-primitives/src/text/**",
   "vyre-libs/tests/*scan*",
@@ -312,12 +313,13 @@ write = [
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
   "vyre-libs/src/security/**",
+  "vyre-core/src/scan/**",
   "vyre-libs/src/scan/**",
   "scripts/**",
   "release/evidence/**",
 ]
 avoid = [
-  "docs/optimization/ALL_AXES_ACCELERATION_PLAN.md",
+  "BACKLOG.md",
 ]
 required_commands = [
   "cargo_full test -p vyre-foundation wire",
@@ -383,25 +385,20 @@ required_commands = [
 purpose = "Cross-cutting evidence matrices, docs claims, conformance schemas, hygiene classifiers, duplicate detectors, and proof truth gates."
 layer = "Testing/evidence"
 write = [
-  "xtask/src/acceleration_plan_gate.rs",
   "xtask/src/artifact_paths.rs",
   "xtask/src/command_matrix.rs",
   "xtask/src/hot_path_scan.rs",
   "xtask/src/launch_contract.rs",
   "release/repo-boundary.toml",
   "xtask/src/repo_boundary.rs",
-  "xtask/src/research_basis.rs",
   "xtask/src/research_key.rs",
   "xtask/src/research_source_ledger.rs",
-  "xtask/src/research_audit.rs",
-  "xtask/src/research_audit/**",
   "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml",
   "docs/optimization/RESEARCH_SOURCE_LEDGER.toml",
   "xtask/src/release_evidence/expected_artifacts.rs",
   "xtask/src/release_train.rs",
   "xtask/src/source_similar.rs",
   "xtask/src/toml_config.rs",
-  "xtask/src/vx_plan_table.rs",
   "xtask/src/**",
   "release/release-train.toml",
   "release/evidence/**",

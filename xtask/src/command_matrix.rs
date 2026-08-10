@@ -25,31 +25,21 @@ const ARTIFACT_PATHS_SOURCE: &str = "xtask/src/artifact_paths.rs";
 const BENCH_TARGETS_DATA_SOURCE: &str = "docs/optimization/BENCH_TARGETS.toml";
 const BENCHMARK_EVIDENCE_SEMANTICS_SOURCE: &str = "xtask/src/benchmark_evidence_semantics.rs";
 const EXPECTED_ARTIFACTS_SOURCE: &str = "xtask/src/release_evidence/expected_artifacts.rs";
-const COMPETITOR_ISSUE_LEDGER_DATA_SOURCE: &str = "docs/optimization/COMPETITOR_ISSUE_LEDGER.toml";
-const ARCHIVE_REPLAY_AUDITS_DATA_SOURCE: &str = "docs/optimization/ARCHIVE_REPLAY_AUDITS.toml";
 const FRONTIER_LEADERBOARD_BASELINES_DATA_SOURCE: &str =
     "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml";
 const HASH_SOURCE: &str = "xtask/src/hash.rs";
-const INNOVATION_FALSIFICATION_SOURCE: &str = "xtask/src/innovation_falsification.rs";
 const LAUNCH_CONTRACT_SOURCE: &str = "xtask/src/launch_contract.rs";
-const MARKDOWN_TABLE_SOURCE: &str = "xtask/src/markdown_table.rs";
 const OWNERSHIP_SOURCE: &str = "xtask/src/ownership.rs";
 const RELEASE_BENCHMARKS_SOURCE: &str = "xtask/src/release_benchmarks.rs";
 const RELEASE_TRAIN_DATA_SOURCE: &str = "release/release-train.toml";
 const RELEASE_TRAIN_SOURCE: &str = "xtask/src/release_train.rs";
 const REPO_BOUNDARY_DATA_SOURCE: &str = "release/repo-boundary.toml";
 const REPO_BOUNDARY_SOURCE: &str = "xtask/src/repo_boundary.rs";
-const RESEARCH_AUDIT_SOURCE: &str = "xtask/src/research_audit.rs";
-const RESEARCH_BASIS_SOURCE: &str = "xtask/src/research_basis.rs";
 const RESEARCH_KEY_SOURCE: &str = "xtask/src/research_key.rs";
-const RESEARCH_PLAN_COVERAGE_SOURCE: &str = "xtask/src/research_plan_coverage.rs";
 const RESEARCH_SOURCE_LEDGER_SOURCE: &str = "xtask/src/research_source_ledger.rs";
 const RESEARCH_SOURCE_LEDGER_DATA_SOURCE: &str = "docs/optimization/RESEARCH_SOURCE_LEDGER.toml";
-const RULES_AS_DATA_SOURCE: &str = "xtask/src/rules_as_data.rs";
-const RULES_AS_DATA_MANIFEST_SOURCE: &str = "docs/optimization/RULES_AS_DATA_MANIFEST.toml";
 const THRESHOLD_POLICY_DATA_SOURCE: &str = "docs/optimization/THRESHOLD_POLICY.toml";
 const TOML_CONFIG_SOURCE: &str = "xtask/src/toml_config.rs";
-const VX_PLAN_TABLE_SOURCE: &str = "xtask/src/vx_plan_table.rs";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct ResearchAffinityContract {
@@ -59,42 +49,17 @@ struct ResearchAffinityContract {
     proof_artifact_fragment: &'static str,
 }
 
-const RESEARCH_AFFINITY_CONTRACTS: &[ResearchAffinityContract] = &[
-    ResearchAffinityContract {
-        command: "acceleration-plan-gate",
-        affinity: "active-plan-research-grounding",
-        required_shared_sources: &[
-            RESEARCH_BASIS_SOURCE,
-            RESEARCH_KEY_SOURCE,
-            RESEARCH_SOURCE_LEDGER_SOURCE,
-            RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-        ],
-        proof_artifact_fragment: "release/evidence/optimization/",
-    },
-    ResearchAffinityContract {
-        command: "release-benchmarks",
-        affinity: "frontier-benchmark-baseline",
-        required_shared_sources: &[
-            FRONTIER_LEADERBOARD_BASELINES_DATA_SOURCE,
-            RESEARCH_KEY_SOURCE,
-            RESEARCH_SOURCE_LEDGER_SOURCE,
-            RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-        ],
-        proof_artifact_fragment: "release/evidence/benchmarks/",
-    },
-    ResearchAffinityContract {
-        command: "research-audit",
-        affinity: "research-audit-grounding",
-        required_shared_sources: &[
-            RESEARCH_BASIS_SOURCE,
-            RESEARCH_KEY_SOURCE,
-            RESEARCH_SOURCE_LEDGER_SOURCE,
-            RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-            COMPETITOR_ISSUE_LEDGER_DATA_SOURCE,
-        ],
-        proof_artifact_fragment: "release/evidence/optimization/",
-    },
-];
+const RESEARCH_AFFINITY_CONTRACTS: &[ResearchAffinityContract] = &[ResearchAffinityContract {
+    command: "release-benchmarks",
+    affinity: "frontier-benchmark-baseline",
+    required_shared_sources: &[
+        FRONTIER_LEADERBOARD_BASELINES_DATA_SOURCE,
+        RESEARCH_KEY_SOURCE,
+        RESEARCH_SOURCE_LEDGER_SOURCE,
+        RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
+    ],
+    proof_artifact_fragment: "release/evidence/benchmarks/",
+}];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct CommandSpec {
@@ -106,7 +71,6 @@ struct CommandSpec {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum ProofKind {
-    PlanGate,
     HotPathGate,
     DedupGate,
     MatrixEvidence,
@@ -120,7 +84,6 @@ enum ProofKind {
 impl ProofKind {
     fn as_str(self) -> &'static str {
         match self {
-            ProofKind::PlanGate => "plan-gate",
             ProofKind::HotPathGate => "hot-path-gate",
             ProofKind::DedupGate => "dedup-gate",
             ProofKind::MatrixEvidence => "matrix-evidence",
@@ -134,7 +97,6 @@ impl ProofKind {
 
     fn duplicate_risk_weight(self) -> u32 {
         match self {
-            ProofKind::PlanGate => 30,
             ProofKind::HotPathGate => 30,
             ProofKind::DedupGate => 30,
             ProofKind::MatrixEvidence => 28,
@@ -265,12 +227,6 @@ fn command_specs() -> &'static [CommandSpec] {
             module: "quick",
             owner_lane: "coordination",
             proof_kind: ProofKind::Utility,
-        },
-        CommandSpec {
-            command: "acceleration-plan-gate",
-            module: "acceleration_plan_gate",
-            owner_lane: "coordination",
-            proof_kind: ProofKind::PlanGate,
         },
         CommandSpec {
             command: "abstraction-gate",
@@ -554,12 +510,6 @@ fn command_specs() -> &'static [CommandSpec] {
             owner_lane: "coordination",
             proof_kind: ProofKind::MatrixEvidence,
         },
-        CommandSpec {
-            command: "research-audit",
-            module: "research_audit",
-            owner_lane: "coordination",
-            proof_kind: ProofKind::MatrixEvidence,
-        },
     ]
 }
 
@@ -650,39 +600,6 @@ fn module_source_stats(
 
 fn shared_sources_for_command(command: &str) -> &'static [&'static str] {
     match command {
-        "acceleration-plan-gate" => &[
-            ARTIFACT_PATHS_SOURCE,
-            HASH_SOURCE,
-            INNOVATION_FALSIFICATION_SOURCE,
-            MARKDOWN_TABLE_SOURCE,
-            RESEARCH_BASIS_SOURCE,
-            RESEARCH_KEY_SOURCE,
-            RESEARCH_PLAN_COVERAGE_SOURCE,
-            RESEARCH_SOURCE_LEDGER_SOURCE,
-            RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-            RULES_AS_DATA_SOURCE,
-            RULES_AS_DATA_MANIFEST_SOURCE,
-            VX_PLAN_TABLE_SOURCE,
-        ],
-        "research-audit" => &[
-            ARTIFACT_PATHS_SOURCE,
-            HASH_SOURCE,
-            INNOVATION_FALSIFICATION_SOURCE,
-            MARKDOWN_TABLE_SOURCE,
-            REPO_BOUNDARY_DATA_SOURCE,
-            REPO_BOUNDARY_SOURCE,
-            RESEARCH_BASIS_SOURCE,
-            RESEARCH_KEY_SOURCE,
-            RESEARCH_PLAN_COVERAGE_SOURCE,
-            RESEARCH_SOURCE_LEDGER_SOURCE,
-            RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-            COMPETITOR_ISSUE_LEDGER_DATA_SOURCE,
-            ARCHIVE_REPLAY_AUDITS_DATA_SOURCE,
-            RULES_AS_DATA_SOURCE,
-            RULES_AS_DATA_MANIFEST_SOURCE,
-            TOML_CONFIG_SOURCE,
-            VX_PLAN_TABLE_SOURCE,
-        ],
         "hygiene-matrix" => &[THRESHOLD_POLICY_DATA_SOURCE],
         "launch-state" => &[
             LAUNCH_CONTRACT_SOURCE,
@@ -698,7 +615,6 @@ fn shared_sources_for_command(command: &str) -> &'static [&'static str] {
             OWNERSHIP_SOURCE,
             EXPECTED_ARTIFACTS_SOURCE,
             RELEASE_BENCHMARKS_SOURCE,
-            RESEARCH_AUDIT_SOURCE,
         ],
         "metadata-matrix" | "package-readiness" => &[
             RELEASE_TRAIN_DATA_SOURCE,
@@ -722,7 +638,6 @@ fn shared_sources_for_command(command: &str) -> &'static [&'static str] {
             RELEASE_BENCHMARKS_SOURCE,
             REPO_BOUNDARY_DATA_SOURCE,
             REPO_BOUNDARY_SOURCE,
-            RESEARCH_AUDIT_SOURCE,
             TOML_CONFIG_SOURCE,
         ],
         "release-completion-audit" => &[
@@ -1197,16 +1112,11 @@ mod tests {
     }
 
     #[test]
-    fn vx003_rows_include_required_targets_with_owner_and_proof_kind() {
+    fn command_rows_include_required_owner_and_proof_kind() {
         let specs = command_specs()
             .iter()
             .copied()
-            .filter(|spec| {
-                matches!(
-                    spec.command,
-                    "hot-path-scan" | "source-similar" | "acceleration-plan-gate"
-                )
-            })
+            .filter(|spec| matches!(spec.command, "hot-path-scan" | "source-similar"))
             .collect::<Vec<_>>();
         let mut stats = BTreeMap::new();
         stats.insert(
@@ -1216,10 +1126,6 @@ mod tests {
         stats.insert(
             "source_similar",
             fixture_source_stats("xtask/src/source_similar.rs", 1, 1379),
-        );
-        stats.insert(
-            "acceleration_plan_gate",
-            fixture_source_stats("xtask/src/acceleration_plan_gate.rs", 1, 1523),
         );
 
         let rows = rows_from_stats(&specs, &stats, &[]);
@@ -1241,61 +1147,6 @@ mod tests {
         );
         assert_eq!(similar.source_loc, 1379);
         assert_eq!(similar.duplicate_risk_score, 43);
-
-        let plan = row(&rows, "acceleration-plan-gate");
-        assert_eq!(plan.owner_lane, "coordination");
-        assert_eq!(plan.proof_kind, "plan-gate");
-        assert_eq!(plan.source_file_count, 1);
-        assert_eq!(
-            plan.primary_evidence_artifact,
-            "release/evidence/optimization/acceleration-plan-progress.json"
-        );
-        assert_eq!(plan.source_loc, 1523);
-        assert_eq!(plan.duplicate_risk_score, 45);
-    }
-
-    #[test]
-    fn shared_source_helpers_are_declared_for_research_key_users() {
-        assert_eq!(
-            shared_sources_for_command("acceleration-plan-gate"),
-            &[
-                ARTIFACT_PATHS_SOURCE,
-                HASH_SOURCE,
-                INNOVATION_FALSIFICATION_SOURCE,
-                MARKDOWN_TABLE_SOURCE,
-                RESEARCH_BASIS_SOURCE,
-                RESEARCH_KEY_SOURCE,
-                RESEARCH_PLAN_COVERAGE_SOURCE,
-                RESEARCH_SOURCE_LEDGER_SOURCE,
-                RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-                RULES_AS_DATA_SOURCE,
-                RULES_AS_DATA_MANIFEST_SOURCE,
-                VX_PLAN_TABLE_SOURCE
-            ]
-        );
-        assert_eq!(
-            shared_sources_for_command("research-audit"),
-            &[
-                ARTIFACT_PATHS_SOURCE,
-                HASH_SOURCE,
-                INNOVATION_FALSIFICATION_SOURCE,
-                MARKDOWN_TABLE_SOURCE,
-                REPO_BOUNDARY_DATA_SOURCE,
-                REPO_BOUNDARY_SOURCE,
-                RESEARCH_BASIS_SOURCE,
-                RESEARCH_KEY_SOURCE,
-                RESEARCH_PLAN_COVERAGE_SOURCE,
-                RESEARCH_SOURCE_LEDGER_SOURCE,
-                RESEARCH_SOURCE_LEDGER_DATA_SOURCE,
-                COMPETITOR_ISSUE_LEDGER_DATA_SOURCE,
-                ARCHIVE_REPLAY_AUDITS_DATA_SOURCE,
-                RULES_AS_DATA_SOURCE,
-                RULES_AS_DATA_MANIFEST_SOURCE,
-                TOML_CONFIG_SOURCE,
-                VX_PLAN_TABLE_SOURCE
-            ]
-        );
-        assert!(shared_sources_for_command("whats-similar").is_empty());
     }
 
     #[test]
@@ -1312,8 +1163,7 @@ mod tests {
             ]
         );
         // The completion audit reads bench targets and shares the benchmark-evidence
-        // semantics helpers (`release_completion_audit::semantics::part5`, `part6`,
-        // `part8`, `part10`, `part13`), so both belong in its declared shared surface.
+        // semantics helpers, so both belong in its declared shared surface.
         assert_eq!(
             shared_sources_for_command("release-completion-audit"),
             &[
@@ -1327,9 +1177,6 @@ mod tests {
                 TOML_CONFIG_SOURCE
             ]
         );
-        assert!(shared_sources_for_command("research-audit")
-            .iter()
-            .any(|source| *source == REPO_BOUNDARY_SOURCE));
     }
 
     #[test]
@@ -1378,7 +1225,6 @@ mod tests {
                 OWNERSHIP_SOURCE,
                 EXPECTED_ARTIFACTS_SOURCE,
                 RELEASE_BENCHMARKS_SOURCE,
-                RESEARCH_AUDIT_SOURCE
             ]
         );
         assert_eq!(
@@ -1389,9 +1235,6 @@ mod tests {
             shared_sources_for_command("source-similar"),
             &[OWNERSHIP_SOURCE]
         );
-        assert!(shared_sources_for_command("research-audit")
-            .iter()
-            .all(|source| *source != OWNERSHIP_SOURCE));
     }
 
     #[test]

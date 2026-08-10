@@ -3,13 +3,9 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::acceleration_plan_gate::validate_plan_progress_artifact_bytes;
-use crate::artifact_paths::{
-    FRONTIER_LEADERBOARD_ARTIFACT, PLAN_PROGRESS_ARTIFACT, RESEARCH_AUDIT_ARTIFACT,
-};
+use crate::artifact_paths::FRONTIER_LEADERBOARD_ARTIFACT;
 use crate::dedup_report::validate_duplicate_family_report_artifact;
 use crate::hash::sha256_hex;
-use crate::research_audit::validate_research_audit_artifact_bytes;
 
 use super::expected_artifacts::{
     expected_artifact_registry_blockers, COMMAND_MODE_EXTERNAL_ARTIFACTS_ONLY,
@@ -146,19 +142,8 @@ fn artifact_semantic_blockers(
         ));
         return blockers;
     }
-    if artifact == PLAN_PROGRESS_ARTIFACT {
-        blockers.extend(validate_plan_progress_artifact_bytes(bytes));
-        return blockers;
-    }
     if artifact == EXPECTED_ARTIFACT_REGISTRY {
         blockers.extend(expected_artifact_registry_blockers(bytes));
-        return blockers;
-    }
-    if artifact == RESEARCH_AUDIT_ARTIFACT {
-        blockers.extend(validate_research_audit_artifact_bytes(
-            bytes,
-            expected_generator_command,
-        ));
         return blockers;
     }
     if artifact == FRONTIER_LEADERBOARD_ARTIFACT {
@@ -289,11 +274,8 @@ fn owner_lane_for_command(command_args: &[&str]) -> &'static str {
         "optimization-corpus" | "optimization-matrix" => "foundation_optimizer",
         "parser-coherence" => "parser_frontend",
         "weir-matrix" => "flow_weir",
-        "source-similar" | "whats-similar" | "lego-audit" | "research-audit" => "testing_evidence",
-        "docs-check" | "hygiene-matrix" | "test-matrix" | "release-evidence" => {
-            "testing_evidence"
-        }
-        "acceleration-plan-gate" => "testing_evidence",
+        "source-similar" | "whats-similar" | "lego-audit" => "testing_evidence",
+        "docs-check" | "hygiene-matrix" | "test-matrix" | "release-evidence" => "testing_evidence",
         "version-matrix" | "metadata-matrix" | "feature-matrix" => "coordination",
         _ => "coordination",
     }

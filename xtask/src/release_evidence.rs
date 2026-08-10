@@ -347,12 +347,13 @@ fn registry_command_mode(status: &str) -> &'static str {
 mod tests {
     use super::expected_artifacts::expected_artifact_registry_blockers;
     use super::*;
-    use crate::artifact_paths::PLAN_PROGRESS_ARTIFACT;
 
     #[test]
     fn artifact_status_records_generator_owner_and_fingerprints() {
         let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join("release/evidence/metadata/version-matrix.json");
+        let artifact = tmp
+            .path()
+            .join("release/evidence/metadata/version-matrix.json");
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(&artifact, b"{\"blockers\":[]}\n").unwrap();
 
@@ -384,7 +385,9 @@ mod tests {
     #[test]
     fn artifact_status_rejects_public_boundary_leaks() {
         let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join("release/evidence/metadata/version-matrix.json");
+        let artifact = tmp
+            .path()
+            .join("release/evidence/metadata/version-matrix.json");
         std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
         std::fs::write(
             &artifact,
@@ -446,42 +449,6 @@ mod tests {
             assert!(status.freshness_fingerprint.is_some());
             assert!(status.blockers.is_empty(), "{:?}", status.blockers);
         }
-    }
-
-    #[test]
-    fn acceleration_plan_progress_artifact_is_release_indexed_with_freshness() {
-        let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join(PLAN_PROGRESS_ARTIFACT);
-        std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
-        std::fs::write(&artifact, valid_plan_progress_artifact_fixture()).unwrap();
-
-        let statuses = inspect_expected_artifacts(
-            tmp.path(),
-            &[
-                "acceleration-plan-gate",
-                "--progress-json",
-                PLAN_PROGRESS_ARTIFACT,
-            ],
-            expected_artifacts(&["acceleration-plan-gate"]),
-        );
-
-        assert_eq!(
-            expected_artifacts(&["acceleration-plan-gate"]),
-            &[PLAN_PROGRESS_ARTIFACT]
-        );
-        assert_eq!(statuses.len(), 1);
-        let status = &statuses[0];
-        assert_eq!(status.owner_lane, "testing_evidence");
-        assert_eq!(
-            status.generator_command,
-            format!("xtask acceleration-plan-gate --progress-json {PLAN_PROGRESS_ARTIFACT}")
-        );
-        assert_eq!(status.command_mode, COMMAND_MODE_SPAWNED);
-        assert!(status
-            .freshness_fingerprint
-            .as_deref()
-            .is_some_and(|value| value.starts_with("release-evidence-freshness:v1:")));
-        assert!(status.blockers.is_empty(), "{:?}", status.blockers);
     }
 
     #[test]
@@ -638,64 +605,6 @@ mod tests {
     }
 
     #[test]
-    fn plan_progress_artifact_requires_summary_consistency() {
-        let tmp = tempfile::tempdir().unwrap();
-        let artifact = tmp.path().join(PLAN_PROGRESS_ARTIFACT);
-        std::fs::create_dir_all(artifact.parent().unwrap()).unwrap();
-        std::fs::write(
-            &artifact,
-            b"{\"schema_version\":2,\"row_count\":3,\"dedup_seam_count\":2,\"evidence_path_count\":0,\"axis_row_counts\":{\"coordination\":1},\"research_key_counts\":{},\"rows\":[]}\n",
-        )
-        .unwrap();
-
-        let statuses = inspect_expected_artifacts(
-            tmp.path(),
-            &[
-                "acceleration-plan-gate",
-                "--progress-json",
-                PLAN_PROGRESS_ARTIFACT,
-            ],
-            &[PLAN_PROGRESS_ARTIFACT],
-        );
-
-        let blockers = &statuses[0].blockers;
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("schema_version=4")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("dedup_seam_count")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("evidence_path_count")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("axis_row_counts")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("research_key_counts")));
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("row_count must be at least")));
-    }
-
-    fn valid_plan_progress_artifact_fixture() -> String {
-        let row_count = crate::vx_plan_table::VX_PLAN_MIN_ROWS;
-        let rows = (1..=row_count)
-            .map(|index| {
-                format!(
-                    r#"{{"id":"VX-{index:03}","axis":"coordination","proof_gate":"Gate test rejects malformed rows {index}.","dedup_seam":"Plan progress fixture seam {index}.","status":"active","linked_release_artifact":"{PLAN_PROGRESS_ARTIFACT}"}}"#
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",");
-        format!(
-            r#"{{"schema_version":4,"row_count":{row_count},"research_grounded_row_count":{row_count},"dedup_seam_count":{row_count},"duplicate_dedup_seam_count":0,"duplicate_dedup_seams":[],"evidence_path_count":42,"duplicate_evidence_path_count":0,"duplicate_evidence_paths":[],"axis_row_counts":{{"coordination":{row_count}}},"research_key_counts":{{"MLIR_PASS":{row_count}}},"rows":[{rows}]}}
-"#
-        )
-    }
-
-    #[test]
     fn expected_artifact_registry_counts_commands_and_artifacts() {
         let registry = build_expected_artifact_registry(vec![ReleaseExpectedArtifactCommand::new(
             "xtask version-matrix".to_string(),
@@ -712,7 +621,10 @@ mod tests {
         assert_eq!(registry.schema_version, 2);
         assert_eq!(registry.command_count, 2);
         assert_eq!(registry.artifact_count, 4);
-        assert_eq!(registry.commands[0].generator_command, "xtask version-matrix");
+        assert_eq!(
+            registry.commands[0].generator_command,
+            "xtask version-matrix"
+        );
         assert!(registry.commands[0].required);
         assert_eq!(
             registry.commands[1].expected_artifacts,

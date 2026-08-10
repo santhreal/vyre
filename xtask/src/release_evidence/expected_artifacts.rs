@@ -4,8 +4,8 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::artifact_paths::{
-    FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT, PLAN_PROGRESS_ARTIFACT,
-    REGISTERED_OP_DUPLICATES_ARTIFACT, RESEARCH_AUDIT_ARTIFACT, SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
+    FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT,
+    REGISTERED_OP_DUPLICATES_ARTIFACT, SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
 };
 
 pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str =
@@ -100,8 +100,6 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
         "source-similar" => &[SOURCE_SIMILAR_DUPLICATES_ARTIFACT],
         "whats-similar" => &[REGISTERED_OP_DUPLICATES_ARTIFACT],
         "lego-audit" => &[LEGO_AUDIT_DUPLICATES_ARTIFACT],
-        "acceleration-plan-gate" => &[PLAN_PROGRESS_ARTIFACT],
-        "research-audit" => &[RESEARCH_AUDIT_ARTIFACT],
         "release-evidence" => RELEASE_EVIDENCE_EXPECTED_ARTIFACTS,
         "release-completion-audit" => &["release/evidence/final/completion-audit.json"],
         _ => &[],
@@ -179,25 +177,6 @@ fn artifact_contracts_for_command(
     expected_artifacts: &[String],
 ) -> Vec<ReleaseExpectedArtifactContract> {
     let mut contracts = Vec::new();
-    if generator_command.starts_with(crate::research_audit::RESEARCH_AUDIT_COMMAND_PREFIX)
-        && expected_artifacts
-            .iter()
-            .any(|artifact| artifact == RESEARCH_AUDIT_ARTIFACT)
-    {
-        contracts.push(ReleaseExpectedArtifactContract {
-            artifact: RESEARCH_AUDIT_ARTIFACT.to_string(),
-            generator_command: generator_command.to_string(),
-            command_mode: command_mode.to_string(),
-            command_required,
-            schema_version: crate::research_audit::RESEARCH_AUDIT_SCHEMA_VERSION,
-            semantic_validator: crate::research_audit::RESEARCH_AUDIT_SEMANTIC_VALIDATOR
-                .to_string(),
-            required_fields: crate::research_audit::research_audit_required_artifact_fields()
-                .iter()
-                .map(|field| (*field).to_string())
-                .collect(),
-        });
-    }
     if generator_command.starts_with("xtask release-benchmarks")
         && expected_artifacts
             .iter()
@@ -346,19 +325,6 @@ pub(crate) fn expected_artifact_registry_blockers(bytes: &[u8]) -> Vec<String> {
         if command
             .get("generator_command")
             .and_then(|raw| raw.as_str())
-            .is_some_and(|command| {
-                command.starts_with(crate::research_audit::RESEARCH_AUDIT_COMMAND_PREFIX)
-            })
-            && !contracts.iter().any(is_research_audit_contract)
-        {
-            blockers.push(format!(
-                "expected artifact registry command[{index}] must declare research-audit schema v{} semantic contract",
-                crate::research_audit::RESEARCH_AUDIT_SCHEMA_VERSION
-            ));
-        }
-        if command
-            .get("generator_command")
-            .and_then(|raw| raw.as_str())
             .is_some_and(|command| command.starts_with("xtask release-benchmarks"))
             && artifacts
                 .iter()
@@ -477,24 +443,6 @@ fn allowed_command_mode(command_mode: &str) -> bool {
     )
 }
 
-fn is_research_audit_contract(contract: &serde_json::Value) -> bool {
-    contract.get("artifact").and_then(|raw| raw.as_str()) == Some(RESEARCH_AUDIT_ARTIFACT)
-        && contract.get("schema_version").and_then(|raw| raw.as_u64())
-            == Some(crate::research_audit::RESEARCH_AUDIT_SCHEMA_VERSION.into())
-        && contract
-            .get("semantic_validator")
-            .and_then(|raw| raw.as_str())
-            == Some(crate::research_audit::RESEARCH_AUDIT_SEMANTIC_VALIDATOR)
-        && contract
-            .get("required_fields")
-            .and_then(serde_json::Value::as_array)
-            .is_some_and(|fields| {
-                crate::research_audit::research_audit_required_artifact_fields()
-                    .iter()
-                    .all(|required| fields.iter().any(|field| field.as_str() == Some(*required)))
-            })
-}
-
 fn is_frontier_leaderboard_contract(contract: &serde_json::Value) -> bool {
     contract.get("artifact").and_then(|raw| raw.as_str()) == Some(FRONTIER_LEADERBOARD_ARTIFACT)
         && contract.get("schema_version").and_then(|raw| raw.as_u64())
@@ -516,46 +464,6 @@ fn is_frontier_leaderboard_contract(contract: &serde_json::Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn research_audit_expected_artifact_declares_schema_v5_contract() {
-        let command = ReleaseExpectedArtifactCommand::new(
-            crate::research_audit::RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND.to_string(),
-            true,
-            vec![RESEARCH_AUDIT_ARTIFACT.to_string()],
-        );
-
-        assert_eq!(command.artifact_contracts.len(), 1);
-        assert_eq!(command.command_mode, COMMAND_MODE_SPAWNED);
-        let contract = &command.artifact_contracts[0];
-        assert_eq!(contract.artifact, RESEARCH_AUDIT_ARTIFACT);
-        assert_eq!(
-            contract.generator_command,
-            crate::research_audit::RESEARCH_AUDIT_DEFAULT_GENERATOR_COMMAND
-        );
-        assert_eq!(contract.command_mode, COMMAND_MODE_SPAWNED);
-        assert!(contract.command_required);
-        assert_eq!(
-            contract.schema_version,
-            crate::research_audit::RESEARCH_AUDIT_SCHEMA_VERSION
-        );
-        assert!(contract
-            .required_fields
-            .iter()
-            .any(|field| field == "rust_toml_loader_findings"));
-        assert!(contract
-            .required_fields
-            .iter()
-            .any(|field| field == "plan_row_count"));
-        assert!(contract
-            .required_fields
-            .iter()
-            .any(|field| field == "minimum_plan_row_count"));
-        assert!(contract
-            .required_fields
-            .iter()
-            .any(|field| field == "source_digest"));
-    }
 
     #[test]
     fn release_benchmarks_expected_artifact_declares_frontier_leaderboard_contract() {
@@ -595,40 +503,6 @@ mod tests {
             .iter()
             .any(|field| field == "source_suite"));
         assert!(contract.required_fields.iter().any(|field| field == "rows"));
-    }
-
-    #[test]
-    fn expected_artifact_registry_rejects_research_audit_without_contract() {
-        let registry = br#"{
-  "schema_version": 2,
-  "command_count": 2,
-  "artifact_count": 2,
-  "commands": [
-    {
-      "generator_command": "xtask research-audit --output release/evidence/optimization/research-audit.json",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": ["release/evidence/optimization/research-audit.json"],
-      "artifact_contracts": []
-    },
-    {
-      "generator_command": "xtask release-evidence",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": [
-        "release/evidence/final/release-evidence-run.json",
-        "release/evidence/final/expected-artifacts.json"
-      ],
-      "artifact_contracts": []
-    }
-  ]
-}"#;
-
-        let blockers = expected_artifact_registry_blockers(registry);
-
-        assert!(blockers
-            .iter()
-            .any(|blocker| blocker.contains("research-audit schema v7 semantic contract")));
     }
 
     #[test]

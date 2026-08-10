@@ -1,7 +1,3 @@
-pub(crate) const PLAN_PROGRESS_ARTIFACT: &str =
-    "release/evidence/optimization/acceleration-plan-progress.json";
-pub(crate) const RESEARCH_AUDIT_ARTIFACT: &str =
-    "release/evidence/optimization/research-audit.json";
 pub(crate) const FRONTIER_LEADERBOARD_ARTIFACT: &str =
     "release/evidence/benchmarks/frontier-leaderboard.json";
 

@@ -1,39 +1,36 @@
 # Vyre optimization control plane
 
-This directory is the canonical coordination surface for performance work in
-Vyre. Older optimization plans, audits, release notes, and internals are
-evidence. They are not authoritative unless this directory links them for a
-specific workstream.
+Applies to Vyre 0.7.2.
+
+This directory defines the canonical contracts for performance work in Vyre.
+Older optimization plans, audits, release notes, and internals are evidence.
+They do not assign work.
 
 The goal is swarm-safe optimization: thousands of agents can improve the
 codebase without duplicating work, moving code into the wrong layer, or
 shipping superficial patches.
 
 Start with [`START_HERE.md`](START_HERE.md). Use
-[`LEGACY_DOCS.md`](LEGACY_DOCS.md) when you find an older plan or audit.
-The executable backlog lives in `ROADMAP.md` and the patch contract in
-`AGENT_CONTRACT.md`, both in this directory. Neither is linked here because both
-are maintainer working documents excluded from the repository, so they are present
-for a maintainer and absent from a clone; the precedence list below names them for
-the record. Active work claims live in [`CLAIMS.toml`](CLAIMS.toml).
+[`LEGACY_DOCS.md`](LEGACY_DOCS.md) when you find an older plan or audit. The
+only executable queue is the maintainer's local root `BACKLOG.md`. This
+directory owns the public patch contract below, lane reservations in
+[`CLAIMS.toml`](CLAIMS.toml), and the generated control artifacts.
 
 ## Precedence
 
 For optimization, performance, backend consolidation, and op-placement work:
 
-1. `docs/optimization/README.md` defines the control plane.
-2. `docs/optimization/OWNERSHIP.toml` defines write ownership and swarm lanes.
-3. `docs/optimization/AGENT_CONTRACT.md` defines what a patch must prove.
-4. `docs/optimization/TAXONOMY.md` defines the accepted optimization classes.
-5. `docs/optimization/ROADMAP.md` defines the executable backlog.
-6. `docs/optimization/OP_MATRIX.toml` defines op/backend coverage tracking.
+1. The root `BACKLOG.md` defines active work.
+2. `docs/optimization/README.md` defines the optimization control plane.
+3. `docs/optimization/OWNERSHIP.toml` defines write ownership and lanes.
+4. The patch contract in this document defines what a change must prove.
+5. `docs/optimization/TAXONOMY.md` defines accepted optimization classes.
+6. `docs/optimization/OP_MATRIX.toml` defines op and backend coverage.
 7. `docs/optimization/BENCH_TARGETS.toml` defines benchmark targets and baseline classes.
-8. Other docs and audits are reference material unless one of the files above
-   delegates a task to them.
+8. Other docs and audits are reference material only.
 
-When another document conflicts with this directory, this directory wins.
-Update the lower-precedence document with a supersession note instead of
-creating a second plan.
+When another document conflicts with this directory, correct it. Migrate any
+executable item into the root backlog and delete the parallel plan.
 
 ## Non-negotiable architecture
 
@@ -80,7 +77,7 @@ the main integrator explicitly expands scope.
 
 Required lanes:
 
-- `coordination`: canonical roadmap, claims, lane boundaries, and enforcement scripts.
+- `coordination`: canonical backlog, claims, lane boundaries, and enforcement scripts.
 - `foundation_optimizer`: IR rewrites, fact graph, canonicalization, pass timing.
 - `foundation_wire`: canonical bytes, fingerprints, serialization allocation behavior.
 - `driver_shared`: backend-neutral launch, binding, validation, cache, residency.
@@ -270,42 +267,9 @@ Required structural checks:
 - No duplicated optimizer logic inside drivers.
 - No op support claim without matrix coverage and tests.
 - No benchmark target without a baseline row.
-- No new optimization plan outside this directory unless it has a supersession
-  header pointing back here.
+- No new optimization plan, roadmap, backlog, worklist, or execution-status
+  document outside the root `BACKLOG.md`.
 
 When these checks are not yet automated, the patch must include the grep/script
 used as proof and a follow-up enforcement issue in this directory.
 
-## The research-audit artifact
-
-`research-audit` writes `release/evidence/optimization/research-audit.json`. Run it
-with
-
-```bash
-./cargo_full run --bin xtask -- research-audit \
-    --output release/evidence/optimization/research-audit.json
-```
-
-The artifact is a single JSON object. Its schema is versioned by `schema_version`,
-and a reader that does not recognize that number must stop rather than guess at the
-field meanings. The fields you will use most:
-
-- `schema_version` - integer schema version of this artifact.
-- `generator_command` - the exact command that produced the file, so a stale artifact
-  can be regenerated without guesswork.
-- `plan_row_count` and `minimum_plan_row_count` - rows found, and the floor the gate
-  requires.
-- `source_ledger_findings` - one entry per problem found in
-  `RESEARCH_SOURCE_LEDGER.toml`, each naming the ledger key and what is wrong with it.
-- `competitor_issue_findings`, `research_plan_coverage_findings`,
-  `rules_as_data_findings` - the same finding shape for the other Tier-B manifests.
-- `blockers` - the release-blocking subset. An empty array is the only passing state;
-  the command exits non-zero when it is non-empty.
-- `source_digest` - a digest of every source file the audit read. It changes whenever
-  an input changes, so a downstream gate can tell a fresh artifact from one generated
-  against different inputs.
-
-Exit codes: `0` when `blockers` is empty, `1` when it is not, and `2` when an input
-manifest cannot be read or parsed. The command never writes a partial artifact: a
-read or parse failure exits before the file is opened, so an existing artifact is
-never silently replaced by a truncated one.

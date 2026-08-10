@@ -4,7 +4,6 @@ use std::env;
 use std::process;
 
 mod abstraction_gate;
-mod acceleration_plan_gate;
 mod artifact_paths;
 mod backend_matrix;
 mod bench_crossback;
@@ -28,7 +27,6 @@ mod heuristic_audit;
 mod hot_path_scan;
 mod hygiene_matrix;
 mod implementation_family;
-mod innovation_falsification;
 mod json_output;
 mod launch_contract;
 mod launch_state;
@@ -37,7 +35,6 @@ mod lego_quick;
 mod lint_shape_tests;
 mod list_ops;
 mod manifest_walk;
-mod markdown_table;
 mod metadata_matrix;
 mod op_matrix;
 mod operation_schema;
@@ -62,12 +59,8 @@ mod release_gate;
 mod release_train;
 mod release_workload_matrix;
 mod repo_boundary;
-mod research_audit;
-mod research_basis;
 mod research_key;
-mod research_plan_coverage;
 mod research_source_ledger;
-mod rules_as_data;
 mod shrink;
 mod source_similar;
 mod test_matrix;
@@ -77,7 +70,6 @@ mod trace_f32;
 mod use_paths;
 mod verify_rewrite_proofs;
 mod version_matrix;
-mod vx_plan_table;
 mod vyre_release_gate;
 mod weir_matrix;
 mod whats_similar;
@@ -91,7 +83,6 @@ fn print_help() {
          \n\
          SUBCOMMANDS:\n\
            quick-check --op NAME               Run minimal <5s verification path for a single op\n\
-           acceleration-plan-gate [--plan PATH] Enforce evidence-backed VX acceleration plan rows\n\
            abstraction-gate                     Enforce registered building-block boundaries\n\
            bench-crossback [program]           Cross-backend perf table\n\
            backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy\n\
@@ -129,7 +120,6 @@ fn print_help() {
            release-evidence                    Generate cheap structural release evidence artifacts\n\
            vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure\n\
            recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
-           research-audit [--output PATH]      Generate research-grounding audit evidence for the VX plan\n\
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
            verify-rewrite-proofs               Verify optimizer rewrite proof fixtures\n\
            hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers\n\
@@ -154,7 +144,6 @@ fn main() {
 
     match args[1].as_str() {
         "quick-check" => quick::cmd_quick_check(&args),
-        "acceleration-plan-gate" => acceleration_plan_gate::run(&args),
         "abstraction-gate" => abstraction_gate::run(&args),
         "bench-crossback" => bench_crossback::run(&args),
         "backend-matrix" => backend_matrix::run(&args),
@@ -187,7 +176,6 @@ fn main() {
         "release-evidence" => release_evidence::run(&args),
         "vyre-release-gate" => vyre_release_gate::run(&args),
         "recursion-gate" => recursion_gate::run(&args),
-        "research-audit" => research_audit::run(&args),
         "heuristic-audit" => heuristic_audit::run(&args),
         "hygiene-matrix" => hygiene_matrix::run(&args),
         "trace-f32" => trace_f32::run_cmd(&args),

@@ -16,7 +16,7 @@ rebuild every binary, execute every help route, and reject drift.
 | `xtask` | `public_api_check` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `scaffold_rule` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `xtask` | internal | `abstraction-gate`, `acceleration-plan-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `research-audit`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `weir-matrix`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
+| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `weir-matrix`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
 | `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
@@ -357,7 +357,6 @@ cargo_full run --bin xtask -- <subcommand> [options]
 
 SUBCOMMANDS:
 quick-check --op NAME               Run minimal <5s verification path for a single op
-acceleration-plan-gate [--plan PATH] Enforce evidence-backed VX acceleration plan rows
 abstraction-gate                     Enforce registered building-block boundaries
 bench-crossback [program]           Cross-backend perf table
 backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy
@@ -395,7 +394,6 @@ release-completion-audit [--output PATH]  Generate final prompt-to-artifact audi
 release-evidence                    Generate cheap structural release evidence artifacts
 vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure
 recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)
-research-audit [--output PATH]      Generate research-grounding audit evidence for the VX plan
 heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls
 verify-rewrite-proofs               Verify optimizer rewrite proof fixtures
 hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers
