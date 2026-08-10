@@ -4,20 +4,20 @@ use std::io::{BufRead, BufReader, Write};
 use crate::runner::{evaluate_candidate_headless, RunConfig};
 
 #[derive(Debug, Deserialize)]
-pub struct EvolveRequest {
-    pub case_id: String,
-    pub candidate_ir: String,
-    pub timeout_ms: u64,
+struct EvolveRequest {
+    case_id: String,
+    candidate_ir: String,
+    timeout_ms: u64,
 }
 
 #[derive(Debug, Serialize)]
-pub struct EvolveResponse {
-    pub case_id: String,
-    pub fitness: Option<f64>,
-    pub error: Option<String>,
+struct EvolveResponse {
+    case_id: String,
+    fitness: Option<f64>,
+    error: Option<String>,
 }
 
-pub fn run_evolve_server() -> anyhow::Result<()> {
+pub(super) fn run_evolve_server() -> anyhow::Result<()> {
     let registry = crate::registry::collect_all();
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();

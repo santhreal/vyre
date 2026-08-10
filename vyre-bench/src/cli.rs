@@ -135,12 +135,12 @@ enum Commands {
     EvolveServer,
 }
 
-pub fn run_cli() -> anyhow::Result<()> {
+pub(super) fn run_cli() -> anyhow::Result<()> {
     env_logger::init();
     run_cli_with(std::env::args_os())
 }
 
-pub fn run_cli_with<I, T>(args: I) -> anyhow::Result<()>
+fn run_cli_with<I, T>(args: I) -> anyhow::Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,

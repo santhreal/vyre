@@ -5,7 +5,9 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::Ident;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::hash::fnv1a::{fnv1a32_mul_xor_word_expr, fnv1a32_mul_xor_word_state};
+use crate::hash::fnv1a::fnv1a32_mul_xor_word_expr;
+#[cfg(feature = "inventory-registry")]
+use crate::hash::fnv1a::fnv1a32_mul_xor_word_state;
 
 use super::ast_ops::{AST_ADD, AST_PTR_DEREF, AST_VAR};
 

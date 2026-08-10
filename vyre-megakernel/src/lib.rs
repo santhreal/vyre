@@ -366,7 +366,7 @@ pub(crate) enum CompilerFailureKind {
 impl CompilerFailureKind {
     /// Stable ASCII code for logs and serialized evidence.
     #[must_use]
-    pub const fn as_str(self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::InvalidProgram => "MKC001_INVALID_PROGRAM",
             Self::MissingSymbol => "MKC002_MISSING_SYMBOL",
