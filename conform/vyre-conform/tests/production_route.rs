@@ -22,9 +22,8 @@ fn wgpu_production_route_executes_canonical_artifact() {
 
     let session = ProductionSession::compile(&program, registration)
         .expect("Fix: production conformance compilation and materialization must succeed");
-    let initial = [0_u8; 4];
     let outputs = session
-        .submit(&[initial.as_slice()])
+        .submit(&[])
         .expect("Fix: typed artifact submission must succeed");
 
     assert_eq!(outputs, vec![7_u32.to_le_bytes().to_vec()]);
