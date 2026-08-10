@@ -74,6 +74,10 @@ impl DeadBufferElim {
         );
         let entry = staged.into_entry_vec();
 
+        if buffers.len() == program.buffers().len() && entry.as_slice() == program.entry() {
+            return PassResult::unchanged(program);
+        }
+
         let optimized = Program::wrapped(buffers, workgroup_size, entry)
             .with_optional_entry_op_id(entry_op_id)
             .with_non_composable_with_self(non_composable);
@@ -387,6 +391,27 @@ mod tests {
             crate::optimizer::ProgramPass::analyze(&DeadBufferElim, &program),
             PassAnalysis::SKIP
         );
+    }
+
+    /// WHY: liveness may keep every declaration after filtering even when no buffer is an output;
+    /// reporting that no-op as changed prevents the fixed-point scheduler from converging.
+    #[test]
+    fn side_effectful_control_reference_reports_unchanged() {
+        let program = Program::wrapped(
+            vec![BufferDecl::read_write("state", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::if_then(
+                Expr::atomic_add("state", Expr::u32(0), Expr::u32(1)),
+                vec![Node::store("state", Expr::u32(0), Expr::u32(2))],
+            )],
+        );
+
+        let first = DeadBufferElim::transform(program);
+        let second = DeadBufferElim::transform(first.program.clone());
+
+        assert!(first.changed);
+        assert!(!second.changed);
+        assert_eq!(second.program, first.program);
     }
 
     #[test]
