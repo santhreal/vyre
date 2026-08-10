@@ -25,9 +25,9 @@ impl ExprRef {
 
 /// Bump-allocated expression arena.
 ///
-/// This is an opt-in migration path for builders that create many temporary
-/// expression nodes. Existing callers can continue to use boxed [`Expr`] trees
-/// through `Program::new`.
+/// This is an opt-in path for builders that create many temporary expression
+/// nodes. Existing callers can continue to use boxed [`Expr`] trees through
+/// [`Program::wrapped`](crate::ir::Program::wrapped).
 #[derive(Default)]
 pub struct ExprArena {
     bump: Bump,

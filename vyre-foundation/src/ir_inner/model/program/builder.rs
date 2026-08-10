@@ -240,9 +240,9 @@ impl Program {
 
     /// Create an arena-backed program scaffold.
     ///
-    /// This constructor is the opt-in migration path for builders that want
+    /// This constructor is the opt-in path for builders that want
     /// [`ExprRef`](crate::ir_inner::model::arena::ExprRef) handles instead of boxed
-    /// expression trees. [`Program::new`] remains the boxed-tree constructor.
+    /// expression trees. [`Program::wrapped`] remains the boxed-tree constructor.
     #[must_use]
     #[inline]
     pub fn with_arena(

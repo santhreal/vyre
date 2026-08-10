@@ -70,7 +70,7 @@ static SENTINEL_BODY_MARKER: u8 = 0xA7;
 /// result. That is precisely the fail-open the sentinel exists to prevent.
 pub static SENTINEL_CPU_REF: CpuFn = structured_intrinsic_cpu;
 
-/// True when [`structured_intrinsic_cpu`] is set as an op's CPU lowering.
+/// True when `structured_intrinsic_cpu` is set as an op's CPU lowering.
 ///
 /// Conformance tooling uses this to flag operations that still expose only the
 /// structured-reference sentinel, so parity status is recorded explicitly

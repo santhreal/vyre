@@ -1,4 +1,4 @@
-//! Typed connections between reusable [`Program`] values.
+//! Typed connections between reusable [`Program`](crate::ir::Program) values.
 //!
 //! `ProgramGraph` is composition metadata over existing Vyre IR. It is not a
 //! second neural IR: every executable node remains an ordinary `Program`.

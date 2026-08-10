@@ -217,12 +217,8 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns `TextParseError::WireEncodeFailed` when the inner
-    /// binary wire encoder fails. This cannot happen for a program
-    /// produced by a successful `Program::new` because every field
-    /// of `Program` is a valid wire input by construction; the
-    /// error path exists only for programs synthesized through
-    /// unsafe means or a wire-format breaking change.
+    /// Returns `TextParseError::WireEncodeFailed` when the program exceeds
+    /// canonical wire-format bounds.
     #[inline]
     #[must_use]
     pub fn to_text(&self) -> Result<String, TextParseError> {

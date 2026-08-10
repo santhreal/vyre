@@ -470,7 +470,7 @@ impl Program {
             .find(|(_, node)| !matches!(node, Node::Region { .. }))
             .map(|(index, node)| {
                 format!(
-                    "program entry node {index} is `{}` instead of `Node::Region`. Fix: construct runnable programs with Program::wrapped(...) or wrap the top-level body in Node::Region; raw Program::new is reserved for wire decode and negative tests.",
+                    "program entry node {index} is `{}` instead of `Node::Region`. Fix: construct runnable programs with Program::wrapped(...) or wrap the top-level body in Node::Region; raw Program::from_raw_parts is reserved for wire decode and negative tests.",
                     crate::ir_inner::model::node::node_op_id(node)
                 )
             })

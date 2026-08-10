@@ -30,20 +30,6 @@ const ALLOWED_FILES: &[&str] = &[
     "vyre-foundation/src/execution_plan/fusion/helpers.rs",
     "vyre-foundation/src/ir_inner/model/program/meta.rs",
     "vyre-driver/src/strategy/mod.rs",
-    "vyre-self-substrate/src/release_validation_matrix.rs",
-    "vyre-self-substrate/src/optimization_release_passes.rs",
-    "vyre-self-substrate/src/hostile_input_coverage.rs",
-    "vyre-self-substrate/src/cpu_fallback_reachability.rs",
-    "vyre-self-substrate/src/gpu_probe_contract.rs",
-    "vyre-self-substrate/src/hardware/gpu_probe_contract.rs",
-    "vyre-self-substrate/src/optimizer/contracts/optimization_release_passes.rs",
-    "vyre-self-substrate/src/integration/release/release_validation_matrix.rs",
-    "vyre-self-substrate/src/integration/coverage/hostile_input_coverage.rs",
-    "vyre-self-substrate/src/integration/quality/cpu_fallback_reachability.rs",
-    "vyre-self-substrate/src/integration/quality/mod.rs",
-    "vyre-self-substrate/src/c_dialect_matrix.rs",
-    "vyre-self-substrate/src/deep_review_gate.rs",
-    "vyre-self-substrate/src/lib.rs",
     // Capability contract: advertises the regex-accelerator class (incl. the
     // software class) and keeps unsupported devices fail-closed, making the
     // software path VISIBLE to benchmark evidence, the opposite of a hidden
