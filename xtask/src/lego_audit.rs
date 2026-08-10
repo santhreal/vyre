@@ -204,16 +204,9 @@ fn tier_of(op_id: &str) -> Tier {
 }
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
-    let mut ops = Vec::new();
-    for entry in vyre_harness::all_entries() {
-        ops.push(build_info(
-            entry.id,
-            entry
-                .program()
-                .expect("Fix: canonical operation must provide a neutral builder"),
-        ));
-    }
-    ops
+    vyre_harness::all_entries()
+        .filter_map(|entry| entry.program().map(|program| build_info(entry.id, program)))
+        .collect()
 }
 
 fn build_info(id: &'static str, program: Program) -> OpInfo {
@@ -1533,6 +1526,18 @@ mod dedup_contract_tests {
             composed_nodes: 0,
             children: children.iter().map(|child| (*child).to_string()).collect(),
         }
+    }
+
+    /// Signature-only operations belong to the canonical registry but have no IR to compare.
+    #[test]
+    fn signature_only_operations_are_excluded_from_ir_duplicate_analysis() {
+        assert!(vyre_harness::all_entries().any(|entry| entry.program().is_none()));
+        let ops = collect_ops();
+        assert!(ops.iter().all(|op| {
+            vyre_foundation::operation::OperationRegistry::global()
+                .get(&op.id)
+                .is_some_and(|entry| entry.program().is_some())
+        }));
     }
 
     /// This test prevents generated consumer_a/consumer_b aliases from satisfying the two-caller primitive promotion rule.
