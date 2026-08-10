@@ -206,7 +206,7 @@ package = "vyre-frontend-rust"
 path = "vyre-frontend-rust"
 owner = "rust-frontend"
 layer = "frontend"
-responsibility = "Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends."
+responsibility = "Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution."
 allowed_dependencies = ["vyre-foundation"]
 
 [[crate]]
@@ -238,7 +238,7 @@ package = "vyre-emit-naga"
 path = "vyre-emit-naga"
 owner = "primary-text-emitter"
 layer = "emitter"
-responsibility = "Lower neutral programs into the primary text emitter representation and related binary targets."
+responsibility = "Consume verified lowering products and emit the primary text representation and related binary targets."
 allowed_dependencies = ["vyre-foundation", "vyre-lower"]
 
 [[crate]]
@@ -246,7 +246,7 @@ package = "vyre-emit-ptx"
 path = "vyre-emit-ptx"
 owner = "primary-binary-emitter"
 layer = "emitter"
-responsibility = "Lower neutral programs into the primary binary backend text artifact."
+responsibility = "Consume verified lowering products and emit the primary binary backend text artifact."
 allowed_dependencies = ["vyre-foundation", "vyre-lower"]
 
 [[crate]]
@@ -254,7 +254,7 @@ package = "vyre-emit-spirv"
 path = "vyre-emit-spirv"
 owner = "spirv-emitter"
 layer = "emitter"
-responsibility = "Lower neutral programs into SPIR-V artifacts through the shared emitter path."
+responsibility = "Consume verified lowering products and emit SPIR-V artifacts through the shared writer."
 allowed_dependencies = ["vyre-emit-naga", "vyre-lower"]
 
 [[crate]]
@@ -262,7 +262,7 @@ package = "vyre-emit-metal"
 path = "vyre-emit-metal"
 owner = "metal-emitter"
 layer = "emitter"
-responsibility = "Lower neutral programs into native Apple shader source through the shared emitter path."
+responsibility = "Consume verified lowering products and emit native Apple shader source through the shared emitter path."
 allowed_dependencies = ["vyre-emit-naga", "vyre-foundation", "vyre-lower"]
 
 [[crate]]

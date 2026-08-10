@@ -128,7 +128,7 @@ Own pure WGSL target compilation, portable GPU acquisition, materialization, dis
 
 ### `vyre-emit-metal`
 
-Lower neutral programs into native Apple shader source through the shared emitter path.
+Consume verified lowering products and emit native Apple shader source through the shared emitter path.
 
 - Path: `vyre-emit-metal`
 - Owner: `metal-emitter`
@@ -137,7 +137,7 @@ Lower neutral programs into native Apple shader source through the shared emitte
 
 ### `vyre-emit-naga`
 
-Lower neutral programs into the primary text emitter representation and related binary targets.
+Consume verified lowering products and emit the primary text representation and related binary targets.
 
 - Path: `vyre-emit-naga`
 - Owner: `primary-text-emitter`
@@ -146,7 +146,7 @@ Lower neutral programs into the primary text emitter representation and related 
 
 ### `vyre-emit-ptx`
 
-Lower neutral programs into the primary binary backend text artifact.
+Consume verified lowering products and emit the primary binary backend text artifact.
 
 - Path: `vyre-emit-ptx`
 - Owner: `primary-binary-emitter`
@@ -155,7 +155,7 @@ Lower neutral programs into the primary binary backend text artifact.
 
 ### `vyre-emit-spirv`
 
-Lower neutral programs into SPIR-V artifacts through the shared emitter path.
+Consume verified lowering products and emit SPIR-V artifacts through the shared writer.
 
 - Path: `vyre-emit-spirv`
 - Owner: `spirv-emitter`
@@ -182,7 +182,7 @@ Parse C input and lower supported language constructs into typed Vyre programs.
 
 ### `vyre-frontend-rust`
 
-Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends.
+Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution.
 
 - Path: `vyre-frontend-rust`
 - Owner: `rust-frontend`
