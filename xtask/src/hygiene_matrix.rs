@@ -1281,7 +1281,6 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
         "test_matrix",
         "version_matrix",
         "vyre_release_gate",
-        "weir_matrix",
     ] {
         match crate::command_matrix::resolve_module_source(root, module) {
             Ok(path) => scan_file(&path, scanned_files, findings),
@@ -2078,7 +2077,6 @@ fn is_hygiene_rule_source(path: &Path) -> bool {
         "xtask/src/optimization_matrix.rs",
         "xtask/src/release_completion_audit.rs",
         "xtask/src/vyre_release_gate/mod.rs",
-        "xtask/src/weir_matrix.rs",
         "xtask/src/whats_similar.rs",
         "xtask/src/parser_coherence.rs",
     ]

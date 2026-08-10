@@ -91,12 +91,6 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/parser/external-dataflow-contracts.json",
             "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
         ],
-        "weir-matrix" => &[
-            "release/evidence/weir/weir-analysis-api-matrix.json",
-            "release/evidence/weir/weir-vyre-integration-tests.json",
-            "release/evidence/weir/weir-readme-contracts.json",
-            "release/evidence/weir/weir-flow-release-contracts.json",
-        ],
         "source-similar" => &[SOURCE_SIMILAR_DUPLICATES_ARTIFACT],
         "whats-similar" => &[REGISTERED_OP_DUPLICATES_ARTIFACT],
         "lego-audit" => &[LEGO_AUDIT_DUPLICATES_ARTIFACT],

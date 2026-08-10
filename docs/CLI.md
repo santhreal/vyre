@@ -16,7 +16,7 @@ rebuild every binary, execute every help route, and reject drift.
 | `xtask` | `public_api_check` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `scaffold_rule` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `weir-matrix`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
+| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
 | `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
@@ -369,13 +369,13 @@ compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondar
 conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage
 dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version
 docs-check                           Validate manifest-backed documentation lifecycle and generated navigation
-feature-matrix [--output PATH]      Generate Vyre/Weir crate feature evidence matrix
+feature-matrix [--output PATH]      Generate Vyre crate feature evidence matrix
 print-composition <op_id>           Walk an op's Region tree and print its decomposition chain
 trace-f32 <op_id>                   Run an op's test_inputs through vyre-reference and dump expected_output literal
 gate1                               Enforce Gate 1 complexity budget (CI floor)
 launch-state [--output PATH]       Generate public launch completion state evidence
 list-ops [--write PATH|--check]     Render or check the schema-derived operation inventory
-metadata-matrix [--output PATH]     Generate Vyre/Weir crate metadata evidence
+metadata-matrix [--output PATH]     Generate Vyre crate metadata evidence
 operation-schema [--output PATH] [--check] [--validate PATH]  Generate or verify the canonical live operation contract schema
 op-matrix [--output PATH]           Generate operation/backend coverage evidence
 optimization-matrix [--output PATH] Generate release optimization integration evidence
@@ -383,8 +383,7 @@ package-readiness [--output PATH]  Generate pre-publish package order evidence
 optimization-corpus [--output PATH]  Generate release optimization corpus manifest
 parser-coherence [--output PATH]   Generate distributed C parser ownership evidence
 platform-boundary                  Fail on consumer names in platform crate docs/comments
-version-matrix [--output PATH]      Generate Vyre/Weir manifest version matrix
-weir-matrix [--output PATH]         Generate Weir analysis API evidence matrix
+version-matrix [--output PATH]      Generate Vyre manifest version matrix
 catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift
 release-gate                        Pre-publish sanity checks (catalog + gate1 + Cargo.lock clean)
 release-workload-matrix [--output PATH]  Generate cheap release workload family evidence
@@ -396,13 +395,13 @@ vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublicat
 recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)
 heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls
 verify-rewrite-proofs               Verify optimizer rewrite proof fixtures
-hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers
+hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers
 lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management
 lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan
 whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape
 source-similar [--root PATH] [--check] [--include-untracked] [--duplicate-report-json PATH] Repo-wide Rust source duplicate scanner
 hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns
-test-matrix [--output PATH]         Generate Vyre/Weir test architecture evidence
+test-matrix [--output PATH]         Generate Vyre test architecture evidence
 lint-shape-tests [--strict]         Scan test modules for shape-only assertions
 
 --help                              Print this message

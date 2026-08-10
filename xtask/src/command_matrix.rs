@@ -445,12 +445,6 @@ fn command_specs() -> &'static [CommandSpec] {
             proof_kind: ProofKind::MatrixEvidence,
         },
         CommandSpec {
-            command: "weir-matrix",
-            module: "weir_matrix",
-            owner_lane: "coordination",
-            proof_kind: ProofKind::MatrixEvidence,
-        },
-        CommandSpec {
             command: "gate1",
             module: "gate1",
             owner_lane: "coordination",

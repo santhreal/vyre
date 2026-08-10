@@ -47,7 +47,6 @@ const COMMANDS: &[EvidenceCommand] = &[
     EvidenceCommand::required(&["optimization-corpus"]),
     EvidenceCommand::required(&["optimization-matrix"]),
     EvidenceCommand::required(&["parser-coherence"]),
-    EvidenceCommand::required(&["weir-matrix"]),
     EvidenceCommand::required(&[
         "source-similar",
         "--duplicate-report-json",
@@ -422,34 +421,6 @@ mod tests {
             .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
     }
 
-    #[test]
-    fn weir_matrix_artifacts_are_owned_by_flow_lane() {
-        let tmp = tempfile::tempdir().unwrap();
-        for artifact in expected_artifacts(&["weir-matrix"]) {
-            let artifact_path = tmp.path().join(artifact);
-            std::fs::create_dir_all(artifact_path.parent().unwrap()).unwrap();
-            std::fs::write(&artifact_path, b"{\"blockers\":[]}\n").unwrap();
-        }
-
-        let statuses = inspect_expected_artifacts(
-            tmp.path(),
-            &["weir-matrix"],
-            expected_artifacts(&["weir-matrix"]),
-        );
-
-        assert_eq!(statuses.len(), 4);
-        assert!(statuses.iter().any(|status| {
-            status.path == "release/evidence/weir/weir-flow-release-contracts.json"
-        }));
-        for status in &statuses {
-            assert_eq!(status.owner_lane, "flow_weir");
-            assert_eq!(status.generator_command, "xtask weir-matrix");
-            assert_eq!(status.command_mode, COMMAND_MODE_SPAWNED);
-            assert!(status.source_fingerprint.is_some());
-            assert!(status.freshness_fingerprint.is_some());
-            assert!(status.blockers.is_empty(), "{:?}", status.blockers);
-        }
-    }
 
     #[test]
     fn duplicate_family_reports_are_release_indexed() {

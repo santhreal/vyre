@@ -159,14 +159,6 @@ const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
             "compiler-consumer-grammar-gen-contracts.json",
         ],
     ),
-    (
-        "weir-matrix",
-        &[
-            "weir-analysis-api-matrix.json",
-            "weir-vyre-integration-tests.json",
-            "weir-readme-contracts.json",
-        ],
-    ),
 ];
 
 pub(crate) fn check_release_evidence_run(

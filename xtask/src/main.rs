@@ -71,7 +71,6 @@ mod use_paths;
 mod verify_rewrite_proofs;
 mod version_matrix;
 mod vyre_release_gate;
-mod weir_matrix;
 mod whats_similar;
 
 fn print_help() {
@@ -95,13 +94,13 @@ fn print_help() {
            conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage\n\
            dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version\n\
            docs-check                           Validate manifest-backed documentation lifecycle and generated navigation\n\
-           feature-matrix [--output PATH]      Generate Vyre/Weir crate feature evidence matrix\n\
+           feature-matrix [--output PATH]      Generate Vyre crate feature evidence matrix\n\
            print-composition <op_id>           Walk an op's Region tree and print its decomposition chain\n\
            trace-f32 <op_id>                   Run an op's test_inputs through vyre-reference and dump expected_output literal\n\
            gate1                               Enforce Gate 1 complexity budget (CI floor)\n\
            launch-state [--output PATH]       Generate public launch completion state evidence\n\
            list-ops [--write PATH|--check]     Render or check the schema-derived operation inventory\n\
-           metadata-matrix [--output PATH]     Generate Vyre/Weir crate metadata evidence\n\
+           metadata-matrix [--output PATH]     Generate Vyre crate metadata evidence\n\
            operation-schema [--output PATH] [--check] [--validate PATH]  Generate or verify the canonical live operation contract schema\n\
            op-matrix [--output PATH]           Generate operation/backend coverage evidence\n\
            optimization-matrix [--output PATH] Generate release optimization integration evidence\n\
@@ -109,8 +108,7 @@ fn print_help() {
            optimization-corpus [--output PATH]  Generate release optimization corpus manifest\n\
            parser-coherence [--output PATH]   Generate distributed C parser ownership evidence\n\
            platform-boundary                  Fail on consumer names in platform crate docs/comments\n\
-           version-matrix [--output PATH]      Generate Vyre/Weir manifest version matrix\n\
-           weir-matrix [--output PATH]         Generate Weir analysis API evidence matrix\n\
+           version-matrix [--output PATH]      Generate Vyre manifest version matrix\n\
            catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift\n\
            release-gate                        Pre-publish sanity checks (catalog + gate1 + Cargo.lock clean)\n\
            release-workload-matrix [--output PATH]  Generate cheap release workload family evidence\n\
@@ -122,13 +120,13 @@ fn print_help() {
            recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
            verify-rewrite-proofs               Verify optimizer rewrite proof fixtures\n\
-           hygiene-matrix [--output PATH]      Scan Vyre/Weir source hygiene release blockers\n\
+           hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers\n\
            lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management\n\
            lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
            whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape\n\
            source-similar [--root PATH] [--check] [--include-untracked] [--duplicate-report-json PATH] Repo-wide Rust source duplicate scanner\n\
            hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns\n\
-           test-matrix [--output PATH]         Generate Vyre/Weir test architecture evidence\n\
+           test-matrix [--output PATH]         Generate Vyre test architecture evidence\n\
            lint-shape-tests [--strict]         Scan test modules for shape-only assertions\n\
          \n\
            --help                              Print this message\n"
@@ -181,7 +179,6 @@ fn main() {
         "trace-f32" => trace_f32::run_cmd(&args),
         "verify-rewrite-proofs" => verify_rewrite_proofs::run(&args),
         "version-matrix" => version_matrix::run(&args),
-        "weir-matrix" => weir_matrix::run(&args),
         "gate1" => gate1::run(&args),
         "lego-audit" => lego_audit::run(&args),
         "lego-quick" => lego_quick::run(&args),
