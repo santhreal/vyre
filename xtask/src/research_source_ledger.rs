@@ -253,7 +253,7 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
                 "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` artifact_url must use a canonical https URL"
             ));
         }
-        let Some(vx_rows) = source.vx_rows.as_ref().filter(|rows| !rows.is_empty()) else {
+        let Some(vx_rows) = source.vx_rows.as_ref() else {
             return Err(format!(
                 "{RESEARCH_SOURCE_LEDGER_PATH} source[{index}] key `{key}` is missing vx_rows"
             ));
@@ -279,12 +279,14 @@ fn validate_research_source_ledger_rows(ledger: &ResearchSourceLedger) -> Result
         }
         let digest_material =
             required_source_field(source.digest_material.as_deref(), index, "digest_material")?;
+        let compact_release_floor = format!("release_floor_eligible={release_floor_eligible}");
+        let spaced_release_floor = format!("release_floor_eligible = {release_floor_eligible}");
         if !digest_material.contains(key)
             || (!digest_material.contains(url) && !digest_material.contains(&normalized_url))
             || !digest_material.contains(reproducibility_class)
             || !digest_material.contains(artifact_state)
-            || !digest_material
-                .contains(&format!("release_floor_eligible={release_floor_eligible}"))
+            || (!digest_material.contains(&compact_release_floor)
+                && !digest_material.contains(&spaced_release_floor))
             || (!digest_material.contains(artifact_url)
                 && !digest_material.contains(&normalized_artifact_url))
         {
@@ -739,6 +741,37 @@ digest_material = "MLIR_PASS|https://mlir.llvm.org/docs/Passes/|compiler-officia
         .expect_err("Fix: research source ledger parser must reject malformed VX row ids.");
 
         assert!(error.contains("must use VX-###"));
+    }
+
+    #[test]
+    fn ledger_accepts_source_without_active_backlog_link() {
+        let ledger = parse_research_source_ledger_text(
+            r#"
+[schema]
+version = 1
+ledger = "vyre-research-source-ledger"
+recorded_on = "2026-06-10"
+contract = "Each source row records source reproducibility and release-floor requirements."
+
+[[sources]]
+key = "DOCUMENTED_REFERENCE"
+url = "https://example.com/reference"
+source_class = "official-reference-implementation"
+baseline_type = "documented-reference"
+reproducibility_class = "source-available"
+artifact_state = "documentation-only"
+release_floor_eligible = false
+artifact_url = "https://example.com/reference"
+vx_rows = []
+digest_material = "DOCUMENTED_REFERENCE|https://example.com/reference|official-reference-implementation|documented-reference|source-available|documentation-only|release_floor_eligible = false|https://example.com/reference"
+"#,
+        )
+        .expect("research sources need not create active backlog work");
+
+        assert_eq!(
+            ledger.sources.as_deref().unwrap()[0].vx_rows.as_deref(),
+            Some([].as_slice())
+        );
     }
 
     #[test]
