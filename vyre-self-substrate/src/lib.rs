@@ -101,19 +101,27 @@
 //!   onto disjoint sub-trees via planar non-overlapping selection.
 //!   Drops dispatch count from O(N) sequential to O(log N) batched.
 
+#[cfg(feature = "analysis")]
 pub mod analysis;
+#[cfg(feature = "data")]
 pub mod data;
+#[cfg(feature = "graph-solvers")]
 pub mod graph;
+#[cfg(feature = "optimizer")]
 pub mod hardware;
-pub mod integration;
+#[cfg(feature = "logic")]
 pub mod logic;
+#[cfg(feature = "math-solvers")]
 pub mod math;
+#[cfg(feature = "scheduling")]
 pub mod scheduling;
+#[cfg(feature = "telemetry")]
 pub mod telemetry;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "all-solvers"))]
 mod test_support;
 
+#[cfg(feature = "optimizer")]
 /// Self-hosted optimizer keystone  -  the encoder + GPU passes that run
 /// the compiler against its own substrate. Exposed at the lib root so
 /// external consumers (driver-cuda parity tests, conform runners) can
@@ -122,7 +130,7 @@ mod test_support;
 /// private module paths.
 pub mod optimizer;
 
-
+#[cfg(feature = "analysis")]
 pub use analysis::{
     cost_model, dataflow_fixpoint, decision_telemetry, diagnostic_aggregation,
     diagnostic_comparison, effect_signature_check, incremental_invalidation,
@@ -130,47 +138,29 @@ pub use analysis::{
     shape_smt_check,
 };
 
+#[cfg(feature = "logic")]
 pub use logic::{
     adjustment_set_pass_dependency, categorical_check, dnnf_compile, do_calculus_change_impact,
     functorial_pass_composition, string_diagram_ir_rewrite, zx_rewrite,
 };
 
+#[cfg(feature = "data")]
 pub use data::{
     bitset_compression, bitset_summary, matroid_exact_megakernel, matroid_megakernel_scheduler,
     parsing_dispatch_pipeline, scallop_provenance, scallop_provenance_wide, vsa_fingerprint,
 };
 
+#[cfg(feature = "telemetry")]
 pub use telemetry::observability;
 
+#[cfg(feature = "scheduling")]
 pub use scheduling::{
     branch_compaction, frontier_partitioning, frontier_typed_ir, megakernel_schedule,
     multi_corpus_batching, planar_rewrite_pass_scheduler, polyhedral_fusion, spectral_schedule,
     submodular_cache_eviction,
 };
 
-pub use integration::evidence::{
-    benchmark_baselines, c_parser_benchmark_evidence, cuda_ptx_pattern_evidence,
-    optimization_release_evidence,
-};
-pub use integration::{coverage, evidence, quality, release};
-
-pub use optimizer::contracts::{
-    cross_crate_perf_contracts, optimization_composition_contracts, optimization_pass_selection,
-    optimization_registry, optimization_release_passes,
-};
-
-pub use integration::quality::{
-    allocation_regression, architecture_boundary_map, contributor_module_map,
-    crate_metadata_readiness, deep_review_gate, paradigm_shift_plan_audit, public_api_boundary,
-    public_api_doctest_gate,
-};
-
-pub use integration::coverage::{
-    analysis_coverage, c_dialect_matrix, clang_parity_dashboard, graph_layout_coverage,
-    hostile_input_coverage, linux_corpus_parity, parser_semantic_safety, semantic_parity_coverage,
-    test_taxonomy_coverage,
-};
-
+#[cfg(feature = "graph-solvers")]
 pub use graph::{
     adaptive_traverse, alias_registry, csr_bidirectional, csr_forward_or_changed,
     csr_frontier_queue_batch_memory, csr_frontier_queue_batch_resident,
@@ -179,6 +169,7 @@ pub use graph::{
     traversal_dispatch_pipeline, union_find_emit, vast_tree_walk,
 };
 
+#[cfg(feature = "math-solvers")]
 pub use math::{
     amg_pass_solver, bellman_tn_order, differentiable_autotune, fmm_polyhedral_compress,
     kfac_autotune_step, mori_zwanzig_region_coarsen, multigrid_matroid_solver,
@@ -188,13 +179,10 @@ pub use math::{
     tensor_train_compression,
 };
 
+#[cfg(feature = "optimizer")]
 pub(crate) use hardware::dispatch_buffers;
+#[cfg(feature = "optimizer")]
 pub use hardware::{
     device_resident_token_fact_graph, gpu_preprocessing_coverage, gpu_probe_contract,
     memory_ownership_contract,
-};
-
-pub use integration::release::{
-    release_checklist_gate, release_completion_audit, release_gap_findings, release_gpu_evidence,
-    release_launch_sequence, release_scope_docs, release_validation_matrix,
 };

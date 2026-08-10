@@ -20,7 +20,6 @@
 pub mod canonicalize_via_encoded;
 pub mod const_fold_via_encoded;
 pub mod const_prop;
-pub mod contracts;
 pub mod cross_scope_cse;
 pub mod cse_via_encoded;
 pub mod dce_program;
@@ -156,8 +155,3 @@ fn run_encoded_analysis_kernel(
         output,
     )
 }
-
-pub use contracts::{
-    cross_crate_perf_contracts, optimization_composition_contracts, optimization_pass_selection,
-    optimization_registry, optimization_release_passes,
-};

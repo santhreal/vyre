@@ -58,7 +58,7 @@ scheduling = [
     "vyre-primitives/parsing",
 ]
 telemetry = []
-integration = [
+all-solvers = [
     "analysis",
     "data",
     "graph-solvers",
@@ -67,7 +67,6 @@ integration = [
     "scheduling",
     "telemetry",
 ]
-all-solvers = ["integration"]
 cpu-parity = ["all-solvers", "vyre-primitives/cpu-parity"]
 
 [dependencies]
