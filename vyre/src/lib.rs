@@ -156,10 +156,6 @@ pub use vyre_driver::backend;
 /// Public API re-export.
 pub use vyre_foundation::match_result;
 
-/// Pipeline-mode dispatch: compile a Program once, dispatch repeatedly.
-/// Public API re-export.
-/// Public API re-export.
-pub use vyre_driver::pipeline;
 
 // Previously: pub mod bytecode  -  a 637-LOC stack-machine VM publicly
 // re-exported from core. Deleted 2026-04-17. The NFA scan micro-interpreter

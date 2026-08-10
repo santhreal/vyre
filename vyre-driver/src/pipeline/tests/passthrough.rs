@@ -284,7 +284,7 @@ fn native_pipeline_is_used_when_backend_provides_one() {
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Err(BackendError::new(
                 "native backend should be reached via compile, not dispatch. \
-                 Fix: use vyre::pipeline::compile then call CompiledPipeline::dispatch.",
+                 Fix: use vyre_driver::pipeline::compile then call CompiledPipeline::dispatch.",
             ))
         }
         fn compile_native(
