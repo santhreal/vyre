@@ -1,33 +1,35 @@
 {
-  "schema_version": 1,
-  "objective": "complete release/plans/paradigm-shift-100-concrete.md",
-  "current_state": "public_launch_complete",
+  "schema_version": 2,
+  "objective": "publish the canonical Vyre release artifacts",
+  "current_state": "prepublish_release_ready",
   "public_repository": "santhreal/vyre",
   "prepublish_gates": {
     "version_matrix": "pass",
     "metadata_matrix": "pass",
     "feature_matrix": "pass",
-    "package_readiness": "pass",
-    "release_completion_audit": "prepublish-pass",
-    "vyre_weir_release_gate": "prepublish-pass"
+    "package_readiness": "pass"
   },
   "external_actions": [
     {
       "action": "cargo_full publish approved crates in dependency order",
-      "status": "complete",
+      "status": "blocked_pending_user_approval",
       "evidence": "scripts/final-launch.sh + scripts/publish-release.sh + release/evidence/package/publish-readiness.json"
     },
     {
       "action": "verify vyre repository is public",
-      "status": "complete",
+      "status": "blocked_pending_user_approval",
       "evidence": "scripts/final-launch.sh + gh repo view santhreal/vyre --json visibility"
     },
     {
       "action": "git push release branch and tags",
-      "status": "complete",
+      "status": "blocked_pending_user_approval",
       "evidence": "scripts/final-launch.sh"
     }
   ],
-  "blockers": [],
-  "completion_status": "complete"
+  "blockers": [
+    "cargo_full publish is not approved or completed",
+    "vyre repository public verification is not completed",
+    "git push release branch and tags is not approved or completed"
+  ],
+  "completion_status": "not_complete_until_external_actions_are_approved_and_done"
 }

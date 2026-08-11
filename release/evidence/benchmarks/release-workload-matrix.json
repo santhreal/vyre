@@ -29,11 +29,10 @@
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
   "release_suite_case_count": 27,
-  "cpu_sota_contract_count": 39,
-  "cpu_sota_100x_contract_count": 15,
+  "cpu_sota_contract_count": 32,
+  "cpu_sota_100x_contract_count": 14,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",
-    "frontend.c.parser.linux_driver_pipeline",
     "nn.linear_4bit_affine_grouped.1m",
     "release.alias_reaching_def.1m",
     "release.c_ast_traversal.1m",
@@ -315,16 +314,16 @@
         "release.workload.alias_reaching_def"
       ],
       "cpu_sota_contracts": [
-        "release.alias_reaching_def.1m => Weir sparse dataflow and alias-analysis CPU baseline 100x"
+        "release.alias_reaching_def.1m => sparse dataflow and alias-analysis CPU baseline 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.alias_reaching_def.1m"
       ],
       "cpu_sota_baseline_names": [
-        "Weir sparse dataflow and alias-analysis CPU baseline"
+        "sparse dataflow and alias-analysis CPU baseline"
       ],
       "cpu_sota_baseline_crates": [
-        "weir"
+        "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
@@ -354,16 +353,16 @@
         "release.workload.ifds_witness"
       ],
       "cpu_sota_contracts": [
-        "release.ifds_witness.1m => Weir IFDS CPU reachability and witness extraction 100x"
+        "release.ifds_witness.1m => IFDS CPU reachability and witness extraction 100x"
       ],
       "cpu_sota_100x_cases": [
         "release.ifds_witness.1m"
       ],
       "cpu_sota_baseline_names": [
-        "Weir IFDS CPU reachability and witness extraction"
+        "IFDS CPU reachability and witness extraction"
       ],
       "cpu_sota_baseline_crates": [
-        "weir"
+        "vyre-bench"
       ],
       "cpu_sota_backend_ids": [
         "cuda",
@@ -604,6 +603,7 @@
       "dispatch_policy": "resident-routing-kernel",
       "non_megakernel_justification": "architectural: adaptive routing is GPU-side scheduling metadata generation rather than execution of a queued rule opcode stream",
       "matched_cases": [
+        "foundation.reduce.sum.crossover",
         "runtime.adaptive_routing.gpu_resident.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-15-adaptive-routing.json",
@@ -612,11 +612,13 @@
         "release.workload.adaptive_routing"
       ],
       "cpu_sota_contracts": [
+        "foundation.reduce.sum.crossover => rayon CPU reduction baseline 1.1x",
         "runtime.adaptive_routing.gpu_resident.1m => Rayon-parallel CPU scheduler over equivalent routing predicates 10x"
       ],
       "cpu_sota_100x_cases": [],
       "cpu_sota_baseline_names": [
-        "Rayon-parallel CPU scheduler over equivalent routing predicates"
+        "Rayon-parallel CPU scheduler over equivalent routing predicates",
+        "rayon CPU reduction baseline"
       ],
       "cpu_sota_baseline_crates": [
         "rayon"

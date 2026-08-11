@@ -3,9 +3,9 @@
   "path": "README.md",
   "exists": true,
   "read_error": null,
-  "source_bytes": 37392,
+  "source_bytes": 38237,
   "required_tokens": [
-    "0.7.1",
+    "0.7.2",
     "vyre",
     "gpu",
     "cuda",

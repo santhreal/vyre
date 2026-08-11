@@ -3,8 +3,8 @@
   "source_manifest": "docs/optimization/THRESHOLD_POLICY.toml",
   "evidence_artifact": "release/evidence/hygiene/threshold-policy.json",
   "owner_lane": "testing_evidence",
-  "threshold_const_count": 15,
-  "registered_policy_count": 15,
+  "threshold_const_count": 14,
+  "registered_policy_count": 14,
   "rows": [
     {
       "id": "VX475-STAGING_BUFFER_POOL_CLASS_CAP",
@@ -22,7 +22,7 @@
     {
       "id": "VX475-BIND_GROUP_CACHE_CAP",
       "path": "vyre-driver-wgpu/src/buffer/handle.rs",
-      "line": 704,
+      "line": 781,
       "name": "BIND_GROUP_CACHE_CAP",
       "observed_value": "256",
       "unit": "bind group entries",
@@ -98,19 +98,6 @@
       "release_rule": "VX-475"
     },
     {
-      "id": "VX475-STABILIZE_FIXPOINT_CAP",
-      "path": "vyre-foundation/src/optimizer/pre_lowering.rs",
-      "line": 158,
-      "name": "STABILIZE_FIXPOINT_CAP",
-      "observed_value": "16",
-      "unit": "stabilization sweep iterations",
-      "provenance": "Upper bound on the pre-lowering stabilization sweep. A correct pass set converges in a handful of rounds because each round strictly simplifies; the cap only bounds a hypothetical oscillating rewrite so the sweep logs instead of looping forever.",
-      "config_tier": "structural",
-      "override_path": "not operator configurable; raising this hides an oscillating rewrite instead of fixing it",
-      "evidence_link": "release/evidence/hygiene/threshold-policy.json",
-      "release_rule": "VX-475"
-    },
-    {
       "id": "VX475-SHAPE_FACT_CACHE_CAP",
       "path": "vyre-foundation/src/optimizer/program_shape_facts.rs",
       "line": 29,
@@ -165,7 +152,7 @@
     {
       "id": "VX475-RESERVED_MAX_RANGE_MIN",
       "path": "vyre-runtime/src/megakernel/protocol/opcode.rs",
-      "line": 41,
+      "line": 32,
       "name": "RESERVED_MAX_RANGE_MIN",
       "observed_value": "0x0000_FFF0",
       "unit": "opcode value",
@@ -178,7 +165,7 @@
     {
       "id": "VX475-STARVATION_THRESHOLD",
       "path": "vyre-runtime/src/megakernel/scheduler.rs",
-      "line": 51,
+      "line": 48,
       "name": "STARVATION_THRESHOLD",
       "observed_value": "16",
       "unit": "scheduler ticks",
@@ -191,7 +178,7 @@
     {
       "id": "VX475-TENANT_FAIRNESS_THRESHOLD",
       "path": "vyre-runtime/src/megakernel/scheduler.rs",
-      "line": 55,
+      "line": 52,
       "name": "TENANT_FAIRNESS_THRESHOLD",
       "observed_value": "64",
       "unit": "scheduler ticks",

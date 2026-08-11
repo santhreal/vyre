@@ -12,7 +12,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "DSE consumes Weir alias facts"
+      "role": "DSE consumes external alias facts"
     },
     {
       "id": "reaching-def-dse-entrypoint",
@@ -23,10 +23,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "DSE consumes Weir reaching-definition facts"
+      "role": "DSE consumes external reaching-definition facts"
     },
     {
-      "id": "weir-alias-analysis-api",
+      "id": "external-alias-analysis-api",
       "path": "vyre-lower/src/analyses/alias_import/mod.rs",
       "marker": "AliasFactSet",
       "exists": true,
@@ -34,10 +34,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+      "role": "Vyre lowering imports external alias facts through an explicit API"
     },
     {
-      "id": "weir-reaching-def-analysis-api",
+      "id": "external-reaching-def-analysis-api",
       "path": "vyre-lower/src/analyses/reaching_def_import/mod.rs",
       "marker": "import_descriptor_reaching_defs",
       "exists": true,
@@ -45,10 +45,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+      "role": "Vyre lowering imports external reaching-definition facts through an explicit API"
     },
     {
-      "id": "weir-copy-chain-reaching-def-import",
+      "id": "external-copy-chain-reaching-def-import",
       "path": "vyre-lower/src/analyses/reaching_def_import/mod.rs",
       "marker": "resolve_copy_alias",
       "exists": true,
@@ -56,7 +56,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Weir reaching-def import canonicalizes descriptor Copy chains before rewrite legality checks"
+      "role": "External reaching-definition import canonicalizes descriptor Copy chains before rewrite legality checks"
     },
     {
       "id": "dataflow-analysis-pipeline-entrypoint",
@@ -67,7 +67,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Canonical rewrite pipeline consumes Weir alias and reaching-definition facts"
+      "role": "Canonical rewrite pipeline consumes external alias and reaching-definition facts"
     },
     {
       "id": "dataflow-analysis-dse-firing-test",
@@ -78,7 +78,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir reaching-def facts fire DSE in the canonical pipeline"
+      "role": "Integration test proves external reaching-definition facts fire DSE in the canonical pipeline"
     },
     {
       "id": "dataflow-analysis-stlf-firing-test",
@@ -89,7 +89,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Local test proves Weir reaching-def facts fire store/load forwarding"
+      "role": "Local test proves external reaching-definition facts fire store/load forwarding"
     },
     {
       "id": "dataflow-analysis-loop-fusion-firing-test",
@@ -100,7 +100,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir facts unlock loop fusion"
+      "role": "Integration test proves external facts unlock loop fusion"
     },
     {
       "id": "dataflow-analysis-loop-fission-firing-test",
@@ -111,7 +111,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir facts unlock loop fission"
+      "role": "Integration test proves external facts unlock loop fission"
     },
     {
       "id": "dataflow-analysis-licm-firing-test",
@@ -122,7 +122,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir facts unlock LICM load hoisting"
+      "role": "Integration test proves external facts unlock LICM load hoisting"
     }
   ],
   "blockers": []

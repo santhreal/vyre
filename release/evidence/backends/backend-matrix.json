@@ -12,14 +12,14 @@
     "nvidia_smi_device_details": [
       {
         "name": "NVIDIA GeForce RTX 5090",
-        "driver_version": "570.211.01",
+        "driver_version": "580.178.04",
         "memory_total_mib": 32607,
         "compute_capability_major": 12,
         "compute_capability_minor": 0
       }
     ],
-    "nvidia_driver_version": "570.211.01",
-    "nvidia_cuda_version": "12.8",
+    "nvidia_driver_version": "580.178.04",
+    "nvidia_cuda_version": "13.0",
     "nvidia_smi_error": null
   },
   "cuda_feature_markers": [
@@ -56,7 +56,7 @@
       "path": "vyre-emit-ptx/src/patterns/predicated_execution/mod.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 18684,
+      "source_bytes": 18643,
       "implementation_tokens": [
         "predicate",
         "predicated"
@@ -272,32 +272,33 @@
   ],
   "wgpu_feature_markers": [
     {
-      "id": "wgpu-persistent-engine",
-      "path": "vyre-driver-wgpu/src/engine/persistent.rs",
+      "id": "wgpu-artifact-materializer",
+      "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 10763,
+      "source_bytes": 20787,
       "implementation_tokens": [
-        "persistent",
-        "dispatch"
+        "impl ArtifactMaterializer",
+        "fn materialize",
+        "TargetPayload"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
-      "role": "WGPU persistent execution engine"
+      "role": "WGPU authenticated artifact materialization"
     },
     {
-      "id": "wgpu-megakernel-dispatcher",
-      "path": "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
+      "id": "runtime-artifact-admission",
+      "path": "vyre-runtime/src/artifact_admission.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 136412,
+      "source_bytes": 23465,
       "implementation_tokens": [
-        "megakernel",
-        "dispatch"
+        "ArtifactSession",
+        "materialize"
       ],
       "missing_tokens": [],
       "unresolved_markers": [],
-      "role": "WGPU megakernel dispatcher"
+      "role": "Canonical runtime artifact admission and materialization"
     },
     {
       "id": "wgpu-readback-ring",
@@ -318,7 +319,7 @@
       "path": "vyre-driver-wgpu/src/async_dispatch.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17229,
+      "source_bytes": 17738,
       "implementation_tokens": [
         "dispatch_borrowed_async",
         "PipelinePrefetch"
@@ -361,7 +362,7 @@
       "path": "vyre-driver-wgpu/tests/dispatch_never_cpu_fallback.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 5421,
+      "source_bytes": 3945,
       "implementation_tokens": [
         "never",
         "cpu",
@@ -492,6 +493,13 @@
       "dispatches": true,
       "acquire_ok": true,
       "acquire_error": null
+    },
+    {
+      "id": "metal",
+      "precedence": 4294967295,
+      "dispatches": false,
+      "acquire_ok": false,
+      "acquire_error": "unsupported feature `Apple Metal.framework native runtime` on backend `metal`.          Fix: check backend capability before using this feature, or select a backend that supports it."
     }
   ],
   "blockers": []

@@ -9,66 +9,6 @@
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 84,
-      "pattern": "placeholder_text",
-      "text": "/// `(origin, loan)`: origin is a placeholder (a universal/free region)."
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 85,
-      "pattern": "placeholder_text",
-      "text": "pub placeholder: Vec<(Origin, Loan)>,"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 249,
-      "pattern": "placeholder_text",
-      "text": "let mut placeholder = Vec::new();"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 254,
-      "pattern": "placeholder_text",
-      "text": "placeholder.push((origins.intern(f[0]), loans.intern(f[1])));"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 292,
-      "pattern": "placeholder_text",
-      "text": "placeholder,"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 333,
-      "pattern": "placeholder_text",
-      "text": "for &(origin, loan) in &self.placeholder {"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 537,
-      "pattern": "placeholder_text",
-      "text": "/// derived subset between two placeholder origins that is not a"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 538,
-      "pattern": "placeholder_text",
-      "text": "/// known/declared placeholder subset."
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 543,
-      "pattern": "placeholder_text",
-      "text": "let placeholders: HashSet<Origin> = self.placeholder.iter().map(|&(o, _)| o).collect();"
-    },
-    {
-      "path": "vyre-libs/src/borrowck/rustc_facts.rs",
-      "line": 565,
-      "pattern": "placeholder_text",
-      "text": "/// placeholder origins that is not a known/declared placeholder subset."
-    },
-    {
       "path": "vyre-bench/src/cases/scan_ac_irregular.rs",
       "line": 83,
       "pattern": "TODO",
@@ -106,7 +46,7 @@
     },
     {
       "path": "vyre-reference/src/execution/mod.rs",
-      "line": 59,
+      "line": 61,
       "pattern": "placeholder_text",
       "text": "// lowering table's placeholder, which cleared the output buffer instead"
     },
@@ -129,22 +69,10 @@
       "text": "// `max(edge_count, 1)`. A zero-edge graph still carries a single placeholder"
     },
     {
-      "path": "../../../../libs/dataflow/weir/src/analysis_family.rs",
-      "line": 127,
+      "path": "conform/vyre-conform-spec/src/schema.rs",
+      "line": 165,
       "pattern": "placeholder_text",
-      "text": "// This is a placeholder; real implementations will hard-code the"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/test_harness.rs",
-      "line": 29,
-      "pattern": "stub_text",
-      "text": "/// The handle carries a shared stub owner identity, so two stub handles are"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/test_harness.rs",
-      "line": 30,
-      "pattern": "stub_text",
-      "text": "/// equal exactly when their ids are. Do not hand a stub handle to a real"
+      "text": "/// Construct an unsigned certificate with deterministic placeholder fields."
     }
   ],
   "release_blocking_findings": [],

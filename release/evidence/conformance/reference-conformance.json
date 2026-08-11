@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "backend_id": "cpu-ref",
-  "command": "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/cargo_full run -p vyre-conform-runner --release --bin vyre-conform-runner -- dispatch --backend cpu-ref --ops all",
+  "command": "${SANTH_ROOT}/libs/performance/matching/vyre/cargo_full run -p vyre-conform-runner --release --bin vyre-conform-runner -- dispatch --backend cpu-ref --ops all",
   "stdout_diagnostics": [],
   "total_pairs": 359,
   "distinct_op_count": 359,

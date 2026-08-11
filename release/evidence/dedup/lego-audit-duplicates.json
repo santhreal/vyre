@@ -94,25 +94,25 @@
       "severity": "similar",
       "score": 0.5812098319910954,
       "left": {
-        "id": "vyre-primitives::parsing::planar_rewrite_schedule",
-        "owner_lane": "parser_frontend",
-        "fingerprint": "registered-op-ir-fingerprint:v1:7cd1fe66438ecd9067853923be65ecde1064d1f8ca38ab22f162850ab3188cca",
-        "tokens": 15,
-        "bytes": 119
-      },
-      "right": {
         "id": "vyre-primitives::math::tensor_train_decompose",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:d27e7453f18fb6e1136a8ab5a7632d2be07795cdcb68da6983c7a594628baec8",
         "tokens": 79,
         "bytes": 760
       },
-      "import_owner": "parser_frontend",
-      "import_target": "vyre-primitives::parsing::planar_rewrite_schedule",
+      "right": {
+        "id": "vyre-primitives::parsing::planar_rewrite_schedule",
+        "owner_lane": "parser_frontend",
+        "fingerprint": "registered-op-ir-fingerprint:v1:7cd1fe66438ecd9067853923be65ecde1064d1f8ca38ab22f162850ab3188cca",
+        "tokens": 15,
+        "bytes": 119
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::math::tensor_train_decompose",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T2_5:own_nodes=15:composed_nodes=0:fingerprint_bytes=119",
-        "right_metric": "tier=T2_5:own_nodes=79:composed_nodes=0:fingerprint_bytes=760",
+        "left_metric": "tier=T2_5:own_nodes=79:composed_nodes=0:fingerprint_bytes=760",
+        "right_metric": "tier=T2_5:own_nodes=15:composed_nodes=0:fingerprint_bytes=119",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -150,25 +150,25 @@
       "severity": "similar",
       "score": 0.5600194454572346,
       "left": {
-        "id": "vyre-libs::optim::muon_update",
-        "owner_lane": "security_dataflow",
-        "fingerprint": "registered-op-ir-fingerprint:v1:fadb670174f0813d1e89810c647f4703065957dd82f69a6072b32d640e5248dd",
-        "tokens": 5,
-        "bytes": 240
-      },
-      "right": {
         "id": "vyre-libs::nn::skip_gate",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
         "tokens": 4,
         "bytes": 109
       },
-      "import_owner": "security_dataflow",
-      "import_target": "vyre-libs::optim::muon_update",
+      "right": {
+        "id": "vyre-libs::optim::muon_update",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:fadb670174f0813d1e89810c647f4703065957dd82f69a6072b32d640e5248dd",
+        "tokens": 5,
+        "bytes": 240
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::skip_gate",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T3:own_nodes=5:composed_nodes=0:fingerprint_bytes=240",
-        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "right_metric": "tier=T3:own_nodes=5:composed_nodes=0:fingerprint_bytes=240",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -178,25 +178,25 @@
       "severity": "similar",
       "score": 0.819688599970537,
       "left": {
-        "id": "vyre-primitives::reduce::histogram",
-        "owner_lane": "sparse_math_ai",
-        "fingerprint": "registered-op-ir-fingerprint:v1:7b48cb9bdeff45a89590e1e635bda12c6c47e4788abe48d0355332118ee7723b",
-        "tokens": 6,
-        "bytes": 41
-      },
-      "right": {
         "id": "vyre-primitives::graph::functor_apply",
         "owner_lane": "graph_flow_compiler",
         "fingerprint": "registered-op-ir-fingerprint:v1:39c893b7cc7f9db95bcbb3610c5a9c05b1281e8d25a7990d0567e5d7f7f52c85",
         "tokens": 7,
         "bytes": 39
       },
-      "import_owner": "sparse_math_ai",
-      "import_target": "vyre-primitives::reduce::histogram",
+      "right": {
+        "id": "vyre-primitives::reduce::histogram",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:7b48cb9bdeff45a89590e1e635bda12c6c47e4788abe48d0355332118ee7723b",
+        "tokens": 6,
+        "bytes": 41
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::graph::functor_apply",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T2_5:own_nodes=6:composed_nodes=0:fingerprint_bytes=41",
-        "right_metric": "tier=T2_5:own_nodes=7:composed_nodes=0:fingerprint_bytes=39",
+        "left_metric": "tier=T2_5:own_nodes=7:composed_nodes=0:fingerprint_bytes=39",
+        "right_metric": "tier=T2_5:own_nodes=6:composed_nodes=0:fingerprint_bytes=41",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -262,21 +262,21 @@
       "severity": "very_similar",
       "score": 0.88,
       "left": {
-        "id": "vyre-libs::quant::int8_pack",
-        "owner_lane": "sparse_math_ai",
-        "fingerprint": "registered-op-ir-fingerprint:v1:6f82a807c6b6e290eb47612dc69d53ee66fd15dc2eb4535c7503d88cbf735a7a",
-        "tokens": 4,
-        "bytes": 22
-      },
-      "right": {
         "id": "vyre-libs::math::algebra::meet",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:29194441b86a728fc98bbf479e6a90bab1e18c1489f9602c9420e2cd5694c0a1",
         "tokens": 4,
         "bytes": 22
       },
+      "right": {
+        "id": "vyre-libs::quant::int8_pack",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:6f82a807c6b6e290eb47612dc69d53ee66fd15dc2eb4535c7503d88cbf735a7a",
+        "tokens": 4,
+        "bytes": 22
+      },
       "import_owner": "sparse_math_ai",
-      "import_target": "vyre-libs::quant::int8_pack",
+      "import_target": "vyre-libs::math::algebra::meet",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
         "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=22",
@@ -318,25 +318,25 @@
       "severity": "similar",
       "score": 0.7392967317463898,
       "left": {
-        "id": "vyre-primitives::text::encoding_classify",
-        "owner_lane": "scan_automata",
-        "fingerprint": "registered-op-ir-fingerprint:v1:e3f32cf3868ea3d1679edef0ded9605476823f5df180e5e66dea2c5e1f26a1a5",
-        "tokens": 35,
-        "bytes": 132
-      },
-      "right": {
         "id": "vyre-primitives::graph::path_reconstruct",
         "owner_lane": "graph_flow_compiler",
         "fingerprint": "registered-op-ir-fingerprint:v1:a0cc9f5bd6886c85d1e7f6b8b6828104e2f213d833862b45284af5a49cc168a4",
         "tokens": 16,
         "bytes": 83
       },
-      "import_owner": "scan_automata",
-      "import_target": "vyre-primitives::text::encoding_classify",
+      "right": {
+        "id": "vyre-primitives::text::encoding_classify",
+        "owner_lane": "scan_automata",
+        "fingerprint": "registered-op-ir-fingerprint:v1:e3f32cf3868ea3d1679edef0ded9605476823f5df180e5e66dea2c5e1f26a1a5",
+        "tokens": 35,
+        "bytes": 132
+      },
+      "import_owner": "graph_flow_compiler",
+      "import_target": "vyre-primitives::graph::path_reconstruct",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=15:fingerprint_bytes=132",
-        "right_metric": "tier=T2_5:own_nodes=16:composed_nodes=0:fingerprint_bytes=83",
+        "left_metric": "tier=T2_5:own_nodes=16:composed_nodes=0:fingerprint_bytes=83",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=15:fingerprint_bytes=132",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -346,25 +346,25 @@
       "severity": "similar",
       "score": 0.5953635174981126,
       "left": {
-        "id": "vyre-primitives::predicate::arg_of",
-        "owner_lane": "security_dataflow",
-        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
-        "tokens": 20,
-        "bytes": 133
-      },
-      "right": {
         "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:220e38a09a450cb479520df3e583e842e9fb38bba80a0c657598cca4d7fd88c3",
         "tokens": 14,
         "bytes": 106
       },
-      "import_owner": "security_dataflow",
-      "import_target": "vyre-primitives::predicate::arg_of",
+      "right": {
+        "id": "vyre-primitives::predicate::arg_of",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
+        "tokens": 20,
+        "bytes": 133
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
-        "right_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "left_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -374,25 +374,25 @@
       "severity": "similar",
       "score": 0.5953635174981126,
       "left": {
-        "id": "vyre-primitives::predicate::size_argument_of",
-        "owner_lane": "security_dataflow",
-        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
-        "tokens": 20,
-        "bytes": 133
-      },
-      "right": {
         "id": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:220e38a09a450cb479520df3e583e842e9fb38bba80a0c657598cca4d7fd88c3",
         "tokens": 14,
         "bytes": 106
       },
-      "import_owner": "security_dataflow",
-      "import_target": "vyre-primitives::predicate::size_argument_of",
+      "right": {
+        "id": "vyre-primitives::predicate::size_argument_of",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:244e20431f59bae2fb510c5afd32d28e193d05a207c5abc17bb6692daebd06e7",
+        "tokens": 20,
+        "bytes": 133
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-primitives::math::quantized::i4x8_matvec_f32_scaled",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
-        "right_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "left_metric": "tier=T2_5:own_nodes=14:composed_nodes=0:fingerprint_bytes=106",
+        "right_metric": "tier=T2_5:own_nodes=20:composed_nodes=0:fingerprint_bytes=133",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -458,25 +458,25 @@
       "severity": "similar",
       "score": 0.6076909908301541,
       "left": {
-        "id": "vyre-libs::optim::ema_apply",
-        "owner_lane": "security_dataflow",
-        "fingerprint": "registered-op-ir-fingerprint:v1:4b272283876a15ed2c4f895ef8dc4caa439a0a8d4d9920f7ff89e07202d51c3e",
-        "tokens": 4,
-        "bytes": 53
-      },
-      "right": {
         "id": "vyre-libs::nn::skip_gate",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:a39ce3d054896f55d298d0e60fabfdad2fe062786bd05747cacc2f9de213d565",
         "tokens": 4,
         "bytes": 109
       },
-      "import_owner": "security_dataflow",
-      "import_target": "vyre-libs::optim::ema_apply",
+      "right": {
+        "id": "vyre-libs::optim::ema_apply",
+        "owner_lane": "security_dataflow",
+        "fingerprint": "registered-op-ir-fingerprint:v1:4b272283876a15ed2c4f895ef8dc4caa439a0a8d4d9920f7ff89e07202d51c3e",
+        "tokens": 4,
+        "bytes": 53
+      },
+      "import_owner": "sparse_math_ai",
+      "import_target": "vyre-libs::nn::skip_gate",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=53",
-        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "left_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=109",
+        "right_metric": "tier=T3:own_nodes=4:composed_nodes=0:fingerprint_bytes=53",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },
@@ -542,25 +542,25 @@
       "severity": "very_similar",
       "score": 0.9001837297150916,
       "left": {
-        "id": "vyre-libs::nn::rms_norm",
-        "owner_lane": "sparse_math_ai",
-        "fingerprint": "registered-op-ir-fingerprint:v1:bd522e771b52fbd1f92fdf2df89d1deaf843bc64759377a7f20f82b2edc572ce",
-        "tokens": 30,
-        "bytes": 58
-      },
-      "right": {
         "id": "vyre-libs::math::reduce_mean",
         "owner_lane": "sparse_math_ai",
         "fingerprint": "registered-op-ir-fingerprint:v1:c0cbf7be71c14e46327bf2bc5b2c400049df463008b6b4a75fa8fcfe781cc79d",
         "tokens": 46,
         "bytes": 45
       },
+      "right": {
+        "id": "vyre-libs::nn::rms_norm",
+        "owner_lane": "sparse_math_ai",
+        "fingerprint": "registered-op-ir-fingerprint:v1:bd522e771b52fbd1f92fdf2df89d1deaf843bc64759377a7f20f82b2edc572ce",
+        "tokens": 30,
+        "bytes": 58
+      },
       "import_owner": "sparse_math_ai",
-      "import_target": "vyre-libs::nn::rms_norm",
+      "import_target": "vyre-libs::math::reduce_mean",
       "evidence": {
         "similarity_metric": "lego-ir-structural-similarity",
-        "left_metric": "tier=T3:own_nodes=9:composed_nodes=21:fingerprint_bytes=58",
-        "right_metric": "tier=T3:own_nodes=7:composed_nodes=39:fingerprint_bytes=45",
+        "left_metric": "tier=T3:own_nodes=7:composed_nodes=39:fingerprint_bytes=45",
+        "right_metric": "tier=T3:own_nodes=9:composed_nodes=21:fingerprint_bytes=58",
         "dedup_action": "extract_shared_tier_2_5_primitive_or_compose_existing_op"
       }
     },

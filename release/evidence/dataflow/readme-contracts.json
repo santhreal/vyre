@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "path": "/media/mukund-thiru/SanthData/Santh/libs/dataflow/dataflow-consumer/README.md",
+  "path": "${SANTH_ROOT}/libs/dataflow/dataflow-consumer/README.md",
   "exists": true,
   "source_bytes": 6822,
   "required_tokens": [

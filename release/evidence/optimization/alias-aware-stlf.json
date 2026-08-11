@@ -12,7 +12,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Store/load forwarding consumes Weir alias facts"
+      "role": "Store/load forwarding consumes external alias facts"
     },
     {
       "id": "reaching-def-stlf-entrypoint",
@@ -23,10 +23,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Store/load forwarding consumes Weir reaching-definition facts"
+      "role": "Store/load forwarding consumes external reaching-definition facts"
     },
     {
-      "id": "weir-alias-analysis-api",
+      "id": "external-alias-analysis-api",
       "path": "vyre-lower/src/analyses/alias_import/mod.rs",
       "marker": "AliasFactSet",
       "exists": true,
@@ -34,10 +34,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+      "role": "Vyre lowering imports external alias facts through an explicit API"
     },
     {
-      "id": "weir-reaching-def-analysis-api",
+      "id": "external-reaching-def-analysis-api",
       "path": "vyre-lower/src/analyses/reaching_def_import/mod.rs",
       "marker": "import_descriptor_reaching_defs",
       "exists": true,
@@ -45,7 +45,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+      "role": "Vyre lowering imports external reaching-definition facts through an explicit API"
     },
     {
       "id": "dataflow-analysis-pipeline-entrypoint",
@@ -56,7 +56,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Canonical rewrite pipeline consumes Weir alias and reaching-definition facts"
+      "role": "Canonical rewrite pipeline consumes external alias and reaching-definition facts"
     },
     {
       "id": "dataflow-analysis-stlf-firing-test",
@@ -67,7 +67,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Local test proves Weir reaching-def facts fire store/load forwarding"
+      "role": "Local test proves external reaching-definition facts fire store/load forwarding"
     }
   ],
   "blockers": []

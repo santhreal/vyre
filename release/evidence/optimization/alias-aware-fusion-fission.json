@@ -12,7 +12,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Loop fusion consumes Weir alias facts"
+      "role": "Loop fusion consumes external alias facts"
     },
     {
       "id": "reaching-def-loop-fusion-entrypoint",
@@ -23,7 +23,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Loop fusion consumes Weir reaching-definition facts"
+      "role": "Loop fusion consumes external reaching-definition facts"
     },
     {
       "id": "alias-aware-loop-fission-entrypoint",
@@ -34,7 +34,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Loop fission consumes Weir alias facts"
+      "role": "Loop fission consumes external alias facts"
     },
     {
       "id": "reaching-def-loop-fission-entrypoint",
@@ -45,10 +45,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Loop fission consumes Weir reaching-definition facts"
+      "role": "Loop fission consumes external reaching-definition facts"
     },
     {
-      "id": "weir-alias-analysis-api",
+      "id": "external-alias-analysis-api",
       "path": "vyre-lower/src/analyses/alias_import/mod.rs",
       "marker": "AliasFactSet",
       "exists": true,
@@ -56,10 +56,10 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir alias facts through an explicit API"
+      "role": "Vyre lowering imports external alias facts through an explicit API"
     },
     {
-      "id": "weir-reaching-def-analysis-api",
+      "id": "external-reaching-def-analysis-api",
       "path": "vyre-lower/src/analyses/reaching_def_import/mod.rs",
       "marker": "import_descriptor_reaching_defs",
       "exists": true,
@@ -67,7 +67,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Vyre-lower imports Weir reaching-def facts through an explicit API"
+      "role": "Vyre lowering imports external reaching-definition facts through an explicit API"
     },
     {
       "id": "dataflow-analysis-loop-fusion-firing-test",
@@ -78,7 +78,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir facts unlock loop fusion"
+      "role": "Integration test proves external facts unlock loop fusion"
     },
     {
       "id": "dataflow-analysis-loop-fission-firing-test",
@@ -89,7 +89,7 @@
       "marker_present": true,
       "marker_on_code_line": true,
       "unresolved_markers": [],
-      "role": "Integration test proves Weir facts unlock loop fission"
+      "role": "Integration test proves external facts unlock loop fission"
     }
   ],
   "blockers": []

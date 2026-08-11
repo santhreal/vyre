@@ -1,34 +1,16 @@
 {
   "schema_version": 2,
-  "command_count": 18,
-  "artifact_count": 85,
+  "command_count": 15,
+  "artifact_count": 40,
   "commands": [
     {
-      "generator_command": "xtask docs-matrix",
+      "generator_command": "xtask docs-check",
       "command_mode": "spawned",
       "required": true,
       "expected_artifacts": [
-        "release/evidence/docs/docs-matrix.json",
-        "release/evidence/docs/vyre-readme-contracts.json",
-        "release/evidence/docs/release-notes-version-story.md",
-        "release/evidence/docs/cuda-release-path.md",
-        "release/evidence/docs/wgpu-fallback-proof.md",
-        "release/evidence/docs/megakernel-default-proof.md",
-        "release/evidence/docs/optimization-proof.md",
-        "release/evidence/docs/egraph-saturation.md",
-        "release/evidence/docs/c-parser-linux-proof.md",
-        "release/evidence/docs/distributed-parser-coherence.md",
-        "release/evidence/docs/weir-integration.md",
-        "release/evidence/docs/test-architecture.md",
-        "release/evidence/docs/vyre-readme-proof.md",
-        "release/evidence/docs/weir-readme-proof.md",
-        "release/evidence/docs/parser-doc-proof.md",
-        "release/evidence/docs/benchmark-doc-proof.md",
-        "release/evidence/docs/conformance-doc-proof.md",
-        "release/evidence/docs/release-notes.md",
-        "release/evidence/docs/crate-metadata-proof.md",
-        "release/evidence/docs/release-hygiene-proof.md",
-        "release/evidence/docs/cpu-only-100x-proof.md"
+        "docs/DOCS.toml",
+        "docs/SUMMARY.md",
+        "docs/INDEX.md"
       ],
       "artifact_contracts": []
     },
@@ -119,32 +101,7 @@
         "release/evidence/hygiene/no-hidden-fallback-scan.json",
         "release/evidence/hygiene/resource-bound-scan.json",
         "release/evidence/hygiene/error-surface-scan.json",
-        "release/evidence/hygiene/cargo-wrapper-scan.json",
-        "release/evidence/hygiene/audit-location-scan.json",
-        "release/evidence/hygiene/public-doc-scan.json",
-        "release/evidence/hygiene/test-hygiene-scan.json"
-      ],
-      "artifact_contracts": []
-    },
-    {
-      "generator_command": "xtask test-matrix",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": [
-        "release/evidence/tests/test-matrix.json",
-        "release/evidence/tests/modularization-map.json",
-        "release/evidence/tests/oversized-test-closure.json",
-        "release/evidence/tests/modularity-findings.json",
-        "release/evidence/tests/risk-coverage.json",
-        "release/evidence/tests/release-surface-suite-coverage.json",
-        "release/evidence/tests/unit-suite.json",
-        "release/evidence/tests/adversarial-suite.json",
-        "release/evidence/tests/property-suite.json",
-        "release/evidence/tests/conformance-suite.json",
-        "release/evidence/tests/corpus-suite.json",
-        "release/evidence/tests/benchmark-suite.json",
-        "release/evidence/tests/gap-suite.json",
-        "release/evidence/tests/fuzz-suite.json"
+        "release/evidence/hygiene/cargo-wrapper-scan.json"
       ],
       "artifact_contracts": []
     },
@@ -163,6 +120,15 @@
       "required": true,
       "expected_artifacts": [
         "release/evidence/metadata/feature-matrix.json"
+      ],
+      "artifact_contracts": []
+    },
+    {
+      "generator_command": "xtask package-readiness",
+      "command_mode": "spawned",
+      "required": true,
+      "expected_artifacts": [
+        "release/evidence/package/publish-readiness.json"
       ],
       "artifact_contracts": []
     },
@@ -189,43 +155,8 @@
         "release/evidence/optimization/alias-aware-stlf.json",
         "release/evidence/optimization/alias-aware-licm.json",
         "release/evidence/optimization/alias-aware-fusion-fission.json",
-        "release/evidence/optimization/weir-facts-pass-firing.json",
         "release/evidence/optimization/egraph-saturation-matrix.json",
         "release/evidence/optimization/egraph-semantic-contracts.json"
-      ],
-      "artifact_contracts": []
-    },
-    {
-      "generator_command": "xtask parser-coherence",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": [
-        "release/evidence/parser/distributed-parser-map.json",
-        "release/evidence/parser/vyre-frontend-c-contracts.json",
-        "release/evidence/parser/vyrec-cli-contracts.json",
-        "release/evidence/parser/external-dataflow-contracts.json",
-        "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json"
-      ],
-      "artifact_contracts": []
-    },
-    {
-      "generator_command": "xtask weir-matrix",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": [
-        "release/evidence/weir/weir-analysis-api-matrix.json",
-        "release/evidence/weir/weir-vyre-integration-tests.json",
-        "release/evidence/weir/weir-readme-contracts.json",
-        "release/evidence/weir/weir-flow-release-contracts.json"
-      ],
-      "artifact_contracts": []
-    },
-    {
-      "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
-      "command_mode": "spawned",
-      "required": true,
-      "expected_artifacts": [
-        "release/evidence/dedup/source-similar-duplicates.json"
       ],
       "artifact_contracts": []
     },

@@ -3,6 +3,12 @@
   "scan": "cargo-wrapper",
   "findings": [
     {
+      "path": "vyre-libs/src/fixture_catalog/fp_contract.rs",
+      "line": 32,
+      "pattern": "raw_workspace_cargo",
+      "text": "/// that contracts, so `cargo test --workspace --all-features`, which the release"
+    },
+    {
       "path": "vyre-driver-cuda/src/backend/host_dispatch/host_cost_attribution.rs",
       "line": 77,
       "pattern": "raw_workspace_cargo",
@@ -15,34 +21,10 @@
       "text": "//! cargo test -p vyre-driver-cuda --lib -- --ignored --nocapture host_cost"
     },
     {
-      "path": "vyre-harness/src/fp_contract.rs",
-      "line": 32,
+      "path": "conform/vyre-conform/src/fp_contract.rs",
+      "line": 31,
       "pattern": "raw_workspace_cargo",
       "text": "/// that contracts, so `cargo test --workspace --all-features`, which the release"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 241,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo bench -p weirflow --bench primitive_micro"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 267,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 270,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test --lib && cargo test --doc && cargo test --examples"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/README.md",
-      "line": 273,
-      "pattern": "raw_workspace_cargo",
-      "text": "cargo test --features cpu-parity"
     }
   ],
   "release_blocking_findings": [],

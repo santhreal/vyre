@@ -21,88 +21,22 @@
       "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
     },
     {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 71,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"#elif without matching #if\");"
+      "path": "vyre-frontend-c/src/pipeline.rs",
+      "line": 533,
+      "pattern": "expect_call",
+      "text": ".expect(\"source was validated as UTF-8 before syntax traversal\")"
     },
     {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 74,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"#elif after #else\");"
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 355,
+      "pattern": "expect_call",
+      "text": ".expect(\"validated non-empty target resource bindings\");"
     },
     {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 85,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"#else without matching #if\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 88,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"duplicate preprocessor #else\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 98,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"#endif without matching #if\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 104,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"active preprocessor #error encountered:{rest}\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/reference.rs",
-      "line": 119,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/parser.rs",
-      "line": 166,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"exceeding the i128 evaluator width: left shift by {rhs}\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/parser.rs",
-      "line": 176,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"exceeding the i128 evaluator width: right shift by {rhs}\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
-      "line": 92,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"malformed preprocessor defined operator: expected identifier\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
-      "line": 104,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"malformed preprocessor defined operator: missing `)`\");"
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
-      "line": 326,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/tokenize.rs",
-      "line": 333,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-frontend-c/src/tu_host/preprocess/expr/literals.rs",
-      "line": 40,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"empty character literal ''\");"
+      "path": "vyre-aot/src/bundle.rs",
+      "line": 361,
+      "pattern": "expect_call",
+      "text": ".expect(\"canonical target payload validation guarantees resource association\");"
     },
     {
       "path": "vyre-driver/src/subgroup.rs",
@@ -111,20 +45,26 @@
       "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
     },
     {
+      "path": "vyre-driver/src/registry/intrinsic_adapter.rs",
+      "line": 59,
+      "pattern": "expect_call",
+      "text": ".expect(\"canonical intrinsic registration must provide a signature\"),"
+    },
+    {
       "path": "vyre-driver/src/registry/registry.rs",
-      "line": 257,
+      "line": 224,
+      "pattern": "panic_macro",
+      "text": "panic!(\"vyre-driver registry rejected conflicting registrations: {error}\")"
+    },
+    {
+      "path": "vyre-driver/src/registry/registry.rs",
+      "line": 256,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-driver extern registry failed verification: {errors:?}\");"
     },
     {
-      "path": "vyre-libs/src/scan/mega_scan.rs",
-      "line": 251,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges.rs",
-      "line": 593,
+      "line": 598,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -137,30 +77,6 @@
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter.rs",
       "line": 202,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/literal_set.rs",
-      "line": 1424,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/dispatch_io.rs",
-      "line": 69,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/dispatch_io.rs",
-      "line": 333,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/dispatch_io.rs",
-      "line": 378,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -187,12 +103,6 @@
       "line": 154,
       "pattern": "documented_panic_contract",
       "text": "panic!("
-    },
-    {
-      "path": "vyre-libs/src/scan/paged_corpus.rs",
-      "line": 1162,
-      "pattern": "documented_panic_contract",
-      "text": "let (staging, pending) = inflight.pop_front().expect(\"depth reached\");"
     },
     {
       "path": "vyre-libs/src/security/predicate_catalog.rs",
@@ -232,19 +142,19 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 302,
+      "line": 298,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 375,
+      "line": 371,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 514,
+      "line": 510,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
@@ -274,7 +184,7 @@
     },
     {
       "path": "vyre-bench/src/cases/literal_set_decode_heavy.rs",
-      "line": 78,
+      "line": 77,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"PATTERNS is non-empty\");"
     },
@@ -309,6 +219,18 @@
       "text": ".expect(\"stack is non-empty inside `while let Some(..) = stack.last()`\")"
     },
     {
+      "path": "vyre-foundation/src/diagnostics.rs",
+      "line": 366,
+      "pattern": "expect_call",
+      "text": "serde_json::to_string(self).expect(\"Diagnostic serialization is infallible\")"
+    },
+    {
+      "path": "vyre-foundation/src/operation.rs",
+      "line": 346,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
+    },
+    {
       "path": "vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
       "line": 25,
       "pattern": "expect_call",
@@ -319,6 +241,36 @@
       "line": 27,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: reparsing canonical to_wire bytes must succeed; restore this invariant before continuing.\");"
+    },
+    {
+      "path": "vyre-scan/src/session.rs",
+      "line": 200,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-scan/src/literal_set.rs",
+      "line": 1860,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-scan/src/dispatch_io.rs",
+      "line": 53,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-scan/src/dispatch_io.rs",
+      "line": 317,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-scan/src/dispatch_io.rs",
+      "line": 362,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
@@ -369,22 +321,40 @@
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
     {
-      "path": "vyre-driver-wgpu/src/megakernel/batch.rs",
-      "line": 913,
-      "pattern": "documented_panic_contract",
-      "text": "let last_offset = *output_offsets.last().expect(\"non-empty: checked above\") as usize;"
+      "path": "vyre-megakernel/src/select.rs",
+      "line": 31,
+      "pattern": "expect_call",
+      "text": ".expect(\"candidate search always includes the baseline\")"
     },
     {
-      "path": "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-      "line": 520,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
+      "path": "vyre-megakernel/src/envelope.rs",
+      "line": 633,
+      "pattern": "expect_call",
+      "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed frame slice\")) as usize;"
     },
     {
-      "path": "vyre-driver-wgpu/src/megakernel/dispatcher.rs",
-      "line": 543,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
+      "path": "vyre-megakernel/src/envelope.rs",
+      "line": 660,
+      "pattern": "expect_call",
+      "text": ".expect(\"validated digest length\");"
+    },
+    {
+      "path": "vyre-megakernel/src/lib.rs",
+      "line": 768,
+      "pattern": "expect_call",
+      "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed slice\")) as usize;"
+    },
+    {
+      "path": "vyre-megakernel/src/lib.rs",
+      "line": 795,
+      "pattern": "expect_call",
+      "text": ".expect(\"validated digest length\");"
+    },
+    {
+      "path": "vyre-megakernel/src/lib.rs",
+      "line": 926,
+      "pattern": "expect_call",
+      "text": ".expect(\"encoded digest length\");"
     },
     {
       "path": "vyre-reference/src/oob.rs",
@@ -409,6 +379,30 @@
       "line": 200,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"))"
+    },
+    {
+      "path": "vyre-reference/src/float16.rs",
+      "line": 28,
+      "pattern": "expect_call",
+      "text": "let unbiased = -14_i32 - i32::try_from(shift).expect(\"bounded half shift\");"
+    },
+    {
+      "path": "vyre-reference/src/float16.rs",
+      "line": 29,
+      "pattern": "expect_call",
+      "text": "sign | (u32::try_from(unbiased + 127).expect(\"half exponent fits\") << 23)"
+    },
+    {
+      "path": "vyre-reference/src/float16.rs",
+      "line": 55,
+      "pattern": "expect_call",
+      "text": "let mut half_exponent = u16::try_from(unbiased + 15).expect(\"normal half exponent fits\");"
+    },
+    {
+      "path": "vyre-reference/src/float16.rs",
+      "line": 70,
+      "pattern": "expect_call",
+      "text": "let shift = u32::try_from(-unbiased - 1).expect(\"subnormal half shift fits\");"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
@@ -573,14 +567,8 @@
       "text": "panic!(\"vyre-primitives f32 wire pack failed: {error}\");"
     },
     {
-      "path": "vyre-intrinsics/src/category_check.rs",
-      "line": 23,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
       "path": "vyre-intrinsics/src/hardware/subgroup_shuffle/subgroup_shuffle.rs",
-      "line": 54,
+      "line": 56,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -628,19 +616,7 @@
     },
     {
       "path": "vyre-runtime/src/megakernel/descriptor.rs",
-      "line": 283,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/planner/fusion.rs",
-      "line": 373,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-runtime fusion subset selection failed on malformed planner input: {error}\");"
-    },
-    {
-      "path": "vyre-runtime/src/megakernel/planner/fusion.rs",
-      "line": 463,
+      "line": 287,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -651,364 +627,58 @@
       "text": ".unwrap_or_else(|_| panic!(\"pipeline cache shard lock was poisoned\"))"
     },
     {
+      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "line": 32,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "line": 35,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "line": 43,
+      "pattern": "unwrap_call",
+      "text": ".unwrap();"
+    },
+    {
+      "path": "vyre-runtime/src/pipeline_cache/test_helpers.rs",
+      "line": 44,
+      "pattern": "unwrap_call",
+      "text": "compile(&request).unwrap()"
+    },
+    {
       "path": "vyre-runtime/src/scheduler.rs",
-      "line": 94,
+      "line": 93,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-runtime work-unit partition failed: {error}\");"
     },
     {
-      "path": "../../../../libs/dataflow/weir/src/ifds/cpu_oracle.rs",
-      "line": 32,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds/cpu_oracle.rs",
-      "line": 37,
+      "path": "conform/vyre-conform/src/lens.rs",
+      "line": 133,
       "pattern": "expect_call",
-      "text": ".expect(\"ifds_reachability CPU oracle received malformed seed bitset\");"
+      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
-      "path": "../../../../libs/dataflow/weir/src/ifds/cpu_oracle.rs",
-      "line": 45,
+      "path": "conform/vyre-conform/src/lens.rs",
+      "line": 217,
       "pattern": "expect_call",
-      "text": ".expect(\"ifds_reachability CPU oracle received malformed CSR graph\");"
+      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 36,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{context} oracle received malformed CSR graph: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 38,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{context} oracle received malformed seed bitset: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 117,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 603,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 614,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 653,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{context} initial queue reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 709,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 733,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{context} {label} reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 740,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"{context} {label} reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 747,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/bitset_closure_oracle.rs",
-      "line": 755,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/loop_sum/cpu_oracle.rs",
-      "line": 8,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/loop_sum/cpu_oracle.rs",
-      "line": 13,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/loop_sum/cpu_oracle.rs",
-      "line": 35,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 37,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"IFDS CPU oracle received malformed problem: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 44,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 49,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 60,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 82,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"IFDS CPU oracle output reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 85,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 111,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 127,
+      "path": "conform/vyre-conform/src/lens.rs",
+      "line": 299,
       "pattern": "expect_call",
-      "text": ".expect(\"weir IFDS dense BFS oracle received an empty CSR row_ptr. Fix: pass a CSR table with node_count + 1 row offsets.\");"
+      "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 132,
-      "pattern": "panic_macro",
-      "text": "panic!(\"IFDS CPU oracle BFS queue reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 137,
-      "pattern": "panic_macro",
-      "text": "panic!(\"IFDS CPU oracle BFS result reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 154,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/ifds_cpu_oracle.rs",
-      "line": 174,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/summary/cpu_oracle.rs",
-      "line": 15,
+      "path": "conform/vyre-conform/src/main.rs",
+      "line": 997,
       "pattern": "expect_call",
-      "text": ".expect(\"summarize_function CPU oracle received malformed AST bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/summary/cpu_oracle.rs",
-      "line": 21,
-      "pattern": "expect_call",
-      "text": ".expect(\"summarize_function CPU oracle received malformed callgraph bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/summary/cpu_oracle.rs",
-      "line": 27,
-      "pattern": "expect_call",
-      "text": ".expect(\"summarize_function CPU oracle received malformed cached-summary bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/summary/cpu_oracle.rs",
-      "line": 29,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"summary CPU oracle output reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/range/cpu_oracle.rs",
-      "line": 7,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/range/cpu_oracle.rs",
-      "line": 12,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/range/cpu_oracle.rs",
-      "line": 19,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"range CPU oracle output reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/callgraph/cpu_oracle.rs",
-      "line": 17,
-      "pattern": "expect_call",
-      "text": ".expect(\"callgraph_build CPU oracle received malformed direct edge bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/callgraph/cpu_oracle.rs",
-      "line": 23,
-      "pattern": "expect_call",
-      "text": ".expect(\"callgraph_build CPU oracle received malformed indirect-site bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/callgraph/cpu_oracle.rs",
-      "line": 29,
-      "pattern": "expect_call",
-      "text": ".expect(\"callgraph_build CPU oracle received malformed points-to closure bitset\");"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/callgraph/cpu_oracle.rs",
-      "line": 31,
-      "pattern": "panic_macro",
-      "text": ".unwrap_or_else(|error| panic!(\"callgraph CPU oracle output reservation failed: {error}\"));"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/test_harness/fake_backend.rs",
-      "line": 121,
-      "pattern": "panic_macro",
-      "text": "panic!(\"Fix: fake resident backend could not mint a resident owner identity. Restart the test process.\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 55,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 79,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 149,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 156,
-      "pattern": "panic_macro",
-      "text": "panic!(\"dominators CPU oracle bitmap byte reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 244,
-      "pattern": "panic_macro",
-      "text": "panic!(\"dominators CPU oracle predecessor indegree reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 255,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 270,
-      "pattern": "panic_macro",
-      "text": "panic!(\"dominators CPU oracle predecessor row reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 279,
-      "pattern": "panic_macro",
-      "text": "panic!(\"dominators CPU oracle predecessor row entry reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 291,
-      "pattern": "panic_macro",
-      "text": "panic!(\"dominators CPU oracle reverse-postorder reservation failed: {error}\")"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 342,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 347,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 356,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/src/dominators/cpu_oracle.rs",
-      "line": 364,
-      "pattern": "panic_macro",
-      "text": "panic!("
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
-      "line": 127,
-      "pattern": "unwrap_call",
-      "text": "path.statements.first().unwrap().node_id,"
-    },
-    {
-      "path": "../../../../libs/dataflow/weir/fuzz/fuzz_targets/reachability_witness_extract.rs",
-      "line": 132,
-      "pattern": "unwrap_call",
-      "text": "path.statements.last().unwrap().node_id,"
-    },
-    {
-      "path": "vyre-grammar-gen/src/lex_c11_max_munch.rs",
-      "line": 40,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-grammar-gen/src/c11_lexer.rs",
-      "line": 266,
-      "pattern": "documented_panic_contract",
-      "text": "b.build().expect("
-    },
-    {
-      "path": "vyre-grammar-gen/src/c11_lexer.rs",
-      "line": 286,
-      "pattern": "documented_panic_contract",
-      "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
+      "text": ".expect(\"production session initialized\")"
     }
   ],
   "release_blocking_findings": [],
