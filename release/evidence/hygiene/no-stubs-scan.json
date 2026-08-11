@@ -39,12 +39,6 @@
       "text": "//! own ~230-line copy of the enumerator (and 22 crates shipped a *tautology stub* whose doc"
     },
     {
-      "path": "vyre-macros/src/ast_registry.rs",
-      "line": 279,
-      "pattern": "stub_text",
-      "text": "// Trap instead of a no-op barrier stub: executing this branch"
-    },
-    {
       "path": "vyre-reference/src/execution/mod.rs",
       "line": 61,
       "pattern": "placeholder_text",
@@ -58,7 +52,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 429,
+      "line": 427,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },

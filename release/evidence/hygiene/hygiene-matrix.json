@@ -3,7 +3,7 @@
   "scanned_roots": [
     "."
   ],
-  "scanned_files": 2312,
+  "scanned_files": 2310,
   "release_surface_coverage": {
     "vyre_workspace": true,
     "cuda_driver_crate": true,
@@ -64,7 +64,7 @@
     },
     {
       "pattern": "stub_text",
-      "count": 2
+      "count": 1
     },
     {
       "pattern": "unwrap_call",
@@ -102,7 +102,7 @@
       "risk": "release_debt",
       "hot_path": false,
       "release_blocker": false,
-      "count": 3
+      "count": 2
     },
     {
       "owner_lane": "coordination",
@@ -288,15 +288,6 @@
       "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 2
-    },
-    {
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "stub_text",
-      "release_blocker": false,
-      "count": 1
     },
     {
       "owner_lane": "coordination",
@@ -1322,16 +1313,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-macros/src/ast_registry.rs",
-      "line": 279,
-      "pattern": "stub_text",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "vyre-megakernel/src/select.rs",
       "line": 31,
       "pattern": "expect_call",
@@ -1493,7 +1474,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 429,
+      "line": 427,
       "pattern": "placeholder_text",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -1503,7 +1484,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 499,
+      "line": 496,
       "pattern": "documented_panic_contract",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -1513,7 +1494,7 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 530,
+      "line": 527,
       "pattern": "documented_panic_contract",
       "owner_lane": "driver_shared",
       "surface": "production",
@@ -1943,7 +1924,7 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 133,
+      "line": 134,
       "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "production",
@@ -1953,7 +1934,7 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 217,
+      "line": 218,
       "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "production",
@@ -1963,7 +1944,7 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 299,
+      "line": 300,
       "pattern": "expect_call",
       "owner_lane": "testing_evidence",
       "surface": "production",
@@ -2367,12 +2348,6 @@
       "text": "let path = entry.expect(\"source entry must be readable\").path();"
     },
     {
-      "path": "vyre-macros/src/ast_registry.rs",
-      "line": 279,
-      "pattern": "stub_text",
-      "text": "// Trap instead of a no-op barrier stub: executing this branch"
-    },
-    {
       "path": "vyre-megakernel/src/select.rs",
       "line": 31,
       "pattern": "expect_call",
@@ -2470,19 +2445,19 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 429,
+      "line": 427,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 499,
+      "line": 496,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 530,
+      "line": 527,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
@@ -2740,19 +2715,19 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 133,
+      "line": 134,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 217,
+      "line": 218,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 299,
+      "line": 300,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },

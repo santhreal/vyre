@@ -67,15 +67,6 @@
     },
     {
       "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_debt",
-      "hot_path": false,
-      "pattern": "stub_text",
-      "release_blocker": false,
-      "count": 1
-    },
-    {
-      "owner_lane": "coordination",
       "surface": "test",
       "risk": "test_hygiene",
       "hot_path": false,

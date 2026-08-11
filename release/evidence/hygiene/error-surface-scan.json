@@ -406,13 +406,13 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 499,
+      "line": 496,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 530,
+      "line": 527,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
@@ -658,19 +658,19 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 133,
+      "line": 134,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 217,
+      "line": 218,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 299,
+      "line": 300,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
