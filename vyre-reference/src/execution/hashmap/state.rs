@@ -9,6 +9,7 @@ use super::{
     step::step_round_robin,
     sync::{live_waiting_count, release_barrier_if_ready, verify_uniform_control_flow},
 };
+use crate::ReferenceError;
 use crate::{
     value::Value,
     workgroup::{Frame, InvocationIds},
@@ -16,8 +17,8 @@ use crate::{
 use im::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
-use vyre::ir::{Expr, Node, Program};
-use vyre::{Error, OpDef};
+use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::OpDef;
 
 #[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
 pub(crate) struct HashmapLocals {
@@ -44,9 +45,9 @@ impl HashmapLocals {
             locals: self.locals.clone(),
         }
     }
-    pub(crate) fn bind(&mut self, name: &str, value: Value) -> Result<Arc<str>, Error> {
+    pub(crate) fn bind(&mut self, name: &str, value: Value) -> Result<Arc<str>, ReferenceError> {
         if self.locals.contains_key(name) {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "duplicate local binding `{name}`. Fix: choose a unique local name; shadowing is not allowed."
             )));
         }
@@ -57,25 +58,25 @@ impl HashmapLocals {
         }
         Ok(name)
     }
-    pub(crate) fn assign(&mut self, name: &str, value: Value) -> Result<(), Error> {
+    pub(crate) fn assign(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
         let key = self
             .locals
             .get_key_value(name)
             .map(|(key, _)| Arc::clone(key))
             .ok_or_else(|| {
-                Error::interp(format!(
+                ReferenceError::new(format!(
                     "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
                 ))
             })?;
         if self.immutable.get(name).copied().unwrap_or(false) {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "assignment to loop variable `{name}`. Fix: loop variables are immutable."
             )));
         }
         self.locals.insert(key, value);
         Ok(())
     }
-    pub(crate) fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), Error> {
+    pub(crate) fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), ReferenceError> {
         let name = self.bind(name, value)?;
         self.immutable.insert(name, true);
         Ok(())
@@ -160,9 +161,9 @@ impl<'a> HashmapInvocation<'a> {
         &mut self,
         tag: &str,
         transfer: HashmapAsyncTransfer,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ReferenceError> {
         if self.pending_async.contains_key(tag) {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "async transfer tag `{tag}` was started more than once before a matching wait. Fix: reuse the tag only after AsyncWait completes."
             )));
         }
@@ -170,8 +171,11 @@ impl<'a> HashmapInvocation<'a> {
         Ok(())
     }
 
-    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<HashmapAsyncTransfer, Error> {
-        self.pending_async.remove(tag).ok_or_else(|| Error::interp(format!(
+    pub(crate) fn finish_async(
+        &mut self,
+        tag: &str,
+    ) -> Result<HashmapAsyncTransfer, ReferenceError> {
+        self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
             "async wait for tag `{tag}` has no matching async transfer. Fix: emit AsyncLoad or AsyncStore before AsyncWait."
         )))
     }
@@ -189,23 +193,19 @@ pub(crate) fn create_invocations<'a>(
     program: &Program,
     workgroup: [u32; 3],
     entry: &'a [Node],
-) -> Result<Vec<HashmapInvocation<'a>>, Error> {
+) -> Result<Vec<HashmapInvocation<'a>>, ReferenceError> {
     let [sx, sy, sz] = program.workgroup_size();
     let invocation_count = sx
         .checked_mul(sy)
         .and_then(|count| count.checked_mul(sz))
         .ok_or_else(|| {
-            Error::interp(
-                "workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.",
-            )
+            ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
         })?;
     let mut invocations = Vec::with_capacity(usize::try_from(invocation_count).map_err(|_| {
-        Error::interp(
-            "workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.",
-        )
+        ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
     })?);
     let global_dim = |wgid: u32, size: u32, local: u32| {
-        wgid . checked_mul (size) . and_then (| base | base . checked_add (local)) . ok_or_else (| | { Error :: interp ("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32." ,) })
+        wgid . checked_mul (size) . and_then (| base | base . checked_add (local)) . ok_or_else (| | { ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.") })
     };
     for z in 0..sz {
         for y in 0..sy {
@@ -235,7 +235,7 @@ pub(crate) fn run_invocations(
     memory: &mut HashmapMemory,
     invocations: &mut [HashmapInvocation<'_>],
     #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     while invocations.iter().any(|inv| !inv.done()) {
         let made_progress = step_round_robin(
             memory,
@@ -248,9 +248,7 @@ pub(crate) fn run_invocations(
             continue;
         }
         if !made_progress && live_waiting_count(invocations) > 0 {
-            return Err(Error::interp(
-                "program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow.",
-            ));
+            return Err(ReferenceError::new("program violates uniform-control-flow rule: not every live invocation reached the same barrier. Fix: move Barrier to uniform control flow."));
         }
     }
     if let Some((invocation, tag)) = invocations.iter().find_map(|invocation| {
@@ -260,7 +258,7 @@ pub(crate) fn run_invocations(
             .next()
             .map(|tag| (invocation, tag))
     }) {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "invocation {:?} completed with async transfer tag `{tag}` still pending. Fix: add AsyncWait for every AsyncLoad/AsyncStore tag before Return or end-of-program.",
             invocation.ids
         )));

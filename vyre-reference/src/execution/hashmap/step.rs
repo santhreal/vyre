@@ -7,14 +7,14 @@ pub(crate) use node_step::{eval_call, step_loop_frame, step_nodes_frame};
 #[cfg(feature = "subgroup-ops")]
 use super::state::HashmapInvocationSnapshot;
 use super::{memory::HashmapMemory, state::HashmapInvocation};
+use crate::ReferenceError;
 use crate::{value::Value, workgroup::Frame};
-use vyre::Error;
 
 pub(crate) fn step_round_robin(
     memory: &mut HashmapMemory,
     invocations: &mut [HashmapInvocation<'_>],
     #[cfg(feature = "subgroup-ops")] uses_subgroup_ops: bool,
-) -> Result<bool, Error> {
+) -> Result<bool, ReferenceError> {
     let mut made_progress = false;
     #[cfg(feature = "subgroup-ops")]
     let snapshots = if uses_subgroup_ops {
@@ -43,7 +43,7 @@ fn step(
     memory: &mut HashmapMemory,
     invocations: &mut [HashmapInvocation<'_>],
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     let invocation = &mut invocations[index];
     if invocation.done() || invocation.waiting_at_barrier {
         return Ok(());
@@ -83,25 +83,25 @@ fn step(
     }
 }
 
-pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, Error> {
+pub(crate) fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, ReferenceError> {
     values
         .get(axis as usize)
         .copied()
         .map(Value::U32)
         .ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
             ))
         })
 }
 
 pub(crate) fn eval_to_index(
-    expr: &vyre::ir::Expr,
+    expr: &vyre_foundation::ir::Expr,
     label: &str,
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<u32, Error> {
+) -> Result<u32, ReferenceError> {
     super::eval_expr(
         expr,
         invocation,
@@ -111,7 +111,7 @@ pub(crate) fn eval_to_index(
     )?
     .try_as_u32()
     .ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "{label} cannot be represented as u32. Fix: use a non-negative scalar index within u32."
         ))
     })
@@ -119,12 +119,12 @@ pub(crate) fn eval_to_index(
 
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn eval_expr_snapshot(
-    expr: &vyre::ir::Expr,
+    expr: &vyre_foundation::ir::Expr,
     snapshot: &HashmapInvocationSnapshot,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<Value, Error> {
-    let empty_entry: &[vyre::ir::Node] = &[];
+) -> Result<Value, ReferenceError> {
+    let empty_entry: &[vyre_foundation::ir::Node] = &[];
     let mut invocation =
         HashmapInvocation::new(snapshot.ids, snapshot.linear_local_index, empty_entry);
     invocation.locals.locals = snapshot.locals.locals.clone();
@@ -156,7 +156,7 @@ mod tests {
     use crate::value::Value;
     use crate::workgroup::InvocationIds;
     use std::sync::Arc;
-    use vyre::ir::Node;
+    use vyre_foundation::ir::Node;
 
     #[test]
     fn subgroup_snapshots_share_persistent_local_maps() {

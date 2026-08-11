@@ -1,12 +1,12 @@
 //! IEEE-754 `f32` operation semantics for the reference interpreter.
 
 use crate::ieee754;
-use vyre::ir::{BinOp, UnOp};
-use vyre::Error;
+use crate::ReferenceError;
+use vyre_foundation::ir::{BinOp, UnOp};
 
 use crate::value::Value;
 
-pub(super) fn binop_f32(op: BinOp, left: f32, right: f32) -> Result<Value, vyre::Error> {
+pub(super) fn binop_f32(op: BinOp, left: f32, right: f32) -> Result<Value, crate::ReferenceError> {
     let left = canonical_f32(left);
     let right = canonical_f32(right);
     let wrap = |v: f32| Value::Float(f64::from(canonical_f32(v)));
@@ -23,13 +23,13 @@ pub(super) fn binop_f32(op: BinOp, left: f32, right: f32) -> Result<Value, vyre:
         BinOp::Gt => Ok(Value::Bool(left > right)),
         BinOp::Le => Ok(Value::Bool(left <= right)),
         BinOp::Ge => Ok(Value::Bool(left >= right)),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "binary op `{op:?}` is not defined for f32 operands. Fix: use arithmetic or comparison ops only for float primitives."
         ))),
     }
 }
 
-pub(super) fn unop_f32(op: &UnOp, value: f32) -> Result<Value, vyre::Error> {
+pub(super) fn unop_f32(op: &UnOp, value: f32) -> Result<Value, crate::ReferenceError> {
     let value = canonical_f32(value);
     let wrap = |v: f32| Value::Float(f64::from(canonical_f32(v)));
     match op {
@@ -61,7 +61,7 @@ pub(super) fn unop_f32(op: &UnOp, value: f32) -> Result<Value, vyre::Error> {
         UnOp::Tanh => Ok(wrap(ieee754::canonical_tanh(value))),
         UnOp::Sinh => Ok(wrap(ieee754::canonical_sinh(value))),
         UnOp::Cosh => Ok(wrap(ieee754::canonical_cosh(value))),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "unary op `{op:?}` is not defined for f32 operands. Fix: use numeric or IEEE-754 classification ops only for float primitives."
         ))),
     }

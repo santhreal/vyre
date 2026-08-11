@@ -4,7 +4,7 @@
 //! ordinary IR before backend lowering. No runtime dispatch or GPU-side
 //! interpreter is introduced by this pass.
 
-use crate::error::{Error, Result};
+use crate::error::{IrError as Error, IrResult as Result};
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;

@@ -123,18 +123,18 @@ pub enum TextParseError {
     },
     /// The inner binary wire decoder rejected the byte payload.
     ///
-    /// The carried error is whatever [`Program::from_wire`] emitted  -
-    /// a typed [`crate::error::Error`] whose `Display` impl already
-    /// carries the `Fix:`-prefixed diagnostic prose.
+    /// The carried error is whatever [`Program::from_wire`] emitted: a typed
+    /// [`crate::error::IrError`] whose `Display` implementation carries the
+    /// corrective action.
     WireDecodeFailed {
         /// The inner decoder error.
-        inner: crate::error::Error,
+        inner: crate::error::IrError,
     },
     /// The inner binary wire encoder rejected the program when
     /// we tried to serialize it. Only emitted by `to_text`.
     WireEncodeFailed {
         /// The inner encoder error.
-        inner: crate::error::Error,
+        inner: crate::error::IrError,
     },
 }
 

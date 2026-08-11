@@ -11,14 +11,14 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-#[cfg(test)]
-use vyre::ir::BufferAccess;
-use vyre::ir::{Expr, Node, Program};
-use vyre::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
-use vyre::OpDef;
 use vyre_foundation::ir::model::expr::GeneratorRef;
+#[cfg(test)]
+use vyre_foundation::ir::BufferAccess;
+use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
+use vyre_foundation::OpDef;
 
-use vyre::Error;
+use crate::ReferenceError;
 
 use crate::{oob::Buffer, value::Value};
 
@@ -156,7 +156,10 @@ impl Memory {
     #[must_use]
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
         let mut storage = BufferMap::new();
-        storage.insert("__value", Buffer::new(bytes, vyre::ir::DataType::Bytes));
+        storage.insert(
+            "__value",
+            Buffer::new(bytes, vyre_foundation::ir::DataType::Bytes),
+        );
         Self {
             storage,
             workgroup: BufferMap::new(),
@@ -257,11 +260,11 @@ macro_rules! async_extent_visitors {
         fn visit_async_load(
             &mut self,
             _: &Node,
-            _: &vyre::ir::Ident,
-            _: &vyre::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
             offset: &Expr,
             size: &Expr,
-            _: &vyre::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
         ) -> ControlFlow<Self::Break> {
             visit_async_extent(self, offset, size)
         }
@@ -269,11 +272,11 @@ macro_rules! async_extent_visitors {
         fn visit_async_store(
             &mut self,
             _: &Node,
-            _: &vyre::ir::Ident,
-            _: &vyre::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
             offset: &Expr,
             size: &Expr,
-            _: &vyre::ir::Ident,
+            _: &vyre_foundation::ir::Ident,
         ) -> ControlFlow<Self::Break> {
             visit_async_extent(self, offset, size)
         }
@@ -286,7 +289,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_let(
         &mut self,
         _: &Node,
-        name: &vyre::ir::Ident,
+        name: &vyre_foundation::ir::Ident,
         value: &Expr,
     ) -> ControlFlow<Self::Break> {
         self.intern(name);
@@ -296,7 +299,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_assign(
         &mut self,
         _: &Node,
-        _: &vyre::ir::Ident,
+        _: &vyre_foundation::ir::Ident,
         value: &Expr,
     ) -> ControlFlow<Self::Break> {
         visit_preorder(self, value)
@@ -305,7 +308,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_store(
         &mut self,
         _: &Node,
-        _: &vyre::ir::Ident,
+        _: &vyre_foundation::ir::Ident,
         index: &Expr,
         value: &Expr,
     ) -> ControlFlow<Self::Break> {
@@ -326,7 +329,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_loop(
         &mut self,
         _: &Node,
-        var: &vyre::ir::Ident,
+        var: &vyre_foundation::ir::Ident,
         from: &Expr,
         to: &Expr,
         _: &[Node],
@@ -339,7 +342,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_indirect_dispatch(
         &mut self,
         _: &Node,
-        _: &vyre::ir::Ident,
+        _: &vyre_foundation::ir::Ident,
         _: u64,
     ) -> ControlFlow<Self::Break> {
         Continue(())
@@ -347,7 +350,11 @@ impl NodeVisitor for LocalSlots {
 
     async_extent_visitors!();
 
-    fn visit_async_wait(&mut self, _: &Node, _: &vyre::ir::Ident) -> ControlFlow<Self::Break> {
+    fn visit_async_wait(
+        &mut self,
+        _: &Node,
+        _: &vyre_foundation::ir::Ident,
+    ) -> ControlFlow<Self::Break> {
         Continue(())
     }
 
@@ -355,12 +362,16 @@ impl NodeVisitor for LocalSlots {
         &mut self,
         _: &Node,
         address: &Expr,
-        _: &vyre::ir::Ident,
+        _: &vyre_foundation::ir::Ident,
     ) -> ControlFlow<Self::Break> {
         visit_preorder(self, address)
     }
 
-    fn visit_resume(&mut self, _: &Node, _: &vyre::ir::Ident) -> ControlFlow<Self::Break> {
+    fn visit_resume(
+        &mut self,
+        _: &Node,
+        _: &vyre_foundation::ir::Ident,
+    ) -> ControlFlow<Self::Break> {
         Continue(())
     }
 
@@ -379,7 +390,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_region(
         &mut self,
         _: &Node,
-        _: &vyre::ir::Ident,
+        _: &vyre_foundation::ir::Ident,
         _: &Option<GeneratorRef>,
         _: &[Node],
     ) -> ControlFlow<Self::Break> {
@@ -389,7 +400,7 @@ impl NodeVisitor for LocalSlots {
     fn visit_opaque_node(
         &mut self,
         _: &Node,
-        _: &dyn vyre::ir::NodeExtension,
+        _: &dyn vyre_foundation::ir::NodeExtension,
     ) -> ControlFlow<Self::Break> {
         Continue(())
     }
@@ -512,10 +523,14 @@ impl<'a> Invocation<'a> {
         }
     }
 
-    pub(crate) fn begin_async(&mut self, tag: &str, transfer: AsyncTransfer) -> Result<(), Error> {
+    pub(crate) fn begin_async(
+        &mut self,
+        tag: &str,
+        transfer: AsyncTransfer,
+    ) -> Result<(), ReferenceError> {
         let tag: Arc<str> = Arc::from(tag);
         if self.pending_async.insert(tag.clone(), transfer).is_some() {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "async tag `{}` was started more than once before a matching wait. \
                  Fix: reuse the tag only after AsyncWait completes.",
                 tag
@@ -524,8 +539,8 @@ impl<'a> Invocation<'a> {
         Ok(())
     }
 
-    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, Error> {
-        self.pending_async.remove(tag).ok_or_else(|| Error::interp(format!(
+    pub(crate) fn finish_async(&mut self, tag: &str) -> Result<AsyncTransfer, ReferenceError> {
+        self.pending_async.remove(tag).ok_or_else(|| ReferenceError::new(format!(
             "async wait for tag `{tag}` has no matching async load. Fix: emit AsyncLoad before AsyncWait."
         )))
     }
@@ -543,20 +558,20 @@ impl<'a> Invocation<'a> {
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), vyre_foundation::Error> {
+    /// fn main() -> Result<(), crate::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind("example", Value::U32(1))?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn bind(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
+    pub fn bind(&mut self, name: &str, value: Value) -> Result<(), crate::ReferenceError> {
         let slot = self.slots.slot(name).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "local binding `{name}` has no preassigned slot. Fix: rebuild the local slot layout from the full Program before interpretation."
             ))
         })?;
         if self.locals[slot].is_some() {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "duplicate local binding `{name}`. Fix: choose a unique local name; shadowing is not allowed."
             )));
         }
@@ -572,16 +587,16 @@ impl<'a> Invocation<'a> {
     ///
     /// ```rust,no_run
     /// use vyre_reference::{value::Value, workgroup::{Invocation, InvocationIds}};
-    /// fn main() -> Result<(), vyre_foundation::Error> {
+    /// fn main() -> Result<(), crate::ReferenceError> {
     ///     let mut invocation = Invocation::new(InvocationIds::ZERO, &[]);
     ///     invocation.bind_loop_var("example", Value::U32(1))?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
+    pub fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), crate::ReferenceError> {
         self.bind(name, value)?;
         let slot = self.slots.slot(name).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "local binding `{name}` disappeared after bind. Fix: keep local slot layout immutable during interpretation."
             ))
         })?;
@@ -590,19 +605,19 @@ impl<'a> Invocation<'a> {
     }
 
     /// Assign an existing mutable local.
-    pub fn assign(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
+    pub fn assign(&mut self, name: &str, value: Value) -> Result<(), crate::ReferenceError> {
         let slot = self.slots.slot(name).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
             ))
         })?;
         if self.immutable[slot] {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "assignment to loop variable `{name}`. Fix: loop variables are immutable."
             )));
         }
         let Some(local) = self.locals.get_mut(slot).and_then(Option::as_mut) else {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "assignment to undeclared variable `{name}`. Fix: add a Let before assigning it."
             )));
         };
@@ -631,28 +646,22 @@ pub(crate) fn create_invocations(
     program: &Program,
     workgroup: [u32; 3],
     slots: Arc<LocalSlots>,
-) -> Result<Vec<Invocation<'_>>, vyre::Error> {
+) -> Result<Vec<Invocation<'_>>, crate::ReferenceError> {
     let global_dim = |wgid: u32, size: u32, local: u32| {
         wgid
             .checked_mul(size)
             .and_then(|base| base.checked_add(local))
-            .ok_or_else(|| Error::interp(
-                "workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32.",
-            ))
+            .ok_or_else(|| ReferenceError::new("workgroup * dispatch dimensions overflow u32 global id. Fix: reduce workgroup id or workgroup size so each global_invocation_id component fits in u32."))
     };
     let [sx, sy, sz] = program.workgroup_size();
     let invocation_count = sx
         .checked_mul(sy)
         .and_then(|count| count.checked_mul(sz))
         .ok_or_else(|| {
-            Error::interp(
-                "workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.",
-            )
+            ReferenceError::new("workgroup invocation count overflows u32. Fix: reduce workgroup dimensions before reference execution.")
         })?;
     let mut invocations = Vec::with_capacity(usize::try_from(invocation_count).map_err(|_| {
-        Error::interp(
-            "workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.",
-        )
+        ReferenceError::new("workgroup invocation count exceeds host usize. Fix: reduce workgroup dimensions before reference execution.")
     })?);
     for z in 0..sz {
         for y in 0..sy {
@@ -680,7 +689,7 @@ pub(crate) fn create_invocations(
 
 #[cfg(test)]
 #[allow(dead_code)]
-pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, vyre::Error> {
+pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, crate::ReferenceError> {
     let mut workgroup = BufferMap::new();
     let mut allocated = 0usize;
     for decl in program
@@ -691,17 +700,15 @@ pub(crate) fn workgroup_memory(program: &Program) -> Result<BufferMap, vyre::Err
         let element_size = decl.element().min_bytes();
         let len = (decl.count() as usize)
             .checked_mul(element_size)
-            .ok_or_else(|| Error::interp(format!(
+            .ok_or_else(|| ReferenceError::new(format!(
                     "workgroup buffer `{}` byte size overflows usize. Fix: reduce count or element size.",
                     decl.name()
             )))?;
         allocated = allocated
             .checked_add(len)
-            .ok_or_else(|| Error::interp(
-                "total workgroup memory byte size overflows usize. Fix: reduce workgroup buffer declarations.",
-            ))?;
+            .ok_or_else(|| ReferenceError::new("total workgroup memory byte size overflows usize. Fix: reduce workgroup buffer declarations."))?;
         if allocated > MAX_WORKGROUP_BYTES {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "workgroup memory requires {allocated} bytes, exceeding the {MAX_WORKGROUP_BYTES}-byte reference budget. Fix: reduce workgroup buffer counts."
             )));
         }

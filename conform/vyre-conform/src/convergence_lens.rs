@@ -5,7 +5,7 @@
 
 use crate::lens::fixpoint_current_score;
 use vyre::ir::{BufferAccess, Program};
-use vyre::BackendRegistration;
+use vyre_driver::BackendRegistration;
 use vyre_reference::value::Value;
 
 use crate::ProductionSession;
@@ -158,7 +158,7 @@ fn run_cpu<'a>(
     inputs: &[Vec<u8>],
     values: &'a mut Vec<Value>,
     outputs: &'a mut Vec<Vec<u8>>,
-) -> Result<&'a [Vec<u8>], vyre::Error> {
+) -> Result<&'a [Vec<u8>], vyre_reference::ReferenceError> {
     values.clear();
     for input in inputs {
         values.push(Value::from(input.as_slice()));

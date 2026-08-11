@@ -2,8 +2,8 @@
 
 use crate::ops::{read_u32_prefix, read_u64_prefix};
 use crate::value::Value;
-use vyre::ir::DataType;
-use vyre::Error;
+use crate::ReferenceError;
+use vyre_foundation::ir::DataType;
 
 pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
     match ty {
@@ -21,7 +21,7 @@ pub(crate) fn spec_output_value(ty: DataType, bytes: &[u8]) -> Value {
     }
 }
 
-pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre::Error> {
+pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crate::ReferenceError> {
     // A float source converts NUMERICALLY only to U32/I32 (saturating), Bool
     // (truthy), or F32 (identity). It has NO defined ARITHMETIC conversion to a
     // narrow int (U8/U16/I8/I16), a 64-bit int (U64/I64), or any other exotic
@@ -52,7 +52,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
                 | DataType::Bytes
         )
     {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "cast from f32 to {target:?} has no defined conversion: a float source \
              converts numerically only to u32/i32 (saturating), bool (truthy), or f32, \
              or byte-reinterprets to a fixed-width vector. Fix: cast the f32 to u32 or \
@@ -147,7 +147,7 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, vyre
 /// bits `0xFFFF_FFFF`, and `-1i32 as u8` == `0xFF` == 255. Fails closed for a
 /// `Float`/`Array` source (a float is already rejected upstream for narrow
 /// targets; an array is not a scalar).
-fn narrow_low_word(target: &DataType, value: &Value) -> Result<u32, vyre::Error> {
+fn narrow_low_word(target: &DataType, value: &Value) -> Result<u32, crate::ReferenceError> {
     match value {
         Value::U32(v) => Ok(*v),
         Value::I32(v) => Ok(*v as u32),
@@ -165,8 +165,8 @@ fn read_fixed_prefix(bytes: &[u8], width: usize) -> Vec<u8> {
     fixed
 }
 
-fn invalid_cast(target: &DataType, value: &Value) -> Error {
-    Error::interp(format!(
+fn invalid_cast(target: &DataType, value: &Value) -> ReferenceError {
+    ReferenceError::new(format!(
         "cast to {target:?} cannot represent {value:?} losslessly. Fix: cast from an in-range scalar value."
     ))
 }

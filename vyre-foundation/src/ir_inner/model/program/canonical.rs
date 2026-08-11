@@ -29,7 +29,7 @@ impl Program {
     /// Returns the same wire-format validation errors as [`Self::to_wire`],
     /// but after canonical normalization has been applied.
     #[must_use]
-    pub fn canonical_wire_bytes(&self) -> Result<Vec<u8>, crate::error::Error> {
+    pub fn canonical_wire_bytes(&self) -> Result<Vec<u8>, crate::error::IrError> {
         let canonical = self.canonicalized();
         // Pre-size: VIR0 wire encoding lands in the ballpark of ~32
         // bytes per IR node + a fixed program header. Over-sizing is
@@ -42,7 +42,7 @@ impl Program {
             + canonical.buffers().len().saturating_mul(64);
         let mut out = Vec::with_capacity(estimate);
         crate::serial::wire::encode::to_wire_into(&canonical, &mut out)
-            .map_err(|message| crate::error::Error::WireFormatValidation { message })?;
+            .map_err(|message| crate::error::IrError::WireFormatValidation { message })?;
         Ok(out)
     }
 
@@ -52,7 +52,7 @@ impl Program {
     ///
     /// Returns a wire-format validation error if the canonical program cannot
     /// be represented by the current VIR0 encoder.
-    pub fn canonical_wire_hash(&self) -> Result<blake3::Hash, crate::error::Error> {
+    pub fn canonical_wire_hash(&self) -> Result<blake3::Hash, crate::error::IrError> {
         self.canonical_wire_bytes()
             .map(|bytes| blake3::hash(&bytes))
     }

@@ -5,8 +5,8 @@ use vyre_foundation::ir::Program;
 
 mod cache_audit;
 mod cache_identity;
+mod compiled_pipeline_defaults;
 mod on_disk;
-mod passthrough;
 
 #[test]
 fn parse_positive_env_rejects_unset_zero_and_invalid() {

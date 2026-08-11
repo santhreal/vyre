@@ -6,8 +6,8 @@
 //! called once per compile, reads (never mutates) the Program, and returns a
 //! structured decision that names every policy that applied.
 //!
-//! The default gate in `vyre-core::ops::registry::gate` verifies that every
-//! op invoked by the Program is registered in the `DialectRegistry`. Downstream
+//! The default gate resolves every invoked operation through the foundation-owned
+//! semantic operation registry. Downstream
 //! crates compose additional gates (certificate verification, witness-domain
 //! coverage, signature checks) by stacking policies via `EnforceGate::then`.
 

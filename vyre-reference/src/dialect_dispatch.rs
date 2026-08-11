@@ -18,7 +18,8 @@
 //! instead of panicking at dispatch time.
 
 use crate::execution::call::invoke_cpu_ref;
-use vyre::{cpu_op::is_cpu_reference_sentinel, Error, OpDef};
+use crate::ReferenceError;
+use vyre_foundation::{cpu_op::is_cpu_reference_sentinel, OpDef};
 
 /// Run a single op against its registered CPU reference.
 ///
@@ -28,20 +29,20 @@ use vyre::{cpu_op::is_cpu_reference_sentinel, Error, OpDef};
 ///
 /// # Errors
 ///
-/// Returns `Error::Interp` when:
+/// Returns `ReferenceError::Interp` when:
 ///
 /// * The op id is not registered with any dialect.
 /// * The registered op is a Category C IO op, which has no portable CPU path.
 /// * The registered op still points at foundation's structured CPU reference sentinel.
-pub fn dispatch_op(op_id: &str, input: &[u8], output: &mut Vec<u8>) -> Result<(), Error> {
-    let lookup = vyre::dialect_lookup().ok_or_else(|| {
-        Error::interp(format!(
+pub fn dispatch_op(op_id: &str, input: &[u8], output: &mut Vec<u8>) -> Result<(), ReferenceError> {
+    let lookup = vyre_foundation::dialect_lookup().ok_or_else(|| {
+        ReferenceError::new(format!(
             "reference interpreter: no DialectLookup is installed. Fix: initialize vyre-driver before dispatching `{op_id}`."
         ))
     })?;
     let interned = lookup.intern_op(op_id);
     let op_def = lookup.lookup(interned).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "reference interpreter: op `{op_id}` is not registered. Fix: link the dialect crate that provides `{op_id}`."
         ))
     })?;
@@ -51,15 +52,15 @@ pub fn dispatch_op(op_id: &str, input: &[u8], output: &mut Vec<u8>) -> Result<()
     invoke_cpu_ref(op_id, op_def.lowerings.cpu_ref, input, output)
 }
 
-fn reject_unsupported_cpu_dispatch(op_id: &str, op_def: &OpDef) -> Result<(), Error> {
+fn reject_unsupported_cpu_dispatch(op_id: &str, op_def: &OpDef) -> Result<(), ReferenceError> {
     if op_def.dialect == "io" {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "unsupported capability for `{op_id}` on reference/CPU backend: Category C IO ops are registered for composition but require a backend lowering for zero-copy NVMe/GDS execution. Fix: select or register a backend that advertises the `io` dialect capability, or reject the program during capability negotiation before reference dispatch."
         )));
     }
 
     if is_cpu_reference_sentinel(op_def.lowerings.cpu_ref) {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "unsupported CPU reference dispatch for `{op_id}`: the op is registered with foundation's structured intrinsic reference sentinel, not an executable flat-ABI CPU implementation. Fix: implement a typed reference adapter for `{op_id}` or route the program to a backend that declares a native lowering for this capability."
         )));
     }
@@ -80,7 +81,7 @@ pub const REFERENCE_BACKEND_NAME: &str = "reference";
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use vyre::{
+    use vyre_foundation::{
         install_dialect_lookup, intern_string, DialectLookup, InternedOpId, LoweringTable, OpDef,
     };
 

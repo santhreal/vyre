@@ -26,7 +26,7 @@ pub const MAGIC: &[u8; 4] = b"VYRE";
 /// program-level composition-safety flags in metadata so parser/stateful
 /// kernels do not become fusible after wire round trip. Rev 3 introduces:
 /// structured version-mismatch errors (see
-/// [`crate::error::Error::VersionMismatch`]) and a reserved
+/// [`crate::error::IrError::VersionMismatch`]) and a reserved
 /// dialect-manifest section after the header for rev-3+ readers. Rev
 /// 2 was never released; versions go 1 to 3 directly.
 pub const WIRE_FORMAT_VERSION: u16 = 6;

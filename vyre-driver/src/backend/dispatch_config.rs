@@ -13,7 +13,7 @@ use std::time::Duration;
 /// # Examples
 ///
 /// ```
-/// use vyre::DispatchConfig;
+/// use vyre_driver::DispatchConfig;
 ///
 /// // DispatchConfig is `#[non_exhaustive]`; construct it through
 /// // `default()` and overwrite the fields you want to change.

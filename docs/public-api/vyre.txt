@@ -10,7 +10,6 @@ pub use vyre::ByteRange
 pub use vyre::CompileRequest
 pub use vyre::Completion
 pub use vyre::DeviceIdentity
-pub use vyre::Error
 pub use vyre::ExternalFacts
 pub use vyre::InterpCtx
 pub use vyre::MemoryOrdering
@@ -31,7 +30,6 @@ pub use vyre::admit_artifact
 pub use vyre::admit_envelope
 pub use vyre::compiler
 pub use vyre::diagnostics
-pub use vyre::error
 pub use vyre::execution_plan
 pub use vyre::ir
 pub use vyre::match_result

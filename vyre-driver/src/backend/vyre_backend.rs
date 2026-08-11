@@ -6,8 +6,8 @@ use smallvec::SmallVec;
 use vyre_foundation::ir::Program;
 
 use crate::backend::{
-    device_buffer::unsupported_device_buffer, private, BackendError, CompiledPipeline,
-    DeviceBuffer, DispatchConfig, OutputBuffers, PendingDispatch, Resource, TimedDispatchResult,
+    device_buffer::unsupported_device_buffer, private, BackendError, DeviceBuffer, DispatchConfig,
+    OutputBuffers, PendingDispatch, Resource, TimedDispatchResult,
 };
 
 /// One backend-resident program dispatch in an ordered sequence.
@@ -97,9 +97,10 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
     /// # Examples
     ///
     /// ```no_run
-    /// use vyre::{Program, VyreBackend, DispatchConfig};
+    /// use vyre_foundation::ir::Program;
+    /// use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
     ///
-    /// # fn example(backend: &dyn VyreBackend, program: &Program) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+    /// # fn example(backend: &dyn VyreBackend, program: &Program) -> Result<Vec<Vec<u8>>, BackendError> {
     /// let inputs = vec![vec![1u8, 2, 3]];
     /// let config = DispatchConfig::default();
     /// backend.dispatch(program, &inputs, &config)
@@ -592,56 +593,6 @@ pub trait VyreBackend: private::Sealed + Send + Sync {
             .map(|range| (range.resource, range.byte_offset, range.byte_len))
             .collect::<SmallVec<[_; 8]>>();
         self.download_resident_ranges_into(&ranges, outputs)
-    }
-
-    /// Optional pre-compilation hook for the pipeline-mode API.
-    ///
-    /// Default returns `Ok(None)`  -  the framework wraps in a passthrough
-    /// pipeline whose `dispatch` calls back into [`VyreBackend::dispatch`]
-    /// every time. Backends that genuinely cache compiled state (compute
-    /// pipeline, bind-group layout, lowered shader text) override this and
-    /// return `Ok(Some(...))` so repeated dispatches skip the compilation
-    /// overhead.
-    ///
-    /// The returned pipeline MUST be bit-identical to repeated
-    /// `dispatch(program, inputs, config)` for the program it was compiled
-    /// from. The cache key is the backend's responsibility  -  the framework
-    /// does not deduplicate compile calls.
-    ///
-    /// Implementing this method is the P-6 contract from
-    /// `docs/audits/ROADMAP_PERFORMANCE.md`: "compile target-text + pipeline +
-    /// bind-group-layout once; dispatch repeatedly with different inputs."
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] when the backend cannot complete the
-    /// pre-compilation. Callers should treat this as fatal for the program
-    /// (the program will not dispatch successfully via any path).
-    fn compile_native(
-        &self,
-        _program: &Program,
-        _config: &DispatchConfig,
-    ) -> Result<Option<Arc<dyn CompiledPipeline>>, BackendError> {
-        Ok(None)
-    }
-
-    /// Optional pre-compilation hook for callers that already own a shared
-    /// program allocation.
-    ///
-    /// Backends that store the program inside the compiled pipeline should
-    /// override this method and keep the supplied [`Arc<Program>`] instead of
-    /// cloning the IR. The default preserves the older borrowed-program hook
-    /// for backends that only inspect the program while compiling.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] when backend-native compilation fails.
-    fn compile_native_shared(
-        &self,
-        program: Arc<Program>,
-        config: &DispatchConfig,
-    ) -> Result<Option<Arc<dyn CompiledPipeline>>, BackendError> {
-        self.compile_native(&program, config)
     }
 
     /// Optional compiled-pipeline cache counters for compile telemetry.

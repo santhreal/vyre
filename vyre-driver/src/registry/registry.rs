@@ -11,7 +11,6 @@
 //! installed snapshot. No lookup ever observes a partially-mutated registry.
 
 use super::interner::{intern_string, InternedOpId};
-use super::lowering::ReferenceKind;
 use super::op_def::OpDef;
 use arc_swap::{ArcSwap, Guard};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -20,6 +19,7 @@ use std::fmt::{self, Write as _};
 use std::sync::{Arc, OnceLock};
 use vyre_foundation::dialect_lookup::{install_dialect_lookup, Category, DialectLookup};
 use vyre_foundation::extern_registry::{ExternDialect, ExternOp};
+use vyre_spec::CpuFn;
 
 /// Lookup target for a dialect op's lowering path.
 ///
@@ -354,7 +354,7 @@ impl DialectRegistry {
 
     /// Resolve the lowering descriptor for `id` on `target`, or `None`
     /// when no backend lowering has been registered for that pair.
-    pub fn get_lowering(&self, id: InternedOpId, target: Target) -> Option<ReferenceKind> {
+    pub fn get_lowering(&self, id: InternedOpId, target: Target) -> Option<CpuFn> {
         let def = self.index.by_id.get(&id)?;
         if target == Target::ReferenceBackend {
             return Some(def.lowerings.cpu_ref);

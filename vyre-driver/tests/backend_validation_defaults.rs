@@ -6,11 +6,11 @@
 
 use std::collections::HashSet;
 
-use vyre::backend::validation::{
+use vyre::ir::{CollectiveOp, CommGroup, Expr, Node, OpId, Program};
+use vyre_driver::backend::validation::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,
 };
-use vyre::backend::{BackendError, VyreBackend};
-use vyre::ir::{CollectiveOp, CommGroup, Expr, Node, OpId, Program};
+use vyre_driver::backend::{BackendError, VyreBackend};
 
 fn collective_nodes() -> [Node; 4] {
     [
@@ -191,7 +191,7 @@ fn default_supported_ops_with_trap_excludes_distributed_collectives() {
 fn default_backend_validation_rejects_distributed_collectives() {
     struct DefaultOpsBackend;
 
-    impl vyre::backend::private::Sealed for DefaultOpsBackend {}
+    impl vyre_driver::backend::private::Sealed for DefaultOpsBackend {}
 
     impl VyreBackend for DefaultOpsBackend {
         fn id(&self) -> &'static str {
@@ -206,7 +206,7 @@ fn default_backend_validation_rejects_distributed_collectives() {
             &self,
             _program: &Program,
             _inputs: &[Vec<u8>],
-            _config: &vyre::DispatchConfig,
+            _config: &vyre_driver::DispatchConfig,
         ) -> Result<Vec<Vec<u8>>, BackendError> {
             Ok(Vec::new())
         }

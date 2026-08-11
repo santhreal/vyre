@@ -128,51 +128,25 @@ pub use vyre_runtime::{
 /// Canonical scan compilation, session, paging, residency, and readback owner.
 pub use vyre_scan as scan;
 
-/// Distribution-aware runtime algorithm selection.
-/// Public API re-export.
-pub use vyre_driver::routing;
-
 /// Substrate-neutral execution planning for performance and accuracy tracks.
 /// Public API re-export.
 pub use vyre_foundation::execution_plan;
-
-/// Unified error types for the entire crate.
-/// Public API re-export.
-pub use vyre_driver::error;
 
 /// Structured, machine-readable diagnostics.
 /// Public API re-export.
 pub use vyre_driver::diagnostics;
 
-/// Backend trait surface  -  `VyreBackend`, `Executable`,
-/// `Streamable`, `DispatchConfig`, `BackendError`,
-/// `ErrorCode`. The whole backend contract every driver crate
-/// implements against.
-/// Public API re-export.
-/// Public API re-export.
-pub use vyre_driver::backend;
 /// Re-export of the native scan match result type from the foundation crate.
 /// Public API re-export.
 /// Public API re-export.
 pub use vyre_foundation::match_result;
-
 
 // Previously: pub mod bytecode  -  a 637-LOC stack-machine VM publicly
 // re-exported from core. Deleted 2026-04-17. The NFA scan micro-interpreter
 // that carried the remaining bytecode was deleted 2026-04-19. Rule evaluators
 // compose ops in vyre IR directly. No interpreter surface remains in core.
 
-pub use vyre_driver::{
-    ArtifactInstance, BackendError, BackendRegistration, BindingSet, CompiledPipeline, Completion,
-    Device, DeviceIdentity, DispatchConfig, Error, Executable, Memory, MemoryRef, OutputBuffers,
-    ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError, Submission, TypedDispatchExt,
-    VyreBackend,
-};
-
-/// Persistent-thread dispatch policy for dispatch paths.
-pub use vyre_driver::persistent::PersistentThreadMode;
-/// Speculation policy for dispatch paths.
-pub use vyre_driver::speculate::SpeculationMode;
+pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
 
 /// Re-export of the core IR program type and validation entry point.
 ///
@@ -181,10 +155,5 @@ pub use vyre_driver::speculate::SpeculationMode;
 /// handed to a backend.
 pub use ir::{validate, InterpCtx, NodeId, NodeStorage, OpId, Program, Value};
 
-/// Re-export of the native scan match result type.
-///
-/// `Match` represents a byte-range hit produced by pattern-scanning engines.
-pub use vyre_foundation::match_result::Match;
-
-/// Domain-neutral byte-range type.
+/// Domain-neutral tagged byte range shared by scan and source-processing products.
 pub use vyre_foundation::match_result::ByteRange;

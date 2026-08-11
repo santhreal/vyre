@@ -1,9 +1,9 @@
 //! Evaluation of `Expr::Call` for the reference interpreter.
 
-use vyre::cpu_op::CpuFn;
-use vyre::ir::{DataType, Expr, Program};
-use vyre::Error;
-use vyre::{dialect_lookup, TypedParam};
+use crate::ReferenceError;
+use vyre_foundation::cpu_op::CpuFn;
+use vyre_foundation::ir::{DataType, Expr, Program};
+use vyre_foundation::{dialect_lookup, TypedParam};
 
 use crate::execution::expr_cast::spec_output_value;
 use crate::{
@@ -20,7 +20,7 @@ pub(crate) fn eval_call(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<Value, vyre::Error> {
+) -> Result<Value, crate::ReferenceError> {
     let resolved = resolve_call(call_expr, op_id, invocation)?;
     let def = resolved.def;
 
@@ -72,12 +72,12 @@ pub(crate) fn invoke_cpu_ref(
     cpu_ref: CpuFn,
     input: &[u8],
     output: &mut Vec<u8>,
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     // The sentinel is not an implementation: it clears the output buffer and
     // returns. Calling it would report success while computing nothing, so
     // every op that still carries it fails closed here instead.
-    if vyre::cpu_op::is_cpu_reference_sentinel(cpu_ref) {
-        return Err(Error::interp(format!(
+    if vyre_foundation::cpu_op::is_cpu_reference_sentinel(cpu_ref) {
+        return Err(ReferenceError::new(format!(
             "op `{op_id}` has no CPU reference implementation: its lowering table still holds the non-executable sentinel. Fix: register a real `cpu_ref` for this intrinsic, or give the op a composition body so the interpreter can inline and execute it."
         )));
     }
@@ -85,7 +85,7 @@ pub(crate) fn invoke_cpu_ref(
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cpu_ref(input, output))).map_err(
         |payload| {
             output.truncate(original_len);
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "CPU reference for `{op_id}` panicked: {}. Fix: make the primitive reference total over byte inputs and return a structured error before registering it.",
                 panic_payload_message(payload.as_ref())
             ))
@@ -107,18 +107,18 @@ fn resolve_call(
     call_expr: *const Expr,
     op_id: &str,
     invocation: &mut Invocation<'_>,
-) -> Result<ResolvedCall, vyre::Error> {
+) -> Result<ResolvedCall, crate::ReferenceError> {
     if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
         return Ok(resolved);
     }
     let lookup = dialect_lookup().ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "unsupported call `{op_id}`: no DialectLookup is installed. Fix: initialize vyre-driver before running the reference interpreter or inline the callee as IR."
         ))
     })?;
     let interned = lookup.intern_op(op_id);
     let def = lookup.lookup(interned).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "unsupported call `{op_id}`. Fix: register the op in DialectRegistry or inline the callee as IR."
         ))
     })?;
@@ -127,11 +127,15 @@ fn resolve_call(
     Ok(resolved)
 }
 
-fn validate_arity(op_id: &str, actual: usize, expected: usize) -> Result<(), vyre::Error> {
+fn validate_arity(
+    op_id: &str,
+    actual: usize,
+    expected: usize,
+) -> Result<(), crate::ReferenceError> {
     if actual == expected {
         return Ok(());
     }
-    Err(Error::interp(format!(
+    Err(ReferenceError::new(format!(
         "call `{op_id}` received {actual} arguments but the primitive signature requires {expected}. Fix: pass exactly {expected} arguments."
     )))
 }
@@ -143,17 +147,17 @@ fn encode_inputs(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<Vec<u8>, vyre::Error> {
+) -> Result<Vec<u8>, crate::ReferenceError> {
     let mut input = Vec::with_capacity(inputs.iter().map(|param| param_width(param.ty)).sum());
     for (arg, param) in args.iter().zip(inputs) {
         let declared_width = param_width(param.ty);
         let next_len = input.len().checked_add(declared_width).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "call `{op_id}` input byte size overflows usize. Fix: reduce the argument count or byte payload size."
             ))
         })?;
         if next_len > MAX_CALL_INPUT_BYTES {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "call `{op_id}` requires {next_len} input bytes, exceeding the {MAX_CALL_INPUT_BYTES}-byte reference budget. Fix: reduce call input size."
             )));
         }

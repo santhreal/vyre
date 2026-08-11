@@ -88,6 +88,9 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   instructions and registers.
 - Release benchmark commands now run 300 warmup samples before measurement so
   accelerator clock preconditioning is explicit and reproducible.
+- Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead
+  of a cross-domain error sink. Reference interpretation, backend execution,
+  WGPU device selection, and runtime framing return owner-local typed failures.
 
 ### Removed
 

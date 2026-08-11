@@ -160,7 +160,7 @@ fn run_dynamic_macro_expansion(
     input: &[u32],
     fixture: &MacroFixture,
     max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_dynamic_macro_expansion(
         "in_tok_types",
         "macro_keys",
@@ -182,7 +182,7 @@ fn run_dynamic_macro_expansion(
     vyre_reference::reference_eval(&program, &values)
 }
 
-fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre::Error> {
+fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_conditional_mask("tok_types", "out_mask", Expr::u32(tok_types.len() as u32));
     let input_bytes = if tok_types.is_empty() {
         vec![0u8; 4]

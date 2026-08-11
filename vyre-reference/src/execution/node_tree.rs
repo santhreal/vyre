@@ -1,6 +1,6 @@
 //! Shared recursive inspection helpers for statement IR nodes.
 
-use vyre::ir::Node;
+use vyre_foundation::ir::Node;
 
 /// Whether any statement in `nodes` may reach a `Barrier`, scanning child
 /// statement lists recursively with an exhaustive `Node` match.

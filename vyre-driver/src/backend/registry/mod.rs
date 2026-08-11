@@ -3,9 +3,9 @@
 //! Backend crates submit a [`BackendRegistration`] with `inventory::submit!`.
 //! Applications discover every linked backend through [`registered_backends`]
 //! without hardcoding crate-specific constructors. Because the registry lives
-//! in `vyre-core` and is populated by downstream crates at link time, this
-//! crate's own test sees an empty registry; downstream crates assert their
-//! own presence.
+//! in the neutral driver crate and is populated by downstream crates at link
+//! time, this crate's own test sees an empty registry; concrete driver crates
+//! assert their own presence.
 
 mod acquire;
 mod grid_sync_split;

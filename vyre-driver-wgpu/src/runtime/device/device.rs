@@ -3,7 +3,9 @@ use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
-use vyre_driver::error::{Error, Result};
+use vyre_driver::BackendError;
+
+type Result<T, E = BackendError> = std::result::Result<T, E>;
 
 use crate::staging_reserve::reserve_backend_vec;
 
@@ -222,13 +224,11 @@ pub async fn acquire_gpu() -> Result<(
             info.name, info.device_type, info.backend
         )
     }));
-    Err(Error::Gpu {
-        message: format!(
-            "no real GPU adapter could create a wgpu device. Probed adapters: [{}]. Device failures: [{}]. Fix: expose a discrete, integrated, or virtual GPU through a wgpu-supported driver before running vyre.",
-            probed.join(", "),
-            failures.join("; ")
-        ),
-    })
+    Err(BackendError::new(format!(
+        "no real GPU adapter could create a wgpu device. Probed adapters: [{}]. Device failures: [{}]. Fix: expose a discrete, integrated, or virtual GPU through a wgpu-supported driver before running vyre.",
+        probed.join(", "),
+        failures.join("; ")
+    )))
 }
 
 pub(super) async fn request_device_for_adapter(
@@ -241,12 +241,10 @@ pub(super) async fn request_device_for_adapter(
 )> {
     let adapter_info = adapter.get_info();
     if !crate::capabilities::is_real_gpu(&adapter_info) {
-        return Err(Error::Gpu {
-            message: format!(
-                "wgpu adapter `{}` reports device type {:?}, which is not a real GPU execution target. Fix: select a discrete, integrated, or virtual GPU adapter; CPU/software adapters are not production dispatch backends.",
-                adapter_info.name, adapter_info.device_type
-            ),
-        });
+        return Err(BackendError::new(format!(
+            "wgpu adapter `{}` reports device type {:?}, which is not a real GPU execution target. Fix: select a discrete, integrated, or virtual GPU adapter; CPU/software adapters are not production dispatch backends.",
+            adapter_info.name, adapter_info.device_type
+        )));
     }
     // Opt into every feature the adapter advertises that we know how to
     // lower against. Each feature is additive: enabling it unlocks the
@@ -310,9 +308,7 @@ pub(super) async fn request_device_for_adapter(
             },
         )
         .await
-        .map_err(|error| Error::Gpu {
-            message: format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name),
-        })?;
+        .map_err(|error| BackendError::new(format!("failed to acquire device for adapter `{}`: {error}. Fix: check requested wgpu limits/features against the adapter and update the GPU driver if limits are unexpectedly low.", adapter_info.name)))?;
     let device_limits = device_queue.0.limits();
     enabled.max_workgroup_size = [
         device_limits.max_compute_workgroup_size_x,
@@ -325,12 +321,10 @@ pub(super) async fn request_device_for_adapter(
     enabled.min_subgroup_size = device_limits.min_subgroup_size;
 
     if enabled.subgroup {
-        subgroup_smoke_compiles(&device_queue.0).map_err(|error| Error::Gpu {
-            message: format!(
-                "adapter `{}` advertises SUBGROUP but rejects the subgroup compute-pipeline smoke test: {error}. Fix: repair the wgpu feature negotiation or GPU driver; do not silently report subgroup support as disabled on a subgroup-capable adapter.",
-                adapter_info.name
-            ),
-        })?;
+        subgroup_smoke_compiles(&device_queue.0).map_err(|error| BackendError::new(format!(
+            "adapter `{}` advertises SUBGROUP but rejects the subgroup compute-pipeline smoke test: {error}. Fix: repair the wgpu feature negotiation or GPU driver; do not silently report subgroup support as disabled on a subgroup-capable adapter.",
+            adapter_info.name
+        )))?;
     }
 
     Ok((device_queue, adapter_info, enabled))
@@ -542,9 +536,8 @@ pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
 }
 
 fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static str) -> Result<()> {
-    reserve_backend_vec(vec, additional, context).map_err(|error| Error::Gpu {
-        message: error.to_string(),
-    })
+    reserve_backend_vec(vec, additional, context)
+        .map_err(|error| BackendError::new(error.to_string()))
 }
 
 #[cfg(test)]

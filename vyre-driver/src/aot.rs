@@ -3,21 +3,10 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use crate::{BackendError, DispatchConfig};
-use vyre_foundation::ir::Program;
+use crate::BackendError;
 
 /// Stable AOT target identifier.
 pub type AotTargetId = &'static str;
-
-/// One backend-owned AOT emitter.
-pub struct AotEmitter {
-    /// Stable target identifier.
-    pub target: AotTargetId,
-    /// Emit target-native bytes for `program`.
-    pub emit: fn(&Program, &DispatchConfig) -> Result<Vec<u8>, String>,
-}
-
-inventory::collect!(AotEmitter);
 
 /// One dependency entry required by a generated launcher crate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,7 +20,7 @@ pub struct LauncherDependency {
 /// Backend-neutral launcher emission request.
 #[derive(Debug)]
 pub struct AotLauncherRequest<'a> {
-    /// Stable target id matching [`AotEmitter::target`].
+    /// Stable target id matching the selected launcher emitter.
     pub target: AotTargetId,
     /// Generated launcher crate name.
     pub crate_name: &'a str,
@@ -78,16 +67,6 @@ pub struct AotLauncherEmitter {
 
 inventory::collect!(AotLauncherEmitter);
 
-/// Return every linked AOT emitter.
-#[must_use]
-pub fn registered_aot_emitters() -> Vec<&'static AotEmitter> {
-    let emitter_count = inventory::iter::<AotEmitter>.into_iter().count();
-    let mut emitters = Vec::new();
-    let _ = emitters.try_reserve_exact(emitter_count);
-    emitters.extend(inventory::iter::<AotEmitter>);
-    emitters
-}
-
 /// Return every linked launcher emitter.
 #[must_use]
 pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
@@ -96,33 +75,6 @@ pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
     let _ = emitters.try_reserve_exact(emitter_count);
     emitters.extend(inventory::iter::<AotLauncherEmitter>);
     emitters
-}
-
-/// Emit target-native bytes through the linked emitter matching `target`.
-///
-/// # Errors
-///
-/// Returns [`BackendError::UnsupportedFeature`] when no linked backend owns
-/// `target`, or [`BackendError::KernelCompileFailed`] when the concrete
-/// emitter rejects the program.
-pub fn emit_aot_target(
-    target: &str,
-    program: &Program,
-    config: &DispatchConfig,
-) -> Result<Vec<u8>, BackendError> {
-    let Some(emitter) = inventory::iter::<AotEmitter>
-        .into_iter()
-        .find(|emitter| emitter.target == target)
-    else {
-        return Err(BackendError::UnsupportedFeature {
-            name: format!("aot target `{target}`"),
-            backend: "vyre-driver".to_string(),
-        });
-    };
-    (emitter.emit)(program, config).map_err(|compiler_message| BackendError::KernelCompileFailed {
-        backend: target.to_string(),
-        compiler_message,
-    })
 }
 
 /// Emit target-owned launcher files through the linked emitter matching `target`.

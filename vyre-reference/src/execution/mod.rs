@@ -18,7 +18,7 @@ pub(crate) mod typed_ops;
 use std::borrow::Cow;
 
 use rustc_hash::FxHashMap;
-use vyre::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
+use vyre_foundation::ir::{InterpCtx, Node, NodeId, NodeStorage, Program, Value as IrValue};
 
 use crate::value::Value;
 
@@ -29,15 +29,17 @@ use crate::value::Value;
 /// `Program::wrapped` again. When the first entry node is a `Store` (or the
 /// entry is empty), we do **not** auto-wrap: those programs must still use
 /// `Program::wrapped` explicitly, matching `region_gate` negative tests.
-pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Program>, vyre::Error> {
+pub(crate) fn program_for_interpreter(
+    program: &Program,
+) -> Result<Cow<'_, Program>, crate::ReferenceError> {
     let normalized = if let Some(message) = program.top_level_region_violation() {
         if program.entry().is_empty() {
-            return Err(vyre::Error::interp(format!(
+            return Err(crate::ReferenceError::new(format!(
                 "reference interpreter requires a top-level Region-wrapped Program: {message}"
             )));
         }
         if matches!(program.entry().first(), Some(Node::Store { .. })) {
-            return Err(vyre::Error::interp(format!(
+            return Err(crate::ReferenceError::new(format!(
                 "reference interpreter requires a top-level Region-wrapped Program: {message}"
             )));
         }
@@ -51,7 +53,7 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
         ) {
             Ok(Some(lowered)) => Cow::Owned(lowered),
             Ok(None) => normalized,
-            Err(error) => return Err(vyre::Error::interp(error.to_string())),
+            Err(error) => return Err(crate::ReferenceError::new(error.to_string())),
         };
     // A composite op IS its IR body, so run the body. Only intrinsics reach
     // `eval_call`, and those are the only ops that register a CPU function.
@@ -59,7 +61,7 @@ pub(crate) fn program_for_interpreter(program: &Program) -> Result<Cow<'_, Progr
     // lowering table's placeholder, which cleared the output buffer instead
     // of computing anything.
     let inlined = vyre_foundation::ir::inline_composite_calls(collectives_lowered.as_ref())
-        .map_err(|error| vyre::Error::interp(error.to_string()))?;
+        .map_err(|error| crate::ReferenceError::new(error.to_string()))?;
     Ok(Cow::Owned(inlined))
 }
 
@@ -74,7 +76,10 @@ pub use hashmap::{is_reference_input, is_reference_output, output_index};
 /// The current public [`Program`] model is statement-oriented, so this stable
 /// entry point delegates to the statement evaluator. Graph-shaped extension
 /// nodes use [`run_storage_graph`].
-pub fn reference_eval(program: &Program, inputs: &[Value]) -> Result<Vec<Value>, vyre::Error> {
+pub fn reference_eval(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<Vec<Value>, crate::ReferenceError> {
     run_arena_reference(program, inputs)
 }
 
@@ -99,7 +104,7 @@ pub fn reference_eval(program: &Program, inputs: &[Value]) -> Result<Vec<Value>,
 pub fn reference_eval_oob_report(
     program: &Program,
     inputs: &[Value],
-) -> Result<(Vec<Value>, crate::oob::OobReport), vyre::Error> {
+) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
     let outputs = reference_eval(program, inputs)?;
     Ok((outputs, crate::oob::oob_report()))
@@ -120,7 +125,7 @@ pub fn reference_eval_with_dispatch_oob_report(
     program: &Program,
     inputs: &[Value],
     min_dispatch_elements: u32,
-) -> Result<(Vec<Value>, crate::oob::OobReport), vyre::Error> {
+) -> Result<(Vec<Value>, crate::oob::OobReport), crate::ReferenceError> {
     crate::oob::reset_oob_report();
     let outputs = reference_eval_with_dispatch(program, inputs, min_dispatch_elements)?;
     Ok((outputs, crate::oob::oob_report()))
@@ -143,12 +148,15 @@ pub fn reference_eval_with_dispatch(
     program: &Program,
     inputs: &[Value],
     min_dispatch_elements: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     run_arena_reference_with_dispatch(program, inputs, min_dispatch_elements)
 }
 
 /// Execute using the statement-IR reference evaluator.
-pub fn run_arena_reference(program: &Program, inputs: &[Value]) -> Result<Vec<Value>, vyre::Error> {
+pub fn run_arena_reference(
+    program: &Program,
+    inputs: &[Value],
+) -> Result<Vec<Value>, crate::ReferenceError> {
     run_arena_reference_with_dispatch(program, inputs, 0)
 }
 
@@ -161,7 +169,7 @@ pub fn run_arena_reference_with_dispatch(
     program: &Program,
     inputs: &[Value],
     min_dispatch_elements: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
     hashmap::run_hashmap_reference(
         &program,
@@ -189,7 +197,7 @@ pub fn reference_eval_with_grid(
     program: &Program,
     inputs: &[Value],
     grid: [u32; 3],
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Forward, Some(grid))
 }
@@ -210,7 +218,7 @@ pub fn reference_eval_with_grid(
 pub fn reference_eval_lane_reversed(
     program: &Program,
     inputs: &[Value],
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     let program = program_for_interpreter(program)?;
     hashmap::run_hashmap_reference(&program, inputs, 0, hashmap::LaneOrder::Reversed, None)
 }
@@ -220,7 +228,7 @@ pub fn reference_eval_lane_reversed(
 pub fn eval_hashmap_reference(
     program: &Program,
     inputs: &[Value],
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, crate::ReferenceError> {
     run_arena_reference(program, inputs)
 }
 
@@ -228,7 +236,7 @@ pub fn eval_hashmap_reference(
 pub fn run_storage_graph(
     nodes: &[(NodeId, NodeStorage)],
     outputs: &[NodeId],
-) -> Result<Vec<IrValue>, vyre::Error> {
+) -> Result<Vec<IrValue>, crate::ReferenceError> {
     let mut graph = FxHashMap::with_capacity_and_hasher(nodes.len(), Default::default());
     for (id, node) in nodes {
         if graph.insert(*id, node).is_some() {
@@ -259,7 +267,7 @@ fn eval_storage_node(
     graph: &FxHashMap<NodeId, &NodeStorage>,
     ctx: &mut InterpCtx,
     states: &mut FxHashMap<NodeId, VisitState>,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     match states.get(&id).copied() {
         Some(VisitState::Done) => return Ok(()),
         Some(VisitState::Visiting) => return Err(cycle_error(id)),
@@ -279,26 +287,26 @@ fn eval_storage_node(
     Ok(())
 }
 
-fn interp_error(error: vyre::ir::EvalError) -> vyre::Error {
-    vyre::Error::interp(error.to_string())
+fn interp_error(error: vyre_foundation::ir::EvalError) -> crate::ReferenceError {
+    crate::ReferenceError::new(error.to_string())
 }
 
-fn missing_node_error(id: NodeId) -> vyre::Error {
-    vyre::Error::interp(format!(
+fn missing_node_error(id: NodeId) -> crate::ReferenceError {
+    crate::ReferenceError::new(format!(
         "graph references missing node {}. Fix: include every dependency in the interpreter input graph.",
         id.0
     ))
 }
 
-fn cycle_error(id: NodeId) -> vyre::Error {
-    vyre::Error::interp(format!(
+fn cycle_error(id: NodeId) -> crate::ReferenceError {
+    crate::ReferenceError::new(format!(
         "graph contains a dependency cycle at node {}. Fix: submit an acyclic dataflow graph.",
         id.0
     ))
 }
 
-fn duplicate_node_error(id: NodeId) -> vyre::Error {
-    vyre::Error::interp(format!(
+fn duplicate_node_error(id: NodeId) -> crate::ReferenceError {
+    crate::ReferenceError::new(format!(
         "graph contains duplicate node {}. Fix: submit exactly one storage record for each NodeId before reference execution.",
         id.0
     ))
@@ -307,7 +315,7 @@ fn duplicate_node_error(id: NodeId) -> vyre::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
+    use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, NodeStorage};
 
     #[test]
     fn reference_eval_dispatches_singleton_atomic_flags_across_dynamic_byte_input() {
@@ -469,7 +477,7 @@ mod tests {
     fn recursive_value(
         id: NodeId,
         graph: &[(NodeId, NodeStorage)],
-    ) -> Result<IrValue, vyre::Error> {
+    ) -> Result<IrValue, crate::ReferenceError> {
         let node = graph
             .iter()
             .find(|(node_id, _)| *node_id == id)
@@ -487,23 +495,23 @@ mod tests {
                     BinOp::BitXor => left ^ right,
                     BinOp::BitAnd => left & right,
                     _ => {
-                        return Err(vyre::Error::interp(
+                        return Err(crate::ReferenceError::new(
                             "recursive parity oracle received unsupported op. Fix: keep test generation within the oracle domain.",
                         ));
                     }
                 };
                 Ok(IrValue::U32(value))
             }
-            _ => Err(vyre::Error::interp(
+            _ => Err(crate::ReferenceError::new(
                 "recursive parity oracle received unsupported node. Fix: keep test generation within the oracle domain.",
             )),
         }
     }
 
-    fn expect_u32(value: IrValue) -> Result<u32, vyre::Error> {
+    fn expect_u32(value: IrValue) -> Result<u32, crate::ReferenceError> {
         match value {
             IrValue::U32(value) => Ok(value),
-            other => Err(vyre::Error::interp(format!(
+            other => Err(crate::ReferenceError::new(format!(
                 "recursive parity oracle expected u32, got {other:?}. Fix: keep generated graphs scalar-u32 only."
             ))),
         }

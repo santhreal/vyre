@@ -11,7 +11,7 @@
 //! conform runner uses as its CPU oracle; [`crate::workgroup`] owns
 //! per-invocation state and memory types shared by the execution tree.
 
-use vyre::ir::Program;
+use vyre_foundation::ir::Program;
 
 use crate::workgroup::{InvocationIds, MAX_WORKGROUP_BYTES};
 
@@ -72,13 +72,13 @@ pub const MAX_SHARED_BYTES: usize = MAX_WORKGROUP_BYTES;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::{BufferDecl, DataType, Node, Program};
+    use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 
     fn trivial_program(size: [u32; 3]) -> Program {
         Program::wrapped(
             vec![BufferDecl::output("out", 0, DataType::U32)],
             size,
-            vec![Node::let_bind("idx", vyre::ir::Expr::gid_x())],
+            vec![Node::let_bind("idx", vyre_foundation::ir::Expr::gid_x())],
         )
     }
 

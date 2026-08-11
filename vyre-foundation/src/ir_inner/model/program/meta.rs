@@ -692,11 +692,11 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::Error::WireFormatValidation`] with every validation
+    /// Returns [`crate::IrError::WireFormatValidation`] with every validation
     /// message joined when the structural validator rejects the program.
-    pub fn validate(&self) -> crate::error::Result<()> {
+    pub fn validate(&self) -> crate::error::IrResult<()> {
         if self.validation_mutation_provenance() == ProgramMutationProvenance::Unknown {
-            return Err(crate::error::Error::WireFormatValidation {
+            return Err(crate::error::IrError::WireFormatValidation {
                 message: "program validation cache was invalidated by unknown mutation provenance. Fix: rebuild the Program through Program::wrapped/from_wire or use a named Program mutation API before validating.".into(),
             });
         }
@@ -715,7 +715,7 @@ impl Program {
             }
             message.push_str(error.message());
         }
-        Err(crate::error::Error::WireFormatValidation { message })
+        Err(crate::error::IrError::WireFormatValidation { message })
     }
 
     #[inline]

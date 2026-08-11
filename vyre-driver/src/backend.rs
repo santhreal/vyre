@@ -26,11 +26,12 @@ mod resource;
 mod typed_dispatch;
 mod vyre_backend;
 
+pub use crate::validation::validate_program_for_backend;
 pub use artifact_lifecycle::{
     ArtifactInstance, ArtifactMaterializer, BindingSet, BoundResource, Completion, Device,
     DeviceIdentity, Submission,
 };
-pub use capability::{Backend, Executable, Memory, MemoryRef, Streamable};
+pub use capability::Backend;
 pub use dialect_supported_ops::{dialect_and_language_supported_ops, dialect_only_supported_ops};
 pub use registry::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
@@ -41,12 +42,6 @@ pub use registry::{
 pub use validation::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,
 };
-// `validate_program_for_backend` lives at the crate root in
-// `crate::validation` (the cross-backend variant), not under the
-// per-backend submodule. Re-export it here so legacy call sites that
-// reach `vyre_driver::backend::validate_program_for_backend` keep
-// resolving against the same path.
-pub use crate::validation::validate_program_for_backend;
 
 pub use compiled_pipeline::CompiledPipeline;
 pub use device_buffer::{

@@ -178,7 +178,11 @@ fn u32_unary_cases() -> [(UnOp, UnExpected); 6] {
     ]
 }
 
-fn eval_u32_bin(op: BinOp, left: u32, right: u32) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_u32_bin(
+    op: BinOp,
+    left: u32,
+    right: u32,
+) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitU32(left)),
         (NodeId(1), NodeStorage::LitU32(right)),
@@ -194,7 +198,7 @@ fn eval_u32_bin(op: BinOp, left: u32, right: u32) -> Result<IrValue, vyre_founda
     Ok(run_storage_graph(&graph, &[NodeId(2)])?[0])
 }
 
-fn eval_u32_un(op: UnOp, value: u32) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_u32_un(op: UnOp, value: u32) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitU32(value)),
         (
@@ -208,7 +212,11 @@ fn eval_u32_un(op: UnOp, value: u32) -> Result<IrValue, vyre_foundation::Error> 
     Ok(run_storage_graph(&graph, &[NodeId(1)])?[0])
 }
 
-fn eval_bool_bin(op: BinOp, left: bool, right: bool) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_bool_bin(
+    op: BinOp,
+    left: bool,
+    right: bool,
+) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitBool(left)),
         (NodeId(1), NodeStorage::LitBool(right)),
@@ -224,7 +232,7 @@ fn eval_bool_bin(op: BinOp, left: bool, right: bool) -> Result<IrValue, vyre_fou
     Ok(run_storage_graph(&graph, &[NodeId(2)])?[0])
 }
 
-fn eval_bool_un(op: UnOp, value: bool) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_bool_un(op: UnOp, value: bool) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitBool(value)),
         (

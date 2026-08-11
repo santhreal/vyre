@@ -1,15 +1,14 @@
-//! Driver lifecycle E2E and PersistentEngine integration stress.
+//! Driver planning contracts and PersistentEngine integration stress.
 //!
-//! Exercises the full driver path (build Program → binding plan → launch plan
-//! → pipeline compile → dispatch → readback) through the cpu-ref backend, and
-//! a 16×16 producer/consumer PersistentEngine stress run at 100k items.
+//! Exercises lower-level binding, launch, dispatch, and readback through the
+//! reference backend. Production compilation lifecycle tests live at the
+//! artifact/runtime boundary.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 use vyre_driver::persistent::{PersistentEngine, PersistentWorkItem};
-use vyre_driver::pipeline::compile;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::{BindingPlan, DispatchConfig, LaunchPlan, VyreBackend};
 use vyre_driver_reference::CpuRefBackend;
@@ -72,7 +71,7 @@ fn reference_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 }
 
 #[test]
-fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
+fn driver_low_level_plan_dispatch_readback() {
     let program = multi_op_program();
     let a_bytes = 13_u32.to_le_bytes().to_vec();
     let b_bytes = 7_u32.to_le_bytes().to_vec();
@@ -93,13 +92,9 @@ fn driver_lifecycle_e2e_parse_plan_emit_dispatch_readback() {
     assert_eq!(launch.element_count, 1);
     assert!(!launch.param_words.is_empty());
 
-    let backend: Arc<dyn VyreBackend> = Arc::new(CpuRefBackend);
-    let pipeline = compile(Arc::clone(&backend), &program, &DispatchConfig::default())
-        .expect("Fix: lifecycle pipeline compile must succeed");
-
-    let outputs = pipeline
-        .dispatch(&inputs, &DispatchConfig::default())
-        .expect("Fix: lifecycle pipeline dispatch must succeed");
+    let outputs = CpuRefBackend
+        .dispatch(&program, &inputs, &DispatchConfig::default())
+        .expect("Fix: lower-level reference dispatch must succeed");
 
     let expected = reference_bytes(&program, &inputs);
     assert_eq!(

@@ -6,27 +6,27 @@
 //! `Barrier`, or `Store` semantics is caught by the conform gate as a concrete
 //! counterexample.
 
-use vyre::ir::{Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 
+use crate::ReferenceError;
 use crate::{
     execution::expr as eval_expr,
     execution::node_tree::{contains_barrier, node_id},
     oob,
     workgroup::{AsyncTransfer, Frame, Invocation, Memory},
 };
-use vyre::Error;
 
 /// Execute one scheduling step for an invocation.
 ///
 /// # Errors
 ///
-/// Returns [`Error::Interp`] for uniform-control-flow violations,
+/// Returns [`ReferenceError::Interp`] for uniform-control-flow violations,
 /// out-of-bounds stores, malformed loops, or expression evaluation failures.
 pub fn step<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
     program: &'a Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     if invocation.done() || invocation.waiting_at_barrier {
         return Ok(());
     }
@@ -62,7 +62,7 @@ fn step_nodes_frame<'a>(
     nodes: &'a [Node],
     index: usize,
     scoped: bool,
-) -> Result<bool, vyre::Error> {
+) -> Result<bool, crate::ReferenceError> {
     if index >= nodes.len() {
         if scoped {
             invocation.pop_scope();
@@ -85,7 +85,7 @@ fn step_loop_frame<'a>(
     next: u32,
     to: u32,
     body: &'a [Node],
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     if next >= to {
         return Ok(());
     }
@@ -110,7 +110,7 @@ fn execute_node<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
     program: &'a Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     match node {
         Node::Let { name, value } => eval_let(name, value, invocation, memory, program),
         Node::Assign { name, value } => eval_assign(name, value, invocation, memory, program),
@@ -178,18 +178,18 @@ fn execute_node<'a>(
             let address = eval_expr::eval(address, invocation, memory, program)?
                 .try_as_u32()
                 .ok_or_else(|| {
-                    Error::interp(format!(
+                    ReferenceError::new(format!(
                         "reference trap `{tag}` address is not a u32. Fix: pass a scalar u32 trap address."
                     ))
                 })?;
-            Err(vyre::Error::interp(format!(
+            Err(crate::ReferenceError::new(format!(
                 "reference dispatch trapped: address={address}, tag=`{tag}`. Fix: handle the trap condition or route this Program through a backend/runtime with replay support."
             )))
         }
-        Node::Resume { tag } => Err(vyre::Error::interp(format!(
+        Node::Resume { tag } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached Resume `{tag}` without a replay runtime. Fix: lower Resume through a runtime-owned replay path before reference execution."
         ))),
-        Node::AllReduce { buffer, group, .. } => Err(vyre::Error::interp(format!(
+        Node::AllReduce { buffer, group, .. } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached AllReduce on buffer `{buffer}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
             group.as_u32()
         ))),
@@ -197,7 +197,7 @@ fn execute_node<'a>(
             input,
             output,
             group,
-        } => Err(vyre::Error::interp(format!(
+        } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached AllGather `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
             group.as_u32()
         ))),
@@ -206,7 +206,7 @@ fn execute_node<'a>(
             output,
             group,
             ..
-        } => Err(vyre::Error::interp(format!(
+        } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached ReduceScatter `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
             group.as_u32()
         ))),
@@ -214,17 +214,17 @@ fn execute_node<'a>(
             buffer,
             root,
             group,
-        } => Err(vyre::Error::interp(format!(
+        } => Err(crate::ReferenceError::new(format!(
             "reference dispatch reached Broadcast on buffer `{buffer}` from root {root} for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
             group.as_u32()
         ))),
         Node::Region { body, .. } => eval_block(body, invocation),
-        Node::Opaque(extension) => Err(vyre::Error::interp(format!(
+        Node::Opaque(extension) => Err(crate::ReferenceError::new(format!(
             "reference interpreter does not support opaque node extension `{}`/`{}`. Fix: provide a reference evaluator for this NodeExtension or lower it to core Node variants before evaluation.",
             extension.extension_kind(),
             extension.debug_identity()
         ))),
-        _ => Err(vyre::Error::interp(
+        _ => Err(crate::ReferenceError::new(
             "reference interpreter encountered an unknown Node variant. Fix: update vyre-reference before executing this IR.",
         )),
     }
@@ -236,7 +236,7 @@ fn eval_let(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let value = eval_expr::eval(value, invocation, memory, program)?;
     invocation.bind(name, value)
 }
@@ -247,7 +247,7 @@ fn eval_assign(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let value = eval_expr::eval(value, invocation, memory, program)?;
     invocation.assign(name, value)
 }
@@ -259,11 +259,11 @@ fn eval_store(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let index = eval_expr::eval(index, invocation, memory, program)?;
     let index = index
         .try_as_u32()
-        .ok_or_else(|| Error::interp(format!(
+        .ok_or_else(|| ReferenceError::new(format!(
                 "store index {index:?} cannot be represented as u32. Fix: use a non-negative scalar index within u32."
         )))?;
     let value = eval_expr::eval(value, invocation, memory, program)?;
@@ -277,29 +277,29 @@ fn eval_indirect_dispatch(
     count_offset: u64,
     memory: &Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     if count_offset % 4 != 0 {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "indirect dispatch offset {count_offset} is not 4-byte aligned. Fix: use a u32-aligned dispatch tuple."
         )));
     }
     let decl = program.buffer(count_buffer).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "indirect dispatch references unknown buffer `{count_buffer}`. Fix: declare the count buffer before execution."
         ))
     })?;
-    let buffer = if decl.access() == vyre::ir::BufferAccess::Workgroup {
+    let buffer = if decl.access() == vyre_foundation::ir::BufferAccess::Workgroup {
         memory.workgroup.get(count_buffer)
     } else {
         memory.storage.get(count_buffer)
     }
     .ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "indirect dispatch buffer `{count_buffer}` is missing. Fix: initialize the count buffer before execution."
         ))
     })?;
     let required_end = count_offset.checked_add(12).ok_or_else(|| {
-        Error::interp(
+        ReferenceError::new(
             "indirect dispatch byte range overflowed u64. Fix: shrink the count offset."
                 .to_string(),
         )
@@ -308,17 +308,17 @@ fn eval_indirect_dispatch(
         .bytes
         .read()
         .map_err(|_| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "indirect dispatch buffer `{count_buffer}` lock is poisoned. Fix: rebuild the interpreter memory state before execution."
             ))
         })?
         .len();
     if u64::try_from(byte_len).unwrap_or(u64::MAX) < required_end {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "indirect dispatch buffer `{count_buffer}` is too short for a 3-word dispatch tuple at byte offset {count_offset}. Fix: provide 12 readable bytes starting at that offset."
         )));
     }
-    Err(Error::interp(format!(
+    Err(ReferenceError::new(format!(
         "Node::IndirectDispatch cannot execute in the sequential reference interpreter because dynamic indirect dispatch requires runtime queue scheduling. Fix: run this program on a backend/runtime that supports indirect dispatch or lower `{count_buffer}` at byte offset {count_offset} to a static workgroup grid before reference execution."
     )))
 }
@@ -344,7 +344,7 @@ fn eval_async_load(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let start = eval_byte_count(
         request.offset,
         "async load source offset",
@@ -370,7 +370,7 @@ fn eval_async_store(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let start = eval_byte_count(
         request.offset,
         "async store destination offset",
@@ -402,7 +402,7 @@ fn eval_async_wait(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     apply_async_transfer(invocation.finish_async(tag)?, memory, program)
 }
 
@@ -412,15 +412,15 @@ fn eval_byte_count(
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<usize, Error> {
+) -> Result<usize, ReferenceError> {
     let value = eval_expr::eval(expr, invocation, memory, program)?;
     usize::try_from(value.try_as_u64().ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "{label} cannot be represented as u64. Fix: use an in-range non-negative byte count."
         ))
     })?)
     .map_err(|_| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "{label} exceeds host usize. Fix: reduce the async transfer span."
         ))
     })
@@ -432,7 +432,7 @@ fn read_bytes(
     source: &str,
     start: usize,
     byte_count: usize,
-) -> Result<Vec<u8>, Error> {
+) -> Result<Vec<u8>, ReferenceError> {
     let buffer = resolve_buffer(memory, program, source)?;
     let bytes = buffer
         .bytes
@@ -446,7 +446,11 @@ fn read_bytes(
     Ok(payload)
 }
 
-fn ensure_writable_buffer(memory: &mut Memory, program: &Program, name: &str) -> Result<(), Error> {
+fn ensure_writable_buffer(
+    memory: &mut Memory,
+    program: &Program,
+    name: &str,
+) -> Result<(), ReferenceError> {
     eval_expr::buffer_mut(memory, program, name).map(|_| ())
 }
 
@@ -454,7 +458,7 @@ fn apply_async_transfer(
     transfer: AsyncTransfer,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     match transfer {
         AsyncTransfer::Copy {
             destination,
@@ -480,19 +484,19 @@ fn resolve_buffer<'a>(
     memory: &'a Memory,
     program: &Program,
     name: &str,
-) -> Result<&'a oob::Buffer, Error> {
+) -> Result<&'a oob::Buffer, ReferenceError> {
     let decl = program.buffer(name).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "missing buffer declaration `{name}`. Fix: declare every async transfer buffer."
         ))
     })?;
-    if decl.access() == vyre::ir::BufferAccess::Workgroup {
+    if decl.access() == vyre_foundation::ir::BufferAccess::Workgroup {
         memory.workgroup.get(name)
     } else {
         memory.storage.get(name)
     }
     .ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "missing buffer `{name}`. Fix: initialize every declared async transfer buffer."
         ))
     })
@@ -506,7 +510,7 @@ fn eval_if<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let cond_value = eval_expr::eval(cond, invocation, memory, program)?.truthy();
     if contains_barrier(then) || contains_barrier(otherwise) {
         invocation.uniform_checks.push((node_id(node), cond_value));
@@ -529,15 +533,15 @@ fn eval_loop<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<(), vyre::Error> {
+) -> Result<(), crate::ReferenceError> {
     let from_value = eval_expr::eval(from, invocation, memory, program)?;
     let to_value = eval_expr::eval(to, invocation, memory, program)?;
     let from = from_value.try_as_u32().ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
                 "loop lower bound {from_value:?} cannot be represented as u32. Fix: use an in-range unsigned loop bound."
         ))
     })?;
-    let to = to_value.try_as_u32().ok_or_else(|| Error::interp(format!(
+    let to = to_value.try_as_u32().ok_or_else(|| ReferenceError::new(format!(
             "loop upper bound {to_value:?} cannot be represented as u32. Fix: use an in-range unsigned loop bound."
     )))?;
     invocation.frames_mut().push(Frame::Loop {
@@ -549,13 +553,16 @@ fn eval_loop<'a>(
     Ok(())
 }
 
-fn eval_return(invocation: &mut Invocation<'_>) -> Result<(), vyre::Error> {
+fn eval_return(invocation: &mut Invocation<'_>) -> Result<(), crate::ReferenceError> {
     invocation.frames_mut().clear();
     invocation.returned = true;
     Ok(())
 }
 
-fn eval_block<'a>(nodes: &'a [Node], invocation: &mut Invocation<'a>) -> Result<(), vyre::Error> {
+fn eval_block<'a>(
+    nodes: &'a [Node],
+    invocation: &mut Invocation<'a>,
+) -> Result<(), crate::ReferenceError> {
     invocation.push_scope();
     invocation.frames_mut().push(Frame::Nodes {
         nodes,
@@ -565,7 +572,7 @@ fn eval_block<'a>(nodes: &'a [Node], invocation: &mut Invocation<'a>) -> Result<
     Ok(())
 }
 
-fn eval_barrier(invocation: &mut Invocation<'_>) -> Result<(), vyre::Error> {
+fn eval_barrier(invocation: &mut Invocation<'_>) -> Result<(), crate::ReferenceError> {
     invocation.waiting_at_barrier = true;
     Ok(())
 }
@@ -575,9 +582,9 @@ mod tests {
     use super::*;
     use crate::oob::Buffer;
     use crate::workgroup::InvocationIds;
-    use vyre::ir::{BufferDecl, DataType};
+    use vyre_foundation::ir::{BufferDecl, DataType};
 
-    fn run_program(program: &Program, memory: &mut Memory) -> Result<(), vyre::Error> {
+    fn run_program(program: &Program, memory: &mut Memory) -> Result<(), crate::ReferenceError> {
         let mut invocation = Invocation::new(InvocationIds::ZERO, program.entry());
         while !invocation.done() {
             step(&mut invocation, memory, program)?;

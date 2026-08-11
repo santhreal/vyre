@@ -1,7 +1,5 @@
 //! Actionable backend error taxonomy.
 
-use crate::Error;
-
 /// Machine-readable classification of a backend failure kind.
 ///
 /// Use this to drive retry logic, circuit breakers, and alerting rules
@@ -68,14 +66,14 @@ impl ErrorCode {
 /// conform reports are directly actionable for backend authors and that
 /// consumers never receive an opaque failure string.
 ///
-/// Prefer specific variants (`DeviceOutOfMemory`, `KernelCompileFailed`,
-/// etc.) over [`BackendError::new`] in new backends. The `Raw` variant
-/// exists solely for backward compatibility with existing call sites.
+/// Use specific variants (`DeviceOutOfMemory`, `KernelCompileFailed`, etc.) when
+/// the failure class is known. [`BackendError::Other`] carries actionable failures
+/// that do not fit a structured variant.
 ///
 /// # Examples
 ///
 /// ```
-/// use vyre::BackendError;
+/// use vyre_driver::BackendError;
 ///
 /// let err = BackendError::new("adapter not found. Fix: install a compatible device driver.");
 /// assert!(err.message().contains("Fix:"));
@@ -179,32 +177,21 @@ pub enum BackendError {
         detail: String,
     },
 
-    /// Fallback for backends that have not migrated to structured errors.
-    ///
-    /// New backends should use a specific variant. This variant exists
-    /// solely to preserve backward compatibility with [`BackendError::new`].
+    /// Actionable backend failure without a more specific structured class.
     #[error("{0}")]
-    Raw(String),
-}
-
-impl From<crate::Error> for BackendError {
-    fn from(error: crate::Error) -> Self {
-        Self::new(error.to_string())
-    }
+    Other(String),
 }
 
 impl BackendError {
-    /// Build a fallback [`BackendError::Raw`] after verifying the message is actionable.
+    /// Build an actionable unclassified backend error.
     ///
     /// If the supplied message already contains a `Fix: ` section it is used
-    /// verbatim. Otherwise a generic fallback hint is appended. Prefer specific
-    /// variants (`DeviceOutOfMemory`, `KernelCompileFailed`, etc.) over this
-    /// constructor in new code.
+    /// verbatim. Otherwise a generic corrective action is appended.
     ///
     /// # Examples
     ///
     /// ```
-    /// use vyre::BackendError;
+    /// use vyre_driver::BackendError;
     ///
     /// let err = BackendError::new("queue full. Fix: retry with a smaller dispatch size.");
     /// assert_eq!(err.to_string(), "queue full. Fix: retry with a smaller dispatch size.");
@@ -212,9 +199,9 @@ impl BackendError {
     pub fn new(message: impl Into<String>) -> Self {
         let message = message.into();
         if message.contains("Fix: ") {
-            return Self::Raw(message);
+            return Self::Other(message);
         }
-        Self::Raw(format!(
+        Self::Other(format!(
             "{message}. Fix: include backend-specific recovery guidance."
         ))
     }
@@ -274,7 +261,7 @@ impl BackendError {
             Self::DispatchFailed { .. } => ErrorCode::DispatchFailed,
             Self::InvalidProgram { .. } => ErrorCode::InvalidProgram,
             Self::CooperativeResidencyExceeded { .. } => ErrorCode::CooperativeResidencyExceeded,
-            Self::Raw(_) => ErrorCode::Unknown,
+            Self::Other(_) => ErrorCode::Unknown,
         }
     }
 }

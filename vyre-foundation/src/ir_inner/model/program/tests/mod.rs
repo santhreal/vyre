@@ -12,7 +12,7 @@ thread_local! {
 }
 
 use super::Program;
-use crate::error::Error;
+use crate::error::IrError;
 use crate::ir::{Expr, Ident, Node};
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::DataType;

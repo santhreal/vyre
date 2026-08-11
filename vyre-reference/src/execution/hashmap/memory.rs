@@ -4,10 +4,10 @@
 //! each workgroup dispatch. The helpers here centralize that distinction so the
 //! executor does not duplicate storage/workgroup lookup plumbing.
 
+use crate::ReferenceError;
 use crate::{oob::Buffer, value::Value, workgroup::MAX_WORKGROUP_BYTES};
 use rustc_hash::FxHashMap;
-use vyre::ir::{BufferAccess, BufferDecl, Program};
-use vyre::Error;
+use vyre_foundation::ir::{BufferAccess, BufferDecl, Program};
 
 pub(crate) struct HashmapMemory {
     pub(crate) storage: FxHashMap<String, Buffer>,
@@ -22,7 +22,7 @@ impl HashmapMemory {
         }
     }
 
-    pub(crate) fn reset_workgroup(&mut self, program: &Program) -> Result<(), Error> {
+    pub(crate) fn reset_workgroup(&mut self, program: &Program) -> Result<(), ReferenceError> {
         if zero_existing_workgroup(&self.workgroup, program)? {
             return Ok(());
         }
@@ -42,7 +42,9 @@ pub(crate) fn output_value(buffer: Buffer, decl: &BufferDecl) -> Value {
     Value::from(bytes)
 }
 
-pub(crate) fn workgroup_memory(program: &Program) -> Result<FxHashMap<String, Buffer>, Error> {
+pub(crate) fn workgroup_memory(
+    program: &Program,
+) -> Result<FxHashMap<String, Buffer>, ReferenceError> {
     let mut workgroup = FxHashMap::default();
     let mut allocated = 0usize;
     for decl in program
@@ -51,9 +53,9 @@ pub(crate) fn workgroup_memory(program: &Program) -> Result<FxHashMap<String, Bu
         .filter(|decl| decl.access() == BufferAccess::Workgroup)
     {
         let len = workgroup_byte_len(decl)?;
-        allocated = allocated . checked_add (len) . ok_or_else (| | { Error :: interp ("total workgroup memory byte size overflows usize. Fix: reduce workgroup buffer declarations." ,) }) ? ;
+        allocated = allocated . checked_add (len) . ok_or_else (| | { ReferenceError::new("total workgroup memory byte size overflows usize. Fix: reduce workgroup buffer declarations.") }) ? ;
         if allocated > MAX_WORKGROUP_BYTES {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "workgroup memory requires {allocated} bytes, exceeding the {MAX_WORKGROUP_BYTES}-byte reference budget. Fix: reduce workgroup buffer counts."
             )));
         }
@@ -68,7 +70,7 @@ pub(crate) fn workgroup_memory(program: &Program) -> Result<FxHashMap<String, Bu
 fn zero_existing_workgroup(
     workgroup: &FxHashMap<String, Buffer>,
     program: &Program,
-) -> Result<bool, Error> {
+) -> Result<bool, ReferenceError> {
     let mut decl_count = 0usize;
     for decl in program
         .buffers()
@@ -93,33 +95,36 @@ fn zero_existing_workgroup(
     Ok(true)
 }
 
-pub(crate) fn declared_byte_len(decl: &BufferDecl, unsized_context: &str) -> Result<usize, Error> {
+pub(crate) fn declared_byte_len(
+    decl: &BufferDecl,
+    unsized_context: &str,
+) -> Result<usize, ReferenceError> {
     match decl.static_byte_len() {
         Ok(Some(byte_len)) => Ok(byte_len),
         Ok(None) if decl.count() == 0 => Ok(0),
-        Ok(None) => Err(Error::interp(format!(
+        Ok(None) => Err(ReferenceError::new(format!(
             "{unsized_context} buffer `{}` has unsized element type {}. Fix: use a fixed-width buffer element type.",
             decl.name(),
             decl.element()
         ))),
-        Err(error) => Err(Error::interp(error)),
+        Err(error) => Err(ReferenceError::new(error)),
     }
 }
 
-fn workgroup_byte_len(decl: &BufferDecl) -> Result<usize, Error> {
+fn workgroup_byte_len(decl: &BufferDecl) -> Result<usize, ReferenceError> {
     declared_byte_len(decl, "workgroup")
 }
 
 pub(crate) fn resolve_buffer<'a>(
     memory: &'a HashmapMemory,
     name: &str,
-) -> Result<&'a Buffer, Error> {
+) -> Result<&'a Buffer, ReferenceError> {
     memory
         .storage
         .get(name)
         .or_else(|| memory.workgroup.get(name))
         .ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "missing buffer `{name}`. Fix: initialize all declared buffers."
             ))
         })
@@ -128,13 +133,13 @@ pub(crate) fn resolve_buffer<'a>(
 pub(crate) fn buffer_mut<'a>(
     memory: &'a mut HashmapMemory,
     name: &str,
-) -> Result<&'a mut Buffer, Error> {
+) -> Result<&'a mut Buffer, ReferenceError> {
     memory
         .storage
         .get_mut(name)
         .or_else(|| memory.workgroup.get_mut(name))
         .ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "missing buffer `{name}`. Fix: initialize all declared buffers."
             ))
         })
@@ -143,8 +148,8 @@ pub(crate) fn buffer_mut<'a>(
 pub(crate) fn atomic_buffer_mut<'a>(
     memory: &'a mut HashmapMemory,
     name: &str,
-) -> Result<&'a mut Buffer, Error> {
-    memory . storage . get_mut (name) . ok_or_else (| | { Error :: interp (format ! ("atomic target `{name}` is workgroup memory or missing. Fix: atomics only support ReadWrite storage buffers.")) })
+) -> Result<&'a mut Buffer, ReferenceError> {
+    memory . storage . get_mut (name) . ok_or_else (| | { ReferenceError::new(format ! ("atomic target `{name}` is workgroup memory or missing. Fix: atomics only support ReadWrite storage buffers.")) })
 }
 
 #[cfg(test)]
@@ -152,7 +157,7 @@ mod tests {
     use super::*;
     use crate::oob;
     use crate::value::Value;
-    use vyre::ir::{DataType, Node};
+    use vyre_foundation::ir::{DataType, Node};
 
     fn workgroup_program(count: u32) -> Program {
         Program::wrapped(

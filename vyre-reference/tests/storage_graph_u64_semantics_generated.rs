@@ -151,7 +151,11 @@ fn u64_unary_cases() -> [(UnOp, U64UnaryExpected); 7] {
     ]
 }
 
-fn eval_u64_bin(op: BinOp, left: u64, right: u64) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_u64_bin(
+    op: BinOp,
+    left: u64,
+    right: u64,
+) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitU64(left)),
         (NodeId(1), NodeStorage::LitU64(right)),
@@ -167,7 +171,7 @@ fn eval_u64_bin(op: BinOp, left: u64, right: u64) -> Result<IrValue, vyre_founda
     Ok(run_storage_graph(&graph, &[NodeId(2)])?[0])
 }
 
-fn eval_u64_un(op: UnOp, value: u64) -> Result<IrValue, vyre_foundation::Error> {
+fn eval_u64_un(op: UnOp, value: u64) -> Result<IrValue, vyre_reference::ReferenceError> {
     let graph = vec![
         (NodeId(0), NodeStorage::LitU64(value)),
         (

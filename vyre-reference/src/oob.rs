@@ -6,10 +6,10 @@
 //! zero-fill for scalar loads, empty slice for `Bytes`, and silent no-op for stores.
 //! Any backend that diverges from these rules fails the conform gate.
 
-use vyre::ir::DataType as IrDataType;
+use vyre_foundation::ir::DataType as IrDataType;
 
 use crate::value::Value;
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 
 use std::cell::Cell;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};

@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::IrResult as Result;
 use crate::ir_inner::model::expr::{Expr, GeneratorRef, Ident};
 use crate::ir_inner::model::generated::Node;
 use crate::ir_inner::model::node::NodeExtension;

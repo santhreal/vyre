@@ -19,6 +19,7 @@ use step::{axis_value, eval_call, eval_to_index};
 use subgroup::{eval_subgroup_ballot, eval_subgroup_reduce, eval_subgroup_shuffle};
 use sync::element_count;
 
+use crate::ReferenceError;
 use crate::{
     atomics,
     oob::{self, Buffer},
@@ -26,7 +27,6 @@ use crate::{
 };
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, MemoryOrdering, Node, Program};
-use vyre_foundation::Error;
 
 /// Order in which the interpreter steps workgroups and the invocations within
 /// each workgroup.
@@ -168,7 +168,7 @@ pub(crate) fn run_hashmap_reference(
     min_dispatch_elements: u32,
     lane_order: LaneOrder,
     explicit_grid: Option<[u32; 3]>,
-) -> Result<Vec<Value>, Error> {
+) -> Result<Vec<Value>, ReferenceError> {
     #[cfg(feature = "subgroup-ops")]
     let validation_report = vyre_foundation::validate::validate::validate_with_options(
         program,
@@ -198,7 +198,7 @@ pub(crate) fn run_hashmap_reference(
             }
             messages.push_str(error.message());
         }
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "program failed IR validation: {messages}. Fix: repair the Program before invoking the reference interpreter."
         )));
     }
@@ -236,12 +236,12 @@ pub(crate) fn run_hashmap_reference(
         // CUDA and WGPU both reject, which is a certification hole rather than a
         // cosmetic inconsistency.
         decl.require_static_readback_size()
-            .map_err(|message| Error::interp(message))?;
+            .map_err(|message| ReferenceError::new(message))?;
         // One predicate, read here and exported for callers building the input
         // vector, so the two cannot drift apart.
         let bytes = if is_reference_input(decl) {
             let value = inputs.get(input_index).ok_or_else(|| {
-                Error::interp(format!(
+                ReferenceError::new(format!(
                     "missing input for buffer `{}`. Fix: pass one Value for each non-output, non-workgroup buffer in Program::buffers order.",
                     decl.name()
                 ))
@@ -251,7 +251,7 @@ pub(crate) fn run_hashmap_reference(
         } else {
             if legacy_input_mode {
                 let legacy_output_initializer = inputs.get(input_index).ok_or_else(|| {
-                    Error::interp(format!(
+                    ReferenceError::new(format!(
                         "missing legacy output initializer for buffer `{}`. Fix: pass one Value for each non-workgroup buffer or migrate to logical inputs only.",
                         decl.name()
                     ))
@@ -293,12 +293,10 @@ pub(crate) fn run_hashmap_reference(
         );
     }
     if input_index != inputs.len() {
-        return Err(Error::interp(
-            "unused input values supplied. Fix: pass exactly one Value per non-workgroup buffer declaration.",
-        ));
+        return Err(ReferenceError::new("unused input values supplied. Fix: pass exactly one Value per non-workgroup buffer declaration."));
     }
     if program.workgroup_size().contains(&0) {
-        return Err(Error::interp(
+        return Err(ReferenceError::new(
             "workgroup size contains zero. Fix: all dimensions must be >= 1.",
         ));
     }
@@ -418,7 +416,7 @@ pub(crate) fn run_hashmap_reference(
         }
     }
     let mut storage = memory.storage;
-    output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; Error :: interp (format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
+    output_decls . into_iter () . map (| decl | { storage . remove (decl . name ()) . map (| buffer | output_value (buffer , & decl)) . ok_or_else (| | { let name = decl . name () ; ReferenceError::new(format ! ("missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique.")) }) }) . collect ()
 }
 
 /// Bytes of an output buffer a caller actually reads back.
@@ -441,9 +439,9 @@ fn check_min_byte_len(
     decl: &vyre_foundation::ir::BufferDecl,
     supplied_bytes: usize,
     required_bytes: usize,
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     if supplied_bytes < required_bytes {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "buffer `{}` has {} bytes but requires at least {} bytes ({} elements of {}). Fix: provide a larger input buffer.",
             decl.name(),
             supplied_bytes,
@@ -455,16 +453,16 @@ fn check_min_byte_len(
     Ok(())
 }
 
-fn declared_min_byte_len(decl: &vyre_foundation::ir::BufferDecl) -> Result<usize, Error> {
+fn declared_min_byte_len(decl: &vyre_foundation::ir::BufferDecl) -> Result<usize, ReferenceError> {
     match decl.static_byte_len() {
         Ok(Some(byte_len)) => Ok(byte_len),
         Ok(None) if decl.count() == 0 => Ok(0),
-        Ok(None) => Err(Error::interp(format!(
+        Ok(None) => Err(ReferenceError::new(format!(
             "reference input buffer `{}` has unsized element type {}. Fix: use a fixed-width buffer element type.",
             decl.name(),
             decl.element()
         ))),
-        Err(error) => Err(Error::interp(error)),
+        Err(error) => Err(ReferenceError::new(error)),
     }
 }
 
@@ -473,7 +471,7 @@ fn eval_expr(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     match expr {
         Expr::LitU32(value) => Ok(Value::U32(*value)),
         Expr::LitI32(value) => Ok(Value::I32(*value)),
@@ -482,7 +480,7 @@ fn eval_expr(
         )))),
         Expr::LitBool(value) => Ok(Value::Bool(*value)),
         Expr::Var(name) => invocation.locals.local(name).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "reference to undeclared variable `{name}`. Fix: add a Let before this use."
             ))
         }),
@@ -610,7 +608,7 @@ fn eval_expr(
             )?
             .try_as_f32()
             .ok_or_else(|| {
-                Error::interp("fma operand `a` is not a float. Fix: cast to f32 before fma.")
+                ReferenceError::new("fma operand `a` is not a float. Fix: cast to f32 before fma.")
             })?;
             let b = eval_expr(
                 b,
@@ -621,7 +619,7 @@ fn eval_expr(
             )?
             .try_as_f32()
             .ok_or_else(|| {
-                Error::interp("fma operand `b` is not a float. Fix: cast to f32 before fma.")
+                ReferenceError::new("fma operand `b` is not a float. Fix: cast to f32 before fma.")
             })?;
             let c = eval_expr(
                 c,
@@ -632,7 +630,7 @@ fn eval_expr(
             )?
             .try_as_f32()
             .ok_or_else(|| {
-                Error::interp("fma operand `c` is not a float. Fix: cast to f32 before fma.")
+                ReferenceError::new("fma operand `c` is not a float. Fix: cast to f32 before fma.")
             })?;
             let a = crate::execution::typed_ops::canonical_f32(a);
             let b = crate::execution::typed_ops::canonical_f32(b);
@@ -660,7 +658,7 @@ fn eval_expr(
             #[cfg(feature = "subgroup-ops")]
             snapshots,
         ),
-        Expr::Opaque(extension) => Err(Error::interp(format!(
+        Expr::Opaque(extension) => Err(ReferenceError::new(format!(
             "hashmap reference interpreter does not support opaque expression extension `{}`/`{}`. Fix: provide a reference evaluator for this ExprNode or lower it to core Expr variants before evaluation.",
             extension.extension_kind(),
             extension.debug_identity()
@@ -685,7 +683,7 @@ fn eval_expr(
             {
                 let value_val = eval_expr(value, invocation, memory)?;
                 let lane_val = eval_expr(lane, invocation, memory)?;
-                let lane_u32 = lane_val . try_as_u32 () . ok_or_else (| | { Error :: interp ("subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument." ,) }) ? ;
+                let lane_u32 = lane_val . try_as_u32 () . ok_or_else (| | { ReferenceError::new("subgroup_shuffle lane index is not a u32. Fix: use a scalar u32 lane argument.") }) ? ;
                 Ok(if lane_u32 == 0 {
                     value_val
                 } else {
@@ -706,9 +704,7 @@ fn eval_expr(
                 eval_expr(value, invocation, memory)
             }
         }
-        _ => Err(Error::interp(
-            "hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.",
-        )),
+        _ => Err(ReferenceError::new("hashmap reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.")),
     }
 }
 #[allow(clippy::too_many_arguments)]
@@ -721,18 +717,14 @@ fn eval_atomic(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     match (op, expected) {
         (AtomicOp::CompareExchange, None) => {
-            return Err(Error::interp(
-                "compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange.",
-            ));
+            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
         }
         (AtomicOp::CompareExchange, Some(_)) => {}
         (_, Some(_)) => {
-            return Err(Error::interp(
-                "non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange.",
-            ));
+            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
         }
         (_, None) => {}
     }
@@ -744,7 +736,7 @@ fn eval_atomic(
         #[cfg(feature = "subgroup-ops")]
         snapshots,
     )?;
-    let expected = expected . map (| expr | { eval_expr (expr , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { Error :: interp (format ! ("atomic expected value {expr:?} cannot be represented as u32. Fix: use a scalar u32-compatible argument.")) }) }) . transpose () ? ;
+    let expected = expected . map (| expr | { eval_expr (expr , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new(format ! ("atomic expected value {expr:?} cannot be represented as u32. Fix: use a scalar u32-compatible argument.")) }) }) . transpose () ? ;
     let value = eval_expr(
         value,
         invocation,
@@ -753,7 +745,7 @@ fn eval_atomic(
         snapshots,
     )?;
     let value = value.try_as_u32().ok_or_else(|| {
-        Error::interp(
+        ReferenceError::new(
             "atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.",
         )
     })?;

@@ -1,19 +1,13 @@
-//! Pipeline mode  -  pre-compile a Program once, dispatch repeatedly with new inputs.
+//! Concrete executable cache identity, persistence, and telemetry.
 
 /// Shared on-disk compiled-pipeline cache.
 pub mod cache;
-/// Backend-neutral pipeline compilation entry points.
-pub mod compiler;
 /// Stable cache hashing and device fingerprint helpers.
 pub mod hashing;
 
 pub use cache::{
     DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey, PipelineCacheMissEvidence,
     PipelineCacheMissReason, PipelineFeatureFlags,
-};
-pub use compiler::{
-    compile, compile_owned, compile_owned_with_telemetry, compile_shared,
-    compile_shared_with_telemetry, compile_with_telemetry, prewarm, prewarm_owned, prewarm_shared,
 };
 pub use hashing::{
     dispatch_policy_cache_digest, dispatch_policy_cache_string, hex_encode, hex_short,
@@ -39,99 +33,11 @@ pub struct PipelineCacheSnapshot {
     pub misses: u64,
 }
 
-/// Result of compiling a reusable pipeline with honest cache telemetry.
-#[derive(Clone)]
-pub struct CompiledPipelineBuild {
-    /// Reusable pipeline returned by the backend or passthrough wrapper.
-    pub pipeline: std::sync::Arc<dyn crate::backend::CompiledPipeline>,
-    /// `Some(true)` when backend counters prove a cache hit,
-    /// `Some(false)` when counters prove a miss, and `None` when the backend
-    /// does not expose real compile-cache counters.
-    pub cache_hit: Option<bool>,
-    /// Reproducibility manifest for this compiled artifact.
-    pub manifest: PipelineReproManifest,
-}
-
-/// Result of prewarming a backend pipeline cache before the hot dispatch path.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PipelinePrewarmReport {
-    /// Backend pipeline id that was materialized or fetched from cache.
-    pub pipeline_id: String,
-    /// `Some(true)` when backend counters prove the pipeline was already warm,
-    /// `Some(false)` when this call performed compile/load work, and `None`
-    /// when the backend does not expose real cache counters.
-    pub cache_hit: Option<bool>,
-    /// Reproducibility manifest for the warmed artifact.
-    pub manifest: PipelineReproManifest,
-}
-
-/// JSON-serializable reproducibility sidecar for a compiled pipeline.
-#[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct PipelineReproManifest {
-    /// Manifest schema version.
-    pub schema: u32,
-    /// Backend id that compiled the artifact.
-    pub backend_id: String,
-    /// Backend pipeline id returned by [`crate::backend::CompiledPipeline::id`].
-    pub pipeline_id: String,
-    /// Canonical normalized Program digest as lowercase hex.
-    pub program_digest: String,
-    /// Dispatch policy fields that affect generated backend code.
-    pub dispatch_policy: String,
-    /// Backend-reported cache status for this compile/prewarm.
-    pub cache_hit: Option<bool>,
-}
-
-impl PipelineReproManifest {
-    /// Current manifest schema.
-    pub const SCHEMA: u32 = 1;
-
-    /// Build a manifest from shared compile facts.
-    #[must_use]
-    pub fn new(
-        backend_id: impl Into<String>,
-        pipeline_id: impl Into<String>,
-        program_digest: [u8; 32],
-        dispatch_policy: impl Into<String>,
-        cache_hit: Option<bool>,
-    ) -> Self {
-        Self {
-            schema: Self::SCHEMA,
-            backend_id: backend_id.into(),
-            pipeline_id: pipeline_id.into(),
-            program_digest: hex_encode(&program_digest),
-            dispatch_policy: dispatch_policy.into(),
-            cache_hit,
-        }
-    }
-
-    /// Serialize as compact JSON for sidecar files and result envelopes.
-    ///
-    /// # Errors
-    ///
-    /// Returns when serde cannot serialize the manifest. This should not occur
-    /// for the current schema, but the error is propagated for forward
-    /// compatibility.
-    pub fn to_json(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string(self)
-    }
-}
-
-/// ROADMAP C6 substrate: pipeline reuse cache hit-rate audit.
+/// Pipeline reuse cache hit-rate audit.
 ///
-/// Aggregates a stream of `Option<bool>` cache_hit values from the
-/// dispatcher's [`CompiledPipelineBuild`]/`PipelinePrewarmReport`
-/// reports into hit-rate telemetry. The dispatcher pushes one entry
-/// per resolved pipeline (or one per prewarm); the audit produces a
-/// `PipelineCacheAuditReport` that names the hit rate, the count of
-/// each outcome, and whether the rate falls below a configurable
-/// alarm threshold so operators can wire it into observability and
-/// CI gates.
-///
-/// `Option<bool>::None` values count as `unknown` and are excluded
-/// from the rate denominator. This matches the upstream contract:
-/// some backends do not expose real compile-cache counters and
-/// honestly report `None` rather than lying about a hit.
+/// Aggregates backend cache lookup outcomes into a report that records hit,
+/// miss, and unknown counts. Unknown outcomes are excluded from the hit-rate
+/// denominator because backends without real counters report `None`.
 #[derive(Debug, Default, Clone)]
 pub struct PipelineCacheAudit {
     hits: u64,

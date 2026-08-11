@@ -12,12 +12,13 @@
 //! Each test picks a lens, passes an op iterator, and the shared code
 //! does the rest with missing coverage represented as failure.
 
-use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, Error};
+use vyre_driver::{BackendError, BackendRegistration, DispatchConfig};
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_libs::fixture_catalog::{
     convergence_contract, fixpoint_contract, FixpointContract, OpEntry,
 };
 use vyre_reference::value::Value;
+use vyre_reference::ReferenceError;
 
 use crate::fp_parity::{compare_output_buffers, BufferParity};
 use crate::production::ProductionSession;
@@ -56,7 +57,7 @@ impl LensOutcome {
     }
 }
 
-fn run_cpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Error> {
+fn run_cpu(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, ReferenceError> {
     let values: Vec<Value> = inputs.iter().cloned().map(Value::from).collect();
     let outputs = vyre_reference::reference_eval(program, &values)?;
     Ok(outputs.into_iter().map(|value| value.to_bytes()).collect())
@@ -462,8 +463,8 @@ pub fn fixpoint(entry: &OpEntry, backend: &'static BackendRegistration) -> LensO
 /// Convergence lens: dispatch the op repeatedly until the RW state
 /// stabilises, then compare the final state to the CPU reference.
 ///
-/// Used for ops that register a [`vyre_harness::ConvergenceContract`] (e.g. security
-/// graph-traversal steps whose Program performs ONE transfer step).
+/// Used for ops that register a [`vyre_libs::fixture_catalog::ConvergenceContract`],
+/// such as graph-traversal steps whose program performs one transfer step.
 /// The lens infers the `current` (RO input) and `next` (RW output)
 /// buffers, copies `next` → `current` between iterations, and stops
 /// when `next` stops changing.
@@ -649,7 +650,7 @@ fn gpu_convergence(
 
 #[derive(Debug)]
 enum LoopError {
-    Reference(Error),
+    Reference(ReferenceError),
     Backend(BackendError),
     DidNotConverge,
 }

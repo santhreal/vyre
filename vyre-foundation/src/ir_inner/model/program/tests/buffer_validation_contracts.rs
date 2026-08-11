@@ -22,7 +22,7 @@ fn validate_joins_multiple_errors_with_semicolon_separator() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(1)), Node::Return],
     );
     match program.validate() {
-        Err(Error::WireFormatValidation { message }) => {
+        Err(IrError::WireFormatValidation { message }) => {
             assert!(
                 message.contains("workgroup_size[0] is 0"),
                 "missing axis-0 message: {message}"

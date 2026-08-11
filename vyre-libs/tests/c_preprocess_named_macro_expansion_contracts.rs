@@ -144,7 +144,7 @@ fn run_named_macro_expansion(
     stream: &TokenStream<'_>,
     fixture: &NamedMacroFixture,
     max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_named_macro_expansion(
         "in_tok_types",
         "in_tok_starts",

@@ -253,3 +253,8 @@ text = "The neural library now executes chunk-size-64 gated delta prefill with F
 id = "canonical-procedural-macro-surface"
 category = "Removed"
 text = "The macro crate now exports only the production-used AST registry and semantic pass registration generators. Test-only operation registration, algebraic-law derive, no-op builder marker, and generated decoder stubs are gone."
+
+[[fragments]]
+id = "owner-local-error-contracts"
+category = "Changed"
+text = "Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead of a cross-domain error sink. Reference interpretation, backend execution, WGPU device selection, and runtime framing return owner-local typed failures."

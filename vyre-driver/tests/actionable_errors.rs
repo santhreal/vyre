@@ -41,7 +41,7 @@ fn all_backend_error_variants_contain_fix() {
         BackendError::InvalidProgram {
             fix: "Fix: supply a valid program.".into(),
         },
-        BackendError::Raw("something went wrong. Fix: check logs.".into()),
+        BackendError::Other("something went wrong. Fix: check logs.".into()),
     ];
 
     for err in &variants {
@@ -169,7 +169,7 @@ fn backend_error_code_roundtrip() {
             BackendError::InvalidProgram { fix: "".into() },
             ErrorCode::InvalidProgram,
         ),
-        (BackendError::Raw("".into()), ErrorCode::Unknown),
+        (BackendError::Other("".into()), ErrorCode::Unknown),
     ];
     for (err, expected) in pairs {
         assert_eq!(

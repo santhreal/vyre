@@ -1,17 +1,8 @@
-//! Public backend trait compatibility tests.
-//!
-//! Guarantees:
-//! - `VyreBackend` blanket-implements `Backend` and `Executable`
-//! - `CompiledPipeline`, `PendingDispatch`, `Backend`, `Executable`, `Streamable` are object-safe
-//! - Default trait methods preserve backward compatibility
-//! - `Send + Sync` bounds are satisfied by typical impls
-//! - `Arc<dyn VyreBackend>` can call all surface methods
+//! Backend trait and default-method contracts.
 
 use std::sync::Arc;
-use vyre_driver::backend::{Backend, Streamable};
-use vyre_driver::{
-    BackendError, CompiledPipeline, DispatchConfig, Executable, PendingDispatch, VyreBackend,
-};
+use vyre_driver::backend::Backend;
+use vyre_driver::{BackendError, CompiledPipeline, DispatchConfig, PendingDispatch, VyreBackend};
 use vyre_foundation::ir::Program;
 
 struct TraitProbeBackend;
@@ -46,44 +37,6 @@ fn vyre_backend_blanket_impls_backend() {
     let _ = as_backend.supported_ops();
 }
 
-#[test]
-fn executable_trait_is_implementable_by_vyre_backend() {
-    // Compilation guard + functional check: a VyreBackend can also implement Executable.
-    struct Probe;
-    impl vyre_driver::backend::private::Sealed for Probe {}
-    impl VyreBackend for Probe {
-        fn id(&self) -> &'static str {
-            "probe"
-        }
-        fn dispatch(
-            &self,
-            _program: &Program,
-            _inputs: &[Vec<u8>],
-            _config: &DispatchConfig,
-        ) -> Result<Vec<Vec<u8>>, BackendError> {
-            Ok(vec![])
-        }
-    }
-    impl Executable for Probe {
-        fn dispatch(
-            &self,
-            program: &Program,
-            inputs: &[vyre_driver::MemoryRef<'_>],
-            config: &DispatchConfig,
-        ) -> Result<Vec<vyre_driver::Memory>, BackendError> {
-            let owned: Vec<Vec<u8>> = inputs.iter().map(|input| (*input).to_vec()).collect();
-            VyreBackend::dispatch(self, program, &owned, config)
-        }
-    }
-    let backend = Probe;
-    let as_executable: &dyn Executable = &backend;
-    let program = Program::default();
-    let outputs = as_executable
-        .dispatch(&program, &[], &DispatchConfig::default())
-        .expect("Fix: Executable dispatch must succeed");
-    assert!(outputs.is_empty());
-}
-
 // ------------------------------------------------------------------
 // 2. Object safety compilation guards
 // ------------------------------------------------------------------
@@ -102,16 +55,6 @@ fn pending_dispatch_trait_is_object_safe() {
 #[test]
 fn backend_trait_is_object_safe() {
     let _: Option<Box<dyn Backend>> = None;
-}
-
-#[test]
-fn executable_trait_is_object_safe() {
-    let _: Option<Box<dyn Executable>> = None;
-}
-
-#[test]
-fn streamable_trait_is_object_safe() {
-    let _: Option<Box<dyn Streamable>> = None;
 }
 
 // ------------------------------------------------------------------
@@ -162,19 +105,6 @@ fn arc_dyn_vyre_backend_can_call_all_surface_methods() {
 // ------------------------------------------------------------------
 // 5. Default method contracts
 // ------------------------------------------------------------------
-
-#[test]
-fn default_compile_native_returns_none() {
-    let backend = TraitProbeBackend;
-    let program = Program::default();
-    let result = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .expect("Fix: default compile_native must return Ok");
-    assert!(
-        result.is_none(),
-        "Fix: default compile_native must return Ok(None)"
-    );
-}
 
 #[test]
 fn default_dispatch_async_returns_ready_handle() {

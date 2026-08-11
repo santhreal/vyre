@@ -9,8 +9,9 @@ use crate::backend::{private, BackendError, OutputBuffers, TimedDispatchResult};
 ///
 /// ```no_run
 /// # use std::sync::Arc;
-/// # use vyre::{Program, VyreBackend, DispatchConfig};
-/// # fn run(backend: Arc<dyn VyreBackend>, program: &Program) -> Result<(), vyre::BackendError> {
+/// # use vyre_foundation::ir::Program;
+/// # use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
+/// # fn run(backend: Arc<dyn VyreBackend>, program: &Program) -> Result<(), BackendError> {
 /// let pending = backend.dispatch_async(program, &[vec![0u8; 64]], &DispatchConfig::default())?;
 /// while !pending.is_ready() {
 ///     // Host-side work overlaps with the GPU dispatch.

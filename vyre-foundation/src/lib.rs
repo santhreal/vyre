@@ -172,9 +172,9 @@ pub mod pass_substrate;
 /// provenance, autotune, and accuracy guard decisions.
 pub mod execution_plan;
 
-/// Unified error type for validation, wire format, lowering, and execution.
+/// Foundation-owned IR and Program wire failures.
 pub mod error;
-pub use error::{Error, Result};
+pub use error::{IrError, IrResult};
 
 /// Test utilities shared across optimizer and transform test suites.
 /// `pub(crate)` because they are an internal contract  -  no consumer

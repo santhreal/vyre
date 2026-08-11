@@ -6,10 +6,12 @@
 //! exists so IR semantics are defined by Rust code, not by whatever a backend
 //! happens to emit.
 
-use vyre::ir::{AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Program, UnOp};
+use vyre_foundation::ir::{
+    AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Program, UnOp,
+};
 
+use crate::ReferenceError;
 use smallvec::SmallVec;
-use vyre::Error;
 
 use crate::execution::expr_cast::cast_value;
 use crate::{atomics, oob, value::Value, workgroup::Invocation, workgroup::Memory};
@@ -21,14 +23,14 @@ pub use crate::oob::Buffer;
 ///
 /// # Errors
 ///
-/// Returns [`Error::Interp`] when expression lowering or flat execution
+/// Returns [`ReferenceError::Interp`] when expression lowering or flat execution
 /// fails. The recursive evaluator is retained only as a test oracle.
 pub fn eval(
     expr: &Expr,
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<Value, vyre::Error> {
+) -> Result<Value, crate::ReferenceError> {
     eval_frame_oracle(expr, invocation, memory, program)
 }
 
@@ -36,14 +38,14 @@ pub fn eval(
 ///
 /// # Errors
 ///
-/// Returns [`Error::Interp`] on operand type errors, malformed atomic or call
+/// Returns [`ReferenceError::Interp`] on operand type errors, malformed atomic or call
 /// expressions, unsupported variants, or float operands.
 pub(crate) fn eval_frame_oracle(
     expr: &Expr,
     invocation: &mut Invocation<'_>,
     memory: &mut Memory,
     program: &Program,
-) -> Result<Value, vyre::Error> {
+) -> Result<Value, crate::ReferenceError> {
     enum Frame<'a> {
         Expr(&'a Expr),
         BinOp(BinOp),
@@ -138,15 +140,11 @@ pub(crate) fn eval_frame_oracle(
                 } => {
                     match (*op, expected.as_deref()) {
                         (AtomicOp::CompareExchange, None) => {
-                            return Err(Error::interp(
-                                "compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange.",
-                            ));
+                            return Err(ReferenceError::new("compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."));
                         }
                         (AtomicOp::CompareExchange, Some(_)) => {}
                         (_, Some(_)) => {
-                            return Err(Error::interp(
-                                "non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange.",
-                            ));
+                            return Err(ReferenceError::new("non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."));
                         }
                         (_, None) => {}
                     }
@@ -175,56 +173,64 @@ pub(crate) fn eval_frame_oracle(
                 // disappears. Seeing one here means the call was never
                 // inlined.
                 Expr::BufferRef { buffer } => {
-                    return Err(Error::interp(format!(
+                    return Err(ReferenceError::new(format!(
                         "reference interpreter cannot evaluate a reference to buffer `{buffer}` as a value: it is legal only as an argument to a composite op. Fix: inline composite calls before evaluation, or read an element with `Expr::Load`."
                     )));
                 }
                 Expr::Opaque(extension) => {
-                    return Err(Error::interp(format!(
+                    return Err(ReferenceError::new(format!(
                         "reference interpreter does not support opaque expression extension `{}`/`{}`. Fix: provide a reference evaluator for this ExprNode or lower it to core Expr variants before evaluation.",
                         extension.extension_kind(),
                         extension.debug_identity()
                     )));
                 }
                 _ => {
-                    return Err(Error::interp(
-                        "reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch.",
-                    ));
+                    return Err(ReferenceError::new("reference interpreter encountered an unknown expression variant. Fix: add explicit reference semantics for the new ExprNode before dispatch."));
                 }
             },
             Frame::BinOp(op) => {
                 let right = values.pop().ok_or_else(|| {
-                    Error::interp("binary op missing right operand. Fix: internal evaluator error.")
+                    ReferenceError::new(
+                        "binary op missing right operand. Fix: internal evaluator error.",
+                    )
                 })?;
                 let left = values.pop().ok_or_else(|| {
-                    Error::interp("binary op missing left operand. Fix: internal evaluator error.")
+                    ReferenceError::new(
+                        "binary op missing left operand. Fix: internal evaluator error.",
+                    )
                 })?;
                 values.push(super::typed_ops::eval_binop(op, left, right)?);
             }
             Frame::UnOp(op) => {
                 let operand = values.pop().ok_or_else(|| {
-                    Error::interp("unary op missing operand. Fix: internal evaluator error.")
+                    ReferenceError::new("unary op missing operand. Fix: internal evaluator error.")
                 })?;
                 values.push(super::typed_ops::eval_unop(op, operand)?);
             }
             Frame::Select => {
                 let false_val = values.pop().ok_or_else(|| {
-                    Error::interp("select missing false branch. Fix: internal evaluator error.")
+                    ReferenceError::new(
+                        "select missing false branch. Fix: internal evaluator error.",
+                    )
                 })?;
                 let true_val = values.pop().ok_or_else(|| {
-                    Error::interp("select missing true branch. Fix: internal evaluator error.")
+                    ReferenceError::new(
+                        "select missing true branch. Fix: internal evaluator error.",
+                    )
                 })?;
                 let cond = values
                     .pop()
                     .ok_or_else(|| {
-                        Error::interp("select missing condition. Fix: internal evaluator error.")
+                        ReferenceError::new(
+                            "select missing condition. Fix: internal evaluator error.",
+                        )
                     })?
                     .truthy();
                 values.push(if cond { true_val } else { false_val });
             }
             Frame::Cast(target) => {
                 let value = values.pop().ok_or_else(|| {
-                    Error::interp("cast missing value. Fix: internal evaluator error.")
+                    ReferenceError::new("cast missing value. Fix: internal evaluator error.")
                 })?;
                 values.push(cast_value(target, &value)?);
             }
@@ -232,33 +238,33 @@ pub(crate) fn eval_frame_oracle(
                 let c = values
                     .pop()
                     .ok_or_else(|| {
-                        Error::interp("fma missing operand c. Fix: internal evaluator error.")
+                        ReferenceError::new("fma missing operand c. Fix: internal evaluator error.")
                     })?
                     .try_as_f32()
                     .ok_or_else(|| {
-                        Error::interp(
+                        ReferenceError::new(
                             "fma operand `c` is not a float. Fix: cast to f32 before fma.",
                         )
                     })?;
                 let b = values
                     .pop()
                     .ok_or_else(|| {
-                        Error::interp("fma missing operand b. Fix: internal evaluator error.")
+                        ReferenceError::new("fma missing operand b. Fix: internal evaluator error.")
                     })?
                     .try_as_f32()
                     .ok_or_else(|| {
-                        Error::interp(
+                        ReferenceError::new(
                             "fma operand `b` is not a float. Fix: cast to f32 before fma.",
                         )
                     })?;
                 let a = values
                     .pop()
                     .ok_or_else(|| {
-                        Error::interp("fma missing operand a. Fix: internal evaluator error.")
+                        ReferenceError::new("fma missing operand a. Fix: internal evaluator error.")
                     })?
                     .try_as_f32()
                     .ok_or_else(|| {
-                        Error::interp(
+                        ReferenceError::new(
                             "fma operand `a` is not a float. Fix: cast to f32 before fma.",
                         )
                     })?;
@@ -271,10 +277,10 @@ pub(crate) fn eval_frame_oracle(
             }
             Frame::Load { buffer } => {
                 let value = values.pop().ok_or_else(|| {
-                    Error::interp("load missing index. Fix: internal evaluator error.")
+                    ReferenceError::new("load missing index. Fix: internal evaluator error.")
                 })?;
                 let idx = value.try_as_u32().ok_or_else(|| {
-                    Error::interp(format!(
+                    ReferenceError::new(format!(
                         "load index {value:?} cannot be represented as u32. Fix: use a non-negative scalar index within u32."
                     ))
                 })?;
@@ -287,10 +293,10 @@ pub(crate) fn eval_frame_oracle(
                 value,
             } => {
                 let val = values.pop().ok_or_else(|| {
-                    Error::interp("atomic missing index. Fix: internal evaluator error.")
+                    ReferenceError::new("atomic missing index. Fix: internal evaluator error.")
                 })?;
                 let idx = val.try_as_u32().ok_or_else(|| {
-                    Error::interp(format!(
+                    ReferenceError::new(format!(
                         "atomic index {val:?} cannot be represented as u32. Fix: use a non-negative scalar index within u32."
                     ))
                 })?;
@@ -321,12 +327,10 @@ pub(crate) fn eval_frame_oracle(
                 expected_expr,
             } => {
                 let val = values.pop().ok_or_else(|| {
-                    Error::interp(
-                        "atomic compare-exchange missing expected value. Fix: internal evaluator error.",
-                    )
+                    ReferenceError::new("atomic compare-exchange missing expected value. Fix: internal evaluator error.")
                 })?;
                 let expected_val = val.try_as_u32().ok_or_else(|| {
-                    Error::interp(format!(
+                    ReferenceError::new(format!(
                         "atomic expected value {expected_expr:?} cannot be represented as u32. Fix: use a scalar u32-compatible argument."
                     ))
                 })?;
@@ -345,12 +349,10 @@ pub(crate) fn eval_frame_oracle(
                 index,
             } => {
                 let val = values.pop().ok_or_else(|| {
-                    Error::interp("atomic missing value. Fix: internal evaluator error.")
+                    ReferenceError::new("atomic missing value. Fix: internal evaluator error.")
                 })?;
                 let value = val.try_as_u32().ok_or_else(|| {
-                    Error::interp(
-                        "atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.",
-                    )
+                    ReferenceError::new("atomic value cannot be represented as u32. Fix: use a scalar u32-compatible argument.")
                 })?;
                 let target = atomic_buffer_mut(memory, program, buffer)?;
                 let Some(old) = oob::atomic_load(target, index) else {
@@ -365,7 +367,9 @@ pub(crate) fn eval_frame_oracle(
     }
 
     values.pop().ok_or_else(|| {
-        Error::interp("expression evaluation produced no value. Fix: internal evaluator error.")
+        ReferenceError::new(
+            "expression evaluation produced no value. Fix: internal evaluator error.",
+        )
     })
 }
 
@@ -373,48 +377,58 @@ pub(crate) fn eval_frame_oracle(
 ///
 /// # Errors
 ///
-/// Returns [`Error::Interp`] if the buffer is read-only, uniform,
+/// Returns [`ReferenceError::Interp`] if the buffer is read-only, uniform,
 /// or does not exist in the program declaration.
 pub fn buffer_mut<'a>(
     memory: &'a mut Memory,
     program: &Program,
     name: &str,
-) -> Result<&'a mut Buffer, vyre::Error> {
+) -> Result<&'a mut Buffer, crate::ReferenceError> {
     let decl = buffer_decl(program, name)?;
     match decl.access() {
         BufferAccess::ReadWrite | BufferAccess::WriteOnly | BufferAccess::Workgroup => {
             resolve_buffer_mut(memory, decl)
         }
-        BufferAccess::ReadOnly | BufferAccess::Uniform => Err(Error::interp(format!(
+        BufferAccess::ReadOnly | BufferAccess::Uniform => Err(ReferenceError::new(format!(
             "store target `{name}` is not writable. Fix: declare it ReadWrite, WriteOnly, or Workgroup."
         ))),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "store target `{name}` uses an unsupported access mode. Fix: use a supported BufferAccess."
         ))),
     }
 }
 
-fn eval_var(name: &str, invocation: &Invocation<'_>) -> Result<Value, vyre::Error> {
+fn eval_var(name: &str, invocation: &Invocation<'_>) -> Result<Value, crate::ReferenceError> {
     invocation.local(name).cloned().ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "reference to undeclared variable `{name}`. Fix: add a Let before this use."
         ))
     })
 }
 
-fn eval_buf_len(buffer: &str, memory: &Memory, program: &Program) -> Result<Value, vyre::Error> {
+fn eval_buf_len(
+    buffer: &str,
+    memory: &Memory,
+    program: &Program,
+) -> Result<Value, crate::ReferenceError> {
     Ok(Value::U32(resolve_buffer(memory, program, buffer)?.len()))
 }
 
-fn eval_invocation_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, vyre::Error> {
+fn eval_invocation_id(
+    axis: u8,
+    invocation: &Invocation<'_>,
+) -> Result<Value, crate::ReferenceError> {
     axis_value(invocation.ids.global, axis)
 }
 
-fn eval_workgroup_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, vyre::Error> {
+fn eval_workgroup_id(
+    axis: u8,
+    invocation: &Invocation<'_>,
+) -> Result<Value, crate::ReferenceError> {
     axis_value(invocation.ids.workgroup, axis)
 }
 
-fn eval_local_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, vyre::Error> {
+fn eval_local_id(axis: u8, invocation: &Invocation<'_>) -> Result<Value, crate::ReferenceError> {
     axis_value(invocation.ids.local, axis)
 }
 
@@ -422,7 +436,7 @@ fn resolve_buffer<'a>(
     memory: &'a Memory,
     program: &Program,
     name: &str,
-) -> Result<&'a oob::Buffer, vyre::Error> {
+) -> Result<&'a oob::Buffer, crate::ReferenceError> {
     let decl = buffer_decl(program, name)?;
     if decl.access() == BufferAccess::Workgroup {
         memory.workgroup.get(name)
@@ -430,7 +444,7 @@ fn resolve_buffer<'a>(
         memory.storage.get(name)
     }
     .ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "missing buffer `{name}`. Fix: initialize all declared buffers."
         ))
     })
@@ -439,7 +453,7 @@ fn resolve_buffer<'a>(
 fn resolve_buffer_mut<'a>(
     memory: &'a mut Memory,
     decl: &BufferDecl,
-) -> Result<&'a mut oob::Buffer, vyre::Error> {
+) -> Result<&'a mut oob::Buffer, crate::ReferenceError> {
     let name = decl.name();
     if decl.access() == BufferAccess::Workgroup {
         memory.workgroup.get_mut(name)
@@ -447,7 +461,7 @@ fn resolve_buffer_mut<'a>(
         memory.storage.get_mut(name)
     }
     .ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "missing buffer `{name}`. Fix: initialize all declared buffers."
         ))
     })
@@ -457,37 +471,40 @@ fn atomic_buffer_mut<'a>(
     memory: &'a mut Memory,
     program: &Program,
     name: &str,
-) -> Result<&'a mut oob::Buffer, vyre::Error> {
+) -> Result<&'a mut oob::Buffer, crate::ReferenceError> {
     let decl = buffer_decl(program, name)?;
     match decl.access() {
         BufferAccess::ReadWrite => resolve_buffer_mut(memory, decl),
-        BufferAccess::Workgroup => Err(Error::interp(format!(
+        BufferAccess::Workgroup => Err(ReferenceError::new(format!(
             "atomic target `{name}` is workgroup memory. Fix: atomics only support ReadWrite storage buffers."
         ))),
-        BufferAccess::ReadOnly | BufferAccess::Uniform => Err(Error::interp(format!(
+        BufferAccess::ReadOnly | BufferAccess::Uniform => Err(ReferenceError::new(format!(
             "atomic target `{name}` is not writable. Fix: atomics only support ReadWrite storage buffers."
         ))),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "atomic target `{name}` uses an unsupported access mode. Fix: use a supported BufferAccess."
         ))),
     }
 }
 
-fn buffer_decl<'a>(program: &'a Program, name: &str) -> Result<&'a BufferDecl, vyre::Error> {
+fn buffer_decl<'a>(
+    program: &'a Program,
+    name: &str,
+) -> Result<&'a BufferDecl, crate::ReferenceError> {
     program.buffer(name).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "unknown buffer `{name}`. Fix: declare it in Program::buffers."
         ))
     })
 }
 
-fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, vyre::Error> {
+fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, crate::ReferenceError> {
     values
         .get(axis as usize)
         .copied()
         .map(Value::U32)
         .ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "invocation/workgroup ID axis {axis} out of range. Fix: use 0, 1, or 2."
             ))
         })
@@ -497,7 +514,7 @@ fn axis_value(values: [u32; 3], axis: u8) -> Result<Value, vyre::Error> {
 mod tests {
 
     use proptest::prelude::*;
-    use vyre::ir::{Expr, Program};
+    use vyre_foundation::ir::{Expr, Program};
 
     use super::eval;
     use crate::value::Value;
@@ -557,7 +574,7 @@ mod tests {
         assert_eq!(value, Value::U32(4096));
     }
 
-    fn eval_recursive_contract(expr: &Expr) -> Result<Value, vyre::Error> {
+    fn eval_recursive_contract(expr: &Expr) -> Result<Value, crate::ReferenceError> {
         match expr {
             Expr::LitU32(value) => Ok(Value::U32(*value)),
             Expr::LitI32(value) => Ok(Value::I32(*value)),
@@ -583,13 +600,19 @@ mod tests {
             }
             Expr::Fma { a, b, c } => {
                 let a = eval_recursive_contract(a)?.try_as_f32().ok_or_else(|| {
-                    vyre::Error::interp("fma operand `a` is not a float in recursive contract")
+                    crate::ReferenceError::new(
+                        "fma operand `a` is not a float in recursive contract",
+                    )
                 })?;
                 let b = eval_recursive_contract(b)?.try_as_f32().ok_or_else(|| {
-                    vyre::Error::interp("fma operand `b` is not a float in recursive contract")
+                    crate::ReferenceError::new(
+                        "fma operand `b` is not a float in recursive contract",
+                    )
                 })?;
                 let c = eval_recursive_contract(c)?.try_as_f32().ok_or_else(|| {
-                    vyre::Error::interp("fma operand `c` is not a float in recursive contract")
+                    crate::ReferenceError::new(
+                        "fma operand `c` is not a float in recursive contract",
+                    )
                 })?;
                 let a = crate::execution::typed_ops::canonical_f32(a);
                 let b = crate::execution::typed_ops::canonical_f32(b);
@@ -598,7 +621,7 @@ mod tests {
                     crate::execution::typed_ops::canonical_f32(a.mul_add(b, c)),
                 )))
             }
-            _ => Err(vyre::Error::interp(
+            _ => Err(crate::ReferenceError::new(
                 "recursive test contract received an expression outside its generated subset",
             )),
         }

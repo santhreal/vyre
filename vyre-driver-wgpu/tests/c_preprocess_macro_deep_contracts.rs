@@ -138,7 +138,7 @@ fn run_dynamic_macro_expansion(
     input: &[u32],
     fixture: &MacroFixture,
     max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_dynamic_macro_expansion(
         "in_tok_types",
         "macro_keys",
@@ -170,7 +170,7 @@ fn run_conditional_mask_with_directives(
     tok_types: &[u32],
     directive_kinds: &[u32],
     directive_values: &[u32],
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_conditional_mask_with_directives(
         "tok_types",
         "directive_kinds",

@@ -2,9 +2,9 @@
 #[non_exhaustive] pub enum vyre_foundation::AttrType
 #[non_exhaustive] pub enum vyre_foundation::DataflowKind
 #[non_exhaustive] pub enum vyre_foundation::EdgeKind
-#[non_exhaustive] pub enum vyre_foundation::Error
 #[non_exhaustive] pub enum vyre_foundation::ExternVerifyError
 #[non_exhaustive] pub enum vyre_foundation::GraphValidateError
+#[non_exhaustive] pub enum vyre_foundation::IrError
 #[non_exhaustive] pub enum vyre_foundation::MemoryOrdering
 #[non_exhaustive] pub enum vyre_foundation::analysis::graph_view::DataflowKind
 #[non_exhaustive] pub enum vyre_foundation::analysis::graph_view::EdgeKind
@@ -16,7 +16,7 @@
 #[non_exhaustive] pub enum vyre_foundation::dispatch::dialect_lookup::AttrType
 #[non_exhaustive] pub enum vyre_foundation::dispatch::extension::ExtensionKind
 #[non_exhaustive] pub enum vyre_foundation::dispatch::extern_registry::ExternVerifyError
-#[non_exhaustive] pub enum vyre_foundation::error::Error
+#[non_exhaustive] pub enum vyre_foundation::error::IrError
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::InnovationTrack
 #[non_exhaustive] pub enum vyre_foundation::execution_plan::fusion::FusionError
 #[non_exhaustive] pub enum vyre_foundation::extension::ExtensionKind
@@ -208,7 +208,7 @@ impl vyre_foundation::dispatch::dialect_lookup::Signature
 impl vyre_foundation::dispatch::extension::ExtensionId
 impl vyre_foundation::dispatch::extern_registry::ExternDialect
 impl vyre_foundation::dispatch::extern_registry::ExternOp
-impl vyre_foundation::error::Error
+impl vyre_foundation::error::IrError
 impl vyre_foundation::execution_plan::ExecutionPlan
 impl vyre_foundation::execution_plan::ReadbackStrategy
 impl vyre_foundation::execution_plan::SchedulingPolicy
@@ -821,8 +821,7 @@ pub fn vyre_foundation::dispatch::extern_registry::all_ops() -> alloc::vec::Vec<
 pub fn vyre_foundation::dispatch::extern_registry::dialects() -> alloc::vec::Vec<&'static vyre_foundation::dispatch::extern_registry::ExternDialect>
 pub fn vyre_foundation::dispatch::extern_registry::ops_in_dialect(dialect: &str) -> alloc::vec::Vec<&'static vyre_foundation::dispatch::extern_registry::ExternOp>
 pub fn vyre_foundation::dispatch::extern_registry::verify() -> core::result::Result<(), alloc::vec::Vec<vyre_foundation::dispatch::extern_registry::ExternVerifyError>>
-pub fn vyre_foundation::error::Error::interp(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_foundation::error::Error::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_foundation::error::IrError::lowering(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn vyre_foundation::execution_plan::ExecutionPlan::track_active(&self, track: vyre_foundation::execution_plan::InnovationTrack) -> bool
 pub fn vyre_foundation::execution_plan::ReadbackStrategy::visible_bytes(&self) -> u64
 pub fn vyre_foundation::execution_plan::SchedulingPolicy::default() -> Self
@@ -1110,8 +1109,8 @@ pub fn vyre_foundation::ir::NodeStorage::interpret(&self, ctx: &mut vyre_foundat
 pub fn vyre_foundation::ir::Program::buffer(&self, name: &str) -> core::option::Option<&vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::ir::Program::buffer_count(&self) -> usize
 pub fn vyre_foundation::ir::Program::buffers(&self) -> &[vyre_foundation::ir::BufferDecl]
-pub fn vyre_foundation::ir::Program::canonical_wire_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::error::Error>
-pub fn vyre_foundation::ir::Program::canonical_wire_hash(&self) -> core::result::Result<blake3::Hash, vyre_foundation::error::Error>
+pub fn vyre_foundation::ir::Program::canonical_wire_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::error::IrError>
+pub fn vyre_foundation::ir::Program::canonical_wire_hash(&self) -> core::result::Result<blake3::Hash, vyre_foundation::error::IrError>
 pub fn vyre_foundation::ir::Program::canonicalized(&self) -> Self
 pub fn vyre_foundation::ir::Program::clone(&self) -> Self
 pub fn vyre_foundation::ir::Program::content_hash(&self) -> [u8; 32]
@@ -1126,7 +1125,7 @@ pub fn vyre_foundation::ir::Program::estimate_peak_vram_bytes(&self) -> u64
 pub fn vyre_foundation::ir::Program::fingerprint(&self) -> [u8; 32]
 pub fn vyre_foundation::ir::Program::from_raw_parts(buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>, workgroup_size: [u32; 3], entry: alloc::vec::Vec<vyre_foundation::ir::Node>) -> Self
 pub fn vyre_foundation::ir::Program::from_text(input: &str) -> core::result::Result<Self, vyre_foundation::serial::text::TextParseError>
-pub fn vyre_foundation::ir::Program::from_wire(bytes: &[u8]) -> core::result::Result<Self, vyre_foundation::error::Error>
+pub fn vyre_foundation::ir::Program::from_wire(bytes: &[u8]) -> core::result::Result<Self, vyre_foundation::error::IrError>
 pub fn vyre_foundation::ir::Program::has_buffer(&self, name: &str) -> bool
 pub fn vyre_foundation::ir::Program::has_indirect_dispatch(&self) -> bool
 pub fn vyre_foundation::ir::Program::into_entry_vec(self) -> alloc::vec::Vec<vyre_foundation::ir::Node>
@@ -1148,11 +1147,11 @@ pub fn vyre_foundation::ir::Program::set_workgroup_size(&mut self, workgroup_siz
 pub fn vyre_foundation::ir::Program::stats(&self) -> &vyre_foundation::ir::ProgramStats
 pub fn vyre_foundation::ir::Program::structural_eq(&self, other: &Self) -> bool
 pub fn vyre_foundation::ir::Program::to_text(&self) -> core::result::Result<alloc::string::String, vyre_foundation::serial::text::TextParseError>
-pub fn vyre_foundation::ir::Program::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::error::Error>
-pub fn vyre_foundation::ir::Program::to_wire_into(&self, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::error::Error>
+pub fn vyre_foundation::ir::Program::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::error::IrError>
+pub fn vyre_foundation::ir::Program::to_wire_into(&self, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::error::IrError>
 pub fn vyre_foundation::ir::Program::top_level_region_violation(&self) -> core::option::Option<alloc::string::String>
 pub fn vyre_foundation::ir::Program::try_normalized_cache_digest(&self) -> core::result::Result<[u8; 32], alloc::string::String>
-pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::error::Result<()>
+pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::error::IrResult<()>
 pub fn vyre_foundation::ir::Program::validation_mutation_provenance(&self) -> vyre_foundation::ir_inner::model::program::meta::ProgramMutationProvenance
 pub fn vyre_foundation::ir::Program::vsa_fingerprint(&self) -> alloc::vec::Vec<u32>
 pub fn vyre_foundation::ir::Program::with_arena(arena: &vyre_foundation::ir::ExprArena, buffers: alloc::vec::Vec<vyre_foundation::ir::BufferDecl>, workgroup_size: [u32; 3]) -> vyre_foundation::ir::ArenaProgram<'_>
@@ -1211,10 +1210,10 @@ pub fn vyre_foundation::ir::eval::fold_cast_literal(target: &vyre_spec::data_typ
 pub fn vyre_foundation::ir::eval::fold_fma_literal(a: &vyre_foundation::ir::Expr, b: &vyre_foundation::ir::Expr, c: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
 pub fn vyre_foundation::ir::eval::fold_literal_tree(expr: &vyre_foundation::ir::Expr) -> core::option::Option<alloc::borrow::Cow<'_, vyre_foundation::ir::Expr>>
 pub fn vyre_foundation::ir::eval::fold_unary_literal(op: &vyre_spec::un_op::UnOp, operand: &vyre_foundation::ir::Expr) -> core::option::Option<vyre_foundation::ir::Expr>
-pub fn vyre_foundation::ir::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::ir::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::ir::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::ir::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::ir::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
 pub fn vyre_foundation::ir::model::expr::ExprNode::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::model::expr::ExprNode::cse_safe(&self) -> bool
 pub fn vyre_foundation::ir::model::expr::ExprNode::debug_identity(&self) -> &str
@@ -1224,8 +1223,6 @@ pub fn vyre_foundation::ir::model::expr::ExprNode::stable_fingerprint(&self) -> 
 pub fn vyre_foundation::ir::model::expr::ExprNode::validate_extension(&self) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_foundation::ir::model::expr::ExprNode::wire_payload(&self) -> alloc::vec::Vec<u8>
 pub fn vyre_foundation::ir::model::generated::expr_op_id(item: &vyre_foundation::ir::Expr) -> alloc::string::String
-pub fn vyre_foundation::ir::model::generated::generate_expr_gpu_vm_decoder() -> vyre_foundation::ir::Node
-pub fn vyre_foundation::ir::model::generated::generate_node_gpu_vm_decoder() -> vyre_foundation::ir::Node
 pub fn vyre_foundation::ir::model::generated::node_op_id(item: &vyre_foundation::ir::Node) -> alloc::string::String
 pub fn vyre_foundation::ir::model::node::NodeExtension::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_foundation::ir::model::node::NodeExtension::debug_identity(&self) -> &str
@@ -2383,11 +2380,11 @@ pub fn vyre_foundation::transform::compiler::visitor_walk::source() -> core::opt
 pub fn vyre_foundation::transform::compiler::visitor_walk::validate_tree(node_count: usize, offsets: &[u32], children: &[u32]) -> core::result::Result<(), vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError>
 pub fn vyre_foundation::transform::compiler::visitor_walk::visit_step_program(child_offsets: &str, children: &str, stack: &str, post_order: &str, post_count: &str) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::transform::inline::default_resolver(op_id: &str) -> core::option::Option<vyre_foundation::ir::Program>
-pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::transform::inline::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::transform::inline::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::Result<vyre_foundation::ir::Program>
-pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, program: &'a vyre_foundation::ir::Program) -> vyre_foundation::error::Result<&'a vyre_foundation::ir::BufferDecl>
+pub fn vyre_foundation::transform::inline::inline_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::inline_calls_with_mode(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver, unresolved: vyre_foundation::transform::inline::UnresolvedCalls) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::inline_calls_with_resolver(program: &vyre_foundation::ir::Program, resolver: vyre_foundation::transform::inline::OpResolver) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::inline_composite_calls(program: &vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<vyre_foundation::ir::Program>
+pub fn vyre_foundation::transform::inline::output_buffer<'a>(op_id: &str, program: &'a vyre_foundation::ir::Program) -> vyre_foundation::error::IrResult<&'a vyre_foundation::ir::BufferDecl>
 pub fn vyre_foundation::transform::inline::zero_value(ty: &vyre_spec::data_type::DataType) -> vyre_foundation::ir::Expr
 pub fn vyre_foundation::transform::parallelism::detect_parallelism(nodes: &[vyre_foundation::ir::Node]) -> alloc::vec::Vec<vyre_foundation::transform::parallelism::DispatchGroup>
 pub fn vyre_foundation::transform::visit::ExprVisitor::visit_expr(&mut self, expr: &vyre_foundation::ir::Expr)
@@ -2452,7 +2449,7 @@ pub fn vyre_foundation::vast::vast_edit_digest(bytes: &[u8]) -> vyre_foundation:
 pub fn vyre_foundation::vast::walk_postorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
 pub fn vyre_foundation::vast::walk_preorder_indices(node_bytes: &[u8], node_count: u32, max_stack: usize) -> core::result::Result<alloc::vec::Vec<u32>, vyre_foundation::vast::VastError>
 pub fn vyre_foundation::verify_extern_registry() -> core::result::Result<(), alloc::vec::Vec<vyre_foundation::dispatch::extern_registry::ExternVerifyError>>
-pub fn vyre_foundation::visit::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::error::Result<Self::Value>
+pub fn vyre_foundation::visit::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::error::IrResult<Self::Value>
 pub fn vyre_foundation::visit::ExprVisitor::visit_atomic(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::atomic_op::AtomicOp, _buffer: &vyre_foundation::ir::Ident, _index: &vyre_foundation::ir::Expr, _expected: core::option::Option<&vyre_foundation::ir::Expr>, _value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_bin_op(&mut self, _expr: &vyre_foundation::ir::Expr, _op: &vyre_spec::bin_op::BinOp, _left: &vyre_foundation::ir::Expr, _right: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_buf_len(&mut self, _expr: &vyre_foundation::ir::Expr, _buffer: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2479,7 +2476,7 @@ pub fn vyre_foundation::visit::ExprVisitor::visit_un_op(&mut self, _expr: &vyre_
 pub fn vyre_foundation::visit::ExprVisitor::visit_var(&mut self, _expr: &vyre_foundation::ir::Expr, _name: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::visit_workgroup_id(&mut self, _expr: &vyre_foundation::ir::Expr, _axis: u32) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::ExprVisitor::walk_children_default(&mut self, expr: &vyre_foundation::ir::Expr, order: vyre_foundation::visit::VisitOrder) -> core::ops::control_flow::ControlFlow<Self::Break> where Self: core::marker::Sized
-pub fn vyre_foundation::visit::Lowerable::lower(&self, ctx: &mut Ctx) -> vyre_foundation::error::Result<()>
+pub fn vyre_foundation::visit::Lowerable::lower(&self, ctx: &mut Ctx) -> vyre_foundation::error::IrResult<()>
 pub fn vyre_foundation::visit::NodeVisitor::visit_assign(&mut self, node: &vyre_foundation::ir::Node, name: &vyre_foundation::ir::Ident, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_async_load(&mut self, node: &vyre_foundation::ir::Node, source: &vyre_foundation::ir::Ident, destination: &vyre_foundation::ir::Ident, offset: &vyre_foundation::ir::Expr, size: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::NodeVisitor::visit_async_store(&mut self, node: &vyre_foundation::ir::Node, source: &vyre_foundation::ir::Ident, destination: &vyre_foundation::ir::Ident, offset: &vyre_foundation::ir::Expr, size: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -2532,8 +2529,8 @@ pub fn vyre_foundation::visit::expr::walk_expr_children_default<V: vyre_foundati
 pub fn vyre_foundation::visit::node_map::any_descendant<P>(node: &vyre_foundation::ir::Node, pred: &mut P) -> bool where P: core::ops::function::FnMut(&vyre_foundation::ir::Node) -> bool
 pub fn vyre_foundation::visit::node_map::map_body<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(alloc::vec::Vec<vyre_foundation::ir::Node>) -> alloc::vec::Vec<vyre_foundation::ir::Node>
 pub fn vyre_foundation::visit::node_map::map_children<F>(node: vyre_foundation::ir::Node, f: &mut F) -> vyre_foundation::ir::Node where F: core::ops::function::FnMut(vyre_foundation::ir::Node) -> vyre_foundation::ir::Node
-pub fn vyre_foundation::visit::traits::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::error::Result<Self::Value>
-pub fn vyre_foundation::visit::traits::Lowerable::lower(&self, ctx: &mut Ctx) -> vyre_foundation::error::Result<()>
+pub fn vyre_foundation::visit::traits::Evaluatable::evaluate(&self, env: &mut Env) -> vyre_foundation::error::IrResult<Self::Value>
+pub fn vyre_foundation::visit::traits::Lowerable::lower(&self, ctx: &mut Ctx) -> vyre_foundation::error::IrResult<()>
 pub fn vyre_foundation::visit::traits::NodeVisitor::visit_assign(&mut self, node: &vyre_foundation::ir::Node, name: &vyre_foundation::ir::Ident, value: &vyre_foundation::ir::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::traits::NodeVisitor::visit_async_load(&mut self, node: &vyre_foundation::ir::Node, source: &vyre_foundation::ir::Ident, destination: &vyre_foundation::ir::Ident, offset: &vyre_foundation::ir::Expr, size: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
 pub fn vyre_foundation::visit::traits::NodeVisitor::visit_async_store(&mut self, node: &vyre_foundation::ir::Node, source: &vyre_foundation::ir::Ident, destination: &vyre_foundation::ir::Ident, offset: &vyre_foundation::ir::Expr, size: &vyre_foundation::ir::Expr, tag: &vyre_foundation::ir::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
@@ -3154,10 +3151,10 @@ pub trait vyre_foundation::visit::expr::ExprVisitor
 pub trait vyre_foundation::visit::traits::Evaluatable<Env: ?core::marker::Sized>
 pub trait vyre_foundation::visit::traits::Lowerable<Ctx: ?core::marker::Sized>
 pub trait vyre_foundation::visit::traits::NodeVisitor
+pub type vyre_foundation::IrResult<T, E> = core::result::Result<T, E>
 pub type vyre_foundation::NativeModuleBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::NativeModule
 pub type vyre_foundation::PrimaryBinaryBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> alloc::vec::Vec<u32>
 pub type vyre_foundation::PrimaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<(), alloc::string::String>
-pub type vyre_foundation::Result<T> = core::result::Result<T, vyre_foundation::error::Error>
 pub type vyre_foundation::SecondaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::TextModule
 pub type vyre_foundation::dialect_lookup::ExtensionLoweringFn = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub type vyre_foundation::dialect_lookup::NativeModuleBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::NativeModule
@@ -3171,7 +3168,7 @@ pub type vyre_foundation::dispatch::dialect_lookup::PrimaryTextBuilder = fn(&vyr
 pub type vyre_foundation::dispatch::dialect_lookup::SecondaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::TextModule
 pub type vyre_foundation::dispatch::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
 pub type vyre_foundation::dispatch::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
-pub type vyre_foundation::error::Result<T> = core::result::Result<T, vyre_foundation::error::Error>
+pub type vyre_foundation::error::IrResult<T, E> = core::result::Result<T, E>
 pub type vyre_foundation::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
 pub type vyre_foundation::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
 pub type vyre_foundation::ir::Ident::Target = str
@@ -3245,56 +3242,6 @@ pub vyre_foundation::EdgeKind::Control
 pub vyre_foundation::EdgeKind::Def
 pub vyre_foundation::EdgeKind::Def::name: vyre_foundation::ir::Ident
 pub vyre_foundation::EdgeKind::Ordering
-pub vyre_foundation::Error::Csr
-pub vyre_foundation::Error::Csr::message: alloc::string::String
-pub vyre_foundation::Error::Dataflow
-pub vyre_foundation::Error::Dataflow::message: alloc::string::String
-pub vyre_foundation::Error::Decode
-pub vyre_foundation::Error::Decode::message: alloc::string::String
-pub vyre_foundation::Error::DecodeConfig
-pub vyre_foundation::Error::DecodeConfig::message: alloc::string::String
-pub vyre_foundation::Error::Decompress
-pub vyre_foundation::Error::Decompress::message: alloc::string::String
-pub vyre_foundation::Error::Dfa
-pub vyre_foundation::Error::Dfa::message: alloc::string::String
-pub vyre_foundation::Error::Gpu
-pub vyre_foundation::Error::Gpu::message: alloc::string::String
-pub vyre_foundation::Error::InlineArgCountMismatch
-pub vyre_foundation::Error::InlineArgCountMismatch::expected: usize
-pub vyre_foundation::Error::InlineArgCountMismatch::got: usize
-pub vyre_foundation::Error::InlineArgCountMismatch::op_id: alloc::string::String
-pub vyre_foundation::Error::InlineCycle
-pub vyre_foundation::Error::InlineCycle::op_id: alloc::string::String
-pub vyre_foundation::Error::InlineNoOutput
-pub vyre_foundation::Error::InlineNoOutput::op_id: alloc::string::String
-pub vyre_foundation::Error::InlineNonInlinable
-pub vyre_foundation::Error::InlineNonInlinable::op_id: alloc::string::String
-pub vyre_foundation::Error::InlineOutputCountMismatch
-pub vyre_foundation::Error::InlineOutputCountMismatch::got: usize
-pub vyre_foundation::Error::InlineOutputCountMismatch::op_id: alloc::string::String
-pub vyre_foundation::Error::InlineUnknownOp
-pub vyre_foundation::Error::InlineUnknownOp::op_id: alloc::string::String
-pub vyre_foundation::Error::Interp
-pub vyre_foundation::Error::Interp::message: alloc::string::String
-pub vyre_foundation::Error::Lowering
-pub vyre_foundation::Error::Lowering::message: alloc::string::String
-pub vyre_foundation::Error::Prefix
-pub vyre_foundation::Error::Prefix::message: alloc::string::String
-pub vyre_foundation::Error::RuleEval
-pub vyre_foundation::Error::RuleEval::message: alloc::string::String
-pub vyre_foundation::Error::Serialization
-pub vyre_foundation::Error::Serialization::message: alloc::string::String
-pub vyre_foundation::Error::UnknownDialect
-pub vyre_foundation::Error::UnknownDialect::name: alloc::string::String
-pub vyre_foundation::Error::UnknownDialect::requested: alloc::string::String
-pub vyre_foundation::Error::UnknownOp
-pub vyre_foundation::Error::UnknownOp::dialect: alloc::string::String
-pub vyre_foundation::Error::UnknownOp::op: alloc::string::String
-pub vyre_foundation::Error::VersionMismatch
-pub vyre_foundation::Error::VersionMismatch::expected: u32
-pub vyre_foundation::Error::VersionMismatch::found: u32
-pub vyre_foundation::Error::WireFormatValidation
-pub vyre_foundation::Error::WireFormatValidation::message: alloc::string::String
 pub vyre_foundation::ExternDialect::crate_repo: &'static str
 pub vyre_foundation::ExternDialect::name: &'static str
 pub vyre_foundation::ExternDialect::version: &'static str
@@ -3319,6 +3266,34 @@ pub vyre_foundation::GraphValidateError::DanglingEdge::from: u32
 pub vyre_foundation::GraphValidateError::DanglingEdge::to: u32
 pub vyre_foundation::GraphValidateError::OrphanPhi
 pub vyre_foundation::GraphValidateError::OrphanPhi::node_id: u32
+pub vyre_foundation::IrError::InlineArgCountMismatch
+pub vyre_foundation::IrError::InlineArgCountMismatch::expected: usize
+pub vyre_foundation::IrError::InlineArgCountMismatch::got: usize
+pub vyre_foundation::IrError::InlineArgCountMismatch::op_id: alloc::string::String
+pub vyre_foundation::IrError::InlineCycle
+pub vyre_foundation::IrError::InlineCycle::op_id: alloc::string::String
+pub vyre_foundation::IrError::InlineNoOutput
+pub vyre_foundation::IrError::InlineNoOutput::op_id: alloc::string::String
+pub vyre_foundation::IrError::InlineNonInlinable
+pub vyre_foundation::IrError::InlineNonInlinable::op_id: alloc::string::String
+pub vyre_foundation::IrError::InlineOutputCountMismatch
+pub vyre_foundation::IrError::InlineOutputCountMismatch::got: usize
+pub vyre_foundation::IrError::InlineOutputCountMismatch::op_id: alloc::string::String
+pub vyre_foundation::IrError::InlineUnknownOp
+pub vyre_foundation::IrError::InlineUnknownOp::op_id: alloc::string::String
+pub vyre_foundation::IrError::Lowering
+pub vyre_foundation::IrError::Lowering::message: alloc::string::String
+pub vyre_foundation::IrError::UnknownDialect
+pub vyre_foundation::IrError::UnknownDialect::name: alloc::string::String
+pub vyre_foundation::IrError::UnknownDialect::requested: alloc::string::String
+pub vyre_foundation::IrError::UnknownOp
+pub vyre_foundation::IrError::UnknownOp::dialect: alloc::string::String
+pub vyre_foundation::IrError::UnknownOp::op: alloc::string::String
+pub vyre_foundation::IrError::VersionMismatch
+pub vyre_foundation::IrError::VersionMismatch::expected: u32
+pub vyre_foundation::IrError::VersionMismatch::found: u32
+pub vyre_foundation::IrError::WireFormatValidation
+pub vyre_foundation::IrError::WireFormatValidation::message: alloc::string::String
 pub vyre_foundation::LoweringCtx::unused: core::marker::PhantomData<&'a ()>
 pub vyre_foundation::LoweringTable::cpu_ref: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_foundation::LoweringTable::extensions: rustc_hash::FxHashMap<&'static str, vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn>
@@ -3525,56 +3500,34 @@ pub vyre_foundation::dispatch::extern_registry::ExternVerifyError::MalformedDial
 pub vyre_foundation::dispatch::extern_registry::ExternVerifyError::OrphanOp
 pub vyre_foundation::dispatch::extern_registry::ExternVerifyError::OrphanOp::dialect: &'static str
 pub vyre_foundation::dispatch::extern_registry::ExternVerifyError::OrphanOp::op_id: &'static str
-pub vyre_foundation::error::Error::Csr
-pub vyre_foundation::error::Error::Csr::message: alloc::string::String
-pub vyre_foundation::error::Error::Dataflow
-pub vyre_foundation::error::Error::Dataflow::message: alloc::string::String
-pub vyre_foundation::error::Error::Decode
-pub vyre_foundation::error::Error::Decode::message: alloc::string::String
-pub vyre_foundation::error::Error::DecodeConfig
-pub vyre_foundation::error::Error::DecodeConfig::message: alloc::string::String
-pub vyre_foundation::error::Error::Decompress
-pub vyre_foundation::error::Error::Decompress::message: alloc::string::String
-pub vyre_foundation::error::Error::Dfa
-pub vyre_foundation::error::Error::Dfa::message: alloc::string::String
-pub vyre_foundation::error::Error::Gpu
-pub vyre_foundation::error::Error::Gpu::message: alloc::string::String
-pub vyre_foundation::error::Error::InlineArgCountMismatch
-pub vyre_foundation::error::Error::InlineArgCountMismatch::expected: usize
-pub vyre_foundation::error::Error::InlineArgCountMismatch::got: usize
-pub vyre_foundation::error::Error::InlineArgCountMismatch::op_id: alloc::string::String
-pub vyre_foundation::error::Error::InlineCycle
-pub vyre_foundation::error::Error::InlineCycle::op_id: alloc::string::String
-pub vyre_foundation::error::Error::InlineNoOutput
-pub vyre_foundation::error::Error::InlineNoOutput::op_id: alloc::string::String
-pub vyre_foundation::error::Error::InlineNonInlinable
-pub vyre_foundation::error::Error::InlineNonInlinable::op_id: alloc::string::String
-pub vyre_foundation::error::Error::InlineOutputCountMismatch
-pub vyre_foundation::error::Error::InlineOutputCountMismatch::got: usize
-pub vyre_foundation::error::Error::InlineOutputCountMismatch::op_id: alloc::string::String
-pub vyre_foundation::error::Error::InlineUnknownOp
-pub vyre_foundation::error::Error::InlineUnknownOp::op_id: alloc::string::String
-pub vyre_foundation::error::Error::Interp
-pub vyre_foundation::error::Error::Interp::message: alloc::string::String
-pub vyre_foundation::error::Error::Lowering
-pub vyre_foundation::error::Error::Lowering::message: alloc::string::String
-pub vyre_foundation::error::Error::Prefix
-pub vyre_foundation::error::Error::Prefix::message: alloc::string::String
-pub vyre_foundation::error::Error::RuleEval
-pub vyre_foundation::error::Error::RuleEval::message: alloc::string::String
-pub vyre_foundation::error::Error::Serialization
-pub vyre_foundation::error::Error::Serialization::message: alloc::string::String
-pub vyre_foundation::error::Error::UnknownDialect
-pub vyre_foundation::error::Error::UnknownDialect::name: alloc::string::String
-pub vyre_foundation::error::Error::UnknownDialect::requested: alloc::string::String
-pub vyre_foundation::error::Error::UnknownOp
-pub vyre_foundation::error::Error::UnknownOp::dialect: alloc::string::String
-pub vyre_foundation::error::Error::UnknownOp::op: alloc::string::String
-pub vyre_foundation::error::Error::VersionMismatch
-pub vyre_foundation::error::Error::VersionMismatch::expected: u32
-pub vyre_foundation::error::Error::VersionMismatch::found: u32
-pub vyre_foundation::error::Error::WireFormatValidation
-pub vyre_foundation::error::Error::WireFormatValidation::message: alloc::string::String
+pub vyre_foundation::error::IrError::InlineArgCountMismatch
+pub vyre_foundation::error::IrError::InlineArgCountMismatch::expected: usize
+pub vyre_foundation::error::IrError::InlineArgCountMismatch::got: usize
+pub vyre_foundation::error::IrError::InlineArgCountMismatch::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::InlineCycle
+pub vyre_foundation::error::IrError::InlineCycle::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::InlineNoOutput
+pub vyre_foundation::error::IrError::InlineNoOutput::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::InlineNonInlinable
+pub vyre_foundation::error::IrError::InlineNonInlinable::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::InlineOutputCountMismatch
+pub vyre_foundation::error::IrError::InlineOutputCountMismatch::got: usize
+pub vyre_foundation::error::IrError::InlineOutputCountMismatch::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::InlineUnknownOp
+pub vyre_foundation::error::IrError::InlineUnknownOp::op_id: alloc::string::String
+pub vyre_foundation::error::IrError::Lowering
+pub vyre_foundation::error::IrError::Lowering::message: alloc::string::String
+pub vyre_foundation::error::IrError::UnknownDialect
+pub vyre_foundation::error::IrError::UnknownDialect::name: alloc::string::String
+pub vyre_foundation::error::IrError::UnknownDialect::requested: alloc::string::String
+pub vyre_foundation::error::IrError::UnknownOp
+pub vyre_foundation::error::IrError::UnknownOp::dialect: alloc::string::String
+pub vyre_foundation::error::IrError::UnknownOp::op: alloc::string::String
+pub vyre_foundation::error::IrError::VersionMismatch
+pub vyre_foundation::error::IrError::VersionMismatch::expected: u32
+pub vyre_foundation::error::IrError::VersionMismatch::found: u32
+pub vyre_foundation::error::IrError::WireFormatValidation
+pub vyre_foundation::error::IrError::WireFormatValidation::message: alloc::string::String
 pub vyre_foundation::execution_plan::AccuracyPlan::reason: &'static str
 pub vyre_foundation::execution_plan::AccuracyPlan::shadow_reference_recommended: bool
 pub vyre_foundation::execution_plan::AccuracyStrategy::Direct
@@ -3649,7 +3602,7 @@ pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::full_size: u
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::name: alloc::string::String
 pub vyre_foundation::execution_plan::PlanError::InvalidOutputRange::start: usize
 pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram
-pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram::source: vyre_foundation::error::Error
+pub vyre_foundation::execution_plan::PlanError::NonCanonicalProgram::source: vyre_foundation::error::IrError
 pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded
 pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::backend: &'static str
 pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::budget_bytes: u64
@@ -4534,9 +4487,9 @@ pub vyre_foundation::ir::text::TextParseError::OddHexLineLength::observed: usize
 pub vyre_foundation::ir::text::TextParseError::WireBytesTooLarge
 pub vyre_foundation::ir::text::TextParseError::WireBytesTooLarge::declared: usize
 pub vyre_foundation::ir::text::TextParseError::WireDecodeFailed
-pub vyre_foundation::ir::text::TextParseError::WireDecodeFailed::inner: vyre_foundation::error::Error
+pub vyre_foundation::ir::text::TextParseError::WireDecodeFailed::inner: vyre_foundation::error::IrError
 pub vyre_foundation::ir::text::TextParseError::WireEncodeFailed
-pub vyre_foundation::ir::text::TextParseError::WireEncodeFailed::inner: vyre_foundation::error::Error
+pub vyre_foundation::ir::text::TextParseError::WireEncodeFailed::inner: vyre_foundation::error::IrError
 pub vyre_foundation::match_result::ByteRange::end: u32
 pub vyre_foundation::match_result::ByteRange::start: u32
 pub vyre_foundation::match_result::ByteRange::tag: u32
@@ -5247,9 +5200,9 @@ pub vyre_foundation::serial::text::TextParseError::OddHexLineLength::observed: u
 pub vyre_foundation::serial::text::TextParseError::WireBytesTooLarge
 pub vyre_foundation::serial::text::TextParseError::WireBytesTooLarge::declared: usize
 pub vyre_foundation::serial::text::TextParseError::WireDecodeFailed
-pub vyre_foundation::serial::text::TextParseError::WireDecodeFailed::inner: vyre_foundation::error::Error
+pub vyre_foundation::serial::text::TextParseError::WireDecodeFailed::inner: vyre_foundation::error::IrError
 pub vyre_foundation::serial::text::TextParseError::WireEncodeFailed
-pub vyre_foundation::serial::text::TextParseError::WireEncodeFailed::inner: vyre_foundation::error::Error
+pub vyre_foundation::serial::text::TextParseError::WireEncodeFailed::inner: vyre_foundation::error::IrError
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Dynamic(alloc::boxed::Box<arrayvec::array_string::ArrayString<256>>)
 pub vyre_foundation::serial::wire::encode::WireEncodeErr::Static(&'static str)
 pub vyre_foundation::serial::wire::encode::error::WireEncodeErr::Dynamic(alloc::boxed::Box<arrayvec::array_string::ArrayString<256>>)

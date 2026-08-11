@@ -50,7 +50,7 @@ fn run_dynamic_macro_expansion(
     input: &[u32],
     fixture: &MacroFixture,
     max_out_tokens: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_dynamic_macro_expansion(
         "in_tok_types",
         "macro_keys",

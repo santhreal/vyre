@@ -185,7 +185,7 @@ fn run_dynamic(
     input: &[u32],
     fixture: &DynamicFixture,
     max_out: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_dynamic_macro_expansion(
         "in_tok_types",
         "macro_keys",
@@ -215,7 +215,7 @@ fn run_named(
     stream: &TokenStream<'_>,
     fixture: &NamedFixture,
     max_out: u32,
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_named_macro_expansion(
         "in_tok_types",
         "in_tok_starts",
@@ -255,7 +255,7 @@ fn run_named(
     ];
     vyre_reference::reference_eval(&program, &values)
 }
-fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre::Error> {
+fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_conditional_mask("tok_types", "out_mask", Expr::u32(tok_types.len() as u32));
     let input_bytes = if tok_types.is_empty() {
         vec![0u8; 4]
@@ -272,7 +272,7 @@ fn run_conditional_mask_with_directives(
     tok_types: &[u32],
     directive_kinds: &[u32],
     directive_values: &[u32],
-) -> Result<Vec<Value>, vyre::Error> {
+) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     let program = opt_conditional_mask_with_directives(
         "tok_types",
         "directive_kinds",

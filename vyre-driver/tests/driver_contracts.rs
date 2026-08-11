@@ -1,7 +1,4 @@
-//! Organization-level contract tests for the vyre-driver ecosystem.
-//!
-//! These tests enforce long-term structural contracts without relying on
-//! brittle message wording. They may fail when code violates a contract.
+//! Driver error, capability, validation, and fixture contracts.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -11,63 +8,7 @@ use vyre_foundation::ir::{Node, OpId, Program};
 use vyre_foundation::program_caps::{check_backend_capabilities, RequiredCapabilities};
 
 // ---------------------------------------------------------------------------
-// 1. No wildcard public re-export expansion in new driver modules
-// ---------------------------------------------------------------------------
-
-/// Scan every `.rs` file in driver-tier crates for `pub use ...::*`.
-/// New wildcard re-exports break the explicit-surface contract.
-#[test]
-fn driver_modules_avoid_wildcard_pub_reexports() {
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest.parent().unwrap();
-    let workspace_manifest = std::fs::read_to_string(workspace_root.join("Cargo.toml"))
-        .expect("workspace manifest must be readable");
-    let driver_crates: Vec<PathBuf> = workspace_manifest
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim().trim_matches(',').trim_matches('"');
-            trimmed
-                .starts_with("vyre-driver-")
-                .then(|| workspace_root.join(trimmed))
-        })
-        .collect();
-
-    let mut violations = Vec::new();
-
-    for crate_root in driver_crates {
-        let src = crate_root.join("src");
-        if !src.is_dir() {
-            continue;
-        }
-        let mut stack = vec![src];
-        while let Some(dir) = stack.pop() {
-            for entry in std::fs::read_dir(&dir).unwrap().flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    stack.push(path);
-                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                    let content = std::fs::read_to_string(&path).unwrap();
-                    for (line_no, line) in content.lines().enumerate() {
-                        let t = line.trim();
-                        if t.starts_with("pub use") && t.ends_with("::*;") {
-                            let rel = path.strip_prefix(&crate_root).unwrap_or(&path);
-                            violations.push(format!("{}:{} {}", rel.display(), line_no + 1, t));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "driver modules must not expand wildcard pub re-exports. Violations:\n{}",
-        violations.join("\n")
-    );
-}
-
-// ---------------------------------------------------------------------------
-// 2. Public validation errors remain actionable with Fix guidance
+// Public validation errors remain actionable with Fix guidance
 // ---------------------------------------------------------------------------
 
 /// Every public error type that vyre-driver surfaces must contain a Fix: hint.
@@ -119,7 +60,7 @@ fn backend_error_new_synthesizes_fix_when_absent() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Capability contracts are explicit
+// Capability contracts are explicit
 // ---------------------------------------------------------------------------
 
 /// A backend that advertises zero supported ops must reject a program
@@ -203,7 +144,7 @@ fn capability_negotiation_lists_all_missing_bits() {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Graph/program validation rejects malformed input instead of defaulting silently
+// Graph/program validation rejects malformed input instead of defaulting silently
 // ---------------------------------------------------------------------------
 
 /// validate_program must return an Err for a program containing an unsupported
@@ -242,12 +183,11 @@ fn validation_rejects_unsupported_operation() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Test fixtures are external not inline
+// Test fixtures are external rather than inline
 // ---------------------------------------------------------------------------
 
-/// Organization contract: integration tests must load fixtures from external
-/// files rather than embedding large inline data. This test verifies the
-/// fixture directory exists and the fixture is readable.
+/// Integration tests load fixtures from external files.
+/// This verifies the fixture directory exists and is readable.
 #[test]
 fn external_fixture_is_loadable() {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

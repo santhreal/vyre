@@ -5,7 +5,7 @@
 //! `inventory::submit!`. There is no legacy registry shim, no parallel macro-generated
 //! catalog, no alternative discovery mechanism. If an op isn't in the
 //! `DialectRegistry` it doesn't exist; the wire decoder returns
-//! [`vyre_foundation::error::Error::UnknownOp`] for it.
+//! [`vyre_foundation::error::IrError::UnknownOp`] for it.
 //!
 //! Dialects register themselves via [`DialectRegistration`]. The per-op
 //! [`OpBackendTarget`] rows are a pure metadata index so the coverage

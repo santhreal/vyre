@@ -10,15 +10,15 @@ use super::{
     step::eval_expr_snapshot,
 };
 #[cfg(feature = "subgroup-ops")]
+use crate::ReferenceError;
+#[cfg(feature = "subgroup-ops")]
 use crate::{subgroup::SubgroupSimulator, value::Value};
 #[cfg(feature = "subgroup-ops")]
 use smallvec::SmallVec;
 #[cfg(feature = "subgroup-ops")]
 use std::sync::OnceLock;
 #[cfg(feature = "subgroup-ops")]
-use vyre::ir::{Expr, SubgroupReduceOp};
-#[cfg(feature = "subgroup-ops")]
-use vyre::Error;
+use vyre_foundation::ir::{Expr, SubgroupReduceOp};
 
 #[cfg(feature = "subgroup-ops")]
 pub(crate) fn subgroup_simulator() -> &'static SubgroupSimulator {
@@ -43,7 +43,7 @@ pub(crate) fn eval_subgroup_ballot(
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     let mask = collect_lane_bools(cond, invocation.linear_local_index, snapshots, memory)?;
     Ok(Value::U32(subgroup_simulator().ballot_slice(&mask)))
 }
@@ -55,7 +55,7 @@ pub(crate) fn eval_subgroup_shuffle(
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let src_lanes = collect_lane_u32s(
         lane,
@@ -80,9 +80,7 @@ pub(crate) fn eval_subgroup_shuffle(
             _ => Ok(Value::Float(0.0)),
         };
     }
-    Err(Error::interp(
-        "subgroup_shuffle lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective.",
-    ))
+    Err(ReferenceError::new("subgroup_shuffle lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective."))
 }
 
 #[cfg(feature = "subgroup-ops")]
@@ -92,7 +90,7 @@ pub(crate) fn eval_subgroup_reduce(
     invocation: &HashmapInvocation<'_>,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     let values = collect_lane_values(value, invocation.linear_local_index, snapshots, memory)?;
     let width = subgroup_simulator().width();
     if values.iter().all(|value| matches!(value, Value::U32(_))) {
@@ -103,25 +101,19 @@ pub(crate) fn eval_subgroup_reduce(
     }
     if values.iter().all(|value| matches!(value, Value::Float(_))) {
         let Some(identity) = op.f32_identity() else {
-            return Err(Error::interp(
-                "subgroup bitwise reduction (and/or/xor) requires integer lanes, not f32. Fix: use an integer value or a non-bitwise reduction operator.",
-            ));
+            return Err(ReferenceError::new("subgroup bitwise reduction (and/or/xor) requires integer lanes, not f32. Fix: use an integer value or a non-bitwise reduction operator."));
         };
         let mut acc = identity;
         for value in values.iter().take(width) {
             let Value::Float(lane) = value else { continue };
             let Some(combined) = op.combine_f32(acc, *lane as f32) else {
-                return Err(Error::interp(
-                    "subgroup reduction operator is not defined on f32 lanes. Fix: extend SubgroupReduceOp::combine_f32 or use integer lanes.",
-                ));
+                return Err(ReferenceError::new("subgroup reduction operator is not defined on f32 lanes. Fix: extend SubgroupReduceOp::combine_f32 or use integer lanes."));
             };
             acc = crate::execution::typed_ops::canonical_f32(combined);
         }
         return Ok(Value::Float(f64::from(acc)));
     }
-    Err(Error::interp(
-        "subgroup reduce lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective.",
-    ))
+    Err(ReferenceError::new("subgroup reduce lanes have mixed or unsupported value types. Fix: cast every lane value to the same primitive u32 or f32 type before the subgroup collective."))
 }
 
 #[cfg(feature = "subgroup-ops")]
@@ -130,7 +122,7 @@ fn collect_lane_bools(
     linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<SmallVec<[bool; 32]>, Error> {
+) -> Result<SmallVec<[bool; 32]>, ReferenceError> {
     subgroup_slice(snapshots, linear_local_index)
         .iter()
         .map(|lane| eval_expr_snapshot(expr, lane, snapshots, memory).map(|value| value.truthy()))
@@ -144,13 +136,13 @@ fn collect_lane_u32s(
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
     error: &'static str,
-) -> Result<SmallVec<[u32; 32]>, Error> {
+) -> Result<SmallVec<[u32; 32]>, ReferenceError> {
     subgroup_slice(snapshots, linear_local_index)
         .iter()
         .map(|lane| {
             eval_expr_snapshot(expr, lane, snapshots, memory)?
                 .try_as_u32()
-                .ok_or_else(|| Error::interp(error))
+                .ok_or_else(|| ReferenceError::new(error))
         })
         .collect()
 }
@@ -161,7 +153,7 @@ fn collect_lane_values(
     linear_local_index: u32,
     snapshots: &[HashmapInvocationSnapshot],
     memory: &HashmapMemory,
-) -> Result<SmallVec<[Value; 32]>, Error> {
+) -> Result<SmallVec<[Value; 32]>, ReferenceError> {
     subgroup_slice(snapshots, linear_local_index)
         .iter()
         .map(|lane| eval_expr_snapshot(expr, lane, snapshots, memory))
@@ -173,7 +165,7 @@ mod tests {
     use super::*;
     use crate::workgroup::InvocationIds;
     use rustc_hash::FxHashMap;
-    use vyre::ir::Node;
+    use vyre_foundation::ir::Node;
 
     fn snapshot_lane(index: u32, value: Value, source_lane: u32) -> HashmapInvocationSnapshot {
         let entry: &[Node] = &[];

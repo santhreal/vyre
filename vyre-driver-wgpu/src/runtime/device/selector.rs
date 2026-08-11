@@ -24,7 +24,9 @@
 //! multi-GPU now select an adapter by index before constructing a
 //! device/queue pair.
 
-use vyre_driver::error::{Error, Result};
+use vyre_driver::BackendError;
+
+type Result<T, E = BackendError> = std::result::Result<T, E>;
 
 use crate::staging_reserve::reserve_backend_vec;
 
@@ -131,7 +133,7 @@ pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when probe-result metadata cannot be reserved.
+/// Returns `BackendError` when probe-result metadata cannot be reserved.
 pub(crate) fn try_enumerate_adapters() -> Result<Vec<wgpu::AdapterInfo>> {
     let instance = wgpu::Instance::default();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
@@ -159,7 +161,7 @@ pub fn has_real_gpu_adapter() -> bool {
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when the adapter is no longer visible.
+/// Returns `BackendError` when the adapter is no longer visible.
 pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
     let instance = wgpu::Instance::default();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
@@ -180,17 +182,15 @@ pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
         ));
     }
 
-    Err(Error::Gpu {
-        message: format!(
-            "selected adapter `{}` ({:?}, backend={:?}, vendor={:08x}, device={:08x}) is no longer enumerable. Probed adapters: [{}]. Fix: repair GPU visibility or reacquire the WGPU backend.",
-            expected.name,
-            expected.device_type,
-            expected.backend,
-            expected.vendor,
-            expected.device,
-            probed.join(", ")
-        ),
-    })
+    Err(BackendError::new(format!(
+        "selected adapter `{}` ({:?}, backend={:?}, vendor={:08x}, device={:08x}) is no longer enumerable. Probed adapters: [{}]. Fix: repair GPU visibility or reacquire the WGPU backend.",
+        expected.name,
+        expected.device_type,
+        expected.backend,
+        expected.vendor,
+        expected.device,
+        probed.join(", ")
+    )))
 }
 
 fn adapter_info_matches(candidate: &wgpu::AdapterInfo, expected: &wgpu::AdapterInfo) -> bool {
@@ -262,7 +262,7 @@ pub fn adapter_probe_report() -> AdapterProbeReport {
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when no adapter matches.
+/// Returns `BackendError` when no adapter matches.
 pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
     let instance = wgpu::Instance::default();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
@@ -272,11 +272,9 @@ pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::Adapte
             return Ok((idx, info));
         }
     }
-    Err(Error::Gpu {
-        message: format!(
-            "no real GPU adapter matches criteria {criteria:?}. Fix: loosen the criteria or install drivers exposing the requested GPU class."
-        ),
-    })
+    Err(BackendError::new(format!(
+        "no real GPU adapter matches criteria {criteria:?}. Fix: loosen the criteria or install drivers exposing the requested GPU class."
+    )))
 }
 
 fn adapter_is_selectable(info: &wgpu::AdapterInfo, criteria: &AdapterCriteria) -> bool {
@@ -322,7 +320,7 @@ fn adapter_name_contains(name: &str, needle: &str) -> bool {
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when `index` is out of range or device
+/// Returns `BackendError` when `index` is out of range or device
 /// creation fails.
 pub fn init_device_for_adapter(
     index: usize,
@@ -338,7 +336,7 @@ pub fn init_device_for_adapter(
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when the adapter disappeared, no longer reports as a
+/// Returns `BackendError` when the adapter disappeared, no longer reports as a
 /// real GPU, or rejects device creation.
 pub(crate) fn init_device_for_adapter_identity(
     identity: &AdapterIdentity,
@@ -363,12 +361,10 @@ async fn acquire_gpu_for_adapter_identity(
         let info = adapter.get_info();
         if identity.matches(&info) {
             if !crate::capabilities::is_real_gpu(&info) {
-                return Err(Error::Gpu {
-                    message: format!(
-                        "recovery target `{}` now reports device type {:?}, which is not a real GPU execution target. Fix: restore the original GPU adapter or construct a new backend for the changed adapter.",
-                        info.name, info.device_type
-                    ),
-                });
+                return Err(BackendError::new(format!(
+                    "recovery target `{}` now reports device type {:?}, which is not a real GPU execution target. Fix: restore the original GPU adapter or construct a new backend for the changed adapter.",
+                    info.name, info.device_type
+                )));
             }
             return super::device::request_device_for_adapter(adapter, "vyre device (recovered)")
                 .await;
@@ -388,20 +384,18 @@ async fn acquire_gpu_for_adapter_identity(
             info.name, info.device_type, info.backend, info.vendor, info.device
         )
     }));
-    Err(Error::Gpu {
-        message: format!(
-            "original recovery adapter was not found. Target: {:?}. Probed adapters: [{}]. Fix: restore the original GPU or create a new WgpuBackend for the available adapter.",
-            identity,
-            probed.join(", ")
-        ),
-    })
+    Err(BackendError::new(format!(
+        "original recovery adapter was not found. Target: {:?}. Probed adapters: [{}]. Fix: restore the original GPU or create a new WgpuBackend for the available adapter.",
+        identity,
+        probed.join(", ")
+    )))
 }
 
 /// Async variant of [`init_device_for_adapter`].
 ///
 /// # Errors
 ///
-/// Returns `Error::Gpu` when `index` is out of range or device
+/// Returns `BackendError` when `index` is out of range or device
 /// creation fails.
 pub async fn acquire_gpu_for_adapter(
     index: usize,
@@ -412,20 +406,16 @@ pub async fn acquire_gpu_for_adapter(
 )> {
     let instance = wgpu::Instance::default();
     let adapters = instance.enumerate_adapters(wgpu::Backends::all());
-    let adapter = adapters.get(index).ok_or_else(|| Error::Gpu {
-        message: format!(
-            "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
-            adapters.len()
-        ),
-    })?;
+    let adapter = adapters.get(index).ok_or_else(|| BackendError::new(format!(
+        "adapter index {index} out of range (saw {} adapters). Fix: call enumerate_adapters() first to see valid indices.",
+        adapters.len()
+    )))?;
     let info = adapter.get_info();
     if !crate::capabilities::is_real_gpu(&info) {
-        return Err(Error::Gpu {
-            message: format!(
-                "adapter index {index} resolved to `{}` with device type {:?}, which is not a real GPU execution target. Fix: choose a discrete, integrated, or virtual GPU adapter.",
-                info.name, info.device_type
-            ),
-        });
+        return Err(BackendError::new(format!(
+            "adapter index {index} resolved to `{}` with device type {:?}, which is not a real GPU execution target. Fix: choose a discrete, integrated, or virtual GPU adapter.",
+            info.name, info.device_type
+        )));
     }
     super::device::request_device_for_adapter(adapter, "vyre device (selected)").await
 }
@@ -446,17 +436,14 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
     let Some(raw) = raw else {
         return Ok(None);
     };
-    raw.parse::<usize>().map(Some).map_err(|error| Error::Gpu {
-        message: format!(
-            "VYRE_ADAPTER_INDEX={raw:?} is not a valid adapter index: {error}. Fix: set VYRE_ADAPTER_INDEX to a non-negative integer from enumerate_adapters(), or unset it for automatic GPU selection."
-        ),
-    })
+    raw.parse::<usize>().map(Some).map_err(|error| BackendError::new(format!(
+        "VYRE_ADAPTER_INDEX={raw:?} is not a valid adapter index: {error}. Fix: set VYRE_ADAPTER_INDEX to a non-negative integer from enumerate_adapters(), or unset it for automatic GPU selection."
+    )))
 }
 
 fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static str) -> Result<()> {
-    reserve_backend_vec(vec, additional, context).map_err(|error| Error::Gpu {
-        message: error.to_string(),
-    })
+    reserve_backend_vec(vec, additional, context)
+        .map_err(|error| BackendError::new(error.to_string()))
 }
 
 #[cfg(test)]

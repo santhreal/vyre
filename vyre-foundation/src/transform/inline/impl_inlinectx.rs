@@ -134,13 +134,11 @@ impl InlineCtx {
                 source_region: source_region.clone(),
                 body: std::sync::Arc::new(self.inline_nodes(body)?),
             }]),
-            Node::Opaque(extension) => Err(Error::Interp {
-                message: format!(
-                    "inliner cannot rewrite opaque statement extension `{}`/`{}`. Fix: lower the extension to core Node variants before inlining.",
-                    extension.extension_kind(),
-                    extension.debug_identity()
-                ),
-            }),
+            Node::Opaque(extension) => Err(Error::lowering(format!(
+                "inliner cannot rewrite opaque statement extension `{}`/`{}`. Fix: lower the extension to core Node variants before inlining.",
+                extension.extension_kind(),
+                extension.debug_identity()
+            ))),
         }
     }
 

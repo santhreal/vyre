@@ -1,5 +1,5 @@
 use super::super::CalleeExpander;
-use crate::error::Result;
+use crate::error::IrResult as Result;
 use crate::ir::{AtomicOp, BinOp, Expr, Ident, UnOp};
 use crate::memory_model::MemoryOrdering;
 
@@ -71,7 +71,7 @@ impl CalleeExpander<'_> {
                     ordering,
                 } => push_atomic(op, buffer, has_expected, ordering, &mut values)?,
                 Frame::PerInvocationBuiltin => {
-                    return Err(crate::error::Error::lowering(
+                    return Err(crate::error::IrError::lowering(
                         "inliner cannot inline a callee that references \
                          InvocationId / WorkgroupId / LocalId / SubgroupLocalId / SubgroupSize: \
                          these built-ins are per-invocation and cannot be passed as callee arguments. \
@@ -82,7 +82,7 @@ impl CalleeExpander<'_> {
             }
         }
         values.pop().ok_or_else(|| {
-            crate::error::Error::lowering(
+            crate::error::IrError::lowering(
                 "IR inline expansion: expression rename produced no value. Fix: ensure the input Expr is well-formed.",
             )
         })
@@ -184,8 +184,8 @@ impl CalleeExpander<'_> {
     }
 }
 
-fn missing(what: &str) -> crate::error::Error {
-    crate::error::Error::lowering(format!(
+fn missing(what: &str) -> crate::error::IrError {
+    crate::error::IrError::lowering(format!(
         "IR inline expansion: {what} missing from expression stack. Fix: ensure the input Expr is well-formed."
     ))
 }

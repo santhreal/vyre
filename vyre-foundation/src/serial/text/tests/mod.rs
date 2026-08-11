@@ -238,12 +238,12 @@ pub(crate) fn error_display_never_panics_and_includes_fix_hint() {
             actual: 0,
         },
         TextParseError::WireDecodeFailed {
-            inner: crate::error::Error::WireFormatValidation {
+            inner: crate::error::IrError::WireFormatValidation {
                 message: "Fix: some inner issue".to_string(),
             },
         },
         TextParseError::WireEncodeFailed {
-            inner: crate::error::Error::WireFormatValidation {
+            inner: crate::error::IrError::WireFormatValidation {
                 message: "some encode issue".to_string(),
             },
         },

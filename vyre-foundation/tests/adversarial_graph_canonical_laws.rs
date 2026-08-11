@@ -55,7 +55,7 @@ fn canonicalized_store_value(expr: Expr) -> Expr {
     }
 }
 
-fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_foundation::Error> {
+fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     vyre_reference::reference_eval(program, &[Value::U32(0)])
 }
 

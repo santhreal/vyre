@@ -99,13 +99,13 @@ impl Value {
         &self,
         declared_width: usize,
         out: &mut Vec<u8>,
-    ) -> Result<(), vyre::Error> {
+    ) -> Result<(), crate::ReferenceError> {
         let start_len = out.len();
         let fixed_next_len = if declared_width == 0 {
             None
         } else {
             Some(start_len.checked_add(declared_width).ok_or_else(|| {
-                vyre::Error::interp(
+                crate::ReferenceError::new(
                     "encoded value byte size overflows usize. Fix: reduce the argument count or byte payload size.",
                 )
             })?)
@@ -214,23 +214,23 @@ impl Value {
 
     /// Create a zero value for the given data type.
     #[must_use]
-    pub fn zero_for(ty: vyre::ir::DataType) -> Self {
+    pub fn zero_for(ty: vyre_foundation::ir::DataType) -> Self {
         Self::try_zero_for(ty).unwrap_or_else(|| Self::Bytes(Arc::from([])))
     }
 
     /// Try to create a zero value for the given data type.
     #[must_use]
-    pub fn try_zero_for(ty: vyre::ir::DataType) -> Option<Self> {
+    pub fn try_zero_for(ty: vyre_foundation::ir::DataType) -> Option<Self> {
         match ty {
-            vyre::ir::DataType::U32 => Some(Self::U32(0)),
-            vyre::ir::DataType::I32 => Some(Self::I32(0)),
-            vyre::ir::DataType::U64 => Some(Self::U64(0)),
-            vyre::ir::DataType::Bool => Some(Self::Bool(false)),
-            vyre::ir::DataType::Bytes => Some(Self::Bytes(Arc::from([]))),
-            vyre::ir::DataType::F32 => Some(Self::Float(0.0)),
-            vyre::ir::DataType::F64 => Some(Self::Float(0.0)),
-            vyre::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from(vec![0; 8]))),
-            vyre::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from(vec![0; 16]))),
+            vyre_foundation::ir::DataType::U32 => Some(Self::U32(0)),
+            vyre_foundation::ir::DataType::I32 => Some(Self::I32(0)),
+            vyre_foundation::ir::DataType::U64 => Some(Self::U64(0)),
+            vyre_foundation::ir::DataType::Bool => Some(Self::Bool(false)),
+            vyre_foundation::ir::DataType::Bytes => Some(Self::Bytes(Arc::from([]))),
+            vyre_foundation::ir::DataType::F32 => Some(Self::Float(0.0)),
+            vyre_foundation::ir::DataType::F64 => Some(Self::Float(0.0)),
+            vyre_foundation::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from(vec![0; 8]))),
+            vyre_foundation::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from(vec![0; 16]))),
             _ => {
                 fixed_scalar_storage_width(&ty).map(|width| Self::Bytes(Arc::from(vec![0; width])))
             }
@@ -242,9 +242,12 @@ impl Value {
     /// # Errors
     ///
     /// Returns an error if the byte slice is too short for the declared type.
-    pub fn from_element_bytes(ty: vyre::ir::DataType, bytes: &[u8]) -> Result<Self, String> {
+    pub fn from_element_bytes(
+        ty: vyre_foundation::ir::DataType,
+        bytes: &[u8],
+    ) -> Result<Self, String> {
         match ty {
-            vyre::ir::DataType::U32 => {
+            vyre_foundation::ir::DataType::U32 => {
                 if bytes.len() < 4 {
                     return Err("u32 requires 4 bytes".to_string());
                 }
@@ -252,7 +255,7 @@ impl Value {
                     bytes[0], bytes[1], bytes[2], bytes[3],
                 ])))
             }
-            vyre::ir::DataType::I32 => {
+            vyre_foundation::ir::DataType::I32 => {
                 if bytes.len() < 4 {
                     return Err("i32 requires 4 bytes".to_string());
                 }
@@ -260,7 +263,7 @@ impl Value {
                     bytes[0], bytes[1], bytes[2], bytes[3],
                 ])))
             }
-            vyre::ir::DataType::U64 => {
+            vyre_foundation::ir::DataType::U64 => {
                 if bytes.len() < 8 {
                     return Err("u64 requires 8 bytes".to_string());
                 }
@@ -268,7 +271,7 @@ impl Value {
                     bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
                 ])))
             }
-            vyre::ir::DataType::Bool => {
+            vyre_foundation::ir::DataType::Bool => {
                 if bytes.len() < 4 {
                     return Err("bool requires 4 bytes".to_string());
                 }
@@ -276,19 +279,19 @@ impl Value {
                     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) != 0,
                 ))
             }
-            vyre::ir::DataType::Vec2U32 => {
+            vyre_foundation::ir::DataType::Vec2U32 => {
                 if bytes.len() < 8 {
                     return Err("vec2u32 requires 8 bytes".to_string());
                 }
                 Ok(Self::Bytes(Arc::from(&bytes[..8])))
             }
-            vyre::ir::DataType::Vec4U32 => {
+            vyre_foundation::ir::DataType::Vec4U32 => {
                 if bytes.len() < 16 {
                     return Err("vec4u32 requires 16 bytes".to_string());
                 }
                 Ok(Self::Bytes(Arc::from(&bytes[..16])))
             }
-            vyre::ir::DataType::F32 => {
+            vyre_foundation::ir::DataType::F32 => {
                 if bytes.len() < 4 {
                     return Err("f32 requires 4 bytes".to_string());
                 }
@@ -297,7 +300,7 @@ impl Value {
                     crate::execution::typed_ops::canonical_f32(value),
                 )))
             }
-            vyre::ir::DataType::F64 => {
+            vyre_foundation::ir::DataType::F64 => {
                 if bytes.len() < 8 {
                     return Err("f64 requires 8 bytes".to_string());
                 }
@@ -305,7 +308,7 @@ impl Value {
                     bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
                 ])))
             }
-            vyre::ir::DataType::Bytes => Ok(Self::Bytes(Arc::from(bytes))),
+            vyre_foundation::ir::DataType::Bytes => Ok(Self::Bytes(Arc::from(bytes))),
             _ => match fixed_scalar_storage_width(&ty) {
                 Some(width) => {
                     if bytes.len() < width {
@@ -319,31 +322,36 @@ impl Value {
     }
 }
 
-fn fixed_scalar_storage_width(ty: &vyre::ir::DataType) -> Option<usize> {
+fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usize> {
     match ty {
-        vyre::ir::DataType::U8
-        | vyre::ir::DataType::I8
-        | vyre::ir::DataType::F8E4M3
-        | vyre::ir::DataType::F8E5M2
-        | vyre::ir::DataType::I4
-        | vyre::ir::DataType::FP4
-        | vyre::ir::DataType::NF4 => Some(1),
-        vyre::ir::DataType::U16
-        | vyre::ir::DataType::I16
-        | vyre::ir::DataType::F16
-        | vyre::ir::DataType::BF16 => Some(2),
-        vyre::ir::DataType::Handle(_) | vyre::ir::DataType::DeviceMesh { .. } => Some(4),
-        vyre::ir::DataType::I64 => Some(8),
-        vyre::ir::DataType::Array { element_size } => Some(*element_size),
-        vyre::ir::DataType::Vec { element, count } => fixed_scalar_storage_width(element)
-            .and_then(|width| width.checked_mul(usize::from(*count))),
-        vyre::ir::DataType::TensorShaped { element, shape } => {
+        vyre_foundation::ir::DataType::U8
+        | vyre_foundation::ir::DataType::I8
+        | vyre_foundation::ir::DataType::F8E4M3
+        | vyre_foundation::ir::DataType::F8E5M2
+        | vyre_foundation::ir::DataType::I4
+        | vyre_foundation::ir::DataType::FP4
+        | vyre_foundation::ir::DataType::NF4 => Some(1),
+        vyre_foundation::ir::DataType::U16
+        | vyre_foundation::ir::DataType::I16
+        | vyre_foundation::ir::DataType::F16
+        | vyre_foundation::ir::DataType::BF16 => Some(2),
+        vyre_foundation::ir::DataType::Handle(_)
+        | vyre_foundation::ir::DataType::DeviceMesh { .. } => Some(4),
+        vyre_foundation::ir::DataType::I64 => Some(8),
+        vyre_foundation::ir::DataType::Array { element_size } => Some(*element_size),
+        vyre_foundation::ir::DataType::Vec { element, count } => {
+            fixed_scalar_storage_width(element)
+                .and_then(|width| width.checked_mul(usize::from(*count)))
+        }
+        vyre_foundation::ir::DataType::TensorShaped { element, shape } => {
             let element_width = fixed_scalar_storage_width(element)?;
             shape
                 .iter()
                 .try_fold(element_width, |width, &dim| width.checked_mul(dim as usize))
         }
-        vyre::ir::DataType::Quantized { storage, .. } => fixed_scalar_storage_width(storage),
+        vyre_foundation::ir::DataType::Quantized { storage, .. } => {
+            fixed_scalar_storage_width(storage)
+        }
         _ => None,
     }
 }
@@ -428,7 +436,7 @@ mod tests {
     #[test]
     fn f32_element_decode_canonicalizes_subnormal_and_nan_payload_bits() {
         let positive_subnormal =
-            Value::from_element_bytes(vyre::ir::DataType::F32, &1u32.to_le_bytes())
+            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &1u32.to_le_bytes())
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 positive subnormal decode must succeed");
         assert_eq!(
             positive_subnormal.try_as_f32().unwrap().to_bits(),
@@ -436,7 +444,7 @@ mod tests {
         );
 
         let negative_subnormal =
-            Value::from_element_bytes(vyre::ir::DataType::F32, &0x8000_0001u32.to_le_bytes())
+            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &0x8000_0001u32.to_le_bytes())
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 negative subnormal decode must succeed");
         assert_eq!(
             negative_subnormal.try_as_f32().unwrap().to_bits(),
@@ -444,7 +452,7 @@ mod tests {
         );
 
         let payload_nan =
-            Value::from_element_bytes(vyre::ir::DataType::F32, &0x7fa0_0001u32.to_le_bytes())
+            Value::from_element_bytes(vyre_foundation::ir::DataType::F32, &0x7fa0_0001u32.to_le_bytes())
                 .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - f32 payload NaN decode must succeed");
         assert_eq!(payload_nan.try_as_f32().unwrap().to_bits(), 0x7fc0_0000);
     }

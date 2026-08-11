@@ -1,284 +1,572 @@
-pub const DEFAULT_INTRUSIVE_LRU_CAPACITY: usize = 65_536;
-pub const DEFAULT_THRESHOLD: u32 = 3;
-pub const INDIRECT_ARGS_BYTES: u64 = 12;
-pub const MAX_SERIALIZED_PART_BYTES: usize = 256 * 1024 * 1024;
-pub const SPIRV_BACKEND_ID: &str = "spirv";
-pub const WGPU_BACKEND_ID: &str = "wgpu";
-pub enum CacheError {
-pub enum GpuResource {
-pub enum Override<'a> {
-pub enum Reason {
-pub enum SlotState {
-pub enum StreamShardError {
-pub fn acquire(
-pub fn acquire() -> Result<Self, vyre_driver::BackendError> {
-pub fn acquire_adapter(index: usize) -> Result<Self, vyre_driver::BackendError> {
-pub fn acquire_all() -> Result<Self, vyre_driver::BackendError> {
-pub fn acquire_indices(indices: &[usize]) -> Result<Self, vyre_driver::BackendError> {
-pub fn adapter_caps(&self) -> vyre_foundation::optimizer::AdapterCaps {
-pub fn adapter_for_info(expected: &wgpu::AdapterInfo) -> Result<wgpu::Adapter> {
-pub fn adapter_index_from_env() -> Result<Option<usize>> {
-pub fn adapter_indices(&self) -> Vec<usize> {
-pub fn adapter_info(&self) -> &wgpu::AdapterInfo {
-pub fn adapter_probe_report() -> AdapterProbeReport {
-pub fn alloc(
-pub fn allocate_wgpu_device_buffer(
-pub fn allocation_len(&self) -> u64 {
-pub fn arm_ticket(
-pub fn assign(&mut self, key: &[u8], cost: u64) -> Result<Option<u32>, StreamShardError> {
-pub fn async_load<F>(&mut self, tag: impl Into<String>, copy: F) -> Result<(), BackendError>
-pub fn async_wait(&mut self, tag: &str) -> Result<(), BackendError> {
-pub fn backend_fingerprint() -> String {
-pub fn bg_entry(binding: u32, buffer: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
-pub fn bind_group_cache_stats(&self) -> BindGroupCacheStats {
-pub fn buffer(&self) -> &wgpu::Buffer {
-pub fn buffer_arc(&self) -> Arc<wgpu::Buffer> {
-pub fn byte_len(&self) -> u64 {
-pub fn cache_dir() -> PathBuf {
-pub fn cache_key(spec_hash: &str, backend_fingerprint: &str) -> String {
-pub fn cached_adapter_info() -> Result<&'static wgpu::AdapterInfo> {
-pub fn cached_device() -> Result<Arc<(wgpu::Device, wgpu::Queue)>> {
-pub fn collect_slot(
-pub fn collect_slot_into(
-pub fn compile(
-pub fn compile(program: &Program) -> Result<Arc<Self>, BackendError> {
-pub fn compile_compute_pipeline(
-pub fn compile_compute_pipeline_with_layout(
-pub fn compile_persistent(
-pub fn compile_streaming(
-pub fn compile_with_config(
-pub fn decode_parts(mut bytes: &[u8]) -> Result<Vec<&[u8]>> {
-pub fn default_flags() -> WriterFlags {
-pub fn demote(&mut self, key: u64) -> Result<(), CacheError> {
-pub fn device(&self) -> &wgpu::Device {
-pub fn device_limits(&self) -> &wgpu::Limits {
-pub fn device_profile(&self) -> vyre_driver::DeviceProfile {
-pub fn device_queue(&self) -> Arc<(wgpu::Device, wgpu::Queue)> {
-pub fn dispatch(&self, config: &DispatchConfig) -> Result<Vec<Vec<Vec<u8>>>, BackendError> {
-pub fn dispatch_batch(
-pub fn dispatch_borrowed_batch(
-pub fn dispatch_borrowed_batch_into(
-pub fn dispatch_borrowed_for_each_mapped_output<F>(
-pub fn dispatch_borrowed_for_each_pod_output<T, F>(
-pub fn dispatch_coalesced(
-pub fn dispatch_coalesced_borrowed(
-pub fn dispatch_compiled(
-pub fn dispatch_compound_v2(
-pub fn dispatch_indirect<'a>(pass: &mut wgpu::ComputePass<'a>, args: &'a IndirectArgs) {
-pub fn dispatch_persistent(
-pub fn dispatch_persistent_batched(
-pub fn dispatch_persistent_borrowed(
-pub fn dispatch_speculative_prefilter_confirm<F>(
-pub fn dispatch_wgsl(
-pub fn download_wgpu_device_buffer(
-pub fn element_count(&self) -> usize {
-pub fn emit(module: &naga::Module, entry: &str) -> Result<Vec<u32>, String> {
-pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
-pub fn ensure(&mut self, key: K) -> &mut V {
-pub fn ensure_front(&mut self, key: K) -> &mut V {
-pub fn enumerate_adapters() -> Vec<wgpu::AdapterInfo> {
-pub fn enumerate_by_precedence() -> Vec<&'static BackendRegistration> {
-pub fn enumerate_live_gpus() -> Vec<LiveGpu> {
-pub fn evict_coldest(&mut self) -> Option<u64> {
-pub fn execution_plan(&self) -> &ExecutionPlan {
-pub fn existing_ring_for(
-pub fn finish(&mut self) -> Result<Option<Vec<Vec<u8>>>, BackendError> {
-pub fn force_device_lost(&self) -> Result<(), vyre_driver::BackendError> {
-pub fn free_wgpu_device_buffer(
-pub fn from_backend(
-pub fn from_backend_profile(
-pub fn from_handle(handle: &GpuBufferHandle, offset: u64) -> Result<Self, BackendError> {
-pub fn from_program(
-pub fn from_resident_handle(
-pub fn from_resident_id(id: u64) -> Option<Self> {
-pub fn from_runner<F>(runner: F, config: DispatchConfig) -> Self
-pub fn get(&self, key: &K) -> Option<&V> {
-pub fn get(&self, key: u64) -> Option<&CacheEntry> {
-pub fn get_or_create(
-pub fn handle(&self) -> &GpuBufferHandle {
-pub fn has_real_gpu_adapter() -> bool {
-pub fn high_performance() -> Self {
-pub fn hot_set(&self, n: usize) -> Vec<u64> {
-pub fn hottest(&self, n: usize) -> Vec<K> {
-pub fn id(&self) -> u64 {
-pub fn init_device() -> Result<(
-pub fn init_device_for_adapter(
-pub fn insert(&mut self, key: u64, size: u64) -> Result<(), CacheError> {
-pub fn invalidate_impacted_disk_cache(
-pub fn invalidate_impacted_pipeline_cache(
-pub fn invalidate_pipeline_cache_for_changed_op(
-pub fn is_empty(&self) -> bool {
-pub fn iter_coldest(&self) -> impl Iterator<Item = (&K, &V)> + '_ {
-pub fn iter_hottest(&self) -> impl Iterator<Item = (&K, &V)> + '_ {
-pub fn launch_accounting(op_count: usize) -> LaunchAccounting {
-pub fn len(&self) -> usize {
-pub fn live_gpu_loads() -> Result<Vec<DeviceLoad>, String> {
-pub fn load(&self) -> &[u64] {
-pub fn load_or_compile(program: &Program, fingerprint: &str) -> Result<AotArtifact, BackendError> {
-pub fn load_or_compile_with_config(
-pub fn low_power() -> Self {
-pub fn lower(program: &vyre_foundation::ir::Program) -> Result<String, LoweringError> {
-pub fn lower_to_backend_ir(
-pub fn lower_to_target<'a>(&self, bir: &'a WgpuProgram) -> &'a naga::Module {
-pub fn lower_with_config(
-pub fn new() -> Result<Self, vyre_driver::BackendError> {
-pub fn new() -> Self {
-pub fn new(device: &wgpu::Device, size: usize, buffer_size: u64) -> Result<Self, BackendError> {
-pub fn new(device: wgpu::Device, queue: wgpu::Queue, config: &DispatchConfig) -> Self {
-pub fn new(n_gpus: u32, spill_threshold: u64) -> Result<Self, StreamShardError> {
-pub fn new(name: impl Into<String>, capacity: u64) -> Self {
-pub fn new(pipeline: WgpuPipeline, config: DispatchConfig) -> Self {
-pub fn new(promote_threshold: u32) -> Self {
-pub fn new(tiers: Vec<CacheTier>) -> Self {
-pub fn overlap_copy_compute<C, G>(
-pub fn partition_work_stealing(
-pub fn pick(&self, program: &Program) -> Result<RouterDecision, BackendError> {
-pub fn pick_with_override(
-pub fn prerecord_borrowed_dispatch(
-pub fn prerecord_persistent_dispatch(
-pub fn probe(adapter: &wgpu::Adapter) -> AdapterCaps {
-pub fn probe_op(
-pub fn probe_op_many(
-pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
-pub fn promote(&mut self, key: u64) -> Result<(), CacheError> {
-pub fn push(&mut self, item: PersistentPayloadWorkItem) {
-pub fn push(&mut self, pipeline: WgpuPipeline, input: impl Into<GpuResource>) {
-pub fn push_chunk(
-pub fn push_chunk(&mut self, bytes: Vec<u8>) -> Result<Option<Vec<Vec<u8>>>, BackendError> {
-pub fn queue(&self) -> &wgpu::Queue {
-pub fn read_output(&self, index: usize) -> Result<Vec<u8>, BackendError> {
-pub fn read_output_into(&self, index: usize, out: &mut Vec<u8>) -> Result<(), BackendError> {
-pub fn readback(
-pub fn readback_prefix(
-pub fn readback_range(
-pub fn record(&mut self, key: u64) {
-pub fn record_access(&mut self, key: u64) {
-pub fn record_copy(
-pub fn record_dispatch(&self) -> u64 {
-pub fn record_stall(&self) {
-pub fn reduction_factor(self) -> usize {
-pub fn release(&self, buffer: wgpu::Buffer, size: u64, usage: wgpu::BufferUsages) {
-pub fn release(&self, handle: GpuBufferHandle) {
-pub fn remove(&mut self, key: &K) {
-pub fn replay(&self, queue: &wgpu::Queue) -> Result<wgpu::SubmissionIndex, BackendError> {
-pub fn reserved_capacity_for_diagnostics(&self) -> (usize, usize, usize) {
-pub fn resident_handle(&self) -> Result<ResidentHandle, BackendError> {
-pub fn ring_for(
-pub fn run_persistent_kernel(
-pub fn seed_load(&mut self, device: u32, cost: u64) -> Result<(), StreamShardError> {
-pub fn select_adapter(criteria: &AdapterCriteria) -> Result<(usize, wgpu::AdapterInfo)> {
-pub fn shard_by_blake3(key: &[u8], n_gpus: u32) -> Result<u32, StreamShardError> {
-pub fn shared() -> Result<Arc<Self>, vyre_driver::BackendError> {
-pub fn slots_per_ring(&self) -> usize {
-pub fn stats(&self) -> BindGroupCacheStats {
-pub fn stats(&self) -> BufferPoolStats {
-pub fn stats(&self) -> StagingBufferPoolStats {
-pub fn stats(&self) -> WgpuBackendStats {
-pub fn stats(&self, key: u64) -> Option<crate::runtime::cache::AccessStats> {
-pub fn submit_readback(
-pub fn touch(&mut self, key: K) {
-pub fn try_new(
-pub fn try_new() -> Result<Self, vyre_driver::BackendError> {
-pub fn try_new(tiers: Vec<CacheTier>) -> Result<Self, vyre_driver::BackendError> {
-pub fn try_with_capacity(capacity: usize) -> Result<Self, vyre_driver::BackendError> {
-pub fn try_with_policy(
-pub fn try_with_reserved_capacity(capacity: usize) -> Result<Self, vyre_driver::BackendError> {
-pub fn update_peak(&self, current: u64) {
-pub fn upload(
-pub fn upload_wgpu_device_buffer(
-pub fn usage(&self) -> wgpu::BufferUsages {
-pub fn with_cap(cap: usize) -> Self {
-pub fn with_capacity(capacity: usize) -> Self {
-pub fn with_mapped_ticket<R>(
-pub fn with_policy(tiers: Vec<CacheTier>, policy: LruPolicy) -> Self {
-pub fn with_requested_slots(raw_slots: Option<&str>) -> Self {
-pub fn with_reserved_capacity(capacity: usize) -> Self {
-pub fn with_tiering(
-pub mod adapter_caps_probe;
-pub mod aot;
-pub mod async_copy;
-pub mod buffer;
-pub mod cache;
-pub mod compile_compute_pipeline;
-pub mod decode_parts;
-pub mod device;
-pub mod emit;
-pub mod encode_parts;
-pub mod engine;
-pub mod ext;
-pub mod graph;
-pub mod indirect;
-pub mod lru;
-pub mod multi_gpu;
-pub mod persistent;
-pub mod pipeline;
-pub mod prerecorded;
-pub mod readback_ring;
-pub mod router;
-pub mod runtime;
-pub mod serializer;
-pub mod shader;
-pub mod spirv_backend;
-pub mod streaming;
-pub mod tests;
-pub mod tiered_cache;
-pub mod unit;
-pub struct AccessMeta {
-pub struct AccessStats {
-pub struct AccessTracker {
-pub struct AdapterCriteria {
-pub struct AdapterProbeReport {
-pub struct AotArtifact {
-pub struct AsyncCopyStreams {
-pub struct BackendRouter;
-pub struct BindGroupCache {
-pub struct BindGroupCacheStats {
-pub struct BorrowedGpuWorkItem<'a> {
-pub struct BufferPool {
-pub struct BufferPoolStats {
-pub struct CacheEntry {
-pub struct CacheTier {
-pub struct DeviceLoad {
-pub struct DispatchArena {
-pub struct DispatchItem<'a> {
-pub struct EnabledFeatures {
-pub struct GpuBufferHandle {
-pub struct GpuDispatchGraph {
-pub struct GpuSlot {
-pub struct GpuWorkItem {
-pub struct GpuWorkOutput {
-pub struct HostIngressStream {
-pub struct IndirectArgs {
-pub struct IntrusiveLru<K, V> {
-pub struct LaunchAccounting {
-pub struct LiveGpu {
-pub struct LruPolicy {
-pub struct MultiGpuExecutor {
-pub struct Partition {
-pub struct PersistentKernelReport {
-pub struct PersistentPayloadWorkItem {
-pub struct PersistentQueue {
-pub struct PrerecordedDispatch {
-pub struct ReadbackRing {
-pub struct ReadbackRingSet {
-pub struct ReadbackTicket {
-pub struct RingStats {
-pub struct RouterDecision {
-pub struct SpirvEmitter;
-pub struct StagingBufferPool {
-pub struct StagingBufferPoolStats {
-pub struct StreamShardAllocator {
-pub struct TieredCache {
-pub struct WeightedWorkItem {
-pub struct WgpuBackend {
-pub struct WgpuBackendConfig {
-pub struct WgpuBackendStats {
-pub struct WgpuBindingAssignment {
-pub struct WgpuDeviceBuffer {
-pub struct WgpuDispatchGeometry {
-pub struct WgpuIR {
-pub struct WgpuPipeline {
-pub struct WgpuProgram {
-pub struct WorkResult {
-pub type MapResult = Result<(), wgpu::BufferAsyncError>;
-pub type StreamShardError = stream_shard::StreamShardError;
+#[non_exhaustive] pub enum vyre_driver_wgpu::runtime::CacheError
+#[non_exhaustive] pub enum vyre_driver_wgpu::runtime::cache::CacheError
+#[non_exhaustive] pub enum vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError
+#[non_exhaustive] pub enum vyre_driver_wgpu::runtime::router::Override<'a>
+#[non_exhaustive] pub enum vyre_driver_wgpu::runtime::router::Reason
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::AccessStats
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::AccessTracker
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::LruPolicy
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::AccessStats
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::AccessTracker
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::CacheEntry
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::CacheTier
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::LruPolicy
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::TieredCache
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::lru::AccessTracker
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::tiered_cache::CacheEntry
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+#[non_exhaustive] pub struct vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
+impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver_wgpu::engine::graph::GpuResource
+impl core::convert::From<vyre_driver_wgpu::buffer::GpuBufferHandle> for vyre_driver_wgpu::engine::graph::GpuResource
+impl core::default::Default for vyre_driver_wgpu::buffer::BindGroupCache
+impl core::default::Default for vyre_driver_wgpu::runtime::cache::lru::AccessTracker
+impl core::default::Default for vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl core::default::Default for vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet
+impl core::error::Error for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError
+impl core::fmt::Debug for vyre_driver_wgpu::DispatchArena
+impl core::fmt::Debug for vyre_driver_wgpu::buffer::BindGroupCache
+impl core::fmt::Debug for vyre_driver_wgpu::buffer::BufferPool
+impl core::fmt::Debug for vyre_driver_wgpu::buffer::GpuBufferHandle
+impl core::fmt::Debug for vyre_driver_wgpu::buffer::StagingBufferPool
+impl core::fmt::Debug for vyre_driver_wgpu::pipeline::WgpuPipeline
+impl core::fmt::Display for vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError
+impl vyre_driver::backend::compiled_pipeline::CompiledPipeline for vyre_driver_wgpu::pipeline::WgpuPipeline
+impl vyre_driver::backend::device_buffer::DeviceBuffer for vyre_driver_wgpu::WgpuDeviceBuffer
+impl vyre_driver::backend::private::Sealed for vyre_driver_wgpu::WgpuBackend
+impl vyre_driver::backend::private::Sealed for vyre_driver_wgpu::pipeline::WgpuPipeline
+impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_wgpu::WgpuBackend
+impl vyre_driver_wgpu::DispatchArena
+impl vyre_driver_wgpu::WgpuBackend
+impl vyre_driver_wgpu::WgpuDeviceBuffer
+impl vyre_driver_wgpu::buffer::BindGroupCache
+impl vyre_driver_wgpu::buffer::BufferPool
+impl vyre_driver_wgpu::buffer::GpuBufferHandle
+impl vyre_driver_wgpu::buffer::StagingBufferPool
+impl vyre_driver_wgpu::emit::WgpuProgram
+impl vyre_driver_wgpu::engine::graph::GpuDispatchGraph
+impl vyre_driver_wgpu::engine::graph::LaunchAccounting
+impl vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor
+impl vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator
+impl vyre_driver_wgpu::pipeline::WgpuPipeline
+impl vyre_driver_wgpu::runtime::cache::lru::AccessTracker
+impl vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier
+impl vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy
+impl vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache
+impl vyre_driver_wgpu::runtime::device::AdapterCriteria
+impl vyre_driver_wgpu::runtime::indirect::IndirectArgs
+impl vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch
+impl vyre_driver_wgpu::runtime::readback_ring::ReadbackRing
+impl vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet
+impl vyre_driver_wgpu::runtime::readback_ring::RingStats
+impl vyre_driver_wgpu::runtime::router::BackendRouter
+impl vyre_driver_wgpu::spirv_backend::SpirvEmitter
+impl vyre_foundation::validate::options::BackendValidationCapabilities for vyre_driver_wgpu::WgpuBackend
+impl vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher for vyre_driver_wgpu::WgpuBackend
+impl<K, V> core::default::Default for vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V> where K: core::hash::Hash + core::cmp::Eq + core::marker::Copy, V: core::default::Default
+impl<K, V> vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V> where K: core::hash::Hash + core::cmp::Eq + core::marker::Copy, V: core::default::Default
+pub async fn vyre_driver_wgpu::runtime::device::acquire_gpu() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
+pub async fn vyre_driver_wgpu::runtime::device::acquire_gpu_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
+pub const vyre_driver_wgpu::WGPU_BACKEND_ID: &str
+pub const vyre_driver_wgpu::runtime::cache::lru::DEFAULT_INTRUSIVE_LRU_CAPACITY: usize
+pub const vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::DEFAULT_THRESHOLD: u32
+pub const vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES: u64
+pub const vyre_driver_wgpu::runtime::serializer::MAX_SERIALIZED_PART_BYTES: usize
+pub const vyre_driver_wgpu::runtime::serializer::encode_parts::MAX_SERIALIZED_PART_BYTES: usize
+pub const vyre_driver_wgpu::spirv_backend::SPIRV_BACKEND_ID: &str
+pub enum vyre_driver_wgpu::engine::graph::GpuResource
+pub enum vyre_driver_wgpu::runtime::readback_ring::SlotState
+pub enum vyre_driver_wgpu::runtime::serializer::SerializerError
+pub fn vyre_driver_wgpu::DispatchArena::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::DispatchArena::new(device: wgpu::api::device::Device, queue: wgpu::api::queue::Queue, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> Self
+pub fn vyre_driver_wgpu::WgpuBackend::acquire() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::acquire_adapter(index: usize) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::adapter_caps(&self) -> vyre_foundation::optimizer::ctx::AdapterCaps
+pub fn vyre_driver_wgpu::WgpuBackend::adapter_info(&self) -> &wgpu_types::AdapterInfo
+pub fn vyre_driver_wgpu::WgpuBackend::allocate_device_buffer(&self, byte_len: usize) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::allocate_resident(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::allocate_wgpu_device_buffer(&self, byte_len: usize) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::backend_name(&self) -> &'static str
+pub fn vyre_driver_wgpu::WgpuBackend::device_limits(&self) -> &wgpu_types::Limits
+pub fn vyre_driver_wgpu::WgpuBackend::device_lost(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile
+pub fn vyre_driver_wgpu::WgpuBackend::device_queue(&self) -> alloc::sync::Arc<(wgpu::api::device::Device, wgpu::api::queue::Queue)>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], grid_override: core::option::Option<[u32; 3]>) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_self_substrate::optimizer::dispatcher::DispatchError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_async(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_batch(&self, jobs: &[(vyre_foundation::ir_inner::model::program::core::Program, alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::dispatch_config::DispatchConfig)]) -> core::result::Result<alloc::vec::Vec<core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_async(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_batch(&self, jobs: &[(&vyre_foundation::ir_inner::model::program::core::Program, &[&[u8]], &vyre_driver::backend::dispatch_config::DispatchConfig)]) -> core::result::Result<alloc::vec::Vec<core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_batch_into(&self, jobs: &[(&vyre_foundation::ir_inner::model::program::core::Program, &[&[u8]], &vyre_driver::backend::dispatch_config::DispatchConfig)], outputs: &mut [vyre_driver::backend::dispatch_result::OutputBuffers]) -> core::result::Result<alloc::vec::Vec<core::result::Result<(), vyre_driver::backend::error::BackendError>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_for_each_mapped_output<F>(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, visitor: F) -> core::result::Result<(), vyre_driver::backend::error::BackendError> where F: core::ops::function::FnMut(usize, &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_for_each_pod_output<T, F>(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, visitor: F) -> core::result::Result<(), vyre_driver::backend::error::BackendError> where T: bytemuck::pod::Pod, F: core::ops::function::FnMut(usize, &[T]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_into(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_borrowed_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_resident_async(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, resources: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::pending_dispatch::PendingDispatch>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_resident_timed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, resources: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_speculative_prefilter_confirm<F>(&self, speculator: &vyre_driver::speculate::AdaptiveSpeculator, plan: vyre_driver::speculate::SpeculativeDispatchPlan<'_>, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, confirm_serial: F) -> core::result::Result<vyre_driver::speculate::SpeculativeDispatchOutcome, vyre_driver::backend::error::BackendError> where F: core::ops::function::FnMut(vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_wgsl(&self, wgsl: &str, input: &[u8], output_size: usize, workgroup_size: u32) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
+pub fn vyre_driver_wgpu::WgpuBackend::dispatch_with_device_buffers(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&dyn vyre_driver::backend::device_buffer::DeviceBuffer], outputs: &mut [&mut dyn vyre_driver::backend::device_buffer::DeviceBuffer], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_device_buffer(&self, buffer: &dyn vyre_driver::backend::device_buffer::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_resident(&self, resource: &vyre_driver::backend::resource::Resource) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_resident_into(&self, resource: &vyre_driver::backend::resource::Resource, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_resident_range(&self, resource: &vyre_driver::backend::resource::Resource, byte_offset: usize, byte_len: usize) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_resident_range_into(&self, resource: &vyre_driver::backend::resource::Resource, byte_offset: usize, byte_len: usize, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_resident_ranges_into(&self, ranges: &[(&vyre_driver::backend::resource::Resource, usize, usize)], outputs: &mut [&mut alloc::vec::Vec<u8>]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::download_wgpu_device_buffer(&self, buffer: &dyn vyre_driver::backend::device_buffer::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::flush(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::force_device_lost(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::free_device_buffer(&self, buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::free_resident(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::free_wgpu_device_buffer(&self, buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::id(&self) -> &'static str
+pub fn vyre_driver_wgpu::WgpuBackend::invalidate_impacted_disk_cache(&self, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, pipeline_lineage_cell: &[u32], cache_keys: &[alloc::string::String]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::invalidate_impacted_pipeline_cache(&self, intervention_mask: &[u32], rule_adj: &[u32], state: &[u32], join_rules: &[u32], n: u32, max_iterations: u32, pipeline_lineage_cell: &[u32], pipeline_keys: &[[u8; 32]]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::invalidate_pipeline_cache_for_changed_op(&self, changed_op_handle: u32, pipeline_lineage_cell: &[u32], pipeline_keys: &[[u8; 32]]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::is_distributed(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::lower_to_backend_ir(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_driver_wgpu::emit::WgpuProgram, vyre_foundation::lower::LoweringError>
+pub fn vyre_driver_wgpu::WgpuBackend::lower_to_target<'a>(&self, bir: &'a vyre_driver_wgpu::emit::WgpuProgram) -> &'a naga::ir::Module
+pub fn vyre_driver_wgpu::WgpuBackend::max_compute_invocations_per_workgroup(&self) -> u32
+pub fn vyre_driver_wgpu::WgpuBackend::max_compute_workgroups_per_dimension(&self) -> u32
+pub fn vyre_driver_wgpu::WgpuBackend::max_storage_buffer_bytes(&self) -> u64
+pub fn vyre_driver_wgpu::WgpuBackend::max_workgroup_size(&self) -> [u32; 3]
+pub fn vyre_driver_wgpu::WgpuBackend::new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::pipeline_cache_snapshot(&self) -> core::option::Option<vyre_driver::pipeline::PipelineCacheSnapshot>
+pub fn vyre_driver_wgpu::WgpuBackend::shared() -> core::result::Result<alloc::sync::Arc<Self>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::stats(&self) -> vyre_driver_wgpu::WgpuBackendStats
+pub fn vyre_driver_wgpu::WgpuBackend::subgroup_size(&self) -> core::option::Option<u32>
+pub fn vyre_driver_wgpu::WgpuBackend::supported_ops(&self) -> &std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
+pub fn vyre_driver_wgpu::WgpuBackend::supports_async_compute(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_bf16(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_cast_target(&self, target: &vyre_spec::data_type::DataType) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_distributed_collectives(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_f16(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_indirect_dispatch(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_persistent_thread_dispatch(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_specialization_constants(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_speculation(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_subgroup_ops(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::supports_tensor_cores(&self) -> bool
+pub fn vyre_driver_wgpu::WgpuBackend::try_recover(&self) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_device_buffer(&self, buffer: &mut dyn vyre_driver::backend::device_buffer::DeviceBuffer, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_resident(&self, resource: &vyre_driver::backend::resource::Resource, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_resident_at(&self, resource: &vyre_driver::backend::resource::Resource, dst_offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_resident_at_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, usize, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_resident_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::upload_wgpu_device_buffer(&self, buffer: &mut dyn vyre_driver::backend::device_buffer::DeviceBuffer, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::WgpuBackend::version(&self) -> &'static str
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::as_any(&self) -> &dyn core::any::Any
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::as_any_mut(&mut self) -> &mut dyn core::any::Any
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::backend_id(&self) -> &'static str
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::byte_len(&self) -> usize
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::debug_label(&self) -> core::option::Option<&str>
+pub fn vyre_driver_wgpu::WgpuDeviceBuffer::handle(&self) -> &vyre_driver_wgpu::buffer::GpuBufferHandle
+pub fn vyre_driver_wgpu::artifact_materializer(backend: vyre_driver_wgpu::WgpuBackend) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::default() -> Self
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::get_or_create(&self, layout_id: usize, handles: &[vyre_driver_wgpu::buffer::GpuBufferHandle], factory: impl core::ops::function::FnOnce() -> wgpu::api::bind_group::BindGroup) -> alloc::sync::Arc<wgpu::api::bind_group::BindGroup>
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::new() -> Self
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::stats(&self) -> vyre_driver_wgpu::buffer::BindGroupCacheStats
+pub fn vyre_driver_wgpu::buffer::BindGroupCache::with_cap(cap: usize) -> Self
+pub fn vyre_driver_wgpu::buffer::BufferPool::acquire(&self, len: u64, usage: wgpu_types::BufferUsages) -> core::result::Result<vyre_driver_wgpu::buffer::GpuBufferHandle, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::BufferPool::device(&self) -> &wgpu::api::device::Device
+pub fn vyre_driver_wgpu::buffer::BufferPool::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::buffer::BufferPool::new(device: wgpu::api::device::Device, queue: wgpu::api::queue::Queue, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> Self
+pub fn vyre_driver_wgpu::buffer::BufferPool::queue(&self) -> &wgpu::api::queue::Queue
+pub fn vyre_driver_wgpu::buffer::BufferPool::release(&self, handle: vyre_driver_wgpu::buffer::GpuBufferHandle)
+pub fn vyre_driver_wgpu::buffer::BufferPool::stats(&self) -> vyre_driver_wgpu::buffer::BufferPoolStats
+pub fn vyre_driver_wgpu::buffer::BufferPool::with_tiering(device: wgpu::api::device::Device, queue: wgpu::api::queue::Queue, config: &vyre_driver::backend::dispatch_config::DispatchConfig, tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::alloc(device: &wgpu::api::device::Device, len: u64, usage: wgpu_types::BufferUsages) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::allocation_len(&self) -> u64
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::buffer(&self) -> &wgpu::api::buffer::Buffer
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::buffer_arc(&self) -> alloc::sync::Arc<wgpu::api::buffer::Buffer>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::byte_len(&self) -> u64
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::element_count(&self) -> usize
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::from_resident_handle(handle: vyre_driver::backend::resource::ResidentHandle, context: &str) -> core::result::Result<core::option::Option<Self>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::from_resident_id(id: u64) -> core::option::Option<Self>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::id(&self) -> u64
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback_prefix(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, len: u64, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::readback_range(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, byte_offset: u64, len: u64, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::resident_handle(&self) -> core::result::Result<vyre_driver::backend::resource::ResidentHandle, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::upload(device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, bytes: &[u8], usage: wgpu_types::BufferUsages) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::buffer::GpuBufferHandle::usage(&self) -> wgpu_types::BufferUsages
+pub fn vyre_driver_wgpu::buffer::StagingBufferPool::acquire(&self, device: &wgpu::api::device::Device, size: u64, usage: wgpu_types::BufferUsages) -> wgpu::api::buffer::Buffer
+pub fn vyre_driver_wgpu::buffer::StagingBufferPool::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::buffer::StagingBufferPool::new() -> Self
+pub fn vyre_driver_wgpu::buffer::StagingBufferPool::release(&self, buffer: wgpu::api::buffer::Buffer, size: u64, usage: wgpu_types::BufferUsages)
+pub fn vyre_driver_wgpu::buffer::StagingBufferPool::stats(&self) -> vyre_driver_wgpu::buffer::StagingBufferPoolStats
+pub fn vyre_driver_wgpu::emit::WgpuProgram::from_program(program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::backend::dispatch_config::DispatchConfig, enabled_features: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> core::result::Result<Self, vyre_foundation::lower::LoweringError>
+pub fn vyre_driver_wgpu::emit::lower(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::string::String, vyre_foundation::lower::LoweringError>
+pub fn vyre_driver_wgpu::emit::lower_with_config(program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::string::String, vyre_foundation::lower::LoweringError>
+pub fn vyre_driver_wgpu::engine::graph::GpuDispatchGraph::dispatch(&self, config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::engine::graph::GpuDispatchGraph::is_empty(&self) -> bool
+pub fn vyre_driver_wgpu::engine::graph::GpuDispatchGraph::len(&self) -> usize
+pub fn vyre_driver_wgpu::engine::graph::GpuDispatchGraph::new() -> Self
+pub fn vyre_driver_wgpu::engine::graph::GpuDispatchGraph::push(&mut self, pipeline: vyre_driver_wgpu::pipeline::WgpuPipeline, input: impl core::convert::Into<vyre_driver_wgpu::engine::graph::GpuResource>)
+pub fn vyre_driver_wgpu::engine::graph::GpuResource::from(bytes: alloc::vec::Vec<u8>) -> Self
+pub fn vyre_driver_wgpu::engine::graph::GpuResource::from(handle: vyre_driver_wgpu::buffer::GpuBufferHandle) -> Self
+pub fn vyre_driver_wgpu::engine::graph::LaunchAccounting::reduction_factor(self) -> usize
+pub fn vyre_driver_wgpu::engine::graph::launch_accounting(op_count: usize) -> vyre_driver_wgpu::engine::graph::LaunchAccounting
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::acquire_all() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::acquire_indices(indices: &[usize]) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::adapter_indices(&self) -> alloc::vec::Vec<usize>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::dispatch_batch(&mut self, items: alloc::vec::Vec<vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem>) -> core::result::Result<alloc::vec::Vec<vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::dispatch_borrowed_batch(&mut self, items: &[vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem<'_>]) -> core::result::Result<alloc::vec::Vec<core::result::Result<vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput, vyre_driver::backend::error::BackendError>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::enumerate_live_gpus() -> alloc::vec::Vec<vyre_driver_wgpu::engine::multi_gpu::LiveGpu>
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::is_empty(&self) -> bool
+pub fn vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor::len(&self) -> usize
+pub fn vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator::assign(&mut self, key: &[u8], cost: u64) -> core::result::Result<core::option::Option<u32>, vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator::load(&self) -> &[u64]
+pub fn vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator::new(n_gpus: u32, spill_threshold: u64) -> core::result::Result<Self, vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator::seed_load(&mut self, device: u32, cost: u64) -> core::result::Result<(), vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError>
+pub fn vyre_driver_wgpu::engine::multi_gpu::live_gpu_loads() -> core::result::Result<alloc::vec::Vec<vyre_driver_wgpu::engine::multi_gpu::DeviceLoad>, alloc::string::String>
+pub fn vyre_driver_wgpu::engine::multi_gpu::partition_work_stealing(devices: &[vyre_driver_wgpu::engine::multi_gpu::DeviceLoad], items: &[vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem]) -> core::result::Result<alloc::vec::Vec<vyre_driver_wgpu::engine::multi_gpu::Partition>, alloc::string::String>
+pub fn vyre_driver_wgpu::engine::multi_gpu::shard_by_blake3(key: &[u8], n_gpus: u32) -> core::result::Result<u32, vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::bind_group_cache_stats(&self) -> vyre_driver_wgpu::buffer::BindGroupCacheStats
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_batched(&self, batches: &[&[&[u8]]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_batched_into(&self, batches: &[&[&[u8]]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, batch_outputs: &mut alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_into(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_borrowed_timed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_coalesced(&self, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_coalesced_borrowed(&self, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_compound_v2(requests: &[(&vyre_driver_wgpu::pipeline::WgpuPipeline, vyre_driver::backend::resource::Resource)], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<alloc::vec::Vec<u8>>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent(&self, inputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &mut [vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_batched(&self, items: &[vyre_driver_wgpu::pipeline::persistent::DispatchItem<'_>]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_borrowed(&self, inputs: &[&vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &[&vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::OutputBuffers, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_batched(&self, batches: &[&[vyre_driver::backend::resource::Resource]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_batched_into(&self, batches: &[&[vyre_driver::backend::resource::Resource]], config: &vyre_driver::backend::dispatch_config::DispatchConfig, batch_outputs: &mut alloc::vec::Vec<vyre_driver::backend::dispatch_result::OutputBuffers>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_into(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig, outputs: &mut vyre_driver::backend::dispatch_result::OutputBuffers) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_handles_timed(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<vyre_driver::backend::dispatch_result::TimedDispatchResult, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::dispatch_persistent_resource_outputs(&self, inputs: &[vyre_driver::backend::resource::Resource], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<vyre_driver::backend::resource::Resource>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::execution_plan(&self) -> &vyre_foundation::execution_plan::ExecutionPlan
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::id(&self) -> &str
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_borrowed_dispatch(&self, inputs: &[&[u8]], workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::pipeline::WgpuPipeline::prerecord_persistent_dispatch(&self, inputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], outputs: &[vyre_driver_wgpu::buffer::GpuBufferHandle], params: core::option::Option<&vyre_driver_wgpu::buffer::GpuBufferHandle>, workgroups: [u32; 3]) -> core::result::Result<vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend(adapter_info: &wgpu_types::AdapterInfo, device_limits: &wgpu_types::Limits, enabled: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> vyre_foundation::optimizer::ctx::AdapterCaps
+pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::from_backend_profile(adapter_info: &wgpu_types::AdapterInfo, device_limits: &wgpu_types::Limits, enabled: &vyre_driver_wgpu::runtime::device::EnabledFeatures) -> vyre_driver::device_profile::DeviceProfile
+pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::probe(adapter: &wgpu::api::adapter::Adapter) -> vyre_foundation::optimizer::ctx::AdapterCaps
+pub fn vyre_driver_wgpu::runtime::adapter_caps_probe::probe_profile(adapter: &wgpu::api::adapter::Adapter) -> vyre_driver::device_profile::DeviceProfile
+pub fn vyre_driver_wgpu::runtime::bg_entry(binding: u32, buffer: &wgpu::api::buffer::Buffer) -> wgpu::api::bind_group::BindGroupEntry<'_>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::default() -> Self
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::hot_set(&self, n: usize) -> alloc::vec::Vec<u64>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::new() -> Self
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::record(&mut self, key: u64)
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::stats(&self, key: u64) -> core::option::Option<vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats>
+pub fn vyre_driver_wgpu::runtime::cache::lru::AccessTracker::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::default() -> Self
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::ensure(&mut self, key: K) -> &mut V
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::ensure_front(&mut self, key: K) -> &mut V
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::get(&self, key: &K) -> core::option::Option<&V>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::hottest(&self, n: usize) -> alloc::vec::Vec<K>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::iter_coldest(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&K, &V)> + '_
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::iter_hottest(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&K, &V)> + '_
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::new() -> Self
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::remove(&mut self, key: &K)
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::touch(&mut self, key: K)
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_new() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_with_capacity(capacity: usize) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::try_with_reserved_capacity(capacity: usize) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::with_capacity(capacity: usize) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>::with_reserved_capacity(capacity: usize) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::try_new(name: impl core::convert::Into<alloc::string::String>, capacity: u64) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::default() -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::new(promote_threshold: u32) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::demote(&mut self, key: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::evict_coldest(&mut self) -> core::option::Option<u64>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::get(&self, key: u64) -> core::option::Option<&vyre_driver_wgpu::runtime::cache::tiered_cache::CacheEntry>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::insert(&mut self, key: u64, size: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> Self
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::promote(&mut self, key: u64) -> core::result::Result<(), vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::record_access(&mut self, key: u64)
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_new(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::try_with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cache::tiered_cache::TieredCache::with_policy(tiers: alloc::vec::Vec<vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier>, policy: vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy) -> Self
+pub fn vyre_driver_wgpu::runtime::cached_adapter_info() -> core::result::Result<&'static wgpu_types::AdapterInfo, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::cached_device() -> core::result::Result<alloc::sync::Arc<(wgpu::api::device::Device, wgpu::api::queue::Queue)>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::compile_compute_pipeline(device: &wgpu::api::device::Device, label: &str, wgsl_source: &str, entry_point: &str) -> core::result::Result<wgpu::api::compute_pipeline::ComputePipeline, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::compile_compute_pipeline_with_layout(device: &wgpu::api::device::Device, label: &str, wgsl_source: &str, entry_point: &str, layout: core::option::Option<&wgpu::api::pipeline_layout::PipelineLayout>) -> core::result::Result<wgpu::api::compute_pipeline::ComputePipeline, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::AdapterCriteria::high_performance() -> Self
+pub fn vyre_driver_wgpu::runtime::device::AdapterCriteria::low_power() -> Self
+pub fn vyre_driver_wgpu::runtime::device::adapter_for_info(expected: &wgpu_types::AdapterInfo) -> core::result::Result<wgpu::api::adapter::Adapter, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::adapter_index_from_env() -> core::result::Result<core::option::Option<usize>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::adapter_probe_report() -> vyre_driver_wgpu::runtime::device::AdapterProbeReport
+pub fn vyre_driver_wgpu::runtime::device::cached_adapter_info() -> core::result::Result<&'static wgpu_types::AdapterInfo, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::cached_device() -> core::result::Result<alloc::sync::Arc<(wgpu::api::device::Device, wgpu::api::queue::Queue)>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::enumerate_adapters() -> alloc::vec::Vec<wgpu_types::AdapterInfo>
+pub fn vyre_driver_wgpu::runtime::device::has_real_gpu_adapter() -> bool
+pub fn vyre_driver_wgpu::runtime::device::init_device() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::init_device_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::device::select_adapter(criteria: &vyre_driver_wgpu::runtime::device::AdapterCriteria) -> core::result::Result<(usize, wgpu_types::AdapterInfo), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::indirect::IndirectArgs::from_handle(handle: &vyre_driver_wgpu::buffer::GpuBufferHandle, offset: u64) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::indirect::dispatch_indirect<'a>(pass: &mut wgpu::api::compute_pass::ComputePass<'a>, args: &'a vyre_driver_wgpu::runtime::indirect::IndirectArgs)
+pub fn vyre_driver_wgpu::runtime::init_device() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::read_output(&self, index: usize) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::read_output_into(&self, index: usize, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::replay(&self, queue: &wgpu::api::queue::Queue) -> core::result::Result<wgpu::api::queue::SubmissionIndex, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::arm_ticket(&self, ticket: &vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket) -> core::result::Result<(crossbeam_channel::channel::Receiver<vyre_driver_wgpu::runtime::readback_ring::MapResult>, alloc::sync::Arc<core::sync::atomic::AtomicBool>), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::collect_slot(&self, device: &wgpu::api::device::Device, idx: usize) -> core::result::Result<core::option::Option<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::collect_slot_into(&self, device: &wgpu::api::device::Device, idx: usize, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<core::option::Option<usize>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::new(device: &wgpu::api::device::Device, size: usize, buffer_size: u64) -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::record_copy(&self, device: &wgpu::api::device::Device, encoder: &mut wgpu::api::command_encoder::CommandEncoder, src_buffer: &wgpu::api::buffer::Buffer, src_offset: u64, byte_len: u64) -> core::result::Result<vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::submit_readback(&self, device: &wgpu::api::device::Device, queue: &wgpu::api::queue::Queue, src_buffer: &wgpu::api::buffer::Buffer, src_offset: u64, byte_len: u64) -> core::result::Result<usize, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRing::with_mapped_ticket<R>(&self, ticket: &vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket, visitor: impl core::ops::function::FnOnce(&[u8]) -> core::result::Result<R, vyre_driver::backend::error::BackendError>) -> core::result::Result<R, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::default() -> Self
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::existing_ring_for(&self, byte_len: u64) -> core::result::Result<core::option::Option<alloc::sync::Arc<vyre_driver_wgpu::runtime::readback_ring::ReadbackRing>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::new() -> Self
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::ring_for(&self, device: &wgpu::api::device::Device, byte_len: u64) -> core::result::Result<alloc::sync::Arc<vyre_driver_wgpu::runtime::readback_ring::ReadbackRing>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::slots_per_ring(&self) -> usize
+pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::with_requested_slots(raw_slots: core::option::Option<&str>) -> Self
+pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::record_dispatch(&self) -> u64
+pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::record_stall(&self)
+pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::update_peak(&self, current: u64)
+pub fn vyre_driver_wgpu::runtime::router::BackendRouter::enumerate_by_precedence() -> alloc::vec::Vec<&'static vyre_driver::backend::registry::inventory_streams::BackendRegistration>
+pub fn vyre_driver_wgpu::runtime::router::BackendRouter::new() -> Self
+pub fn vyre_driver_wgpu::runtime::router::BackendRouter::pick(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_driver_wgpu::runtime::router::RouterDecision, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::router::BackendRouter::pick_with_override(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, source: vyre_driver_wgpu::runtime::router::Override<'_>) -> core::result::Result<vyre_driver_wgpu::runtime::router::RouterDecision, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::serializer::decode_parts(bytes: &[u8]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<&[u8]>>
+pub fn vyre_driver_wgpu::runtime::serializer::decode_parts::decode_parts(bytes: &[u8]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<&[u8]>>
+pub fn vyre_driver_wgpu::runtime::serializer::encode_parts(parts: &[&[u8]]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<u8>>
+pub fn vyre_driver_wgpu::runtime::serializer::encode_parts::encode_parts(parts: &[&[u8]]) -> vyre_driver_wgpu::runtime::serializer::SerializerResult<alloc::vec::Vec<u8>>
+pub fn vyre_driver_wgpu::runtime::shader::compile_compute_pipeline::compile_compute_pipeline(device: &wgpu::api::device::Device, label: &str, wgsl_source: &str, entry_point: &str) -> core::result::Result<wgpu::api::compute_pipeline::ComputePipeline, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::runtime::shader::compile_compute_pipeline::compile_compute_pipeline_with_layout(device: &wgpu::api::device::Device, label: &str, wgsl_source: &str, entry_point: &str, layout: core::option::Option<&wgpu::api::pipeline_layout::PipelineLayout>) -> core::result::Result<wgpu::api::compute_pipeline::ComputePipeline, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_wgpu::spirv_backend::SpirvEmitter::default_flags() -> naga::back::spv::WriterFlags
+pub fn vyre_driver_wgpu::spirv_backend::SpirvEmitter::emit(module: &naga::ir::Module, entry: &str) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub mod vyre_driver_wgpu
+pub mod vyre_driver_wgpu::buffer
+pub mod vyre_driver_wgpu::emit
+pub mod vyre_driver_wgpu::engine
+pub mod vyre_driver_wgpu::engine::graph
+pub mod vyre_driver_wgpu::engine::multi_gpu
+pub mod vyre_driver_wgpu::ext
+pub mod vyre_driver_wgpu::pipeline
+pub mod vyre_driver_wgpu::pipeline::persistent
+pub mod vyre_driver_wgpu::runtime
+pub mod vyre_driver_wgpu::runtime::adapter_caps_probe
+pub mod vyre_driver_wgpu::runtime::cache
+pub mod vyre_driver_wgpu::runtime::cache::lru
+pub mod vyre_driver_wgpu::runtime::cache::tiered_cache
+pub mod vyre_driver_wgpu::runtime::device
+pub mod vyre_driver_wgpu::runtime::indirect
+pub mod vyre_driver_wgpu::runtime::prerecorded
+pub mod vyre_driver_wgpu::runtime::readback_ring
+pub mod vyre_driver_wgpu::runtime::router
+pub mod vyre_driver_wgpu::runtime::serializer
+pub mod vyre_driver_wgpu::runtime::serializer::decode_parts
+pub mod vyre_driver_wgpu::runtime::serializer::encode_parts
+pub mod vyre_driver_wgpu::runtime::shader
+pub mod vyre_driver_wgpu::runtime::shader::compile_compute_pipeline
+pub mod vyre_driver_wgpu::spirv_backend
+pub struct vyre_driver_wgpu::DispatchArena
+pub struct vyre_driver_wgpu::WgpuBackend
+pub struct vyre_driver_wgpu::WgpuBackendStats
+pub struct vyre_driver_wgpu::WgpuDeviceBuffer
+pub struct vyre_driver_wgpu::buffer::BindGroupCache
+pub struct vyre_driver_wgpu::buffer::BindGroupCacheStats
+pub struct vyre_driver_wgpu::buffer::BufferPool
+pub struct vyre_driver_wgpu::buffer::BufferPoolStats
+pub struct vyre_driver_wgpu::buffer::GpuBufferHandle
+pub struct vyre_driver_wgpu::buffer::StagingBufferPool
+pub struct vyre_driver_wgpu::buffer::StagingBufferPoolStats
+pub struct vyre_driver_wgpu::emit::WgpuBindingAssignment
+pub struct vyre_driver_wgpu::emit::WgpuDispatchGeometry
+pub struct vyre_driver_wgpu::emit::WgpuProgram
+pub struct vyre_driver_wgpu::engine::graph::GpuDispatchGraph
+pub struct vyre_driver_wgpu::engine::graph::LaunchAccounting
+pub struct vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem<'a>
+pub struct vyre_driver_wgpu::engine::multi_gpu::DeviceLoad
+pub struct vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem
+pub struct vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput
+pub struct vyre_driver_wgpu::engine::multi_gpu::LiveGpu
+pub struct vyre_driver_wgpu::engine::multi_gpu::MultiGpuExecutor
+pub struct vyre_driver_wgpu::engine::multi_gpu::Partition
+pub struct vyre_driver_wgpu::engine::multi_gpu::StreamShardAllocator
+pub struct vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem
+pub struct vyre_driver_wgpu::pipeline::BindGroupCacheStats
+pub struct vyre_driver_wgpu::pipeline::DispatchItem<'a>
+pub struct vyre_driver_wgpu::pipeline::WgpuPipeline
+pub struct vyre_driver_wgpu::pipeline::persistent::DispatchItem<'a>
+pub struct vyre_driver_wgpu::runtime::cache::lru::AccessMeta
+pub struct vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V>
+pub struct vyre_driver_wgpu::runtime::device::AdapterCriteria
+pub struct vyre_driver_wgpu::runtime::device::AdapterProbeReport
+pub struct vyre_driver_wgpu::runtime::device::EnabledFeatures
+pub struct vyre_driver_wgpu::runtime::indirect::IndirectArgs
+pub struct vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch
+pub struct vyre_driver_wgpu::runtime::readback_ring::GpuSlot
+pub struct vyre_driver_wgpu::runtime::readback_ring::ReadbackRing
+pub struct vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet
+pub struct vyre_driver_wgpu::runtime::readback_ring::ReadbackTicket
+pub struct vyre_driver_wgpu::runtime::readback_ring::RingStats
+pub struct vyre_driver_wgpu::runtime::router::BackendRouter
+pub struct vyre_driver_wgpu::runtime::router::RouterDecision
+pub struct vyre_driver_wgpu::spirv_backend::SpirvEmitter
+pub type vyre_driver_wgpu::engine::multi_gpu::StreamShardError = vyre_driver_wgpu::engine::multi_gpu::stream_shard::StreamShardError
+pub type vyre_driver_wgpu::runtime::readback_ring::MapResult = core::result::Result<(), wgpu::api::buffer::BufferAsyncError>
+pub type vyre_driver_wgpu::runtime::serializer::SerializerResult<T, E> = core::result::Result<T, E>
+pub use vyre_driver_wgpu::pipeline::IndirectDispatch
+pub use vyre_driver_wgpu::pipeline::OutputLayout
+pub use vyre_driver_wgpu::pipeline::output_layout_from_program
+pub vyre_driver_wgpu::WgpuBackendStats::adapter_name: alloc::sync::Arc<str>
+pub vyre_driver_wgpu::WgpuBackendStats::persistent_pool: vyre_driver_wgpu::buffer::BufferPoolStats
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_byte_capacity: usize
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_bytes: usize
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_capacity: usize
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_entries: usize
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_evictions: u64
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hit_rate: f64
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_hits: u64
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_insertions: u64
+pub vyre_driver_wgpu::WgpuBackendStats::pipeline_cache_misses: u64
+pub vyre_driver_wgpu::buffer::BindGroupCacheStats::entries: usize
+pub vyre_driver_wgpu::buffer::BindGroupCacheStats::evictions: usize
+pub vyre_driver_wgpu::buffer::BindGroupCacheStats::hits: usize
+pub vyre_driver_wgpu::buffer::BindGroupCacheStats::misses: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::allocations: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::evictions: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::hits: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::releases: usize
+pub vyre_driver_wgpu::buffer::BufferPoolStats::retained_bytes: usize
+pub vyre_driver_wgpu::buffer::StagingBufferPoolStats::allocations: usize
+pub vyre_driver_wgpu::buffer::StagingBufferPoolStats::hits: usize
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::access: vyre_spec::buffer_access::BufferAccess
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::binding: u32
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::element: vyre_spec::data_type::DataType
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::group: u32
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::kind: vyre_foundation::ir_inner::model::program::MemoryKind
+pub vyre_driver_wgpu::emit::WgpuBindingAssignment::name: alloc::sync::Arc<str>
+pub vyre_driver_wgpu::emit::WgpuDispatchGeometry::workgroup_size: [u32; 3]
+pub vyre_driver_wgpu::emit::WgpuDispatchGeometry::workgroups: [u32; 3]
+pub vyre_driver_wgpu::emit::WgpuProgram::bindings: alloc::vec::Vec<vyre_driver_wgpu::emit::WgpuBindingAssignment>
+pub vyre_driver_wgpu::emit::WgpuProgram::dispatch_geometry: vyre_driver_wgpu::emit::WgpuDispatchGeometry
+pub vyre_driver_wgpu::emit::WgpuProgram::module: naga::ir::Module
+pub vyre_driver_wgpu::emit::WgpuProgram::workgroup_size: [u32; 3]
+pub vyre_driver_wgpu::engine::graph::GpuResource::Borrowed(alloc::vec::Vec<u8>)
+pub vyre_driver_wgpu::engine::graph::GpuResource::Resident(vyre_driver_wgpu::buffer::GpuBufferHandle)
+pub vyre_driver_wgpu::engine::graph::LaunchAccounting::graph_submissions: usize
+pub vyre_driver_wgpu::engine::graph::LaunchAccounting::sequential_submissions: usize
+pub vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem::config: &'a vyre_driver::backend::dispatch_config::DispatchConfig
+pub vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem::cost: u64
+pub vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem::id: usize
+pub vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem::inputs: &'a [&'a [u8]]
+pub vyre_driver_wgpu::engine::multi_gpu::BorrowedGpuWorkItem::program: &'a vyre_foundation::ir_inner::model::program::core::Program
+pub vyre_driver_wgpu::engine::multi_gpu::DeviceLoad::device_index: usize
+pub vyre_driver_wgpu::engine::multi_gpu::DeviceLoad::queued_cost: u64
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem::config: vyre_driver::backend::dispatch_config::DispatchConfig
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem::cost: u64
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem::id: usize
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem::inputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkItem::program: vyre_foundation::ir_inner::model::program::core::Program
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput::adapter_index: usize
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput::id: usize
+pub vyre_driver_wgpu::engine::multi_gpu::GpuWorkOutput::outputs: alloc::vec::Vec<alloc::vec::Vec<u8>>
+pub vyre_driver_wgpu::engine::multi_gpu::LiveGpu::adapter_index: usize
+pub vyre_driver_wgpu::engine::multi_gpu::LiveGpu::info: wgpu_types::AdapterInfo
+pub vyre_driver_wgpu::engine::multi_gpu::Partition::device_index: usize
+pub vyre_driver_wgpu::engine::multi_gpu::Partition::item_ids: alloc::vec::Vec<usize>
+pub vyre_driver_wgpu::engine::multi_gpu::Partition::total_cost: u64
+pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::cost: u64
+pub vyre_driver_wgpu::engine::multi_gpu::WeightedWorkItem::id: usize
+pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::entries: usize
+pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::evictions: usize
+pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::hits: usize
+pub vyre_driver_wgpu::pipeline::BindGroupCacheStats::misses: usize
+pub vyre_driver_wgpu::pipeline::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
+pub vyre_driver_wgpu::pipeline::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
+pub vyre_driver_wgpu::pipeline::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>
+pub vyre_driver_wgpu::pipeline::DispatchItem::workgroups: [u32; 3]
+pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::inputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
+pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::outputs: &'a [vyre_driver_wgpu::buffer::GpuBufferHandle]
+pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::params: core::option::Option<&'a vyre_driver_wgpu::buffer::GpuBufferHandle>
+pub vyre_driver_wgpu::pipeline::persistent::DispatchItem::workgroups: [u32; 3]
+pub vyre_driver_wgpu::runtime::AccessStats::frequency: u32
+pub vyre_driver_wgpu::runtime::AccessStats::last_access: u64
+pub vyre_driver_wgpu::runtime::AccessStats::size: u64
+pub vyre_driver_wgpu::runtime::CacheError::CapacityAccountingOverflow
+pub vyre_driver_wgpu::runtime::CacheError::EntryTooLarge
+pub vyre_driver_wgpu::runtime::CacheError::KeyNotFound
+pub vyre_driver_wgpu::runtime::LruPolicy::promote_threshold: u32
+pub vyre_driver_wgpu::runtime::cache::AccessStats::frequency: u32
+pub vyre_driver_wgpu::runtime::cache::AccessStats::last_access: u64
+pub vyre_driver_wgpu::runtime::cache::AccessStats::size: u64
+pub vyre_driver_wgpu::runtime::cache::CacheEntry::key: u64
+pub vyre_driver_wgpu::runtime::cache::CacheEntry::size: u64
+pub vyre_driver_wgpu::runtime::cache::CacheEntry::tier: usize
+pub vyre_driver_wgpu::runtime::cache::CacheError::CapacityAccountingOverflow
+pub vyre_driver_wgpu::runtime::cache::CacheError::EntryTooLarge
+pub vyre_driver_wgpu::runtime::cache::CacheError::KeyNotFound
+pub vyre_driver_wgpu::runtime::cache::CacheTier::capacity: u64
+pub vyre_driver_wgpu::runtime::cache::CacheTier::name: alloc::string::String
+pub vyre_driver_wgpu::runtime::cache::CacheTier::used: u64
+pub vyre_driver_wgpu::runtime::cache::LruPolicy::promote_threshold: u32
+pub vyre_driver_wgpu::runtime::cache::lru::AccessMeta::frequency: u32
+pub vyre_driver_wgpu::runtime::cache::lru::AccessMeta::last_access: u64
+pub vyre_driver_wgpu::runtime::cache::lru::AccessMeta::size: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats::frequency: u32
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats::last_access: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::AccessStats::size: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheEntry::key: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheEntry::size: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheEntry::tier: usize
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError::CapacityAccountingOverflow
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError::EntryTooLarge
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheError::KeyNotFound
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::capacity: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::name: alloc::string::String
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::CacheTier::used: u64
+pub vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::promote_threshold: u32
+pub vyre_driver_wgpu::runtime::device::AdapterCriteria::device_type: core::option::Option<wgpu_types::DeviceType>
+pub vyre_driver_wgpu::runtime::device::AdapterCriteria::name_contains: core::option::Option<alloc::string::String>
+pub vyre_driver_wgpu::runtime::device::AdapterCriteria::power: core::option::Option<wgpu_types::PowerPreference>
+pub vyre_driver_wgpu::runtime::device::AdapterCriteria::vendor: core::option::Option<u32>
+pub vyre_driver_wgpu::runtime::device::AdapterProbeReport::missing: alloc::vec::Vec<alloc::string::String>
+pub vyre_driver_wgpu::runtime::device::AdapterProbeReport::probed: alloc::vec::Vec<alloc::string::String>
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::indirect_first_instance: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::max_storage_buffer_binding_size: u64
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::max_subgroup_size: u32
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::max_workgroup_size: [u32; 3]
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::min_subgroup_size: u32
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::pipeline_cache: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::push_constants: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::shader_f16: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::subgroup: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::subgroup_barrier: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::timestamp_query: bool
+pub vyre_driver_wgpu::runtime::device::EnabledFeatures::timestamp_query_inside_encoders: bool
+pub vyre_driver_wgpu::runtime::indirect::IndirectArgs::buffer: alloc::sync::Arc<wgpu::api::buffer::Buffer>
+pub vyre_driver_wgpu::runtime::indirect::IndirectArgs::offset: u64
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::bind_groups: alloc::vec::Vec<alloc::sync::Arc<wgpu::api::bind_group::BindGroup>>
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::cb: std::sync::poison::mutex::Mutex<core::option::Option<wgpu::api::command_buffer::CommandBuffer>>
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::device: wgpu::api::device::Device
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::handles: alloc::vec::Vec<vyre_driver_wgpu::buffer::GpuBufferHandle>
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::output_handles: alloc::vec::Vec<vyre_driver_wgpu::buffer::GpuBufferHandle>
+pub vyre_driver_wgpu::runtime::prerecorded::PrerecordedDispatch::queue: wgpu::api::queue::Queue
+pub vyre_driver_wgpu::runtime::readback_ring::GpuSlot::buffer: wgpu::api::buffer::Buffer
+pub vyre_driver_wgpu::runtime::readback_ring::GpuSlot::state: alloc::sync::Arc<core::sync::atomic::AtomicU8>
+pub vyre_driver_wgpu::runtime::readback_ring::RingStats::dispatches: core::sync::atomic::AtomicU64
+pub vyre_driver_wgpu::runtime::readback_ring::RingStats::peak_inflight: core::sync::atomic::AtomicU64
+pub vyre_driver_wgpu::runtime::readback_ring::RingStats::readback_stalls: core::sync::atomic::AtomicU64
+pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Error
+pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Free
+pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Pending
+pub vyre_driver_wgpu::runtime::readback_ring::SlotState::Ready
+pub vyre_driver_wgpu::runtime::router::Override::Explicit(&'a str)
+pub vyre_driver_wgpu::runtime::router::Override::FromEnv
+pub vyre_driver_wgpu::runtime::router::Override::None
+pub vyre_driver_wgpu::runtime::router::Reason::EnvOverride
+pub vyre_driver_wgpu::runtime::router::Reason::Precedence
+pub vyre_driver_wgpu::runtime::router::RouterDecision::backend: &'static str
+pub vyre_driver_wgpu::runtime::router::RouterDecision::reason: vyre_driver_wgpu::runtime::router::Reason
+pub vyre_driver_wgpu::runtime::serializer::SerializerError::InvalidFrame
+pub vyre_driver_wgpu::runtime::serializer::SerializerError::InvalidFrame::message: alloc::string::String
+pub vyre_driver_wgpu::runtime::serializer::SerializerError::Serialization
+pub vyre_driver_wgpu::runtime::serializer::SerializerError::Serialization::message: alloc::string::String

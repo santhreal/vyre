@@ -1,4 +1,4 @@
-use vyre_driver::error::{Error, Result};
+use super::{SerializerError, SerializerResult as Result};
 
 pub(crate) const MAGIC: [u8; 8] = *b"VYREPART";
 
@@ -40,7 +40,7 @@ pub const MAX_SERIALIZED_PART_BYTES: usize = 256 * 1024 * 1024;
 #[inline]
 pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
     if parts.len() > MAX_PART_COUNT {
-        return Err(Error::Serialization {
+        return Err(SerializerError::Serialization {
             message: format!(
                 "serialized frame has {} parts, exceeding {MAX_PART_COUNT}. Fix: split the frame into fewer parts before encoding.",
                 parts.len()
@@ -49,7 +49,7 @@ pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
     }
     for part in parts {
         if part.len() > MAX_SERIALIZED_PART_BYTES {
-            return Err(Error::Serialization {
+            return Err(SerializerError::Serialization {
                 message: format!(
                     "serialized part is {} bytes, exceeding {MAX_SERIALIZED_PART_BYTES}. Fix: split the payload into smaller parts before framing.",
                     part.len()
@@ -60,18 +60,18 @@ pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
     let payload_len = parts.iter().try_fold(0usize, |sum, part| {
         sum.checked_add(8)
             .and_then(|value| value.checked_add(part.len()))
-            .ok_or_else(|| Error::Serialization {
+            .ok_or_else(|| SerializerError::Serialization {
                 message: "SerializationOverflow: framed part size calculation overflow. Fix: split the payload into smaller encode_parts calls.".to_string(),
             })
     })?;
-    let total = MAGIC.len().checked_add(payload_len).ok_or_else(|| Error::Serialization {
+    let total = MAGIC.len().checked_add(payload_len).ok_or_else(|| SerializerError::Serialization {
         message: "SerializationOverflow: framed output size calculation overflow. Fix: split the payload into smaller encode_parts calls.".to_string(),
     })?;
     let mut out = Vec::new();
     reserve_encoded_frame(&mut out, total)?;
     out.extend_from_slice(&MAGIC);
     for part in parts {
-        let len = u64::try_from(part.len()).map_err(|source| Error::Serialization {
+        let len = u64::try_from(part.len()).map_err(|source| SerializerError::Serialization {
             message: format!("framed part length {} exceeds u64::MAX: {source}. Fix: split the payload before framing.", part.len()),
         })?;
         out.extend_from_slice(&len.to_le_bytes());
@@ -81,7 +81,7 @@ pub fn encode_parts(parts: &[&[u8]]) -> Result<Vec<u8>> {
 }
 
 fn reserve_encoded_frame(out: &mut Vec<u8>, total: usize) -> Result<()> {
-    out.try_reserve_exact(total).map_err(|source| Error::Serialization {
+    out.try_reserve_exact(total).map_err(|source| SerializerError::Serialization {
         message: format!(
             "could not reserve {total} encoded frame bytes exactly: {source}. Fix: split the payload into smaller encode_parts calls."
         ),

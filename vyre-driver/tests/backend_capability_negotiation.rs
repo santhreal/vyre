@@ -1,14 +1,13 @@
 //! Failure-oriented tests for backend capability negotiation.
 //!
 //! Guarantees:
-//! - Unknown backends report conservative defaults (no dispatch, lowest precedence)
-//! - The `Backend` blanket impl for `VyreBackend` never drifts
-//! - Capability traits are object-safe so routers can hold `dyn` pointers
+//! - Unknown backends report conservative defaults.
+//! - The `Backend` blanket implementation for `VyreBackend` remains object-safe.
 
 use vyre_driver::backend::{
     acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
     registered_backends, registered_backends_by_precedence, Backend, BackendError, DispatchConfig,
-    Executable, Streamable, VyreBackend,
+    VyreBackend,
 };
 use vyre_foundation::ir::Program;
 
@@ -107,16 +106,4 @@ fn backend_trait_blanket_impl_for_vyre_backend() {
 fn backend_trait_is_object_safe() {
     // Compilation guard  -  if Backend ever loses object safety this test stops compiling.
     let _: Option<Box<dyn Backend>> = None;
-}
-
-#[test]
-fn executable_trait_is_object_safe() {
-    // Compilation guard  -  if Executable ever loses object safety this test stops compiling.
-    let _: Option<Box<dyn Executable>> = None;
-}
-
-#[test]
-fn streamable_trait_is_object_safe() {
-    // Compilation guard  -  if Streamable ever loses object safety this test stops compiling.
-    let _: Option<Box<dyn Streamable>> = None;
 }

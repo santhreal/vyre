@@ -1,21 +1,14 @@
-//! Pre-compiled pipeline trait.
+//! Backend executable-module dispatch contract.
 
 use crate::backend::{
     private, BackendError, DispatchConfig, OutputBuffers, Resource, TimedDispatchResult,
 };
 
-/// A program that has been pre-compiled by a backend, ready for repeated
-/// dispatch with new inputs without paying compilation cost on each call.
+/// A materialized backend executable ready for repeated dispatch.
 ///
-/// Build one with [`crate::pipeline::compile`]. Backends that override
-/// [`crate::backend::VyreBackend::compile_native`] return a cached pipeline (skipping
-/// shader compilation, pipeline-layout creation, and bind-group-layout
-/// creation on every dispatch); backends that don't get a transparent
-/// passthrough whose semantics are identical to repeated [`crate::backend::VyreBackend::dispatch`].
-///
-/// `CompiledPipeline::dispatch` MUST be bit-identical to
-/// `VyreBackend::dispatch(program, inputs, config)` for the program this
-/// pipeline was compiled from. Any divergence is a backend bug.
+/// Canonical artifact materializers construct concrete implementations after
+/// authenticating a target payload. Dispatch must remain bit-identical across
+/// host and resident bindings for the same artifact ABI.
 pub trait CompiledPipeline: private::Sealed + Send + Sync {
     /// Stable identifier for this pipeline (typically `<backend>:<program-fingerprint>`).
     ///

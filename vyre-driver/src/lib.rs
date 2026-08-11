@@ -194,19 +194,17 @@ pub mod numeric;
 /// Eliminates per-file kernel-launch overhead for streams of
 /// many small scan jobs.
 pub mod persistent;
-/// Re-exports the unified vyre error type from `vyre-foundation`.
-pub use vyre_foundation::error;
 
-pub use aot::{emit_aot_target, registered_aot_emitters, AotEmitter, AotTargetId};
+pub use aot::AotTargetId;
 pub use backend::{
     borrowed_input_slices, default_dispatch_with_device_buffers,
     replace_output_buffers_preserving_slots, validate_buffer_ownership,
     validate_program_for_backend, ArtifactInstance, ArtifactMaterializer, BackendError,
     BackendRegistration, BindingSet, BoundResource, CompiledPipeline, Completion, Device,
-    DeviceBuffer, DeviceIdentity, DispatchConfig, Executable, HostShimBuffer, Memory, MemoryRef,
-    OutputBuffers, PendingDispatch, ResidentDispatchStep, ResidentHandle, ResidentOwner,
-    ResidentReadRange, ResidentSequenceTiming, Resource, Submission, TimedDispatchResult,
-    TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
+    DeviceBuffer, DeviceIdentity, DispatchConfig, HostShimBuffer, OutputBuffers, PendingDispatch,
+    ResidentDispatchStep, ResidentHandle, ResidentOwner, ResidentReadRange, ResidentSequenceTiming,
+    Resource, Submission, TimedDispatchResult, TypedDispatchExt, VyreBackend,
+    DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
     binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
@@ -223,13 +221,10 @@ pub use dispatch_shape::{
     borrowed_input_batch_shapes_match, borrowed_input_shapes_match,
     dispatch_configs_share_launch_shape,
 };
-pub use error::Error;
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
 pub use pipeline::{
-    compile, compile_owned, compile_owned_with_telemetry, compile_shared,
-    compile_shared_with_telemetry, compile_with_telemetry, hex_encode, hex_short,
-    CompiledPipelineBuild, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
+    hex_encode, hex_short, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
     PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot,
     PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
 };
@@ -247,8 +242,8 @@ pub use registry::{
     Chain, Dialect, DialectRegistration, DialectRegistry, DuplicateOpIdError, EnforceGate,
     EnforceVerdict, InternedOpId, IntrinsicRegistrationError, LoweringCtx, LoweringTable,
     MutationClass, NativeModule, NativeModuleBuilder, OpBackendTarget, OpDef, OpDefRegistration,
-    PrimaryBinaryBuilder, PrimaryTextBuilder, ReferenceKind, SecondaryTextBuilder, Signature,
-    Target, TextModule, TypedParam,
+    PrimaryBinaryBuilder, PrimaryTextBuilder, SecondaryTextBuilder, Signature, Target, TextModule,
+    TypedParam,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};

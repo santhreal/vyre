@@ -32,7 +32,6 @@ impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
 impl core::convert::From<vyre_driver::device_profile::DeviceProfile> for vyre_foundation::optimizer::ctx::AdapterCaps
 impl core::convert::From<vyre_driver::device_profile::DeviceProfile> for vyre_foundation::validate::options::BackendCapabilities
 impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
-impl core::convert::From<vyre_foundation::error::Error> for vyre_driver::BackendError
 impl core::default::Default for vyre_driver::Resource
 impl core::default::Default for vyre_driver::arm_independence::ArmBindingSummary
 impl core::default::Default for vyre_driver::device_profile::DeviceProfile
@@ -389,7 +388,6 @@ pub fn vyre_driver::ArtifactMaterializer::materialize(&self, artifact: &vyre_meg
 pub fn vyre_driver::ArtifactMaterializer::upload_resident(&self, _resource: &vyre_driver::Resource, _bytes: &[u8]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::ArtifactMaterializer::upload_resident_at(&self, resource: &vyre_driver::Resource, offset_bytes: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::BackendError::code(&self) -> vyre_driver::backend::ErrorCode
-pub fn vyre_driver::BackendError::from(error: vyre_foundation::error::Error) -> Self
 pub fn vyre_driver::BackendError::into_message(self) -> alloc::string::String
 pub fn vyre_driver::BackendError::message(&self) -> alloc::string::String
 pub fn vyre_driver::BackendError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
@@ -801,7 +799,6 @@ pub fn vyre_driver::device_work_queue::DeviceWorkQueueError::fmt(&self, f: &mut 
 pub fn vyre_driver::device_work_queue::plan_device_work_queue(profile: vyre_driver::device_work_queue::DeviceWorkQueueProfile) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueuePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
 pub fn vyre_driver::device_work_queue::plan_device_work_queue_backpressure(profile: vyre_driver::device_work_queue::DeviceWorkQueueProfile, max_items_per_drain_launch: u64) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueueBackpressurePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
 pub fn vyre_driver::device_work_queue::plan_device_work_queue_with_expansion(profile: vyre_driver::device_work_queue::DeviceWorkQueueExpansionProfile) -> core::result::Result<vyre_driver::device_work_queue::DeviceWorkQueuePlan, vyre_driver::device_work_queue::DeviceWorkQueueError>
-pub fn vyre_driver::diagnostics::diagnostic_from_error(error: &vyre_foundation::error::Error) -> vyre_foundation::diagnostics::Diagnostic
 pub fn vyre_driver::dispatch_configs_share_launch_shape(compiled: &vyre_driver::DispatchConfig, runtime: &vyre_driver::DispatchConfig) -> bool
 pub fn vyre_driver::dispatch_element_count(bindings: &[vyre_driver::binding::Binding]) -> u32
 pub fn vyre_driver::dispatch_element_count_for_program(program: &vyre_foundation::ir_inner::model::program::core::Program, bindings: &[vyre_driver::binding::Binding]) -> u32
@@ -1628,7 +1625,6 @@ pub use vyre_driver::AttrType
 pub use vyre_driver::Category
 pub use vyre_driver::Diagnostic
 pub use vyre_driver::DiagnosticCode
-pub use vyre_driver::Error
 pub use vyre_driver::InternedOpId
 pub use vyre_driver::LoweringCtx
 pub use vyre_driver::LoweringTable
@@ -1652,7 +1648,6 @@ pub use vyre_driver::diagnostics::DiagnosticStage
 pub use vyre_driver::diagnostics::OpLocation
 pub use vyre_driver::diagnostics::RetryClass
 pub use vyre_driver::diagnostics::Severity
-pub use vyre_driver::error
 pub use vyre_driver::intern_string
 pub use vyre_driver::registry::AttrSchema
 pub use vyre_driver::registry::AttrType

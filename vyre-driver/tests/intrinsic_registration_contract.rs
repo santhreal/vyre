@@ -35,7 +35,7 @@ fn canonical_identity_signature_and_fixture_reach_reference_registry() {
     let entry = canonical_entry();
     let definition = registered_definition();
     assert_eq!(definition.id, entry.id);
-    assert_eq!(definition.signature, entry.signature);
+    assert_eq!(Some(definition.signature.clone()), entry.signature);
 
     let program = definition.program().expect("canonical neutral builder");
     let inputs = entry.test_inputs.expect("canonical input fixture")();
@@ -63,7 +63,7 @@ fn concrete_lowering_accepts_canonical_definition() {
     lowering.lowerings.primary_text = Some(builder);
     let owner = validate_intrinsic_lowering(&lowering).expect("canonical lowering registration");
     assert_eq!(owner.id, INTRINSIC_ID);
-    assert_eq!(owner.signature, lowering.signature);
+    assert_eq!(owner.signature, Some(lowering.signature));
 }
 
 /// Negative: a lowering cannot invent a driver-owned intrinsic identity.

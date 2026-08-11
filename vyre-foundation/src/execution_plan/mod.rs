@@ -89,7 +89,7 @@ pub enum PlanError {
     #[error("non-canonical program: {source}")]
     NonCanonicalProgram {
         /// Original validation or serialization error.
-        source: crate::error::Error,
+        source: crate::error::IrError,
     },
     /// An output buffer advertises a byte range outside its full allocation.
     #[error(
@@ -245,7 +245,7 @@ fn validate_program_for_plan(
         messages.push_str(error.message());
     }
     Err(PlanError::NonCanonicalProgram {
-        source: crate::error::Error::WireFormatValidation {
+        source: crate::error::IrError::WireFormatValidation {
             message: format!(
                 "canonical execution plan validation failed: {messages}. Fix: repair the Program before planning."
             ),
@@ -296,7 +296,7 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
         let size = if count > 0 {
             Some(u64::from(count).checked_mul(elem_size).ok_or_else(|| {
                 PlanError::NonCanonicalProgram {
-                    source: crate::error::Error::WireFormatValidation {
+                    source: crate::error::IrError::WireFormatValidation {
                         message: format!(
                             "canonical execution plan buffer `{}` byte size overflows u64. Fix: split the buffer before planning.",
                             buffer.name()
@@ -310,7 +310,7 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
         if let Some(s) = size {
             static_bytes = static_bytes.checked_add(s).ok_or_else(|| {
                 PlanError::NonCanonicalProgram {
-                    source: crate::error::Error::WireFormatValidation {
+                    source: crate::error::IrError::WireFormatValidation {
                         message: format!(
                             "canonical execution plan static memory total overflows u64 while adding `{}`. Fix: split the Program before planning.",
                             buffer.name()
@@ -331,7 +331,7 @@ fn memory_plan(program: &Program, adapter_caps: &AdapterCaps) -> Result<MemoryPl
         // identical omission on `BufferDecl::output` was refused.
         buffer.require_static_readback_size().map_err(|message| {
             PlanError::NonCanonicalProgram {
-                source: crate::error::Error::WireFormatValidation {
+                source: crate::error::IrError::WireFormatValidation {
                     message: format!(
                         "canonical execution plan rejected buffer `{}`: {message}",
                         buffer.name()

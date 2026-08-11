@@ -7,10 +7,10 @@
 //!                  silent miscompile for every invocation other than lane 0.
 //!
 //! After the fix:   `inline_calls_with_resolver` returns
-//!                  `Err(Error::Lowering { .. })` whose message names the
+//!                  `Err(IrError::Lowering { .. })` whose message names the
 //!                  built-in and contains the string "Fix:".
 
-use vyre_foundation::error::Error;
+use vyre_foundation::error::IrError;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::transform::inline::inline_calls_with_resolver;
 
@@ -79,9 +79,9 @@ fn builtin_resolver(id: &str) -> Option<Program> {
     Some(callee_with_builtin(built_in))
 }
 
-fn assert_lowering_error_names_fix(result: Result<Program, Error>, builtin_name: &str) {
+fn assert_lowering_error_names_fix(result: Result<Program, IrError>, builtin_name: &str) {
     match result {
-        Err(Error::Lowering { message }) => {
+        Err(IrError::Lowering { message }) => {
             assert!(
                 message.contains("Fix:"),
                 "Fix: inline rejection for {builtin_name} must include 'Fix:' guidance, \

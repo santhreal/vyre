@@ -1,7 +1,7 @@
 //! Variant-preserving primitive BinOp and UnOp dispatch.
 
-use vyre::ir::{BinOp, UnOp};
-use vyre::Error;
+use crate::ReferenceError;
+use vyre_foundation::ir::{BinOp, UnOp};
 
 use crate::value::Value;
 
@@ -10,7 +10,11 @@ mod float_ops;
 pub(crate) use float_ops::canonical_f32;
 use float_ops::{binop_f32, unop_f32};
 
-pub(super) fn eval_binop(op: BinOp, left: Value, right: Value) -> Result<Value, vyre::Error> {
+pub(super) fn eval_binop(
+    op: BinOp,
+    left: Value,
+    right: Value,
+) -> Result<Value, crate::ReferenceError> {
     // Shared-arity ops that the int_bin_helpers macro does not generate:
     // Min, Max, AbsDiff. Handled before per-type dispatch so we do not
     // have to retrofit them into every macro invocation.
@@ -35,7 +39,7 @@ pub(super) fn eval_binop(op: BinOp, left: Value, right: Value) -> Result<Value, 
         (Value::U64(left), Value::U64(right)) => binop_u64(op, left, right),
         (Value::Bool(left), Value::Bool(right)) => binop_bool(op, left, right),
         (Value::Float(left), Value::Float(right)) => binop_f32(op, left as f32, right as f32),
-        (left, right) => Err(Error::interp(format!(
+        (left, right) => Err(ReferenceError::new(format!(
             "binary op `{op:?}` received mismatched operands {left:?} and {right:?}. Fix: insert an explicit Cast so both operands have the same primitive type."
         ))),
     }
@@ -91,7 +95,7 @@ fn u64_shared_binop(op: &BinOp, left: u64, right: u64) -> Option<Value> {
     }
 }
 
-pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error> {
+pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, crate::ReferenceError> {
     // Bit-unpack ops extract a nibble/byte from a 32-bit integer's bit pattern
     // into a u32 (doc: "Unpack lower/upper N-bits of a u8/u32 into a u32"). They
     // are SHARED across operand type, handled here before per-type dispatch,
@@ -108,7 +112,7 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error>
             Value::U32(v) => v,
             Value::I32(v) => v as u32,
             other => {
-                return Err(Error::interp(format!(
+                return Err(ReferenceError::new(format!(
                     "unary op `{op:?}` (bit unpack) requires a 32-bit integer operand, got {other:?}. Fix: cast to u32/i32 before unpacking."
                 )))
             }
@@ -121,7 +125,7 @@ pub(super) fn eval_unop(op: &UnOp, operand: Value) -> Result<Value, vyre::Error>
         Value::U64(value) => unop_u64(op, value),
         Value::Bool(value) => unop_bool(op, value),
         Value::Float(value) => unop_f32(op, value as f32),
-        value => Err(Error::interp(format!(
+        value => Err(ReferenceError::new(format!(
             "unary op `{op:?}` received non-primitive operand {value:?}. Fix: load or cast to a scalar primitive before applying unary ops."
         ))),
     }
@@ -181,11 +185,11 @@ macro_rules! int_bin_helpers {
             Value::$value(left.wrapping_mul(right))
         }
 
-        fn $div_fn(left: $ty, right: $ty) -> Result<Value, vyre::Error> {
+        fn $div_fn(left: $ty, right: $ty) -> Result<Value, crate::ReferenceError> {
             $div(left, right).map(Value::$value)
         }
 
-        fn $mod_fn(left: $ty, right: $ty) -> Result<Value, vyre::Error> {
+        fn $mod_fn(left: $ty, right: $ty) -> Result<Value, crate::ReferenceError> {
             $rem(left, right).map(Value::$value)
         }
 
@@ -241,7 +245,7 @@ macro_rules! int_bin_helpers {
             Value::Bool(left != 0 || right != 0)
         }
 
-        fn $binop(op: BinOp, left: $ty, right: $ty) -> Result<Value, vyre::Error> {
+        fn $binop(op: BinOp, left: $ty, right: $ty) -> Result<Value, crate::ReferenceError> {
             match op {
                 BinOp::Add => Ok($add(left, right)),
                 BinOp::Sub => Ok($sub(left, right)),
@@ -261,8 +265,8 @@ macro_rules! int_bin_helpers {
                 BinOp::Ge => Ok($ge(left, right)),
                 BinOp::And => Ok($and(left, right)),
                 BinOp::Or => Ok($or(left, right)),
-                _ => Err(Error::interp(format!(
-                    "unsupported IR `unknown BinOp variant: {op:?}`. Fix: update vyre-reference for the new vyre::ir variant."
+                _ => Err(ReferenceError::new(format!(
+                    "unsupported IR `unknown BinOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
             }
         }
@@ -311,7 +315,7 @@ macro_rules! int_un_helpers {
             Value::$value(value.reverse_bits())
         }
 
-        fn $unop(op: &UnOp, value: $ty) -> Result<Value, vyre::Error> {
+        fn $unop(op: &UnOp, value: $ty) -> Result<Value, crate::ReferenceError> {
             match op {
                 UnOp::Negate => Ok($negate(value)),
                 UnOp::BitNot => Ok($bit_not(value)),
@@ -320,19 +324,19 @@ macro_rules! int_un_helpers {
                 UnOp::Clz => Ok($clz(value)),
                 UnOp::Ctz => Ok($ctz(value)),
                 UnOp::ReverseBits => Ok($reverse_bits(value)),
-                _ => Err(Error::interp(format!(
-                    "unsupported IR `unknown UnOp variant: {op:?}`. Fix: update vyre-reference for the new vyre::ir variant."
+                _ => Err(ReferenceError::new(format!(
+                    "unsupported IR `unknown UnOp variant: {op:?}`. Fix: update vyre-reference for the new foundation IR variant."
                 ))),
             }
         }
     };
 }
 
-fn div_u32(left: u32, right: u32) -> Result<u32, Error> {
+fn div_u32(left: u32, right: u32) -> Result<u32, ReferenceError> {
     Ok(if right == 0 { u32::MAX } else { left / right })
 }
 
-fn rem_u32(left: u32, right: u32) -> Result<u32, Error> {
+fn rem_u32(left: u32, right: u32) -> Result<u32, ReferenceError> {
     Ok(if right == 0 { 0 } else { left % right })
 }
 
@@ -346,7 +350,7 @@ fn shift_u32(left: u32, right: u32, left_shift: bool) -> u32 {
     }
 }
 
-fn div_i32(left: i32, right: i32) -> Result<i32, Error> {
+fn div_i32(left: i32, right: i32) -> Result<i32, ReferenceError> {
     if right == 0 {
         return Err(undefined_i32_division("division", left, right));
     }
@@ -356,7 +360,7 @@ fn div_i32(left: i32, right: i32) -> Result<i32, Error> {
     Ok(left / right)
 }
 
-fn rem_i32(left: i32, right: i32) -> Result<i32, Error> {
+fn rem_i32(left: i32, right: i32) -> Result<i32, ReferenceError> {
     if right == 0 {
         return Err(undefined_i32_division("remainder", left, right));
     }
@@ -366,8 +370,8 @@ fn rem_i32(left: i32, right: i32) -> Result<i32, Error> {
     Ok(left % right)
 }
 
-fn undefined_i32_division(kind: &str, left: i32, right: i32) -> Error {
-    Error::interp(format!(
+fn undefined_i32_division(kind: &str, left: i32, right: i32) -> ReferenceError {
+    ReferenceError::new(format!(
         "i32 {kind} `{left} / {right}` has undefined backend semantics. Fix: guard the signed divisor/overflow case before lowering, or use unsigned operands when zero-divisor semantics must produce 0."
     ))
 }
@@ -382,11 +386,11 @@ fn shift_i32(left: i32, right: i32, left_shift: bool) -> i32 {
     }
 }
 
-fn div_u64(left: u64, right: u64) -> Result<u64, Error> {
+fn div_u64(left: u64, right: u64) -> Result<u64, ReferenceError> {
     Ok(if right == 0 { u64::MAX } else { left / right })
 }
 
-fn rem_u64(left: u64, right: u64) -> Result<u64, Error> {
+fn rem_u64(left: u64, right: u64) -> Result<u64, ReferenceError> {
     Ok(if right == 0 { 0 } else { left % right })
 }
 
@@ -519,22 +523,22 @@ int_un_helpers!(
     un_reverse_bits_u64
 );
 
-fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, vyre::Error> {
+fn binop_bool(op: BinOp, left: bool, right: bool) -> Result<Value, crate::ReferenceError> {
     match op {
         BinOp::Eq => Ok(Value::Bool(left == right)),
         BinOp::Ne => Ok(Value::Bool(left != right)),
         BinOp::And => Ok(Value::Bool(left && right)),
         BinOp::Or => Ok(Value::Bool(left || right)),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "binary op `{op:?}` is not defined for bool operands. Fix: cast bools to u32 before numeric or bitwise operations."
         ))),
     }
 }
 
-fn unop_bool(op: &UnOp, value: bool) -> Result<Value, vyre::Error> {
+fn unop_bool(op: &UnOp, value: bool) -> Result<Value, crate::ReferenceError> {
     match op {
         UnOp::LogicalNot => Ok(Value::Bool(!value)),
-        _ => Err(Error::interp(format!(
+        _ => Err(ReferenceError::new(format!(
             "unary op `{op:?}` is not defined for bool operands. Fix: cast bool to u32 before numeric or bitwise unary operations."
         ))),
     }
@@ -551,7 +555,7 @@ mod tests {
         }
     }
 
-    fn eval_i32(op: BinOp, left: i32, right: i32) -> Result<Value, Error> {
+    fn eval_i32(op: BinOp, left: i32, right: i32) -> Result<Value, ReferenceError> {
         eval_binop(op, Value::I32(left), Value::I32(right))
     }
 

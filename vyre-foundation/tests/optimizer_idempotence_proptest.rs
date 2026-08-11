@@ -24,7 +24,7 @@ fn program_with_body(body: Vec<Node>) -> Program {
     Program::wrapped(vec![test_output_buffer()], [1, 1, 1], body)
 }
 
-fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_foundation::Error> {
+fn run_reference(program: &Program) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
     vyre_reference::reference_eval(program, &[Value::U32(0)])
 }
 

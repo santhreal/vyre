@@ -95,13 +95,13 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::error::Error::WireFormatValidation`] when a count
+    /// Returns [`crate::error::IrError::WireFormatValidation`] when a count
     /// cannot be represented in the versioned wire format or when a public
     /// enum variant has no registered stable wire tag. The `message` field
     /// carries the actionable diagnostic prose including a `Fix:` hint.
     #[inline]
     #[must_use]
-    pub fn to_wire(&self) -> Result<Vec<u8>, crate::error::Error> {
+    pub fn to_wire(&self) -> Result<Vec<u8>, crate::error::IrError> {
         encode::to_wire(self).map_err(wire_err)
     }
 
@@ -110,12 +110,12 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::error::Error::WireFormatValidation`] when a count
+    /// Returns [`crate::error::IrError::WireFormatValidation`] when a count
     /// cannot be represented in the versioned wire format or when a public
     /// enum variant has no registered stable wire tag. The `message` field
     /// carries the actionable diagnostic prose including a `Fix:` hint.
     #[inline]
-    pub fn to_wire_into(&self, dst: &mut Vec<u8>) -> Result<(), crate::error::Error> {
+    pub fn to_wire_into(&self, dst: &mut Vec<u8>) -> Result<(), crate::error::IrError> {
         encode::to_wire_into(self, dst).map_err(wire_err)
     }
 
@@ -123,15 +123,14 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::error::Error::VersionMismatch`] when the
-    /// payload advertises a schema version this runtime does not
-    /// understand. Returns [`crate::error::Error::WireFormatValidation`]
-    /// for any other decode failure  -  truncated bytes, unknown enum
-    /// tag, integrity digest mismatch, or malformed structural
-    /// section.
+    /// Returns [`crate::error::IrError::VersionMismatch`] when the payload
+    /// advertises a schema version this runtime does not understand. Returns
+    /// [`crate::error::IrError::WireFormatValidation`] for any other decode
+    /// failure: truncated bytes, unknown enum tag, integrity digest mismatch,
+    /// or malformed structural section.
     #[inline]
     #[must_use]
-    pub fn from_wire(bytes: &[u8]) -> Result<Self, crate::error::Error> {
+    pub fn from_wire(bytes: &[u8]) -> Result<Self, crate::error::IrError> {
         if bytes.len() > MAX_PROGRAM_BYTES {
             return Err(wire_err(format!(
                 "Fix: wire blob is {} bytes, exceeding the {}-byte IR framing cap. Reject this input or split the Program before serialization.",
@@ -150,7 +149,7 @@ impl Program {
         {
             let version = u16::from_le_bytes([bytes[4], bytes[5]]);
             if !framing::wire_format_version_is_supported(version) {
-                return Err(crate::error::Error::VersionMismatch {
+                return Err(crate::error::IrError::VersionMismatch {
                     expected: u32::from(framing::WIRE_FORMAT_VERSION),
                     found: u32::from(version),
                 });
@@ -173,11 +172,10 @@ impl Program {
     }
 }
 
-/// Wrap an internal wire-format error string in the typed [`crate::error::Error`]
-/// so every public boundary of this module returns a structured variant
-/// callers can match on.
-fn wire_err(message: String) -> crate::error::Error {
-    crate::error::Error::WireFormatValidation { message }
+/// Wrap an internal wire-format error string in the typed [`crate::error::IrError`]
+/// so every public boundary of this module returns a structured variant.
+fn wire_err(message: String) -> crate::error::IrError {
+    crate::error::IrError::WireFormatValidation { message }
 }
 
 /// Append stable VIR0 wire bytes for a [`DataType`] (tag + any payload) into

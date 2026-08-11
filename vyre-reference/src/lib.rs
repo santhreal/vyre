@@ -10,8 +10,8 @@
 //! intentionally slow and direct: every current IR expression and node variant
 //! has a named evaluator function.
 
-extern crate vyre_foundation as vyre;
-
+mod error;
+pub use error::ReferenceError;
 /// Dual-reference trait and registry types.
 pub mod dual;
 /// Canonical dual implementations and reference evaluators.

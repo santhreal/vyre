@@ -4,9 +4,9 @@
 //! reference interpreter's workgroup-wide barrier semantics.
 
 use super::state::HashmapInvocation;
+use crate::ReferenceError;
 use smallvec::SmallVec;
-use vyre::ir::BufferDecl;
-use vyre::Error;
+use vyre_foundation::ir::BufferDecl;
 
 pub(crate) use crate::execution::node_tree::{contains_barrier, node_id};
 
@@ -32,15 +32,13 @@ pub(crate) fn live_waiting_count(invocations: &[HashmapInvocation<'_>]) -> usize
 
 pub(crate) fn verify_uniform_control_flow(
     invocations: &[HashmapInvocation<'_>],
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     let mut observed = SmallVec::<[(usize, bool); 8]>::new();
     for invocation in invocations.iter().filter(|inv| !inv.done()) {
         for (id, value) in &invocation.uniform_checks {
             if let Some((_, previous)) = observed.iter().find(|(seen_id, _)| seen_id == id) {
                 if previous != value {
-                    return Err(Error::interp(
-                        "program violates uniform-control-flow rule: Barrier appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move Barrier outside the branch.",
-                    ));
+                    return Err(ReferenceError::new("program violates uniform-control-flow rule: Barrier appears inside an If whose condition differs across the workgroup. Fix: make the condition uniform or move Barrier outside the branch."));
                 }
             } else {
                 observed.push((*id, *value));
@@ -50,10 +48,10 @@ pub(crate) fn verify_uniform_control_flow(
     Ok(())
 }
 
-pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, Error> {
+pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, ReferenceError> {
     if let Some(bits) = decl.element().bit_width() {
         let total_bits = byte_len.checked_mul(8).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "buffer `{}` has {} bytes and overflows host bit counting. Fix: shrink declaration footprint or split work.",
                 decl.name(),
                 byte_len,
@@ -61,7 +59,7 @@ pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, E
         })?;
         let elements = total_bits / bits;
         return u32::try_from(elements).map_err(|_| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "buffer `{}` has {} bytes for {}-bit elements and overflows u32 elements. Fix: shrink declaration footprint or split work.",
                 decl.name(),
                 byte_len,
@@ -70,23 +68,23 @@ pub(crate) fn element_count(decl: &BufferDecl, byte_len: usize) -> Result<u32, E
         });
     }
     let Some(stride) = decl.element().size_bytes() else {
-        return Err(Error::interp(format!(
+        return Err(ReferenceError::new(format!(
             "buffer `{}` has unsized element type {}. Fix: provide a fixed-width buffer element type before invoking the reference interpreter.",
             decl.name(),
             decl.element()
         )));
     };
     if stride == 0 {
-        return u32 :: try_from (byte_len) . map_err (| _ | { Error :: interp (format ! ("buffer `{}` has {} bytes and cannot be indexed within u32 address space. Fix: shrink or split the invocation." , decl . name () , byte_len ,)) }) ;
+        return u32 :: try_from (byte_len) . map_err (| _ | { ReferenceError::new(format ! ("buffer `{}` has {} bytes and cannot be indexed within u32 address space. Fix: shrink or split the invocation." , decl . name () , byte_len ,)) }) ;
     }
     let elements = byte_len / stride;
-    u32 :: try_from (elements) . map_err (| _ | { Error :: interp (format ! ("buffer `{}` has {} bytes for stride {} and overflows u32 elements. Fix: shrink declaration footprint or split work." , decl . name () , byte_len , stride ,)) })
+    u32 :: try_from (elements) . map_err (| _ | { ReferenceError::new(format ! ("buffer `{}` has {} bytes for stride {} and overflows u32 elements. Fix: shrink declaration footprint or split work." , decl . name () , byte_len , stride ,)) })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre::ir::DataType;
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn element_count_uses_bit_width_for_packed_i4_buffers() {

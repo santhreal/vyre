@@ -1,4 +1,6 @@
-use vyre_driver::error::Result;
+use vyre_driver::BackendError;
+
+type Result<T, E = BackendError> = std::result::Result<T, E>;
 
 /// Compile a WGSL compute shader into a `wgpu` compute pipeline.
 ///
@@ -45,11 +47,9 @@ pub fn compile_compute_pipeline_with_layout(
     layout: Option<&wgpu::PipelineLayout>,
 ) -> Result<wgpu::ComputePipeline> {
     super::dump_wgsl_if_requested(label, wgsl_source).map_err(|error| {
-        vyre_driver::error::Error::Gpu {
-            message: format!(
-                "failed to dump WGSL for `{label}`: {error}. Fix: set VYRE_DUMP_WGSL to a writable directory or unset it"
-            ),
-        }
+        vyre_driver::BackendError::new(format!(
+            "failed to dump WGSL for `{label}`: {error}. Fix: set VYRE_DUMP_WGSL to a writable directory or unset it"
+        ))
     })?;
     let driver_cache = if device.features().contains(wgpu::Features::PIPELINE_CACHE) {
         Some(driver_pipeline_cache(device, label)?)
@@ -71,16 +71,12 @@ pub fn compile_compute_pipeline_with_layout(
     });
     if let Some(error) =
         crate::runtime::device::pop_error_scope_now(device).map_err(|message| {
-            vyre_driver::error::Error::Gpu {
-                message: format!("WGSL compute pipeline `{label}` validation did not complete without a host wait: {message}"),
-            }
+            vyre_driver::BackendError::new(format!("WGSL compute pipeline `{label}` validation did not complete without a host wait: {message}"))
         })?
     {
-        return Err(vyre_driver::error::Error::Gpu {
-            message: format!(
-                "WGSL compute pipeline `{label}` failed validation: {error}. Fix: validate the lowered WGSL and adapter limits before compiling."
-            ),
-        });
+        return Err(vyre_driver::BackendError::new(format!(
+            "WGSL compute pipeline `{label}` failed validation: {error}. Fix: validate the lowered WGSL and adapter limits before compiling."
+        )));
     }
     Ok(pipeline)
 }

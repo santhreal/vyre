@@ -6,7 +6,7 @@
 //! support lands, this module will become the source of truth for rounding mode,
 //! NaN propagation, and subnormal handling that the conform gate checks.
 
-use vyre::Error;
+use crate::ReferenceError;
 
 /// Maximum accepted reference-oracle error against correctly rounded f32
 /// transcendental results.
@@ -213,12 +213,10 @@ fn ordered_f32_key(value: f32) -> u32 {
 /// # Examples
 ///
 /// ```rust,ignore
-/// let err = vyre::reference::ieee754::pending_float_types();
+/// let err = vyre_reference::ieee754::pending_float_types();
 /// ```
-pub fn pending_float_types() -> Error {
-    Error::interp(
-        "pending upstream float variants in vyre::ir; reference interpreter is integer-only until those variants land",
-    )
+pub fn pending_float_types() -> ReferenceError {
+    ReferenceError::new("pending upstream float variants in foundation IR; reference interpreter is integer-only until those variants land")
 }
 
 #[cfg(test)]

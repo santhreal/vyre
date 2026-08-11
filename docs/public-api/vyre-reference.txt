@@ -1,124 +1,407 @@
-pub const MAX_SHARED_BYTES: usize = MAX_WORKGROUP_BYTES;
-pub const MAX_WORKGROUP_BYTES: usize = 64 * 1024 * 1024;
-pub const OP_ID: &str = "primitive.bitwise.xor";
-pub const OP_ID: &str = Xor::SPEC.id();
-pub const REFERENCE_BACKEND_NAME: &str = "reference";
-pub const ZERO: Self = Self {
-pub enum Frame<'a> {
-pub enum Value {
-pub fn apply(
-pub fn assign(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
-pub fn as_u32(&self) -> u32 {
-pub fn as_u64(&self) -> u64 {
-pub fn atomic_add(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_and(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_compare_exchange(
-pub fn atomic_exchange(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_max(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_min(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_or(old: u32, value: u32) -> (u32, u32) {
-pub fn atomic_xor(old: u32, value: u32) -> (u32, u32) {
-pub fn bind_loop_var(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
-pub fn bind(&mut self, name: &str, value: Value) -> Result<(), vyre::Error> {
-pub fn buffer_mut<'a>(
-pub fn bytes(&self) -> &[u8] {
-pub fn dispatch_op(op_id: &str, input: &[u8], output: &mut Vec<u8>) -> Result<(), BackendError> {
-pub fn done(&self) -> bool {
-pub fn dual_op_ids() -> &'static [&'static str] {
-pub fn empty() -> Self {
-pub fn eval(
-pub fn eval_hashmap_reference(
-pub fn for_nodes(nodes: &[Node]) -> Self {
-pub fn for_program(program: &Program) -> Self {
-pub fn from_bytes(bytes: Vec<u8>) -> Self {
-pub fn from_element_bytes(ty: vyre::ir::DataType, bytes: &[u8]) -> Result<Self, String> {
-pub fn get_mut(&mut self, name: &str) -> Option<&mut Buffer> {
-pub fn get(&self, name: &str) -> Option<&Buffer> {
-pub fn insert(&mut self, name: impl Into<Arc<str>>, buffer: Buffer) -> Option<Buffer> {
-pub fn into_bytes(self) -> Vec<u8> {
-pub fn into_iter_pairs(self) -> impl Iterator<Item = (Arc<str>, Buffer)> {
-pub fn invocation_count(&self) -> u32 {
-pub fn invocations(&self, workgroup_id: [u32; 3]) -> impl Iterator<Item = InvocationIds> {
-pub fn is_empty(&self) -> bool {
-pub fn iter(&self) -> impl Iterator<Item = (&str, &Buffer)> {
-pub fn len(&self) -> usize {
-pub fn local(&self, name: &str) -> Option<&Value> {
-pub fn new(bytes: Vec<u8>, element: DataType) -> Self {
-pub fn new(ids: InvocationIds, entry: &'a [Node]) -> Self {
-pub fn new(message: impl Into<String>) -> Self {
-pub fn new() -> Self {
-pub fn pending_float_types() -> Error {
-pub fn pop_scope(&mut self) {
-pub fn push_scope(&mut self) {
-pub fn reference(input: &[u8]) -> Vec<u8> {
-pub fn resolve_dual(op_id: &str) -> Option<(dual::ReferenceFn, dual::ReferenceFn)> {
-pub fn run_arena_reference(program: &Program, inputs: &[Value]) -> Result<Vec<Value>, vyre::Error> {
-pub fn run_flat(program: &Program, input: &[u8], output: &mut Vec<u8>) -> Result<(), vyre::Error> {
-pub fn run_node_graph<'a, I>(nodes: I, outputs: &[NodeId]) -> Result<Vec<IrValue>, vyre::Error>
-pub fn run(program: &Program, inputs: &[Value]) -> Result<Vec<Value>, vyre::Error> {
-pub fn run_storage_graph(
-pub fn step<'a>(
-pub fn to_bytes(&self) -> Vec<u8> {
-pub fn to_bytes_width(&self, declared_width: usize) -> Vec<u8> {
-pub fn truthy(&self) -> bool {
-pub fn try_as_f32(&self) -> Option<f32> {
-pub fn try_as_u32(&self) -> Option<u32> {
-pub fn try_as_u64(&self) -> Option<u64> {
-pub fn try_zero_for(ty: vyre::ir::DataType) -> Option<Self> {
-pub fn wide_bytes(&self) -> Vec<u8> {
-pub fn with_storage(mut self, name: impl Into<Arc<str>>, buffer: Buffer) -> Self {
-pub fn with_workgroup(mut self, name: impl Into<Arc<str>>, buffer: Buffer) -> Self {
-pub fn zero_for(ty: vyre::ir::DataType) -> Self {
-pub mod arith_add;
-pub mod arith_mul;
-pub mod atomics;
-pub mod bitwise;
-pub mod bitwise_and;
-pub mod bitwise_or;
-pub mod bitwise_xor;
-pub mod clz;
-pub mod compare_eq;
-pub mod compare_lt;
-pub mod cpu_op;
-pub mod dialect_dispatch;
-pub mod dual;
-pub mod eval_expr;
-pub mod eval_node;
-pub mod flat_cpu;
-pub mod gather;
-pub mod hash_blake3;
-pub mod hash_fnv1a;
-pub mod ieee754;
-pub mod interp;
-pub mod scan_dfa;
-pub mod scan_literal;
-pub mod popcount;
-pub mod primitive;
-pub mod primitives;
-pub mod reduce;
-pub mod reference_a;
-pub mod reference_b;
-pub mod scan;
-pub mod scatter;
-pub mod sequential;
-pub mod shift_left;
-pub mod shift_right;
-pub mod shuffle;
-pub mod value;
-pub mod workgroup;
-pub mod xor;
-pub struct Buffer {
-pub struct BufferMap {
-pub struct EvalError {
-pub struct Invocation<'a> {
-pub struct InvocationIds {
-pub struct LocalSlots {
-pub struct Memory {
-pub struct SequentialWorkgroup {
-pub struct XorDualReference;
-pub trait CategoryAOp {
-pub trait CpuOp {
-pub trait DualReference {
-pub trait ReferenceEvaluator {
-pub type CpuFn = fn(input: &[u8], output: &mut Vec<u8>);
-pub type ReferenceFn = fn(&[u8]) -> Vec<u8>;
+#[non_exhaustive] pub enum vyre_reference::value::Value
+#[non_exhaustive] pub enum vyre_reference::workgroup::Frame<'a>
+impl core::cmp::Eq for vyre_reference::value::Value
+impl core::cmp::PartialEq for vyre_reference::value::Value
+impl core::convert::From<&[u8]> for vyre_reference::value::Value
+impl core::convert::From<alloc::vec::Vec<u8>> for vyre_reference::value::Value
+impl core::default::Default for vyre_reference::subgroup::SubgroupSimulator
+impl core::error::Error for vyre_reference::ReferenceError
+impl core::error::Error for vyre_reference::dual_impls::common::EvalError
+impl core::fmt::Display for vyre_reference::ReferenceError
+impl core::fmt::Display for vyre_reference::dual_impls::common::EvalError
+impl vyre_foundation::visit::expr::ExprVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_foundation::visit::traits::NodeVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_reference::OobReport
+impl vyre_reference::ReferenceError
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::add::AddDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::mul::MulDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::and::AndDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::not::NotDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::or::OrDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::xor::XorDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::compare::eq::EqDualReference
+impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::compare::lt::LtDualReference
+impl vyre_reference::dual_impls::common::EvalError
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ArithAdd
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ArithMul
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Clz
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::CompareEq
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::CompareLt
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Gather
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::HashBlake3
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::HashFnv1a
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::PatternMatchDfa
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::PatternMatchLiteral
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Popcount
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Reduce
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Scan
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Scatter
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ShiftLeft
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::ShiftRight
+impl vyre_reference::dual_impls::common::ReferenceEvaluator for vyre_primitives::markers::Shuffle
+impl vyre_reference::execution::expr::Buffer
+impl vyre_reference::execution::sequential::SequentialWorkgroup
+impl vyre_reference::subgroup::SubgroupSimulator
+impl vyre_reference::value::Value
+impl vyre_reference::workgroup::BufferMap
+impl vyre_reference::workgroup::InvocationIds
+impl vyre_reference::workgroup::LocalSlots
+impl vyre_reference::workgroup::Memory
+impl<'a> vyre_reference::workgroup::Invocation<'a>
+pub const fn vyre_reference::subgroup::SubgroupSimulator::width(&self) -> usize
+pub const vyre_reference::dialect_dispatch::REFERENCE_BACKEND_NAME: &str
+pub const vyre_reference::dual_impls::arith::add::OP_ID: &str
+pub const vyre_reference::dual_impls::arith::mul::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::and::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::clz::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::not::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::or::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::popcount::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::shift_left::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::shift_right::OP_ID: &str
+pub const vyre_reference::dual_impls::bitwise::xor::OP_ID: &str
+pub const vyre_reference::dual_impls::compare::eq::OP_ID: &str
+pub const vyre_reference::dual_impls::compare::lt::OP_ID: &str
+pub const vyre_reference::execution::sequential::MAX_SHARED_BYTES: usize
+pub const vyre_reference::ieee754::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
+pub const vyre_reference::ieee754::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
+pub const vyre_reference::ieee754::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
+pub const vyre_reference::workgroup::InvocationIds::ZERO: Self
+pub const vyre_reference::workgroup::MAX_WORKGROUP_BYTES: usize
+pub fn vyre_primitives::markers::ArithAdd::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::ArithMul::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Clz::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::CompareEq::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::CompareLt::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Gather::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::HashBlake3::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::HashFnv1a::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::PatternMatchDfa::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::PatternMatchLiteral::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Popcount::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Reduce::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Scan::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Scatter::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::ShiftLeft::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::ShiftRight::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_primitives::markers::Shuffle::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_reference::OobReport::total(&self) -> u64
+pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::ReferenceError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::atomics::apply(op: vyre_spec::atomic_op::AtomicOp, old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
+pub fn vyre_reference::atomics::atomic_add(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_and(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_compare_exchange(old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
+pub fn vyre_reference::atomics::atomic_exchange(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_lru_update(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_max(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_min(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_or(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::atomics::atomic_xor(old: u32, value: u32) -> (u32, u32)
+pub fn vyre_reference::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
+pub fn vyre_reference::dialect_dispatch::dispatch_op(op_id: &str, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::dual::DualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual::DualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::add::AddDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::add::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::add::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::mul::MulDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::mul::MulDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::mul::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::arith::mul::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::and::AndDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::and::AndDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::and::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::and::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::clz::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::clz::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::not::NotDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::not::NotDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::not::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::not::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::or::OrDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::or::OrDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::or::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::or::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::popcount::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::popcount::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::shift_left::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::shift_left::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::shift_right::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::shift_right::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::xor::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::bitwise::xor::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::common::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::dual_impls::common::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::dual_impls::common::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
+pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::eq::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::eq::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::lt::LtDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::lt::LtDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::lt::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::compare::lt::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_op_ids() -> &'static [&'static str]
+pub fn vyre_reference::execution::expr::Buffer::into_value(self) -> vyre_reference::value::Value
+pub fn vyre_reference::execution::expr::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_reference::execution::expr::buffer_mut<'a>(memory: &'a mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::result::Result<&'a mut vyre_reference::execution::expr::Buffer, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::expr::eval(expr: &vyre_foundation::ir_inner::model::generated::Expr, invocation: &mut vyre_reference::workgroup::Invocation<'_>, memory: &mut vyre_reference::workgroup::Memory, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_reference::value::Value, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::is_reference_input(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
+pub fn vyre_reference::execution::is_reference_output(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
+pub fn vyre_reference::execution::node::step<'a>(invocation: &mut vyre_reference::workgroup::Invocation<'a>, memory: &mut vyre_reference::workgroup::Memory, program: &'a vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::op_count::count_ops<R>(f: impl core::ops::function::FnOnce() -> R) -> (R, u64)
+pub fn vyre_reference::execution::output_index(program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::option::Option<usize>
+pub fn vyre_reference::execution::reference_eval(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::run_storage_graph(nodes: &[(vyre_foundation::ir_inner::model::node_kind::NodeId, vyre_foundation::ir_inner::model::node_kind::NodeStorage)], outputs: &[vyre_foundation::ir_inner::model::node_kind::NodeId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::node_kind::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::execution::sequential::SequentialWorkgroup::for_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> Self
+pub fn vyre_reference::execution::sequential::SequentialWorkgroup::invocation_count(&self) -> u32
+pub fn vyre_reference::execution::sequential::SequentialWorkgroup::invocations(&self, workgroup_id: [u32; 3]) -> impl core::iter::traits::iterator::Iterator<Item = vyre_reference::workgroup::InvocationIds>
+pub fn vyre_reference::flat_cpu::run_flat(program: &vyre_foundation::ir_inner::model::program::core::Program, input: &[u8], output: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::ieee754::canonical_acos(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_asin(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_atan(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_cos(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_cosh(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_exp(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_exp2(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_f32(value: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_inverse_sqrt(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_log(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_log2(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_reciprocal(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_sin(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_sinh(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_sqrt(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_tan(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_tanh(x: f32) -> f32
+pub fn vyre_reference::ieee754::canonical_ulp_distance(left: f32, right: f32) -> u32
+pub fn vyre_reference::ieee754::pending_float_types() -> vyre_reference::ReferenceError
+pub fn vyre_reference::is_reference_input(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
+pub fn vyre_reference::is_reference_output(decl: &vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl) -> bool
+pub fn vyre_reference::output_index(program: &vyre_foundation::ir_inner::model::program::core::Program, name: &str) -> core::option::Option<usize>
+pub fn vyre_reference::reference_eval(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_lane_reversed(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
+pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::resolve_dual(op_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
+pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::run_storage_graph(nodes: &[(vyre_foundation::ir_inner::model::node_kind::NodeId, vyre_foundation::ir_inner::model::node_kind::NodeStorage)], outputs: &[vyre_foundation::ir_inner::model::node_kind::NodeId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::node_kind::Value>, vyre_reference::ReferenceError>
+pub fn vyre_reference::subgroup::SubgroupSimulator::add(&self, values: &[u32]) -> u32
+pub fn vyre_reference::subgroup::SubgroupSimulator::ballot<const N: usize>(&self, mask: &[bool; N]) -> u32
+pub fn vyre_reference::subgroup::SubgroupSimulator::ballot_slice(&self, mask: &[bool]) -> u32
+pub fn vyre_reference::subgroup::SubgroupSimulator::default() -> Self
+pub fn vyre_reference::subgroup::SubgroupSimulator::new(width: usize) -> Self
+pub fn vyre_reference::subgroup::SubgroupSimulator::shuffle(&self, values: &[u32], src_lanes: &[u32]) -> alloc::vec::Vec<u32>
+pub fn vyre_reference::subgroup::SubgroupSimulator::subgroup_bounds(&self, lane_count: usize, lane_index: usize) -> (usize, usize)
+pub fn vyre_reference::value::Value::as_u32(&self) -> u32
+pub fn vyre_reference::value::Value::as_u64(&self) -> u64
+pub fn vyre_reference::value::Value::eq(&self, other: &Self) -> bool
+pub fn vyre_reference::value::Value::extend_bytes_width(&self, declared_width: usize, out: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::value::Value::from(bytes: &[u8]) -> Self
+pub fn vyre_reference::value::Value::from(bytes: alloc::vec::Vec<u8>) -> Self
+pub fn vyre_reference::value::Value::from_element_bytes(ty: vyre_spec::data_type::DataType, bytes: &[u8]) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_reference::value::Value::to_bytes(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::value::Value::to_bytes_width(&self, declared_width: usize) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::value::Value::truthy(&self) -> bool
+pub fn vyre_reference::value::Value::try_as_f32(&self) -> core::option::Option<f32>
+pub fn vyre_reference::value::Value::try_as_u32(&self) -> core::option::Option<u32>
+pub fn vyre_reference::value::Value::try_as_u64(&self) -> core::option::Option<u64>
+pub fn vyre_reference::value::Value::try_zero_for(ty: vyre_spec::data_type::DataType) -> core::option::Option<Self>
+pub fn vyre_reference::value::Value::wide_bytes(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::value::Value::write_bytes_width_into(&self, target: &mut [u8])
+pub fn vyre_reference::value::Value::zero_for(ty: vyre_spec::data_type::DataType) -> Self
+pub fn vyre_reference::workgroup::BufferMap::get(&self, name: &str) -> core::option::Option<&vyre_reference::execution::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::get_mut(&mut self, name: &str) -> core::option::Option<&mut vyre_reference::execution::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::insert(&mut self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> core::option::Option<vyre_reference::execution::expr::Buffer>
+pub fn vyre_reference::workgroup::BufferMap::into_iter_pairs(self) -> impl core::iter::traits::iterator::Iterator<Item = (alloc::sync::Arc<str>, vyre_reference::execution::expr::Buffer)>
+pub fn vyre_reference::workgroup::BufferMap::is_empty(&self) -> bool
+pub fn vyre_reference::workgroup::BufferMap::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&str, &vyre_reference::execution::expr::Buffer)>
+pub fn vyre_reference::workgroup::BufferMap::len(&self) -> usize
+pub fn vyre_reference::workgroup::BufferMap::new() -> Self
+pub fn vyre_reference::workgroup::Invocation<'a>::assign(&mut self, name: &str, value: vyre_reference::value::Value) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::workgroup::Invocation<'a>::bind(&mut self, name: &str, value: vyre_reference::value::Value) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::workgroup::Invocation<'a>::bind_loop_var(&mut self, name: &str, value: vyre_reference::value::Value) -> core::result::Result<(), vyre_reference::ReferenceError>
+pub fn vyre_reference::workgroup::Invocation<'a>::done(&self) -> bool
+pub fn vyre_reference::workgroup::Invocation<'a>::local(&self, name: &str) -> core::option::Option<&vyre_reference::value::Value>
+pub fn vyre_reference::workgroup::Invocation<'a>::new(ids: vyre_reference::workgroup::InvocationIds, entry: &'a [vyre_foundation::ir_inner::model::generated::Node]) -> Self
+pub fn vyre_reference::workgroup::Invocation<'a>::pop_scope(&mut self)
+pub fn vyre_reference::workgroup::Invocation<'a>::push_scope(&mut self)
+pub fn vyre_reference::workgroup::LocalSlots::for_nodes(nodes: &[vyre_foundation::ir_inner::model::generated::Node]) -> Self
+pub fn vyre_reference::workgroup::LocalSlots::for_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> Self
+pub fn vyre_reference::workgroup::LocalSlots::visit_assign(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_load(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &vyre_foundation::ir_inner::model::expr::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &vyre_foundation::ir_inner::model::expr::Ident, offset: &vyre_foundation::ir_inner::model::generated::Expr, size: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_async_wait(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_barrier(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_block(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_if(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, cond: &vyre_foundation::ir_inner::model::generated::Expr, _: &[vyre_foundation::ir_inner::model::generated::Node], _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_indirect_dispatch(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: u64) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_let(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, name: &vyre_foundation::ir_inner::model::expr::Ident, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_loop(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, var: &vyre_foundation::ir_inner::model::expr::Ident, from: &vyre_foundation::ir_inner::model::generated::Expr, to: &vyre_foundation::ir_inner::model::generated::Expr, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_opaque_node(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &dyn vyre_foundation::ir_inner::model::node::NodeExtension) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_region(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, _: &core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>, _: &[vyre_foundation::ir_inner::model::generated::Node]) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_resume(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_return(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_store(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, _: &vyre_foundation::ir_inner::model::expr::Ident, index: &vyre_foundation::ir_inner::model::generated::Expr, value: &vyre_foundation::ir_inner::model::generated::Expr) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::LocalSlots::visit_trap(&mut self, _: &vyre_foundation::ir_inner::model::generated::Node, address: &vyre_foundation::ir_inner::model::generated::Expr, _: &vyre_foundation::ir_inner::model::expr::Ident) -> core::ops::control_flow::ControlFlow<Self::Break>
+pub fn vyre_reference::workgroup::Memory::bytes(&self) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::workgroup::Memory::empty() -> Self
+pub fn vyre_reference::workgroup::Memory::from_bytes(bytes: alloc::vec::Vec<u8>) -> Self
+pub fn vyre_reference::workgroup::Memory::into_bytes(self) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::workgroup::Memory::with_storage(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> Self
+pub fn vyre_reference::workgroup::Memory::with_workgroup(self, name: impl core::convert::Into<alloc::sync::Arc<str>>, buffer: vyre_reference::execution::expr::Buffer) -> Self
+pub mod vyre_reference
+pub mod vyre_reference::atomics
+pub mod vyre_reference::cpu_op
+pub mod vyre_reference::dialect_dispatch
+pub mod vyre_reference::dual
+pub mod vyre_reference::dual_impls
+pub mod vyre_reference::dual_impls::arith
+pub mod vyre_reference::dual_impls::arith::add
+pub mod vyre_reference::dual_impls::arith::add::reference_a
+pub mod vyre_reference::dual_impls::arith::add::reference_b
+pub mod vyre_reference::dual_impls::arith::mul
+pub mod vyre_reference::dual_impls::arith::mul::reference_a
+pub mod vyre_reference::dual_impls::arith::mul::reference_b
+pub mod vyre_reference::dual_impls::bitwise
+pub mod vyre_reference::dual_impls::bitwise::and
+pub mod vyre_reference::dual_impls::bitwise::and::reference_a
+pub mod vyre_reference::dual_impls::bitwise::and::reference_b
+pub mod vyre_reference::dual_impls::bitwise::clz
+pub mod vyre_reference::dual_impls::bitwise::clz::reference
+pub mod vyre_reference::dual_impls::bitwise::clz::reference_a
+pub mod vyre_reference::dual_impls::bitwise::clz::reference_b
+pub mod vyre_reference::dual_impls::bitwise::not
+pub mod vyre_reference::dual_impls::bitwise::not::reference_a
+pub mod vyre_reference::dual_impls::bitwise::not::reference_b
+pub mod vyre_reference::dual_impls::bitwise::or
+pub mod vyre_reference::dual_impls::bitwise::or::reference_a
+pub mod vyre_reference::dual_impls::bitwise::or::reference_b
+pub mod vyre_reference::dual_impls::bitwise::popcount
+pub mod vyre_reference::dual_impls::bitwise::popcount::reference
+pub mod vyre_reference::dual_impls::bitwise::popcount::reference_a
+pub mod vyre_reference::dual_impls::bitwise::popcount::reference_b
+pub mod vyre_reference::dual_impls::bitwise::shift_left
+pub mod vyre_reference::dual_impls::bitwise::shift_left::reference
+pub mod vyre_reference::dual_impls::bitwise::shift_left::reference_a
+pub mod vyre_reference::dual_impls::bitwise::shift_left::reference_b
+pub mod vyre_reference::dual_impls::bitwise::shift_right
+pub mod vyre_reference::dual_impls::bitwise::shift_right::reference
+pub mod vyre_reference::dual_impls::bitwise::shift_right::reference_a
+pub mod vyre_reference::dual_impls::bitwise::shift_right::reference_b
+pub mod vyre_reference::dual_impls::bitwise::xor
+pub mod vyre_reference::dual_impls::bitwise::xor::reference_a
+pub mod vyre_reference::dual_impls::bitwise::xor::reference_b
+pub mod vyre_reference::dual_impls::common
+pub mod vyre_reference::dual_impls::compare
+pub mod vyre_reference::dual_impls::compare::eq
+pub mod vyre_reference::dual_impls::compare::eq::reference
+pub mod vyre_reference::dual_impls::compare::eq::reference_a
+pub mod vyre_reference::dual_impls::compare::eq::reference_b
+pub mod vyre_reference::dual_impls::compare::lt
+pub mod vyre_reference::dual_impls::compare::lt::reference
+pub mod vyre_reference::dual_impls::compare::lt::reference_a
+pub mod vyre_reference::dual_impls::compare::lt::reference_b
+pub mod vyre_reference::dual_impls::hash
+pub mod vyre_reference::dual_impls::hash::blake3
+pub mod vyre_reference::dual_impls::hash::blake3::reference
+pub mod vyre_reference::dual_impls::hash::fnv1a
+pub mod vyre_reference::dual_impls::hash::fnv1a::reference
+pub mod vyre_reference::dual_impls::memory
+pub mod vyre_reference::dual_impls::memory::gather
+pub mod vyre_reference::dual_impls::memory::gather::reference
+pub mod vyre_reference::dual_impls::memory::scatter
+pub mod vyre_reference::dual_impls::memory::scatter::reference
+pub mod vyre_reference::dual_impls::scan
+pub mod vyre_reference::dual_impls::scan::dfa
+pub mod vyre_reference::dual_impls::scan::dfa::reference
+pub mod vyre_reference::dual_impls::scan::literal
+pub mod vyre_reference::dual_impls::scan::literal::reference
+pub mod vyre_reference::dual_impls::scan::prefix
+pub mod vyre_reference::dual_impls::scan::prefix::reference
+pub mod vyre_reference::dual_impls::workgroup
+pub mod vyre_reference::dual_impls::workgroup::reduce
+pub mod vyre_reference::dual_impls::workgroup::reduce::reference
+pub mod vyre_reference::dual_impls::workgroup::shuffle
+pub mod vyre_reference::dual_impls::workgroup::shuffle::reference
+pub mod vyre_reference::execution
+pub mod vyre_reference::execution::expr
+pub mod vyre_reference::execution::node
+pub mod vyre_reference::execution::op_count
+pub mod vyre_reference::execution::sequential
+pub mod vyre_reference::flat_cpu
+pub mod vyre_reference::ieee754
+pub mod vyre_reference::registry_architecture
+pub mod vyre_reference::subgroup
+pub mod vyre_reference::value
+pub mod vyre_reference::workgroup
+pub struct vyre_reference::OobReport
+pub struct vyre_reference::ReferenceError
+pub struct vyre_reference::dual_impls::EvalError
+pub struct vyre_reference::dual_impls::arith::add::AddDualReference
+pub struct vyre_reference::dual_impls::arith::mul::MulDualReference
+pub struct vyre_reference::dual_impls::bitwise::and::AndDualReference
+pub struct vyre_reference::dual_impls::bitwise::not::NotDualReference
+pub struct vyre_reference::dual_impls::bitwise::or::OrDualReference
+pub struct vyre_reference::dual_impls::bitwise::xor::XorDualReference
+pub struct vyre_reference::dual_impls::common::EvalError
+pub struct vyre_reference::dual_impls::compare::eq::EqDualReference
+pub struct vyre_reference::dual_impls::compare::lt::LtDualReference
+pub struct vyre_reference::execution::expr::Buffer
+pub struct vyre_reference::execution::sequential::SequentialWorkgroup
+pub struct vyre_reference::subgroup::SubgroupSimulator
+pub struct vyre_reference::workgroup::BufferMap
+pub struct vyre_reference::workgroup::Invocation<'a>
+pub struct vyre_reference::workgroup::InvocationIds
+pub struct vyre_reference::workgroup::LocalSlots
+pub struct vyre_reference::workgroup::Memory
+pub trait vyre_reference::dual::DualReference
+pub trait vyre_reference::dual_impls::ReferenceEvaluator
+pub trait vyre_reference::dual_impls::common::ReferenceEvaluator
+pub type vyre_reference::dual::ReferenceFn = fn(&[u8]) -> alloc::vec::Vec<u8>
+pub type vyre_reference::workgroup::LocalSlots::Break = core::convert::Infallible
+pub use vyre_reference::cpu_op::CategoryAOp
+pub use vyre_reference::cpu_op::CpuFn
+pub use vyre_reference::cpu_op::CpuOp
+pub vyre_reference::OobReport::oob_atomics: u64
+pub vyre_reference::OobReport::oob_loads: u64
+pub vyre_reference::OobReport::oob_stores: u64
+pub vyre_reference::execution::sequential::SequentialWorkgroup::size: [u32; 3]
+pub vyre_reference::value::Value::Array(alloc::vec::Vec<vyre_reference::value::Value>)
+pub vyre_reference::value::Value::Bool(bool)
+pub vyre_reference::value::Value::Bytes(alloc::sync::Arc<[u8]>)
+pub vyre_reference::value::Value::Float(f64)
+pub vyre_reference::value::Value::I32(i32)
+pub vyre_reference::value::Value::U32(u32)
+pub vyre_reference::value::Value::U64(u64)
+pub vyre_reference::workgroup::Frame::Loop
+pub vyre_reference::workgroup::Frame::Loop::body: &'a [vyre_foundation::ir_inner::model::generated::Node]
+pub vyre_reference::workgroup::Frame::Loop::next: u32
+pub vyre_reference::workgroup::Frame::Loop::to: u32
+pub vyre_reference::workgroup::Frame::Loop::var: &'a str
+pub vyre_reference::workgroup::Frame::Nodes
+pub vyre_reference::workgroup::Frame::Nodes::index: usize
+pub vyre_reference::workgroup::Frame::Nodes::nodes: &'a [vyre_foundation::ir_inner::model::generated::Node]
+pub vyre_reference::workgroup::Frame::Nodes::scoped: bool
+pub vyre_reference::workgroup::Invocation::ids: vyre_reference::workgroup::InvocationIds
+pub vyre_reference::workgroup::Invocation::returned: bool
+pub vyre_reference::workgroup::Invocation::uniform_checks: alloc::vec::Vec<(usize, bool)>
+pub vyre_reference::workgroup::Invocation::waiting_at_barrier: bool
+pub vyre_reference::workgroup::InvocationIds::global: [u32; 3]
+pub vyre_reference::workgroup::InvocationIds::local: [u32; 3]
+pub vyre_reference::workgroup::InvocationIds::workgroup: [u32; 3]

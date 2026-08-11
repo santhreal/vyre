@@ -1,5 +1,5 @@
 use super::super::CalleeExpander;
-use crate::error::Result;
+use crate::error::IrResult as Result;
 use crate::ir::{AtomicOp, BinOp, Expr, Ident, Node, UnOp};
 
 impl CalleeExpander<'_> {
@@ -39,7 +39,7 @@ impl CalleeExpander<'_> {
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId
             | Expr::SubgroupSize => {
-                Err(crate::error::Error::lowering(
+                Err(crate::error::IrError::lowering(
                     "inliner cannot inline a callee that references \
                      InvocationId / WorkgroupId / LocalId / SubgroupLocalId / SubgroupSize: \
                      these built-ins are per-invocation and cannot be passed as callee arguments. \
@@ -79,11 +79,11 @@ impl CalleeExpander<'_> {
                 ordering,
             } => self.atomic(*op, buffer, index, expected.as_deref(), value, *ordering),
             &Expr::SubgroupBallot { .. } | &Expr::SubgroupShuffle { .. } | &Expr::SubgroupReduce { .. } => {
-                Err(crate::error::Error::lowering(
+                Err(crate::error::IrError::lowering(
                     "inliner cannot expand subgroup intrinsics; RFC 0004 gates this on target builder 25+. Fix: avoid inlining across subgroup-op boundaries.".to_string(),
                 ))
             }
-        Expr::Opaque(extension) => Err(crate::error::Error::lowering(format!(
+        Expr::Opaque(extension) => Err(crate::error::IrError::lowering(format!(
                 "inliner cannot expand opaque expression extension `{}`/`{}`. Fix: lower the extension to core Expr variants before inlining.",
                 extension.extension_kind(),
                 extension.debug_identity()

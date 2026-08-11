@@ -34,7 +34,7 @@ pub use interner::{intern_string, InternedOpId};
 pub use intrinsic_adapter::{validate_intrinsic_lowering, IntrinsicRegistrationError};
 pub use lowering::{
     LoweringCtx, LoweringTable, NativeModule, NativeModuleBuilder, PrimaryBinaryBuilder,
-    PrimaryTextBuilder, ReferenceKind, SecondaryTextBuilder, TextModule,
+    PrimaryTextBuilder, SecondaryTextBuilder, TextModule,
 };
 pub use migration::{
     deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,

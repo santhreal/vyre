@@ -1,5 +1,5 @@
 use super::super::CalleeExpander;
-use crate::error::Result;
+use crate::error::IrResult as Result;
 use crate::ir::{Expr, Ident, Node};
 
 impl CalleeExpander<'_> {
@@ -116,7 +116,7 @@ impl CalleeExpander<'_> {
                     body: std::sync::Arc::new(self.nodes(&body_nodes)?),
                 }])
             }
-            Node::Opaque(extension) => Err(crate::error::Error::lowering(format!(
+            Node::Opaque(extension) => Err(crate::error::IrError::lowering(format!(
                 "inliner cannot expand opaque statement extension `{}`/`{}`. Fix: lower the extension to core Node variants before inlining.",
                 extension.extension_kind(),
                 extension.debug_identity()

@@ -8,10 +8,10 @@ use super::super::{
 };
 use crate::execution::call::invoke_cpu_ref;
 use crate::execution::expr_cast::spec_output_value;
+use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
-use vyre::ir::{DataType, Expr, Node};
-use vyre::Error;
-use vyre::TypedParam;
+use vyre_foundation::ir::{DataType, Expr, Node};
+use vyre_foundation::TypedParam;
 
 const MAX_CALL_INPUT_BYTES: usize = 64 * 1024 * 1024;
 
@@ -22,7 +22,7 @@ pub(crate) fn step_nodes_frame<'a>(
     index: usize,
     scoped: bool,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<bool, Error> {
+) -> Result<bool, ReferenceError> {
     if index >= nodes.len() {
         if scoped {
             invocation.locals.pop_scope();
@@ -61,7 +61,7 @@ pub(crate) fn step_nodes_frame<'a>(
             index,
             value,
         } => {
-            let idx = eval_expr (index , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { Error :: interp ("store index cannot be represented as u32. Fix: use a non-negative scalar index within u32." ,) }) ? ;
+            let idx = eval_expr (index , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("store index cannot be represented as u32. Fix: use a non-negative scalar index within u32.") }) ? ;
             let v = eval_expr(
                 value,
                 invocation,
@@ -102,8 +102,8 @@ pub(crate) fn step_nodes_frame<'a>(
             to,
             body,
         } => {
-            let from_value = eval_expr (from , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { Error :: interp ("loop lower bound cannot be represented as u32. Fix: use an in-range unsigned loop bound." ,) }) ? ;
-            let to_value = eval_expr (to , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { Error :: interp ("loop upper bound cannot be represented as u32. Fix: use an in-range unsigned loop bound." ,) }) ? ;
+            let from_value = eval_expr (from , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("loop lower bound cannot be represented as u32. Fix: use an in-range unsigned loop bound.") }) ? ;
+            let to_value = eval_expr (to , invocation , memory , #[cfg (feature = "subgroup-ops")] snapshots ,) ? . try_as_u32 () . ok_or_else (| | { ReferenceError::new("loop upper bound cannot be represented as u32. Fix: use an in-range unsigned loop bound.") }) ? ;
             invocation.frames.push(Frame::Loop {
                 var,
                 next: from_value,
@@ -131,7 +131,7 @@ pub(crate) fn step_nodes_frame<'a>(
             count_offset,
         } => {
             let count_offset = u32::try_from(*count_offset).map_err(|_| {
-                Error::interp(format!(
+                ReferenceError::new(format!(
                     "indirect dispatch count offset {count_offset} exceeds u32. Fix: keep indirect dispatch offsets within the reference interpreter index domain."
                 ))
             })?;
@@ -188,21 +188,21 @@ pub(crate) fn step_nodes_frame<'a>(
             )?
             .try_as_u32()
             .ok_or_else(|| {
-                Error::interp(format!(
+                ReferenceError::new(format!(
                     "reference trap `{tag}` address is not a u32. Fix: pass a scalar u32 trap address."
                 ))
             })?;
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "reference dispatch trapped: address={address}, tag=`{tag}`. Fix: handle the trap condition or route this Program through a backend/runtime with replay support."
             )));
         }
         Node::Resume { tag } => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "reference dispatch reached Resume `{tag}` without a replay runtime. Fix: lower Resume through a runtime-owned replay path before reference execution."
             )));
         }
         Node::AllReduce { buffer, group, .. } => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "hashmap reference interpreter reached AllReduce on buffer `{buffer}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
                 group.as_u32()
             )));
@@ -212,7 +212,7 @@ pub(crate) fn step_nodes_frame<'a>(
             output,
             group,
         } => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "hashmap reference interpreter reached AllGather `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
                 group.as_u32()
             )));
@@ -223,7 +223,7 @@ pub(crate) fn step_nodes_frame<'a>(
             group,
             ..
         } => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "hashmap reference interpreter reached ReduceScatter `{input}` -> `{output}` for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
                 group.as_u32()
             )));
@@ -233,7 +233,7 @@ pub(crate) fn step_nodes_frame<'a>(
             root,
             group,
         } => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "hashmap reference interpreter reached Broadcast on buffer `{buffer}` from root {root} for group {}. Fix: run this Program on a distributed backend with collective support or lower the single-rank collective before reference execution.",
                 group.as_u32()
             )));
@@ -247,16 +247,14 @@ pub(crate) fn step_nodes_frame<'a>(
             });
         }
         Node::Opaque(extension) => {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "hashmap reference interpreter does not support opaque node extension `{}`/`{}`. Fix: provide a reference evaluator for this NodeExtension or lower it to core Node variants before evaluation.",
                 extension.extension_kind(),
                 extension.debug_identity()
             )));
         }
         _ => {
-            return Err(Error::interp(
-                "hashmap reference interpreter encountered an unknown node variant. Fix: add explicit reference semantics for the new Node before dispatch.",
-            ));
+            return Err(ReferenceError::new("hashmap reference interpreter encountered an unknown node variant. Fix: add explicit reference semantics for the new Node before dispatch."));
         }
     }
     Ok(true)
@@ -268,7 +266,7 @@ pub(crate) fn step_loop_frame<'a>(
     next: u32,
     to: u32,
     body: &'a [Node],
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     if next >= to {
         return Ok(());
     }
@@ -295,7 +293,7 @@ pub(crate) fn eval_call(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<Value, Error> {
+) -> Result<Value, ReferenceError> {
     let HashmapResolvedCall { def } = resolve_call(expr, op_id, invocation)?;
     validate_arity(op_id, inputs.len(), def.signature.inputs.len())?;
     let input = encode_inputs(
@@ -324,11 +322,11 @@ pub(crate) fn eval_call(
     Ok(spec_output_value(parsed_out_type, &output))
 }
 
-fn validate_arity(op_id: &str, actual: usize, expected: usize) -> Result<(), Error> {
+fn validate_arity(op_id: &str, actual: usize, expected: usize) -> Result<(), ReferenceError> {
     if actual == expected {
         return Ok(());
     }
-    Err(Error::interp(format!(
+    Err(ReferenceError::new(format!(
         "call `{op_id}` received {actual} arguments but the primitive signature requires {expected}. Fix: pass exactly {expected} arguments."
     )))
 }
@@ -340,17 +338,17 @@ fn encode_inputs(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<Vec<u8>, Error> {
+) -> Result<Vec<u8>, ReferenceError> {
     let mut input = Vec::with_capacity(inputs.iter().map(|param| param_width(param.ty)).sum());
     for (arg, param) in args.iter().zip(inputs) {
         let declared_width = param_width(param.ty);
         let next_len = input.len().checked_add(declared_width).ok_or_else(|| {
-            Error::interp(format!(
+            ReferenceError::new(format!(
                 "call `{op_id}` input byte size overflows usize. Fix: reduce the argument count or byte payload size."
             ))
         })?;
         if next_len > MAX_CALL_INPUT_BYTES {
-            return Err(Error::interp(format!(
+            return Err(ReferenceError::new(format!(
                 "call `{op_id}` requires {next_len} input bytes, exceeding the {MAX_CALL_INPUT_BYTES}-byte reference budget. Fix: reduce call input size."
             )));
         }
@@ -379,8 +377,8 @@ fn eval_indirect_dispatch(
     count_buffer: &str,
     count_offset: u32,
     _memory: &HashmapMemory,
-) -> Result<(), Error> {
-    Err(Error::interp(format!(
+) -> Result<(), ReferenceError> {
+    Err(ReferenceError::new(format!(
         "Node::IndirectDispatch cannot execute in the hashmap reference interpreter because dynamic indirect dispatch requires runtime queue scheduling. Fix: run this program on a backend/runtime that supports indirect dispatch or lower `{count_buffer}` at byte offset {count_offset} to a static workgroup grid before reference execution."
     )))
 }
@@ -393,7 +391,7 @@ fn eval_async_load(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, Error> {
+) -> Result<HashmapAsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async load source offset",
@@ -427,7 +425,7 @@ fn eval_async_store(
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<HashmapAsyncTransfer, Error> {
+) -> Result<HashmapAsyncTransfer, ReferenceError> {
     let start = eval_byte_count(
         offset,
         "async store destination offset",
@@ -453,14 +451,13 @@ fn eval_async_store(
     })
 }
 
-
 fn eval_byte_count(
     expr: &Expr,
     label: &str,
     invocation: &mut HashmapInvocation<'_>,
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
-) -> Result<usize, Error> {
+) -> Result<usize, ReferenceError> {
     let value = eval_expr(
         expr,
         invocation,
@@ -469,12 +466,12 @@ fn eval_byte_count(
         snapshots,
     )?;
     usize::try_from(value.try_as_u64().ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "{label} cannot be represented as u64. Fix: use an in-range non-negative byte count."
         ))
     })?)
     .map_err(|_| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "{label} exceeds host usize. Fix: reduce the async transfer span."
         ))
     })
@@ -491,7 +488,7 @@ fn read_bytes(
     source: &str,
     start: usize,
     byte_count: usize,
-) -> Result<Vec<u8>, Error> {
+) -> Result<Vec<u8>, ReferenceError> {
     let buffer = super::super::memory::resolve_buffer(memory, source)?;
     let bytes = buffer
         .bytes
@@ -505,7 +502,7 @@ fn read_bytes(
     Ok(payload)
 }
 
-fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), Error> {
+fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), ReferenceError> {
     super::super::memory::resolve_buffer(memory, name).map(|_| ())
 }
 
@@ -516,7 +513,7 @@ fn ensure_buffer_exists(memory: &HashmapMemory, name: &str) -> Result<(), Error>
 fn apply_async_transfer(
     transfer: HashmapAsyncTransfer,
     memory: &mut HashmapMemory,
-) -> Result<(), Error> {
+) -> Result<(), ReferenceError> {
     match transfer {
         HashmapAsyncTransfer::Copy {
             destination,
@@ -542,18 +539,18 @@ fn resolve_call(
     call_expr: *const Expr,
     op_id: &str,
     invocation: &mut HashmapInvocation<'_>,
-) -> Result<HashmapResolvedCall, Error> {
+) -> Result<HashmapResolvedCall, ReferenceError> {
     if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
         return Ok(resolved);
     }
-    let lookup = vyre::dialect_lookup().ok_or_else(|| {
-        Error::interp(format!(
+    let lookup = vyre_foundation::dialect_lookup().ok_or_else(|| {
+        ReferenceError::new(format!(
             "unsupported call `{op_id}`: no DialectLookup is installed."
         ))
     })?;
     let interned = lookup.intern_op(op_id);
     let def = lookup.lookup(interned).ok_or_else(|| {
-        Error::interp(format!(
+        ReferenceError::new(format!(
             "unsupported call `{op_id}`. Fix: register the op in DialectRegistry."
         ))
     })?;
@@ -567,7 +564,7 @@ mod tests {
     use super::super::super::memory::HashmapMemory;
     use crate::oob::Buffer;
     use rustc_hash::FxHashMap;
-    use vyre::ir::DataType;
+    use vyre_foundation::ir::DataType;
 
     /// Poisons the `Arc<RwLock<Vec<u8>>>` inside a `Buffer` by taking the write
     /// lock in a thread and panicking before releasing it, then confirms that the
