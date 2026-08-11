@@ -105,6 +105,10 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   Persistent product execution uses authenticated artifact sessions; concrete
   pipeline compilation remains available only as a hidden oracle helper for
   driver cache tests.
+- The macro crate now exports only the production-used AST registry and
+  semantic pass registration generators. Test-only operation registration,
+  algebraic-law derive, no-op builder marker, and generated decoder stubs are
+  gone.
 
 ### Fixed
 

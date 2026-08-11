@@ -933,14 +933,6 @@ section = "Optimization"
 source = "optimization/TAXONOMY.md"
 nav = true
 
-[[page]]
-path = "optimization/XTASK_COMMAND_MATRIX.md"
-title = "Xtask command matrix"
-status = "generated"
-class = "projection"
-section = "Optimization"
-source = "../xtask/src/command_matrix.rs"
-nav = true
 
 [[page]]
 path = "parity/three_substrate.md"
@@ -987,6 +979,7 @@ section = "Guides and reference"
 source = "region-chain.md"
 nav = true
 
+
 [[page]]
 path = "release/v0.4.1.md"
 title = "Vyre 0.4.1 / Weir 0.0.1 release notes"
@@ -1022,6 +1015,15 @@ class = "history"
 section = "Release"
 source = "release/v0.7.1.md"
 nav = false
+
+[[page]]
+path = "release/v0.7.2.md"
+title = "Vyre 0.7.2 release notes"
+status = "generated"
+class = "projection"
+section = "Release"
+source = "../scripts/release_docs.py"
+nav = true
 
 [[page]]
 path = "rfcs/0001-region-inline-pass.md"
@@ -1302,14 +1304,6 @@ section = "Testing"
 source = "../scripts/testing_guides.py"
 nav = true
 
-[[page]]
-path = "testing/vyre-harness.md"
-title = "Testing `vyre-harness`"
-status = "generated"
-class = "projection"
-section = "Testing"
-source = "../scripts/testing_guides.py"
-nav = true
 
 [[page]]
 path = "testing/vyre-intrinsics.md"

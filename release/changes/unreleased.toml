@@ -249,3 +249,7 @@ text = "The neural library now executes a reusable dense gated-MLP ProgramGraph 
 id = "chunked-gated-delta"
 category = "Added"
 text = "The neural library now executes chunk-size-64 gated delta prefill with F32 cumulative log-decay, a strict lower-triangular solve, initial-state correction, chunk output reconstruction, and explicit final matrix state. F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final structural tile cannot read padding, change state, or appear in truncated output."
+[[fragments]]
+id = "canonical-procedural-macro-surface"
+category = "Removed"
+text = "The macro crate now exports only the production-used AST registry and semantic pass registration generators. Test-only operation registration, algebraic-law derive, no-op builder marker, and generated decoder stubs are gone."

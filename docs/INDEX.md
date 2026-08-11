@@ -16,14 +16,14 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 
 ## Cargo-derived workspace facts
 
-- Workspace packages: 35.
-- Shipped library, binary, and example targets: 77.
+- Workspace packages: 34.
+- Shipped library, binary, and example targets: 73.
 - Source: `cargo metadata --no-deps --format-version 1`.
 
 ## Lifecycle counts
 
 - current: 41.
-- generated: 72.
+- generated: 71.
 - superseded: 34.
 - archived: 18.
 
@@ -134,7 +134,6 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `current` | `optimization` | `optimization/README.md` | [optimization/README.md](optimization/README.md) |
 | `current` | `optimization` | `optimization/START_HERE.md` | [optimization/START_HERE.md](optimization/START_HERE.md) |
 | `current` | `optimization` | `optimization/TAXONOMY.md` | [optimization/TAXONOMY.md](optimization/TAXONOMY.md) |
-| `generated` | `projection` | `optimization/XTASK_COMMAND_MATRIX.md` | [../xtask/src/command_matrix.rs](../xtask/src/command_matrix.rs) |
 | `superseded` | `history` | `parity/three_substrate.md` | [parity/three_substrate.md](parity/three_substrate.md) |
 | `superseded` | `history` | `parsing-and-frontends.md` | [parsing-and-frontends.md](parsing-and-frontends.md) |
 | `superseded` | `history` | `primitives-tier.md` | [primitives-tier.md](primitives-tier.md) |
@@ -144,6 +143,7 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `archived` | `history` | `release/v0.4.2.md` | [release/v0.4.2.md](release/v0.4.2.md) |
 | `archived` | `history` | `release/v0.7.0.md` | [release/v0.7.0.md](release/v0.7.0.md) |
 | `archived` | `history` | `release/v0.7.1.md` | [release/v0.7.1.md](release/v0.7.1.md) |
+| `generated` | `projection` | `release/v0.7.2.md` | [../scripts/release_docs.py](../scripts/release_docs.py) |
 | `current` | `guide` | `rfcs/0001-region-inline-pass.md` | [rfcs/0001-region-inline-pass.md](rfcs/0001-region-inline-pass.md) |
 | `current` | `guide` | `rfcs/0002-autodiff-ir-transform.md` | [rfcs/0002-autodiff-ir-transform.md](rfcs/0002-autodiff-ir-transform.md) |
 | `current` | `guide` | `rfcs/0003-datatype-quantized.md` | [rfcs/0003-datatype-quantized.md](rfcs/0003-datatype-quantized.md) |
@@ -175,7 +175,6 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 | `generated` | `projection` | `testing/vyre-frontend-c.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `projection` | `testing/vyre-frontend-rust.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `projection` | `testing/vyre-grammar-gen.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-harness.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `projection` | `testing/vyre-intrinsics.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `projection` | `testing/vyre-libs.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `projection` | `testing/vyre-lints.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |

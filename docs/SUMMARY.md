@@ -89,7 +89,10 @@
 - [Optimization Taxonomy](optimization/TAXONOMY.md)
 - [Start Here for Optimization Work](optimization/START_HERE.md)
 - [Vyre optimization control plane](optimization/README.md)
-- [Xtask command matrix](optimization/XTASK_COMMAND_MATRIX.md)
+
+# Release
+
+- [Vyre 0.7.2 release notes](release/v0.7.2.md)
 
 # Rfcs
 
@@ -119,7 +122,6 @@
 - [Testing `vyre-frontend-c`](testing/vyre-frontend-c.md)
 - [Testing `vyre-frontend-rust`](testing/vyre-frontend-rust.md)
 - [Testing `vyre-grammar-gen`](testing/vyre-grammar-gen.md)
-- [Testing `vyre-harness`](testing/vyre-harness.md)
 - [Testing `vyre-intrinsics`](testing/vyre-intrinsics.md)
 - [Testing `vyre-libs`](testing/vyre-libs.md)
 - [Testing `vyre-lints`](testing/vyre-lints.md)

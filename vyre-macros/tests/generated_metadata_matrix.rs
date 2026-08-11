@@ -4,9 +4,9 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, ops, optimizer};
+pub use support::{ir, optimizer};
 
-use vyre_macros::{define_op, vyre_pass, AlgebraicLaws};
+use vyre_macros::vyre_pass;
 
 #[vyre_pass(
     name = "generated.matrix.selective",
@@ -91,20 +91,6 @@ impl GeneratedDenseMetadataPass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
         optimizer::unchanged(program)
     }
-}
-
-#[derive(AlgebraicLaws)]
-#[vyre(laws = [Commutative, Associative, "Identity { element: 0 }"])]
-pub struct GeneratedLawProvider;
-
-define_op! {
-    id = "generated.matrix.xor_reduce",
-    dialect = "generated.matrix",
-    category = B,
-    inputs = ["u32", "u32", "u32"],
-    outputs = ["u32"],
-    laws = [Commutative, Associative, Identity { element: 0 }],
-    program = crate::ir::Program { id: 0xC0DE },
 }
 
 struct PassCase {
@@ -219,40 +205,4 @@ fn generated_vyre_pass_matrix_checks_thousands_of_metadata_and_behavior_cases() 
         }
     }
     assert_eq!(assertions, 4096 * cases.len() * 16);
-}
-
-#[test]
-fn generated_define_op_and_law_provider_matrix_remains_runtime_discoverable() {
-    assert_eq!(
-        <GeneratedLawProvider as ops::AlgebraicLawProvider>::laws(),
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Associative,
-            ops::AlgebraicLaw::Identity { element: 0 }
-        ]
-    );
-
-    let op = inventory::iter::<dialect::OpDefRegistration>
-        .into_iter()
-        .map(|registration| (registration.factory)())
-        .find(|op| op.id == "generated.matrix.xor_reduce")
-        .expect("define_op! must publish generated matrix op registration");
-
-    assert_eq!(op.dialect, "generated.matrix");
-    assert_eq!(op.category, dialect::Category::B);
-    assert_eq!(op.signature.inputs.len(), 3);
-    assert_eq!(op.signature.outputs.len(), 1);
-    assert!(op.signature.inputs.iter().all(|param| param.ty == "u32"));
-    assert_eq!(
-        op.laws,
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Associative,
-            ops::AlgebraicLaw::Identity { element: 0 }
-        ]
-    );
-    assert_eq!(
-        op.compose.expect("compose function must exist")().id,
-        0xC0DE
-    );
 }

@@ -2,8 +2,6 @@
 
 mod support;
 
-pub use support::ir_inner;
-
 use vyre_macros::vyre_ast_registry;
 
 vyre_ast_registry! {
@@ -84,37 +82,6 @@ fn type_cases() -> Vec<(GeneratedType, &'static str)> {
     ]
 }
 
-fn decoder_hashes(node: &ir_inner::model::node::Node, out: &mut Vec<u32>) {
-    match node {
-        ir_inner::model::node::Node::If {
-            cond, otherwise, ..
-        } => {
-            if let ir_inner::model::expr::Expr::BinOp { right, .. } = cond {
-                if let ir_inner::model::expr::Expr::LitU32(hash) = right.as_ref() {
-                    out.push(*hash);
-                }
-            }
-            for child in otherwise {
-                decoder_hashes(child, out);
-            }
-        }
-        // The `then` branch is a single `Node::trap` leaf carrying the same
-        // opcode discriminant as the enclosing `If` cond; it holds no nested
-        // decoder `If`, so collecting from the cond alone counts each variant
-        // exactly once.
-        ir_inner::model::node::Node::Barrier
-        | ir_inner::model::node::Node::Return
-        | ir_inner::model::node::Node::Trap { .. } => {}
-    }
-}
-
-fn sorted_decoder_hashes(node: &ir_inner::model::node::Node) -> Vec<u32> {
-    let mut hashes = Vec::new();
-    decoder_hashes(node, &mut hashes);
-    hashes.sort();
-    hashes
-}
-
 #[test]
 fn generated_ast_registry_matrix_pins_op_ids_and_partial_eq() {
     let expr = expr_cases();
@@ -168,27 +135,4 @@ fn generated_ast_registry_matrix_pins_op_ids_and_partial_eq() {
     );
 
     assert_eq!(assertions, 4096 * 6);
-}
-
-#[test]
-fn generated_ast_registry_decoders_cover_every_variant_by_index() {
-    // After the hash-collision fix, each variant's decoder opcode discriminant
-    // is its DECLARATION INDEX (0..N), guaranteed unique. NOT the old
-    // collision-prone ASCII byte-sum. So the cascade must carry exactly the
-    // contiguous index set `0..variant_count`, one per variant, no gaps or dups.
-    // GeneratedExpr: Const, Unary, Pair, Binary, Select (5 variants).
-    assert_eq!(
-        sorted_decoder_hashes(&generate_generatedexpr_gpu_vm_decoder()),
-        (0u32..5).collect::<Vec<_>>(),
-    );
-    // GeneratedNode: Return, Barrier, Store, Branch (4 variants).
-    assert_eq!(
-        sorted_decoder_hashes(&generate_generatednode_gpu_vm_decoder()),
-        (0u32..4).collect::<Vec<_>>(),
-    );
-    // GeneratedType: U32, F32, Ptr, Tensor (4 variants).
-    assert_eq!(
-        sorted_decoder_hashes(&generate_generatedtype_gpu_vm_decoder()),
-        (0u32..4).collect::<Vec<_>>(),
-    );
 }

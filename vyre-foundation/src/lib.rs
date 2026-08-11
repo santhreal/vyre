@@ -133,8 +133,8 @@ pub use analysis::graph_view::{
 pub use dispatch::dialect_lookup::{
     dialect_lookup, install_dialect_lookup, intern_string, AttrSchema, AttrType, Category,
     DialectLookup, InternedOpId, LoweringCtx, LoweringTable, NativeModule, NativeModuleBuilder,
-    OpDef, PrimaryBinaryBuilder, PrimaryTextBuilder, ReferenceKind, SecondaryTextBuilder,
-    Signature, TextModule, TypedParam,
+    OpDef, PrimaryBinaryBuilder, PrimaryTextBuilder, SecondaryTextBuilder, Signature, TextModule,
+    TypedParam,
 };
 pub use dispatch::extern_registry::{
     all_ops as all_extern_ops, dialects as extern_dialects,
@@ -142,13 +142,7 @@ pub use dispatch::extern_registry::{
     ExternOp, ExternVerifyError,
 };
 
-// V7-API-017: `ir_inner` is intentionally private  -  the public surface
-// re-exports through `pub mod ir` above. The internal name is pinned by
-// the `vyre_macros::vyre_ast_registry!` proc-macro, which emits literal
-// `crate::ir_inner::model::*` paths for the generated decoder cascades.
-// Renaming `ir_inner` to `ir` requires a coordinated proc-macro rewrite
-// + every dialect that uses `vyre_ast_registry!` recompiling against the
-// new path. Tracked for the next semver-major.
+// The generated AST is owner-local; public consumers use `pub mod ir`.
 mod ir_inner {
     pub mod model;
 }

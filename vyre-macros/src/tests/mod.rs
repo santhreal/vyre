@@ -1,9 +1,8 @@
 #![allow(clippy::module_name_repetitions)]
 
-use crate::algebraic_laws::extract_laws_attribute;
 use crate::pass::{boundary_class_tokens, cost_model_family_tokens, pass_phase_tokens, PassArgs};
 use quote::quote;
-use syn::{DeriveInput, LitStr};
+use syn::LitStr;
 
 #[test]
 fn pass_args_parse_full_metadata_contract() {
@@ -106,37 +105,6 @@ fn pass_phase_rejects_consumer_prefixed_phase_names() {
 
     assert!(err.to_string().contains("unsupported pass phase"));
     assert!(err.to_string().contains("Fix:"));
-}
-
-#[test]
-fn extract_laws_accepts_identifier_and_string_forms() {
-    let input = syn::parse2::<DeriveInput>(quote! {
-        #[vyre(laws = [Commutative, "Associative"])]
-        struct Xor;
-    })
-    .expect("Fix: derive input should parse");
-
-    let laws = extract_laws_attribute(&input.attrs)
-        .expect("Fix: AlgebraicLaws should accept identifier and string law forms");
-
-    assert_eq!(
-        laws.iter().map(LitStr::value).collect::<Vec<_>>(),
-        vec!["Commutative", "Associative"]
-    );
-}
-
-#[test]
-fn extract_laws_rejects_unknown_vyre_attribute_argument() {
-    let input = syn::parse2::<DeriveInput>(quote! {
-        #[vyre(rulez = [Commutative])]
-        struct Xor;
-    })
-    .expect("Fix: derive input should parse");
-
-    let err = extract_laws_attribute(&input.attrs)
-        .expect_err("Fix: unknown vyre attribute arguments must fail");
-
-    assert!(err.to_string().contains("unknown vyre() argument"));
 }
 
 #[test]

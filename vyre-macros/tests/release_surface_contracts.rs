@@ -4,9 +4,9 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, ops, optimizer};
+pub use support::{ir, optimizer};
 
-use vyre_macros::{define_op, vyre_pass, AlgebraicLaws};
+use vyre_macros::vyre_pass;
 
 #[vyre_pass(
     name = "release_surface_pass",
@@ -32,20 +32,6 @@ impl ReleaseSurfacePass {
     fn transform(program: ir::Program) -> optimizer::PassResult {
         optimizer::pass_result(program, true)
     }
-}
-
-#[derive(AlgebraicLaws)]
-#[vyre(laws = [Commutative, "Identity { element: 0 }"])]
-pub struct XorLikeOp;
-
-define_op! {
-    id = "release.surface.xor_like",
-    dialect = "release.surface",
-    category = A,
-    inputs = ["u32", "u32"],
-    outputs = ["u32"],
-    laws = [Commutative, Identity { element: 0 }],
-    program = crate::ir::Program { id: 7 },
 }
 
 #[vyre_pass(name = "release_surface_defaults", requires = [], invalidates = [])]
@@ -326,36 +312,4 @@ fn vyre_pass_metadata_matrix_covers_every_non_default_phase_mapping() {
         assert_eq!(metadata.invalidates, &[] as &[&str]);
         assert!(metadata.preserves_abi);
     }
-}
-
-#[test]
-fn algebraic_laws_and_define_op_emit_runtime_discoverable_contracts() {
-    assert_eq!(
-        <XorLikeOp as ops::AlgebraicLawProvider>::laws(),
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Identity { element: 0 }
-        ]
-    );
-
-    let op = inventory::iter::<dialect::OpDefRegistration>
-        .into_iter()
-        .map(|registration| (registration.factory)())
-        .find(|op| op.id == "release.surface.xor_like")
-        .expect("define_op! must submit release-surface op registration");
-
-    assert_eq!(op.dialect, "release.surface");
-    assert_eq!(op.category, dialect::Category::A);
-    assert_eq!(op.signature.inputs.len(), 2);
-    assert_eq!(op.signature.outputs.len(), 1);
-    assert_eq!(op.signature.inputs[0].ty, "u32");
-    assert_eq!(op.signature.outputs[0].ty, "u32");
-    assert_eq!(
-        op.laws,
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Identity { element: 0 }
-        ]
-    );
-    assert_eq!(op.compose.expect("compose function must exist")().id, 7);
 }

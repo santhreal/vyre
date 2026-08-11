@@ -4,9 +4,9 @@ extern crate self as vyre;
 
 mod support;
 
-pub use support::{dialect, ir, ir_inner, ops, optimizer};
+pub use support::{ir, optimizer};
 
-use vyre_macros::{define_op, skip_builder, vyre_ast_registry, vyre_pass, AlgebraicLaws};
+use vyre_macros::{vyre_ast_registry, vyre_pass};
 
 #[vyre_pass(
     name = "macro_compile_backed_pass",
@@ -56,26 +56,6 @@ impl DefaultedPass {
     }
 }
 
-#[derive(AlgebraicLaws)]
-#[vyre(laws = [Commutative, Associative, "Identity { element: 0 }"])]
-pub struct XorLawProvider;
-
-#[derive(AlgebraicLaws)]
-#[vyre(laws = [Associative])]
-pub enum AssociativeEnumLawProvider {
-    Variant,
-}
-
-define_op! {
-    id = "primitive.bitwise.xor",
-    dialect = "primitive.bitwise",
-    category = A,
-    inputs = ["u32", "u32"],
-    outputs = ["u32"],
-    laws = [Commutative, Associative],
-    program = ir::Program { id: 42 },
-}
-
 vyre_ast_registry! {
     TestExpr {
         Unit,
@@ -85,11 +65,6 @@ vyre_ast_registry! {
 }
 
 vyre_ast_registry! {}
-
-#[skip_builder]
-pub struct SkipBuilderTarget {
-    value: u32,
-}
 
 #[test]
 fn vyre_pass_expands_to_metadata_analysis_transform_and_inventory_entry() {
@@ -160,45 +135,7 @@ fn vyre_pass_defaults_are_abi_preserving_unknown_metadata() {
 }
 
 #[test]
-fn algebraic_laws_derive_pins_declared_laws() {
-    assert_eq!(
-        <XorLawProvider as ops::AlgebraicLawProvider>::laws(),
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Associative,
-            ops::AlgebraicLaw::Identity { element: 0 },
-        ]
-    );
-    assert_eq!(
-        <AssociativeEnumLawProvider as ops::AlgebraicLawProvider>::laws(),
-        &[ops::AlgebraicLaw::Associative]
-    );
-}
-
-#[test]
-fn define_op_registers_dialect_signature_laws_and_program_factory() {
-    let op = inventory::iter::<dialect::OpDefRegistration>
-        .into_iter()
-        .map(|registration| (registration.factory)())
-        .find(|op| op.id == "primitive.bitwise.xor")
-        .expect("define_op! should submit an op registration");
-
-    assert_eq!(op.dialect, "primitive.bitwise");
-    assert_eq!(op.category, dialect::Category::A);
-    assert_eq!(op.signature.inputs.len(), 2);
-    assert_eq!(op.signature.outputs.len(), 1);
-    assert_eq!(
-        op.laws,
-        &[
-            ops::AlgebraicLaw::Commutative,
-            ops::AlgebraicLaw::Associative
-        ]
-    );
-    assert_eq!((op.compose.expect("compose factory should exist"))().id, 42);
-}
-
-#[test]
-fn ast_registry_generates_enum_equality_op_ids_and_decoder_scaffold() {
+fn ast_registry_generates_enum_equality_and_operation_ids() {
     assert_eq!(testexpr_op_id(&TestExpr::Unit), "vyre.testexpr.unit");
     assert_eq!(testexpr_op_id(&TestExpr::Unary(5)), "vyre.testexpr.unary");
     assert_eq!(
@@ -216,11 +153,6 @@ fn ast_registry_generates_enum_equality_op_ids_and_decoder_scaffold() {
         TestExpr::Pair { left: 1, right: 2 },
         TestExpr::Pair { left: 2, right: 1 }
     );
-
-    match generate_testexpr_gpu_vm_decoder() {
-        ir_inner::model::node::Node::If { .. } => {}
-        other => panic!("expected generated decoder cascade, got {other:?}"),
-    }
 }
 
 #[test]
@@ -230,10 +162,4 @@ fn ast_registry_accepts_empty_manifest_as_noop() {
         optimizer::ProgramPass::metadata(&pass).name,
         "macro_defaulted_pass"
     );
-}
-
-#[test]
-fn skip_builder_attribute_preserves_the_input_item() {
-    let target = SkipBuilderTarget { value: 9 };
-    assert_eq!(target.value, 9);
 }
