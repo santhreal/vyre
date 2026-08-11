@@ -13,34 +13,21 @@ impl BodyCtx<'_> {
         if value.0 != PtxType::F32 {
             return value;
         }
-        let bits = self.alloc(PtxType::U32);
-        let abs_bits = self.alloc(PtxType::U32);
-        let sign_bits = self.alloc(PtxType::U32);
-        let subnormal_or_zero = self.alloc(PtxType::Bool);
+        let flushed = self.alloc(PtxType::F32);
         let nan = self.alloc(PtxType::Bool);
-        let no_subnormal_bits = self.alloc(PtxType::U32);
-        let canonical_bits = self.alloc(PtxType::U32);
         let out = self.alloc(PtxType::F32);
-        let _ = writeln!(self.text, "    mov.b32    {bits}, {value};");
-        let _ = writeln!(self.text, "    and.b32    {abs_bits}, {bits}, 0x7fffffff;");
-        let _ = writeln!(self.text, "    and.b32    {sign_bits}, {bits}, 0x80000000;");
         let _ = writeln!(
             self.text,
-            "    setp.lt.u32    {subnormal_or_zero}, {abs_bits}, 0x00800000;"
+            "    mul.ftz.f32    {flushed}, {value}, 0f3f800000;"
         );
         let _ = writeln!(
             self.text,
-            "    setp.gt.u32    {nan}, {abs_bits}, 0x7f800000;"
+            "    setp.nan.f32    {nan}, {flushed}, {flushed};"
         );
         let _ = writeln!(
             self.text,
-            "    selp.u32    {no_subnormal_bits}, {sign_bits}, {bits}, {subnormal_or_zero};"
+            "    selp.f32    {out}, 0f7fc00000, {flushed}, {nan};"
         );
-        let _ = writeln!(
-            self.text,
-            "    selp.u32    {canonical_bits}, 0x7fc00000, {no_subnormal_bits}, {nan};"
-        );
-        let _ = writeln!(self.text, "    mov.b32    {out}, {canonical_bits};");
         out
     }
 

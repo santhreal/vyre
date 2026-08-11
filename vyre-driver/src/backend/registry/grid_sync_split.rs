@@ -7,8 +7,8 @@ use vyre_foundation::ir::OpId;
 use vyre_foundation::ir::Program;
 
 use crate::backend::{
-    BackendError, CompiledPipeline, DispatchConfig, OutputBuffers, PendingDispatch,
-    ResidentDispatchStep, ResidentReadRange, Resource, TimedDispatchResult, VyreBackend,
+    BackendError, DispatchConfig, OutputBuffers, PendingDispatch, ResidentDispatchStep,
+    ResidentReadRange, Resource, TimedDispatchResult, VyreBackend,
 };
 
 pub(super) fn wrap_grid_sync_split(backend: Box<dyn VyreBackend>) -> Box<dyn VyreBackend> {
@@ -28,6 +28,10 @@ impl VyreBackend for GridSyncSplitBackend {
 
     fn version(&self) -> &'static str {
         self.inner.version()
+    }
+
+    fn device_profile(&self) -> crate::DeviceProfile {
+        self.inner.device_profile()
     }
 
     fn supported_ops(&self) -> &HashSet<OpId> {
@@ -108,17 +112,6 @@ impl VyreBackend for GridSyncSplitBackend {
         }
         self.inner
             .dispatch_borrowed_into(program, inputs, config, outputs)
-    }
-
-    fn compile_native(
-        &self,
-        program: &Program,
-        config: &DispatchConfig,
-    ) -> Result<Option<std::sync::Arc<dyn CompiledPipeline>>, BackendError> {
-        if self.should_split_grid_sync(program) {
-            return Ok(None);
-        }
-        self.inner.compile_native(program, config)
     }
 
     fn pipeline_cache_snapshot(&self) -> Option<crate::pipeline::PipelineCacheSnapshot> {
@@ -438,8 +431,8 @@ mod tests {
     use super::wrap_grid_sync_split;
     use crate::backend::registry::registered_backends;
     use crate::{
-        BackendError, DispatchConfig, ResidentDispatchStep, ResidentReadRange, Resource,
-        VyreBackend,
+        BackendError, DeviceProfile, DeviceTimingQuality, DispatchConfig, ResidentDispatchStep,
+        ResidentReadRange, Resource, VyreBackend,
     };
     use smallvec::SmallVec;
     use std::sync::{Arc, Mutex};
@@ -468,12 +461,12 @@ mod tests {
     }
 
     #[test]
-    fn vyre_core_alone_sees_no_backends() {
+    fn neutral_driver_alone_sees_no_backends() {
         assert!(
             registered_backends().is_empty(),
-            "vyre-core has no backend deps; registry must be empty here. \
-             Fix: if a backend crate was added as a dependency, move this \
-            assertion into that crate's test suite."
+            "the neutral driver crate links no concrete backend registrations. \
+             Fix: if a concrete backend crate was added as a dependency, move this \
+             assertion into that crate's test suite."
         );
     }
 
@@ -487,6 +480,13 @@ mod tests {
     impl VyreBackend for SegmentRecorder {
         fn id(&self) -> &'static str {
             "segment-recorder"
+        }
+
+        fn device_profile(&self) -> DeviceProfile {
+            let mut profile = DeviceProfile::conservative(self.id());
+            profile.timing_quality = DeviceTimingQuality::DeviceTimestamps;
+            profile.supports_device_timestamps = true;
+            profile
         }
 
         fn dispatch(
@@ -515,6 +515,22 @@ mod tests {
             calls.push((has_grid_sync, captured));
             Ok(vec![vec![calls.len() as u8]])
         }
+    }
+
+    #[test]
+    fn grid_sync_wrapper_preserves_the_concrete_device_profile() {
+        let backend = wrap_grid_sync_split(Box::new(SegmentRecorder::default()));
+        let profile = backend.device_profile();
+
+        assert_eq!(
+            profile.timing_quality,
+            DeviceTimingQuality::DeviceTimestamps,
+            "Fix: backend decorators must preserve the concrete backend timing quality."
+        );
+        assert!(
+            profile.supports_device_timestamps,
+            "Fix: backend decorators must preserve concrete device-timestamp capability."
+        );
     }
 
     fn grid_sync_program() -> Program {

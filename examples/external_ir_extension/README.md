@@ -15,7 +15,7 @@ the starting template.
    backend dispatch machinery all learn about the new op at link
    time.
 3. Keeping the extension crate decoupled: it depends only on
-   `vyre-core` and `vyre-driver`, never on backend crates or
+   `vyre` and `vyre-driver`, never on concrete backend crates or
    downstream tooling.
 
 Running the example:
@@ -88,15 +88,14 @@ This example deliberately:
 
 ## Next steps for a real extension
 
-1. Read `docs/migration-vyre-ops-to-intrinsics.md` to decide which
-   Category your op belongs to (A / B / C).
-2. Read `docs/region-chain.md`  -  every composition must wrap in a
-   region; the helper is exported from `vyre-intrinsics::region`.
-3. Read `conform/README.md` (once published) for the conformance
-   workflow; your extension must hold parity against the CPU
-   reference on every registered backend.
-4. File your dialect tag claim against the `dialect-registry` tracker
-   before publishing so users don't hit overlapping tags.
+1. Read the [architecture contract](../../docs/ARCHITECTURE.md) for the
+   frontend, operation, compiler-facet, and materializer boundaries.
+2. Read the [optimization control plane](../../docs/optimization/README.md)
+   before adding an operation or optimization pass.
+3. Read the [conformance guide](../../conform/vyre-conform/README.md) and prove
+   parity against the CPU reference on every registered target.
+4. Register semantic operation identity in `vyre-foundation` and ship each
+   required target facet in the target's owning driver crate.
 
 See `src/main.rs` for the minimal call graph; grep the workspace for
 `inventory::submit!` to see real registrations that ship today.

@@ -25,8 +25,8 @@ use crate::{
     value::Value,
 };
 use rustc_hash::FxHashMap;
-use vyre::ir::{AtomicOp, BufferAccess, Expr, MemoryOrdering, Node, Program};
-use vyre::Error;
+use vyre_foundation::ir::{AtomicOp, BufferAccess, Expr, MemoryOrdering, Node, Program};
+use vyre_foundation::Error;
 
 /// Order in which the interpreter steps workgroups and the invocations within
 /// each workgroup.
@@ -127,7 +127,7 @@ fn split_top_level_grid_sync(nodes: &[Node]) -> Vec<&[Node]> {
 /// The "backend-allocated output" half is `BufferDecl::is_backend_allocated_output`, the
 /// single cross-backend contract in vyre-foundation shared with the CpuRef/device
 /// backends; this adds the interpreter's extra `ReadWrite` inputs-are-also-returned rule.
-pub fn is_reference_output(decl: &vyre::ir::BufferDecl) -> bool {
+pub fn is_reference_output(decl: &vyre_foundation::ir::BufferDecl) -> bool {
     decl.is_backend_allocated_output() || decl.access() == BufferAccess::ReadWrite
 }
 
@@ -146,7 +146,7 @@ pub fn is_reference_output(decl: &vyre::ir::BufferDecl) -> bool {
 /// surfaces as a missing value for whichever buffer the offset ran past rather
 /// than as anything pointing at the copy.
 #[must_use]
-pub fn is_reference_input(decl: &vyre::ir::BufferDecl) -> bool {
+pub fn is_reference_input(decl: &vyre_foundation::ir::BufferDecl) -> bool {
     decl.access() != BufferAccess::Workgroup && !decl.is_backend_allocated_output()
 }
 
@@ -170,19 +170,19 @@ pub(crate) fn run_hashmap_reference(
     explicit_grid: Option<[u32; 3]>,
 ) -> Result<Vec<Value>, Error> {
     #[cfg(feature = "subgroup-ops")]
-    let validation_report = vyre::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate::validate_with_options(
         program,
-        vyre::validate::ValidationOptions::default().with_backend_capabilities(
-            vyre::validate::BackendCapabilities {
+        vyre_foundation::validate::ValidationOptions::default().with_backend_capabilities(
+            vyre_foundation::validate::BackendCapabilities {
                 supports_subgroup_ops: true,
                 ..Default::default()
             },
         ),
     );
     #[cfg(not(feature = "subgroup-ops"))]
-    let validation_report = vyre::validate::validate::validate_with_options(
+    let validation_report = vyre_foundation::validate::validate::validate_with_options(
         program,
-        vyre::validate::ValidationOptions::default(),
+        vyre_foundation::validate::ValidationOptions::default(),
     );
     let validation_errors = validation_report.errors;
     if !validation_errors.is_empty() {
@@ -360,7 +360,7 @@ pub(crate) fn run_hashmap_reference(
     let [workgroup_count_x, workgroup_count_y, workgroup_count_z] = counts;
     let entry = program.entry();
     #[cfg(feature = "subgroup-ops")]
-    let uses_subgroup_ops = vyre::program_caps::scan(program).subgroup_ops;
+    let uses_subgroup_ops = vyre_foundation::program_caps::scan(program).subgroup_ops;
     // Grid-sync-aware execution: if the body carries `GridSync` barriers (a fused
     // multi-pass kernel the driver would split into ordered dispatches), run the
     // WHOLE grid through each inter-barrier segment before the next, so a later pass
@@ -427,7 +427,7 @@ pub(crate) fn run_hashmap_reference(
 /// declaration carries an explicit byte range, the padding beyond that range
 /// belongs to the kernel's tiling, never to the caller, so the range length is
 /// what a caller-supplied placeholder has to cover.
-fn logical_output_byte_len(decl: &vyre::ir::BufferDecl, declared_bytes: usize) -> usize {
+fn logical_output_byte_len(decl: &vyre_foundation::ir::BufferDecl, declared_bytes: usize) -> usize {
     decl.output_byte_range()
         .map_or(declared_bytes, |range| range.len())
 }
@@ -438,7 +438,7 @@ fn logical_output_byte_len(decl: &vyre::ir::BufferDecl, declared_bytes: usize) -
 /// path and the ordinary input path cannot drift into reporting the same
 /// contract violation two different ways, or one of them not reporting it.
 fn check_min_byte_len(
-    decl: &vyre::ir::BufferDecl,
+    decl: &vyre_foundation::ir::BufferDecl,
     supplied_bytes: usize,
     required_bytes: usize,
 ) -> Result<(), Error> {
@@ -455,7 +455,7 @@ fn check_min_byte_len(
     Ok(())
 }
 
-fn declared_min_byte_len(decl: &vyre::ir::BufferDecl) -> Result<usize, Error> {
+fn declared_min_byte_len(decl: &vyre_foundation::ir::BufferDecl) -> Result<usize, Error> {
     match decl.static_byte_len() {
         Ok(Some(byte_len)) => Ok(byte_len),
         Ok(None) if decl.count() == 0 => Ok(0),
@@ -501,6 +501,28 @@ fn eval_expr(
         Expr::InvocationId { axis } => axis_value(invocation.ids.global, *axis),
         Expr::WorkgroupId { axis } => axis_value(invocation.ids.workgroup, *axis),
         Expr::LocalId { axis } => axis_value(invocation.ids.local, *axis),
+        Expr::SubgroupLocalId => {
+            #[cfg(feature = "subgroup-ops")]
+            {
+                Ok(Value::U32(
+                    invocation.linear_local_index % subgroup::subgroup_simulator().width() as u32,
+                ))
+            }
+            #[cfg(not(feature = "subgroup-ops"))]
+            {
+                Ok(Value::U32(0))
+            }
+        }
+        Expr::SubgroupSize => {
+            #[cfg(feature = "subgroup-ops")]
+            {
+                Ok(Value::U32(subgroup::subgroup_simulator().width() as u32))
+            }
+            #[cfg(not(feature = "subgroup-ops"))]
+            {
+                Ok(Value::U32(1))
+            }
+        }
         Expr::BinOp { op, left, right } => {
             let left = eval_expr(
                 left,
@@ -753,7 +775,7 @@ fn eval_atomic(
 mod grid_sync_segmentation {
     use super::*;
     use std::sync::Arc;
-    use vyre::ir::{Expr, Ident, MemoryOrdering};
+    use vyre_foundation::ir::{Expr, Ident, MemoryOrdering};
 
     fn gs() -> Node {
         Node::barrier_with_ordering(MemoryOrdering::GridSync)

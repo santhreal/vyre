@@ -7,6 +7,8 @@ use serde_json::Value;
 use super::suite_inspect::{read_text_bounded, suite_metric_percentile, suite_metric_samples};
 use super::types::MAX_RELEASE_BENCHMARK_TEXT_BYTES;
 
+const RELEASE_WARMUP_SAMPLES: usize = 300;
+
 pub(super) fn run_named_benchmark(
     workspace_root: &Path,
     case_id: &str,
@@ -51,6 +53,8 @@ pub(super) fn benchmark_command_args(
         output.to_string(),
         "--sample-timeout-secs".to_string(),
         sample_timeout_secs.to_string(),
+        "--warmup-samples".to_string(),
+        RELEASE_WARMUP_SAMPLES.to_string(),
     ];
     if let Some(samples) = measured_samples {
         args.push("--measured-samples".to_string());
@@ -324,6 +328,27 @@ mod tests {
     use super::*;
 
     use tempfile::TempDir;
+
+    #[test]
+    fn release_benchmark_commands_precondition_accelerator_clocks() {
+        let args = benchmark_command_args(
+            "nn.linear_4bit_affine_grouped.1m",
+            "cuda",
+            "release/evidence/benchmarks/quantized.json",
+            Some(30),
+            30,
+        );
+        let warmup_flag = args
+            .iter()
+            .position(|arg| arg == "--warmup-samples")
+            .expect("Fix: release benchmark commands must set an explicit warmup count.");
+
+        assert_eq!(
+            args.get(warmup_flag + 1).map(String::as_str),
+            Some("300"),
+            "Fix: release evidence must precondition accelerator clocks before measured samples."
+        );
+    }
 
     /// Reuse must not bypass release-only evidence enrichment. The previous
     /// predicate accepted a valid timing report that lacked the fused DAG, so

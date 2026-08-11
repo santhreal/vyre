@@ -232,19 +232,6 @@ pub(super) fn run_case(
     let performance = contract
         .as_ref()
         .map(|contract| evaluate_contract(contract, &metrics, ctx.preferred_backend.id()));
-    if config.enforce_budgets
-        && performance
-            .as_ref()
-            .is_some_and(|performance| !performance.contract_passed)
-    {
-        return Err(format!(
-            "Performance contract failed: {}",
-            performance
-                .as_ref()
-                .map(|p| p.violations.join("; "))
-                .unwrap_or_default()
-        ));
-    }
 
     let mut status = "pass".to_string();
     if determinism_p50s.len() > 1 {
@@ -281,6 +268,7 @@ pub(super) fn run_case(
     if thermal_status_applies(&metrics, requirements.needs_gpu) {
         status = "thermal_unstable".to_string();
     }
+    status = final_case_status(&status, config.enforce_budgets, performance.as_ref());
 
     let wall_ns = metrics.get("wall_ns").map(|s| s.mean);
 
@@ -313,6 +301,18 @@ pub(super) fn run_case(
         optimization_passes_applied,
         artifacts: vec![],
     })
+}
+
+fn final_case_status(
+    provisional: &str,
+    enforce_budgets: bool,
+    performance: Option<&PerformanceEvaluation>,
+) -> String {
+    if enforce_budgets && performance.is_some_and(|performance| !performance.contract_passed) {
+        "failed".to_string()
+    } else {
+        provisional.to_string()
+    }
 }
 
 fn thermal_status_applies(
@@ -413,10 +413,18 @@ fn normalize_release_evidence_metrics(
     backend_id: &str,
 ) {
     if backend_id == "cuda" {
-        if let Some(input) = metrics.get("cuda_host_to_device_bytes").cloned() {
+        if let Some(input) = metrics
+            .get("cuda_host_to_device_bytes")
+            .filter(|stats| stats.max > 0)
+            .cloned()
+        {
             metrics.insert("host_to_device_bytes".to_string(), input);
         }
-        if let Some(output) = metrics.get("cuda_device_to_host_bytes").cloned() {
+        if let Some(output) = metrics
+            .get("cuda_device_to_host_bytes")
+            .filter(|stats| stats.max > 0)
+            .cloned()
+        {
             metrics.insert("device_to_host_bytes".to_string(), output);
         }
     }
@@ -447,7 +455,11 @@ fn normalize_release_evidence_metrics(
         .entry("device_to_host_bytes".to_string())
         .or_insert_with(|| single_sample_stats(0));
     if backend_id == "cuda" {
-        if let Some(launches) = metrics.get("cuda_kernel_launches").cloned() {
+        if let Some(launches) = metrics
+            .get("cuda_kernel_launches")
+            .filter(|stats| stats.max > 0)
+            .cloned()
+        {
             metrics
                 .entry("kernel_launches".to_string())
                 .or_insert(launches);
@@ -536,10 +548,15 @@ pub(super) fn evaluate_contract(
 ) -> PerformanceEvaluation {
     let active_gpu = metrics
         .get("dispatch_ns")
-        .or_else(|| metrics.get("kernel_execute_ns"))
-        .or_else(|| metrics.get("wall_ns"));
+        .filter(|stats| stats.p50 > 0)
+        .or_else(|| {
+            metrics
+                .get("kernel_execute_ns")
+                .filter(|stats| stats.p50 > 0)
+        })
+        .or_else(|| metrics.get("wall_ns").filter(|stats| stats.p50 > 0));
     let speedup_x = match (active_gpu, metrics.get("baseline_wall_ns")) {
-        (Some(gpu), Some(cpu)) if gpu.p50 > 0 => Some(cpu.p50 as f64 / gpu.p50 as f64),
+        (Some(gpu), Some(cpu)) => Some(cpu.p50 as f64 / gpu.p50 as f64),
         _ => None,
     };
     let mut violations = Vec::new();
@@ -601,6 +618,36 @@ mod tests {
     }
 
     #[test]
+    fn enforced_performance_failure_retains_a_reportable_failed_status() {
+        let failed = PerformanceEvaluation {
+            speedup_x: Some(99.0),
+            contract_passed: false,
+            violations: vec!["below contract".to_string()],
+        };
+        let passed = PerformanceEvaluation {
+            speedup_x: Some(101.0),
+            contract_passed: true,
+            violations: Vec::new(),
+        };
+
+        assert_eq!(
+            final_case_status("thermal_unstable", true, Some(&failed)),
+            "failed",
+            "Fix: enforced performance failures must remain failed while preserving their measured report."
+        );
+        assert_eq!(
+            final_case_status("pass", false, Some(&failed)),
+            "pass",
+            "Fix: non-enforcing local runs must report measurements without converting a contract miss into a case failure."
+        );
+        assert_eq!(
+            final_case_status("thermal_unstable", true, Some(&passed)),
+            "thermal_unstable",
+            "Fix: a passing performance contract must preserve stronger provisional evidence status."
+        );
+    }
+
+    #[test]
     fn contract_fails_when_no_baseline_applies_to_backend() {
         let mut metrics = BTreeMap::new();
         metrics.insert("dispatch_ns".to_string(), stats(1));
@@ -643,6 +690,23 @@ mod tests {
             evaluation.violations.is_empty(),
             "Fix: backend-agnostic passing contracts must not accumulate baseline applicability violations."
         );
+    }
+
+    /// WHY: some CUDA event paths report a zero device duration while preserving a measured
+    /// host wall duration. A zero dispatch sample is absence, not a zero-cost kernel, and must
+    /// not hide the bounded wall-clock fallback used by the performance contract.
+    #[test]
+    fn contract_uses_wall_time_when_dispatch_duration_is_zero() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("dispatch_ns".to_string(), stats(0));
+        metrics.insert("wall_ns".to_string(), stats(10));
+        metrics.insert("baseline_wall_ns".to_string(), stats(1_000));
+
+        let evaluation =
+            evaluate_contract(&contract_for_backends(&["cuda"], 100.0), &metrics, "cuda");
+
+        assert_eq!(evaluation.speedup_x, Some(100.0));
+        assert!(evaluation.contract_passed, "{:?}", evaluation.violations);
     }
 
     #[test]
@@ -714,6 +778,19 @@ mod tests {
             launch_stats.p50, 4,
             "Fix: canonical kernel_launches must preserve CUDA telemetry instead of reporting the synthetic single-launch fallback."
         );
+    }
+
+    /// WHY: artifact submissions may bypass the lower-level CUDA telemetry
+    /// object. A zero observation is unavailable telemetry, while a successful
+    /// measured GPU sample proves that at least one kernel was launched.
+    #[test]
+    fn zero_cuda_launch_counter_uses_single_submission_fallback() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("cuda_kernel_launches".to_string(), stats(0));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+
+        assert_eq!(metrics["kernel_launches"].p50, 1);
     }
 
     #[test]
@@ -792,6 +869,25 @@ mod tests {
             device_to_host.p50, 16,
             "Fix: canonical device_to_host_bytes must preserve CUDA transfer telemetry instead of logical output bytes."
         );
+    }
+
+    /// WHY: artifact materializers may not expose backend telemetry through the
+    /// lower-level dispatch object. Zero counters must not erase measured byte
+    /// accounting and produce a false missing-transfer release blocker.
+    #[test]
+    fn zero_cuda_transfer_counters_fall_back_to_measured_byte_accounting() {
+        let mut metrics = BTreeMap::new();
+        metrics.insert("bytes_read".to_string(), stats(12));
+        metrics.insert("bytes_written".to_string(), stats(4));
+        metrics.insert("cuda_host_to_device_bytes".to_string(), stats(0));
+        metrics.insert("cuda_device_to_host_bytes".to_string(), stats(0));
+
+        normalize_release_evidence_metrics(&mut metrics, "cuda");
+        normalize_benchmark_evidence_metrics(&mut metrics, None, None);
+
+        assert_eq!(metrics["host_to_device_bytes"].p50, 12);
+        assert_eq!(metrics["device_to_host_bytes"].p50, 4);
+        assert_eq!(metrics["transfer_bytes"].p50, 16);
     }
 
     #[test]

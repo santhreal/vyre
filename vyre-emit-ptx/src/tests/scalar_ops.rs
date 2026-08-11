@@ -58,6 +58,48 @@ fn binop_add_emits_add_u32() {
 }
 
 #[test]
+fn f32_canonicalization_uses_native_flush_to_zero_and_nan_selection() {
+    let kernel = KernelDescriptor {
+        id: "canonical_f32_add".into(),
+        bindings: BindingLayout { slots: vec![] },
+        dispatch: Dispatch::new(1, 1, 1),
+        body: KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(0),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::BinOpKind(BinOp::Add),
+                    operands: vec![0, 1],
+                    result: Some(2),
+                },
+            ],
+            child_bodies: vec![],
+            literals: vec![LiteralValue::F32(-0.0), LiteralValue::F32(f32::NAN)],
+        },
+    };
+
+    let ptx = emit(&kernel).expect("Fix: f32 canonicalization fixture must emit PTX.");
+    assert!(
+        ptx.contains("mul.ftz.f32")
+            && ptx.contains("setp.nan.f32")
+            && ptx.contains("selp.f32"),
+        "Fix: f32 canonicalization must preserve signed zero, flush subnormals, and select the canonical NaN with the compact native sequence:\n{ptx}"
+    );
+    assert!(
+        !ptx.contains("0x00800000"),
+        "Fix: f32 canonicalization must not reconstruct flush-to-zero through an eight-instruction integer mask sequence:\n{ptx}"
+    );
+}
+
+#[test]
 fn integer_single_use_mul_add_emits_mad_without_dead_mul() {
     let kernel = KernelDescriptor {
         id: "int_mad".into(),

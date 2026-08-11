@@ -9,12 +9,9 @@ shipping a version.
 
 ## Version discipline
 
-- publishable Vyre crates move in **lock-step** for a release train. The selected
-  Vyre and Weir package versions come from `release/release-train.toml`, which is
-  the single source of truth; `version-matrix` is the evidence gate for drift.
-- `consumer` versions independently but **declares a tested Vyre
-  minor** in its Cargo.toml. consumer integration is represented in parser
-  coherence evidence; it is not the release tag owner for Vyre.
+- Publishable Vyre crates move in **lock-step** for a release train. The selected
+  package version comes from `release/release-train.toml`, which is the single
+  source of truth; `version-matrix` is the evidence gate for drift.
 - Tier-3 dialect splits (`vyre-libs-nn`, `vyre-libs-crypto`, …)
   move on the vyre minor line.
 - Tier-4 external packs (`vyre-libs-extern`, community authored)
@@ -33,8 +30,8 @@ cargo_full run --bin xtask -- package-readiness
 
 The report runs `cargo package --list` for every publish-order entry. It records
 the normalized file count and BLAKE3 digest, requires metadata, both licenses,
-Rust source, and a runnable example, and rejects internal instructions, secret
-configuration, path traversal, and build output.
+and Rust source, and rejects internal instructions, secret configuration, path
+traversal, and build output.
 
 Publishing uses `cargo_full publish --dry-run --locked -p <crate>` and then
 `cargo_full publish --locked -p <crate>` for each publishable crate after the
@@ -42,25 +39,23 @@ release evidence gate is closed.
 
 ## Tag format
 
-- Vyre tag: `vyre-v<vyre version>`.
-- Weir tag: `weir-v<weir version>`.
-- Combined train tag: `vyre-<vyre version>-weir-<weir version>`.
-- Every tag name is declared in `release/release-train.toml`; take them from there
-  rather than typing them, and cut the release-candidate tags before the final tags.
+- Vyre release-candidate tag: `vyre-v<vyre version>-rc.1`.
+- Vyre final tag: `vyre-v<vyre version>`.
+- Both tag names are declared in `release/release-train.toml`; take them from
+  there rather than typing them, and cut the release-candidate tag before the
+  final tag.
 - Release artifacts live under `release/evidence/` and include conformance,
-  backend, benchmark, parser, optimization, metadata, docs, hygiene, and final
-  completion-audit JSON.
+  backend, benchmark, parser, optimization, metadata, docs, hygiene, and public
+  launch JSON.
 
 Release evidence anchors:
 
-- `release/evidence/final/completion-audit.json`
 - `release/evidence/final/release-evidence-run.json`
 - `release/evidence/final/expected-artifacts.json`
 - `release/evidence/conformance/conformance-matrix.json`
 - `release/evidence/benchmarks/cuda-release-suite.json`
 - `release/evidence/benchmarks/release-workload-matrix.json`
 - `release/evidence/benchmarks/cpu-only-100x-proof.json`
-- `release/evidence/tests/release-surface-suite-coverage.json`
 - `release/evidence/metadata/metadata-matrix.json`
 - `docs/DOCS.toml`
 - `docs/SUMMARY.md`
@@ -100,17 +95,16 @@ top-level hardware provenance before benchmark freshness is accepted.
 
 1. `cargo_full run --bin xtask -- release-evidence`  -  structural evidence batch.
 2. `cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json`  -  truthful external-action state.
-3. `cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json`  -  prompt-to-artifact audit.
-4. `cargo_full run --bin xtask -- vyre-release-gate --prepublish`  -  internal readiness gate that permits only the three explicit approval-gated outward actions.
-5. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
-6. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  CUDA release path.
-7. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets`  -  WGPU fallback path.
-8. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every required 100x release case (`release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`) with 30+ CUDA and CPU baseline samples.
-9. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all`  -  CUDA conformance.
-10. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all`  -  WGPU conformance.
-11. `cargo_full publish --dry-run --locked -p <each crate>` in order.
-12. After approved publication, repository verification, and push actions, regenerate launch-state and completion-audit evidence and run `cargo_full run --bin xtask -- vyre-release-gate` as the final hard gate.
-13. Open the GitHub release with the evidence summary and conformance artifacts attached.
+3. `cargo_full run --bin xtask -- vyre-release-gate --prepublish`  -  internal readiness gate that permits only the three explicit approval-gated outward actions.
+4. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
+5. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets`  -  CUDA release path.
+6. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets`  -  WGPU fallback path.
+7. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every required 100x release case (`release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`) with 30+ CUDA and CPU baseline samples.
+8. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all`  -  CUDA conformance.
+9. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all`  -  WGPU conformance.
+10. `cargo_full publish --dry-run --locked -p <each crate>` in order.
+11. After approved publication, repository verification, and push actions, regenerate launch-state evidence and run `cargo_full run --bin xtask -- vyre-release-gate` as the final hard gate.
+12. Open the GitHub release with the evidence summary and conformance artifacts attached.
 
 ## Post-release
 
@@ -125,8 +119,8 @@ top-level hardware provenance before benchmark freshness is accepted.
 - Prepublication cannot begin until `vyre-release-gate --prepublish` accepts
   every internal requirement and reports only the three approval-gated outward
   actions as pending.
-- Release cannot close until `release/evidence/final/completion-audit.json`
-  has zero blockers and final-mode `vyre-release-gate` accepts every manifest
+- Release cannot close until `release/evidence/final/public-launch-state.json`
+  reports complete and final-mode `vyre-release-gate` accepts every manifest
   requirement.
 - A verified downstream artifact must cite the exact evidence files it relied
   on, not only a green CI run.

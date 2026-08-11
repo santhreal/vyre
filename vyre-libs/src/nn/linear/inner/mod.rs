@@ -16,10 +16,14 @@ mod silu;
 mod tiled;
 
 pub use batch_matmul::batch_matmul;
-pub use builder::{linear, Linear};
+pub use builder::{
+    linear, linear_rows, linear_rows_no_bias, linear_rows_no_bias_out_in_typed,
+    linear_rows_no_bias_typed, Linear,
+};
 #[cfg(feature = "nn-linear-4bit")]
 pub use linear_4bit::{
-    linear_4bit, linear_4bit_affine_grouped, linear_4bit_affine_grouped_planner_evidence,
+    linear_4bit, linear_4bit_affine_grouped, linear_4bit_affine_grouped_batched,
+    linear_4bit_affine_grouped_batched_typed, linear_4bit_affine_grouped_planner_evidence,
     linear_4bit_affine_grouped_typed, QuantizedLinear4BitPlannerEvidence, QuantizedLinear4BitSpec,
     LINEAR_4BIT_AFFINE_GROUPED_OUTPUT_DRIFT_ABS_TOLERANCE,
 };

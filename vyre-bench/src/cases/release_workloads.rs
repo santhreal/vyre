@@ -25,6 +25,22 @@ pub struct SparseOutputCompactionCount;
 pub struct CallgraphReachabilityStep;
 pub struct MetadataConditionBatch;
 
+struct SparseOutputPrepared {
+    program: Program,
+    inputs: Vec<Vec<u8>>,
+    input_bytes_total: u64,
+    expected_count: u32,
+    resident_batch: Option<ResidentInputPool>,
+}
+
+struct CallgraphPrepared {
+    program: Program,
+    graph: GraphInputs,
+    input_bytes_total: u64,
+    output_resource_index: usize,
+    resident_batch: Option<ResidentInputPool>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReleaseMacroFamily {
     Scan,
@@ -72,7 +88,6 @@ struct SyntheticCountPrepared {
     output_reset_payload: Vec<u8>,
     baseline: SyntheticBaseline,
     resident: Option<ResidentInputSet>,
-    resident_batch: Option<ResidentInputPool>,
 }
 
 enum SyntheticBaseline {
@@ -301,9 +316,12 @@ const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
 ];
 
 const SPARSE_ITEMS: u32 = 1_048_576;
+const SPARSE_RESIDENT_BATCH_SIZE: usize = 16;
+const SPARSE_OUTPUT_RESET_BYTES: u64 = 4;
 const METADATA_RECORDS: u32 = 1_048_576;
 const METADATA_OUTPUT_RESET_BYTES: u64 = 4;
 const CALLGRAPH_NODES: u32 = 262_144;
+const CALLGRAPH_RESIDENT_BATCH_SIZE: usize = 16;
 const CALLGRAPH_EDGES: u32 = CALLGRAPH_NODES - 1;
 const CALLGRAPH_WORDS: usize = CALLGRAPH_NODES.div_ceil(32) as usize;
 
@@ -338,7 +356,7 @@ impl BenchCase for SparseOutputCompactionCount {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        gpu_requirements((SPARSE_ITEMS as u64 + 1) * 4)
+        gpu_requirements(u64::from(SPARSE_ITEMS) * 4)
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -349,8 +367,39 @@ impl BenchCase for SparseOutputCompactionCount {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        Ok(Box::new(sparse_output_compaction_count_program()))
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+        let program = sparse_output_compaction_count_program();
+        let mut flags = Vec::with_capacity(SPARSE_ITEMS as usize);
+        let mut expected_count = 0u32;
+        for index in 0..SPARSE_ITEMS {
+            let hit = sparse_compaction_flag(index) != 0;
+            expected_count += u32::from(hit);
+            flags.push(u32::from(hit));
+        }
+        let inputs = vec![encode_u32_words(&flags)];
+        let input_bytes_total = input_bytes_total(&inputs);
+        let resident_batch =
+            ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
+                ctx,
+                &program,
+                &inputs,
+                SPARSE_RESIDENT_BATCH_SIZE,
+                "sparse compaction batch",
+            )?;
+
+        Ok(Box::new(SparseOutputPrepared {
+            program,
+            inputs,
+            input_bytes_total,
+            expected_count,
+            resident_batch,
+        }))
+    }
+
+    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
+        prepared
+            .downcast_ref::<SparseOutputPrepared>()
+            .map(|prepared| &prepared.program)
     }
 
     fn run(
@@ -358,18 +407,87 @@ impl BenchCase for SparseOutputCompactionCount {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let program = crate::api::case::prepared_program(prepared)?;
-        let mut flags = Vec::with_capacity(SPARSE_ITEMS as usize);
-        let mut expected = 0u32;
-        for index in 0..SPARSE_ITEMS {
-            let hit = sparse_compaction_flag(index) != 0;
-            expected += u32::from(hit);
-            flags.push(u32::from(hit));
-        }
-        let inputs = vec![vec![0; 4], encode_u32_words(&flags)];
-        let timed = ctx
-            .dispatch_timed(program, &inputs, &ctx.dispatch_config)
+        let prepared = prepared
+            .downcast_ref::<SparseOutputPrepared>()
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(
+                    "sparse output prepared payload type mismatch".to_string(),
+                )
+            })?;
+        let mut batch_wall_ns = None;
+        let mut batch_len = None;
+        let (timed, resident_used, resident_reset_bytes) = if let Some(resident_batch) =
+            prepared.resident_batch.as_ref()
+        {
+            resident_batch.upload_resource_to_all_sets(
+                0,
+                &0u32.to_le_bytes(),
+                "sparse compaction resident batch counter reset",
+            )?;
+            let config = crate::api::case::dispatch_config_with_inferred_grid(
+                &prepared.program,
+                &prepared.inputs,
+                &ctx.dispatch_config,
+            )
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            match resident_batch.dispatch_artifact_batch_timed(
+                ctx,
+                &prepared.program,
+                SPARSE_RESIDENT_BATCH_SIZE,
+                &config,
+            ) {
+                Ok(batch) => {
+                    if batch.outputs.len() != SPARSE_RESIDENT_BATCH_SIZE {
+                        return Err(BenchError::ExecutionFailed(format!(
+                                "sparse compaction resident batch returned {} output row(s), expected {}",
+                                batch.outputs.len(),
+                                SPARSE_RESIDENT_BATCH_SIZE
+                            )));
+                    }
+                    let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
+                        BenchError::ExecutionFailed(
+                            "sparse compaction resident batch returned no output rows".to_string(),
+                        )
+                    })?;
+                    if let Some((index, _)) = batch
+                        .outputs
+                        .iter()
+                        .enumerate()
+                        .find(|(_, outputs)| **outputs != first_outputs)
+                    {
+                        return Err(BenchError::CorrectnessViolation(format!(
+                                "sparse compaction resident batch output row {index} disagreed with row 0"
+                            )));
+                    }
+                    batch_wall_ns = Some(batch.wall_ns_total);
+                    batch_len = Some(batch.batch_len as u64);
+                    (
+                        vyre_driver::TimedDispatchResult {
+                            outputs: first_outputs,
+                            wall_ns: batch.per_item_wall_ns(),
+                            device_ns: batch.per_item_device_ns(),
+                            enqueue_ns: None,
+                            wait_ns: None,
+                        },
+                        true,
+                        SPARSE_OUTPUT_RESET_BYTES,
+                    )
+                }
+                Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
+                    let timed = ctx
+                        .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
+                        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+                    (timed, false, 0)
+                }
+                Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+            }
+        } else {
+            let timed = ctx
+                .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+            (timed, false, 0)
+        };
+
         let baseline_start = std::time::Instant::now();
         let mut fired_rules = Vec::new();
         for index in 0..SPARSE_ITEMS {
@@ -379,20 +497,52 @@ impl BenchCase for SparseOutputCompactionCount {
         }
         let cpu_count = fired_rules.len() as u32;
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        if cpu_count != expected {
+        if cpu_count != prepared.expected_count {
             return Err(BenchError::CorrectnessViolation(
                 "sparse CPU baseline count disagreed with generator expectation".to_string(),
             ));
         }
+
         let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
-        bench_run_from_timed(
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
+        let accounting = resident_reset_transfer_accounting(
+            prepared.input_bytes_total,
+            output_bytes,
+            resident_used,
+            resident_reset_bytes,
+        );
+        let mut run = bench_run_from_timed_with_accounting(
             timed,
-            inputs,
+            prepared.input_bytes_total,
             baseline_outputs,
             baseline_wall,
             "sparse_items",
             SPARSE_ITEMS,
-        )
+            logical_bytes_touched,
+            accounting,
+        )?;
+        run.metrics.custom.push(MetricPoint {
+            name: "sparse_resident_buffers".to_string(),
+            value: u64::from(resident_used),
+        });
+        run.metrics.custom.push(MetricPoint {
+            name: "sparse_resident_reset_bytes".to_string(),
+            value: resident_reset_bytes,
+        });
+        if let Some(wall_ns) = batch_wall_ns {
+            run.metrics.custom.push(MetricPoint {
+                name: "sparse_resident_batch_wall_ns".to_string(),
+                value: wall_ns,
+            });
+        }
+        if let Some(len) = batch_len {
+            run.metrics.custom.push(MetricPoint {
+                name: "sparse_resident_batch_len".to_string(),
+                value: len,
+            });
+        }
+        Ok(run)
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
@@ -403,7 +553,7 @@ impl BenchCase for SparseOutputCompactionCount {
 fn sparse_output_compaction_count_program() -> Program {
     Program::wrapped(
         vec![
-            BufferDecl::read_write("out_count", 0, DataType::U32).with_count(1),
+            BufferDecl::output("out_count", 0, DataType::U32).with_count(1),
             BufferDecl::storage("flags", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(SPARSE_ITEMS),
         ],
@@ -480,16 +630,45 @@ impl BenchCase for CallgraphReachabilityStep {
         ))
     }
 
-    fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
+    fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
         let shape = ProgramGraphShape::new(CALLGRAPH_NODES, CALLGRAPH_EDGES);
-        Ok(Box::new(
-            vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse(
-                shape,
-                "frontier_in",
-                "frontier_out",
-                1,
-            ),
-        ))
+        let program = vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse(
+            shape,
+            "frontier_in",
+            "frontier_out",
+            1,
+        );
+        let graph = linear_graph_inputs();
+        let input_bytes_total = input_bytes_total(&graph.inputs);
+        let output_resource_index = program
+            .buffers()
+            .iter()
+            .position(|buffer| buffer.name() == "frontier_out")
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(
+                    "callgraph traversal program is missing frontier_out binding".to_string(),
+                )
+            })?;
+        let resident_batch = ResidentInputPool::upload_optional(
+            ctx,
+            &graph.inputs,
+            CALLGRAPH_RESIDENT_BATCH_SIZE,
+            "callgraph reachability batch",
+        )?;
+
+        Ok(Box::new(CallgraphPrepared {
+            program,
+            graph,
+            input_bytes_total,
+            output_resource_index,
+            resident_batch,
+        }))
+    }
+
+    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
+        prepared
+            .downcast_ref::<CallgraphPrepared>()
+            .map(|prepared| &prepared.program)
     }
 
     fn run(
@@ -497,11 +676,104 @@ impl BenchCase for CallgraphReachabilityStep {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let program = crate::api::case::prepared_program(prepared)?;
-        let graph = linear_graph_inputs();
-        let timed = ctx
-            .dispatch_timed(program, &graph.inputs, &ctx.dispatch_config)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+        let prepared = prepared
+            .downcast_ref::<CallgraphPrepared>()
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed("callgraph prepared payload type mismatch".to_string())
+            })?;
+        let reset_payload = prepared
+            .graph
+            .inputs
+            .get(prepared.output_resource_index)
+            .ok_or_else(|| {
+                BenchError::ExecutionFailed(format!(
+                    "callgraph output resource index {} is outside {} input payloads",
+                    prepared.output_resource_index,
+                    prepared.graph.inputs.len()
+                ))
+            })?;
+        let mut batch_wall_ns = None;
+        let mut batch_len = None;
+        let (timed, resident_used, resident_reset_bytes) =
+            if let Some(resident_batch) = prepared.resident_batch.as_ref() {
+                resident_batch.upload_resource_to_all_sets(
+                    prepared.output_resource_index,
+                    reset_payload,
+                    "callgraph resident batch frontier reset",
+                )?;
+                let config = crate::api::case::dispatch_config_with_inferred_grid(
+                    &prepared.program,
+                    &prepared.graph.inputs,
+                    &ctx.dispatch_config,
+                )
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+                match resident_batch.dispatch_artifact_batch_timed(
+                    ctx,
+                    &prepared.program,
+                    CALLGRAPH_RESIDENT_BATCH_SIZE,
+                    &config,
+                ) {
+                    Ok(batch) => {
+                        if batch.outputs.len() != CALLGRAPH_RESIDENT_BATCH_SIZE {
+                            return Err(BenchError::ExecutionFailed(format!(
+                                "callgraph resident batch returned {} output row(s), expected {}",
+                                batch.outputs.len(),
+                                CALLGRAPH_RESIDENT_BATCH_SIZE
+                            )));
+                        }
+                        let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
+                            BenchError::ExecutionFailed(
+                                "callgraph resident batch returned no output rows".to_string(),
+                            )
+                        })?;
+                        if let Some((index, _)) = batch
+                            .outputs
+                            .iter()
+                            .enumerate()
+                            .find(|(_, outputs)| **outputs != first_outputs)
+                        {
+                            return Err(BenchError::CorrectnessViolation(format!(
+                                "callgraph resident batch output row {index} disagreed with row 0"
+                            )));
+                        }
+                        batch_wall_ns = Some(batch.wall_ns_total);
+                        batch_len = Some(batch.batch_len as u64);
+                        (
+                            vyre_driver::TimedDispatchResult {
+                                outputs: first_outputs,
+                                wall_ns: batch.per_item_wall_ns(),
+                                device_ns: batch.per_item_device_ns(),
+                                enqueue_ns: None,
+                                wait_ns: None,
+                            },
+                            true,
+                            reset_payload.len() as u64,
+                        )
+                    }
+                    Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
+                        let timed = ctx
+                            .dispatch_timed(
+                                &prepared.program,
+                                &prepared.graph.inputs,
+                                &ctx.dispatch_config,
+                            )
+                            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+                        (timed, false, 0)
+                    }
+                    Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
+                }
+            } else {
+                let timed = ctx
+                    .dispatch_timed(
+                        &prepared.program,
+                        &prepared.graph.inputs,
+                        &ctx.dispatch_config,
+                    )
+                    .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+                (timed, false, 0)
+            };
+
+        let graph = &prepared.graph;
         let baseline_start = std::time::Instant::now();
         let mut expected = release_benchmark_csr_forward_baseline(
             CALLGRAPH_NODES,
@@ -524,18 +796,48 @@ impl BenchCase for CallgraphReachabilityStep {
         }
         let baseline_outputs = vec![encode_u32_words(&expected)];
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        let mut run = bench_run_from_timed(
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
+        let accounting = resident_reset_transfer_accounting(
+            prepared.input_bytes_total,
+            output_bytes,
+            resident_used,
+            resident_reset_bytes,
+        );
+        let mut run = bench_run_from_timed_with_accounting(
             timed,
-            graph.inputs,
+            prepared.input_bytes_total,
             baseline_outputs,
             baseline_wall,
             "callgraph_nodes",
             CALLGRAPH_NODES,
+            logical_bytes_touched,
+            accounting,
         )?;
         run.metrics.custom.push(MetricPoint {
             name: "callgraph_witness_digest".to_string(),
             value: u64::from(witness_digest),
         });
+        run.metrics.custom.push(MetricPoint {
+            name: "callgraph_resident_buffers".to_string(),
+            value: u64::from(resident_used),
+        });
+        run.metrics.custom.push(MetricPoint {
+            name: "callgraph_resident_reset_bytes".to_string(),
+            value: resident_reset_bytes,
+        });
+        if let Some(wall_ns) = batch_wall_ns {
+            run.metrics.custom.push(MetricPoint {
+                name: "callgraph_resident_batch_wall_ns".to_string(),
+                value: wall_ns,
+            });
+        }
+        if let Some(len) = batch_len {
+            run.metrics.custom.push(MetricPoint {
+                name: "callgraph_resident_batch_len".to_string(),
+                value: len,
+            });
+        }
         Ok(run)
     }
 
@@ -744,7 +1046,7 @@ impl BenchCase for MetadataConditionBatch {
                         vyre_driver::TimedDispatchResult {
                             outputs: first_outputs,
                             wall_ns: batch.per_item_wall_ns(),
-                            device_ns: None,
+                            device_ns: batch.per_item_device_ns(),
                             enqueue_ns: None,
                             wait_ns: None,
                         },
@@ -968,7 +1270,15 @@ impl BenchCase for SyntheticCountWorkload {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        gpu_requirements((self.records as u64 * pattern_input_count(self.pattern) as u64 * 4) + 4)
+        let input_bytes = u64::from(self.records) * pattern_input_count(self.pattern) as u64 * 4;
+        let output_bytes = if self.pattern == SyntheticPattern::StringBitmapScatter {
+            u64::from(self.records.div_ceil(32))
+                * std::mem::size_of::<u32>() as u64
+                * STRING_BITMAP_RESIDENT_BATCH_SIZE as u64
+        } else {
+            4
+        };
+        gpu_requirements(input_bytes.saturating_add(output_bytes))
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -981,10 +1291,20 @@ impl BenchCase for SyntheticCountWorkload {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let program = build_synthetic_release_program(self.pattern, self.records);
+        let program = if self.pattern == SyntheticPattern::StringBitmapScatter {
+            string_bitmap_scatter_release_program(self.records)
+        } else {
+            build_synthetic_release_program(self.pattern, self.records)
+        };
         let (inputs, baseline) = match self.pattern {
             SyntheticPattern::StringBitmapScatter => {
-                let generated = string_bitmap_scatter_inputs(self.records);
+                let mut generated = string_bitmap_scatter_inputs(self.records);
+                generated.inputs[0].resize(
+                    self.records.div_ceil(32) as usize
+                        * std::mem::size_of::<u32>()
+                        * STRING_BITMAP_RESIDENT_BATCH_SIZE,
+                    0,
+                );
                 (
                     generated.inputs,
                     SyntheticBaseline::StringBitmap {
@@ -1013,17 +1333,6 @@ impl BenchCase for SyntheticCountWorkload {
             &inputs,
             "synthetic release workload",
         )?;
-        let resident_batch = if self.pattern == SyntheticPattern::StringBitmapScatter {
-            ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
-                ctx,
-                &program,
-                &inputs,
-                STRING_BITMAP_RESIDENT_BATCH_SIZE,
-                "synthetic release workload batch",
-            )?
-        } else {
-            None
-        };
         Ok(Box::new(SyntheticCountPrepared {
             program,
             inputs,
@@ -1032,7 +1341,6 @@ impl BenchCase for SyntheticCountWorkload {
             output_reset_payload,
             baseline,
             resident,
-            resident_batch,
         }))
     }
 
@@ -1048,101 +1356,48 @@ impl BenchCase for SyntheticCountWorkload {
                     "synthetic release prepared payload type mismatch".to_string(),
                 )
             })?;
-        let (timed, resident_used, resident_reset_bytes, batch_wall_ns, batch_len) =
-            if let (SyntheticPattern::StringBitmapScatter, true, Some(resident_batch)) = (
-                self.pattern,
-                ctx.preferred_backend.id() == "cuda",
-                prepared.resident_batch.as_ref(),
-            ) {
-                let config = crate::api::case::dispatch_config_with_inferred_grid(
-                    &prepared.program,
-                    &prepared.inputs,
-                    &ctx.dispatch_config,
+        let mut dispatch_config = ctx.dispatch_config.clone();
+        if self.pattern == SyntheticPattern::StringBitmapScatter {
+            dispatch_config.grid_override = Some(
+                vyre_driver::program_walks::infer_dispatch_grid_for_count(
+                    self.records,
+                    prepared.program.workgroup_size(),
                 )
-                .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-                match resident_batch.dispatch_artifact_batch_timed(
-                    ctx,
-                    &prepared.program,
-                    STRING_BITMAP_RESIDENT_BATCH_SIZE,
-                    &config,
-                ) {
-                    Ok(batch) => {
-                        if batch.outputs.len() != STRING_BITMAP_RESIDENT_BATCH_SIZE {
-                            return Err(BenchError::ExecutionFailed(format!(
-                                "{} resident batch returned {} output row(s), expected {}",
-                                self.id,
-                                batch.outputs.len(),
-                                STRING_BITMAP_RESIDENT_BATCH_SIZE
-                            )));
-                        }
-                        let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
-                            BenchError::ExecutionFailed(format!(
-                                "{} resident batch returned no output rows",
-                                self.id
-                            ))
-                        })?;
-                        if let Some((index, _)) = batch
-                            .outputs
-                            .iter()
-                            .enumerate()
-                            .find(|(_, outputs)| **outputs != first_outputs)
-                        {
-                            return Err(BenchError::CorrectnessViolation(format!(
-                                "{} resident batch output row {index} disagreed with row 0",
-                                self.id
-                            )));
-                        }
-                        (
-                            vyre_driver::TimedDispatchResult {
-                                outputs: first_outputs,
-                                wall_ns: batch.per_item_wall_ns(),
-                                device_ns: None,
-                                enqueue_ns: None,
-                                wait_ns: None,
-                            },
-                            true,
-                            0,
-                            Some(batch.wall_ns_total),
-                            Some(batch.batch_len as u64),
-                        )
-                    }
-                    Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => {
-                        dispatch_single_synthetic_resident(ctx, prepared)?
-                    }
-                    Err(error) => return Err(BenchError::BackendFailed(error.to_string())),
-                }
-            } else if let Some(resident) = prepared.resident.as_ref() {
-                if !prepared.output_reset_payload.is_empty() {
-                    resident.upload_resource(
-                        0,
-                        &prepared.output_reset_payload,
-                        "synthetic release resident output reset",
-                    )?;
-                }
-                let dispatch = dispatch_program_timed(
-                    ctx,
-                    &prepared.program,
-                    Some(resident),
-                    &prepared.inputs,
-                    &ctx.dispatch_config,
+                .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
+            );
+        }
+        if let Some(resident) = prepared.resident.as_ref() {
+            if !prepared.output_reset_payload.is_empty() {
+                resident.upload_resource(
+                    0,
+                    &prepared.output_reset_payload,
+                    "synthetic release resident output reset",
                 )?;
-                (
-                    dispatch.timed,
-                    dispatch.resident_used,
-                    prepared.output_reset_payload.len() as u64,
-                    None,
-                    None,
-                )
-            } else {
-                let dispatch = dispatch_program_timed(
-                    ctx,
-                    &prepared.program,
-                    None,
-                    &prepared.inputs,
-                    &ctx.dispatch_config,
-                )?;
-                (dispatch.timed, dispatch.resident_used, 0, None, None)
-            };
+            }
+        }
+        let dispatch = dispatch_program_timed(
+            ctx,
+            &prepared.program,
+            prepared.resident.as_ref(),
+            &prepared.inputs,
+            &dispatch_config,
+        )?;
+        let mut timed = dispatch.timed;
+        let resident_used = dispatch.resident_used;
+        let resident_reset_bytes = if resident_used {
+            prepared.output_reset_payload.len() as u64
+        } else {
+            0
+        };
+        let (batch_wall_ns, batch_len) = if self.pattern == SyntheticPattern::StringBitmapScatter {
+            let batch_len = STRING_BITMAP_RESIDENT_BATCH_SIZE as u64;
+            let batch_wall_ns = timed.wall_ns;
+            timed.wall_ns = timed.wall_ns.div_ceil(batch_len);
+            timed.device_ns = timed.device_ns.map(|ns| ns.div_ceil(batch_len));
+            (Some(batch_wall_ns), Some(batch_len))
+        } else {
+            (None, None)
+        };
         let baseline_start = std::time::Instant::now();
         let baseline_outputs = match &prepared.baseline {
             SyntheticBaseline::Count { expected } => {
@@ -1159,13 +1414,21 @@ impl BenchCase for SyntheticCountWorkload {
                 pattern_bitmap,
                 rule_bitmap,
             } => {
-                let baseline_words =
-                    string_bitmap_scatter_expected_words(pattern_bitmap, rule_bitmap, self.records);
-                vec![encode_u32_words(&baseline_words)]
+                let baseline_row = encode_u32_words(&string_bitmap_scatter_expected_words(
+                    pattern_bitmap,
+                    rule_bitmap,
+                    self.records,
+                ));
+                vec![baseline_row.repeat(STRING_BITMAP_RESIDENT_BATCH_SIZE)]
             }
         };
         let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
-        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let output_bytes = timed
+            .outputs
+            .iter()
+            .map(Vec::len)
+            .sum::<usize>()
+            .div_ceil(batch_len.unwrap_or(1) as usize) as u64;
         let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
             output_bytes,
@@ -1357,12 +1620,32 @@ fn condition_eval_program(records: u32) -> Program {
 }
 
 fn string_bitmap_scatter_program(records: u32) -> Program {
+    string_bitmap_scatter_program_with_batch(records, 1)
+}
+
+fn string_bitmap_scatter_release_program(records: u32) -> Program {
+    string_bitmap_scatter_program_with_batch(records, STRING_BITMAP_RESIDENT_BATCH_SIZE as u32)
+}
+
+fn string_bitmap_scatter_program_with_batch(records: u32, batch_size: u32) -> Program {
     let output_words = records.div_ceil(32);
+    let total_output_words = output_words * batch_size;
+    let record_idx = Expr::var("record_idx");
+    let selected = Expr::and(
+        Expr::lt(record_idx.clone(), Expr::u32(records)),
+        Expr::and(
+            Expr::ne(
+                Expr::load("pattern_bitmap", record_idx.clone()),
+                Expr::u32(0),
+            ),
+            Expr::ne(Expr::load("rule_bitmap", record_idx.clone()), Expr::u32(0)),
+        ),
+    );
     Program::wrapped(
         vec![
             BufferDecl::storage("out_flags", 0, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(output_words)
-                .with_output_byte_range(0..(output_words as usize * 4)),
+                .with_count(total_output_words)
+                .with_output_byte_range(0..(total_output_words as usize * 4)),
             BufferDecl::storage("pattern_bitmap", 1, BufferAccess::ReadOnly, DataType::U32)
                 .with_count(records),
             BufferDecl::storage("rule_bitmap", 2, BufferAccess::ReadOnly, DataType::U32)
@@ -1370,49 +1653,26 @@ fn string_bitmap_scatter_program(records: u32) -> Program {
         ],
         [256, 1, 1],
         vec![
-            Node::let_bind("word_idx", Expr::gid_x()),
+            Node::let_bind("record_idx", Expr::gid_x()),
+            Node::let_bind("scatter_word", Expr::subgroup_ballot(selected)),
             Node::if_then(
-                Expr::lt(Expr::var("word_idx"), Expr::u32(output_words)),
-                vec![
-                    Node::let_bind("word", Expr::u32(0)),
-                    Node::loop_for(
-                        "lane",
-                        Expr::u32(0),
-                        Expr::u32(32),
-                        vec![
-                            Node::let_bind(
-                                "record_idx",
-                                Expr::add(
-                                    Expr::shl(Expr::var("word_idx"), Expr::u32(5)),
-                                    Expr::var("lane"),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::and(
-                                    Expr::lt(Expr::var("record_idx"), Expr::u32(records)),
-                                    Expr::and(
-                                        Expr::ne(
-                                            Expr::load("pattern_bitmap", Expr::var("record_idx")),
-                                            Expr::u32(0),
-                                        ),
-                                        Expr::ne(
-                                            Expr::load("rule_bitmap", Expr::var("record_idx")),
-                                            Expr::u32(0),
-                                        ),
-                                    ),
-                                ),
-                                vec![Node::assign(
-                                    "word",
-                                    Expr::bitor(
-                                        Expr::var("word"),
-                                        Expr::shl(Expr::u32(1), Expr::var("lane")),
-                                    ),
-                                )],
-                            ),
-                        ],
-                    ),
-                    Node::store("out_flags", Expr::var("word_idx"), Expr::var("word")),
-                ],
+                Expr::and(
+                    Expr::eq(Expr::SubgroupLocalId, Expr::u32(0)),
+                    Expr::lt(record_idx.clone(), Expr::u32(records)),
+                ),
+                vec![Node::loop_for(
+                    "scatter_batch",
+                    Expr::u32(0),
+                    Expr::u32(batch_size),
+                    vec![Node::store(
+                        "out_flags",
+                        Expr::add(
+                            Expr::mul(Expr::var("scatter_batch"), Expr::u32(output_words)),
+                            Expr::shr(record_idx, Expr::u32(5)),
+                        ),
+                        Expr::var("scatter_word"),
+                    )],
+                )],
             ),
         ],
     )
@@ -2567,11 +2827,11 @@ fn add_release_alias_metrics(
     match pattern {
         SyntheticPattern::AliasReachingDef => {
             run.metrics.custom.push(MetricPoint {
-                name: "weir_nodes".to_string(),
+                name: "flow_nodes".to_string(),
                 value: u64::from(records),
             });
             run.metrics.custom.push(MetricPoint {
-                name: "weir_bitset_words".to_string(),
+                name: "flow_bitset_words".to_string(),
                 value: u64::from(records.div_ceil(32)),
             });
         }
@@ -2935,14 +3195,15 @@ mod tests {
     #[test]
     fn sparse_compaction_dispatch_inputs_match_program_abi() {
         let program = sparse_output_compaction_count_program();
-        let input_lengths = [4, (SPARSE_ITEMS as usize) * 4];
+        let input_lengths = [(SPARSE_ITEMS as usize) * 4];
 
         let plan = vyre_driver::BindingPlan::from_input_lengths(&program, &input_lengths)
             .expect("Fix: sparse compaction release workload inputs must match Program ABI.");
+        assert_eq!(plan.input_indices, [1]);
         assert_eq!(
-            plan.input_indices.len(),
-            input_lengths.len(),
-            "Fix: sparse compaction count must treat out_count as initialized input-output state and flags as read-only input."
+            plan.output_indices,
+            [0],
+            "Fix: sparse compaction count must expose out_count as an artifact-allocated output, not caller-initialized retained state."
         );
     }
 
@@ -3011,8 +3272,39 @@ mod tests {
         }
     }
 
+    /// WHY: throughput batching may share immutable bitmap inputs, but every logical row must
+    /// still receive the complete bitmap rather than a partial or aliased output.
     #[test]
-    fn alias_reaching_def_release_metrics_expose_weir_shape() {
+    fn string_bitmap_scatter_batched_rows_match_independent_oracles() {
+        let records = 257;
+        let batch_size = 4;
+        let program = string_bitmap_scatter_program_with_batch(records, batch_size);
+        let mut generated = string_bitmap_scatter_inputs(records);
+        let expected_words = string_bitmap_scatter_expected_words(
+            &generated.pattern_bitmap,
+            &generated.rule_bitmap,
+            records,
+        );
+        let expected_row = encode_u32_words(&expected_words);
+        generated.inputs[0].resize(expected_row.len() * batch_size as usize, 0);
+        let values = generated
+            .inputs
+            .iter()
+            .cloned()
+            .map(vyre_reference::value::Value::from)
+            .collect::<Vec<_>>();
+
+        let outputs = vyre_reference::reference_eval(&program, &values)
+            .expect("Fix: batched string bitmap scatter must reference-evaluate")
+            .into_iter()
+            .map(|value| value.to_bytes())
+            .collect::<Vec<_>>();
+
+        assert_eq!(outputs, vec![expected_row.repeat(batch_size as usize)]);
+    }
+
+    #[test]
+    fn alias_reaching_def_release_metrics_expose_flow_shape() {
         let mut run = BenchRun {
             metrics: BenchMetrics::default(),
             baseline_metrics: None,
@@ -3030,12 +3322,12 @@ mod tests {
                 .map(|point| point.value)
         };
         assert_eq!(
-            metric("weir_nodes"),
+            metric("flow_nodes"),
             Some(65),
-            "Fix: dataflow release evidence must expose the Weir node count under the gate-visible metric name."
+            "Fix: dataflow release evidence must expose the node count under the gate-visible metric name."
         );
         assert_eq!(
-            metric("weir_bitset_words"),
+            metric("flow_bitset_words"),
             Some(3),
             "Fix: dataflow release evidence must expose ceil(nodes/32) bitset words under the gate-visible metric name."
         );
@@ -3170,13 +3462,13 @@ mod tests {
                 ),
                 (
                     "release.alias_reaching_def.1m",
-                    "weir",
+                    "vyre-bench",
                     ReleaseMacroFamily::Flow,
                     3,
                 ),
                 (
                     "release.ifds_witness.1m",
-                    "weir",
+                    "vyre-bench",
                     ReleaseMacroFamily::Flow,
                     3,
                 ),
@@ -3204,7 +3496,7 @@ mod tests {
     }
 
     #[test]
-    fn release_macro_typed_family_builders_preserve_weir_flow_and_empty_families() {
+    fn release_macro_typed_family_builders_preserve_external_flow_and_empty_families() {
         let flow_specs =
             release_macro_program_specs_for_family_and_records(ReleaseMacroFamily::Flow, 33);
         assert_eq!(
@@ -3215,18 +3507,18 @@ mod tests {
             vec![
                 (
                     "release.alias_reaching_def.1m",
-                    "weir",
+                    "vyre-bench",
                     ReleaseMacroFamily::Flow,
                     3,
                 ),
                 (
                     "release.ifds_witness.1m",
-                    "weir",
+                    "vyre-bench",
                     ReleaseMacroFamily::Flow,
                     3,
                 ),
             ],
-            "Fix: flow release workloads must stay attached to Weir ownership and not drift into benchmark-local flow."
+            "Fix: flow release workloads must stay attached to their benchmark product owner."
         );
 
         let flow_cases =
@@ -3240,20 +3532,20 @@ mod tests {
             );
             assert_ne!(
                 case.expected_output_digest, 0,
-                "Fix: Weir flow release case {} must carry a nonzero CPU-oracle digest.",
+                "Fix: flow release case {} must carry a nonzero CPU-oracle digest.",
                 case.spec.id
             );
         }
 
         for workload in release_macro_workloads_for_family(ReleaseMacroFamily::Flow) {
             assert!(
-                workload.tags.contains(&"weir"),
-                "Fix: Weir flow workload {} must advertise the Weir boundary in tags.",
+                workload.tags.contains(&"external-facts"),
+                "Fix: flow workload {} must advertise the generic external-facts boundary.",
                 workload.id
             );
             assert!(
-                workload.primitive.contains("Weir"),
-                "Fix: Weir flow workload {} must name the actual Weir primitive.",
+                !workload.primitive.trim().is_empty(),
+                "Fix: flow workload {} must name its benchmarked primitive.",
                 workload.id
             );
         }

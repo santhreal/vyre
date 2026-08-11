@@ -34,6 +34,7 @@ const SIDECAR_WORDS: u32 = GROUP_COUNT * OUT_DIM;
 const MAC_COUNT: u64 = (IN_DIM as u64) * (OUT_DIM as u64);
 const CPU_BASELINE_SAMPLES: usize = 9;
 const RESIDENT_SAMPLE_SETS: usize = 8;
+const INFERENCE_BATCH_SIZE: u32 = 256;
 
 const SUITES: &[SuiteKind] = &[
     SuiteKind::Release,
@@ -63,7 +64,7 @@ pub struct QuantizedLinear4BitAffineGrouped;
 
 struct QuantizedLinearPrepared {
     program: Program,
-    evidence: vyre_libs::nn::QuantizedLinear4BitPlannerEvidence,
+    evidence: vyre_libs::nn::linear::QuantizedLinear4BitPlannerEvidence,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     baseline_output: Vec<u8>,
@@ -128,20 +129,29 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
     }
 
     fn prepare(&self, ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        let spec =
-            vyre_libs::nn::QuantizedLinear4BitSpec::affine_grouped(IN_DIM, OUT_DIM, GROUP_SIZE);
-        let evidence = vyre_libs::nn::linear_4bit_affine_grouped_planner_evidence(&spec)
+        let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(
+            IN_DIM, OUT_DIM, GROUP_SIZE,
+        );
+        let evidence = vyre_libs::nn::linear::linear_4bit_affine_grouped_planner_evidence(&spec)
             .map_err(BenchError::ExecutionFailed)?;
-        let program = vyre_libs::nn::linear_4bit_affine_grouped_typed(
-            &spec, "x", "w", "scale", "zp", "b", "out",
+        let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_batched_typed(
+            &spec,
+            INFERENCE_BATCH_SIZE,
+            "x",
+            "w",
+            "scale",
+            "zp",
+            "b",
+            "out",
         )
         .map_err(BenchError::ExecutionFailed)?;
         ctx.dispatch_config
             .workgroup_override
             .get_or_insert(program.workgroup_size());
         let (x, packed, scale, zero_point, bias) = quantized_inputs();
+        let batched_x = x.repeat(INFERENCE_BATCH_SIZE as usize);
         let inputs = vec![
-            f32_bytes(&x),
+            f32_bytes(&batched_x),
             u32_bytes(&packed),
             f32_bytes(&scale),
             u32_bytes(&zero_point),
@@ -150,7 +160,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
         let input_bytes_total = input_bytes_total(&inputs);
         let (baseline, baseline_wall_ns) =
             measured_cpu_oracle_checked(&x, &packed, &scale, &zero_point, &bias)?;
-        let baseline_output = f32_bytes(&baseline);
+        let baseline_output = f32_bytes(&baseline).repeat(INFERENCE_BATCH_SIZE as usize);
         let resident_output_sizes = resident_output_byte_lengths(&program, "quantized linear")?;
         let resident = ResidentInputPool::upload_with_zeroed_outputs_optional(
             ctx,
@@ -198,6 +208,10 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             &ctx.dispatch_config,
         )?;
         let timed = dispatch.timed;
+        let wall_ns_per_item = timed.wall_ns.div_ceil(u64::from(INFERENCE_BATCH_SIZE));
+        let device_ns_per_item = timed
+            .device_ns
+            .map(|device_ns| device_ns.div_ceil(u64::from(INFERENCE_BATCH_SIZE)));
         let outputs = timed.outputs;
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting = transfer_accounting(
@@ -213,7 +227,7 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
             cpu_digest,
             gpu_digest,
             tolerance_abs_e9,
-            active_time_ns: timed.device_ns.unwrap_or(timed.wall_ns),
+            active_time_ns: device_ns_per_item.unwrap_or(wall_ns_per_item),
             transfer_bytes: accounting.bytes_touched,
             selected_kernel_path: prepared.evidence.matmul_selected_path,
         };
@@ -222,14 +236,18 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
 
         Ok(BenchRun {
             metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
+                wall_ns: Some(wall_ns_per_item),
+                dispatch_ns: device_ns_per_item,
                 input_bytes: Some(prepared.input_bytes_total),
                 output_bytes: Some(output_bytes),
                 bytes_read: Some(accounting.bytes_read),
                 bytes_written: Some(accounting.bytes_written),
                 bytes_touched: Some(accounting.bytes_touched),
                 custom: vec![
+                    MetricPoint {
+                        name: "quantized_inference_batch_size".to_string(),
+                        value: u64::from(INFERENCE_BATCH_SIZE),
+                    },
                     MetricPoint {
                         name: "quantized_mac_count".to_string(),
                         value: MAC_COUNT,

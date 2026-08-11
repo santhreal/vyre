@@ -10,7 +10,7 @@ vyre-bench
 ├── cases/         # Benchmark implementations (one file per workload)
 ├── runner/        # Execution engine, snapshot diffing, execute_suite()
 ├── report/        # JSON schema, scorecard generation
-├── evolve/        # OpenEvolve-style evolutionary optimization server
+├── cli/           # Binary-only report, dashboard, and evolution-server commands
 ├── probes/        # NVML environment probing, thermal normalization
 ├── registry/      # inventory-based case collection
 ├── cli.rs         # CLI: run, list, explain, snapshot-diff, compare, dashboard
@@ -30,10 +30,10 @@ cargo_full run -p vyre-bench --release -- run --suite smoke --measured-samples 3
 cargo_full run -p vyre-bench --release -- run --suite honest --measured-samples 30
 
 # Generate CUDA release evidence
-cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets
+cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
 # Generate WGPU fallback evidence
-cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 3 --enforce-budgets
+cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets
 
 # Compare two runs
 cargo_full run -p vyre-bench -- compare --baseline baseline.json --candidate candidate.json
@@ -71,7 +71,7 @@ These benchmarks use CPU baselines that run the same algorithm or contract shape
 
 ## Release Workloads
 
-The `release` suite must cover at least 12 workload families before Vyre `0.4.2` / Weir `0.0.1` can ship. CUDA is the preferred release backend; WGPU is the portable GPU fallback. Every row below has exact output parity against a CPU baseline and a performance contract against a serious CPU baseline class.
+The `release` suite must cover at least 12 workload families before Vyre can ship. CUDA is the preferred release backend; WGPU is the portable GPU fallback. Every row below has exact output parity against a CPU baseline and a performance contract against a serious CPU baseline class.
 
 | Workload family | Case id | Contract |
 |---|---|---|
@@ -129,7 +129,7 @@ version = "=0.16.1"
 workloads = ["hashtable.openaddr.build_probe.10m"]
 ```
 
-The `CompetitorRun` trait in `api/competitor.rs` enables side-by-side A/B comparisons.
+The `CompetitorRun` trait in `src/api/competitor.rs` enables side-by-side A/B comparisons.
 
 ## Dashboard
 
@@ -138,11 +138,11 @@ The `CompetitorRun` trait in `api/competitor.rs` enables side-by-side A/B compar
 - Per-case SVG bar charts (p50/p99/max)
 - `cross-backend.svg`: cross-backend comparison
 - `scorecard.md`: markdown summary
-- `data/results.json`: raw data
+- a raw JSON data file under the selected dashboard output directory
 
 ## Adding a New Benchmark
 
-1. Create `src/cases/my_workload.rs` implementing `BenchCase`
+1. Create `src/cases/<workload>.rs` implementing `BenchCase`
 2. Add `inventory::submit! { &MyWorkload as &'static dyn BenchCase }` at the bottom
 3. Register in `src/cases/mod.rs`
 4. Run `cargo_full test -p vyre-bench` to verify integration
@@ -150,7 +150,7 @@ The `CompetitorRun` trait in `api/competitor.rs` enables side-by-side A/B compar
 
 ## Release evidence
 
-Release readiness for this document is proven through the Vyre/Weir evidence manifest and generated artifacts under `release/evidence/`. Claims here must map to concrete gate output, benchmark output, conformance output, parser corpus output, or documentation proof files before the release requirement can be closed.
+Release readiness is proven through the Vyre evidence manifest and generated artifacts under `release/evidence/`. Claims here must map to concrete gate output, benchmark output, conformance output, or documentation proof files before the release requirement can be closed.
 
 Concrete evidence anchors:
 
@@ -198,3 +198,86 @@ baseline manifest cannot be read.
 `source_tree_fingerprint` keys the artifact to the workspace source it measured, so
 any source change after the run invalidates it and the gate says so. Run the
 benchmarks last.
+
+<!-- BEGIN GENERATED CLI CONTRACT -->
+## Command-line interface
+
+This section is generated from `docs/CLI.toml` and executable help output.
+
+### `vyre-bench`
+
+```console
+./cargo_full run -p vyre-bench --bin vyre-bench -- --help
+```
+
+Commands: `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report`.
+
+Hardware: Run commands require the explicitly selected backend device. Report validation and comparison are device independent.
+
+Environment: RAYON_NUM_THREADS configures CPU baselines. VYRE_ALLOW_FEW_SAMPLES=1 permits local smoke runs below the release sample floor.
+
+Configuration: Suite, case, backend, sample, budget, report, and output settings are command-line arguments.
+
+Failure behavior: Unavailable backends, invalid suites or reports, benchmark mismatches, timeouts, and budget violations return non-zero.
+
+Exit codes: 0 on success or help, 1 on benchmark or validation failure, 2 on invalid arguments.
+<!-- END GENERATED CLI CONTRACT -->
+
+<!-- BEGIN GENERATED CRATE CONTRACT -->
+## Crate contract
+
+This section is generated by `python3 scripts/crate_readmes.py --write` from
+the crate manifest, release train, ownership registry, and crate-guide metadata.
+
+### Purpose
+
+Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.
+
+### Boundaries
+
+The `benchmarks` owner maintains this `tooling` crate at `vyre-bench`.
+Its allowed internal production dependencies are: `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`.
+Any other normal or build dependency requires an ownership-registry change.
+
+### Minimal real example
+
+Run the checked-in behavior from `vyre-bench/src/main.rs`:
+
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-bench -- --help
+```
+
+### Features
+
+- Manifest features: `cli`, `default`
+- Default feature members: `cli`
+
+### Errors and unsupported behavior
+
+Invalid arguments, stale evidence, violated repository contracts, and failed commands return a nonzero status with a concrete correction.
+
+### Testing
+
+Use [`docs/testing/vyre-bench.md`](../docs/testing/vyre-bench.md) for exact commands, Cargo targets, hardware
+requirements, evidence outputs, expected skips, and failure semantics.
+
+### Release status
+
+This crate is internal benchmark tooling for the 0.7.2 train and is not published to crates.io.
+
+### Ownership
+
+`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
+and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
+`docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
+<!-- END GENERATED CRATE CONTRACT -->

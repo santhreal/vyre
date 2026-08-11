@@ -6,10 +6,10 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Added
 
-- `vyre-bench` now keeps command parsing, dashboard generation, and the
-  evolution server behind its default `cli` feature and binary boundary.
-  Library-only consumers can disable default features to omit `clap` and
-  `env_logger` without changing benchmark execution or report APIs.
+- Grouped affine INT4 linear now provides a typed batched program builder that
+  dequantizes each immutable weight tile once and reuses it across independent
+  resident batch rows. Release evidence measures normalized per-inference
+  latency.
 - The runtime now reads bounded safetensors headers and sharded indexes without
   reading tensor payloads, confines shard paths to the checkpoint root, rejects
   duplicate or unmapped tensors, validates caller-supplied dtype and shape
@@ -22,45 +22,21 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   exposing stale state.
 - ProgramGraph now composes reusable Programs through canonical typed value
   identities, explicit consumer and output ports, symbolic or concrete shapes,
-  access and lifetime contracts, and validated retained-value transitions. Its
-  bounded VGR0 v2 wire format embeds existing VIR0 Programs and rejects implicit
-  casts, rank drift, alias conflicts, missing retained inputs, malformed framing,
-  and hostile counts before mutation.
+  access and lifetime contracts, and validated state transitions. Its bounded
+  VGR0 wire format embeds existing VIR0 Programs and rejects implicit casts,
+  rank drift, alias conflicts, dangling state, malformed framing, and hostile
+  counts before mutation.
 - ProgramGraph now validates complete compositions and derives canonical
   topological schedules, inclusive value liveness, and deterministic
   interval-colored allocation plans. Invocation-local values reuse only
-  nonoverlapping slots, while constants, retained generations, and caller-visible
-  outputs retain dedicated storage.
+  nonoverlapping slots, while immutable weights, sequence-state generations,
+  and caller-visible outputs retain dedicated storage.
 - ProgramGraph now derives one versioned, domain-separated BLAKE3 identity from
   canonical topology and Programs, typed port contracts, artifact schema,
-  validated configuration, exact symbolic bindings, and verified constant
-  identities. Mutable retained contents are excluded, so cache growth reuses
-  compiled artifacts while executable or provenance changes invalidate the key.
-  The v2 identity rejects stale v1 records.
-- `vyre-megakernel` now compiles validated `ProgramGraph`, `ExternalFacts`, and
-  explicit `SearchBudget` requests into v4 `Artifact` records. The compiler
-  explores legal whole-graph fusion schedules, prunes lifecycle,
-  synchronization, geometry, and dependency violations with stable reasons,
-  selects the lowest open-model cost, and records exact bounded search work and
-  dependency stages. Registered target compiler facets decode only these
-  selected modules and consume the canonical artifact ABI. Typed graph IDs
-  survive compilation, constant identities and symbolic bindings are
-  authenticated, artifact size is bounded, and runtime retention policy is
-  excluded from compiler identity. `ArtifactEnvelope` remains the versioned
-  target-payload attachment.
-- Backend registrations now expose separate target-compiler and
-  artifact-materializer factories. `Device`, `ArtifactInstance`, `BindingSet`,
-  `Submission`, and `Completion` carry immutable artifact, payload, device
-  generation, binding, and readback identities. Missing native facets fail
-  explicitly instead of receiving a raw `Program` passthrough.
-  SPIR-V now registers the first pure facet: it decodes compiler-selected
-  fusion groups, forms one verified Program per group, emits each through the
-  sole SPIR-V writer, and packages canonical stage-ordered module bytes.
-- `vyre-lower::lower_verified` is now the sole production Program-to-descriptor
-  boundary. It runs the registered fallible semantic optimizer once, performs
-  lower-IR cleanup, and verifies both descriptor states. Target emitters consume
-  verified descriptors without private optimization pipelines, and
-  `vyre-emit-spirv` is the sole SPIR-V serializer.
+  validated model configuration, exact symbolic bindings, and verified
+  immutable-weight identities. Mutable sequence-state contents are excluded, so
+  cache growth reuses compiled artifacts while any executable or provenance
+  change invalidates the key.
 - The neural library now provides gated RMSNorm with float32 accumulation,
   source-dtype rounding, learned scaling, float32 SiLU gating, and exact
   last-dimension row isolation. The reference interpreter now executes
@@ -96,8 +72,51 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   structural tile cannot read padding, change state, or appear in truncated
   output.
 
+### Changed
+
+- The standalone `vyre-harness` package is gone. Semantic operation identity,
+  tier classification, and registration now live in `vyre-foundation`; library
+  fixture views live in `vyre-libs`; conformance execution and parity policy
+  live in `vyre-conform`; self-substrate behavior tests live with their owner.
+- Scan products now return the foundation-owned `ByteRange { tag, start, end
+  }`. The deprecated `Match` and `LiteralMatch` surfaces and the duplicate
+  primitive range type are gone.
+- The reference interpreter now consumes foundation-owned IR, diagnostics, and
+  operation metadata directly instead of depending on the public `vyre` facade.
+- PTX f32 canonicalization now uses native flush-to-zero multiplication plus
+  NaN selection, preserving signed zero and canonical NaN semantics with fewer
+  instructions and registers.
+- Release benchmark commands now run 300 warmup samples before measurement so
+  accelerator clock preconditioning is explicit and reproducible.
+
+### Removed
+
+- Self-substrate no longer publishes source-text validators for deleted
+  C-frontend test files or parser release artifacts. Diagnostic and
+  preprocessing conformance now belongs to the live frontend and conformance
+  paths.
+- Neural operations and opaque-payload helpers now use their category-owned
+  module paths. Flat compatibility re-exports and the `matching::ops` shim are
+  gone; unclassified backend failures use `BackendError::Other`.
+- Backend registration is now consumed from `vyre-driver`, the `ReferenceKind`
+  alias is gone in favor of `vyre-spec::CpuFn`, and `gpu_int_literal_scan()` no
+  longer accepts an ignored source-length parameter.
+- The WGPU host-ingress and raw persistent-kernel compiler routes are gone.
+  Persistent product execution uses authenticated artifact sessions; concrete
+  pipeline compilation remains available only as a hidden oracle helper for
+  driver cache tests.
+
 ### Fixed
 
+- Driver decorators now preserve the concrete backend device profile, including
+  device-timestamp capability and timing quality.
+- Enforced benchmark contract failures now retain correctness, timing metrics,
+  device identity, and measured speedup in the failed case report instead of
+  collapsing into an unprobed error shell.
+- Resident throughput batches preserve complete device-timestamp totals and
+  normalize them per logical item. String bitmap scatter uses subgroup ballots
+  to materialize 16 independent output rows in one resident dispatch, with
+  exact CPU-oracle parity.
 - `xtask heuristic-audit` now resolves both standalone Vyre checkouts and the
   enclosing Santh workspace without duplicating the Vyre path.
 - Public API checks now discover every committed crate snapshot, parse exact

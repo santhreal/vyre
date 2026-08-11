@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver::{
     ArtifactMaterializer, BackendError, OutputBuffers, Resource, TimedDispatchResult,
 };
@@ -39,10 +39,11 @@ pub struct ResidentDispatch {
     pub resident_used: bool,
 }
 
-/// Batched resident dispatch outputs plus batch-level wall timing.
+/// Batched resident dispatch outputs plus batch-level wall and device timing.
 pub struct ResidentBatchDispatch {
     pub outputs: Vec<OutputBuffers>,
     pub wall_ns_total: u64,
+    pub device_ns_total: Option<u64>,
     pub batch_len: usize,
 }
 
@@ -53,6 +54,15 @@ impl ResidentBatchDispatch {
             return self.wall_ns_total;
         }
         self.wall_ns_total.saturating_add(self.batch_len as u64 - 1) / self.batch_len as u64
+    }
+
+    /// Per-item device duration when every batch row reported a positive device timestamp.
+    pub fn per_item_device_ns(&self) -> Option<u64> {
+        let total = self.device_ns_total?;
+        if self.batch_len == 0 || total == 0 {
+            return None;
+        }
+        Some(total.div_ceil(self.batch_len as u64))
     }
 }
 
@@ -543,16 +553,20 @@ impl ResidentInputPool {
         }
         let started = std::time::Instant::now();
         let mut outputs = Vec::with_capacity(batch_len);
+        let mut device_ns_total = Some(0u64);
         for resources in &self.sets[..batch_len] {
-            outputs.push(
-                ctx.dispatch_resident_timed(program, resources, config)?
-                    .outputs,
-            );
+            let timed = ctx.dispatch_resident_timed(program, resources, config)?;
+            device_ns_total = match (device_ns_total, timed.device_ns.filter(|&ns| ns > 0)) {
+                (Some(total), Some(ns)) => Some(total.saturating_add(ns)),
+                _ => None,
+            };
+            outputs.push(timed.outputs);
         }
         let wall_ns_total = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
         Ok(ResidentBatchDispatch {
             outputs,
             wall_ns_total,
+            device_ns_total,
             batch_len,
         })
     }
@@ -829,6 +843,26 @@ fn resident_set_resource_count(inputs: &[Vec<u8>], output_sizes: &[usize]) -> us
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// WHY: resident throughput batches must retain complete device timestamp evidence instead
+    /// of substituting host dispatch/readback latency for the release contract's device metric.
+    #[test]
+    fn resident_batch_normalizes_complete_device_timestamps_per_item() {
+        let complete = ResidentBatchDispatch {
+            outputs: Vec::new(),
+            wall_ns_total: 41,
+            device_ns_total: Some(21),
+            batch_len: 4,
+        };
+        assert_eq!(complete.per_item_wall_ns(), 11);
+        assert_eq!(complete.per_item_device_ns(), Some(6));
+
+        let incomplete = ResidentBatchDispatch {
+            device_ns_total: None,
+            ..complete
+        };
+        assert_eq!(incomplete.per_item_device_ns(), None);
+    }
 
     #[test]
     fn input_bytes_total_sums_encoded_buffers_once() {

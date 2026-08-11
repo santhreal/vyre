@@ -86,7 +86,6 @@
 #[non_exhaustive] pub struct vyre_foundation::graph_view::GraphNode
 #[non_exhaustive] pub struct vyre_foundation::graph_view::NodeGraph
 #[non_exhaustive] pub struct vyre_foundation::ir::ValidationError
-#[non_exhaustive] pub struct vyre_foundation::match_result::Match
 #[non_exhaustive] pub struct vyre_foundation::optimizer::cost::CostCertificate
 #[non_exhaustive] pub struct vyre_foundation::program_caps::RequiredCapabilities
 #[non_exhaustive] pub struct vyre_foundation::validate::ValidationError
@@ -113,8 +112,6 @@ impl core::convert::From<&vyre_foundation::ir::Ident> for vyre_foundation::ir::I
 impl core::convert::From<alloc::string::String> for vyre_foundation::ir::Ident
 impl core::convert::From<alloc::string::String> for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl core::convert::From<alloc::sync::Arc<str>> for vyre_foundation::ir::Ident
-impl core::convert::From<vyre_foundation::match_result::ByteRange> for vyre_foundation::match_result::Match
-impl core::convert::From<vyre_foundation::match_result::Match> for vyre_foundation::match_result::ByteRange
 impl core::convert::From<vyre_foundation::opaque_payload::endian::LeBytesWriter> for alloc::vec::Vec<u8>
 impl core::convert::From<vyre_foundation::optimizer::eqsat::EGraphError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphBridgeError
@@ -233,12 +230,12 @@ impl vyre_foundation::ir::ShapePredicate
 impl vyre_foundation::lower::LoweringError
 impl vyre_foundation::lower::effects::ProgramEffects
 impl vyre_foundation::match_result::ByteRange
-impl vyre_foundation::match_result::Match
 impl vyre_foundation::memory_model::MemoryOrdering
 impl vyre_foundation::opaque_payload::endian::LeBytesWriter
 impl vyre_foundation::operation::OperationEffects
 impl vyre_foundation::operation::OperationRegistration
 impl vyre_foundation::operation::OperationRegistry
+impl vyre_foundation::operation::OperationTier
 impl vyre_foundation::operation::TolerancePolicy
 impl vyre_foundation::optimizer::OptimizerProfile
 impl vyre_foundation::optimizer::OptimizerRunReport
@@ -437,7 +434,6 @@ pub const fn vyre_foundation::match_result::ByteRange::ends_before(&self, other:
 pub const fn vyre_foundation::match_result::ByteRange::is_empty(&self) -> bool
 pub const fn vyre_foundation::match_result::ByteRange::len(&self) -> u32
 pub const fn vyre_foundation::match_result::ByteRange::new(tag: u32, start: u32, end: u32) -> Self
-pub const fn vyre_foundation::match_result::Match::new(pattern_id: u32, start: u32, end: u32) -> Self
 pub const fn vyre_foundation::memory_model::MemoryOrdering::is_valid_for_atomic_rmw(self) -> bool
 pub const fn vyre_foundation::memory_model::MemoryOrdering::is_valid_for_barrier(self) -> bool
 pub const fn vyre_foundation::memory_model::MemoryOrdering::requires_grid_sync(self) -> bool
@@ -451,6 +447,7 @@ pub const fn vyre_foundation::operation::OperationRegistration::with_category(se
 pub const fn vyre_foundation::operation::OperationRegistration::with_laws(self, laws: &'static [&'static str]) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_signature(self, signature: vyre_foundation::dispatch::dialect_lookup::Signature) -> Self
 pub const fn vyre_foundation::operation::OperationRegistration::with_tolerance(self, tolerance: vyre_foundation::operation::TolerancePolicy) -> Self
+pub const fn vyre_foundation::operation::OperationTier::matrix_value(self) -> &'static str
 pub const fn vyre_foundation::operation::TolerancePolicy::f32_ulp(maximum: u32) -> Self
 pub const fn vyre_foundation::optimizer::PassMetadata::new(name: &'static str, requires: &'static [&'static str], invalidates: &'static [&'static str]) -> Self
 pub const fn vyre_foundation::optimizer::algebraic_rules::arithmetic_rewrite_proof_contracts() -> &'static [vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract]
@@ -585,7 +582,6 @@ pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUC
 pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO: &str
 pub const vyre_foundation::optimizer::eqsat::DEFAULT_EXTRACTION_ITER_BUDGET: usize
 pub const vyre_foundation::optimizer::passes::cleanup::region_inline_engine::DEFAULT_INLINE_THRESHOLD: usize
-pub const vyre_foundation::optimizer::passes::loop_strip_mine::DEFAULT_STRIP_MINE_TILE: u32
 pub const vyre_foundation::optimizer::passes::loops::loop_strip_mine::DEFAULT_STRIP_MINE_TILE: u32
 pub const vyre_foundation::optimizer::program_shape_facts::ANALYSIS_KEY: &str
 pub const vyre_foundation::serial::envelope::test_helpers::WireRoundTrip::MAGIC: [u8; 4]
@@ -789,7 +785,7 @@ pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::default() -> Se
 pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::empty() -> Self
 pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::extension(&self, backend_id: &str) -> core::option::Option<vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn>
 pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::new(cpu_ref: vyre_foundation::dispatch::dialect_lookup::ReferenceKind) -> Self
+pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::new(cpu_ref: vyre_spec::intrinsic_descriptor::CpuFn) -> Self
 pub fn vyre_foundation::dispatch::dialect_lookup::LoweringTable::with_extension(self, backend_id: &'static str, builder: vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn) -> Self
 pub fn vyre_foundation::dispatch::dialect_lookup::OpDef::default() -> Self
 pub fn vyre_foundation::dispatch::dialect_lookup::OpDef::program(&self) -> core::option::Option<vyre_foundation::ir::Program>
@@ -1265,13 +1261,8 @@ pub fn vyre_foundation::lower::effects::ProgramEffects::bitor_assign(&mut self, 
 pub fn vyre_foundation::lower::effects::compute_program_effects(program: &vyre_foundation::ir::Program) -> vyre_foundation::lower::effects::ProgramEffects
 pub fn vyre_foundation::lower::lower_subgroup_reductions(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::lower::subgroup_lowering::lower_subgroup_reductions(program: vyre_foundation::ir::Program, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::match_result::ByteRange::from(value: vyre_foundation::match_result::Match) -> Self
-pub fn vyre_foundation::match_result::Match::from(value: vyre_foundation::match_result::ByteRange) -> Self
 pub fn vyre_foundation::memory_model::MemoryOrdering::default() -> Self
 pub fn vyre_foundation::memory_model::MemoryOrdering::from_wire_tag(tag: u8) -> core::result::Result<Self, alloc::string::String>
-pub fn vyre_foundation::opaque_payload::canonical_f32_zero(value: f32) -> f32
-pub fn vyre_foundation::opaque_payload::canonical_f64_zero(value: f64) -> f64
-pub fn vyre_foundation::opaque_payload::canonical_regex_flags(flags: &str) -> alloc::string::String
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_f32_zero(value: f32) -> f32
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_f64_zero(value: f64) -> f64
 pub fn vyre_foundation::opaque_payload::canonicalize::canonical_regex_flags(flags: &str) -> alloc::string::String
@@ -1304,22 +1295,6 @@ pub fn vyre_foundation::opaque_payload::endian::read_i64(bytes: &[u8]) -> core::
 pub fn vyre_foundation::opaque_payload::endian::read_u16(bytes: &[u8]) -> core::result::Result<(u16, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
 pub fn vyre_foundation::opaque_payload::endian::read_u32(bytes: &[u8]) -> core::result::Result<(u32, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
 pub fn vyre_foundation::opaque_payload::endian::read_u64(bytes: &[u8]) -> core::result::Result<(u64, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::push_f32(buf: &mut alloc::vec::Vec<u8>, value: f32)
-pub fn vyre_foundation::opaque_payload::push_f64(buf: &mut alloc::vec::Vec<u8>, value: f64)
-pub fn vyre_foundation::opaque_payload::push_i16(buf: &mut alloc::vec::Vec<u8>, value: i16)
-pub fn vyre_foundation::opaque_payload::push_i32(buf: &mut alloc::vec::Vec<u8>, value: i32)
-pub fn vyre_foundation::opaque_payload::push_i64(buf: &mut alloc::vec::Vec<u8>, value: i64)
-pub fn vyre_foundation::opaque_payload::push_u16(buf: &mut alloc::vec::Vec<u8>, value: u16)
-pub fn vyre_foundation::opaque_payload::push_u32(buf: &mut alloc::vec::Vec<u8>, value: u32)
-pub fn vyre_foundation::opaque_payload::push_u64(buf: &mut alloc::vec::Vec<u8>, value: u64)
-pub fn vyre_foundation::opaque_payload::read_f32(bytes: &[u8]) -> core::result::Result<(f32, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_f64(bytes: &[u8]) -> core::result::Result<(f64, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_i16(bytes: &[u8]) -> core::result::Result<(i16, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_i32(bytes: &[u8]) -> core::result::Result<(i32, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_i64(bytes: &[u8]) -> core::result::Result<(i64, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_u16(bytes: &[u8]) -> core::result::Result<(u16, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_u32(bytes: &[u8]) -> core::result::Result<(u32, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
-pub fn vyre_foundation::opaque_payload::read_u64(bytes: &[u8]) -> core::result::Result<(u64, &[u8]), vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated>
 pub fn vyre_foundation::operation::OperationEffects::from_program(program: &vyre_foundation::ir::Program) -> Self
 pub fn vyre_foundation::operation::OperationRegistration::effects(&self) -> core::option::Option<vyre_foundation::operation::OperationEffects>
 pub fn vyre_foundation::operation::OperationRegistration::program(&self) -> core::option::Option<vyre_foundation::ir::Program>
@@ -1327,6 +1302,7 @@ pub fn vyre_foundation::operation::OperationRegistration::required_capabilities(
 pub fn vyre_foundation::operation::OperationRegistry::get(&self, id: &str) -> core::option::Option<&'static vyre_foundation::operation::OperationRegistration>
 pub fn vyre_foundation::operation::OperationRegistry::global() -> &'static Self
 pub fn vyre_foundation::operation::OperationRegistry::iter(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_foundation::operation::OperationRegistration> + '_
+pub fn vyre_foundation::operation::classify_operation_id(id: &str) -> vyre_foundation::operation::OperationTier
 pub fn vyre_foundation::optimizer::OptimizerProfile::accepts(self, metadata: vyre_foundation::optimizer::PassMetadata) -> bool
 pub fn vyre_foundation::optimizer::OptimizerRunReport::explanations(&self) -> core::result::Result<alloc::vec::Vec<vyre_foundation::optimizer::pass_explain::PassExplanation>, vyre_foundation::optimizer::OptimizerError>
 pub fn vyre_foundation::optimizer::PassResult::from_programs(before: &vyre_foundation::ir::Program, program: vyre_foundation::ir::Program) -> Self
@@ -1834,21 +1810,6 @@ pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplic
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::transform(program: vyre_foundation::ir::Program) -> vyre_foundation::optimizer::PassResult
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_batch_apply(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
 pub fn vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass::try_transform(&self, program: vyre_foundation::ir::Program) -> core::result::Result<vyre_foundation::optimizer::PassResult, vyre_foundation::optimizer::RefusalReason>
-pub fn vyre_foundation::optimizer::passes::const_buffer_fold::fold_const_buffer(program: &vyre_foundation::ir::Program, constant: &vyre_foundation::optimizer::passes::memory::const_buffer_fold::ConstBuffer) -> vyre_foundation::optimizer::PassResult
-pub fn vyre_foundation::optimizer::passes::cse::cse(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::cse::cse_into(program: vyre_foundation::ir::Program, ctx: &mut vyre_foundation::optimizer::passes::fusion_cse::cse::cse_ctx::CseCtx) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::cse::engine::cse(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::cse::engine::cse_into(program: vyre_foundation::ir::Program, ctx: &mut vyre_foundation::optimizer::passes::fusion_cse::cse::cse_ctx::CseCtx) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::cse::expr_has_effect::expr_has_effect(expr: &vyre_foundation::ir::Expr) -> bool
-pub fn vyre_foundation::optimizer::passes::cse::is_commutative::is_commutative(op: &vyre_spec::bin_op::BinOp) -> bool
-pub fn vyre_foundation::optimizer::passes::dce::dce(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::dce::engine::dce(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::decode_scan_fuse::candidate_handoffs(program: &vyre_foundation::ir::Program) -> rustc_hash::FxHashMap<vyre_foundation::ir::Ident, u32>
-pub fn vyre_foundation::optimizer::passes::decode_scan_fuse::count_opportunities(program: &vyre_foundation::ir::Program) -> usize
-pub fn vyre_foundation::optimizer::passes::decode_scan_fuse::run(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
-pub fn vyre_foundation::optimizer::passes::fuse_cse::cse_savings(before: &[vyre_foundation::ir::Program], after: &vyre_foundation::ir::Program) -> usize
-pub fn vyre_foundation::optimizer::passes::fuse_cse::fuse_cse(programs: alloc::vec::Vec<vyre_foundation::ir::Program>) -> core::option::Option<vyre_foundation::ir::Program>
-pub fn vyre_foundation::optimizer::passes::fuse_cse::unique_buffer_count(after: &vyre_foundation::ir::Program) -> usize
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::cse(program: vyre_foundation::ir::Program) -> vyre_foundation::ir::Program
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::cse_ctx::CseCtx::clear(&mut self)
 pub fn vyre_foundation::optimizer::passes::fusion_cse::cse::cse_into(program: vyre_foundation::ir::Program, ctx: &mut vyre_foundation::optimizer::passes::fusion_cse::cse::cse_ctx::CseCtx) -> vyre_foundation::ir::Program
@@ -2711,13 +2672,6 @@ pub mod vyre_foundation::optimizer::passes::algebraic::const_fold::reaching_def_
 pub mod vyre_foundation::optimizer::passes::algebraic::normalize_atomics
 pub mod vyre_foundation::optimizer::passes::algebraic::precision_hint
 pub mod vyre_foundation::optimizer::passes::algebraic::strength_reduce
-pub mod vyre_foundation::optimizer::passes::atomic_minimize
-pub mod vyre_foundation::optimizer::passes::autotune
-pub mod vyre_foundation::optimizer::passes::barrier_coalesce
-pub mod vyre_foundation::optimizer::passes::branch_coalesce
-pub mod vyre_foundation::optimizer::passes::branch_value_hoist
-pub mod vyre_foundation::optimizer::passes::buffer_decl_sort
-pub mod vyre_foundation::optimizer::passes::canonicalize
 pub mod vyre_foundation::optimizer::passes::cleanup
 pub mod vyre_foundation::optimizer::passes::cleanup::branch_coalesce
 pub mod vyre_foundation::optimizer::passes::cleanup::branch_value_hoist
@@ -2731,36 +2685,6 @@ pub mod vyre_foundation::optimizer::passes::cleanup::region_inline_engine
 pub mod vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block
 pub mod vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let
 pub mod vyre_foundation::optimizer::passes::cleanup::tail_duplication
-pub mod vyre_foundation::optimizer::passes::const_buffer_fold
-pub mod vyre_foundation::optimizer::passes::const_fold
-pub mod vyre_foundation::optimizer::passes::const_fold::reaching_def_propagate
-pub mod vyre_foundation::optimizer::passes::cse
-pub mod vyre_foundation::optimizer::passes::cse::cse_ctx
-pub mod vyre_foundation::optimizer::passes::cse::engine
-pub mod vyre_foundation::optimizer::passes::cse::expr_has_effect
-pub mod vyre_foundation::optimizer::passes::cse::expr_key
-pub mod vyre_foundation::optimizer::passes::cse::impl_csectx
-pub mod vyre_foundation::optimizer::passes::cse::impl_exprkey
-pub mod vyre_foundation::optimizer::passes::cse::impl_typekey_from
-pub mod vyre_foundation::optimizer::passes::cse::is_commutative
-pub mod vyre_foundation::optimizer::passes::cse::program_pass
-pub mod vyre_foundation::optimizer::passes::cse::type_key
-pub mod vyre_foundation::optimizer::passes::dce
-pub mod vyre_foundation::optimizer::passes::dce::collect_expr_refs
-pub mod vyre_foundation::optimizer::passes::dce::const_loop_empty
-pub mod vyre_foundation::optimizer::passes::dce::const_truth
-pub mod vyre_foundation::optimizer::passes::dce::eliminate_dead_lets
-pub mod vyre_foundation::optimizer::passes::dce::eliminate_unreachable
-pub mod vyre_foundation::optimizer::passes::dce::engine
-pub mod vyre_foundation::optimizer::passes::dce::live_result
-pub mod vyre_foundation::optimizer::passes::dce::program_pass
-pub mod vyre_foundation::optimizer::passes::dce::reachable_prefix
-pub mod vyre_foundation::optimizer::passes::dead_buffer_elim
-pub mod vyre_foundation::optimizer::passes::dead_store_elim
-pub mod vyre_foundation::optimizer::passes::decode_scan_fuse
-pub mod vyre_foundation::optimizer::passes::empty_block_collapse
-pub mod vyre_foundation::optimizer::passes::fuse_cse
-pub mod vyre_foundation::optimizer::passes::fusion
 pub mod vyre_foundation::optimizer::passes::fusion_cse
 pub mod vyre_foundation::optimizer::passes::fusion_cse::cse
 pub mod vyre_foundation::optimizer::passes::fusion_cse::cse::cse_ctx
@@ -2785,15 +2709,6 @@ pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::program_pass
 pub mod vyre_foundation::optimizer::passes::fusion_cse::dce::reachable_prefix
 pub mod vyre_foundation::optimizer::passes::fusion_cse::fuse_cse
 pub mod vyre_foundation::optimizer::passes::fusion_cse::fusion
-pub mod vyre_foundation::optimizer::passes::if_constant_branch_eliminate
-pub mod vyre_foundation::optimizer::passes::loop_bound_tighten
-pub mod vyre_foundation::optimizer::passes::loop_fusion
-pub mod vyre_foundation::optimizer::passes::loop_licm
-pub mod vyre_foundation::optimizer::passes::loop_redundant_bound_check_elide
-pub mod vyre_foundation::optimizer::passes::loop_software_pipeline
-pub mod vyre_foundation::optimizer::passes::loop_strip_mine
-pub mod vyre_foundation::optimizer::passes::loop_trip_zero_eliminate
-pub mod vyre_foundation::optimizer::passes::loop_unroll
 pub mod vyre_foundation::optimizer::passes::loops
 pub mod vyre_foundation::optimizer::passes::loops::loop_bound_tighten
 pub mod vyre_foundation::optimizer::passes::loops::loop_fission
@@ -2815,21 +2730,10 @@ pub mod vyre_foundation::optimizer::passes::memory::decode_scan_fuse
 pub mod vyre_foundation::optimizer::passes::memory::read_only_load_hoist
 pub mod vyre_foundation::optimizer::passes::memory::store_to_load_forward
 pub mod vyre_foundation::optimizer::passes::memory::vectorization
-pub mod vyre_foundation::optimizer::passes::noop_assign_eliminate
-pub mod vyre_foundation::optimizer::passes::normalize_atomics
-pub mod vyre_foundation::optimizer::passes::read_only_load_hoist
-pub mod vyre_foundation::optimizer::passes::region_fusion_hint
-pub mod vyre_foundation::optimizer::passes::region_inline
-pub mod vyre_foundation::optimizer::passes::region_promote_singleton_block
-pub mod vyre_foundation::optimizer::passes::rematerialize_cheap_let
 pub mod vyre_foundation::optimizer::passes::specialization
 pub mod vyre_foundation::optimizer::passes::specialization::autotune
-pub mod vyre_foundation::optimizer::passes::store_to_load_forward
-pub mod vyre_foundation::optimizer::passes::strength_reduce
 pub mod vyre_foundation::optimizer::passes::sync
 pub mod vyre_foundation::optimizer::passes::sync::barrier_coalesce
-pub mod vyre_foundation::optimizer::passes::tail_duplication
-pub mod vyre_foundation::optimizer::passes::vectorization
 pub mod vyre_foundation::optimizer::planar_batch
 pub mod vyre_foundation::optimizer::program_shape_facts
 pub mod vyre_foundation::optimizer::program_soa
@@ -3036,8 +2940,6 @@ pub struct vyre_foundation::ir::model::program_graph_identity::ProgramGraphIdent
 pub struct vyre_foundation::lower::LoweringError
 pub struct vyre_foundation::lower::ProgramEffects(_)
 pub struct vyre_foundation::lower::effects::ProgramEffects(_)
-pub struct vyre_foundation::opaque_payload::LeBytesWriter
-pub struct vyre_foundation::opaque_payload::OpaquePayloadTruncated
 pub struct vyre_foundation::opaque_payload::endian::LeBytesWriter
 pub struct vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated
 pub struct vyre_foundation::operation::OperationEffects
@@ -3122,13 +3024,6 @@ pub struct vyre_foundation::optimizer::passes::algebraic::normalize_atomics::Nor
 pub struct vyre_foundation::optimizer::passes::algebraic::precision_hint::ExprDigest(pub [u8; 32])
 pub struct vyre_foundation::optimizer::passes::algebraic::precision_hint::PrecisionHints
 pub struct vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce
-pub struct vyre_foundation::optimizer::passes::atomic_minimize::AtomicMinimizePass
-pub struct vyre_foundation::optimizer::passes::autotune::Autotune
-pub struct vyre_foundation::optimizer::passes::barrier_coalesce::BarrierCoalescePass
-pub struct vyre_foundation::optimizer::passes::branch_coalesce::BranchCoalesce
-pub struct vyre_foundation::optimizer::passes::branch_value_hoist::BranchValueHoistPass
-pub struct vyre_foundation::optimizer::passes::buffer_decl_sort::BufferDeclSortPass
-pub struct vyre_foundation::optimizer::passes::canonicalize::Canonicalize
 pub struct vyre_foundation::optimizer::passes::cleanup::branch_coalesce::BranchCoalesce
 pub struct vyre_foundation::optimizer::passes::cleanup::branch_value_hoist::BranchValueHoistPass
 pub struct vyre_foundation::optimizer::passes::cleanup::buffer_decl_sort::BufferDeclSortPass
@@ -3140,20 +3035,6 @@ pub struct vyre_foundation::optimizer::passes::cleanup::region_inline::RegionInl
 pub struct vyre_foundation::optimizer::passes::cleanup::region_promote_singleton_block::RegionPromoteSingletonBlockPass
 pub struct vyre_foundation::optimizer::passes::cleanup::rematerialize_cheap_let::RematerializeCheapLetPass
 pub struct vyre_foundation::optimizer::passes::cleanup::tail_duplication::TailDuplicationPass
-pub struct vyre_foundation::optimizer::passes::const_buffer_fold::ConstBuffer
-pub struct vyre_foundation::optimizer::passes::const_fold::ConstFold
-pub struct vyre_foundation::optimizer::passes::const_fold::reaching_def_propagate::ReachingDefPropagatePass
-pub struct vyre_foundation::optimizer::passes::cse::CseCtx
-pub struct vyre_foundation::optimizer::passes::cse::CsePass
-pub struct vyre_foundation::optimizer::passes::cse::cse_ctx::CseCtx
-pub struct vyre_foundation::optimizer::passes::cse::program_pass::CsePass
-pub struct vyre_foundation::optimizer::passes::dce::DcePass
-pub struct vyre_foundation::optimizer::passes::dce::program_pass::DcePass
-pub struct vyre_foundation::optimizer::passes::dead_buffer_elim::DeadBufferElim
-pub struct vyre_foundation::optimizer::passes::dead_store_elim::DeadStoreElim
-pub struct vyre_foundation::optimizer::passes::decode_scan_fuse::DecodeScanFuse
-pub struct vyre_foundation::optimizer::passes::empty_block_collapse::EmptyBlockCollapsePass
-pub struct vyre_foundation::optimizer::passes::fusion::Fusion
 pub struct vyre_foundation::optimizer::passes::fusion_cse::CsePass
 pub struct vyre_foundation::optimizer::passes::fusion_cse::DcePass
 pub struct vyre_foundation::optimizer::passes::fusion_cse::cse::CseCtx
@@ -3163,15 +3044,6 @@ pub struct vyre_foundation::optimizer::passes::fusion_cse::cse::program_pass::Cs
 pub struct vyre_foundation::optimizer::passes::fusion_cse::dce::DcePass
 pub struct vyre_foundation::optimizer::passes::fusion_cse::dce::program_pass::DcePass
 pub struct vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion
-pub struct vyre_foundation::optimizer::passes::if_constant_branch_eliminate::IfConstantBranchEliminatePass
-pub struct vyre_foundation::optimizer::passes::loop_bound_tighten::LoopBoundTighten
-pub struct vyre_foundation::optimizer::passes::loop_fusion::LoopFusion
-pub struct vyre_foundation::optimizer::passes::loop_licm::LoopLicm
-pub struct vyre_foundation::optimizer::passes::loop_redundant_bound_check_elide::LoopRedundantBoundCheckElidePass
-pub struct vyre_foundation::optimizer::passes::loop_software_pipeline::LoopSoftwarePipeline
-pub struct vyre_foundation::optimizer::passes::loop_strip_mine::LoopStripMine
-pub struct vyre_foundation::optimizer::passes::loop_trip_zero_eliminate::LoopTripZeroEliminatePass
-pub struct vyre_foundation::optimizer::passes::loop_unroll::LoopUnroll
 pub struct vyre_foundation::optimizer::passes::loops::loop_bound_tighten::LoopBoundTighten
 pub struct vyre_foundation::optimizer::passes::loops::loop_fission::LoopFission
 pub struct vyre_foundation::optimizer::passes::loops::loop_fusion::LoopFusion
@@ -3191,19 +3063,8 @@ pub struct vyre_foundation::optimizer::passes::memory::decode_scan_fuse::DecodeS
 pub struct vyre_foundation::optimizer::passes::memory::read_only_load_hoist::ReadOnlyLoadHoistPass
 pub struct vyre_foundation::optimizer::passes::memory::store_to_load_forward::StoreToLoadForward
 pub struct vyre_foundation::optimizer::passes::memory::vectorization::Vectorization
-pub struct vyre_foundation::optimizer::passes::noop_assign_eliminate::NoopAssignEliminatePass
-pub struct vyre_foundation::optimizer::passes::normalize_atomics::NormalizeAtomicsPass
-pub struct vyre_foundation::optimizer::passes::read_only_load_hoist::ReadOnlyLoadHoistPass
-pub struct vyre_foundation::optimizer::passes::region_fusion_hint::RegionFusionHintPass
-pub struct vyre_foundation::optimizer::passes::region_inline::RegionInlinePass
-pub struct vyre_foundation::optimizer::passes::region_promote_singleton_block::RegionPromoteSingletonBlockPass
-pub struct vyre_foundation::optimizer::passes::rematerialize_cheap_let::RematerializeCheapLetPass
 pub struct vyre_foundation::optimizer::passes::specialization::autotune::Autotune
-pub struct vyre_foundation::optimizer::passes::store_to_load_forward::StoreToLoadForward
-pub struct vyre_foundation::optimizer::passes::strength_reduce::StrengthReduce
 pub struct vyre_foundation::optimizer::passes::sync::barrier_coalesce::BarrierCoalescePass
-pub struct vyre_foundation::optimizer::passes::tail_duplication::TailDuplicationPass
-pub struct vyre_foundation::optimizer::passes::vectorization::Vectorization
 pub struct vyre_foundation::optimizer::planar_batch::RewriteBatch
 pub struct vyre_foundation::optimizer::planar_batch::RewriteBatchCandidates
 pub struct vyre_foundation::optimizer::planar_batch::RewriteBatchItem
@@ -3296,20 +3157,17 @@ pub trait vyre_foundation::visit::traits::NodeVisitor
 pub type vyre_foundation::NativeModuleBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::NativeModule
 pub type vyre_foundation::PrimaryBinaryBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> alloc::vec::Vec<u32>
 pub type vyre_foundation::PrimaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<(), alloc::string::String>
-pub type vyre_foundation::ReferenceKind = vyre_spec::intrinsic_descriptor::CpuFn
 pub type vyre_foundation::Result<T> = core::result::Result<T, vyre_foundation::error::Error>
 pub type vyre_foundation::SecondaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::TextModule
 pub type vyre_foundation::dialect_lookup::ExtensionLoweringFn = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub type vyre_foundation::dialect_lookup::NativeModuleBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::NativeModule
 pub type vyre_foundation::dialect_lookup::PrimaryBinaryBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> alloc::vec::Vec<u32>
 pub type vyre_foundation::dialect_lookup::PrimaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<(), alloc::string::String>
-pub type vyre_foundation::dialect_lookup::ReferenceKind = vyre_spec::intrinsic_descriptor::CpuFn
 pub type vyre_foundation::dialect_lookup::SecondaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::TextModule
 pub type vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<alloc::vec::Vec<u8>, alloc::string::String>
 pub type vyre_foundation::dispatch::dialect_lookup::NativeModuleBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::NativeModule
 pub type vyre_foundation::dispatch::dialect_lookup::PrimaryBinaryBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> alloc::vec::Vec<u32>
 pub type vyre_foundation::dispatch::dialect_lookup::PrimaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> core::result::Result<(), alloc::string::String>
-pub type vyre_foundation::dispatch::dialect_lookup::ReferenceKind = vyre_spec::intrinsic_descriptor::CpuFn
 pub type vyre_foundation::dispatch::dialect_lookup::SecondaryTextBuilder = fn(&vyre_foundation::dispatch::dialect_lookup::LoweringCtx<'_>) -> vyre_foundation::dispatch::dialect_lookup::TextModule
 pub type vyre_foundation::dispatch::extension::ExprExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::ExprNode>, alloc::string::String>
 pub type vyre_foundation::dispatch::extension::NodeExtensionDeserializer = fn(&[u8]) -> core::result::Result<alloc::sync::Arc<dyn vyre_foundation::ir::NodeExtension>, alloc::string::String>
@@ -3462,7 +3320,7 @@ pub vyre_foundation::GraphValidateError::DanglingEdge::to: u32
 pub vyre_foundation::GraphValidateError::OrphanPhi
 pub vyre_foundation::GraphValidateError::OrphanPhi::node_id: u32
 pub vyre_foundation::LoweringCtx::unused: core::marker::PhantomData<&'a ()>
-pub vyre_foundation::LoweringTable::cpu_ref: vyre_foundation::dispatch::dialect_lookup::ReferenceKind
+pub vyre_foundation::LoweringTable::cpu_ref: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_foundation::LoweringTable::extensions: rustc_hash::FxHashMap<&'static str, vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn>
 pub vyre_foundation::LoweringTable::native_module: core::option::Option<vyre_foundation::dispatch::dialect_lookup::NativeModuleBuilder>
 pub vyre_foundation::LoweringTable::primary_binary: core::option::Option<vyre_foundation::dispatch::dialect_lookup::PrimaryBinaryBuilder>
@@ -3571,7 +3429,7 @@ pub vyre_foundation::dialect_lookup::Category::Composite
 pub vyre_foundation::dialect_lookup::Category::Extension
 pub vyre_foundation::dialect_lookup::Category::Intrinsic
 pub vyre_foundation::dialect_lookup::LoweringCtx::unused: core::marker::PhantomData<&'a ()>
-pub vyre_foundation::dialect_lookup::LoweringTable::cpu_ref: vyre_foundation::dispatch::dialect_lookup::ReferenceKind
+pub vyre_foundation::dialect_lookup::LoweringTable::cpu_ref: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_foundation::dialect_lookup::LoweringTable::extensions: rustc_hash::FxHashMap<&'static str, vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn>
 pub vyre_foundation::dialect_lookup::LoweringTable::native_module: core::option::Option<vyre_foundation::dispatch::dialect_lookup::NativeModuleBuilder>
 pub vyre_foundation::dialect_lookup::LoweringTable::primary_binary: core::option::Option<vyre_foundation::dispatch::dialect_lookup::PrimaryBinaryBuilder>
@@ -3609,7 +3467,7 @@ pub vyre_foundation::dispatch::dialect_lookup::Category::Composite
 pub vyre_foundation::dispatch::dialect_lookup::Category::Extension
 pub vyre_foundation::dispatch::dialect_lookup::Category::Intrinsic
 pub vyre_foundation::dispatch::dialect_lookup::LoweringCtx::unused: core::marker::PhantomData<&'a ()>
-pub vyre_foundation::dispatch::dialect_lookup::LoweringTable::cpu_ref: vyre_foundation::dispatch::dialect_lookup::ReferenceKind
+pub vyre_foundation::dispatch::dialect_lookup::LoweringTable::cpu_ref: vyre_spec::intrinsic_descriptor::CpuFn
 pub vyre_foundation::dispatch::dialect_lookup::LoweringTable::extensions: rustc_hash::FxHashMap<&'static str, vyre_foundation::dispatch::dialect_lookup::ExtensionLoweringFn>
 pub vyre_foundation::dispatch::dialect_lookup::LoweringTable::native_module: core::option::Option<vyre_foundation::dispatch::dialect_lookup::NativeModuleBuilder>
 pub vyre_foundation::dispatch::dialect_lookup::LoweringTable::primary_binary: core::option::Option<vyre_foundation::dispatch::dialect_lookup::PrimaryBinaryBuilder>
@@ -4682,18 +4540,12 @@ pub vyre_foundation::ir::text::TextParseError::WireEncodeFailed::inner: vyre_fou
 pub vyre_foundation::match_result::ByteRange::end: u32
 pub vyre_foundation::match_result::ByteRange::start: u32
 pub vyre_foundation::match_result::ByteRange::tag: u32
-pub vyre_foundation::match_result::Match::end: u32
-pub vyre_foundation::match_result::Match::pattern_id: u32
-pub vyre_foundation::match_result::Match::start: u32
 pub vyre_foundation::memory_model::MemoryOrdering::AcqRel
 pub vyre_foundation::memory_model::MemoryOrdering::Acquire
 pub vyre_foundation::memory_model::MemoryOrdering::GridSync
 pub vyre_foundation::memory_model::MemoryOrdering::Relaxed
 pub vyre_foundation::memory_model::MemoryOrdering::Release
 pub vyre_foundation::memory_model::MemoryOrdering::SeqCst
-pub vyre_foundation::opaque_payload::OpaquePayloadTruncated::available: usize
-pub vyre_foundation::opaque_payload::OpaquePayloadTruncated::expected: usize
-pub vyre_foundation::opaque_payload::OpaquePayloadTruncated::field: &'static str
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::available: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::expected: usize
 pub vyre_foundation::opaque_payload::endian::OpaquePayloadTruncated::field: &'static str
@@ -4713,6 +4565,10 @@ pub vyre_foundation::operation::OperationRegistration::tier: vyre_foundation::op
 pub vyre_foundation::operation::OperationRegistration::tolerance: vyre_foundation::operation::TolerancePolicy
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId
 pub vyre_foundation::operation::OperationRegistryError::DuplicateId::id: &'static str
+pub vyre_foundation::operation::OperationRegistryError::InvalidTier
+pub vyre_foundation::operation::OperationRegistryError::InvalidTier::classified: vyre_foundation::operation::OperationTier
+pub vyre_foundation::operation::OperationRegistryError::InvalidTier::declared: vyre_foundation::operation::OperationTier
+pub vyre_foundation::operation::OperationRegistryError::InvalidTier::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::InvalidVersion
 pub vyre_foundation::operation::OperationRegistryError::InvalidVersion::id: &'static str
 pub vyre_foundation::operation::OperationRegistryError::MissingSemantics
@@ -4723,6 +4579,7 @@ pub vyre_foundation::operation::OperationTier::Intrinsic
 pub vyre_foundation::operation::OperationTier::Library
 pub vyre_foundation::operation::OperationTier::Primitive
 pub vyre_foundation::operation::OperationTier::Runtime
+pub vyre_foundation::operation::OperationTier::Unknown
 pub vyre_foundation::operation::TargetOperationFacet::operation_id: &'static str
 pub vyre_foundation::operation::TargetOperationFacet::target_id: &'static str
 pub vyre_foundation::operation::TargetOperationFacet::version: u32
@@ -5277,8 +5134,6 @@ pub vyre_foundation::optimizer::passes::algebraic::precision_hint::Transcendenta
 pub vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp::Exp
 pub vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp::Ln
 pub vyre_foundation::optimizer::passes::algebraic::precision_hint::TranscendentalOp::Sin
-pub vyre_foundation::optimizer::passes::const_buffer_fold::ConstBuffer::name: vyre_foundation::ir::Ident
-pub vyre_foundation::optimizer::passes::const_buffer_fold::ConstBuffer::values: alloc::vec::Vec<u32>
 pub vyre_foundation::optimizer::passes::memory::const_buffer_fold::ConstBuffer::name: vyre_foundation::ir::Ident
 pub vyre_foundation::optimizer::passes::memory::const_buffer_fold::ConstBuffer::values: alloc::vec::Vec<u32>
 pub vyre_foundation::optimizer::planar_batch::RewriteBatchItem::candidate_index: usize

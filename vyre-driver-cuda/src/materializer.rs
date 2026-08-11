@@ -2,9 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, BoundResource,
-    CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
-    Submission,
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingRole, BindingSet,
+    BoundResource, CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig,
+    ResidentOwner, Submission,
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
@@ -63,12 +63,7 @@ impl ArtifactMaterializer for CudaMaterializer {
         offset_bytes: usize,
         bytes: &[u8],
     ) -> Result<(), BackendError> {
-        vyre_driver::VyreBackend::upload_resident_at(
-            &self.resident,
-            resource,
-            offset_bytes,
-            bytes,
-        )
+        vyre_driver::VyreBackend::upload_resident_at(&self.resident, resource, offset_bytes, bytes)
     }
 
     fn free_resident(&self, resource: vyre_driver::Resource) -> Result<(), BackendError> {
@@ -331,7 +326,7 @@ impl CudaArtifactInstance {
         let module = &self.modules[0];
         let plan = BindingPlan::build(&module.program)?;
         let mut ordered = Vec::with_capacity(plan.bindings.len());
-        for binding in &plan.bindings {
+        for binding in resident_resource_bindings(&plan) {
             let buffer = &module.program.buffers()[binding.buffer_index];
             let value = self.value_for_buffer(buffer.name())?;
             let resource = resources
@@ -380,6 +375,12 @@ impl CudaArtifactInstance {
             ))
         })
     }
+}
+
+fn resident_resource_bindings(plan: &BindingPlan) -> impl Iterator<Item = &vyre_driver::Binding> {
+    plan.bindings
+        .iter()
+        .filter(|binding| binding.role != BindingRole::Shared)
 }
 
 struct ReadySubmission {
@@ -455,5 +456,34 @@ fn compile_error(error: impl std::fmt::Display) -> BackendError {
         compiler_message: format!(
             "{error}. Fix: rebuild the target payload from the neutral artifact."
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType};
+
+    /// WHY: workgroup scratch is module-internal memory, not an artifact value. Resident
+    /// materialization must bind every host-visible role while excluding shared scratch.
+    #[test]
+    fn resident_resource_projection_excludes_workgroup_scratch() {
+        let program = Program::wrapped(
+            vec![
+                BufferDecl::storage("input", 0, BufferAccess::ReadOnly, DataType::F32)
+                    .with_count(16),
+                BufferDecl::workgroup("scratch", 16, DataType::F32),
+                BufferDecl::output("output", 1, DataType::F32).with_count(16),
+            ],
+            [16, 1, 1],
+            Vec::new(),
+        );
+        let plan = BindingPlan::build(&program)
+            .expect("Fix: resident resource projection fixture must build a binding plan.");
+        let names = resident_resource_bindings(&plan)
+            .map(|binding| binding.name.as_ref())
+            .collect::<Vec<_>>();
+
+        assert_eq!(names, ["input", "output"]);
     }
 }
