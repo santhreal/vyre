@@ -6,10 +6,11 @@
 //!
 //! Category A composition.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{DataType, Program};
 
-use crate::region::wrap_anonymous;
+use super::unary::typed_sigmoid_gate_program;
 
+const OP_ID: &str = "vyre-libs::nn::swiglu";
 /// Build a Program that applies SwiGLU element-wise from `gate` and `up`
 /// into `output`. `n` is the element count of all three buffers.
 #[must_use]
@@ -42,44 +43,9 @@ pub fn swiglu_typed(
 
 fn build_swiglu(gate: &str, up: &str, output: &str, n: u32, dtype: DataType) -> Program {
     if n == 0 {
-        return crate::invalid_program("vyre-libs::nn::swiglu", "Fix: swiglu requires n > 0");
+        return crate::invalid_program(OP_ID, "Fix: swiglu requires n > 0");
     }
-    let i = Expr::var("i");
-    let g = Expr::cast(DataType::F32, Expr::load(gate, i.clone()));
-    let u = Expr::cast(DataType::F32, Expr::load(up, i.clone()));
-    let sigmoid_g = Expr::div(
-        Expr::f32(1.0),
-        Expr::add(
-            Expr::f32(1.0),
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(g.clone()),
-                }),
-            },
-        ),
-    );
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: i,
-                value: Expr::cast(dtype.clone(), Expr::mul(g, Expr::mul(u, sigmoid_g))),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(gate, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
-            BufferDecl::storage(up, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
-            BufferDecl::output(output, 2, dtype).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous("vyre-libs::nn::swiglu", body)],
-    )
+    typed_sigmoid_gate_program(OP_ID, gate, up, output, n, dtype, true)
 }
 
 inventory::submit! {
@@ -89,7 +55,7 @@ inventory::submit! {
         tier: vyre_foundation::operation::OperationTier::Library,
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::nn::swiglu",
+        id: OP_ID,
         build: Some(|| swiglu("gate", "up", "output", 4)),
         test_inputs: Some(|| {
             let to_bytes = vyre_primitives::wire::pack_f32_slice;
@@ -115,8 +81,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::decode_f32;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn swiglu_ref(g: f32, u: f32) -> f32 {
@@ -167,18 +133,10 @@ mod tests {
     }
 
     #[test]
-    fn swiglu_empty_tensor() {
-        let program = swiglu("gate", "up", "output", 0);
-        let outputs = vyre_reference::reference_eval(
-            &program,
-            &[
-                Value::from(vec![]),
-                Value::from(vec![]),
-                Value::from(vec![]),
-            ],
-        )
-        .expect("Fix: swiglu n=0 must not panic");
-        assert!(outputs[0].to_bytes().is_empty());
+    fn swiglu_empty_tensor_is_rejected() {
+        let error = swiglu_typed("gate", "up", "output", 0, DataType::F32)
+            .expect_err("Fix: swiglu n=0 must be rejected before execution.");
+        assert_eq!(error, "Fix: swiglu_typed requires n > 0");
     }
 
     #[test]

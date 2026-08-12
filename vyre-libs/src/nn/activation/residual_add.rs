@@ -1,8 +1,8 @@
 //! Element-wise residual-stream addition.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 
-use crate::region::wrap_anonymous;
+use super::unary::typed_binary_activation_program;
 
 const OP_ID: &str = "vyre-libs::nn::residual_add";
 
@@ -45,31 +45,28 @@ fn build_residual_add(
     if n == 0 {
         return crate::invalid_program(OP_ID, "Fix: residual_add requires n > 0");
     }
-    let index = Expr::var("index");
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: index.clone(),
-                value: Expr::cast(
-                    dtype.clone(),
-                    Expr::add(
-                        Expr::cast(DataType::F32, Expr::load(residual, index.clone())),
-                        Expr::cast(DataType::F32, Expr::load(branch, index)),
-                    ),
-                ),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(residual, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
-            BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
-            BufferDecl::output(output, 2, dtype).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
-    )
+    typed_binary_activation_program(OP_ID, residual, branch, output, n, dtype, Expr::add)
+}
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+        id: OP_ID,
+        build: Some(|| residual_add("residual", "branch", "output", 4)),
+        test_inputs: Some(|| {
+            vec![vec![
+                vyre_primitives::wire::pack_f32_slice(&[1.0, -2.0, 3.5, 0.0]),
+                vyre_primitives::wire::pack_f32_slice(&[0.5, 4.0, -1.5, -0.0]),
+            ]]
+        }),
+        expected_output: Some(|| {
+            vec![vec![vyre_primitives::wire::pack_f32_slice(&[
+                1.5, 2.0, 2.0, 0.0,
+            ])]]
+        }),
+        category: Some("nn"),
+    }
 }

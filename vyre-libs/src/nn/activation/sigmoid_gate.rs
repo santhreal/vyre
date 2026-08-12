@@ -1,8 +1,8 @@
 //! Element-wise sigmoid output gate.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{DataType, Program};
 
-use crate::region::wrap_anonymous;
+use super::unary::typed_sigmoid_gate_program;
 
 const OP_ID: &str = "vyre-libs::nn::sigmoid_gate";
 
@@ -45,41 +45,31 @@ fn build_sigmoid_gate(
     if n == 0 {
         return crate::invalid_program(OP_ID, "Fix: sigmoid_gate requires n > 0");
     }
-    let index = Expr::var("index");
-    let branch_value = Expr::cast(DataType::F32, Expr::load(branch, index.clone()));
-    let gate = Expr::cast(DataType::F32, Expr::load(gate_logits, index.clone()));
-    let sigmoid = Expr::div(
-        Expr::f32(1.0),
-        Expr::add(
-            Expr::f32(1.0),
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(gate),
-                }),
-            },
-        ),
-    );
-    let body = vec![
-        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(n)),
-            vec![Node::Store {
-                buffer: output.into(),
-                index: index.clone(),
-                value: Expr::cast(dtype.clone(), Expr::mul(branch_value, sigmoid)),
-            }],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(gate_logits, 0, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(n),
-            BufferDecl::storage(branch, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
-            BufferDecl::output(output, 2, dtype).with_count(n),
-        ],
-        [64, 1, 1],
-        vec![wrap_anonymous(OP_ID, body)],
-    )
+    typed_sigmoid_gate_program(OP_ID, gate_logits, branch, output, n, dtype, false)
+}
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration {
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::Library,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::f32_ulp(2),
+        id: OP_ID,
+        build: Some(|| sigmoid_gate("gate", "branch", "output", 4)),
+        test_inputs: Some(|| {
+            vec![vec![
+                vyre_primitives::wire::pack_f32_slice(&[0.0, 1.0, -1.0, 100.0]),
+                vyre_primitives::wire::pack_f32_slice(&[8.0, 2.0, -2.0, -7.0]),
+            ]]
+        }),
+        expected_output: Some(|| {
+            let gate = [0.0_f32, 1.0, -1.0, 100.0];
+            let branch = [8.0_f32, 2.0, -2.0, -7.0];
+            let output = std::array::from_fn::<_, 4, _>(|index| {
+                branch[index] / (1.0 + (-gate[index]).exp())
+            });
+            vec![vec![vyre_primitives::wire::pack_f32_slice(&output)]]
+        }),
+        category: Some("nn"),
+    }
 }

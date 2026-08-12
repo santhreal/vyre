@@ -108,6 +108,12 @@ pub(crate) fn implementation_family_id(op_id: &str) -> Option<&'static str> {
         "vyre-libs::nn::gelu" | "vyre-libs::nn::leaky_relu_sq" => {
             Some("vyre-libs::nn::activation::f32_unary_activation_program")
         }
+        "vyre-libs::nn::residual_add" => {
+            Some("vyre-libs::nn::activation::typed_binary_activation_program")
+        }
+        "vyre-libs::nn::sigmoid_gate" | "vyre-libs::nn::swiglu" => {
+            Some("vyre-libs::nn::activation::typed_sigmoid_gate_program")
+        }
         "vyre-libs::nn::rms_norm" | "vyre-libs::nn::softmax" => {
             Some("vyre-libs::builder::strided_writeback_child")
         }
@@ -163,6 +169,12 @@ pub(crate) fn known_distinct_implementation_families(left_id: &str, right_id: &s
         ) | (
             "vyre-primitives::graph::target_centric_functor_apply",
             "vyre-primitives::reduce::indexed_move"
+        ) | (
+            "vyre-libs::nn::activation::typed_binary_activation_program",
+            "vyre-libs::nn::activation::typed_sigmoid_gate_program"
+        ) | (
+            "vyre-libs::nn::activation::typed_sigmoid_gate_program",
+            "vyre-libs::nn::activation::typed_binary_activation_program"
         )
     )
 }

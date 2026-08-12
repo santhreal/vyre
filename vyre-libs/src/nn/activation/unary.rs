@@ -39,3 +39,62 @@ where
         vec![wrap_anonymous(op_id, body)],
     )
 }
+
+/// Build one typed binary activation map with F32 intermediate arithmetic.
+pub(crate) fn typed_binary_activation_program(
+    op_id: &'static str,
+    left: &str,
+    right: &str,
+    output: &str,
+    n: u32,
+    dtype: DataType,
+    combine: impl Fn(Expr, Expr) -> Expr,
+) -> Program {
+    let index = Expr::var("index");
+    let left_value = Expr::cast(DataType::F32, Expr::load(left, index.clone()));
+    let right_value = Expr::cast(DataType::F32, Expr::load(right, index.clone()));
+    let body = vec![
+        Node::let_bind("index", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(index.clone(), Expr::u32(n)),
+            vec![Node::Store {
+                buffer: output.into(),
+                index,
+                value: Expr::cast(dtype.clone(), combine(left_value, right_value)),
+            }],
+        ),
+    ];
+    Program::wrapped(
+        vec![
+            BufferDecl::storage(left, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
+            BufferDecl::storage(right, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(n),
+            BufferDecl::output(output, 2, dtype).with_count(n),
+        ],
+        [64, 1, 1],
+        vec![wrap_anonymous(op_id, body)],
+    )
+}
+
+/// Build a typed sigmoid gate, optionally multiplying by its gate input.
+pub(crate) fn typed_sigmoid_gate_program(
+    op_id: &'static str,
+    gate: &str,
+    branch: &str,
+    output: &str,
+    n: u32,
+    dtype: DataType,
+    include_gate: bool,
+) -> Program {
+    typed_binary_activation_program(op_id, gate, branch, output, n, dtype, |gate, branch| {
+        let sigmoid = Expr::div(
+            Expr::f32(1.0),
+            Expr::add(Expr::f32(1.0), Expr::exp(Expr::negate(gate.clone()))),
+        );
+        let branch = Expr::mul(branch, sigmoid);
+        if include_gate {
+            Expr::mul(gate, branch)
+        } else {
+            branch
+        }
+    })
+}
