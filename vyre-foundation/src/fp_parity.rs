@@ -210,13 +210,38 @@ pub enum BufferParity {
 }
 
 /// Compare two output-buffer vectors against the program's declared
-/// buffer layout. F32 buffers use [`f32_buffer_matches`] with
-/// [`f32_ulp_tolerance`]; every other element type requires byte
-/// identity. Returns [`BufferParity::Ok`] only when every slot passed.
+/// buffer layout. F32 buffers use [`f32_buffer_matches`] with the program-level
+/// floating-point policy; every other element type requires byte identity.
+/// Returns [`BufferParity::Ok`] only when every slot passed.
 pub fn compare_output_buffers(
     program: &Program,
     outputs_a: &[Vec<u8>],
     outputs_b: &[Vec<u8>],
+) -> BufferParity {
+    compare_output_buffers_with_tolerance(program, outputs_a, outputs_b, f32_ulp_tolerance(program))
+}
+
+/// Compare output buffers using the tolerance owned by `op_id`.
+#[must_use]
+pub fn compare_operation_outputs(
+    op_id: &str,
+    program: &Program,
+    outputs_a: &[Vec<u8>],
+    outputs_b: &[Vec<u8>],
+) -> BufferParity {
+    compare_output_buffers_with_tolerance(
+        program,
+        outputs_a,
+        outputs_b,
+        effective_tolerance(op_id, program),
+    )
+}
+
+fn compare_output_buffers_with_tolerance(
+    program: &Program,
+    outputs_a: &[Vec<u8>],
+    outputs_b: &[Vec<u8>],
+    tolerance: u32,
 ) -> BufferParity {
     if outputs_a.len() != outputs_b.len() {
         return BufferParity::Mismatch(format!(
@@ -237,7 +262,6 @@ pub fn compare_output_buffers(
         ));
     }
 
-    let tolerance = f32_ulp_tolerance(program);
     for (slot, ((bytes_a, bytes_b), buffer_index)) in outputs_a
         .iter()
         .zip(outputs_b.iter())

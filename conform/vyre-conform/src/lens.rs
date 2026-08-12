@@ -12,7 +12,7 @@ use vyre_libs::operation_catalog::convergence_contract;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
-use crate::fp_parity::{compare_output_buffers, BufferParity};
+use crate::fp_parity::{compare_operation_outputs, compare_output_buffers, BufferParity};
 use crate::production::ProductionSession;
 
 /// Outcome of running one lens against one op.
@@ -158,12 +158,15 @@ pub fn witness(entry: &SemanticOperation) -> LensOutcome {
     for (index, (inputs, expected_buffers)) in cases.iter().zip(expected.iter()).enumerate() {
         match run_cpu(&program, inputs) {
             Ok(outputs) => {
-                if outputs != *expected_buffers {
+                if let BufferParity::Mismatch(detail) =
+                    compare_operation_outputs(entry.id, &program, &outputs, expected_buffers)
+                {
                     return LensOutcome::Fail {
                         case_index: index,
                         detail: format!(
-                            "CPU reference output diverged from declared expected_output.\nACTUAL:\n{:?}\nEXPECTED:\n{:?}\nFix: regenerate the witness via `cargo xtask trace-f32 {}` or \
-                             repair the reference.",
+                            "CPU reference output diverged from declared expected_output: {detail}\n\
+                             ACTUAL:\n{:?}\nEXPECTED:\n{:?}\n\
+                             Fix: regenerate the witness via `cargo xtask trace-f32 {}` or repair the reference.",
                             outputs, expected_buffers, entry.id
                         ),
                     };
