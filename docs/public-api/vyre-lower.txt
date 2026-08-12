@@ -445,7 +445,7 @@ pub fn vyre_lower::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vy
 pub fn vyre_lower::verify::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::verify::OperandClass
 pub fn vyre_lower::verify::format_verify_errors(errors: &[vyre_lower::verify::VerifyError]) -> alloc::string::String
 pub fn vyre_lower::verify::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::verify::VerifyResult
-pub fn vyre_lower::verify_then_optimize(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<(vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::OptimizationStats), vyre_lower::VerifyFailure>
+pub fn vyre_lower::verify_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<vyre_lower::descriptor::KernelDescriptor, vyre_lower::VerifyFailure>
 pub mod vyre_lower
 pub mod vyre_lower::analyses
 pub mod vyre_lower::analyses::access_kind
@@ -851,7 +851,6 @@ pub vyre_lower::SubgroupCapabilities::ballot: bool
 pub vyre_lower::SubgroupCapabilities::basic: bool
 pub vyre_lower::SubgroupCapabilities::shuffle: bool
 pub vyre_lower::VerifiedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
-pub vyre_lower::VerifiedLowering::descriptor_stats: vyre_lower::rewrites::OptimizationStats
 pub vyre_lower::VerifiedLowering::program: vyre_foundation::ir_inner::model::program::core::Program
 pub vyre_lower::VerifyError::body_path: alloc::vec::Vec<usize>
 pub vyre_lower::VerifyError::kind: vyre_lower::verify::VerifyErrorKind

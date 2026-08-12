@@ -23,9 +23,8 @@ verified descriptor without running another rewrite pipeline.
 
 ```rust
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
+    verify_descriptor, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
     KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    verify, verify_then_optimize,
 };
 use vyre_foundation::ir::DataType;
 
@@ -57,13 +56,9 @@ let desc = KernelDescriptor {
     },
 };
 
-// Hand-built descriptors enter through the shared verified cleanup boundary.
-let (optimized, stats) = verify_then_optimize(&desc).unwrap();
-println!(
-    "{} ops -> {} ops in {} iterations",
-    stats.ops_before, stats.ops_after, stats.iterations,
-);
-assert!(verify(&optimized).is_ok());
+// Hand-built descriptors enter through the shared verification boundary.
+let verified = verify_descriptor(&desc).unwrap();
+assert_eq!(verified.id, "store_seven");
 ```
 
 ## The IR

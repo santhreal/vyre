@@ -130,9 +130,7 @@ fn hostile_success_corpus_emits_structured_ptx() {
 
     for case in emit_adversarial_corpus::success_cases() {
         let ptx = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&case.descriptor)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -148,9 +146,7 @@ fn hostile_success_corpus_emits_structured_ptx() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let result = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&case.descriptor)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         );
         assert!(
             result.is_err(),
@@ -172,28 +168,19 @@ fn rejection_corpus_fails_without_panic() {
 }
 
 #[test]
-fn dead_identity_chain_optimized_ptx_is_not_longer_than_raw() {
+fn dead_identity_chain_verifies_before_ptx_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity").unwrap();
-    let raw = vyre_emit_ptx::emit(&case.descriptor).expect("raw emit");
-    let optimized = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("verified descriptor cleanup")
-            .0,
-    )
-    .expect("optimized emit");
-    assert!(
-        optimized.lines().count() <= raw.lines().count(),
-        "Fix: optimized PTX should not grow vs raw for dead identity chain"
-    );
+    let descriptor =
+        vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+    let ptx = vyre_emit_ptx::emit(&descriptor).expect("verified emit");
+    assert!(ptx.contains(".visible .entry"));
 }
 
 #[test]
 fn vec_load_fusion_emits_no_scalar_load_fallback() {
     let case = emit_adversarial_corpus::case_by_id("adv_vec_load_fusion").unwrap();
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     assert!(
@@ -212,9 +199,7 @@ fn vec_load_fusion_emits_no_scalar_load_fallback() {
 fn shared_global_tile_touches_both_address_spaces() {
     let case = emit_adversarial_corpus::case_by_id("adv_shared_global_tile").unwrap();
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     assert!(ptx.contains("ld.global"), "must load global\n{ptx}");
@@ -233,9 +218,8 @@ proptest! {
         let cases = emit_adversarial_corpus::success_cases();
         prop_assume!(case_index < cases.len());
         let case = &cases[case_index];
-        let descriptor = vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("corpus success case must pass descriptor cleanup")
-            .0;
+        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+            .expect("corpus success case must pass descriptor verification");
         let ptx = vyre_emit_ptx::emit(&descriptor)
             .expect("corpus success case must emit PTX");
         assert!(ptx.contains(".address_size"), "{}: missing .address_size", case.id);

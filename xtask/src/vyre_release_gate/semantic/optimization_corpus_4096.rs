@@ -55,7 +55,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     }
     if verified != generated {
         failures.push(format!(
-            "requirement `optimization-corpus-4096` verified {verified}/{generated} generated cases through verify_then_optimize"
+            "requirement `optimization-corpus-4096` verified {verified}/{generated} generated descriptors before legacy rewrite coverage"
         ));
     }
     if optimized == 0 {

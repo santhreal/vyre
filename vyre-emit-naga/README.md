@@ -11,7 +11,7 @@ routes through naga to share the lossless lowering).
 
 ```rust
 use vyre_lower::{
-    verify_then_optimize, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
+    verify_descriptor, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
     KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
 use vyre_foundation::ir::DataType;
@@ -44,7 +44,7 @@ let desc = KernelDescriptor {
     },
 };
 
-let (desc, _) = verify_then_optimize(&desc).unwrap();
+let desc = verify_descriptor(&desc).unwrap();
 let module = vyre_emit_naga::emit(&desc).unwrap();
 assert_eq!(module.entry_points[0].name, "main");
 ```
@@ -54,7 +54,7 @@ assert_eq!(module.entry_points[0].name, "main");
 - `emit(&desc) -> Result<naga::Module, EmitError>`: emit the verified
   descriptor exactly as supplied. Production callers obtain it from
   `vyre_lower::lower_verified`; descriptor-producing tools use
-  `vyre_lower::verify_then_optimize`.
+  `vyre_lower::verify_descriptor`.
 
 ## Substrate-specific patterns
 

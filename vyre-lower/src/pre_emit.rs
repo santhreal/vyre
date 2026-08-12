@@ -3,12 +3,11 @@
 //! This is the only production boundary from high-level `Program` IR to an
 //! emitter-ready `KernelDescriptor`: expand registered compositions, run the
 //! registered fallible semantic optimizer once, reject unresolved calls, lower,
-//! verify, apply descriptor-only cleanup, and verify again.
+//! canonicalize representation order, and verify.
 
 use crate::descriptor::KernelDescriptor;
 use crate::lower::lower;
-use crate::rewrites::OptimizationStats;
-use crate::{verify_then_optimize, VerifyFailure};
+use crate::{canonicalize, verify, VerifyFailure};
 use std::fmt;
 use vyre_foundation::ir::Program;
 
@@ -17,10 +16,8 @@ use vyre_foundation::ir::Program;
 pub struct VerifiedLowering {
     /// Program after composition expansion and registered semantic optimization.
     pub program: Program,
-    /// Verified descriptor after lower-IR-only cleanup.
+    /// Verified descriptor after bounded representation canonicalization.
     pub descriptor: KernelDescriptor,
-    /// Descriptor cleanup statistics.
-    pub descriptor_stats: OptimizationStats,
 }
 
 /// Error raised by canonical verified lowering.
@@ -85,8 +82,8 @@ fn lower_single_rank_collectives_for_emit(program: Program) -> Result<Program, L
 /// # Errors
 ///
 /// Returns [`LowerVerifiedError`] when composition expansion, semantic
-/// optimization, call resolution, descriptor lowering, verification, or
-/// descriptor-only cleanup fails.
+/// optimization, call resolution, descriptor lowering, canonicalization, or
+/// verification fails.
 pub fn lower_verified(program: &Program) -> Result<VerifiedLowering, LowerVerifiedError> {
     let program = prepare_verified_program(program)?;
     let descriptor = lower(&program).map_err(|error| {
@@ -94,16 +91,22 @@ pub fn lower_verified(program: &Program) -> Result<VerifiedLowering, LowerVerifi
             "KernelDescriptor lowering failed after semantic Program optimization: {error}. Fix: add the missing neutral descriptor mapping before any concrete backend emits this Program."
         ))
     })?;
-    let (descriptor, descriptor_stats) = verify_then_optimize(&descriptor).map_err(|error| {
-        LowerVerifiedError::new(format!(
-            "KernelDescriptor verification or cleanup failed in canonical verified lowering: {}. Fix: repair vyre-lower so descriptor validation succeeds before concrete emission.",
-            format_verify_failure(&error)
-        ))
-    })?;
+    if let Err(errors) = verify::verify(&descriptor) {
+        return Err(LowerVerifiedError::new(format!(
+            "KernelDescriptor verification failed after semantic Program optimization: {}. Fix: repair the neutral lowering mapping before descriptor canonicalization.",
+            format_verify_failure(&VerifyFailure::Input(errors))
+        )));
+    }
+    let descriptor = canonicalize::canonicalize_for_emit(&descriptor);
+    if let Err(errors) = verify::verify(&descriptor) {
+        return Err(LowerVerifiedError::new(format!(
+            "KernelDescriptor verification failed after bounded representation canonicalization: {}. Fix: repair vyre-lower canonicalization so every emitter receives valid neutral lower IR.",
+            format_verify_failure(&VerifyFailure::Output(errors))
+        )));
+    }
     Ok(VerifiedLowering {
         program,
         descriptor,
-        descriptor_stats,
     })
 }
 
@@ -155,7 +158,10 @@ mod tests {
         assert_eq!(lowered.descriptor.dispatch.workgroup_size, [64, 1, 1]);
         assert_eq!(lowered.descriptor.bindings.slots.len(), 1);
         assert!(crate::verify::verify(&lowered.descriptor).is_ok());
-        assert!(lowered.descriptor_stats.iterations >= 1);
+        assert_eq!(
+            crate::canonicalize::canonicalize_for_emit(&lowered.descriptor),
+            lowered.descriptor
+        );
     }
 
     #[test]

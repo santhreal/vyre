@@ -117,9 +117,9 @@ pub const MAX_SCAN_BYTES_BUF: &str = "nfa_max_scan_bytes";
 /// `subgroup_shuffle` still requires a compile-time peer lane, so the caller keeps
 /// `k` unrolled; only the inner bit index `bit` is made dynamic. The emitted block is
 /// O(1) in `num_states`, so the whole scan shader is O(LANES) rather than
-/// O(num_states), the size the descriptor optimizer (`vyre-lower`) and naga emitter
-/// scale on. A 771-state bare-`xor` NFA previously unrolled into thousands of nodes
-/// and made `verify_then_optimize` run for minutes; this keeps it flat.
+/// O(num_states), the size the semantic optimizer, neutral lowerer, and Naga
+/// emitter scale on. A 771-state bare-`xor` NFA previously unrolled into
+/// thousands of nodes and made verified lowering run for minutes; this keeps it flat.
 ///
 /// Semantics are identical to the unrolled form: for every `src_state = k*32 + bit`
 /// with `src_state < num_states`, when peer bit `bit` is set, OR the `table` row for

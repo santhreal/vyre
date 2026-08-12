@@ -18,7 +18,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn assert_emits_clean(prog: Program, label: &str) {
-    // Verified lowering owns semantic optimization and descriptor cleanup.
+    // Verified lowering owns semantic optimization and descriptor canonicalization.
     let lk = vyre_lower::lower_verified(&prog)
         .unwrap_or_else(|e| panic!("{label}: lower_verified failed: {e}"));
     let module = vyre_emit_naga::emit(&lk.descriptor)

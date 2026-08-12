@@ -172,10 +172,8 @@ fn op_corpus() -> Vec<KernelDescriptor> {
 #[test]
 fn every_op_lowers_through_ptx_and_naga() {
     for desc in op_corpus() {
-        let cleaned = vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0;
-        let ptx = vyre_emit_ptx::emit(&cleaned)
+        let verified = vyre_lower::verify_descriptor(&desc).expect("descriptor verification");
+        let ptx = vyre_emit_ptx::emit(&verified)
             .unwrap_or_else(|error| panic!("PTX emit failed for `{}`: {error:?}", desc.id));
         assert!(
             ptx.contains(".version"),
@@ -183,7 +181,7 @@ fn every_op_lowers_through_ptx_and_naga() {
             desc.id
         );
 
-        let naga = vyre_emit_naga::emit(&cleaned)
+        let naga = vyre_emit_naga::emit(&verified)
             .unwrap_or_else(|error| panic!("Naga emit failed for `{}`: {error:?}", desc.id));
         assert!(
             !naga.entry_points.is_empty(),
@@ -203,9 +201,7 @@ fn ptx_contains_expected_instruction_for_each_op() {
     for (id, instr) in cases {
         let desc = op_corpus().into_iter().find(|d| d.id == id).unwrap();
         let ptx = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
         assert!(
@@ -221,15 +217,11 @@ fn ptx_contains_expected_instruction_for_each_op() {
 fn naga_and_ptx_entry_points_share_workgroup_size() {
     for desc in op_corpus() {
         let naga_module = vyre_emit_naga::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
         let ptx = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
 
@@ -254,21 +246,18 @@ fn ptx_audit_carries_kernel_id() {
 }
 
 #[test]
-fn optimized_and_raw_ptx_succeed_together() {
+fn verified_and_raw_ptx_succeed_together() {
     for desc in op_corpus() {
         let raw = vyre_emit_ptx::emit(&desc);
-        let opt = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
-        );
+        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|failure| {
+            panic!("descriptor `{}` failed verification: {failure:?}", desc.id)
+        });
+        let verified = vyre_emit_ptx::emit(&descriptor);
         assert_eq!(
             raw.is_ok(),
-            opt.is_ok(),
-            "ptx divergence on `{}`: raw={:?}, opt={:?}",
+            verified.is_ok(),
+            "ptx divergence on `{}`",
             desc.id,
-            raw.err(),
-            opt.err(),
         );
     }
 }
@@ -277,9 +266,7 @@ fn optimized_and_raw_ptx_succeed_together() {
 fn ptx_output_contains_required_directives() {
     for desc in op_corpus() {
         let ptx = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
         assert!(

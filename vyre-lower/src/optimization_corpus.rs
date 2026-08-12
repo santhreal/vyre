@@ -131,8 +131,7 @@ pub struct OptimizationCorpusValidation {
     pub blockers: Vec<String>,
 }
 
-/// Validate all generated release corpus descriptors through the real
-/// `verify_then_optimize` production entry point.
+/// Validate generated release descriptors and legacy rewrite coverage.
 #[must_use]
 pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> OptimizationCorpusValidation {
     let mut verified_cases = 0usize;
@@ -145,8 +144,9 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
     let mut blockers = Vec::new();
 
     for case in cases {
-        match crate::verify_then_optimize(&case.descriptor) {
-            Ok((_optimized, stats)) => {
+        match crate::verify_descriptor(&case.descriptor) {
+            Ok(verified) => {
+                let (optimized, stats) = crate::rewrites::run_all_with_stats(&verified);
                 verified_cases += 1;
                 total_ops_before = total_ops_before.saturating_add(stats.ops_before);
                 total_ops_after = total_ops_after.saturating_add(stats.ops_after);
@@ -190,7 +190,7 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                                 &reaching_defs,
                             )
                         };
-                    if !dataflow_case_fired(&case.family, &case.descriptor, &optimized) {
+                    if !dataflow_case_fired(&case.family, &verified, &optimized) {
                         blockers.push(format!(
                             "case `{}` did not fire under Dataflow-aware optimization",
                             case.id
@@ -208,7 +208,7 @@ pub fn validate_release_corpus(cases: &[OptimizationCorpusCase]) -> Optimization
                 }
             }
             Err(error) => blockers.push(format!(
-                "case `{}` failed verify_then_optimize: {:?}",
+                "case `{}` failed descriptor verification: {:?}",
                 case.id, error
             )),
         }

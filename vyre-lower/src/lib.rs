@@ -38,6 +38,7 @@
 
 pub mod analyses;
 pub mod audit;
+mod canonicalize;
 pub mod descriptor;
 pub mod emit_adversarial_corpus;
 pub mod error;
@@ -55,31 +56,29 @@ pub use audit::{
     RecommendationCategory,
 };
 
-/// Verify the input descriptor, apply lower-IR cleanup, and verify the output.
+/// Verify a raw descriptor, apply bounded representation canonicalization, and
+/// verify the emitter-ready result.
 ///
-/// Production `Program` callers use [`lower_verified`]. Descriptor-producing
-/// tests and tooling may use this boundary before invoking a pure emitter.
-pub fn verify_then_optimize(
-    desc: &KernelDescriptor,
-) -> Result<(KernelDescriptor, rewrites::OptimizationStats), VerifyFailure> {
-    if let Err(errs) = verify::verify(desc) {
-        return Err(VerifyFailure::Input(errs));
+/// This boundary does not perform semantic optimization. Production `Program`
+/// callers use [`lower_verified`]; descriptor fixtures and tooling use this
+/// function before invoking a pure emitter.
+pub fn verify_descriptor(desc: &KernelDescriptor) -> Result<KernelDescriptor, VerifyFailure> {
+    if let Err(errors) = verify::verify(desc) {
+        return Err(VerifyFailure::Input(errors));
     }
-    let (optimized, stats) = rewrites::run_all_with_stats(desc);
-    if let Err(errs) = verify::verify(&optimized) {
-        return Err(VerifyFailure::Output(errs));
+    let canonical = canonicalize::canonicalize_for_emit(desc);
+    if let Err(errors) = verify::verify(&canonical) {
+        return Err(VerifyFailure::Output(errors));
     }
-    Ok((optimized, stats))
+    Ok(canonical)
 }
 
-/// Which verify step failed in [`verify_then_optimize`].
+/// Which descriptor verification step failed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerifyFailure {
-    /// Input descriptor was invalid before any rewrites ran.
+    /// The descriptor was invalid before canonicalization.
     Input(Vec<verify::VerifyError>),
-    /// The rewrite pipeline produced an invalid descriptor  -  a real
-    /// bug in the rewrite stack. The fuzz harness gates this; if you
-    /// hit it in production, it's a bug to file.
+    /// Bounded representation canonicalization produced an invalid descriptor.
     Output(Vec<verify::VerifyError>),
 }
 
@@ -330,11 +329,11 @@ pub use target::{
 pub use vyre_foundation::ir::SubgroupReduceOp;
 
 #[cfg(test)]
-mod verify_then_optimize_tests {
+mod verify_descriptor_tests {
     use super::*;
 
     #[test]
-    fn valid_input_returns_optimized_and_stats() {
+    fn valid_input_returns_descriptor_directly() {
         let desc = KernelDescriptor {
             id: "k".into(),
             bindings: BindingLayout { slots: vec![] },
@@ -349,9 +348,8 @@ mod verify_then_optimize_tests {
                 literals: vec![LiteralValue::U32(7)],
             },
         };
-        let (out, stats) = verify_then_optimize(&desc).unwrap();
-        assert_eq!(out.id, "k");
-        assert!(stats.iterations >= 1);
+        let out = verify_descriptor(&desc).unwrap();
+        assert_eq!(out, desc);
     }
 
     #[test]
@@ -367,7 +365,7 @@ mod verify_then_optimize_tests {
                 literals: vec![],
             },
         };
-        let r = verify_then_optimize(&desc);
+        let r = verify_descriptor(&desc);
         assert!(matches!(r, Err(VerifyFailure::Input(_))));
     }
 
@@ -516,7 +514,7 @@ mod verify_then_optimize_tests {
                 literals: vec![],
             },
         };
-        let f = verify_then_optimize(&desc).unwrap_err();
+        let f = verify_descriptor(&desc).unwrap_err();
         assert_ne!(f.errors().len(), 0);
     }
 }

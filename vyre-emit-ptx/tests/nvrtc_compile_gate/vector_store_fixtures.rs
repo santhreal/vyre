@@ -88,12 +88,8 @@ pub(crate) fn ptx_for_vector_store_fusion() -> String {
             ],
         },
     };
-    vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
-    )
-    .unwrap()
+    vyre_emit_ptx::emit(&vyre_lower::verify_descriptor(&desc).expect("descriptor verification"))
+        .unwrap()
 }
 
 pub(crate) fn ptx_for_dynamic_vector_store_fusion() -> String {
@@ -229,10 +225,6 @@ pub(crate) fn ptx_for_dynamic_vector_store_fusion() -> String {
             ],
         },
     };
-    vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
-    )
-    .unwrap()
+    vyre_emit_ptx::emit(&vyre_lower::verify_descriptor(&desc).expect("descriptor verification"))
+        .unwrap()
 }

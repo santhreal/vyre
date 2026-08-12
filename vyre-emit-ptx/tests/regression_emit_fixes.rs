@@ -88,9 +88,7 @@ fn i32_binop_descriptor(op: BinOp) -> KernelDescriptor {
 fn shr_on_i32_emits_s32_suffix_not_u32() {
     let desc = i32_binop_descriptor(BinOp::Shr);
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
     )
     .expect("I32 Shr descriptor must emit without error");
 
@@ -152,9 +150,7 @@ fn shr_on_u32_still_emits_u32_suffix() {
         },
     };
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
     )
     .expect("U32 Shr descriptor must emit without error");
     assert!(
@@ -225,9 +221,7 @@ fn ensure_buffer_length_reg_emits_correct_offset_for_slot_1() {
         },
     };
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
     )
     .expect("two-slot descriptor must emit without error");
 
@@ -299,9 +293,7 @@ fn f16_store_of_u64_value_uses_direct_cvt_rn_f32_u64() {
         },
     };
     let ptx = vyre_emit_ptx::emit(
-        &vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
     )
     .expect("U64 → F16 store descriptor must emit without error");
 

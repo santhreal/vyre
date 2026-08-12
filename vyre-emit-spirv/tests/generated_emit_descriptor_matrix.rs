@@ -2,7 +2,7 @@
 //!
 //! The adversarial corpus covers hostile shapes. This test covers generated
 //! ordinary kernels with varied dispatch geometry and arithmetic chain depth,
-//! pinning the raw/optimized word and byte emission contracts.
+//! pinning verification, word emission, and byte emission contracts.
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::{
@@ -93,31 +93,17 @@ fn words_from_le_bytes(bytes: &[u8]) -> Vec<u32> {
 }
 
 #[test]
-fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
+fn generated_descriptors_verify_before_spirv_emission() {
     for seed in 0..256u32 {
         let desc = generated_descriptor(seed.wrapping_mul(0x045d_9f3b));
-        let raw = vyre_emit_spirv::emit(&desc)
-            .unwrap_or_else(|err| panic!("raw SPIR-V emit failed for {}: {err:?}", desc.id));
-        let optimized = vyre_emit_spirv::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
-        )
-        .unwrap_or_else(|err| panic!("optimized SPIR-V emit failed for {}: {err:?}", desc.id));
+        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+            panic!("descriptor verification failed for {}: {err:?}", desc.id)
+        });
+        let words = vyre_emit_spirv::emit(&descriptor)
+            .unwrap_or_else(|err| panic!("SPIR-V emit failed for {}: {err:?}", desc.id));
 
-        assert_eq!(raw[0], vyre_emit_spirv::SPIRV_MAGIC, "{}", desc.id);
-        assert_eq!(
-            optimized[0],
-            vyre_emit_spirv::SPIRV_MAGIC,
-            "{} optimized magic",
-            desc.id
-        );
-        assert!(raw.len() > 16, "{} raw kernel too small", desc.id);
-        assert!(
-            optimized.len() > 16,
-            "{} optimized kernel too small",
-            desc.id
-        );
+        assert_eq!(words[0], vyre_emit_spirv::SPIRV_MAGIC, "{}", desc.id);
+        assert!(words.len() > 16, "{} kernel too small", desc.id);
     }
 }
 
@@ -125,9 +111,9 @@ fn generated_descriptors_emit_valid_raw_and_optimized_spirv() {
 fn generated_descriptors_bytes_match_word_emission() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed ^ 0xa501_7b1d);
-        let descriptor = vyre_lower::verify_then_optimize(&desc)
-            .unwrap_or_else(|err| panic!("descriptor cleanup failed for {}: {err:?}", desc.id))
-            .0;
+        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+            panic!("descriptor verification failed for {}: {err:?}", desc.id)
+        });
         let words = vyre_emit_spirv::emit(&descriptor)
             .unwrap_or_else(|err| panic!("SPIR-V emit failed for {}: {err:?}", desc.id));
         let bytes = vyre_emit_spirv::emit_bytes(&descriptor)
@@ -139,11 +125,12 @@ fn generated_descriptors_bytes_match_word_emission() {
 }
 
 #[test]
-fn generated_descriptors_return_optimization_stats() {
+fn generated_descriptors_verify_before_byte_emission() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed.rotate_left(7));
-        let (descriptor, stats) = vyre_lower::verify_then_optimize(&desc)
-            .unwrap_or_else(|err| panic!("descriptor cleanup failed for {}: {err:?}", desc.id));
+        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+            panic!("descriptor verification failed for {}: {err:?}", desc.id)
+        });
         let bytes = vyre_emit_spirv::emit_bytes(&descriptor)
             .unwrap_or_else(|err| panic!("byte emit failed for {}: {err:?}", desc.id));
         assert!(bytes.len() >= 4, "{}", desc.id);
@@ -151,11 +138,6 @@ fn generated_descriptors_return_optimization_stats() {
             u32::from_le_bytes(bytes[0..4].try_into().expect("SPIR-V header word")),
             vyre_emit_spirv::SPIRV_MAGIC,
             "{}",
-            desc.id
-        );
-        assert!(
-            stats.iterations >= 1,
-            "{} stats must record at least one pass",
             desc.id
         );
     }

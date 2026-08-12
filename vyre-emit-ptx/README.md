@@ -13,7 +13,7 @@ machinery with the naga-based emitters.
 
 ```rust
 use vyre_lower::{
-    verify_then_optimize, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
+    verify_descriptor, BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody,
     KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
 use vyre_foundation::ir::DataType;
@@ -47,7 +47,7 @@ let desc = KernelDescriptor {
     },
 };
 
-let ptx = emit(&verify_then_optimize(&desc).unwrap().0).unwrap();
+let ptx = emit(&verify_descriptor(&desc).unwrap()).unwrap();
 assert!(ptx.contains(".visible .entry"));
 ```
 

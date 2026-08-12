@@ -1,4 +1,4 @@
-//! Cross-emitter parity: every cleaned descriptor in the corpus must emit
+//! Cross-emitter parity: every verified descriptor in the corpus must emit
 //! through Naga, PTX, and SPIR-V. Failure in any target breaks the
 //! substrate-neutral `KernelDescriptor` contract.
 //!
@@ -196,25 +196,23 @@ fn descriptor_corpus() -> Vec<KernelDescriptor> {
 fn every_descriptor_lowers_through_all_three_emitters() {
     for desc in descriptor_corpus() {
         let id = desc.id.clone();
-        let cleaned = vyre_lower::verify_then_optimize(&desc)
-            .expect("verified descriptor cleanup")
-            .0;
+        let verified = vyre_lower::verify_descriptor(&desc).expect("descriptor verification");
 
-        let naga_module = vyre_emit_naga::emit(&cleaned)
+        let naga_module = vyre_emit_naga::emit(&verified)
             .unwrap_or_else(|error| panic!("Naga emit failed for `{id}`: {error:?}"));
         assert!(
             !naga_module.entry_points.is_empty(),
             "naga module for `{id}` must expose an entry point"
         );
 
-        let ptx = vyre_emit_ptx::emit(&cleaned)
+        let ptx = vyre_emit_ptx::emit(&verified)
             .unwrap_or_else(|error| panic!("PTX emit failed for `{id}`: {error:?}"));
         assert!(
             ptx.contains(".version"),
             "ptx for `{id}` must include a version directive"
         );
 
-        let spirv_words = vyre_emit_spirv::emit(&cleaned)
+        let spirv_words = vyre_emit_spirv::emit(&verified)
             .unwrap_or_else(|error| panic!("SPIR-V emit failed for `{id}`: {error:?}"));
         assert_eq!(
             spirv_words.first().copied(),
@@ -230,15 +228,11 @@ fn naga_and_spirv_main_entry_points_match() {
     // point names + workgroup sizes must be identical.
     for desc in descriptor_corpus() {
         let naga_module = vyre_emit_naga::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
         let spirv_words = vyre_emit_spirv::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
 
@@ -260,9 +254,7 @@ fn ptx_output_contains_required_directives_for_every_kernel() {
             continue;
         }
         let ptx = vyre_emit_ptx::emit(
-            &vyre_lower::verify_then_optimize(&desc)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&desc).expect("descriptor verification"),
         )
         .unwrap();
         assert!(
@@ -281,12 +273,11 @@ fn ptx_output_contains_required_directives_for_every_kernel() {
 #[test]
 fn shared_cleanup_preserves_naga_emit_acceptance() {
     for desc in descriptor_corpus() {
-        let cleaned = vyre_lower::verify_then_optimize(&desc)
-            .expect("descriptor corpus must pass shared cleanup")
-            .0;
+        let verified = vyre_lower::verify_descriptor(&desc)
+            .expect("descriptor corpus must pass shared verification");
         assert!(
-            vyre_emit_naga::emit(&cleaned).is_ok(),
-            "cleaned descriptor `{}` must emit through Naga",
+            vyre_emit_naga::emit(&verified).is_ok(),
+            "verified descriptor `{}` must emit through Naga",
             desc.id
         );
     }
@@ -320,41 +311,27 @@ fn every_audit_layer_succeeds_without_panic_on_corpus() {
 }
 
 #[test]
-fn verify_then_optimize_succeeds_on_corpus() {
-    // The production-grade entry point should succeed for every shape
-    // in the corpus (every shape is well-formed by construction; the
-    // rewrite stack is fuzz-verified to produce well-formed output).
-    for desc in descriptor_corpus() {
-        let r = vyre_lower::verify_then_optimize(&desc);
-        match r {
-            Ok((optimized, stats)) => {
-                assert_eq!(optimized.id, desc.id, "id round-trips");
-                assert!(stats.iterations >= 1);
-            }
-            Err(f) => panic!(
-                "verify_then_optimize failed on `{}`: {:?}",
-                desc.id,
-                f.errors()
-            ),
-        }
-    }
-}
-
-#[test]
-fn audit_optimized_doesnt_panic_across_corpus() {
-    // Mirror of every_audit_layer_succeeds_without_panic_on_corpus
-    // but for the _optimized variants  -  runs run_all first, then
-    // audit. None should panic; kernel_id should round-trip.
+fn descriptor_verification_and_audits_succeed_on_corpus() {
     use vyre_emit_ptx::ComputeCapability;
-    for desc in descriptor_corpus() {
-        let lower = vyre_lower::audit::audit_optimized(&desc);
-        assert_eq!(lower.kernel_id, desc.id);
-        let naga = vyre_emit_naga::patterns::audit_optimized(&desc);
-        assert_eq!(naga.kernel_id, desc.id);
-        let ptx = vyre_emit_ptx::patterns::audit_optimized(&desc, ComputeCapability::SM_80);
-        assert_eq!(ptx.kernel_id, desc.id);
-        let spirv = vyre_emit_spirv::patterns::audit_optimized(&desc);
-        assert_eq!(spirv.kernel_id, desc.id);
+
+    for descriptor in descriptor_corpus() {
+        let verified = vyre_lower::verify_descriptor(&descriptor).unwrap_or_else(|failure| {
+            panic!(
+                "descriptor verification failed on `{}`: {:?}",
+                descriptor.id,
+                failure.errors()
+            )
+        });
+        assert_eq!(verified.id, descriptor.id, "id round-trips");
+
+        let lower = vyre_lower::audit::audit(&verified);
+        assert_eq!(lower.kernel_id, descriptor.id);
+        let naga = vyre_emit_naga::patterns::audit(&verified);
+        assert_eq!(naga.kernel_id, descriptor.id);
+        let ptx = vyre_emit_ptx::patterns::audit(&verified, ComputeCapability::SM_80);
+        assert_eq!(ptx.kernel_id, descriptor.id);
+        let spirv = vyre_emit_spirv::patterns::audit(&verified);
+        assert_eq!(spirv.kernel_id, descriptor.id);
     }
 }
 

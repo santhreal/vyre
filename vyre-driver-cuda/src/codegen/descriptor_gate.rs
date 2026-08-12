@@ -9,8 +9,7 @@ pub(crate) fn validate_and_analyze(
     let descriptor = lower_for_cuda_emit(program)?;
     if crate::instrumentation::cuda_descriptor_audit_enabled() {
         let neutral = vyre_lower::audit::audit(&descriptor);
-        let concrete =
-            vyre_emit_ptx::patterns::audit_optimized(&descriptor, compute_capability(target_sm));
+        let concrete = vyre_emit_ptx::patterns::audit(&descriptor, compute_capability(target_sm));
         tracing::trace!(
             target: "vyre_driver_cuda::descriptor",
             kernel = %descriptor.id,
@@ -89,25 +88,24 @@ mod tests {
     }
 
     #[test]
-    fn adversarial_success_corpus_passes_verified_cleanup_and_ptx_emit() {
+    fn adversarial_success_corpus_passes_verification_and_ptx_emit() {
         assert!(
             emit_adversarial_corpus::required_backends().contains(&EmitAdversarialBackend::Cuda),
             "Fix: shared emit adversarial corpus must register CUDA as a required consumer."
         );
 
         for case in emit_adversarial_corpus::success_cases() {
-            let descriptor = vyre_lower::verify_then_optimize(&case.descriptor)
-                .unwrap_or_else(|error| {
+            let descriptor =
+                vyre_lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {
                     panic!(
-                        "Fix: `{}` ({:?}) must pass shared descriptor cleanup: {error:?}",
+                        "Fix: `{}` ({:?}) must pass shared descriptor verification: {error:?}",
                         case.id, case.family
                     )
-                })
-                .0;
+                });
             let ptx = vyre_emit_ptx::emit_with_target(&descriptor, compute_capability(90))
                 .unwrap_or_else(|error| {
                     panic!(
-                        "Fix: `{}` ({:?}) must emit CUDA PTX after shared cleanup: {error:?}",
+                        "Fix: `{}` ({:?}) must emit CUDA PTX after shared verification: {error:?}",
                         case.id, case.family
                     )
                 });
@@ -122,11 +120,10 @@ mod tests {
     #[test]
     fn adversarial_rejection_corpus_returns_structured_cuda_errors() {
         for case in emit_adversarial_corpus::rejection_cases() {
-            let result = vyre_lower::verify_then_optimize(&case.descriptor)
-                .map(|(descriptor, _)| descriptor)
+            let result = vyre_lower::verify_descriptor(&case.descriptor)
                 .map_err(|error| {
                     format!(
-                        "CUDA descriptor cleanup failed for `{}`: {error:?}. Fix: repair the shared lower-IR cleanup.",
+                        "CUDA descriptor verification failed for `{}`: {error:?}. Fix: repair the shared lower-IR descriptor.",
                         case.id
                     )
                 })
@@ -141,7 +138,7 @@ mod tests {
                         })
                 });
             let error = result.expect_err(
-                "Fix: rejection corpus case must fail descriptor cleanup or PTX emission",
+                "Fix: rejection corpus case must fail descriptor verification or PTX emission",
             );
             assert!(
                 error.contains(case.id) && error.contains("Fix:"),

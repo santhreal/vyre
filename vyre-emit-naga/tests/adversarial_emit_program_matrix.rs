@@ -162,9 +162,7 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 
     for case in emit_adversarial_corpus::success_cases() {
         let module = vyre_emit_naga::emit(
-            &vyre_lower::verify_then_optimize(&case.descriptor)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -181,9 +179,7 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let err = vyre_emit_naga::emit(
-            &vyre_lower::verify_then_optimize(&case.descriptor)
-                .expect("verified descriptor cleanup")
-                .0,
+            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
@@ -196,29 +192,20 @@ fn rejection_corpus_fails_without_panic() {
 }
 
 #[test]
-fn dead_identity_chain_optimized_module_is_no_larger_than_raw() {
+fn dead_identity_chain_verifies_before_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity")
         .expect("corpus must include adv_dead_identity");
-    let raw = vyre_emit_naga::emit(&case.descriptor).expect("raw emit");
-    let optimized = vyre_emit_naga::emit(
-        &vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("verified descriptor cleanup")
-            .0,
-    )
-    .expect("optimized emit");
-    assert!(
-        optimized.functions.len() <= raw.functions.len(),
-        "Fix: dead identity chain should not grow naga function count after rewrite"
-    );
+    let descriptor =
+        vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+    let module = vyre_emit_naga::emit(&descriptor).expect("verified emit");
+    assert_eq!(module.entry_points[0].name, "main");
 }
 
 #[test]
 fn multi_binding_preserves_distinct_global_types() {
     let case = emit_adversarial_corpus::case_by_id("adv_multi_binding").unwrap();
     let module = vyre_emit_naga::emit(
-        &vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("verified descriptor cleanup")
-            .0,
+        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     let mut scalar_kinds = std::collections::BTreeSet::new();
@@ -236,12 +223,11 @@ fn multi_binding_preserves_distinct_global_types() {
 }
 
 #[test]
-fn hostile_workgroup_1024_survives_optimize_then_emit() {
+fn hostile_workgroup_1024_survives_verify_then_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_hostile_wg_1024").unwrap();
-    let (optimized, stats) = vyre_lower::verify_then_optimize(&case.descriptor)
-        .expect("verify_then_optimize must succeed on corpus");
-    assert!(stats.iterations >= 1);
-    let module = vyre_emit_naga::emit(&optimized).expect("emit optimized descriptor");
+    let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        .expect("descriptor verification must succeed on corpus");
+    let module = vyre_emit_naga::emit(&descriptor).expect("emit verified descriptor");
     assert_eq!(module.entry_points[0].workgroup_size, [1024, 1, 1]);
 }
 
@@ -253,9 +239,8 @@ proptest! {
         let cases = emit_adversarial_corpus::success_cases();
         prop_assume!(case_index < cases.len());
         let case = &cases[case_index];
-        let descriptor = vyre_lower::verify_then_optimize(&case.descriptor)
-            .expect("corpus success case must pass descriptor cleanup")
-            .0;
+        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+            .expect("corpus success case must pass descriptor verification");
         let module = vyre_emit_naga::emit(&descriptor)
             .expect("corpus success case must emit");
         validate_module(&module, case.id);
