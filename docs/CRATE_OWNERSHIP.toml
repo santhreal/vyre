@@ -1,4 +1,4 @@
-schema_version = 1
+schema_version = 2
 
 [[crate]]
 package = "vyre-megakernel"
@@ -6,7 +6,17 @@ path = "vyre-megakernel"
 owner = "megakernel-compiler"
 layer = "compiler-boundary"
 responsibility = "Explore and select legal whole-ProgramGraph fusion schedules under explicit SearchBudget bounds, expose selected modules and canonical ABI to registered target compilers, then emit canonical Artifact and ArtifactEnvelope records without owning admission, execution, or lifecycle policy."
-allowed_dependencies = ["vyre-foundation"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
 
 [[crate]]
 package = "vyre"
@@ -14,7 +24,116 @@ path = "vyre"
 owner = "public-facade"
 layer = "facade"
 responsibility = "Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts."
-allowed_dependencies = ["vyre-driver", "vyre-driver-cuda", "vyre-driver-wgpu", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-runtime", "vyre-scan", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-driver-cuda"
+purpose = "native accelerator backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "cuda-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-wgpu"
+purpose = "portable backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "portable-driver"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["c-parser", "full", "matching-regex"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-runtime"
+purpose = "artifact admission, residency, submission, recovery, and readback lifecycle"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "runtime"
+
+[[crate.dependency]]
+package = "vyre-scan"
+purpose = "scan product compilation and execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "scan-product"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-foundation"
@@ -22,7 +141,28 @@ path = "vyre-foundation"
 owner = "foundation-ir"
 layer = "foundation"
 responsibility = "Own typed IR and ProgramGraph contracts, validation, diagnostics, serialization, semantic operation registration, and backend-neutral optimization."
-allowed_dependencies = ["vyre-macros", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-macros"
+purpose = "compile-time registration generation"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "registration-macros"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-driver"
@@ -30,8 +170,61 @@ path = "vyre-driver"
 owner = "backend-contract"
 layer = "backend-neutral"
 responsibility = "Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts."
-allowed_dependencies = ["vyre-foundation", "vyre-macros", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
 
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-macros"
+purpose = "compile-time registration generation"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "registration-macros"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-self-substrate"
+purpose = "optional scheduler and analysis substrate"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "self-substrate"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-driver-metal"
@@ -39,7 +232,61 @@ path = "vyre-driver-metal"
 owner = "metal-driver"
 layer = "concrete-backend"
 responsibility = "Own pure MSL target compilation, native Apple device acquisition, materialization, dispatch, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-metal", "vyre-foundation", "vyre-lower", "vyre-megakernel"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-emit-metal"
+purpose = "native Apple source emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "metal-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
 
 [[crate]]
 package = "vyre-driver-wgpu"
@@ -47,7 +294,83 @@ path = "vyre-driver-wgpu"
 owner = "portable-driver"
 layer = "concrete-backend"
 responsibility = "Own pure WGSL target compilation, portable GPU acquisition, materialization, dispatch, graph execution, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-naga", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = ["self-substrate-adapters"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-emit-naga"
+purpose = "primary text and related binary emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "primary-text-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-self-substrate"
+purpose = "optional scheduler and analysis substrate"
+features = ["logic"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "self-substrate"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-driver-spirv"
@@ -55,7 +378,72 @@ path = "vyre-driver-spirv"
 owner = "spirv-driver"
 layer = "concrete-backend"
 responsibility = "Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-spirv", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-emit-spirv"
+purpose = "SPIR-V emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "spirv-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-driver-cuda"
@@ -63,7 +451,83 @@ path = "vyre-driver-cuda"
 owner = "cuda-driver"
 layer = "concrete-backend"
 responsibility = "Own pure PTX target compilation, native device acquisition, materialization, dispatch, graphs, and release-path evidence."
-allowed_dependencies = ["vyre-driver", "vyre-emit-ptx", "vyre-foundation", "vyre-lower", "vyre-megakernel", "vyre-self-substrate", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-emit-ptx"
+purpose = "primary binary backend text emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "primary-binary-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-self-substrate"
+purpose = "optional scheduler and analysis substrate"
+features = ["graph-solvers", "scheduling"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "self-substrate"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-driver-reference"
@@ -71,7 +535,39 @@ path = "vyre-driver-reference"
 owner = "reference-driver"
 layer = "concrete-backend"
 responsibility = "Adapt the reference interpreter to the backend contract for deterministic conformance execution."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-reference"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "independent semantic oracle execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
 
 [[crate]]
 package = "vyre-reference"
@@ -79,7 +575,39 @@ path = "vyre-reference"
 owner = "reference-semantics"
 layer = "semantics"
 responsibility = "Execute programs with the canonical host oracle and produce semantic witnesses."
-allowed_dependencies = ["vyre-foundation", "vyre-primitives", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = ["hash", "matching"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-spec"
@@ -87,7 +615,6 @@ path = "vyre-spec"
 owner = "specification"
 layer = "foundation"
 responsibility = "Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies."
-allowed_dependencies = []
 
 [[crate]]
 package = "vyre-macros"
@@ -95,7 +622,6 @@ path = "vyre-macros"
 owner = "registration-macros"
 layer = "foundation"
 responsibility = "Provide compile-time registration and declaration macros without depending on runtime crates."
-allowed_dependencies = []
 
 [[crate]]
 package = "vyre-primitives"
@@ -103,7 +629,28 @@ path = "vyre-primitives"
 owner = "primitive-library"
 layer = "primitives"
 responsibility = "Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes."
-allowed_dependencies = ["vyre-foundation", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-test-support"
@@ -111,7 +658,6 @@ path = "vyre-test-support"
 owner = "test-support"
 layer = "test-tooling"
 responsibility = "Provide shared deterministic fixtures and assertions for workspace tests."
-allowed_dependencies = []
 
 [[crate]]
 package = "vyre-self-substrate"
@@ -119,7 +665,28 @@ path = "vyre-self-substrate"
 owner = "self-substrate"
 layer = "scheduler"
 responsibility = "Use Vyre primitives to implement scheduler, graph, coverage, and optimization support."
-allowed_dependencies = ["vyre-foundation", "vyre-primitives"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
 
 [[crate]]
 package = "vyre-conform-spec"
@@ -127,7 +694,17 @@ path = "conform/vyre-conform-spec"
 owner = "conformance"
 layer = "conformance"
 responsibility = "Define conformance case, result, and certificate schemas against the public facade."
-allowed_dependencies = ["vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-conform"
@@ -135,8 +712,171 @@ path = "conform/vyre-conform"
 owner = "conformance"
 layer = "conformance"
 responsibility = "Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI."
-allowed_dependencies = ["vyre", "vyre-conform-spec", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-wgpu", "vyre-foundation", "vyre-intrinsics", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-reference", "vyre-runtime", "vyre-spec"]
 
+[[crate.dependency]]
+package = "vyre"
+purpose = "public lifecycle facade"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "public-facade"
+
+[[crate.dependency]]
+package = "vyre-conform-spec"
+purpose = "versioned conformance schemas"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "conformance"
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-driver-cuda"
+purpose = "native accelerator backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "cuda-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-metal"
+purpose = "native Apple backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "metal-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-reference"
+purpose = "reference backend adaptation"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-wgpu"
+purpose = "portable backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "portable-driver"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-intrinsics"
+purpose = "hardware-mapped intrinsic builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "hardware-intrinsics"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["crypto", "full", "logical", "matching", "math", "nn", "nn-moe", "parsing", "security", "visual"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "independent semantic oracle execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
+
+[[crate.dependency]]
+package = "vyre-runtime"
+purpose = "artifact admission, residency, submission, recovery, and readback lifecycle"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "runtime"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "xtask"
@@ -144,7 +884,182 @@ path = "xtask"
 owner = "release-tooling"
 layer = "tooling"
 responsibility = "Generate evidence and enforce repository, release, documentation, and architecture contracts."
-allowed_dependencies = ["vyre", "vyre-bench", "vyre-driver", "vyre-driver-cuda", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-metal", "vyre-foundation", "vyre-intrinsics", "vyre-libs", "vyre-lints", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre"
+purpose = "public lifecycle facade"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "public-facade"
+
+[[crate.dependency]]
+package = "vyre-bench"
+purpose = "benchmark workloads and evidence"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "benchmarks"
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-driver-cuda"
+purpose = "native accelerator backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "cuda-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-reference"
+purpose = "reference backend adaptation"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-spirv"
+purpose = "SPIR-V backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "spirv-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-wgpu"
+purpose = "portable backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "portable-driver"
+
+[[crate.dependency]]
+package = "vyre-emit-metal"
+purpose = "native Apple source emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "metal-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-intrinsics"
+purpose = "hardware-mapped intrinsic builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "hardware-intrinsics"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["crypto", "full", "logical", "matching", "math", "nn", "nn-moe", "parsing", "security", "visual"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-lints"
+purpose = "source policy enforcement"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lint-policy"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = ["bitset", "fixpoint", "graph", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "independent semantic oracle execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-runtime"
@@ -152,7 +1067,50 @@ path = "vyre-runtime"
 owner = "runtime"
 layer = "runtime"
 responsibility = "Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-self-substrate"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-self-substrate"
+purpose = "optional scheduler and analysis substrate"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = true
+default_features = true
+boundary = "private"
+seam = "self-substrate"
 
 [[crate]]
 package = "vyre-scan"
@@ -160,7 +1118,72 @@ path = "vyre-scan"
 owner = "scan-product"
 layer = "runtime"
 responsibility = "Own scan compilation, database codecs, artifact sessions, paging, residency, execution, and readback."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-libs", "vyre-megakernel", "vyre-primitives", "vyre-runtime"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["full", "matching-regex"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-runtime"
+purpose = "artifact admission, residency, submission, recovery, and readback lifecycle"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "runtime"
 
 [[crate]]
 package = "vyre-libs"
@@ -168,7 +1191,39 @@ path = "vyre-libs"
 owner = "product-libraries"
 layer = "libraries"
 responsibility = "Own product-facing Tier 3 program compositions built from neutral primitives and contracts."
-allowed_dependencies = ["vyre-foundation", "vyre-primitives", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = ["serde"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = ["bitset", "decode", "fixpoint", "geom", "graph", "hash", "inventory-registry", "label", "matching", "math", "nfa", "nn", "opt", "parsing", "predicate", "reduce", "text", "topology", "visual"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "public"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "specification"
 
 [[crate]]
 package = "vyre-intrinsics"
@@ -176,7 +1231,28 @@ path = "vyre-intrinsics"
 owner = "hardware-intrinsics"
 layer = "intrinsics"
 responsibility = "Own registered hardware-mapped intrinsic contracts and their neutral program builders."
-allowed_dependencies = ["vyre-foundation", "vyre-primitives"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
 
 [[crate]]
 package = "vyre-aot"
@@ -184,7 +1260,61 @@ path = "vyre-aot"
 owner = "aot-artifacts"
 layer = "packaging"
 responsibility = "Plan and package ahead-of-time artifacts without owning live backend execution."
-allowed_dependencies = ["vyre-driver", "vyre-foundation", "vyre-megakernel", "vyre-primitives", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "whole-graph compilation and immutable artifact contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = ["bitset", "fixpoint", "graph", "inventory-registry", "math", "reduce"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-frontend-c"
@@ -192,7 +1322,17 @@ path = "vyre-frontend-c"
 owner = "c-frontend"
 layer = "frontend"
 responsibility = "Parse C input and lower supported language constructs into typed Vyre programs."
-allowed_dependencies = ["vyre-foundation"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
 
 [[crate]]
 package = "vyre-frontend-rust"
@@ -200,7 +1340,17 @@ path = "vyre-frontend-rust"
 owner = "rust-frontend"
 layer = "frontend"
 responsibility = "Lower the supported Rust frontend subset into typed Vyre programs without owning backend execution."
-allowed_dependencies = ["vyre-foundation"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
 
 [[crate]]
 package = "vyre-bench"
@@ -208,7 +1358,204 @@ path = "vyre-bench"
 owner = "benchmarks"
 layer = "tooling"
 responsibility = "Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence."
-allowed_dependencies = ["vyre", "vyre-driver", "vyre-driver-cuda", "vyre-driver-metal", "vyre-driver-reference", "vyre-driver-spirv", "vyre-driver-wgpu", "vyre-emit-ptx", "vyre-foundation", "vyre-frontend-c", "vyre-frontend-rust", "vyre-intrinsics", "vyre-libs", "vyre-lower", "vyre-primitives", "vyre-reference", "vyre-runtime", "vyre-spec"]
+
+[[crate.dependency]]
+package = "vyre"
+purpose = "public lifecycle facade"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "public-facade"
+
+[[crate.dependency]]
+package = "vyre-driver"
+purpose = "backend-neutral target, materialization, submission, and completion contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "backend-contract"
+
+[[crate.dependency]]
+package = "vyre-driver-cuda"
+purpose = "native accelerator backend execution"
+features = []
+conditions = ["cfg(not(target_os = \"macos\"))"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "cuda-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-metal"
+purpose = "native Apple backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "metal-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-reference"
+purpose = "reference backend adaptation"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-spirv"
+purpose = "SPIR-V backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "spirv-driver"
+
+[[crate.dependency]]
+package = "vyre-driver-wgpu"
+purpose = "portable backend execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "portable-driver"
+
+[[crate.dependency]]
+package = "vyre-emit-ptx"
+purpose = "primary binary backend text emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "primary-binary-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-frontend-c"
+purpose = "C source lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "c-frontend"
+
+[[crate.dependency]]
+package = "vyre-frontend-rust"
+purpose = "Rust source lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "rust-frontend"
+
+[[crate.dependency]]
+package = "vyre-intrinsics"
+purpose = "hardware-mapped intrinsic builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "hardware-intrinsics"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["nn-linear-4bit"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = ["bitset", "cpu-parity", "graph"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-reference"
+purpose = "independent semantic oracle execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "reference-semantics"
+
+[[crate.dependency]]
+package = "vyre-runtime"
+purpose = "artifact admission, residency, submission, recovery, and readback lifecycle"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "runtime"
+
+[[crate.dependency]]
+package = "vyre-spec"
+purpose = "stable cross-engine schemas and operation definitions"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "specification"
 
 [[crate]]
 package = "vyre-lints"
@@ -216,7 +1563,6 @@ path = "vyre-lints"
 owner = "lint-policy"
 layer = "tooling"
 responsibility = "Enforce source-level project policies without depending on runtime crates."
-allowed_dependencies = []
 
 [[crate]]
 package = "vyre-lower"
@@ -224,7 +1570,17 @@ path = "vyre-lower"
 owner = "lowering"
 layer = "lowering"
 responsibility = "Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms."
-allowed_dependencies = ["vyre-foundation"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
 
 [[crate]]
 package = "vyre-emit-naga"
@@ -232,7 +1588,28 @@ path = "vyre-emit-naga"
 owner = "primary-text-emitter"
 layer = "emitter"
 responsibility = "Consume verified lowering products and emit the primary text representation and related binary targets."
-allowed_dependencies = ["vyre-foundation", "vyre-lower"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-ptx"
@@ -240,7 +1617,28 @@ path = "vyre-emit-ptx"
 owner = "primary-binary-emitter"
 layer = "emitter"
 responsibility = "Consume verified lowering products and emit the primary binary backend text artifact."
-allowed_dependencies = ["vyre-foundation", "vyre-lower"]
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-spirv"
@@ -248,7 +1646,28 @@ path = "vyre-emit-spirv"
 owner = "spirv-emitter"
 layer = "emitter"
 responsibility = "Consume verified lowering products and emit SPIR-V artifacts through the shared writer."
-allowed_dependencies = ["vyre-emit-naga", "vyre-lower"]
+
+[[crate.dependency]]
+package = "vyre-emit-naga"
+purpose = "primary text and related binary emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "primary-text-emitter"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
 
 [[crate]]
 package = "vyre-emit-metal"
@@ -256,7 +1675,39 @@ path = "vyre-emit-metal"
 owner = "metal-emitter"
 layer = "emitter"
 responsibility = "Consume verified lowering products and emit native Apple shader source through the shared emitter path."
-allowed_dependencies = ["vyre-emit-naga", "vyre-foundation", "vyre-lower"]
+
+[[crate.dependency]]
+package = "vyre-emit-naga"
+purpose = "primary text and related binary emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "primary-text-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
 
 [[crate]]
 package = "vyre-debug"
@@ -264,7 +1715,83 @@ path = "vyre-debug"
 owner = "debugging"
 layer = "tooling"
 responsibility = "Inspect, explain, and diagnose typed programs, lowering, and product-library composition."
-allowed_dependencies = ["vyre", "vyre-emit-naga", "vyre-foundation", "vyre-libs", "vyre-lower", "vyre-primitives", "vyre-scan"]
+
+[[crate.dependency]]
+package = "vyre"
+purpose = "public lifecycle facade"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "public-facade"
+
+[[crate.dependency]]
+package = "vyre-emit-naga"
+purpose = "primary text and related binary emission"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "primary-text-emitter"
+
+[[crate.dependency]]
+package = "vyre-foundation"
+purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "foundation-ir"
+
+[[crate.dependency]]
+package = "vyre-libs"
+purpose = "product operation builders"
+features = ["c-parser"]
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "product-libraries"
+
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "verified backend-neutral representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "lowering"
+
+[[crate.dependency]]
+package = "vyre-primitives"
+purpose = "reusable semantic Program builders"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = false
+boundary = "private"
+seam = "primitive-library"
+
+[[crate.dependency]]
+package = "vyre-scan"
+purpose = "scan product compilation and execution"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "public"
+seam = "scan-product"
 
 [[crate]]
 package = "vyre-grammar-gen"
@@ -272,4 +1799,3 @@ path = "vyre-grammar-gen"
 owner = "grammar-generation"
 layer = "tooling"
 responsibility = "Generate host-side grammar tables consumed by frontend and parsing crates."
-allowed_dependencies = []

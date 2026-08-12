@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -22,23 +21,57 @@ class ContractError(Exception):
 
 
 @dataclass(frozen=True)
+class DependencyRecord:
+    package: str
+    purpose: str
+    features: tuple[str, ...]
+    conditions: tuple[str, ...]
+    kinds: tuple[str, ...]
+    optional: bool
+    default_features: bool
+    boundary: str
+    seam: str
+
+
+@dataclass(frozen=True)
 class CrateRecord:
     package: str
     path: str
     owner: str
     layer: str
     responsibility: str
-    allowed_dependencies: tuple[str, ...]
+    dependencies: tuple[DependencyRecord, ...]
+
+    @property
+    def allowed_dependencies(self) -> tuple[str, ...]:
+        """Return declared package names for README generators."""
+        return tuple(sorted(dependency.package for dependency in self.dependencies))
 
 
 @dataclass(frozen=True)
-class PlannedRecord:
+class DependencyUse:
     package: str
-    path: str
-    owner: str
-    layer: str
-    responsibility: str
-    allowed_dependencies: tuple[str, ...]
+    features: tuple[str, ...]
+    conditions: tuple[str, ...]
+    kinds: tuple[str, ...]
+    optional: bool
+    default_features: bool
+
+
+@dataclass(frozen=True)
+class WorkspaceState:
+    members: tuple[str, ...]
+    manifests: dict[str, tuple[str, dict[str, Any]]]
+    dependencies: dict[str, tuple[DependencyUse, ...]]
+
+
+@dataclass
+class DependencyAccumulator:
+    features: set[str]
+    conditions: set[str]
+    kinds: set[str]
+    optional: bool
+    default_features: bool
 
 
 def read_toml(path: Path) -> dict[str, Any]:
@@ -63,9 +96,7 @@ def require_text(row: dict[str, Any], field: str, context: str) -> str:
     return value.strip()
 
 
-def require_dependencies(
-    row: dict[str, Any], field: str, context: str
-) -> tuple[str, ...]:
+def require_strings(row: dict[str, Any], field: str, context: str) -> tuple[str, ...]:
     value = row.get(field)
     if not isinstance(value, list) or not all(
         isinstance(item, str) and item.strip() for item in value
@@ -73,14 +104,48 @@ def require_dependencies(
         raise ContractError(f"{context} must define string array `{field}`")
     normalized = tuple(sorted(item.strip() for item in value))
     if len(normalized) != len(set(normalized)):
-        raise ContractError(f"{context} `{field}` contains duplicate packages")
+        raise ContractError(f"{context} `{field}` contains duplicate values")
     return normalized
 
 
-def load_registry(root: Path) -> tuple[list[CrateRecord], list[PlannedRecord]]:
+def require_bool(row: dict[str, Any], field: str, context: str) -> bool:
+    value = row.get(field)
+    if not isinstance(value, bool):
+        raise ContractError(f"{context} must define boolean `{field}`")
+    return value
+
+
+def load_dependency(row: dict[str, Any], context: str) -> DependencyRecord:
+    boundary = require_text(row, "boundary", context)
+    if boundary not in {"public", "private"}:
+        raise ContractError(f"{context} `boundary` must be `public` or `private`")
+    kinds = require_strings(row, "kinds", context)
+    if not kinds or set(kinds) - {"normal", "build"}:
+        raise ContractError(f"{context} `kinds` must contain only `normal` or `build`")
+    conditions = require_strings(row, "conditions", context)
+    if not conditions:
+        raise ContractError(f"{context} must declare at least one dependency condition")
+    return DependencyRecord(
+        package=require_text(row, "package", context),
+        purpose=require_text(row, "purpose", context),
+        features=require_strings(row, "features", context),
+        conditions=conditions,
+        kinds=kinds,
+        optional=require_bool(row, "optional", context),
+        default_features=require_bool(row, "default_features", context),
+        boundary=boundary,
+        seam=require_text(row, "seam", context),
+    )
+
+
+def load_registry(root: Path) -> list[CrateRecord]:
     registry = read_toml(root / REGISTRY_PATH)
-    if registry.get("schema_version") != 1:
-        raise ContractError(f"`{REGISTRY_PATH}` must declare schema_version = 1")
+    if registry.get("schema_version") != 2:
+        raise ContractError(f"`{REGISTRY_PATH}` must declare schema_version = 2")
+    if "planned" in registry:
+        raise ContractError(
+            f"`{REGISTRY_PATH}` cannot describe planned crates; add only current workspace owners"
+        )
 
     rows = registry.get("crate")
     if not isinstance(rows, list):
@@ -90,6 +155,23 @@ def load_registry(root: Path) -> tuple[list[CrateRecord], list[PlannedRecord]]:
         context = f"{REGISTRY_PATH} [[crate]] row {index + 1}"
         if not isinstance(row, dict):
             raise ContractError(f"{context} must be a table")
+        if "allowed_dependencies" in row:
+            raise ContractError(
+                f"{context} uses removed `allowed_dependencies`; declare complete [[crate.dependency]] records"
+            )
+        dependency_rows = row.get("dependency", [])
+        if not isinstance(dependency_rows, list):
+            raise ContractError(f"{context} `dependency` must be an array of tables")
+        dependencies = tuple(
+            load_dependency(dependency, f"{context} dependency {dependency_index + 1}")
+            for dependency_index, dependency in enumerate(dependency_rows)
+            if isinstance(dependency, dict)
+        )
+        if len(dependencies) != len(dependency_rows):
+            raise ContractError(f"{context} contains a non-table dependency record")
+        names = [dependency.package for dependency in dependencies]
+        if len(names) != len(set(names)):
+            raise ContractError(f"{context} contains duplicate dependency packages")
         records.append(
             CrateRecord(
                 package=require_text(row, "package", context),
@@ -97,74 +179,82 @@ def load_registry(root: Path) -> tuple[list[CrateRecord], list[PlannedRecord]]:
                 owner=require_text(row, "owner", context),
                 layer=require_text(row, "layer", context),
                 responsibility=require_text(row, "responsibility", context),
-                allowed_dependencies=require_dependencies(
-                    row, "allowed_dependencies", context
-                ),
+                dependencies=tuple(sorted(dependencies, key=lambda dependency: dependency.package)),
             )
         )
-
-    planned_table = registry.get("planned", {})
-    if not isinstance(planned_table, dict):
-        raise ContractError(f"`{REGISTRY_PATH}` [planned] value must be a table")
-    planned: list[PlannedRecord] = []
-    for package, row in sorted(planned_table.items()):
-        context = f"{REGISTRY_PATH} [planned.{package}]"
-        if not isinstance(row, dict):
-            raise ContractError(f"{context} must be a table")
-        if row.get("present") is not False:
-            raise ContractError(
-                f"{context} must declare present = false until it is a workspace member"
-            )
-        planned.append(
-            PlannedRecord(
-                package=package,
-                path=require_text(row, "path", context),
-                owner=require_text(row, "owner", context),
-                layer=require_text(row, "layer", context),
-                responsibility=require_text(row, "responsibility", context),
-                allowed_dependencies=require_dependencies(
-                    row, "allowed_dependencies", context
-                ),
-            )
-        )
-    return records, planned
+    return records
 
 
-def dependency_tables(manifest: dict[str, Any]) -> Iterable[dict[str, Any]]:
-    for name in ("dependencies", "build-dependencies"):
+def dependency_tables(
+    manifest: dict[str, Any],
+) -> Iterable[tuple[dict[str, Any], str, str]]:
+    for name, kind in (("dependencies", "normal"), ("build-dependencies", "build")):
         table = manifest.get(name, {})
         if isinstance(table, dict):
-            yield table
+            yield table, kind, "always"
     targets = manifest.get("target", {})
     if isinstance(targets, dict):
-        for target in targets.values():
+        for condition, target in targets.items():
             if not isinstance(target, dict):
                 continue
-            for name in ("dependencies", "build-dependencies"):
+            for name, kind in (("dependencies", "normal"), ("build-dependencies", "build")):
                 table = target.get(name, {})
                 if isinstance(table, dict):
-                    yield table
+                    yield table, kind, condition
 
 
-def dependency_package(
+def merged_specification(
     alias: str, specification: Any, workspace_dependencies: dict[str, Any]
-) -> str:
+) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    if isinstance(specification, dict) and specification.get("workspace") is True:
+        inherited = workspace_dependencies.get(alias, {})
+        if isinstance(inherited, dict):
+            merged.update(inherited)
+        elif isinstance(inherited, str):
+            merged["version"] = inherited
+    elif isinstance(specification, dict):
+        merged.update(specification)
+    elif isinstance(specification, str):
+        merged["version"] = specification
     if isinstance(specification, dict):
-        package = specification.get("package")
-        if isinstance(package, str):
-            return package
-        if specification.get("workspace") is True:
-            workspace_specification = workspace_dependencies.get(alias)
-            if isinstance(workspace_specification, dict):
-                workspace_package = workspace_specification.get("package")
-                if isinstance(workspace_package, str):
-                    return workspace_package
-    return alias
+        inherited_features = merged.get("features", [])
+        local_features = specification.get("features", [])
+        merged.update({key: value for key, value in specification.items() if key != "workspace"})
+        if isinstance(inherited_features, list) and isinstance(local_features, list):
+            merged["features"] = sorted(set(inherited_features) | set(local_features))
+    return merged
 
 
-def workspace_state(
-    root: Path,
-) -> tuple[list[str], dict[str, tuple[str, dict[str, Any]]], dict[str, tuple[str, ...]]]:
+def dependency_use(
+    alias: str,
+    specification: Any,
+    workspace_dependencies: dict[str, Any],
+    kind: str,
+    condition: str,
+) -> DependencyUse:
+    merged = merged_specification(alias, specification, workspace_dependencies)
+    package = merged.get("package", alias)
+    if not isinstance(package, str) or not package:
+        raise ContractError(f"dependency alias `{alias}` has invalid package metadata")
+    features = merged.get("features", [])
+    if not isinstance(features, list) or not all(isinstance(item, str) for item in features):
+        raise ContractError(f"dependency `{package}` has invalid feature metadata")
+    optional = merged.get("optional", False)
+    default_features = merged.get("default-features", True)
+    if not isinstance(optional, bool) or not isinstance(default_features, bool):
+        raise ContractError(f"dependency `{package}` has invalid boolean metadata")
+    return DependencyUse(
+        package=package,
+        features=tuple(sorted(set(features))),
+        conditions=(condition,),
+        kinds=(kind,),
+        optional=optional,
+        default_features=default_features,
+    )
+
+
+def workspace_state(root: Path) -> WorkspaceState:
     workspace = read_toml(root / "Cargo.toml")
     workspace_table = workspace.get("workspace")
     if not isinstance(workspace_table, dict):
@@ -192,24 +282,40 @@ def workspace_state(
         manifests[name] = (member, manifest)
 
     package_names = set(manifests)
-    edges: dict[str, tuple[str, ...]] = {}
+    dependencies: dict[str, tuple[DependencyUse, ...]] = {}
     for package, (_, manifest) in manifests.items():
-        dependencies = {
-            dependency_package(alias, specification, workspace_dependencies)
-            for table in dependency_tables(manifest)
-            for alias, specification in table.items()
-        }
-        edges[package] = tuple(sorted(dependencies & package_names))
-    return list(members), manifests, edges
+        accumulators: dict[str, DependencyAccumulator] = {}
+        for table, kind, condition in dependency_tables(manifest):
+            for alias, specification in table.items():
+                use = dependency_use(alias, specification, workspace_dependencies, kind, condition)
+                if use.package not in package_names:
+                    continue
+                accumulator = accumulators.setdefault(
+                    use.package,
+                    DependencyAccumulator(set(), set(), set(), False, True),
+                )
+                accumulator.features.update(use.features)
+                accumulator.conditions.update(use.conditions)
+                accumulator.kinds.update(use.kinds)
+                accumulator.optional = accumulator.optional or use.optional
+                accumulator.default_features = (
+                    accumulator.default_features and use.default_features
+                )
+        dependencies[package] = tuple(
+            DependencyUse(
+                package=dependency,
+                features=tuple(sorted(accumulator.features)),
+                conditions=tuple(sorted(accumulator.conditions)),
+                kinds=tuple(sorted(accumulator.kinds)),
+                optional=accumulator.optional,
+                default_features=accumulator.default_features,
+            )
+            for dependency, accumulator in sorted(accumulators.items())
+        )
+    return WorkspaceState(tuple(members), manifests, dependencies)
 
 
-def validate(
-    members: list[str],
-    manifests: dict[str, tuple[str, dict[str, Any]]],
-    edges: dict[str, tuple[str, ...]],
-    records: list[CrateRecord],
-    planned: list[PlannedRecord],
-) -> None:
+def validate(state: WorkspaceState, records: list[CrateRecord]) -> None:
     by_package: dict[str, CrateRecord] = {}
     by_path: dict[str, CrateRecord] = {}
     for record in records:
@@ -220,7 +326,7 @@ def validate(
         by_package[record.package] = record
         by_path[record.path] = record
 
-    member_set = set(members)
+    member_set = set(state.members)
     registry_paths = set(by_path)
     if member_set != registry_paths:
         missing = sorted(member_set - registry_paths)
@@ -229,70 +335,87 @@ def validate(
             "ownership registry path set differs from workspace.members: "
             f"missing={missing}, extra={extra}"
         )
-    if set(manifests) != set(by_package):
-        missing = sorted(set(manifests) - set(by_package))
-        extra = sorted(set(by_package) - set(manifests))
+    if set(state.manifests) != set(by_package):
+        missing = sorted(set(state.manifests) - set(by_package))
+        extra = sorted(set(by_package) - set(state.manifests))
         raise ContractError(
             "ownership registry package set differs from workspace packages: "
             f"missing={missing}, extra={extra}"
         )
 
-    for package, (path, _) in manifests.items():
+    for package, (path, _) in state.manifests.items():
         record = by_package[package]
         if record.path != path:
             raise ContractError(
                 f"package `{package}` registry path `{record.path}` does not match `{path}`"
             )
-        actual = edges[package]
-        if actual != record.allowed_dependencies:
-            undeclared = sorted(set(actual) - set(record.allowed_dependencies))
-            stale = sorted(set(record.allowed_dependencies) - set(actual))
+        actual = {dependency.package: dependency for dependency in state.dependencies[package]}
+        declared = {dependency.package: dependency for dependency in record.dependencies}
+        if actual.keys() != declared.keys():
+            undeclared = sorted(actual.keys() - declared.keys())
+            stale = sorted(declared.keys() - actual.keys())
+            owners = {
+                dependency: by_package[dependency].owner
+                for dependency in undeclared
+                if dependency in by_package
+            }
             raise ContractError(
                 f"package `{package}` production dependency contract differs from manifests: "
-                f"undeclared={undeclared}, stale={stale}"
+                f"undeclared={undeclared}, stale={stale}, owning_boundaries={owners}; "
+                f"declare each required destination under `{REGISTRY_PATH}`"
             )
-
-    planned_packages = {record.package for record in planned}
-    if planned_packages & set(manifests):
-        overlap = sorted(planned_packages & set(manifests))
-        raise ContractError(
-            f"planned ownership entries already exist as workspace packages: {overlap}"
-        )
-    planned_paths = {record.path for record in planned}
-    if planned_paths & member_set:
-        overlap = sorted(planned_paths & member_set)
-        raise ContractError(
-            f"planned ownership paths already exist in workspace.members: {overlap}"
-        )
-    for record in planned:
-        unknown = sorted(set(record.allowed_dependencies) - set(manifests))
-        if unknown:
-            raise ContractError(
-                f"planned package `{record.package}` names unknown dependencies: {unknown}"
-            )
+        for dependency, expected in declared.items():
+            observed = actual[dependency]
+            fields = {
+                "features": (expected.features, observed.features),
+                "conditions": (expected.conditions, observed.conditions),
+                "kinds": (expected.kinds, observed.kinds),
+                "optional": (expected.optional, observed.optional),
+                "default_features": (
+                    expected.default_features,
+                    observed.default_features,
+                ),
+            }
+            mismatches = {
+                name: {"declared": declared_value, "actual": actual_value}
+                for name, (declared_value, actual_value) in fields.items()
+                if declared_value != actual_value
+            }
+            if mismatches:
+                raise ContractError(
+                    f"dependency `{package}` -> `{dependency}` metadata differs from Cargo: "
+                    f"{mismatches}"
+                )
+            required_seam = by_package[dependency].owner
+            if expected.seam != required_seam:
+                raise ContractError(
+                    f"dependency `{package}` -> `{dependency}` declares seam `{expected.seam}`; "
+                    f"required destination owner is `{required_seam}`"
+                )
 
 
 def mermaid_id(index: int) -> str:
     return f"C{index}"
 
 
-def render_graph(
-    records: list[CrateRecord], planned: list[PlannedRecord]
-) -> str:
+def format_list(values: tuple[str, ...]) -> str:
+    return ", ".join(f"`{value}`" for value in values) or "None"
+
+
+def render_graph(records: list[CrateRecord]) -> str:
     ordered = sorted(records, key=lambda record: record.package)
     ids = {record.package: mermaid_id(index) for index, record in enumerate(ordered)}
     lines = [
         "# Vyre Crate Graph",
         "",
         "This file is generated by `python3 scripts/crate_ownership.py --write` from",
-        "the workspace manifests and `docs/CRATE_OWNERSHIP.toml`. Edit the registry or",
-        "a manifest, then regenerate this file. `check-tier-deps` rejects drift.",
+        "the workspace manifests and `docs/CRATE_OWNERSHIP.toml`. Edit those authorities",
+        "together, then regenerate this file.",
         "",
-        "## Current workspace",
+        "## Workspace dependency graph",
         "",
         f"The workspace contains {len(ordered)} crates. An arrow points from a crate to",
-        "an internal production dependency. Development dependencies are excluded because",
-        "they do not define the shipped dependency DAG.",
+        "an internal normal or build dependency. Development dependencies are excluded.",
         "",
         "```mermaid",
         "graph TD",
@@ -300,87 +423,59 @@ def render_graph(
     for record in ordered:
         lines.append(f'  {ids[record.package]}["{record.package}"]')
     for record in ordered:
-        for dependency in record.allowed_dependencies:
-            lines.append(f"  {ids[record.package]} --> {ids[dependency]}")
-    lines.extend(["```", "", "## Current ownership and edges", ""])
-    lines.append("| Crate | Path | Owner | Layer | Internal production dependencies |")
-    lines.append("| --- | --- | --- | --- | --- |")
-    for record in ordered:
-        dependencies = ", ".join(f"`{item}`" for item in record.allowed_dependencies)
-        lines.append(
-            f"| `{record.package}` | `{record.path}` | `{record.owner}` | "
-            f"`{record.layer}` | {dependencies or "None"} |"
-        )
-
+        for dependency in record.dependencies:
+            lines.append(f"  {ids[record.package]} --> {ids[dependency.package]}")
     lines.extend(
         [
+            "```",
             "",
-            "## Planned compiler boundary",
+            "## Dependency contracts",
             "",
-            "The entries in this section are plans, not workspace members. The generator",
-            "fails if a planned entry is presented as current before its manifest exists.",
-            "",
+            "| Consumer | Dependency | Purpose | Features | Conditions | Kinds | Optional | Default features | Boundary | Owning seam |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for record in planned:
-        dependencies = ", ".join(f"`{item}`" for item in record.allowed_dependencies)
-        lines.extend(
-            [
-                f"### `{record.package}` (planned, not a workspace member)",
-                "",
-                record.responsibility,
-                "",
-                f"- Intended path: `{record.path}`",
-                f"- Owner: `{record.owner}`",
-                f"- Layer: `{record.layer}`",
-                f"- Intended dependencies: {dependencies or 'None'}",
-                "",
-            ]
-        )
-
+    for record in ordered:
+        for dependency in record.dependencies:
+            lines.append(
+                f"| `{record.package}` | `{dependency.package}` | {dependency.purpose} | "
+                f"{format_list(dependency.features)} | {format_list(dependency.conditions)} | "
+                f"{format_list(dependency.kinds)} | `{str(dependency.optional).lower()}` | "
+                f"`{str(dependency.default_features).lower()}` | `{dependency.boundary}` | "
+                f"`{dependency.seam}` |"
+            )
     lines.extend(
         [
-            "## Cross-crate promotion patch contract",
             "",
-            "When you change a production dependency, update the manifest and",
-            "`docs/CRATE_OWNERSHIP.toml` in the same patch. Regenerate both ownership",
-            "documents. Add an import-path migration test when a public path moves.",
-            "`check-tier-deps` rejects undeclared edges, and `lego-audit` rejects",
-            "cross-tier composition that bypasses the canonical owner.",
+            "## Changing a dependency",
+            "",
+            "Change the Cargo manifest and its complete `[[crate.dependency]]` record in",
+            "the same patch. The registry rejects undeclared packages, feature drift, target",
+            "condition drift, stale seams, and missing visibility declarations.",
             "",
         ]
     )
     return "\n".join(lines)
 
 
-def render_ownership(
-    records: list[CrateRecord], planned: list[PlannedRecord]
-) -> str:
+def render_ownership(records: list[CrateRecord]) -> str:
     ordered = sorted(records, key=lambda record: record.package)
     lines = [
         "# Vyre Crate Ownership",
         "",
         "This file is generated by `python3 scripts/crate_ownership.py --write` from",
-        "`docs/CRATE_OWNERSHIP.toml` and the workspace manifests. The registry is the",
-        "single source for each crate's owner, responsibility, layer, path, and allowed",
-        "internal production dependencies.",
+        "`docs/CRATE_OWNERSHIP.toml` and the workspace manifests.",
         "",
         "## Boundary rule",
         "",
-        "A crate may use only the internal production dependencies listed below. Any",
-        "other normal or build dependency is rejected by `check-tier-deps`. Development",
-        "dependencies are test wiring and do not expand the shipped boundary.",
-        "",
-        "Concrete backend APIs stay in their owning driver or emitter crate. Shared",
-        "foundation, runtime, library, primitive, and conformance code uses neutral",
-        "backend contracts. If shared code needs a capability, add the neutral contract",
-        "to its canonical owner before implementing it in a concrete backend.",
+        "Each workspace crate has one owner and responsibility. Each internal production",
+        "edge declares why it exists, its Cargo feature and target conditions, whether it",
+        "crosses the public API, and the destination seam that owns the contract.",
         "",
         "## Per-crate ownership",
         "",
     ]
     for record in ordered:
-        dependencies = ", ".join(f"`{item}`" for item in record.allowed_dependencies)
         lines.extend(
             [
                 f"### `{record.package}`",
@@ -390,35 +485,30 @@ def render_ownership(
                 f"- Path: `{record.path}`",
                 f"- Owner: `{record.owner}`",
                 f"- Layer: `{record.layer}`",
-                f"- Allowed internal production dependencies: {dependencies or 'None'}",
+                f"- Internal production dependencies: {format_list(record.allowed_dependencies)}",
                 "",
             ]
         )
-
-    lines.extend(["## Planned ownership", ""])
-    for record in planned:
-        dependencies = ", ".join(f"`{item}`" for item in record.allowed_dependencies)
-        lines.extend(
-            [
-                f"### `{record.package}` (planned, not a workspace member)",
-                "",
-                record.responsibility,
-                "",
-                f"- Intended path: `{record.path}`",
-                f"- Owner: `{record.owner}`",
-                f"- Layer: `{record.layer}`",
-                f"- Intended dependencies: {dependencies or 'None'}",
-                "",
-            ]
-        )
-
+        if record.dependencies:
+            lines.extend(
+                [
+                    "| Dependency | Purpose | Boundary | Owning seam |",
+                    "| --- | --- | --- | --- |",
+                ]
+            )
+            for dependency in record.dependencies:
+                lines.append(
+                    f"| `{dependency.package}` | {dependency.purpose} | "
+                    f"`{dependency.boundary}` | `{dependency.seam}` |"
+                )
+            lines.append("")
     lines.extend(
         [
             "## Changing a boundary",
             "",
             "1. Change the manifest and `docs/CRATE_OWNERSHIP.toml` together.",
             "2. Run `python3 scripts/crate_ownership.py --write`.",
-            "3. Add an import-path migration test for a public move.",
+            "3. Add a public import migration test when a public edge changes.",
             "4. Run `cargo_full run --bin xtask -- check-tier-deps` and `lego-audit`.",
             "",
         ]
@@ -426,8 +516,8 @@ def render_ownership(
     return "\n".join(lines)
 
 
-def check_or_write(path: Path, expected: str, write: bool) -> None:
-    if write:
+def check_or_write(path: Path, expected: str, write_output: bool) -> None:
+    if write_output:
         path.write_text(expected, encoding="utf-8")
         return
     try:
@@ -441,13 +531,13 @@ def check_or_write(path: Path, expected: str, write: bool) -> None:
         )
 
 
-def run(root: Path, write: bool) -> None:
+def run(root: Path, write_output: bool) -> None:
     root = root.resolve()
-    records, planned = load_registry(root)
-    members, manifests, edges = workspace_state(root)
-    validate(members, manifests, edges, records, planned)
-    check_or_write(root / GRAPH_PATH, render_graph(records, planned), write)
-    check_or_write(root / OWNERSHIP_PATH, render_ownership(records, planned), write)
+    records = load_registry(root)
+    state = workspace_state(root)
+    validate(state, records)
+    check_or_write(root / GRAPH_PATH, render_graph(records), write_output)
+    check_or_write(root / OWNERSHIP_PATH, render_ownership(records), write_output)
 
 
 def main() -> int:

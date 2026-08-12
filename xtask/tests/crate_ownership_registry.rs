@@ -49,13 +49,17 @@ fn write_workspace(root: &Path, members: &[&str]) {
 }
 
 fn registry_row(package: &str, path: &str, allowed: &[&str]) -> String {
-    let allowed = allowed
+    let dependencies = allowed
         .iter()
-        .map(|dependency| format!("\"{dependency}\""))
+        .map(|dependency| {
+            format!(
+                "\n[[crate.dependency]]\npackage = \"{dependency}\"\npurpose = \"Use the fixture dependency contract.\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"private\"\nseam = \"fixture-owner\"\n"
+            )
+        })
         .collect::<Vec<_>>()
-        .join(", ");
+        .join("");
     format!(
-        "[[crate]]\npackage = \"{package}\"\npath = \"{path}\"\nowner = \"fixture-owner\"\nlayer = \"fixture-layer\"\nresponsibility = \"Prove the fixture ownership contract.\"\nallowed_dependencies = [{allowed}]\n\n"
+        "[[crate]]\npackage = \"{package}\"\npath = \"{path}\"\nowner = \"fixture-owner\"\nlayer = \"fixture-layer\"\nresponsibility = \"Prove the fixture ownership contract.\"\n{dependencies}\n"
     )
 }
 
@@ -89,7 +93,7 @@ fn missing_workspace_member_ownership_fails_closed() {
     write_member(temp.path(), "b", "b", "");
     fs::write(
         temp.path().join("docs/CRATE_OWNERSHIP.toml"),
-        format!("schema_version = 1\n\n{}", registry_row("a", "a", &[])),
+        format!("schema_version = 2\n\n{}", registry_row("a", "a", &[])),
     )
     .expect("Fix: fixture registry must be writable");
 
@@ -120,7 +124,7 @@ fn undeclared_production_dependency_fails_closed() {
     fs::write(
         temp.path().join("docs/CRATE_OWNERSHIP.toml"),
         format!(
-            "schema_version = 1\n\n{}{}",
+            "schema_version = 2\n\n{}{}",
             registry_row("a", "a", &[]),
             registry_row("b", "b", &[])
         ),
@@ -133,60 +137,36 @@ fn undeclared_production_dependency_fails_closed() {
     assert!(
         error.contains("package `a`")
             && error.contains("undeclared=['b']")
-            && error.contains("stale=[]"),
-        "Fix: undeclared edge diagnostic must name consumer and dependency; error={error}"
+            && error.contains("stale=[]")
+            && error.contains("owning_boundaries={'b': 'fixture-owner'}")
+            && error.contains("declare each required destination"),
+        "Fix: undeclared edge diagnostic must name consumer, dependency, and owner; error={error}"
     );
 }
 
-/// Planned crates must render separately from the current workspace and carry an explicit absence label.
+/// Every declared edge must carry complete purpose, feature, visibility, and seam metadata.
 ///
-/// This protects the planned megakernel compiler boundary from becoming a false
-/// support claim before a manifest and implementation actually exist.
+/// This closes the class where a package allowlist was current while the reason and
+/// public ownership of each edge remained unaudited.
 #[test]
-fn planned_boundary_renders_without_claiming_a_current_crate() {
+fn incomplete_dependency_metadata_fails_closed() {
     let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
-    write_workspace(temp.path(), &["a"]);
-    write_member(temp.path(), "a", "a", "");
-    fs::write(
-        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
-        format!(
-            "schema_version = 1\n\n[planned.planned-compiler]\npath = \"planned-compiler\"\npresent = false\nowner = \"compiler\"\nlayer = \"compiler-boundary\"\nresponsibility = \"Compile typed programs.\"\nallowed_dependencies = [\"a\"]\n\n{}",
-            registry_row("a", "a", &[])
-        ),
-    )
-    .expect("Fix: fixture registry must be writable");
-
-    let output = run_registry(temp.path(), "--write");
-    assert!(
-        output.status.success(),
-        "Fix: valid planned boundary must generate: {}",
-        String::from_utf8_lossy(&output.stderr)
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
     );
-    let graph = fs::read_to_string(temp.path().join("docs/CRATE_GRAPH.md"))
-        .expect("Fix: generated graph must be readable");
-    let ownership = fs::read_to_string(temp.path().join("docs/OWNERSHIP.md"))
-        .expect("Fix: generated ownership guide must be readable");
-    for document in [&graph, &ownership] {
-        assert!(document.contains("`planned-compiler` (planned, not a workspace member)"));
-        assert!(!document.contains("| `planned-compiler` |"));
-    }
-    assert!(graph.contains("The workspace contains 1 crates."));
-}
-
-/// A planned entry cannot set `present = true` as a shortcut around workspace discovery.
-///
-/// The member list and package manifest must become real before documentation may
-/// classify the boundary as current.
-#[test]
-fn planned_present_flag_cannot_claim_implementation() {
-    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
-    write_workspace(temp.path(), &["a"]);
-    write_member(temp.path(), "a", "a", "");
+    write_member(temp.path(), "b", "b", "");
+    let incomplete = registry_row("a", "a", &["b"])
+        .replace("purpose = \"Use the fixture dependency contract.\"\n", "");
     fs::write(
         temp.path().join("docs/CRATE_OWNERSHIP.toml"),
         format!(
-            "schema_version = 1\n\n[planned.future]\npath = \"future\"\npresent = true\nowner = \"compiler\"\nlayer = \"compiler-boundary\"\nresponsibility = \"Compile typed programs.\"\nallowed_dependencies = [\"a\"]\n\n{}",
-            registry_row("a", "a", &[])
+            "schema_version = 2\n\n{}{}",
+            incomplete,
+            registry_row("b", "b", &[])
         ),
     )
     .expect("Fix: fixture registry must be writable");
@@ -195,7 +175,44 @@ fn planned_present_flag_cannot_claim_implementation() {
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(!output.status.success());
     assert!(
-        error.contains("[planned.future]") && error.contains("present = false"),
-        "Fix: false implementation claim must name the planned entry and correction; error={error}"
+        error.contains("must define non-empty `purpose`"),
+        "Fix: incomplete edge metadata must name the missing field; error={error}"
+    );
+}
+
+/// Each edge names the destination owner, so a reverse or stale seam fails locally.
+///
+/// This prevents a dependency from compiling after ownership moved while its declared
+/// architectural destination still names the old subsystem.
+#[test]
+fn stale_dependency_seam_fails_closed() {
+    let temp = tempfile::tempdir().expect("Fix: fixture workspace must be creatable");
+    write_workspace(temp.path(), &["a", "b"]);
+    write_member(
+        temp.path(),
+        "a",
+        "a",
+        "[dependencies]\nb = { version = \"0.1.0\", path = \"../b\" }\n",
+    );
+    write_member(temp.path(), "b", "b", "");
+    let stale = registry_row("a", "a", &["b"])
+        .replace("seam = \"fixture-owner\"", "seam = \"removed-owner\"");
+    fs::write(
+        temp.path().join("docs/CRATE_OWNERSHIP.toml"),
+        format!(
+            "schema_version = 2\n\n{}{}",
+            stale,
+            registry_row("b", "b", &[])
+        ),
+    )
+    .expect("Fix: fixture registry must be writable");
+
+    let output = run_registry(temp.path(), "--check");
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success());
+    assert!(
+        error.contains("declares seam `removed-owner`")
+            && error.contains("required destination owner is `fixture-owner`"),
+        "Fix: stale seam diagnostic must name the declared and required owners; error={error}"
     );
 }

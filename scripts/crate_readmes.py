@@ -328,9 +328,9 @@ def composed_readme(existing: str, package: str, contract: str, path: Path) -> s
 
 def run(root: Path, write: bool) -> int:
     root = root.resolve()
-    records, planned = load_registry(root)
-    members, manifests, edges = workspace_state(root)
-    validate(members, manifests, edges, records, planned)
+    records = load_registry(root)
+    state = workspace_state(root)
+    validate(state, records)
     config = read_toml(root / METADATA_PATH)
     if config.get("schema_version") != 1:
         raise ContractError(f"`{METADATA_PATH}` must declare schema_version = 1")

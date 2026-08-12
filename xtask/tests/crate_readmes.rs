@@ -49,7 +49,7 @@ fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
     }
     fs::write(
         root.join("docs/CRATE_OWNERSHIP.toml"),
-        "schema_version = 1\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nowner = \"fixture-owner\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\nallowed_dependencies = []\n",
+        "schema_version = 2\n\n[[crate]]\npackage = \"a\"\npath = \"a\"\nowner = \"fixture-owner\"\nlayer = \"foundation\"\nresponsibility = \"Return the exact fixture answer.\"\n",
     )
     .expect("Fix: fixture ownership registry must be writable");
     let profile = if include_profile {

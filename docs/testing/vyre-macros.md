@@ -30,12 +30,10 @@ This crate declares no Cargo features.
 | `test` | `adversarial` | `vyre-macros/tests/adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test adversarial` |
 | `test` | `ast_registry_contracts` | `vyre-macros/tests/ast_registry_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test ast_registry_contracts` |
 | `test` | `generated_ast_registry_matrix` | `vyre-macros/tests/generated_ast_registry_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test generated_ast_registry_matrix` |
-| `test` | `generated_define_op_matrix` | `vyre-macros/tests/generated_define_op_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test generated_define_op_matrix` |
 | `test` | `generated_metadata_matrix` | `vyre-macros/tests/generated_metadata_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test generated_metadata_matrix` |
 | `test` | `integration` | `vyre-macros/tests/integration.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test integration` |
 | `test` | `pass_matrix` | `vyre-macros/tests/pass_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test pass_matrix` |
 | `test` | `release_surface_contracts` | `vyre-macros/tests/release_surface_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test release_surface_contracts` |
-| `test` | `skip_builder_contract` | `vyre-macros/tests/skip_builder_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test skip_builder_contract` |
 | `test` | `trybuild` | `vyre-macros/tests/trybuild.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-macros --test trybuild` |
 
 ## Test classes

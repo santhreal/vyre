@@ -48,7 +48,7 @@ fn write_fixture(root: &Path) {
     .unwrap();
     fs::write(
         root.join("docs/CRATE_OWNERSHIP.toml"),
-        "schema_version = 1\n\n[[crate]]\npackage = \"vyre-megakernel\"\npath = \"vyre-megakernel\"\nowner = \"megakernel-compiler\"\nlayer = \"compiler-boundary\"\nresponsibility = \"Compile validated ProgramGraph inputs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.\"\nallowed_dependencies = [\"vyre-foundation\"]\n",
+        "schema_version = 2\n\n[[crate]]\npackage = \"vyre-megakernel\"\npath = \"vyre-megakernel\"\nowner = \"megakernel-compiler\"\nlayer = \"compiler-boundary\"\nresponsibility = \"Compile validated ProgramGraph inputs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.\"\n\n[[crate.dependency]]\npackage = \"vyre-foundation\"\npurpose = \"Use typed IR and graph contracts.\"\nfeatures = []\nconditions = [\"always\"]\nkinds = [\"normal\"]\noptional = false\ndefault_features = true\nboundary = \"public\"\nseam = \"foundation-ir\"\n",
     )
     .unwrap();
     write_json(

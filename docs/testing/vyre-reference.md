@@ -57,6 +57,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --all-features
 | `test` | `oracle_program_edges` | `vyre-reference/tests/oracle_program_edges.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test oracle_program_edges` |
 | `test` | `quantized_buffer_contract` | `vyre-reference/tests/quantized_buffer_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test quantized_buffer_contract` |
 | `test` | `reference_abi_predicates` | `vyre-reference/tests/reference_abi_predicates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_abi_predicates` |
+| `test` | `reference_error_contract` | `vyre-reference/tests/reference_error_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_error_contract` |
 | `test` | `reference_eval_fma_select_generated` | `vyre-reference/tests/reference_eval_fma_select_generated.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test reference_eval_fma_select_generated` |
 | `test` | `region_frame_lifetime` | `vyre-reference/tests/region_frame_lifetime.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test region_frame_lifetime` |
 | `test` | `region_gate` | `vyre-reference/tests/region_gate.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test region_gate` |
