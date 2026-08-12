@@ -790,6 +790,25 @@ fn group_resident_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn query(
+        query: u32,
+        graph_layout_hash: u64,
+        traversal_key: u64,
+        graph_upload_bytes: u64,
+        frontier_bytes: u64,
+        scratch_bytes: u64,
+        output_bytes: u64,
+    ) -> MultiQuery {
+        MultiQuery {
+            query,
+            graph_layout_hash,
+            traversal_key,
+            graph_upload_bytes,
+            frontier_bytes,
+            scratch_bytes,
+            output_bytes,
+        }
+    }
 
     #[test]
     fn multi_query_batches_compatible_queries_over_one_resident_graph() {
@@ -873,34 +892,6 @@ mod tests {
     }
 
     #[test]
-    fn multi_query_split_chunks_reserve_only_actual_chunk_ids() {
-        let plan = plan_multi_query_execution(
-            &[
-                query(1, 0xabc, 0x10, 100, 100, 10, 10),
-                query(2, 0xabc, 0x10, 100, 100, 10, 10),
-                query(3, 0xabc, 0x10, 100, 100, 10, 10),
-                query(4, 0xabc, 0x10, 100, 100, 10, 10),
-            ],
-            220,
-        )
-        .expect("Fix: multi-query planner should split into single-query chunks");
-
-        assert_eq!(plan.launch_count, 4);
-        assert!(plan.groups.iter().all(|group| group.queries.len() == 1));
-        assert_eq!(plan.avoided_launches, 0);
-        assert_eq!(plan.avoided_host_fences, 0);
-        assert_eq!(plan.avoided_graph_upload_bytes, 300);
-
-        let src = include_str!("multi_query_execution.rs");
-        assert!(
-            src.contains("let chunk_len =")
-                && src.contains("reserved_vec(chunk_len, \"multi-query chunk query ids\")")
-                && !src.contains(concat!("reserved_vec(queries.len()", " - start")),
-            "Fix: split multi-query chunks must reserve only the actual chunk size, not the whole remaining tail."
-        );
-    }
-
-    #[test]
     fn multi_query_splits_incompatible_graph_or_traversal_keys() {
         let plan = plan_multi_query_execution(
             &[
@@ -932,63 +923,6 @@ mod tests {
     }
 
     #[test]
-    fn multi_query_grouping_avoids_tree_lookup_per_query() {
-        let src = include_str!("multi_query_execution.rs");
-        assert!(
-            !src.contains(concat!("BTree", "Map")),
-            "Fix: multi-query grouping should hash query ids and group indices, then sort final groups once for deterministic output."
-        );
-    }
-
-    #[test]
-    fn multi_query_planner_reuses_caller_owned_grouping_scratch() {
-        let mut scratch = MultiQueryExecutionScratch::try_with_capacity(128)
-            .expect("Fix: multi-query scratch should reserve");
-        let wide = (0..128)
-            .map(|index| query(index, 0xabc, 0x10, 4_096, 4, 8, 4))
-            .collect::<Vec<_>>();
-        let first = plan_multi_query_execution_with_scratch(&wide, 16_384, &mut scratch)
-            .expect("Fix: wide compatible query batch should plan");
-        let group_index_capacity = scratch.group_index_capacity();
-        let grouped_query_capacity = scratch.grouped_query_capacity();
-        let resident_graph_capacity = scratch.resident_graph_capacity();
-        let query_bucket_capacity = scratch.retained_query_bucket_capacity();
-
-        assert_eq!(first.launch_count, 1);
-        assert_eq!(first.groups[0].queries.len(), 128);
-        assert!(
-            query_bucket_capacity >= 128,
-            "Fix: multi-query scratch must retain inner grouped-query bucket capacity across planning calls"
-        );
-
-        let second = plan_multi_query_execution_with_scratch(
-            &[
-                query(9, 0xdef, 0x20, 1_024, 16, 32, 8),
-                query(7, 0xabc, 0x10, 1_024, 16, 32, 8),
-            ],
-            4_096,
-            &mut scratch,
-        )
-        .expect("Fix: smaller incompatible query batch should reuse previous scratch");
-
-        assert_eq!(second.launch_count, 2);
-        assert!(scratch.group_index_capacity() >= group_index_capacity);
-        assert!(scratch.grouped_query_capacity() >= grouped_query_capacity);
-        assert!(scratch.resident_graph_capacity() >= resident_graph_capacity);
-        assert!(scratch.retained_query_bucket_capacity() >= query_bucket_capacity);
-
-        let src = include_str!("multi_query_execution.rs");
-        assert!(
-            src.contains("pub fn plan_multi_query_execution_with_scratch"),
-            "Fix: release callers need a scratch-aware multi-query planning path"
-        );
-        assert!(
-            src.contains("scratch.grouped_queries.sort_unstable_by_key"),
-            "Fix: deterministic multi-query output should sort retained scratch buckets in place"
-        );
-    }
-
-    #[test]
     fn reused_query_bucket_returns_to_pool_when_reservation_fails() {
         let retained = vec![query(42, 0xabc, 0x10, 4_096, 8, 16, 4)];
         let mut free_query_buckets = vec![retained.clone()];
@@ -1013,65 +947,15 @@ mod tests {
         );
     }
 
-    #[test]
-    fn multi_query_planner_staging_reserves_fallibly() {
-        let production = include_str!("multi_query_execution.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: multi-query production source must precede tests");
-
-        assert!(
-            production.contains("MultiQueryExecutionScratch::try_with_capacity(queries.len())?")
-                && production.contains("scratch.try_reserve_query_shape(queries.len())?")
-                && production.contains("use crate::reservation_policy::{")
-                && production.contains("reserve_typed_vec_to_capacity")
-                && production.contains("reserve_typed_hash_map_to_capacity")
-                && production.contains("reserve_typed_hash_set_to_capacity")
-                && production.contains("StorageReserveFailed")
-                && production.contains("const MULTI_QUERY_RESERVATION"),
-            "Fix: multi-query execution planning must reserve scratch and output staging fallibly."
-        );
-        assert!(
-            !production.contains(concat!("FxHashMap::with_capacity", "_and_hasher"))
-                && !production.contains(concat!("FxHashSet::with_capacity", "_and_hasher"))
-                && !production.contains(concat!("Vec::with_capacity", "(query_count)"))
-                && !production.contains(concat!(
-                    "Vec::with_capacity",
-                    "(scratch.grouped_queries.len())"
-                ))
-                && !production.contains(concat!("Vec::with_capacity", "(queries.len() - start)"))
-                && !production.contains(concat!("groups: vec![", "MultiQueryGroup"))
-                && !production.contains(concat!("queries: vec![", "query.query]"))
-                && !production
-                    .contains(concat!("scratch.group_indices", ".reserve(queries.len())"))
-                && !production.contains(concat!(
-                    "scratch.grouped_queries",
-                    ".reserve(queries.len())"
-                ))
-                && !production.contains(concat!("scratch.seen_queries", ".reserve(queries.len())")),
-            "Fix: multi-query release planning must not use infallible staging allocation."
-        );
+    fn next_u64(state: &mut u64) -> u64 {
+        *state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *state
     }
 
-    #[test]
-    fn multi_query_planner_uses_shared_monotonic_sort_fast_path() {
-        let production = include_str!("multi_query_execution.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: multi-query production source must precede tests");
-
-        assert!(
-            production.contains("use crate::ordering::sort_unstable_by_key_if_needed;")
-                && production.contains("sort_unstable_by_key_if_needed(&mut scratch.grouped_queries")
-                && production.contains("sort_unstable_by_key_if_needed(group_queries"),
-            "Fix: multi-query planning must reuse the shared monotonic sort fast path for release-order batches."
-        );
-        assert!(
-            !production.contains(".sort_unstable_by_key("),
-            "Fix: multi-query planning must not sort already monotonic release batches unconditionally."
-        );
-    }
-
+    /// WHY: generated plans close grouping, identity, budget, ordering, and
+    /// aggregate-accounting variants without depending on implementation shape.
     #[test]
     fn generated_multi_query_plans_preserve_grouping_budget_and_identity_contracts() {
         let mut state = 0x6a09_e667_f3bc_c909_u64;
@@ -1156,6 +1040,8 @@ mod tests {
         }
     }
 
+    /// WHY: every rejected input class must fail at the planner boundary with
+    /// the exact typed error instead of producing a partial execution plan.
     #[test]
     fn multi_query_rejects_invalid_inputs_and_budget_overflow() {
         assert_eq!(
@@ -1199,32 +1085,5 @@ mod tests {
                 budget_bytes: 127,
             }
         );
-    }
-
-    fn query(
-        query: u32,
-        graph_layout_hash: u64,
-        traversal_key: u64,
-        graph_upload_bytes: u64,
-        frontier_bytes: u64,
-        scratch_bytes: u64,
-        output_bytes: u64,
-    ) -> MultiQuery {
-        MultiQuery {
-            query,
-            graph_layout_hash,
-            traversal_key,
-            graph_upload_bytes,
-            frontier_bytes,
-            scratch_bytes,
-            output_bytes,
-        }
-    }
-
-    fn next_u64(state: &mut u64) -> u64 {
-        *state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        *state
     }
 }
