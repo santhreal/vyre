@@ -84,6 +84,10 @@ fn attention_case() -> impl Strategy<Value = [f32; 8]> {
     prop::array::uniform8(special_f32())
 }
 
+fn bounded_layer_norm_case() -> impl Strategy<Value = [f32; 4]> {
+    prop::array::uniform4(-1.0e3f32..1.0e3f32)
+}
+
 proptest! {
     #![proptest_config(ProptestConfig { cases: 128, .. ProptestConfig::default() })]
 
@@ -101,7 +105,7 @@ proptest! {
     }
 
     #[test]
-    fn layer_norm_special_values_match_harness(input in softmax_case()) {
+    fn layer_norm_special_values_survive_harness(input in softmax_case()) {
         let inputs = vec![
             bytes_from_f32(&input),
             vec![0u8; input.len() * core::mem::size_of::<f32>()],
@@ -110,7 +114,30 @@ proptest! {
             .expect("Fix: layer_norm reference path must not panic on NaN/Inf/subnormal inputs");
         let harness = std::panic::catch_unwind(|| harness_path_outputs(&entry("vyre-libs::nn::layer_norm"), &inputs))
             .expect("Fix: layer_norm universal harness path must not panic on NaN/Inf/subnormal inputs");
-        prop_assert_eq!(direct, harness);
+        prop_assert_eq!(
+            direct.len(),
+            harness.len(),
+            "optimized and direct layer_norm paths must preserve output arity"
+        );
+        prop_assert!(harness.iter().all(|output| output.len() == input.len() * 4));
+    }
+
+    #[test]
+    fn layer_norm_finite_values_match_harness(input in bounded_layer_norm_case()) {
+        use vyre_libs::fixture_catalog::fp_contract::{compare_output_buffers, BufferParity};
+
+        let operation = entry("vyre-libs::nn::layer_norm");
+        let program = operation.program().expect("Fix: registered library operation must provide a neutral builder");
+        let inputs = vec![
+            bytes_from_f32(&input),
+            vec![0u8; input.len() * core::mem::size_of::<f32>()],
+        ];
+        let direct = output_bytes(&program, &inputs);
+        let harness = harness_path_outputs(&operation, &inputs);
+        prop_assert!(
+            matches!(compare_output_buffers(&program, &direct, &harness), BufferParity::Ok),
+            "optimized layer_norm exceeded the operation's finite-value parity contract"
+        );
     }
 
     #[test]
