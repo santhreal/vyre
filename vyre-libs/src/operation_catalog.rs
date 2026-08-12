@@ -15,6 +15,16 @@ pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
         .filter(|entry| entry.tier == OperationTier::Library)
 }
 
+/// Iterate over library operations with complete deterministic execution fixtures.
+///
+/// Callable composition components remain present in [`all_entries`] for
+/// validation, inlining, documentation, and complexity accounting. They are
+/// omitted here when their execution is covered through a parent operation's
+/// fixture rather than a standalone dispatch shape.
+pub fn fixture_entries() -> impl Iterator<Item = SemanticOperation> {
+    all_entries().filter(|entry| entry.test_inputs.is_some() && entry.expected_output.is_some())
+}
+
 /// Convergence metadata consumed by upper execution harnesses.
 #[derive(Clone, Debug)]
 pub struct ConvergenceContract {

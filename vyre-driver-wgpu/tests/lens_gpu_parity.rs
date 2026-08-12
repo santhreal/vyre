@@ -11,7 +11,7 @@ fn cpu_vs_backend_lens_every_eligible_op() {
     let be = backend();
     let mut failures: Vec<String> = Vec::new();
     let mut passed = 0usize;
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::fixture_entries() {
         match lens::cpu_vs_backend(&entry, be) {
             LensOutcome::Pass { cases } => {
                 passed += 1;

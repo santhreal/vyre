@@ -15,22 +15,15 @@
 //! references, which inlining retargets onto the caller's own buffers.
 
 use super::*;
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 
 /// Scope-open row for a given row, from the reverse scope walk.
 pub(super) const SCOPE_OPEN_FOR_ROW_OP_ID: &str =
     "vyre-libs::parsing::c11_typedef_scope_open_for_row";
-/// Whether a row names a visible typedef, over a byte haystack.
-pub(super) const VISIBLE_NAME_FOR_ROW_OP_ID: &str =
-    "vyre-libs::parsing::c11_typedef_visible_name_for_row";
-/// [`VISIBLE_NAME_FOR_ROW_OP_ID`] over a word-packed haystack.
-pub(super) const VISIBLE_NAME_FOR_ROW_PACKED_OP_ID: &str =
-    "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack";
-/// Declaration kind of a row: 0 none, 1 typedef declarator, 2 ordinary.
-pub(super) const DECL_KIND_FOR_ROW_OP_ID: &str =
-    "vyre-libs::parsing::c11_typedef_decl_kind_for_row";
-/// [`DECL_KIND_FOR_ROW_OP_ID`] over a word-packed haystack.
-pub(super) const DECL_KIND_FOR_ROW_PACKED_OP_ID: &str =
-    "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack";
+pub(super) use super::super::build::{
+    DECL_KIND_FOR_ROW_OP_ID, DECL_KIND_FOR_ROW_PACKED_OP_ID, VISIBLE_NAME_FOR_ROW_OP_ID,
+    VISIBLE_NAME_FOR_ROW_PACKED_OP_ID,
+};
 
 /// Callee-local buffer names. These never survive inlining: a buffer argument
 /// retargets onto the caller's buffer and a scalar argument is substituted.
@@ -40,6 +33,55 @@ const ROW: &str = "phase_row";
 const HAYSTACK_LEN: &str = "phase_haystack_len";
 const NUM_NODES: &str = "phase_num_nodes";
 const RESULT: &str = "phase_result";
+const SCOPE_OPEN_SIGNATURE: Signature = Signature {
+    inputs: &[
+        TypedParam {
+            name: NODES,
+            ty: "buffer<u32>",
+        },
+        TypedParam {
+            name: ROW,
+            ty: "u32",
+        },
+    ],
+    outputs: &[TypedParam {
+        name: RESULT,
+        ty: "u32",
+    }],
+    attrs: &[],
+    bytes_extraction: false,
+};
+
+const HAYSTACK_PHASE_SIGNATURE: Signature = Signature {
+    inputs: &[
+        TypedParam {
+            name: NODES,
+            ty: "buffer<u32>",
+        },
+        TypedParam {
+            name: HAYSTACK,
+            ty: "buffer<u32>",
+        },
+        TypedParam {
+            name: ROW,
+            ty: "u32",
+        },
+        TypedParam {
+            name: HAYSTACK_LEN,
+            ty: "u32",
+        },
+        TypedParam {
+            name: NUM_NODES,
+            ty: "u32",
+        },
+    ],
+    outputs: &[TypedParam {
+        name: RESULT,
+        ty: "u32",
+    }],
+    attrs: &[],
+    bytes_extraction: false,
+};
 
 /// Rows a callee's own buffer declarations are sized for.
 ///
@@ -53,20 +95,6 @@ fn row() -> Expr {
     Expr::load(ROW, Expr::u32(0))
 }
 
-/// The haystack length, read from its scalar parameter.
-fn haystack_len() -> Expr {
-    Expr::load(HAYSTACK_LEN, Expr::u32(0))
-}
-
-/// The VAST row count, read from its scalar parameter.
-///
-/// It is a parameter rather than `BufLen(NODES) / VAST_NODE_STRIDE_U32` because
-/// the caller's node buffer is declared with capacity for more rows than the
-/// parse actually produced, and the forward-neighbour scans below must stop at
-/// the last real row rather than walking into padding.
-fn num_nodes() -> Expr {
-    Expr::load(NUM_NODES, Expr::u32(0))
-}
 
 /// Assemble a phase program: `body` computes `out_name`, which becomes the
 /// op's single output.
@@ -164,59 +192,52 @@ pub(super) fn c11_typedef_scope_open_for_row() -> Program {
     phase_program(SCOPE_OPEN_FOR_ROW_OP_ID, false, "scope_open", body)
 }
 
-/// `1` when the row names a typedef that is visible at that point, else `0`.
-fn visible_name_for_row(op_id: &str, packed_haystack: bool) -> Program {
-    let out = "phase_visible_typedef_name";
-    // The shared emitters read the row count through `annot_num_nodes`. Inlining
-    // splices this body in as its own Region, which is a scope of its own, so the
-    // caller's binding of that name is not visible here and the phase binds it
-    // from its own parameter.
-    let mut body = vec![Node::let_bind("annot_num_nodes", num_nodes())];
-    body.extend(emit_visible_typedef_name_for_index(
-        NODES,
-        HAYSTACK,
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        SCOPE_OPEN_FOR_ROW_OP_ID,
+        c11_typedef_scope_open_for_row,
         None,
-        &haystack_len(),
-        row(),
-        out,
-        "phase_visible_typedef",
-        packed_haystack,
-    ));
-    phase_program(op_id, true, out, body)
-}
-
-pub(super) fn c11_typedef_visible_name_for_row() -> Program {
-    visible_name_for_row(VISIBLE_NAME_FOR_ROW_OP_ID, false)
-}
-
-pub(super) fn c11_typedef_visible_name_for_row_packed_haystack() -> Program {
-    visible_name_for_row(VISIBLE_NAME_FOR_ROW_PACKED_OP_ID, true)
-}
-
-/// `0` when the row declares nothing, `1` for a typedef declarator, `2` for an
-/// ordinary one.
-fn decl_kind_for_row(op_id: &str, packed_haystack: bool) -> Program {
-    let out = "phase_decl_result_kind";
-    // Same reason as `visible_name_for_row`: the emitters below read
-    // `annot_num_nodes`, and an inlined Region does not see the caller's scope.
-    let mut body = vec![Node::let_bind("annot_num_nodes", num_nodes())];
-    body.extend(emit_declaration_kind_for_index(
-        NODES,
-        HAYSTACK,
-        &haystack_len(),
-        row(),
-        out,
-        "phase_decl",
-        packed_haystack,
         None,
-    ));
-    phase_program(op_id, true, out, body)
+    )
+    .with_signature(SCOPE_OPEN_SIGNATURE)
 }
 
-pub(super) fn c11_typedef_decl_kind_for_row() -> Program {
-    decl_kind_for_row(DECL_KIND_FOR_ROW_OP_ID, false)
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        VISIBLE_NAME_FOR_ROW_OP_ID,
+        super::super::build::c11_typedef_visible_name_for_row,
+        None,
+        None,
+    )
+    .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }
 
-pub(super) fn c11_typedef_decl_kind_for_row_packed_haystack() -> Program {
-    decl_kind_for_row(DECL_KIND_FOR_ROW_PACKED_OP_ID, true)
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        VISIBLE_NAME_FOR_ROW_PACKED_OP_ID,
+        super::super::build::c11_typedef_visible_name_for_row_packed_haystack,
+        None,
+        None,
+    )
+    .with_signature(HAYSTACK_PHASE_SIGNATURE)
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        DECL_KIND_FOR_ROW_OP_ID,
+        super::super::build::c11_typedef_decl_kind_for_row,
+        None,
+        None,
+    )
+    .with_signature(HAYSTACK_PHASE_SIGNATURE)
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        DECL_KIND_FOR_ROW_PACKED_OP_ID,
+        super::super::build::c11_typedef_decl_kind_for_row_packed_haystack,
+        None,
+        None,
+    )
+    .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }

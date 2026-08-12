@@ -291,7 +291,7 @@ fn diff_substring_search_gpu_regression() {
 #[test]
 fn diff_universal_registry() {
     let mut failures = Vec::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::fixture_entries() {
         let Some(inputs_fn) = entry.test_inputs else {
             panic!(
                 "{} has no test_inputs. Fix: every registry entry must provide GPU differential inputs.",

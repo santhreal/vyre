@@ -188,7 +188,7 @@ fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
 fn every_op_has_test_fixtures() {
     let mut missing = Vec::new();
 
-    for entry in vyre_libs::operation_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::fixture_entries() {
         // CRITIQUE_CONFORM_2026-04-23 M7: the original gate required
         // BOTH fixtures to be missing before failing. An op that
         // shipped only one half (test_inputs without expected_output

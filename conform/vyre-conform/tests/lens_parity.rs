@@ -25,7 +25,7 @@ fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: 
 
 #[test]
 fn every_op_passes_the_witness_lens() {
-    let entries = vyre_libs::operation_catalog::all_entries();
+    let entries = vyre_libs::operation_catalog::fixture_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut failures = Vec::with_capacity(failure_capacity);
     let mut passed = 0usize;
@@ -52,7 +52,7 @@ fn every_op_passes_the_witness_lens() {
 fn convergence_contract_reachable_for_every_registered_op() {
     // Discover every op with a ConvergenceContract and verify structural
     // invariants plus CPU-side and registered-target convergence.
-    let entries = vyre_libs::operation_catalog::all_entries();
+    let entries = vyre_libs::operation_catalog::fixture_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut cpu_failures = Vec::with_capacity(failure_capacity);
     let backend = build_registered_backend();

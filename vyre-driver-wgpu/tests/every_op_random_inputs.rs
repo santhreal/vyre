@@ -15,7 +15,7 @@ use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
 mod common;
@@ -54,7 +54,7 @@ fn every_op_random_input_stress() {
     let op_filter = std::env::var("VYRE_RANDOM_OP_FILTER").ok();
     let mut matched_ops = 0usize;
 
-    for entry in all_entries() {
+    for entry in fixture_entries() {
         if let Some(filter) = op_filter.as_deref() {
             if !entry.id.contains(filter) {
                 continue;

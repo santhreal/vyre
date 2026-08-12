@@ -73,10 +73,9 @@ fn every_library_operation_has_fixture_coverage() {
     let registry = OperationRegistry::global();
     let exemptions: std::collections::HashMap<&str, &str> = EXEMPT_OP_IDS.iter().copied().collect();
 
-    let mut tested: HashSet<&'static str> = HashSet::new();
-    for entry in vyre_libs::operation_catalog::all_entries() {
-        tested.insert(entry.id);
-    }
+    let tested: HashSet<&'static str> = vyre_libs::operation_catalog::fixture_entries()
+        .map(|entry| entry.id)
+        .collect();
 
     let mut drift: Vec<String> = Vec::new();
     for operation in registry.iter().filter(|operation| {

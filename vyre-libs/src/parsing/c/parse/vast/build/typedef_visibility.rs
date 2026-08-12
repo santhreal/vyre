@@ -8,6 +8,11 @@ mod visibility_match;
 pub(crate) use precomputed_declaration::emit_precomputed_declaration_kind_for_index;
 pub(crate) use precomputed_visibility::emit_typedef_visibility_scan_precomputed_context;
 
+pub(in crate::parsing::c::parse::vast) const VISIBLE_NAME_FOR_ROW_OP_ID: &str =
+    "vyre-libs::parsing::c11_typedef_visible_name_for_row";
+pub(in crate::parsing::c::parse::vast) const VISIBLE_NAME_FOR_ROW_PACKED_OP_ID: &str =
+    "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack";
+
 pub(crate) fn emit_visible_typedef_name_for_index(
     vast_nodes: &str,
     haystack: &str,
@@ -309,4 +314,60 @@ pub(crate) fn emit_visible_typedef_name_for_index(
         vec![Node::assign(out_name, Expr::u32(1))],
     ));
     nodes
+}
+
+fn visible_name_phase_program(op_id: &str, packed_haystack: bool) -> Program {
+    const NODES: &str = "phase_vast_nodes";
+    const HAYSTACK: &str = "phase_haystack";
+    const ROW: &str = "phase_row";
+    const HAYSTACK_LEN: &str = "phase_haystack_len";
+    const NUM_NODES: &str = "phase_num_nodes";
+    const RESULT: &str = "phase_result";
+
+    let row = Expr::load(ROW, Expr::u32(0));
+    let haystack_len = Expr::load(HAYSTACK_LEN, Expr::u32(0));
+    let mut body = vec![Node::let_bind(
+        "annot_num_nodes",
+        Expr::load(NUM_NODES, Expr::u32(0)),
+    )];
+    body.extend(emit_visible_typedef_name_for_index(
+        NODES,
+        HAYSTACK,
+        None,
+        &haystack_len,
+        row,
+        RESULT,
+        "phase_visible_typedef",
+        packed_haystack,
+    ));
+    body.push(Node::store(RESULT, Expr::u32(0), Expr::var(RESULT)));
+
+    let buffers = vec![
+        BufferDecl::storage(NODES, 0, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(VAST_NODE_STRIDE_U32),
+        BufferDecl::storage(HAYSTACK, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::storage(ROW, 2, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::storage(HAYSTACK_LEN, 3, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
+        BufferDecl::output(RESULT, 5, DataType::U32).with_count(1),
+    ];
+    let implementation = child_phase(
+        op_id,
+        &format!("{op_id}::visibility_scan"),
+        body,
+    );
+    Program::wrapped(
+        buffers,
+        [256, 1, 1],
+        vec![wrap_anonymous(op_id, vec![implementation])],
+    )
+    .with_entry_op_id(op_id)
+}
+
+pub(in crate::parsing::c::parse::vast) fn c11_typedef_visible_name_for_row() -> Program {
+    visible_name_phase_program(VISIBLE_NAME_FOR_ROW_OP_ID, false)
+}
+
+pub(in crate::parsing::c::parse::vast) fn c11_typedef_visible_name_for_row_packed_haystack() -> Program {
+    visible_name_phase_program(VISIBLE_NAME_FOR_ROW_PACKED_OP_ID, true)
 }

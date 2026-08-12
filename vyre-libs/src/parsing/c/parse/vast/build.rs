@@ -20,7 +20,9 @@ mod structural_builder;
 mod typedef_visibility;
 
 pub(super) use declaration_kind::{
-    emit_builtin_declaration_kind_for_index, emit_declaration_kind_for_index,
+    c11_typedef_decl_kind_for_row, c11_typedef_decl_kind_for_row_packed_haystack,
+    emit_builtin_declaration_kind_for_index,
+    DECL_KIND_FOR_ROW_OP_ID, DECL_KIND_FOR_ROW_PACKED_OP_ID,
 };
 pub(super) use enclosing_function::emit_enclosing_function_lparen_for_index;
 pub(super) use helpers::{
@@ -32,6 +34,8 @@ pub(super) use identifier_hash::emit_identifier_hash_for_row;
 pub(super) use scope_lookup::{emit_scope_open_for_index, emit_scope_open_scan_assign_for_index};
 pub use structural_builder::{c11_build_vast_nodes, c11_build_vast_nodes_uses_global_last_child};
 pub(super) use typedef_visibility::{
+    c11_typedef_visible_name_for_row, c11_typedef_visible_name_for_row_packed_haystack,
     emit_precomputed_declaration_kind_for_index, emit_typedef_visibility_scan_precomputed_context,
-    emit_visible_typedef_name_for_index,
+    emit_visible_typedef_name_for_index, VISIBLE_NAME_FOR_ROW_OP_ID,
+    VISIBLE_NAME_FOR_ROW_PACKED_OP_ID,
 };

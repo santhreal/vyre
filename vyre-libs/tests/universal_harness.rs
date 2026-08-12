@@ -13,12 +13,12 @@ use vyre_driver::{
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
-use vyre_libs::operation_catalog::all_entries;
+use vyre_libs::operation_catalog::fixture_entries;
 use vyre_reference::value::Value;
 
 #[test]
 fn universal_cat_a_harness() {
-    for entry in all_entries() {
+    for entry in fixture_entries() {
         let program = build_program(&entry);
 
         assert_valid(&program, entry.id);
@@ -52,7 +52,7 @@ fn universal_cat_a_harness() {
 /// fixed point after one invocation, independent of oracle/backend checks.
 #[test]
 fn registered_optimizer_is_idempotent_for_all_cat_a_entries() {
-    for entry in all_entries() {
+    for entry in fixture_entries() {
         let program = build_program(&entry);
         let optimized_once = optimize(program).expect("registered optimizer must converge");
         let optimized_twice =
