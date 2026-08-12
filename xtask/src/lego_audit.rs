@@ -44,6 +44,23 @@ use std::path::PathBuf;
 use std::process;
 
 const MAX_LEGO_AUDIT_SOURCE_BYTES: u64 = 2_097_152;
+const PRIMITIVE_ADMISSION_PATH: &str = "docs/optimization/PRIMITIVE_ADMISSION.toml";
+
+#[derive(Debug, serde::Deserialize)]
+struct PrimitiveAdmissionRegistry {
+    schema_version: u32,
+    minimum_independent_callers: usize,
+    #[serde(default)]
+    exception: Vec<PrimitiveAdmissionException>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct PrimitiveAdmissionException {
+    family: String,
+    owner: String,
+    reason: String,
+    review_boundary: String,
+}
 
 use vyre::ir::{Expr, Node, Program};
 
@@ -734,10 +751,108 @@ fn primitive_caller_counts(ops: &[OpInfo]) -> HashMap<String, usize> {
     caller_counts
 }
 
-/// Check 3: every Tier 2.5 primitive needs ≥ 2 callers.
+fn primitive_family(op_id: &str) -> Option<&str> {
+    op_id
+        .strip_prefix("vyre-primitives::")
+        .and_then(|suffix| suffix.split("::").next())
+}
+
+fn load_primitive_admission_registry() -> Result<PrimitiveAdmissionRegistry, String> {
+    let root = workspace_root().ok_or_else(|| "workspace root is unavailable".to_string())?;
+    let path = root.join(PRIMITIVE_ADMISSION_PATH);
+    let text = std::fs::read_to_string(&path)
+        .map_err(|error| format!("read {}: {error}", path.display()))?;
+    let registry: PrimitiveAdmissionRegistry =
+        toml::from_str(&text).map_err(|error| format!("parse {}: {error}", path.display()))?;
+    if registry.schema_version != 1 {
+        return Err(format!(
+            "{} must declare schema_version = 1",
+            path.display()
+        ));
+    }
+    if registry.minimum_independent_callers != MIN_CALLERS_FOR_PRIMITIVE {
+        return Err(format!(
+            "{} minimum_independent_callers={} disagrees with the audit floor {}",
+            path.display(),
+            registry.minimum_independent_callers,
+            MIN_CALLERS_FOR_PRIMITIVE
+        ));
+    }
+    Ok(registry)
+}
+
+fn validate_primitive_admission(
+    ops: &[OpInfo],
+    caller_counts: &HashMap<String, usize>,
+    registry: PrimitiveAdmissionRegistry,
+) -> (usize, usize) {
+    let mut flagged = 0usize;
+    let mut exceptions = BTreeMap::new();
+    for exception in registry.exception {
+        if exception.family.trim().is_empty()
+            || exception.owner.trim().is_empty()
+            || exception.reason.trim().is_empty()
+            || exception.review_boundary.trim().is_empty()
+        {
+            println!(
+                "  ✗ primitive admission exception `{}` has an empty family, owner, reason, or review boundary",
+                exception.family
+            );
+            flagged += 1;
+            continue;
+        }
+        if exceptions
+            .insert(exception.family.clone(), exception)
+            .is_some()
+        {
+            println!("  ✗ duplicate primitive admission exception family");
+            flagged += 1;
+        }
+    }
+
+    let mut under_adopted_families = BTreeSet::new();
+    for op in ops {
+        if op.tier != Tier::T2_5 {
+            continue;
+        }
+        let callers = caller_counts.get(&op.id).copied().unwrap_or(0);
+        if callers >= MIN_CALLERS_FOR_PRIMITIVE {
+            continue;
+        }
+        let Some(family) = primitive_family(&op.id) else {
+            println!(
+                "  ✗ {} has no canonical primitive family. Fix: use `vyre-primitives::<family>::...`.",
+                op.id
+            );
+            flagged += 1;
+            continue;
+        };
+        under_adopted_families.insert(family.to_string());
+        if !exceptions.contains_key(family) {
+            println!(
+                "  ✗ {} has only {} caller(s) and family `{family}` has no owner-reviewed exception in {PRIMITIVE_ADMISSION_PATH}.",
+                op.id, callers
+            );
+            flagged += 1;
+        }
+    }
+
+    for family in exceptions.keys() {
+        if !under_adopted_families.contains(family) {
+            println!(
+                "  ✗ primitive admission exception `{family}` is stale because every family member meets the caller floor"
+            );
+            flagged += 1;
+        }
+    }
+    (flagged, under_adopted_families.len())
+}
+
+/// Check 3: every Tier 2.5 primitive needs at least two independent callers
+/// or an explicit owner-reviewed exception for its current family.
 fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
-    let mut advisories = 0usize;
+    let mut exceptions_used = 0usize;
     println!(
         "[3/10] Primitive coverage (Tier 2.5 primitives need ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers)"
     );
@@ -751,24 +866,23 @@ fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
         );
         flagged += 1;
     }
+
+    let registry = match load_primitive_admission_registry() {
+        Ok(registry) => registry,
+        Err(error) => {
+            println!("  ✗ primitive admission registry is invalid: {error}");
+            return flagged + 1;
+        }
+    };
     let caller_counts = primitive_caller_counts(ops);
-    for op in ops {
-        if op.tier != Tier::T2_5 {
-            continue;
-        }
-        let callers = caller_counts.get(&op.id).copied().unwrap_or(0);
-        if callers < MIN_CALLERS_FOR_PRIMITIVE {
-            println!(
-                "  ⚠ {} Tier 2.5 primitive has only {} caller(s). Either attract a second caller this cycle or demote back to a private helper in its owning dialect.",
-                op.id, callers
-            );
-            advisories += 1;
-        }
-    }
-    if flagged == 0 && advisories == 0 {
-        println!("  ✓ every Tier 2.5 primitive has ≥ {MIN_CALLERS_FOR_PRIMITIVE} callers");
-    } else if flagged == 0 {
-        println!("  ✓ no synthetic primitive consumers; {advisories} coverage advisory item(s)");
+    let (admission_failures, reviewed_families) =
+        validate_primitive_admission(ops, &caller_counts, registry);
+    flagged += admission_failures;
+    exceptions_used += reviewed_families;
+    if flagged == 0 {
+        println!(
+            "  ✓ no synthetic consumers; under-adopted primitives are covered by {exceptions_used} owner-reviewed family exception(s)"
+        );
     }
     flagged
 }
@@ -1590,25 +1704,45 @@ mod dedup_contract_tests {
         assert!(!is_declared_tier3_leaf("vyre-libs::nn::unknown_flat_op"));
     }
 
-    /// This policy test keeps low primitive adoption visible without turning one-release promotion debt into a hard failure.
+    /// This policy test requires low primitive adoption to match an explicit,
+    /// owner-reviewed family exception instead of disappearing into prose.
     #[test]
-    fn primitive_coverage_advisories_do_not_fail_without_synthetic_consumers() {
-        let ops = vec![op("vyre-primitives::math::new_primitive", Tier::T2_5, &[])];
+    fn primitive_coverage_requires_registered_family_exception() {
+        let ops = collect_ops();
+        assert!(ops
+            .iter()
+            .any(|op| primitive_family(&op.id) == Some("math")));
         assert_eq!(check_3_primitive_coverage(&ops), 0);
+    }
+
+    /// A newly under-adopted family fails closed until its owner records a
+    /// concrete exception or real callers meet the promotion floor.
+    #[test]
+    fn unregistered_primitive_family_fails_admission() {
+        let ops = vec![op(
+            "vyre-primitives::unreviewed::new_primitive",
+            Tier::T2_5,
+            &[],
+        )];
+        let mut exceptions = load_primitive_admission_registry().expect("registry");
+        exceptions
+            .exception
+            .retain(|exception| exception.family == "unreviewed");
+        assert_eq!(
+            validate_primitive_admission(&ops, &primitive_caller_counts(&ops), exceptions).0,
+            1
+        );
     }
 
     /// This adversarial test ensures synthetic catalog wrappers remain hard failures even though low adoption is advisory.
     #[test]
     fn synthetic_primitive_consumers_remain_hard_failures() {
-        let primitive_id = "vyre-primitives::math::new_primitive";
-        let ops = vec![
-            op(primitive_id, Tier::T2_5, &[]),
-            op(
-                "vyre-libs::catalog::math::new_primitive::consumer_a",
-                Tier::T3,
-                &[primitive_id],
-            ),
-        ];
+        let mut ops = collect_ops();
+        ops.push(op(
+            "vyre-libs::catalog::math::new_primitive::consumer_a",
+            Tier::T3,
+            &["vyre-primitives::math::new_primitive"],
+        ));
         assert_eq!(check_3_primitive_coverage(&ops), 1);
     }
 

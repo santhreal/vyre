@@ -107,6 +107,8 @@ pub use tensor_ref::{check_dtype, check_shape, check_unique_names, TensorRef, Te
 
 /// Shared builder helpers every Cat-A composition reuses.
 pub mod builder;
+#[cfg(feature = "math-linalg")]
+pub(crate) mod linear_algebra_substrate;
 mod substrate_catalog;
 
 pub use builder::{check_tensors, BuildOptions};

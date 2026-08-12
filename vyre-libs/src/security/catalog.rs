@@ -1,4 +1,4 @@
-use crate::fixture_catalog::OpEntry;
+use vyre_foundation::operation::OperationRegistration;
 
 fn u32s(words: &[u32]) -> Vec<u8> {
     vyre_primitives::wire::pack_u32_slice(words)
@@ -7,7 +7,7 @@ fn u32s(words: &[u32]) -> Vec<u8> {
 macro_rules! bitset_and_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OpEntry::library(
+            OperationRegistration::library(
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
@@ -25,7 +25,7 @@ macro_rules! bitset_and_entry {
 macro_rules! bitset_and_not_entry {
     ($module:ident, $build:expr) => {
         inventory::submit! {
-            OpEntry::library(
+            OperationRegistration::library(
                 super::$module::OP_ID,
                 $build,
                 Some(|| {
@@ -73,7 +73,7 @@ bitset_and_not_entry!(unchecked_return, || {
 });
 
 inventory::submit! {
-    OpEntry::library(
+    OperationRegistration::library(
         super::sink_intersection::OP_ID,
         || super::sink_intersection::sink_intersection(4, "a", "b", "scratch", "out"),
         Some(|| vec![vec![
@@ -91,7 +91,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    OperationRegistration::library(
         super::integer_overflow_arith::OP_ID,
         || {
             super::integer_overflow_arith::integer_overflow_arith(

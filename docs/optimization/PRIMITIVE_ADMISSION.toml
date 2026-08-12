@@ -1,0 +1,97 @@
+schema_version = 1
+minimum_independent_callers = 2
+
+# Under-adopted primitives require an explicit owner decision. The generator
+# rejects missing rows, caller-count drift, synthetic callers, and exceptions
+# without a concrete reason and review boundary.
+
+[[exception]]
+family = "bitset"
+owner = "primitive-library"
+reason = "The bitset family is a closed algebra used as individually registered conformance and extension building blocks; composition edges are intentionally sparse until semantic registration is unified in slice 2."
+review_boundary = "operation-registry-cutover"
+
+[[exception]]
+family = "decode"
+owner = "primitive-library"
+reason = "Decode primitives are canonical lower-tier owners for the corresponding product codecs; their second independent product adoption is deferred until product ownership is cleaned in slice 9."
+review_boundary = "product-owner-cutover"
+
+[[exception]]
+family = "fixpoint"
+owner = "primitive-library"
+reason = "Fixpoint primitives are execution substrate whose adoption evidence is split from the parallel convergence inventory until slice 9 merges those contracts."
+review_boundary = "convergence-contract-cutover"
+
+[[exception]]
+family = "geom"
+owner = "primitive-library"
+reason = "Geometry primitives are registered extension substrate with no synthetic callers; promotion remains reviewed while the canonical operation view is established."
+review_boundary = "operation-registry-cutover"
+
+[[exception]]
+family = "graph"
+owner = "primitive-library"
+reason = "Graph primitives include reusable traversal and fixed-point substrate whose current product chains do not all retain child-region identity. Caller truth is re-evaluated after registry and convergence cutovers."
+review_boundary = "convergence-contract-cutover"
+
+[[exception]]
+family = "hash"
+owner = "primitive-library"
+reason = "Hash primitives are canonical lower-tier implementations for product hashes; second independent product adoption is not manufactured solely to satisfy promotion counts."
+review_boundary = "product-owner-cutover"
+
+
+[[exception]]
+family = "matching"
+owner = "primitive-library"
+reason = "Matching primitives back product scanners and parser consumers whose complete composition edges are resolved with product/frontend ownership."
+review_boundary = "product-owner-cutover"
+
+[[exception]]
+family = "math"
+owner = "primitive-library"
+reason = "The broad math family contains reviewed research and optimizer substrate; each operation remains visible until source-owned semantic registration and product ownership classify its final home."
+review_boundary = "product-owner-cutover"
+
+[[exception]]
+family = "nn"
+owner = "primitive-library"
+reason = "Neural primitives are canonical substrate for product operations but some callers do not yet retain child-region identity; the product cutover must preserve real callers without aliases."
+review_boundary = "product-owner-cutover"
+
+[[exception]]
+family = "opt"
+owner = "primitive-library"
+reason = "Optimization primitives are reusable neutral constructions; their final semantic-pass ownership is resolved by the two-layer optimizer cutover."
+review_boundary = "optimization-layer-cutover"
+
+[[exception]]
+family = "parsing"
+owner = "primitive-library"
+reason = "Parsing primitives are shared frontend substrate whose final grammar and source-cache owner is established in slice 9."
+review_boundary = "frontend-owner-cutover"
+
+[[exception]]
+family = "predicate"
+owner = "primitive-library"
+reason = "Predicate primitives are registered static-analysis substrate whose public/product owner is resolved during product ownership cleanup."
+review_boundary = "product-owner-cutover"
+
+[[exception]]
+family = "reduce"
+owner = "primitive-library"
+reason = "Reduction primitives form a closed reusable algebra; under-adoption stays explicit until operation and product registrations preserve real composition edges."
+review_boundary = "operation-registry-cutover"
+
+[[exception]]
+family = "vfs"
+owner = "primitive-library"
+reason = "Virtual-filesystem resolution is neutral parsing substrate whose final source-cache and frontend owner is resolved during the frontend cutover."
+review_boundary = "frontend-owner-cutover"
+
+[[exception]]
+family = "text"
+owner = "primitive-library"
+reason = "Text primitives are shared scanner and frontend substrate; caller truth is completed with the frontend and product ownership cutover."
+review_boundary = "frontend-owner-cutover"
