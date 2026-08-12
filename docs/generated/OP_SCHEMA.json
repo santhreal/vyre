@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 360,
+  "operation_count": 367,
   "tier_counts": {
     "intrinsic": 9,
-    "libs": 197,
+    "libs": 204,
     "primitive": 149,
     "runtime": 5
   },
@@ -23,9 +23,9 @@
     "matching": 4,
     "math": 77,
     "mem": 2,
-    "nn": 69,
+    "nn": 71,
     "opt": 1,
-    "parsing": 42,
+    "parsing": 47,
     "predicate": 10,
     "reduce": 18,
     "representation": 1,
@@ -399,7 +399,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -496,7 +495,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -575,7 +573,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -654,7 +651,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -733,7 +729,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -812,7 +807,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -891,7 +885,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -979,7 +972,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1058,7 +1050,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1155,7 +1146,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1248,7 +1238,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1356,7 +1345,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1449,7 +1437,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1533,7 +1520,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1617,7 +1603,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1701,7 +1686,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -1808,7 +1792,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2202,7 +2185,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2291,7 +2273,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2380,7 +2361,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2469,7 +2449,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2567,7 +2546,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2665,7 +2643,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2753,7 +2730,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2841,7 +2817,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -2939,7 +2914,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3046,7 +3020,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3134,7 +3107,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3231,7 +3203,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3355,7 +3326,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3443,7 +3413,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3531,7 +3500,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3619,7 +3587,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3707,7 +3674,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3786,7 +3752,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3874,7 +3839,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -3962,7 +3926,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4059,7 +4022,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4147,7 +4109,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4235,7 +4196,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4323,7 +4283,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4411,7 +4370,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4499,7 +4457,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4569,7 +4526,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4657,7 +4613,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4736,7 +4691,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4833,7 +4787,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -4921,7 +4874,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5000,7 +4952,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5097,7 +5048,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5186,7 +5136,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5301,7 +5250,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5420,7 +5368,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5508,7 +5455,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5587,7 +5533,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5675,7 +5620,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5754,7 +5698,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5842,7 +5785,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -5939,7 +5881,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6036,7 +5977,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6151,7 +6091,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6262,7 +6201,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6355,7 +6293,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6471,7 +6408,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6568,7 +6504,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6647,7 +6582,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6749,7 +6683,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6828,7 +6761,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -6921,7 +6853,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7005,7 +6936,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7093,7 +7023,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7172,7 +7101,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7269,7 +7197,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7366,7 +7293,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7478,7 +7404,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7575,7 +7500,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7720,7 +7644,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7818,7 +7741,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -7929,7 +7851,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8008,7 +7929,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8105,7 +8025,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8241,7 +8160,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8344,7 +8262,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8428,7 +8345,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8516,7 +8432,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8613,7 +8528,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8715,7 +8629,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8830,7 +8743,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -8927,7 +8839,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9024,7 +8935,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9139,7 +9049,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9255,7 +9164,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9334,7 +9242,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9422,7 +9329,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9546,7 +9452,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9653,7 +9558,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9750,7 +9654,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9865,7 +9768,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -9971,7 +9873,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10074,7 +9975,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10171,7 +10071,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10268,7 +10167,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10370,7 +10268,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10467,7 +10364,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10555,7 +10451,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10643,7 +10538,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10722,7 +10616,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10731,6 +10624,93 @@
         {
           "depth": 0,
           "operation": "vyre-libs::nn::relu",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::nn::residual_add",
+      "tier": "libs",
+      "category": "nn",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "residual",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "branch",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "output",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "nn"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::nn::residual_add",
           "registered": true
         }
       ]
@@ -10819,7 +10799,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -10916,7 +10895,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11037,7 +11015,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11046,6 +11023,93 @@
         {
           "depth": 0,
           "operation": "vyre-libs::nn::rms_norm_linear",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::nn::sigmoid_gate",
+      "tier": "libs",
+      "category": "nn",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "gate",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "branch",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "output",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "F32",
+            "count": 4,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "nn"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 2
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::nn::sigmoid_gate",
           "registered": true
         }
       ]
@@ -11116,7 +11180,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11213,7 +11276,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11319,7 +11381,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11416,7 +11477,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11547,7 +11607,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11635,7 +11694,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11732,7 +11790,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11829,7 +11886,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -11908,7 +11964,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12005,7 +12060,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12102,7 +12156,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12181,7 +12234,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12274,7 +12326,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12362,7 +12413,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12486,7 +12536,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12579,7 +12628,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12672,7 +12720,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12796,7 +12843,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -12884,7 +12930,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13013,7 +13058,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13097,7 +13141,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13208,7 +13251,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13314,7 +13356,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13393,7 +13434,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13481,7 +13521,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13569,7 +13608,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13680,7 +13718,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13710,6 +13747,569 @@
           "depth": 2,
           "operation": "vyre-primitives::text::utf8_validate",
           "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 10,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": false,
+        "expected_output": false,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row::declaration_scan",
+          "registered": false
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 10,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": false,
+        "expected_output": false,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack::declaration_scan",
+          "registered": false
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 10,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": false,
+        "expected_output": false,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 10,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": false,
+        "expected_output": false,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row::visibility_scan",
+          "registered": false
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
+      "tier": "libs",
+      "category": "parsing",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "phase_vast_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 10,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "phase_haystack",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "phase_row",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "phase_haystack_len",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "phase_num_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "phase_result",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": true
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "parsing"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": false,
+        "expected_output": false,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack::visibility_scan",
+          "registered": false
         }
       ]
     },
@@ -13779,7 +14379,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13867,7 +14466,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -13987,7 +14585,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14102,7 +14699,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14208,7 +14804,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14319,7 +14914,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14450,7 +15044,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14561,7 +15154,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14672,7 +15264,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14793,7 +15384,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14904,7 +15494,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -14988,7 +15577,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15090,7 +15678,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15210,7 +15797,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15303,7 +15889,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15432,7 +16017,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15543,7 +16127,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15654,7 +16237,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15765,7 +16347,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15876,7 +16457,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -15987,7 +16567,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16071,7 +16650,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16164,7 +16742,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16243,7 +16820,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16349,7 +16925,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16460,7 +17035,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16562,7 +17136,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16673,7 +17246,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16766,7 +17338,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16868,7 +17439,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -16952,7 +17522,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17054,7 +17623,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17138,7 +17706,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17226,7 +17793,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17305,7 +17871,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17393,7 +17958,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17580,7 +18144,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17738,7 +18301,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17867,7 +18429,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -17960,7 +18521,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18089,7 +18649,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18218,7 +18777,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18374,7 +18932,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18577,7 +19134,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18700,7 +19256,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18811,7 +19366,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18890,7 +19444,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -18983,7 +19536,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19076,7 +19628,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19178,7 +19729,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19325,7 +19875,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19428,7 +19977,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19530,7 +20078,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19618,7 +20165,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19747,7 +20293,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19840,7 +20385,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -19991,7 +20535,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20104,7 +20647,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20197,7 +20739,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20281,7 +20822,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20374,7 +20914,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20458,7 +20997,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20533,7 +21071,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20621,7 +21158,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20705,7 +21241,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20775,7 +21310,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20859,7 +21393,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -20939,7 +21472,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21023,7 +21555,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21112,7 +21643,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21192,7 +21722,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21281,7 +21810,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21361,7 +21889,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21441,7 +21968,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21512,7 +22038,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21601,7 +22126,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21681,7 +22205,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21770,7 +22293,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21868,7 +22390,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -21957,7 +22478,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22037,7 +22557,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22126,7 +22645,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22206,7 +22724,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22286,7 +22803,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22375,7 +22891,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22446,7 +22961,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22535,7 +23049,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22624,7 +23137,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22704,7 +23216,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22793,7 +23304,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22873,7 +23383,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -22944,7 +23453,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23042,7 +23550,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23131,7 +23638,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23220,7 +23726,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23309,7 +23814,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23416,7 +23920,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23505,7 +24008,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23594,7 +24096,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23683,7 +24184,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23772,7 +24272,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -23897,7 +24396,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24022,7 +24520,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24147,7 +24644,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24272,7 +24768,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24397,7 +24892,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24513,7 +25007,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24629,7 +25122,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24745,7 +25237,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24849,7 +25340,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -24938,7 +25428,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25063,7 +25552,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25161,7 +25649,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25322,7 +25809,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25516,7 +26002,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25615,7 +26100,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25713,7 +26197,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25838,7 +26321,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -25972,7 +26454,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26097,7 +26578,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26186,7 +26666,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26266,7 +26745,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26346,7 +26824,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26426,7 +26903,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26515,7 +26991,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26604,7 +27079,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26724,7 +27198,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26804,7 +27277,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26884,7 +27356,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -26964,7 +27435,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27044,7 +27514,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27124,7 +27593,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27204,7 +27672,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27293,7 +27760,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27400,7 +27866,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27561,7 +28026,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27646,7 +28110,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27762,7 +28225,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27856,7 +28318,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -27954,7 +28415,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28034,7 +28494,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28132,7 +28591,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28221,7 +28679,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28310,7 +28767,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28408,7 +28864,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28497,7 +28952,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28613,7 +29067,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28702,7 +29155,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28791,7 +29243,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28871,7 +29322,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -28960,7 +29410,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29067,7 +29516,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29174,7 +29622,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29272,7 +29719,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29379,7 +29825,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29468,7 +29913,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29566,7 +30010,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29646,7 +30089,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29735,7 +30177,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29833,7 +30274,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -29931,7 +30371,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30020,7 +30459,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30118,7 +30556,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30203,7 +30640,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30355,7 +30791,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30449,7 +30884,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30529,7 +30963,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30618,7 +31051,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30734,7 +31166,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30823,7 +31254,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -30921,7 +31351,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31037,7 +31466,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31126,7 +31554,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31206,7 +31633,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31277,7 +31703,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31375,7 +31800,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31491,7 +31915,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31571,7 +31994,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31651,7 +32073,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31731,7 +32152,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31847,7 +32267,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -31927,7 +32346,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32052,7 +32470,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32177,7 +32594,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32302,7 +32718,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32382,7 +32797,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32467,7 +32881,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32552,7 +32965,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32637,7 +33049,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32717,7 +33128,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32842,7 +33252,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -32967,7 +33376,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33047,7 +33455,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33127,7 +33534,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33207,7 +33613,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33287,7 +33692,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33376,7 +33780,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33456,7 +33859,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33536,7 +33938,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33616,7 +34017,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33714,7 +34114,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33794,7 +34193,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33874,7 +34272,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -33963,7 +34360,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34052,7 +34448,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34132,7 +34527,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34212,7 +34606,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34301,7 +34694,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34390,7 +34782,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34479,7 +34870,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34559,7 +34949,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34648,7 +35037,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34728,7 +35116,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34845,7 +35232,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -34935,7 +35321,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -35015,7 +35400,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -35104,7 +35488,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],
@@ -35184,7 +35567,6 @@
       },
       "target_facets": [
         "cuda",
-        "metal",
         "spirv",
         "wgpu"
       ],

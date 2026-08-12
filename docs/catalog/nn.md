@@ -2,7 +2,7 @@
 
 This page is generated from `docs/generated/OP_SCHEMA.json`. The JSON schema is the authority. Regenerate this view with `cargo_full run --bin xtask -- catalog`.
 
-51 operations are registered in this subsystem.
+53 operations are registered in this subsystem.
 
 | operation | tier | category | signature | features | oracle | backend support | laws | composition |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -41,9 +41,11 @@ This page is generated from `docs/generated/OP_SCHEMA.json`. The JSON schema is 
 | `vyre-libs::nn::qk_gain` | `libs` | `nn` | 0:q_in:ReadOnly:F32<br>1:q_out:ReadWrite:F32<br>2:gain:ReadOnly:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::qk_gain |
 | `vyre-libs::nn::qk_gain_backward` | `libs` | `nn` | 0:gain:ReadOnly:F32<br>1:grad_out:ReadOnly:F32<br>2:grad_q:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::qk_gain_backward |
 | `vyre-libs::nn::relu` | `libs` | `nn` | 0:input:ReadOnly:U32<br>1:output:ReadWrite:U32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::relu |
+| `vyre-libs::nn::residual_add` | `libs` | `nn` | 0:residual:ReadOnly:F32<br>1:branch:ReadOnly:F32<br>2:output:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::residual_add |
 | `vyre-libs::nn::residual_block_backward` | `libs` | `nn` | 0:grad_out:ReadOnly:F32<br>1:grad_x:ReadWrite:F32<br>2:grad_attn:ReadWrite:F32<br>3:grad_mlp:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::residual_block_backward |
 | `vyre-libs::nn::rms_norm` | `libs` | `nn` | 0:input:ReadOnly:F32<br>0:rms_scratch:Workgroup:F32<br>0:rms_scale:Workgroup:F32<br>1:output:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=2 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::rms_norm<br>&nbsp;&nbsp;vyre-libs::substrate::strided_accumulate<br>&nbsp;&nbsp;vyre-primitives::reduce::workgroup_sum_f32<br>&nbsp;&nbsp;anonymous::vyre-libs::substrate::strided_writeback (internal) |
 | `vyre-libs::nn::rms_norm_linear` | `libs` | `nn` | 0:input:ReadOnly:F32<br>1:w:ReadOnly:F32<br>2:b:ReadOnly:F32<br>0:inv_rms:Workgroup:F32<br>4:out:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=2 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::rms_norm_linear |
+| `vyre-libs::nn::sigmoid_gate` | `libs` | `nn` | 0:gate:ReadOnly:F32<br>1:branch:ReadOnly:F32<br>2:output:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=2 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::sigmoid_gate |
 | `vyre-libs::nn::silu` | `libs` | `nn` | 0:input:ReadOnly:F32<br>1:output:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=1 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::silu |
 | `vyre-libs::nn::skip_gate` | `libs` | `nn` | 0:gate:ReadOnly:F32<br>1:branch:ReadOnly:F32<br>2:skip:ReadOnly:F32<br>3:output:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::skip_gate |
 | `vyre-libs::nn::skip_gate_backward` | `libs` | `nn` | 0:gate:ReadOnly:F32<br>1:branch:ReadOnly:F32<br>2:skip:ReadOnly:F32<br>3:grad_out:ReadOnly:F32<br>4:grad_gate:ReadWrite:F32 | `nn` | reference=true inputs=true expected=true tolerance=0 ULP | cuda:supported<br>reference:supported<br>wgpu:supported | none declared | vyre-libs::nn::skip_gate_backward |
