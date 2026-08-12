@@ -1,29 +1,15 @@
-//! ROADMAP A36  -  minimize identity-op atomics under Relaxed ordering
-//! to a plain `Expr::Load`, and eliminate unique-writer atomics.
+//! Minimize identity-op atomics under Relaxed ordering to plain loads.
+//! Non-identity read-modify-write atomics remain atomic because one syntactic
+//! expression may execute concurrently in every invocation and loop iteration.
 //!
 //! Op id: `vyre-foundation::optimizer::passes::atomic_minimize`.
 
 use crate::ir::{AtomicOp, Expr, Node, Program, SubgroupReduceOp};
 use crate::memory_model::MemoryOrdering;
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
-// Ident hashes well into the FxHash64-mixed bucket; the std SipHash-13
-// default (which fights HashDoS) is overkill for an internal pass-private
-// table that never sees adversarial input. FxHashMap/FxHashSet measurably
-// shorten the analysis pass on programs with many distinct buffers.
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use smallvec::SmallVec;
 
-#[derive(Default, Debug, Clone, Copy)]
-struct BufferAccesses {
-    atomic_adds: u32,
-    other_accesses: u32,
-    /// Ordering of the first (and expected to be the sole) AtomicAdd access.
-    /// Only meaningful when `atomic_adds == 1 && other_accesses == 0`.
-    /// Defaults to `Relaxed` but is overwritten on first atomic-add encounter.
-    sole_atomic_ordering: MemoryOrdering,
-}
-
-/// Replace identity-op Relaxed atomics with plain `Expr::Load`, and rewrite single-writer atomics.
+/// Replace identity-op Relaxed atomics with plain loads.
 #[derive(Debug, Default)]
 #[vyre_pass(
     name = "atomic_minimize",
@@ -36,58 +22,29 @@ struct BufferAccesses {
 pub struct AtomicMinimizePass;
 
 impl AtomicMinimizePass {
-    /// Skip programs that do not contain a candidate atomic.
+    /// Skip programs that contain no identity atomic candidate.
     #[must_use]
     fn analyze_impl(program: &Program) -> PassAnalysis {
-        // Both rewrites need at least one Atomic op anywhere; without
-        // any atomic the two follow-up tree walks (identity scan +
-        // buffer-access count) would always come up empty.
         if program.stats().atomic_op_count == 0 {
             return PassAnalysis::SKIP;
         }
         let mut found = false;
         scan_for_identity_candidate(program.entry(), &mut found);
         if found {
-            return PassAnalysis::RUN;
-        }
-
-        let mut access_counts = HashMap::default();
-        count_buffer_accesses(program.entry(), &mut access_counts);
-        let has_single_writer = access_counts
-            .values()
-            .any(|counts| counts.atomic_adds == 1 && counts.other_accesses == 0);
-
-        if has_single_writer {
             PassAnalysis::RUN
         } else {
             PassAnalysis::SKIP
         }
     }
 
-    /// Walk the program and collapse atomics.
+    /// Walk the program and collapse identity atomics.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let mut access_counts = HashMap::default();
-        count_buffer_accesses(program.entry(), &mut access_counts);
-        // Only Relaxed single-writer atomics are eligible for the load+store
-        // rewrite. SeqCst/AcqRel/Acquire/Release atomics provide ordering
-        // guarantees to concurrent readers; replacing them with a plain store
-        // would silently drop those guarantees even when there is only one
-        // writer. The ordering guard is applied here, not just in
-        // count_expr_accesses, so the set only contains buffers whose sole
-        // atomic-add access is Relaxed.
-        let eligible_buffers: HashSet<_> = access_counts
-            .into_iter()
-            .filter(|(_, counts)| counts.atomic_adds == 1 && counts.other_accesses == 0)
-            .filter(|(_, counts)| counts.sole_atomic_ordering == MemoryOrdering::Relaxed)
-            .map(|(buf, _)| buf)
-            .collect();
-
         let mut changed = false;
         let program = program.map_entry(|entry| {
             entry
                 .into_iter()
-                .flat_map(|n| rewrite_node_multi(n, &eligible_buffers, &mut changed))
+                .flat_map(|node| rewrite_node_multi(node, &mut changed))
                 .collect()
         });
         PassResult { program, changed }
@@ -98,96 +55,16 @@ impl AtomicMinimizePass {
     clippy::too_many_lines,
     reason = "atomic minimization keeps hoisting/rewrite cases colocated with Node reconstruction"
 )]
-fn rewrite_node_multi(
-    node: Node,
-    eligible_buffers: &HashSet<crate::ir::Ident>,
-    changed: &mut bool,
-) -> Vec<Node> {
+fn rewrite_node_multi(node: Node, changed: &mut bool) -> Vec<Node> {
     match node {
-        Node::Let { name, value } => {
-            if let Expr::Atomic {
-                op: AtomicOp::Add,
-                buffer,
-                index,
-                expected: None,
-                value: add_value,
-                ..
-            } = &value
-            {
-                if eligible_buffers.contains(buffer) {
-                    *changed = true;
-                    let new_load = Expr::Load {
-                        buffer: buffer.clone(),
-                        index: index.clone(),
-                    };
-                    let store_node = Node::Store {
-                        buffer: buffer.clone(),
-                        index: *index.clone(),
-                        value: rewrite_expr(
-                            Expr::BinOp {
-                                op: crate::ir::BinOp::Add,
-                                left: Box::new(Expr::Var(name.clone())),
-                                right: add_value.clone(),
-                            },
-                            changed,
-                        ),
-                    };
-                    return vec![
-                        Node::Let {
-                            name,
-                            value: rewrite_expr(new_load, changed),
-                        },
-                        store_node,
-                    ];
-                }
-            }
-            vec![Node::Let {
-                name,
-                value: rewrite_expr(value, changed),
-            }]
-        }
-        Node::Assign { name, value } => {
-            if let Expr::Atomic {
-                op: AtomicOp::Add,
-                buffer,
-                index,
-                expected: None,
-                value: add_value,
-                ..
-            } = &value
-            {
-                if eligible_buffers.contains(buffer) {
-                    *changed = true;
-                    let new_load = Expr::Load {
-                        buffer: buffer.clone(),
-                        index: index.clone(),
-                    };
-                    let store_node = Node::Store {
-                        buffer: buffer.clone(),
-                        index: *index.clone(),
-                        value: rewrite_expr(
-                            Expr::BinOp {
-                                op: crate::ir::BinOp::Add,
-                                left: Box::new(Expr::Var(name.clone())),
-                                right: add_value.clone(),
-                            },
-                            changed,
-                        ),
-                    };
-                    return vec![
-                        Node::Assign {
-                            name,
-                            value: rewrite_expr(new_load, changed),
-                        },
-                        store_node,
-                    ];
-                }
-            }
-            vec![Node::Assign {
-                name,
-                value: rewrite_expr(value, changed),
-            }]
-        }
+        Node::Let { name, value } => vec![Node::Let {
+            name,
+            value: rewrite_expr(value, changed),
+        }],
+        Node::Assign { name, value } => vec![Node::Assign {
+            name,
+            value: rewrite_expr(value, changed),
+        }],
         Node::Store {
             buffer,
             index,
@@ -205,11 +82,11 @@ fn rewrite_node_multi(
             cond: rewrite_expr(cond, changed),
             then: then
                 .into_iter()
-                .flat_map(|n| rewrite_node_multi(n, eligible_buffers, changed))
+                .flat_map(|node| rewrite_node_multi(node, changed))
                 .collect(),
             otherwise: otherwise
                 .into_iter()
-                .flat_map(|n| rewrite_node_multi(n, eligible_buffers, changed))
+                .flat_map(|node| rewrite_node_multi(node, changed))
                 .collect(),
         }],
         Node::Loop {
@@ -223,12 +100,12 @@ fn rewrite_node_multi(
             to: rewrite_expr(to, changed),
             body: body
                 .into_iter()
-                .flat_map(|n| rewrite_node_multi(n, eligible_buffers, changed))
+                .flat_map(|node| rewrite_node_multi(node, changed))
                 .collect(),
         }],
         Node::Block(body) => vec![Node::Block(
             body.into_iter()
-                .flat_map(|n| rewrite_node_multi(n, eligible_buffers, changed))
+                .flat_map(|node| rewrite_node_multi(node, changed))
                 .collect(),
         )],
         Node::Region {
@@ -246,7 +123,7 @@ fn rewrite_node_multi(
                 body: std::sync::Arc::new(
                     body_vec
                         .into_iter()
-                        .flat_map(|n| rewrite_node_multi(n, eligible_buffers, changed))
+                        .flat_map(|node| rewrite_node_multi(node, changed))
                         .collect(),
                 ),
             }]
@@ -618,128 +495,6 @@ fn scan_expr_for_identity(expr: &Expr, found: &mut bool) {
     }
 }
 
-fn count_buffer_accesses(nodes: &[Node], counts: &mut HashMap<crate::ir::Ident, BufferAccesses>) {
-    for node in nodes {
-        match node {
-            Node::Let { value, .. } | Node::Assign { value, .. } => {
-                count_expr_accesses(value, counts);
-            }
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => {
-                counts.entry(buffer.clone()).or_default().other_accesses += 1;
-                count_expr_accesses(index, counts);
-                count_expr_accesses(value, counts);
-            }
-            Node::If {
-                cond,
-                then,
-                otherwise,
-            } => {
-                count_expr_accesses(cond, counts);
-                count_buffer_accesses(then, counts);
-                count_buffer_accesses(otherwise, counts);
-            }
-            Node::Loop { from, to, body, .. } => {
-                count_expr_accesses(from, counts);
-                count_expr_accesses(to, counts);
-                count_buffer_accesses(body, counts);
-            }
-            Node::Block(body) => count_buffer_accesses(body, counts),
-            Node::Region { body, .. } => count_buffer_accesses(body, counts),
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            }
-            | Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                ..
-            } => {
-                counts.entry(source.clone()).or_default().other_accesses += 1;
-                counts
-                    .entry(destination.clone())
-                    .or_default()
-                    .other_accesses += 1;
-                count_expr_accesses(offset, counts);
-                count_expr_accesses(size, counts);
-            }
-            Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                counts.entry(buffer.clone()).or_default().other_accesses += 1;
-            }
-            Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                counts.entry(input.clone()).or_default().other_accesses += 1;
-                counts.entry(output.clone()).or_default().other_accesses += 1;
-            }
-            Node::Trap { address, .. } => count_expr_accesses(address, counts),
-            Node::IndirectDispatch { count_buffer, .. } => {
-                // The indirect dispatch reads `count_buffer` to derive the
-                // launch geometry. It is a genuine reader of the buffer: if a
-                // buffer's sole atomic-add feeds this read, downgrading that
-                // atomic to a non-atomic load+store (the single-writer rewrite)
-                // would let parallel lanes race the very count the dispatch
-                // depends on. Count it so such a buffer is never mistaken for a
-                // single-writer buffer.
-                counts
-                    .entry(count_buffer.clone())
-                    .or_default()
-                    .other_accesses += 1;
-            }
-            Node::Barrier { .. }
-            | Node::Return
-            | Node::Resume { .. }
-            | Node::AsyncWait { .. }
-            | Node::Opaque(_) => {}
-        }
-    }
-}
-
-fn count_expr_accesses(expr: &Expr, counts: &mut HashMap<crate::ir::Ident, BufferAccesses>) {
-    let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
-    stack.push(expr);
-    while let Some(expr) = stack.pop() {
-        match expr {
-            Expr::Atomic {
-                op,
-                buffer,
-                index,
-                expected,
-                value,
-                ordering,
-            } => {
-                if *op == AtomicOp::Add && expected.is_none() {
-                    let entry = counts.entry(buffer.clone()).or_default();
-                    entry.atomic_adds += 1;
-                    // Record the ordering on the first encounter. If
-                    // atomic_adds later exceeds 1 the buffer is ineligible
-                    // regardless, so the recorded value is never misused.
-                    if entry.atomic_adds == 1 {
-                        entry.sole_atomic_ordering = *ordering;
-                    }
-                } else {
-                    counts.entry(buffer.clone()).or_default().other_accesses += 1;
-                }
-                push_expr_child(&mut stack, value);
-                if let Some(expected) = expected.as_deref() {
-                    push_expr_child(&mut stack, expected);
-                }
-                push_expr_child(&mut stack, index);
-            }
-            Expr::Load { buffer, index } => {
-                counts.entry(buffer.clone()).or_default().other_accesses += 1;
-                push_expr_child(&mut stack, index);
-            }
-            _ => push_expr_children(&mut stack, expr),
-        }
-    }
-}
 
 fn push_expr_child<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, child: &'a Expr) {
     stack.push(child);
@@ -944,38 +699,23 @@ mod tests {
     }
 
     #[test]
-    fn single_writer_atomic_add_rewritten() {
+    fn syntactically_single_atomic_add_remains_atomic() {
         let entry = vec![Node::let_bind(
             "x",
             relaxed_atomic(AtomicOp::Add, Expr::u32(42)),
         )];
         let result = AtomicMinimizePass::transform(program(entry));
-        assert!(result.changed);
-
-        let mut found_store = false;
-        fn walk_store(nodes: &[Node], found: &mut bool) {
-            for n in nodes {
-                match n {
-                    Node::Store { buffer, .. } if buffer.as_str() == "buf" => *found = true,
-                    Node::Region { body, .. } => walk_store(body, found),
-                    Node::Block(body) => walk_store(body, found),
-                    Node::If {
-                        then, otherwise, ..
-                    } => {
-                        walk_store(then, found);
-                        walk_store(otherwise, found);
-                    }
-                    Node::Loop { body, .. } => walk_store(body, found),
-                    _ => {}
-                }
-            }
-        }
-        walk_store(result.program.entry(), &mut found_store);
-
-        assert!(found_store, "Store should have been generated");
+        assert!(
+            !result.changed,
+            "one atomic expression may execute concurrently in every invocation"
+        );
         assert!(matches!(
             extract_let_value(&result.program, "x"),
-            Expr::Load { .. }
+            Expr::Atomic {
+                op: AtomicOp::Add,
+                ordering: MemoryOrdering::Relaxed,
+                ..
+            }
         ));
     }
 
@@ -1027,42 +767,6 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn indirect_dispatch_count_buffer_read_blocks_single_writer_rewrite() {
-        // `buf` is atomically incremented once and then consumed as the count
-        // buffer of an indirect dispatch (the canonical atomic-append ->
-        // indirect-launch / stream-compaction pattern). The indirect-dispatch
-        // read derives the launch geometry from buf's value, so the atomic
-        // MUST stay atomic: downgrading it to a non-atomic load+store under the
-        // "single writer" rule would let parallel lanes race the very count the
-        // dispatch depends on. The buffer-access collector must therefore treat
-        // IndirectDispatch's `count_buffer` as a genuine read (other_accesses
-        // += 1), making `buf` ineligible for the single-writer rewrite.
-        let entry = vec![
-            Node::let_bind("x", relaxed_atomic(AtomicOp::Add, Expr::u32(42))),
-            Node::IndirectDispatch {
-                count_buffer: Ident::from("buf"),
-                count_offset: 0,
-            },
-        ];
-        let result = AtomicMinimizePass::transform(program(entry));
-        assert!(
-            !result.changed,
-            "IndirectDispatch reads buf as its count buffer; the single-writer \
-             rewrite must be blocked so the atomic increment stays atomic"
-        );
-        assert!(
-            matches!(
-                extract_let_value(&result.program, "x"),
-                Expr::Atomic {
-                    op: AtomicOp::Add,
-                    ordering: MemoryOrdering::Relaxed,
-                    ..
-                }
-            ),
-            "atomic_add must remain Atomic because buf is also read by indirect dispatch"
-        );
-    }
 
     #[test]
     fn compare_exchange_not_eligible() {
@@ -1097,9 +801,8 @@ mod tests {
                 changed,
                 "Fix: atomic_minimize must rewrite nested identity atomic at generated depth {depth}."
             );
-            let rewritten_program = Box::leak(Box::new(rewritten_program));
-            let rewritten = find_let_value_ref(rewritten_program, "x")
-                .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - generated deep atomic program must still contain let x");
+            let rewritten = find_let_value_ref(&rewritten_program, "x")
+                .expect("generated deep atomic program must retain let x");
             assert!(
                 !expr_contains_atomic(rewritten),
                 "Fix: atomic_minimize left an atomic inside generated depth {depth}: {rewritten:?}"
@@ -1136,12 +839,7 @@ mod tests {
     }
 
     #[test]
-    fn seq_cst_single_writer_ordering_preserved() {
-        // A SeqCst single-writer atomic-add must NOT be rewritten to a plain
-        // Load+Store. SeqCst provides sequential-consistency guarantees to
-        // concurrent readers; silently replacing it with a non-atomic store
-        // drops those guarantees. Only Relaxed single-writer atomics are
-        // eligible for the rewrite.
+    fn non_identity_seq_cst_atomic_remains_atomic() {
         let entry = vec![Node::let_bind(
             "x",
             Expr::Atomic {
@@ -1154,22 +852,14 @@ mod tests {
             },
         )];
         let result = AtomicMinimizePass::transform(program(entry));
-        assert!(
-            !result.changed,
-            "SeqCst single-writer atomic must NOT be rewritten to plain Load+Store: \
-             the rewrite would silently drop SeqCst ordering guarantees visible to concurrent readers"
-        );
-        // The atomic must still be present in the output, unchanged.
-        assert!(
-            matches!(
-                extract_let_value(&result.program, "x"),
-                Expr::Atomic {
-                    ordering: MemoryOrdering::SeqCst,
-                    ..
-                }
-            ),
-            "SeqCst atomic must remain in the program after transform"
-        );
+        assert!(!result.changed);
+        assert!(matches!(
+            extract_let_value(&result.program, "x"),
+            Expr::Atomic {
+                ordering: MemoryOrdering::SeqCst,
+                ..
+            }
+        ));
     }
 
     #[test]
