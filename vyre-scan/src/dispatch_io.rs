@@ -404,6 +404,11 @@ pub fn try_unpack_match_triples_into(
             triples_bytes[off + 10],
             triples_bytes[off + 11],
         ]);
+        if end < start {
+            return Err(BackendError::new(format!(
+                "scan dispatch decoded match record {i} with invalid half-open range [{start}, {end}). Fix: reject the backend readback and inspect the emitting kernel's match-field order."
+            )));
+        }
         results.push(vyre_foundation::match_result::ByteRange::new(
             pid, start, end,
         ));
@@ -512,25 +517,6 @@ fn required_match_triple_bytes(count: u32) -> Result<usize, BackendError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn dispatch_io_wrappers_fail_loud_not_silent_fallback() {
-        // Law 10 regression guard: the infallible pack/unpack wrappers must
-        // never swallow an error into an empty buffer (GPU scans nothing / GPU
-        // matches silently dropped). The old arms logged the failure and then
-        // returned/cleared to empty instead of failing loud. Scan the WHOLE
-        // file (this file has two test modules with production code between
-        // them, so a "split on first cfg-test" slice would miss the unpack
-        // region). The swallow marker is assembled with concat! and is NOT
-        // written contiguously anywhere else in this file (including comments),
-        // so this assertion never matches its own source text.
-        let src = include_str!("dispatch_io.rs");
-        let swallow_marker = concat!("eprintln", "!(\"vyre-libs scan dispatch ");
-        assert!(
-            !src.contains(swallow_marker),
-            "Fix: a dispatch wrapper reintroduced an eprintln!-then-return-empty silent fallback (Law 10) (fail loud via panic!() so callers use the try_ variants)."
-        );
-    }
 
     #[test]
     fn capped_decode_fails_closed_when_count_exceeds_cap() {

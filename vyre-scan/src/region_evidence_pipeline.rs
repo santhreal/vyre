@@ -43,7 +43,7 @@ use crate::regex_anchored_window::anchored_window_extract_program;
 use crate::regex_region_admission::{
     regex_admission_by_region_program, regex_admission_presence_words,
 };
-use crate::{pack_u32_slice, unpack_match_triples};
+use crate::pack_u32_slice;
 
 /// The workgroup size every phase-1 evidence program declares
 /// (`Program::wrapped(.., [128, 1, 1], ..)`). One global invocation per haystack
@@ -310,7 +310,7 @@ impl RegionEvidencePipeline {
             )));
         }
         let match_bytes = dispatch_io::try_output_bytes(&outputs, 1, "extract matches")?;
-        let mut positions: Vec<_> = unpack_match_triples(match_bytes, count)
+        let mut positions: Vec<_> = dispatch_io::try_unpack_match_triples(match_bytes, count)?
             .into_iter()
             .filter(|m| self.position_mask.get(m.tag as usize).copied().unwrap_or(0) != 0)
             .collect();
@@ -382,7 +382,8 @@ impl RegionEvidencePipeline {
         let zero_count = 0u32;
         let presence_scratch = vec_zero_bytes(bitmap_words);
         let admission_scratch = vec_zero_bytes(bitmap_words);
-        let inputs: [&[u8]; 12] = [
+        let matches_scratch = vec![0u8; max_matches as usize * 3 * 4];
+        let inputs: [&[u8]; 13] = [
             &packed_haystack,
             bytemuck::cast_slice(&self.dfa.transitions),
             bytemuck::cast_slice(&self.dfa.output_offsets),
@@ -394,6 +395,7 @@ impl RegionEvidencePipeline {
             bytemuck::cast_slice(std::slice::from_ref(&haystack_len)),
             &presence_scratch,
             bytemuck::cast_slice(std::slice::from_ref(&zero_count)),
+            &matches_scratch,
             &admission_scratch,
         ];
         let config = evidence_dispatch_config(haystack_len);
@@ -415,10 +417,10 @@ impl RegionEvidencePipeline {
                  matches were dropped. Fix: raise max_matches or shard the haystack (fail closed, no partial set)."
             )));
         }
-        let mut positions = unpack_match_triples(
+        let mut positions = dispatch_io::try_unpack_match_triples(
             dispatch_io::try_output_bytes(&outputs, 2, "fused matches")?,
             count,
-        );
+        )?;
         positions.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         positions.dedup();
         let admission = decode_words(

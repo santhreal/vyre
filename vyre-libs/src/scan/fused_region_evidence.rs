@@ -227,7 +227,7 @@ pub fn fused_region_evidence_program(
             DataType::U32,
         )
         .with_count(1),
-        BufferDecl::output(matches, FUSED_EVIDENCE_MATCHES_BINDING, DataType::U32)
+        BufferDecl::read_write(matches, FUSED_EVIDENCE_MATCHES_BINDING, DataType::U32)
             .with_count(max_matches.saturating_mul(3)),
         BufferDecl::read_write(admission, FUSED_EVIDENCE_ADMISSION_BINDING, DataType::U32)
             .with_count(region_bitmap_len),
@@ -245,8 +245,9 @@ pub fn fused_region_evidence_program(
 #[cfg(all(test, feature = "matching-regex", feature = "matching-dfa"))]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
-    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::pack_u32_slice;
 
     fn dfa_for(patterns: &[&str]) -> CompiledDfa {
         build_regex_dfa_pipeline(patterns, 4096, 16_384)
