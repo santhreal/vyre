@@ -368,7 +368,7 @@ pub fn ntt_butterfly_stage(data: &str, twiddles: &str, n: u32, stage_log: u32) -
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || ntt_butterfly_stage("data", "twiddles", 4, 0),
         Some(|| {

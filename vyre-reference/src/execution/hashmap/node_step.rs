@@ -12,6 +12,7 @@ use crate::ReferenceError;
 use crate::{oob, value::Value, workgroup::Frame};
 use vyre_foundation::ir::{DataType, Expr, Node};
 use vyre_foundation::TypedParam;
+use vyre_foundation::operation::OperationRegistry;
 
 const MAX_CALL_INPUT_BYTES: usize = 64 * 1024 * 1024;
 
@@ -294,21 +295,30 @@ pub(crate) fn eval_call(
     memory: &mut HashmapMemory,
     #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
 ) -> Result<Value, ReferenceError> {
-    let HashmapResolvedCall { def } = resolve_call(expr, op_id, invocation)?;
-    validate_arity(op_id, inputs.len(), def.signature.inputs.len())?;
+    let HashmapResolvedCall { operation } = resolve_call(expr, op_id, invocation)?;
+    let signature = operation.signature.ok_or_else(|| {
+        ReferenceError::new(format!(
+            "op `{op_id}` has no callable signature. Fix: attach a Signature to its canonical OperationRegistration before reference execution."
+        ))
+    })?;
+    validate_arity(op_id, inputs.len(), signature.inputs.len())?;
     let input = encode_inputs(
         op_id,
         inputs,
-        def.signature.inputs,
+        signature.inputs,
         invocation,
         memory,
         #[cfg(feature = "subgroup-ops")]
         snapshots,
     )?;
     let mut output = Vec::new();
-    invoke_cpu_ref(op_id, def.lowerings.cpu_ref, &input, &mut output)?;
-    let parsed_out_type = def
-        .signature
+    let cpu_ref = crate::reference_fn(op_id).ok_or_else(|| {
+        ReferenceError::new(format!(
+            "op `{op_id}` has no CPU reference implementation. Fix: register one ReferenceFacet for this canonical operation or inline its composition body."
+        ))
+    })?;
+    invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
+    let parsed_out_type = signature
         .outputs
         .first()
         .map(|param| match param.ty {
@@ -543,18 +553,12 @@ fn resolve_call(
     if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
         return Ok(resolved);
     }
-    let lookup = vyre_foundation::dialect_lookup().ok_or_else(|| {
+    let operation = OperationRegistry::global().get(op_id).ok_or_else(|| {
         ReferenceError::new(format!(
-            "unsupported call `{op_id}`: no DialectLookup is installed."
+            "unsupported call `{op_id}`. Fix: submit one canonical OperationRegistration or inline the callee as IR."
         ))
     })?;
-    let interned = lookup.intern_op(op_id);
-    let def = lookup.lookup(interned).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "unsupported call `{op_id}`. Fix: register the op in DialectRegistry."
-        ))
-    })?;
-    let resolved = HashmapResolvedCall { def };
+    let resolved = HashmapResolvedCall { operation };
     invocation.op_cache.insert(call_expr, resolved);
     Ok(resolved)
 }

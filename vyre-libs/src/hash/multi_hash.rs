@@ -30,7 +30,7 @@ pub fn multi_hash(input: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

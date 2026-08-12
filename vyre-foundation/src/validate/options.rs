@@ -1,4 +1,3 @@
-use crate::dialect_lookup::DialectLookup;
 use crate::ir::DataType;
 
 /// Backend-specific validation hooks for capability-sensitive rules.
@@ -97,8 +96,6 @@ pub struct ValidationOptions<'a> {
     pub backend: Option<&'a dyn BackendValidationCapabilities>,
     /// Snapshot of backend capabilities for direct feature checks.
     pub backend_capabilities: Option<BackendCapabilities>,
-    /// Optional dialect lookup used to resolve `Expr::Call` signatures.
-    pub dialect_lookup: Option<&'a dyn DialectLookup>,
     /// Allow nested-scope shadowing explicitly for this validation run.
     pub allow_shadowing: bool,
 }
@@ -125,14 +122,6 @@ impl<'a> ValidationOptions<'a> {
     #[inline]
     pub fn with_backend_capabilities(mut self, backend_capabilities: BackendCapabilities) -> Self {
         self.backend_capabilities = Some(backend_capabilities);
-        self
-    }
-
-    /// Validate operation calls against an explicit dialect lookup.
-    #[must_use]
-    #[inline]
-    pub fn with_dialect_lookup(mut self, lookup: &'a dyn DialectLookup) -> Self {
-        self.dialect_lookup = Some(lookup);
         self
     }
 

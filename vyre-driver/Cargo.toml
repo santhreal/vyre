@@ -60,8 +60,6 @@ blake3.workspace = true
 bytemuck.workspace = true
 inventory.workspace = true
 toml.workspace = true
-arc-swap = { workspace = true }
-lasso.workspace = true
 dashmap.workspace = true
 fs2.workspace = true
 

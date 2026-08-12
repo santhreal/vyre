@@ -80,11 +80,18 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
     {
         features.push("gpu.nvidia_smi.compute_capability".to_string());
     }
-    let linked_dispatch_backends = vyre_driver::backend::registered_backends_by_precedence_slice()
-        .iter()
-        .filter(|backend| vyre_driver::backend::backend_dispatches(backend.id))
-        .map(|backend| backend.id)
-        .collect::<Vec<_>>();
+    let registered_backends = vyre_driver::backend::registered_backends_by_precedence_slice()
+        .map_err(|error| {
+            std::io::Error::other(format!("backend registry startup failed: {error}"))
+        })?;
+    let mut linked_dispatch_backends = Vec::new();
+    for backend in registered_backends {
+        if vyre_driver::backend::backend_dispatches(backend.id).map_err(|error| {
+            std::io::Error::other(format!("backend registry startup failed: {error}"))
+        })? {
+            linked_dispatch_backends.push(backend.id);
+        }
+    }
     for backend in &linked_dispatch_backends {
         features.push(format!("backend.linked.{backend}"));
     }

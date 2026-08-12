@@ -307,9 +307,11 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
         .ok()
         .filter(|value| !value.trim().is_empty());
     vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| {
             vyre_driver::backend::backend_dispatches(registration.id)
+                .expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)

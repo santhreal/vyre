@@ -14,9 +14,8 @@
 
 use vyre_driver::{BackendError, BackendRegistration, DispatchConfig};
 use vyre_foundation::ir::{BufferAccess, Program};
-use vyre_libs::fixture_catalog::{
-    convergence_contract, fixpoint_contract, FixpointContract, OpEntry,
-};
+use vyre_foundation::operation::SemanticOperation;
+use vyre_libs::fixture_catalog::{convergence_contract, fixpoint_contract, FixpointContract};
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
@@ -109,7 +108,7 @@ fn dispatch_config_for(program: &Program) -> Result<DispatchConfig, String> {
 /// compares the result byte-for-byte against its declared
 /// `expected_output`. The oracle lives next to the op; the lens just
 /// runs it.
-pub fn witness(entry: &OpEntry) -> LensOutcome {
+pub fn witness(entry: &SemanticOperation) -> LensOutcome {
     let Some(test_inputs) = entry.test_inputs else {
         return LensOutcome::Fail {
             case_index: 0,
@@ -195,7 +194,10 @@ pub fn witness(entry: &OpEntry) -> LensOutcome {
 /// authenticated artifact and CPU reference, and compares outputs under the
 /// operation's declared tolerance. Missing fixtures and target failures are
 /// hard failures. Fixpoint operations are routed to [`fixpoint`] instead.
-pub fn cpu_vs_backend(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
+pub fn cpu_vs_backend(
+    entry: &SemanticOperation,
+    backend: &'static BackendRegistration,
+) -> LensOutcome {
     // Fixpoint ops need a convergence loop; route them to the fixpoint
     // lens automatically instead of skipping.
     if fixpoint_contract(entry.id).is_some() {
@@ -283,7 +285,7 @@ struct IterativeLensSetup {
 }
 
 fn prepare_iterative_lens(
-    entry: &OpEntry,
+    entry: &SemanticOperation,
     lens_name: &str,
 ) -> Result<IterativeLensSetup, LensOutcome> {
     let Some(test_inputs) = entry.test_inputs else {
@@ -421,7 +423,7 @@ fn compare_iterative_lens_cases(
 /// read the flag's first word; if zero, the op has converged. The CPU
 /// reference is expected to reach the same final state after iterating
 /// under the same loop.
-pub fn fixpoint(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
+pub fn fixpoint(entry: &SemanticOperation, backend: &'static BackendRegistration) -> LensOutcome {
     let Some(contract) = fixpoint_contract(entry.id) else {
         return LensOutcome::Fail {
             case_index: 0,
@@ -468,7 +470,10 @@ pub fn fixpoint(entry: &OpEntry, backend: &'static BackendRegistration) -> LensO
 /// The lens infers the `current` (RO input) and `next` (RW output)
 /// buffers, copies `next` → `current` between iterations, and stops
 /// when `next` stops changing.
-pub fn convergence(entry: &OpEntry, backend: &'static BackendRegistration) -> LensOutcome {
+pub fn convergence(
+    entry: &SemanticOperation,
+    backend: &'static BackendRegistration,
+) -> LensOutcome {
     let Some(contract) = convergence_contract(entry.id) else {
         return LensOutcome::Fail {
             case_index: 0,

@@ -478,10 +478,9 @@ fn parity_reference_runner_uses_planned_zeroed_read_write_inputs() {
 // out the parity gate.
 #[test]
 fn parity_matrix_across_all_registered_ops() {
-    // Installs the process-wide dialect lookup. Validation resolves every
-    // `Expr::Call` through it, so without this any op carrying a call is
-    // rejected with V016 before it reaches a backend.
-    let _registry = vyre_driver::registry::DialectRegistry::global();
+    // Validation resolves every `Expr::Call` through the immutable canonical
+    // operation registry, so an unknown operation is rejected with V016 before
+    // it reaches a backend.
     let mut summary = Summary::default();
     let runners = backend_runners(&mut summary);
     let entries = unified_entries();
@@ -494,7 +493,7 @@ fn parity_matrix_across_all_registered_ops() {
     );
     assert!(
         !entries.is_empty(),
-        "Fix: parity matrix linked zero OpEntry registrations. Ensure vyre-libs and vyre-intrinsics are linked into this test binary."
+        "Fix: parity matrix linked zero canonical operation registrations. Ensure vyre-libs and vyre-intrinsics are linked into this test binary."
     );
     let missing_expr_variants = expr_variants()
         .iter()
@@ -707,7 +706,10 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
     let selected = env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    let mut registrations: Vec<&'static BackendRegistration> = registered_backends().to_vec();
+    let mut registrations: Vec<&'static BackendRegistration> = registered_backends()
+        .expect("valid backend registry")
+        .iter()
+        .collect();
     registrations.retain(|registration| {
         selected
             .as_deref()
@@ -732,7 +734,7 @@ fn backend_runners(summary: &mut Summary) -> Vec<BackendRunner> {
 }
 
 fn build_backend_runner(registration: &'static BackendRegistration) -> Option<BackendRunner> {
-    backend_dispatches(registration.id).then_some(BackendRunner {
+    backend_dispatches(registration.id).expect("valid backend registry").then_some(BackendRunner {
         id: registration.id,
         kind: BackendKind::Registered(registration),
     })

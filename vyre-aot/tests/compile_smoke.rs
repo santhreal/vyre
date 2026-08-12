@@ -2,8 +2,7 @@
 
 mod common;
 
-use vyre_aot::artifact::Target;
-use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts};
+use vyre_aot::{compile, emit_launcher_rust, CompileError, LauncherError, LauncherOpts, TargetId};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 fn trivial_xor_program() -> Program {
@@ -31,10 +30,11 @@ fn trivial_xor_program() -> Program {
 #[test]
 fn compile_requires_linked_target_compiler() {
     let p = trivial_xor_program();
-    let err = compile(&p, Target::Ptx)
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let err = compile(&p, target.clone())
         .expect_err("Fix: vyre-aot must not emit target bytes without a linked target compiler.");
     assert!(
-        matches!(err, CompileError::TargetNotEnabled(Target::Ptx)),
+        matches!(&err, CompileError::TargetNotEnabled(id) if id == &target),
         "Fix: missing target compiler must report target-not-enabled, got {err:?}."
     );
 }
@@ -43,10 +43,11 @@ fn compile_requires_linked_target_compiler() {
 fn launcher_requires_linked_target_emitter() {
     let artifact = minimal_ptx_artifact_for_template_test();
     let opts = LauncherOpts::default();
-    let err = emit_launcher_rust(&artifact, Target::Ptx, &opts)
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let err = emit_launcher_rust(&artifact, target.clone(), &opts)
         .expect_err("Fix: target launcher files must come from linked driver crates.");
     assert!(
-        matches!(err, LauncherError::TargetNotEnabled("secondary_text")),
+        matches!(&err, LauncherError::TargetNotEnabled(id) if id == &target),
         "Fix: missing launcher emitter must report target-not-enabled, got {err:?}."
     );
 }

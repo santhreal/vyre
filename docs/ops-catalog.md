@@ -8,11 +8,12 @@ you need an operation ID, tier, category, buffer signature, Cargo feature route,
 reference oracle, backend support state, algebraic law, composition chain, or
 operation count.
 
-The schema is generated from linked `OpEntry` registrations, runtime `OpDef`
-registrations, built `Program` buffers, and dialect parameter signatures. It
-also reads Cargo manifests, linked algebraic-law inventories, and the backend
-rows in [`docs/optimization/OP_MATRIX.toml`](optimization/OP_MATRIX.toml).
-These live sources are checked together before the schema is written.
+The schema is generated from canonical linked `OperationRegistration` records,
+built `Program` buffers, callable signatures, Cargo manifests, linked
+algebraic-law inventories, and the backend rows in
+[`docs/optimization/OP_MATRIX.toml`](optimization/OP_MATRIX.toml). Reference
+and target support are joined by stable operation ID. These live sources are
+checked together before the schema is written.
 
 ## Check the schema
 

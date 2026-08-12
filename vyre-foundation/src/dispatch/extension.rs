@@ -28,46 +28,6 @@ use vyre_spec::extension::{
     ExtensionDataTypeId, ExtensionRuleConditionId, ExtensionUnOp, ExtensionUnOpId,
 };
 
-/// Generic extension id used by the `Expr::Opaque` and `Node::Opaque`
-/// surfaces (introduced in the 0.5.x cycle before the per-kind ids in
-/// vyre-spec were finalized). New extensions should prefer the per-kind
-/// ids  -  this generic id stays for the existing `ExprExtensionNode` /
-/// `NodeNode` traits until their migration to per-kind surfaces lands.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ExtensionId(pub u32);
-
-impl ExtensionId {
-    /// Construct an extension id from a stable name hash (blake3 first 4 bytes).
-    #[must_use]
-    pub fn from_name(name: &str) -> Self {
-        let digest = blake3::hash(name.as_bytes());
-        let bytes = digest.as_bytes();
-        let id = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        Self(id | 0x8000_0000)
-    }
-}
-
-/// Opaque Expr extension. Downstream crates implement this to add new
-/// expression kinds.
-pub trait ExprExtensionNode: Debug + Send + Sync + 'static {
-    /// Stable extension id.
-    fn extension_id(&self) -> ExtensionId;
-    /// Encode to wire bytes.
-    fn encode(&self) -> Vec<u8>;
-    /// Human-readable display.
-    fn display(&self) -> String;
-}
-
-/// Opaque Node extension.
-pub trait NodeNode: Debug + Send + Sync + 'static {
-    /// Stable extension id.
-    fn extension_id(&self) -> ExtensionId;
-    /// Encode to wire bytes.
-    fn encode(&self) -> Vec<u8>;
-    /// Human-readable display.
-    fn display(&self) -> String;
-}
-
 /// Opaque rule condition extension  -  lets third-party rule-engine crates
 /// compose bespoke predicates without editing the facade or foundation model.
 pub trait RuleConditionExt: Debug + Send + Sync + 'static {
@@ -126,37 +86,6 @@ pub struct ExtensionAtomicOpRegistration {
     pub vtable: &'static dyn ExtensionAtomicOp,
 }
 
-/// Legacy `Expr`/`Node`/`RuleCondition` registration (generic `ExtensionId`).
-///
-/// Retained while the wire decoder and visitor migration still consume
-/// the generic id; will be split into per-kind registrations when those
-/// sites migrate.
-pub struct ExtensionRegistration {
-    /// Stable id this extension owns.
-    pub id: ExtensionId,
-    /// Extension-crate name for diagnostics.
-    pub name: &'static str,
-    /// Extension kind tag.
-    pub kind: ExtensionKind,
-    /// Decoder for this extension's wire bytes.
-    pub decode: fn(&[u8]) -> Result<(), String>,
-}
-
-/// Which IR surface an extension extends (legacy generic registry).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum ExtensionKind {
-    /// Extends [`Expr`](crate::ir::Expr).
-    Expr,
-    /// Extends [`Node`](crate::ir::Node).
-    Node,
-    /// Extends [`DataType`](crate::ir::DataType).
-    DataType,
-    /// Extends rule conditions.
-    RuleCondition,
-}
-
-inventory::collect!(ExtensionRegistration);
 inventory::collect!(ExtensionDataTypeRegistration);
 inventory::collect!(ExtensionBinOpRegistration);
 inventory::collect!(ExtensionUnOpRegistration);
@@ -272,21 +201,6 @@ pub fn decode_opaque_node(kind: &str, payload: &[u8]) -> Result<crate::ir::Node,
 // Frozen resolvers. First call walks the inventory; every subsequent
 // call is hash + probe. No locks on the hot path.
 // ---------------------------------------------------------------------
-
-fn frozen_generic_registry(
-) -> Result<&'static FxHashMap<ExtensionId, &'static ExtensionRegistration>, String> {
-    static FROZEN: LazyLock<
-        Result<FxHashMap<ExtensionId, &'static ExtensionRegistration>, String>,
-    > = LazyLock::new(|| {
-        collect_unique_by(
-            inventory::iter::<ExtensionRegistration>
-                .into_iter()
-                .map(|reg| (reg.id, reg, reg.name)),
-            "ExtensionRegistration",
-        )
-    });
-    FROZEN.as_ref().map_err(Clone::clone)
-}
 
 fn frozen_data_type_registry(
 ) -> Result<&'static FxHashMap<ExtensionDataTypeId, &'static dyn ExtensionDataType>, String> {
@@ -408,46 +322,9 @@ pub fn try_resolve_atomic_op(
     Ok(frozen_atomic_op_registry()?.get(&id).copied())
 }
 
-/// Look up a legacy generic-id registration.
-#[must_use]
-pub fn find_extension(id: ExtensionId) -> Option<&'static ExtensionRegistration> {
-    try_find_extension(id).ok().flatten()
-}
-
-/// Look up a legacy generic-id registration and surface registry errors.
-pub fn try_find_extension(
-    id: ExtensionId,
-) -> Result<Option<&'static ExtensionRegistration>, String> {
-    Ok(frozen_generic_registry()?.get(&id).copied())
-}
-
-/// Iterate every legacy registration. Not hot-path; materializes a Vec.
-#[must_use]
-pub fn registered_extensions() -> Vec<&'static ExtensionRegistration> {
-    try_registered_extensions().unwrap_or_default()
-}
-
-/// Iterate every legacy registration and surface registry errors.
-pub fn try_registered_extensions() -> Result<Vec<&'static ExtensionRegistration>, String> {
-    Ok(frozen_generic_registry()?.values().copied().collect())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn extension_id_has_high_bit_set() {
-        let id = ExtensionId::from_name("example.crate");
-        assert_ne!(id.0 & 0x8000_0000, 0);
-    }
-
-    #[test]
-    fn extension_id_is_deterministic() {
-        let a = ExtensionId::from_name("vyre-example-ext");
-        let b = ExtensionId::from_name("vyre-example-ext");
-        assert_eq!(a, b);
-    }
 
     #[test]
     fn per_kind_resolvers_are_empty_by_default() {
@@ -464,18 +341,21 @@ mod tests {
     }
 
     #[test]
-    fn generic_registry_is_empty_by_default() {
-        assert_eq!(registered_extensions().len(), 0);
-    }
-
-    #[test]
-    fn duplicate_extension_ids_name_both_registrants() {
+    fn duplicate_typed_extension_ids_name_both_registrants() {
         let err = collect_unique_by(
             [
-                (ExtensionId(1), 10usize, "dialect.alpha"),
-                (ExtensionId(1), 20usize, "dialect.beta"),
+                (
+                    ExtensionDataTypeId::from_name("dialect.duplicate"),
+                    10usize,
+                    "dialect.alpha",
+                ),
+                (
+                    ExtensionDataTypeId::from_name("dialect.duplicate"),
+                    20usize,
+                    "dialect.beta",
+                ),
             ],
-            "ExtensionRegistration",
+            "ExtensionDataTypeRegistration",
         )
         .expect_err("Fix: duplicate registrations must return an error");
 

@@ -91,8 +91,8 @@ all-lego = [
     "nfa", "effects", "visual",
 ]
 
-# Enable the `inventory::submit!(OpEntry { ... })` registrations so the
-# universal conform harness + `cargo xtask print-composition` see every
+# Enable canonical `OperationRegistration::primitive(...)` submissions so the
+# universal conform harness and `cargo xtask print-composition` discover every
 # registered primitive. Off by default to keep default-build dep-free.
 inventory-registry = ["dep:inventory", "vyre-foundation"]
 

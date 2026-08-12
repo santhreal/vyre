@@ -529,7 +529,7 @@ fn reserve_cpu_scratch(out: &mut Vec<f64>, len: usize, name: &str) -> Result<(),
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || amg_v_cycle("a", "b", "x", "r", "p", "ac", "om", "sf", "scb", "scx", 4, 2),
         Some(|| {
@@ -563,7 +563,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         V_CYCLE_PHASE_OP_ID,
         || {
             Program::wrapped(

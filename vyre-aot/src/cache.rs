@@ -124,6 +124,7 @@ mod tests {
         let program = add_one_program();
         let artifact = crate::compile::artifact_fixture(
             &program,
+            "fixture-target-format",
             (0..1024).map(|index| (index % 251) as u8).collect(),
         );
         let envelope_bytes = artifact.to_bytes().unwrap();
@@ -142,7 +143,11 @@ mod tests {
     #[test]
     fn emit_filename_matches_runtime_fingerprint() {
         let program = add_one_program();
-        let artifact = crate::compile::artifact_fixture(&program, b"\x00\x01\x02\x03".to_vec());
+        let artifact = crate::compile::artifact_fixture(
+            &program,
+            "fixture-target-format",
+            b"\x00\x01\x02\x03".to_vec(),
+        );
         let dir = tempfile::tempdir().expect("Fix: tempdir must succeed");
         let path = emit_runtime_cache_blob(&artifact, dir.path()).expect("Fix: emit must succeed");
 

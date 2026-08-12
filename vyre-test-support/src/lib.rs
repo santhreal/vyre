@@ -69,8 +69,8 @@ fn read_source_file_with_cap(path: &Path, max_bytes: u64) -> std::io::Result<Str
 /// Source-enumerates every `pub fn NAME(...) -> Program` builder under `<manifest_dir>/src`,
 /// EXCLUDING `impl`-block methods (`&self` receiver) and IR-transform passes (first parameter
 /// is `Program`/`&Program`/`&mut Program`: a pass rewrites an existing Program rather than
-/// constructing one from source inputs, so it submits no `OpEntry` and is exercised by
-/// optimizer/pass tests, not the source-builder registry contract).
+/// constructing one from source inputs, so it submits no `OperationRegistration` and is
+/// exercised by optimizer/pass tests, not the source-builder registry contract).
 ///
 /// A builder is COVERED iff its name appears (word-boundary) in (a) an `inventory::submit!`
 /// block, (b) any file under `<manifest_dir>/tests` (except the closure gate itself), or
@@ -177,7 +177,7 @@ pub fn assert_registry_closure(manifest_dir: &str, waiver: &[&str], floor: usize
     assert!(
         unwaived.is_empty(),
         "[{crate_name}] {} Program builder(s) have NO parity/behavioral test AND are NOT registered \
-         in the inventory: {unwaived:?}. Fix: add a reference_eval parity test, register an OpEntry, \
+         in the inventory: {unwaived:?}. Fix: add a reference_eval parity test, submit an OperationRegistration, \
          or add to COVERAGE_WAIVER with a reason. See BACKLOG.md WIRING-tautology-closure-25crates.",
         unwaived.len()
     );
@@ -238,8 +238,8 @@ fn program_builders_in(text: &str) -> Vec<String> {
         }
         // Skip IR-transform passes (`pub fn pass(program: Program, ...) -> Program` /
         // `pub fn pass(&Program) -> Program`): a pass rewrites an existing Program, it does
-        // not CONSTRUCT one from source inputs, so it submits no OpEntry and is exercised by
-        // optimizer/pass tests, not the source-builder registry contract.
+        // not CONSTRUCT one from source inputs, so it submits no OperationRegistration and
+        // is exercised by optimizer/pass tests, not the source-builder registry contract.
         if first_param_is_program(after_name) {
             continue;
         }
@@ -432,9 +432,11 @@ mod tests {
 
     #[test]
     fn inventory_block_is_balanced() {
-        let blocks = inventory_submit_blocks("inventory::submit! { OpEntry { a: b(), c: {1} } }");
+        let blocks = inventory_submit_blocks(
+            "inventory::submit! { OperationRegistration::primitive(OP_ID, build, None, None) }",
+        );
         assert_eq!(blocks.len(), 1);
-        assert!(blocks[0].contains("OpEntry"));
+        assert!(blocks[0].contains("OperationRegistration"));
         assert!(blocks[0].ends_with('}'));
     }
 

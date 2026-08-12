@@ -14,12 +14,13 @@ fn canonical_catalog_is_deterministic_and_fixture_complete() {
 
     for intrinsic in entries {
         assert_eq!(intrinsic.tier, OperationTier::Intrinsic);
-        assert!(std::ptr::eq(
-            OperationRegistry::global()
-                .get(intrinsic.id)
-                .expect("canonical intrinsic registration"),
-            intrinsic
-        ));
+        let canonical = OperationRegistry::global()
+            .get(intrinsic.id)
+            .expect("canonical intrinsic registration");
+        assert_eq!(canonical.id, intrinsic.id);
+        assert_eq!(canonical.semantic_version, intrinsic.semantic_version);
+        assert_eq!(canonical.signature, intrinsic.signature);
+        assert_eq!(canonical.tier, intrinsic.tier);
         let shape = intrinsic_facet(intrinsic.id)
             .unwrap_or_else(|| panic!("missing intrinsic facet for {}", intrinsic.id))
             .shape;

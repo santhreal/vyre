@@ -1,8 +1,8 @@
 //! Security / taint compositions for program-analysis pipelines.
 //!
-//! Each op registers via `inventory::submit!(OpEntry { … })` and
-//! exports a `fn(...) -> Program`. Program-analysis lowerers emit
-//! against these stable paths directly.
+//! Each operation submits one `OperationRegistration` and exports a
+//! `fn(...) -> Program`. Program-analysis lowerers use these stable paths
+//! directly.
 //!
 //! All security ops compose GPU-parallel graph algorithms over the
 //! vyre IR: forward / backward reachability, dominator walks, and

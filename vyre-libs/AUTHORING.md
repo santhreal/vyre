@@ -163,23 +163,23 @@ holds at this step; that's what the conformance harness (P5.4) does
 against a witness corpus. Mis-declaring is a P0 correctness bug:
 the optimizer will apply rewrites that produce wrong bytes.
 
-## 5. Register an `OpEntry` for the universal harness
+## 5. Register one semantic operation
 
-At the bottom of your op's source file:
+At the bottom of the operation's source file:
 
 ```rust
 inventory::submit! {
-    crate::harness::OpEntry {
-        id: "vyre-libs::dialect::my_op",
-        build: || my_op("input", "output", 4),
-        test_inputs: None,        // or Some(|| vec![...])
-        expected_output: None,    // or Some(|| vec![...])
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        "vyre-libs::dialect::my_op",
+        || my_op("input", "output", 4),
+        Some(|| vec![/* deterministic input cases */]),
+        Some(|| vec![/* deterministic output cases */]),
+    )
 }
 ```
 
-The harness fires validation, wire round-trip, and CSE stability on
-every registered entry  -  no per-op test file needed for those gates.
+The canonical registry supplies the linked operation to validation, wire
+round-trip, optimization, conformance, and generated catalog checks.
 
 ---
 

@@ -17,7 +17,7 @@ select a concrete target or reconstruct target bytes.
 ## Discovery
 
 ```rust
-let registrations = vyre_driver::backend::registered_backends();
+let registrations = vyre_driver::backend::registered_backends()?;
 for registration in registrations {
     println!("{}", registration.id);
 }
@@ -26,6 +26,9 @@ for registration in registrations {
 A target appears only when its concrete driver crate is linked. Acquiring an
 unavailable target returns a structured `BackendError`; callers must not replace
 it with a silent fallback.
+Registry discovery is fallible. Duplicate backend IDs, duplicate target IDs,
+or conflicting owner-local metadata return a startup `BackendError`; no
+provider wins by inventory order.
 
 ## Production lifecycle
 
@@ -53,14 +56,18 @@ bindings against that admitted instance.
 
 ## Registration
 
-Concrete drivers submit one `vyre_driver::BackendRegistration`:
+Concrete drivers submit one `vyre_driver::BackendRegistration`. The target
+identity and payload format are owner-local constants:
 
 ```rust,ignore
 inventory::submit! {
     vyre_driver::BackendRegistration {
-        id: TARGET_ID,
+        id: BACKEND_ID,
+        target_id: TARGET_ID,
+        payload_format: Some(TARGET_PAYLOAD_FORMAT),
         factory: backend_factory,
         supported_ops,
+        semantic_operations,
         target_compiler: Some(target_compiler_factory),
         materializer: Some(materializer_factory),
     }
@@ -75,9 +82,14 @@ compiler target.
 ## Operation support
 
 Operation support derives from the foundation-owned semantic operation
-registry. Each target contributes `TargetOperationFacet` records and reports
-its supported operation IDs through the backend registration. Conformance
-compares registered production targets with the independent reference engine.
+registry. Each target declares canonical semantic operation IDs through
+`BackendRegistration::semantic_operations`. The shared driver joins that set
+with `OperationRegistry` to produce read-only `TargetOperationFacet` values.
+Conformance compares registered production targets with the independent
+reference engine.
+Signature-only semantic operations remain in the canonical catalog but are
+excluded from executable conformance selection because they have no neutral
+`Program` builder.
 
 The generated operation inventory and conformance matrix report coverage:
 

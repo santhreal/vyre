@@ -1,6 +1,6 @@
 //! RELEASE TEST LANE 15  -  every-op random-input stress test.
 //!
-//! For every OpEntry that ships `test_inputs` + `expected_output`, generate
+//! For every semantic operation with `test_inputs` and `expected_output`, generate
 //! bounded random inputs (10_000 when `CI_STRESS=1`) via a manual
 //! `proptest::test_runner::TestRunner`, run each through the CPU reference
 //! and the wgpu backend, and assert byte-identity (int) or within-ULP
@@ -200,7 +200,7 @@ fn every_op_random_input_stress() {
     if let Some(filter) = op_filter {
         assert!(
             matched_ops > 0,
-            "VYRE_RANDOM_OP_FILTER={filter:?} matched no OpEntry ids. Fix: pass a substring of the target op id."
+            "VYRE_RANDOM_OP_FILTER={filter:?} matched no semantic operation ids. Fix: pass a substring of the target operation id."
         );
     }
 

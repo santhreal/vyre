@@ -1,24 +1,12 @@
-//! Registration drift gate.
+//! Canonical operation coverage gate.
 //!
-//! Vyre has two complementary inventories:
-//! - `DialectRegistry`  -  frozen `OpDef` records (signature, category,
-//!   contract) used by the validator + optimizer.
-//! - `vyre-libs::harness::OpEntry`  -  fixture bundle (build + inputs +
-//!   expected_output) iterated by conform harnesses.
-//!
-//! This gate asserts the direction that matters for correctness: every
-//! `OpDef` declared in the DialectRegistry must have a matching
-//! `OpEntry` *or* intrinsic harness entry so the conform harness
-//! actually exercises it. A declared op with no test is a LAW 5
-//! violation (no adversarial coverage).
-//!
-//! The opposite direction  -  Cat-A composition ops registered only
-//! through OpEntry without a separate OpDefRegistration  -  is an
-//! architectural property of the Tier-3 harness pattern, not drift.
+//! Every library-owned semantic operation must carry deterministic fixture
+//! coverage or an explicit reason that its execution belongs to another
+//! product boundary.
 
 use std::collections::HashSet;
 
-use vyre_driver::registry::DialectRegistry;
+use vyre_foundation::operation::{OperationRegistry, OperationTier};
 
 /// Ids declared in the registry whose executable coverage lives in a
 /// subsystem-specific test instead of the fixture harness.
@@ -53,10 +41,11 @@ const EXEMPT_OP_IDS: &[(&str, &str)] = &[
     // these would measure the placeholder shape rather than any real work.
     //
     // They are executed, with real expected values, through their caller:
-    // `vyre-libs::parsing::c11_annotate_typedef_names` submits an OpEntry whose
-    // expected output comes from `reference_c11_annotate_typedef_names`, and the
-    // calls inline away before lowering, so that one fixture runs all five
-    // phases. See vyre-libs/src/parsing/c/parse/vast/typedef_ann/row_phases.rs.
+    // `vyre-libs::parsing::c11_annotate_typedef_names` submits the canonical
+    // operation whose expected output comes from
+    // `reference_c11_annotate_typedef_names`. Calls inline before lowering, so
+    // that fixture runs all five phases. See
+    // vyre-libs/src/parsing/c/parse/vast/typedef_ann/row_phases.rs.
     (
         "vyre-libs::parsing::c11_typedef_scope_open_for_row",
         "Composite callee of c11_annotate_typedef_names  -  no standalone dispatch shape; executed through that op's harness fixture.",
@@ -80,8 +69,8 @@ const EXEMPT_OP_IDS: &[(&str, &str)] = &[
 ];
 
 #[test]
-fn every_dialect_registered_op_has_a_test_entry() {
-    let registry = DialectRegistry::global();
+fn every_library_operation_has_fixture_coverage() {
+    let registry = OperationRegistry::global();
     let exemptions: std::collections::HashMap<&str, &str> = EXEMPT_OP_IDS.iter().copied().collect();
 
     let mut tested: HashSet<&'static str> = HashSet::new();
@@ -90,28 +79,30 @@ fn every_dialect_registered_op_has_a_test_entry() {
     }
 
     let mut drift: Vec<String> = Vec::new();
-    for op_def in registry.iter() {
-        if tested.contains(op_def.id) {
+    for operation in registry.iter().filter(|operation| {
+        matches!(
+            operation.tier,
+            OperationTier::Library | OperationTier::Runtime
+        )
+    }) {
+        if tested.contains(operation.id) {
             continue;
         }
-        if exemptions.contains_key(op_def.id) {
+        if exemptions.contains_key(operation.id) {
             continue;
         }
-        drift.push(op_def.id.to_string());
+        drift.push(operation.id.to_string());
     }
 
     if !drift.is_empty() {
         drift.sort();
-        let mut rendered = String::from(
-            "registration drift: op declared in DialectRegistry but no harness OpEntry.\n",
-        );
+        let mut rendered =
+            String::from("registration drift: semantic operation has no fixture coverage.\n");
         for id in &drift {
             rendered.push_str(&format!("  - {id}\n"));
         }
         rendered.push_str(
-            "Fix: (a) submit an OpEntry under vyre-libs::harness or \
-             vyre-intrinsics::harness, or (b) add the op id + a reason \
-             to EXEMPT_OP_IDS in this test file.\n",
+            "Fix: add deterministic fixtures to the canonical OperationRegistration or record the owner-specific execution boundary in EXEMPT_OP_IDS.\n",
         );
         panic!("{rendered}");
     }

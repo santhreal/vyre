@@ -29,13 +29,13 @@ auditable after inlining.
 
 ## The invariant
 
-1. **Every `OpEntry::build` returns a Program whose top-level Nodes
-   include at least one `Node::Region`** wrapping the op's body with
-   `generator = <OpEntry::id>`.
-2. **When an op's body is constructed by calling another registered
-   op's builder**, the resulting `Region` populates `source_region =
-   Some(GeneratorRef { generator: <child op id>, .. })` for each
-   child Region nested inside the outer body.
+1. **Every semantic operation builder returns a `Program` whose top-level
+   nodes include at least one `Node::Region`** wrapping the operation body with
+   `generator = <SemanticOperation::id>`.
+2. **When an operation body is constructed by calling another registered
+   operation builder**, the resulting `Region` populates `source_region =
+   Some(GeneratorRef { generator: <child operation id>, .. })` for each child
+   `Region` nested inside the outer body.
 3. **Anonymous inline construction**  -  a helper building
    `vec![Node::if_then(...), Node::store(...)]` by hand  -  wraps with
    `wrap_anonymous(name, body)` which sets `source_region = None`.
@@ -116,9 +116,9 @@ Result: reading a generated WGSL file and grepping
 
 ## The audit tool
 
-`cargo xtask print-composition <op_id>` resolves `<op_id>` against the
-`OpEntry` inventory, calls `build()`, walks the root Region tree, and
-prints a tree:
+`cargo xtask print-composition <op_id>` resolves `<op_id>` against
+`OperationRegistry`, builds the semantic operation's `Program`, walks the root
+`Region` tree, and prints a tree:
 
 ```
 $ cargo xtask print-composition vyre-libs-nn::attention

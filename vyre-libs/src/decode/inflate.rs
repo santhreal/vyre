@@ -252,7 +252,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || inflate_stored_block("input", "output", 10),
         Some(fixture_inputs),

@@ -6,15 +6,13 @@
 //! over-budget op at all: the composition-discipline gate demanded a split the
 //! pipeline could not compile.
 //!
-//! These tests pin the whole path for a buffer argument, registry lookup
-//! through emitted PTX, and pin the signature rules that keep a wrong argument
-//! from silently reading the wrong binding.
+//! These tests pin buffer-argument signature validation, canonical semantic
+//! resolution, and emitted PTX.
 
-use vyre_driver::registry::{
-    Category, DialectRegistry, OpDef, OpDefRegistration, Signature, TypedParam,
-};
 use vyre_driver::DispatchConfig;
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 const LOOKUP_OP_ID: &str = "test::buffer_arg::table_lookup";
 const CALLER_OP_ID: &str = "test::buffer_arg::caller";
@@ -83,25 +81,20 @@ const LOOKUP_SIG: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: LOOKUP_OP_ID,
-        dialect: "test",
-        category: Category::Composite,
-        signature: LOOKUP_SIG,
-        lowerings: vyre_foundation::LoweringTable::empty(),
-        laws: &[],
-        compose: Some(table_lookup),
-    })
-}
-
-fn install_registry() {
-    let _ = DialectRegistry::global();
+    OperationRegistration::new(
+        LOOKUP_OP_ID,
+        OperationTier::External,
+        Some(table_lookup),
+        None,
+        None,
+    )
+    .with_signature(LOOKUP_SIG)
+    .with_category("test")
 }
 
 /// The call resolves, and the callee's read moves onto the caller's buffer.
 #[test]
 fn a_buffer_argument_retargets_the_read_onto_the_callers_table() {
-    install_registry();
     let prepared = vyre_lower::lower_verified(&caller())
         .unwrap_or_else(|error| {
             panic!("buffer-argument op must survive verified lowering: {error}")
@@ -131,7 +124,6 @@ fn a_buffer_argument_retargets_the_read_onto_the_callers_table() {
 /// invocation id reached it intact.
 #[test]
 fn a_buffer_argument_op_emits_ptx() {
-    install_registry();
     let ptx = vyre_driver_cuda::codegen::program_to_ptx(&caller(), &DispatchConfig::default())
         .unwrap_or_else(|error| panic!("buffer-argument op must emit PTX: {error}"));
     // The kernel-parameter block is read through the parameter base register
@@ -167,7 +159,6 @@ fn a_buffer_argument_op_emits_ptx() {
 /// zero of whatever binding it landed on. V053 rejects it.
 #[test]
 fn passing_a_value_for_a_buffer_parameter_is_rejected() {
-    install_registry();
     let row = Expr::InvocationId { axis: 0 };
     let bad = Program::wrapped(
         vec![
@@ -193,7 +184,6 @@ fn passing_a_value_for_a_buffer_parameter_is_rejected() {
 /// that does not exist. V052 rejects it.
 #[test]
 fn referencing_an_undeclared_buffer_is_rejected() {
-    install_registry();
     let row = Expr::InvocationId { axis: 0 };
     let bad = Program::wrapped(
         vec![

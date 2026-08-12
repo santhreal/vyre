@@ -710,7 +710,7 @@ fn validate_sum_product_evaluate_inputs(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || sum_product_evaluate(
             "kinds",
@@ -753,7 +753,7 @@ inventory::submit! {
 // returns the sole RW buffer `out` = [2.0, 3.0, 5.0, 10.0] in 16.16.
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID_LEVELED,
         || sum_product_evaluate_leveled(
             "depths",

@@ -2,13 +2,12 @@
 
 mod common;
 
-use vyre_aot::{Manifest, Target};
+use vyre_aot::Manifest;
 
 fn target_payload(envelope: &vyre_aot::ArtifactEnvelope) -> &vyre_aot::TargetPayload {
     envelope
         .target_payloads()
-        .iter()
-        .find(|payload| payload.format().identity() == Target::Ptx.aot_target_id())
+        .first()
         .expect("fixture target payload must exist")
 }
 
@@ -25,7 +24,8 @@ fn generated_manifest(seed: u32, envelope: &vyre_aot::ArtifactEnvelope) -> Manif
         schema: Manifest::SCHEMA_VERSION.to_string(),
         aot_version: vyre_aot::VERSION.to_string(),
         artifact_name: format!("artifact_{seed:08x}"),
-        target: Target::Ptx,
+        target: common::fixture_target(),
+        target_payload_format: target_payload(envelope).format().identity().to_string(),
         envelope_file: format!("artifact_{seed:08x}.vmk.lzma"),
         envelope_compression: "lzma".to_string(),
         envelope_sha256_hex: format!("{:064x}", seed as u64),

@@ -1,213 +1,95 @@
 //! Backend selection and acquisition policy.
 
-use rustc_hash::FxHashMap;
 use std::collections::HashSet;
-use std::sync::OnceLock;
 use std::time::Instant;
 use vyre_foundation::ir::OpId;
 
 use super::inventory_streams::{
-    registered_backends, BackendCapability, BackendPrecedence, BackendRegistration,
+    registered_backend, registered_backend_dispatches, registered_backend_precedence,
+    registered_backends, BackendRegistration,
 };
-use crate::allocation::{reserve_hash_map_to_capacity, reserve_vec_to_capacity};
+use crate::allocation::reserve_vec_to_capacity;
 use crate::backend::{default_supported_ops, BackendError, VyreBackend};
 use crate::{DeviceProfile, DeviceTimingQuality};
 
-enum CacheState<T> {
-    Ready(T),
-    Failed(String),
-}
-
-fn cache_reservation_failed<T>(cache_name: &str, error: BackendError) -> CacheState<T> {
-    CacheState::Failed(format!("{cache_name} initialization failed: {error}"))
-}
-
-fn cache_or_error<'a, T>(
-    cache_name: &str,
-    state: &'a CacheState<T>,
-) -> Result<&'a T, BackendError> {
-    match state {
-        CacheState::Ready(value) => Ok(value),
-        CacheState::Failed(message) => Err(BackendError::new(format!(
-            "backend registry {cache_name} is unavailable: {message}. Fix: reduce linked backend inventory, increase available memory, or split registry initialization before acquiring a backend."
-        ))),
-    }
-}
-
 fn backend_dispatches_result(id: &str) -> Result<bool, BackendError> {
-    static CACHE: OnceLock<CacheState<FxHashMap<&'static str, bool>>> = OnceLock::new();
-    let table = cache_or_error(
-        "dispatch capability cache",
-        CACHE.get_or_init(|| {
-            // HOT-PATH-OK: inventory::iter is consumed once to build the
-            // immutable dispatch-capability cache; lookups use the frozen map.
-            let entries = inventory::iter::<BackendCapability>.into_iter();
-            let reserve = entries
-                .size_hint()
-                .1
-                .unwrap_or_else(|| entries.size_hint().0);
-            let mut table = FxHashMap::default();
-            if let Err(error) = reserve_hash_map_to_capacity(
-                &mut table,
-                reserve,
-                "Vyre backend registry",
-                "dispatch capability slot",
-                "reduce linked backend inventory or split registry initialization",
-            ) {
-                return cache_reservation_failed("dispatch capability cache", error);
-            }
-            for entry in entries {
-                table.insert(entry.id, entry.dispatches);
-            }
-            CacheState::Ready(table)
-        }),
-    )?;
-    Ok(table.get(id).copied().unwrap_or(false))
+    registered_backend_dispatches(id)
 }
 
-/// Return `true` when the named backend submitted `dispatches: true`.
-#[must_use]
-pub fn backend_dispatches(id: &str) -> bool {
-    backend_dispatches_result(id).unwrap_or_else(|error| {
-        tracing::error!(
-            "backend registry dispatch-capability query failed for `{id}`, treating as non-dispatching: {error}"
-        );
-        false
-    })
+/// Return whether the named backend submitted `dispatches: true`.
+///
+/// # Errors
+///
+/// Returns the validated registry startup error when providers conflict.
+pub fn backend_dispatches(id: &str) -> Result<bool, BackendError> {
+    backend_dispatches_result(id)
 }
 
 fn backend_precedence_result(id: &str) -> Result<u32, BackendError> {
-    static CACHE: OnceLock<CacheState<FxHashMap<&'static str, u32>>> = OnceLock::new();
-    let table = cache_or_error(
-        "backend precedence cache",
-        CACHE.get_or_init(|| {
-            // HOT-PATH-OK: inventory::iter is consumed once to build the
-            // immutable backend-precedence cache; lookups use the frozen map.
-            let entries = inventory::iter::<BackendPrecedence>.into_iter();
-            let reserve = entries
-                .size_hint()
-                .1
-                .unwrap_or_else(|| entries.size_hint().0);
-            let mut table = FxHashMap::default();
-            if let Err(error) = reserve_hash_map_to_capacity(
-                &mut table,
-                reserve,
-                "Vyre backend registry",
-                "backend precedence slot",
-                "reduce linked backend inventory or split registry initialization",
-            ) {
-                return cache_reservation_failed("backend precedence cache", error);
-            }
-            for entry in entries {
-                table.insert(entry.id, entry.rank);
-            }
-            CacheState::Ready(table)
-        }),
-    )?;
-    Ok(table.get(id).copied().unwrap_or(u32::MAX))
+    registered_backend_precedence(id)
 }
 
-/// Look up a backend's submitted precedence. Returns `u32::MAX` for
-/// backends that did not submit a `BackendPrecedence` entry.
-#[must_use]
-pub fn backend_precedence(id: &str) -> u32 {
-    backend_precedence_result(id).unwrap_or_else(|error| {
-        tracing::error!(
-            "backend registry precedence query failed for `{id}`, treating as lowest precedence: {error}"
-        );
-        u32::MAX
-    })
+/// Look up a backend's submitted precedence. Returns `u32::MAX` for backends
+/// that did not submit a `BackendPrecedence` entry.
+///
+/// # Errors
+///
+/// Returns the validated registry startup error when providers conflict.
+pub fn backend_precedence(id: &str) -> Result<u32, BackendError> {
+    backend_precedence_result(id)
 }
 
 fn registered_backends_by_precedence_slice_result(
 ) -> Result<&'static [&'static BackendRegistration], BackendError> {
-    static SORTED: OnceLock<CacheState<Box<[&'static BackendRegistration]>>> = OnceLock::new();
-    let sorted = cache_or_error(
-        "sorted backend precedence cache",
-        SORTED.get_or_init(|| {
-            let registrations = registered_backends();
+    static SORTED: std::sync::LazyLock<Result<Box<[&'static BackendRegistration]>, BackendError>> =
+        std::sync::LazyLock::new(|| {
+            let registrations = registered_backends()?;
             let mut keyed = Vec::new();
-            if let Err(error) = reserve_vec_to_capacity(
+            reserve_vec_to_capacity(
                 &mut keyed,
                 registrations.len(),
                 "Vyre backend registry",
                 "precedence key slot",
                 "reduce linked backend inventory or split registry initialization",
-            ) {
-                return cache_reservation_failed("sorted backend precedence cache", error);
-            }
-            for registration in registrations.iter().copied() {
-                let precedence = match backend_precedence_result(registration.id) {
-                    Ok(precedence) => precedence,
-                    Err(error) => {
-                        return cache_reservation_failed("sorted backend precedence cache", error);
-                    }
-                };
-                keyed.push((precedence, registration.id, registration));
+            )?;
+            for registration in registrations {
+                keyed.push((
+                    backend_precedence_result(registration.id)?,
+                    registration.id,
+                    registration,
+                ));
             }
             keyed.sort_unstable_by(|left, right| {
                 left.0.cmp(&right.0).then_with(|| left.1.cmp(right.1))
             });
-            let mut sorted = Vec::new();
-            if let Err(error) = reserve_vec_to_capacity(
-                &mut sorted,
-                keyed.len(),
-                "Vyre backend registry",
-                "sorted backend slot",
-                "reduce linked backend inventory or split registry initialization",
-            ) {
-                return cache_reservation_failed("sorted backend precedence cache", error);
-            }
-            sorted.extend(keyed.into_iter().map(|(_, _, registration)| registration));
-            CacheState::Ready(sorted.into_boxed_slice())
-        }),
-    )?;
-    Ok(sorted)
+            Ok(keyed
+                .into_iter()
+                .map(|(_, _, registration)| registration)
+                .collect())
+        });
+    match &*SORTED {
+        Ok(sorted) => Ok(sorted),
+        Err(error) => Err(error.clone()),
+    }
 }
 
 /// Return every registered backend sorted by precedence (low rank first).
 #[must_use]
-pub fn registered_backends_by_precedence_slice() -> &'static [&'static BackendRegistration] {
-    registered_backends_by_precedence_slice_result().unwrap_or_else(|error| {
-        tracing::error!(
-            "backend registry precedence enumeration failed, treating as no linked backends: {error}"
-        );
-        &[]
-    })
+pub fn registered_backends_by_precedence_slice(
+) -> Result<&'static [&'static BackendRegistration], BackendError> {
+    registered_backends_by_precedence_slice_result()
 }
 
 /// Return every registered backend sorted by precedence (low rank first).
 /// Prefer [`registered_backends_by_precedence_slice`] on hot paths.
 #[must_use]
-pub fn registered_backends_by_precedence() -> Vec<&'static BackendRegistration> {
-    registered_backends_by_precedence_slice().to_vec()
+pub fn registered_backends_by_precedence() -> Result<Vec<&'static BackendRegistration>, BackendError>
+{
+    Ok(registered_backends_by_precedence_slice()?.to_vec())
 }
 
 fn registration_for_id(id: &str) -> Result<Option<&'static BackendRegistration>, BackendError> {
-    static BY_ID: OnceLock<CacheState<FxHashMap<&'static str, &'static BackendRegistration>>> =
-        OnceLock::new();
-    let table = cache_or_error(
-        "backend-id cache",
-        BY_ID.get_or_init(|| {
-            let registrations = registered_backends();
-            let mut map: FxHashMap<&'static str, &'static BackendRegistration> =
-                FxHashMap::default();
-            if let Err(error) = reserve_hash_map_to_capacity(
-                &mut map,
-                registrations.len(),
-                "Vyre backend registry",
-                "backend-id slot",
-                "reduce linked backend inventory or split registry initialization",
-            ) {
-                return cache_reservation_failed("backend-id cache", error);
-            }
-            for registration in registrations {
-                map.entry(registration.id).or_insert(registration);
-            }
-            CacheState::Ready(map)
-        }),
-    )?;
-    Ok(table.get(id).copied())
+    registered_backend(id)
 }
 /// Resolve the immutable registration for one linked backend identifier.
 ///
@@ -277,7 +159,7 @@ pub fn acquire_preferred_dispatch_backend() -> Result<Box<dyn VyreBackend>, Back
         if !backend_dispatches_result(registration.id)? {
             continue;
         }
-        if is_reference_oracle_backend(registration.id) {
+        if registration.reference_oracle {
             skipped_reference_oracles.push(registration.id);
             continue;
         }
@@ -421,10 +303,6 @@ fn elapsed_ns_saturating(started: Instant) -> u64 {
     u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX)
 }
 
-fn is_reference_oracle_backend(id: &str) -> bool {
-    matches!(id, "cpu-ref" | "reference")
-}
-
 /// Core operation support set used by backends during migration.
 #[must_use]
 pub fn core_supported_ops() -> &'static HashSet<OpId> {
@@ -458,8 +336,11 @@ mod tests {
     #[test]
     fn public_wrappers_return_absent_defaults_for_missing_backend() {
         let missing_id = "__vyre_missing_backend__";
-        assert!(!backend_dispatches(missing_id));
-        assert_eq!(backend_precedence(missing_id), u32::MAX);
+        assert!(!backend_dispatches(missing_id).expect("valid backend registry"));
+        assert_eq!(
+            backend_precedence(missing_id).expect("valid backend registry"),
+            u32::MAX
+        );
     }
 
     #[test]

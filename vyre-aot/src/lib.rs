@@ -14,7 +14,7 @@ pub mod compile;
 pub mod launcher;
 pub mod manifest;
 
-pub use artifact::Target;
+pub use artifact::TargetId;
 pub use bundle::{bundle, package_artifact, read_bundle_artifact, BundleError, DeploymentBundle};
 pub use compile::{compile, compile_with_resolver, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};

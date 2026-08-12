@@ -6,6 +6,7 @@ use vyre_megakernel::{
 
 use crate::CUDA_BACKEND_ID;
 
+pub(crate) const CUDA_TARGET_FORMAT: &str = "ptx";
 const CUDA_TARGET_FORMAT_VERSION: u16 = 1;
 
 pub(crate) struct CudaTargetCompiler {
@@ -30,13 +31,13 @@ impl TargetCompiler for CudaTargetCompiler {
 }
 
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
-    let format = TargetPayloadFormat::new("ptx", CUDA_TARGET_FORMAT_VERSION).map_err(|error| {
-        BackendError::KernelCompileFailed {
+    let format = TargetPayloadFormat::new(CUDA_TARGET_FORMAT, CUDA_TARGET_FORMAT_VERSION).map_err(
+        |error| BackendError::KernelCompileFailed {
             backend: CUDA_BACKEND_ID.to_string(),
             compiler_message: format!(
                 "PTX target format is invalid: {error}. Fix: repair the registered format identity."
             ),
-        }
-    })?;
+        },
+    )?;
     Ok(Box::new(CudaTargetCompiler { format }))
 }

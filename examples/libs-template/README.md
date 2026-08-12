@@ -30,7 +30,7 @@ cargo test
 ## Contributing a second op
 
 1. Add a new module under `src/` with your builder + free function.
-2. Register an `OpEntry` so the universal harness picks it up.
+2. Submit one `OperationRegistration` so the canonical registry and conformance harness discover it.
 3. Add a witness in `tests/cat_a_conform.rs`.
 4. Run `cargo test --all-features`.
 

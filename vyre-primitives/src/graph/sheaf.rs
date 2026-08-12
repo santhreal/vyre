@@ -211,7 +211,7 @@ pub fn try_sheaf_diffusion_step_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || sheaf_diffusion_step("stalks", "restriction_diag", "damping", "stalks_next", 1, 1),
         Some(|| {

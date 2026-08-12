@@ -18,7 +18,7 @@ use im::HashMap;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use vyre_foundation::ir::{Expr, Node, Program};
-use vyre_foundation::OpDef;
+use vyre_foundation::operation::SemanticOperation;
 
 #[doc = " Local variable environment backed by persistent maps for O(1) subgroup snapshots."]
 pub(crate) struct HashmapLocals {
@@ -132,7 +132,7 @@ pub(crate) enum HashmapAsyncTransfer {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct HashmapResolvedCall {
-    pub(crate) def: &'static OpDef,
+    pub(crate) operation: SemanticOperation,
 }
 
 impl<'a> HashmapInvocation<'a> {

@@ -124,9 +124,9 @@ drivers remain the owners of lowering and dispatch. See
 
 ## IO path
 
-`vyre-runtime/src/uring/` owns Linux `io_uring` integration. Runtime dialect
-operations such as DMA and zero-copy mapping are registered as typed `OpDef`
-contracts. Their current backend status is recorded in
+`vyre-runtime/src/uring/` owns Linux `io_uring` integration. Runtime operations
+such as DMA and zero-copy mapping use canonical `OperationRegistration`
+contracts. Their target support remains a concrete-driver facet recorded in
 `docs/optimization/OP_MATRIX.toml` and the generated operation schema.
 Experimental or unsupported rows remain explicit.
 

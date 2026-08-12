@@ -232,7 +232,7 @@ pub fn pack_bytes_as_u32(bytes: &[u8]) -> Vec<u8> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         CHAR_CLASS_OP_ID,
         || char_class("source", "classified", 3),
         Some(|| {

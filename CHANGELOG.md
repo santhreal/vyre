@@ -96,6 +96,26 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   features, target conditions, visibility, and destination seam, and optimizer
   pass reference pages are generated from the live pass registry.
 
+- Semantic operations now have one foundation-owned
+  `OperationRegistration` and validated `OperationRegistry`. Portable flat-byte
+  references submit `ReferenceFacet` records in `vyre-reference`; concrete
+  targets submit compiler, payload-format, materializer, semantic-support, and
+  explicit reference-oracle classification through one `BackendRegistration`.
+  Registry startup now rejects duplicate backend IDs, target IDs, operation
+  facets, and owner-local metadata instead of selecting by inventory order.
+  Production routing excludes reference oracles by this typed registration
+  field rather than matching backend-name strings. Signature-only semantic
+  operations remain cataloged but are excluded from executable conformance.
+- AOT compilation and packaging now select linked concrete targets through the
+  validated opaque `TargetId`. The closed AOT target enum, process-local
+  operation interning, fixed target lowering slots, runtime TOML dialect
+  registry, reference sentinels, and duplicate operation-definition route are
+  gone.
+- Primitive adoption now has one executable authority:
+  `primitive-admission-gate` uses the canonical operation graph and
+  `PRIMITIVE_ADMISSION.toml`. The source-token recursion scanner and its
+  duplicate allowlist are gone.
+
 ### Removed
 
 - Self-substrate no longer publishes source-text validators for deleted

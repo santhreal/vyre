@@ -63,7 +63,7 @@ pub fn vfs_resolve_dma(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         VFS_RESOLVE_OP_ID,
         || vfs_resolve_dma("include_hashes", "out_file_buffers", Expr::u32(1)),
         Some(|| {

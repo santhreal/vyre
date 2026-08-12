@@ -110,7 +110,7 @@ pub mod pipeline;
 /// reads/writes can fuse into one launch with a workgroup-bounded
 /// fence instead of a full grid-sync.
 pub mod pipeline_fusion;
-/// Dialect registry, OpDef registration, lowering tables, and interner.
+/// Read-only semantic operation projections, migrations, and policy.
 pub mod registry;
 /// Backend-neutral reservation policy adapters.
 pub mod reservation_policy;
@@ -238,12 +238,8 @@ pub use program_walks::{
     TailMaskPolicy,
 };
 pub use registry::{
-    default_validator, intern_string, validate_intrinsic_lowering, AttrSchema, AttrType, Category,
-    Chain, Dialect, DialectRegistration, DialectRegistry, DuplicateOpIdError, EnforceGate,
-    EnforceVerdict, InternedOpId, IntrinsicRegistrationError, LoweringCtx, LoweringTable,
-    MutationClass, NativeModule, NativeModuleBuilder, OpBackendTarget, OpDef, OpDefRegistration,
-    PrimaryBinaryBuilder, PrimaryTextBuilder, SecondaryTextBuilder, Signature, Target, TextModule,
-    TypedParam,
+    validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
+    MutationClass,
 };
 pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
 pub use routing::{select_sort_backend, Distribution, RoutingTable, SortBackend};

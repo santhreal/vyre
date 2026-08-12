@@ -260,7 +260,7 @@ pub fn try_voting_recovery_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || sparse_fft_bin_hash("signal", "bins", 1, 0, 4, 8),
         Some(|| {

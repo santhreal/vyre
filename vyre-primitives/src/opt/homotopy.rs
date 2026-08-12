@@ -135,7 +135,7 @@ pub fn linear_homotopy_cpu(g_x: &[f64], f_x: &[f64], t: f64) -> Vec<f64> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || homotopy_euler_predictor("x_curr", "v", "dt_scaled", "x_pred", 1, 2),
         Some(|| {

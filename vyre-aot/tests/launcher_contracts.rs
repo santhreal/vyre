@@ -2,7 +2,7 @@
 
 mod common;
 
-use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, Target};
+use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
 
 fn minimal_ptx_artifact() -> ArtifactEnvelope {
     common::compiled_artifact()
@@ -12,11 +12,12 @@ fn minimal_ptx_artifact() -> ArtifactEnvelope {
 fn launcher_requires_linked_target_emitter() {
     let artifact = minimal_ptx_artifact();
     let opts = LauncherOpts::default();
-    let err = emit_launcher_rust(&artifact, Target::Ptx, &opts).expect_err(
+    let target = TargetId::expect_valid("unlinked-fixture-target");
+    let err = emit_launcher_rust(&artifact, target.clone(), &opts).expect_err(
         "Fix: vyre-aot must not synthesize target-owned launcher files without a linked driver.",
     );
     assert!(
-        matches!(err, LauncherError::TargetNotEnabled("secondary_text")),
+        matches!(&err, LauncherError::TargetNotEnabled(id) if id == &target),
         "Fix: missing launcher emitter must report target-not-enabled, got {err:?}."
     );
 }

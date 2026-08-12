@@ -133,7 +133,7 @@ fn walk(
             let is_registered_child = source_region.is_some() && ids.contains(generator_name);
             if source_region.is_some() && generator_name.contains("::") && !is_registered_child {
                 failures.insert(format!(
-                    "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator_name}` as a child region, but no registered OpEntry exists for that building block. Fix: register it in the appropriate Tier 2.5/Tier 3 harness or stop marking it as a child."
+                    "UNREGISTERED-CHILD: `{owner_id}` wraps `{generator_name}` as a child region, but no canonical SemanticOperation exists for that building block. Fix: submit it from the owning Tier 2.5/Tier 3 crate or stop marking it as a registered child."
                 ));
             }
             if let Some(parent) = source_region {

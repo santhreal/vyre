@@ -4,14 +4,15 @@
 #![allow(deprecated)]
 use proptest::prelude::*;
 use vyre::ir::Program;
+use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::fixture_catalog::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::all_entries;
 use vyre_reference::value::Value;
 
-fn entry(id: &'static str) -> &'static OpEntry {
+fn entry(id: &'static str) -> SemanticOperation {
     all_entries()
         .find(|entry| entry.id == id)
-        .unwrap_or_else(|| panic!("Fix: missing OpEntry for {id}"))
+        .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }
 
 fn bytes_from_f32(values: &[f32]) -> Vec<u8> {
@@ -30,7 +31,7 @@ fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn harness_path_outputs(entry: &'static OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
+fn harness_path_outputs(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let program = entry
         .program()
         .expect("Fix: registered library operation must provide a neutral builder");
@@ -94,7 +95,7 @@ proptest! {
         ];
         let direct = std::panic::catch_unwind(|| output_bytes(&entry("vyre-libs::nn::softmax").program().expect("Fix: registered library operation must provide a neutral builder"), &inputs))
             .expect("Fix: softmax reference path must not panic on NaN/Inf/subnormal inputs");
-        let harness = std::panic::catch_unwind(|| harness_path_outputs(entry("vyre-libs::nn::softmax"), &inputs))
+        let harness = std::panic::catch_unwind(|| harness_path_outputs(&entry("vyre-libs::nn::softmax"), &inputs))
             .expect("Fix: softmax universal harness path must not panic on NaN/Inf/subnormal inputs");
         prop_assert_eq!(direct, harness);
     }
@@ -107,7 +108,7 @@ proptest! {
         ];
         let direct = std::panic::catch_unwind(|| output_bytes(&entry("vyre-libs::nn::layer_norm").program().expect("Fix: registered library operation must provide a neutral builder"), &inputs))
             .expect("Fix: layer_norm reference path must not panic on NaN/Inf/subnormal inputs");
-        let harness = std::panic::catch_unwind(|| harness_path_outputs(entry("vyre-libs::nn::layer_norm"), &inputs))
+        let harness = std::panic::catch_unwind(|| harness_path_outputs(&entry("vyre-libs::nn::layer_norm"), &inputs))
             .expect("Fix: layer_norm universal harness path must not panic on NaN/Inf/subnormal inputs");
         prop_assert_eq!(direct, harness);
     }
@@ -122,7 +123,7 @@ proptest! {
         ];
         let direct = std::panic::catch_unwind(|| output_bytes(&entry("vyre-libs::nn::attention").program().expect("Fix: registered library operation must provide a neutral builder"), &inputs))
             .expect("Fix: attention reference path must not panic on NaN/Inf/subnormal inputs");
-        let harness = std::panic::catch_unwind(|| harness_path_outputs(entry("vyre-libs::nn::attention"), &inputs))
+        let harness = std::panic::catch_unwind(|| harness_path_outputs(&entry("vyre-libs::nn::attention"), &inputs))
             .expect("Fix: attention universal harness path must not panic on NaN/Inf/subnormal inputs");
         prop_assert_eq!(direct, harness);
     }

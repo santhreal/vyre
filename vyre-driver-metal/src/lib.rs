@@ -9,6 +9,9 @@ use vyre_driver::backend::{BackendError, VyreBackend};
 
 /// Stable backend id for native Metal execution.
 pub const METAL_BACKEND_ID: &str = "metal";
+/// Validated target identity owned by the Metal driver.
+pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
+    vyre_foundation::operation::TargetId::expect_valid(METAL_BACKEND_ID);
 
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -52,8 +55,12 @@ pub fn acquire() -> Result<Box<dyn VyreBackend>, BackendError> {
 inventory::submit! {
     vyre_driver::backend::BackendRegistration {
         id: METAL_BACKEND_ID,
+        target_id: METAL_TARGET_ID,
+        payload_format: Some(target_compiler::METAL_TARGET_FORMAT),
+        reference_oracle: false,
         factory: acquire,
         supported_ops: vyre_driver::backend::core_supported_ops,
+        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
@@ -96,7 +103,8 @@ mod tests {
     #[cfg(not(any(target_os = "macos", target_os = "ios")))]
     #[test]
     fn non_apple_build_does_not_register_fake_backend() {
-        let registered = vyre_driver::backend::registered_backends();
+        let registered =
+            vyre_driver::backend::registered_backends().expect("valid backend registry");
         assert!(
             registered
                 .iter()
@@ -226,16 +234,19 @@ mod tests {
         assert_eq!(backend.id(), METAL_BACKEND_ID);
         assert!(
             vyre_driver::backend::registered_backends()
+                .expect("valid backend registry")
                 .iter()
                 .any(|registration| registration.id == METAL_BACKEND_ID),
             "Fix: Apple Metal builds must submit a real backend registration."
         );
         assert!(
-            vyre_driver::backend::backend_dispatches(METAL_BACKEND_ID),
+            vyre_driver::backend::backend_dispatches(METAL_BACKEND_ID)
+                .expect("valid backend registry"),
             "Fix: Apple Metal registration must declare live dispatch capability."
         );
         assert_eq!(
-            vyre_driver::backend::backend_precedence(METAL_BACKEND_ID),
+            vyre_driver::backend::backend_precedence(METAL_BACKEND_ID)
+                .expect("valid backend registry"),
             25,
             "Fix: Metal precedence must stay above portable fallbacks only after live native dispatch exists."
         );

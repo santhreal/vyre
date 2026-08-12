@@ -161,10 +161,10 @@ fn schema_rows_cover_every_required_operation_contract() {
     }
 }
 
-/// Runtime dialect operations must share the same authority as Program-backed operations.
+/// Runtime operations share the canonical semantic-operation authority.
 ///
-/// This prevents the five live `OpDef` registrations from disappearing behind a
-/// 360-row `OpEntry` count while the backend matrix still requires 365 operations.
+/// This prevents signature-only records from disappearing behind the
+/// Program-backed operation count.
 #[test]
 fn runtime_dialect_contracts_are_typed_and_fail_closed_without_reference_fallback() {
     let schema = read_schema();
@@ -286,6 +286,20 @@ fn disabled_reference_oracle_fails_closed() {
             .find(|operation| operation["oracle"]["reference_eval"] == true)
             .expect("Fix: live schema must include a reference-evaluated operation");
         operation["oracle"]["reference_eval"] = Value::Bool(false);
+    });
+}
+
+/// Target facets are a sorted identity join, not free-form catalog prose.
+#[test]
+fn malformed_target_facets_fail_closed() {
+    assert_mutation_rejected("target facets must be", |schema| {
+        let operation = schema["operations"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|operation| !operation["target_facets"].as_array().unwrap().is_empty())
+            .expect("Fix: live schema must include a target-backed operation");
+        operation["target_facets"] = serde_json::json!(["wgpu", "", "wgpu"]);
     });
 }
 

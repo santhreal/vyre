@@ -69,6 +69,7 @@ impl<K, V> vyre_driver_wgpu::runtime::cache::lru::IntrusiveLru<K, V> where K: co
 pub async fn vyre_driver_wgpu::runtime::device::acquire_gpu() -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub async fn vyre_driver_wgpu::runtime::device::acquire_gpu_for_adapter(index: usize) -> core::result::Result<((wgpu::api::device::Device, wgpu::api::queue::Queue), wgpu_types::AdapterInfo, vyre_driver_wgpu::runtime::device::EnabledFeatures), vyre_driver::backend::error::BackendError>
 pub const vyre_driver_wgpu::WGPU_BACKEND_ID: &str
+pub const vyre_driver_wgpu::WGPU_TARGET_ID: vyre_foundation::operation::TargetId
 pub const vyre_driver_wgpu::runtime::cache::lru::DEFAULT_INTRUSIVE_LRU_CAPACITY: usize
 pub const vyre_driver_wgpu::runtime::cache::tiered_cache::LruPolicy::DEFAULT_THRESHOLD: u32
 pub const vyre_driver_wgpu::runtime::indirect::INDIRECT_ARGS_BYTES: u64
@@ -329,7 +330,7 @@ pub fn vyre_driver_wgpu::runtime::readback_ring::ReadbackRingSet::with_requested
 pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::record_dispatch(&self) -> u64
 pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::record_stall(&self)
 pub fn vyre_driver_wgpu::runtime::readback_ring::RingStats::update_peak(&self, current: u64)
-pub fn vyre_driver_wgpu::runtime::router::BackendRouter::enumerate_by_precedence() -> alloc::vec::Vec<&'static vyre_driver::backend::registry::inventory_streams::BackendRegistration>
+pub fn vyre_driver_wgpu::runtime::router::BackendRouter::enumerate_by_precedence() -> core::result::Result<alloc::vec::Vec<&'static vyre_driver::backend::registry::inventory_streams::BackendRegistration>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::router::BackendRouter::new() -> Self
 pub fn vyre_driver_wgpu::runtime::router::BackendRouter::pick(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_driver_wgpu::runtime::router::RouterDecision, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_wgpu::runtime::router::BackendRouter::pick_with_override(&self, _program: &vyre_foundation::ir_inner::model::program::core::Program, source: vyre_driver_wgpu::runtime::router::Override<'_>) -> core::result::Result<vyre_driver_wgpu::runtime::router::RouterDecision, vyre_driver::backend::error::BackendError>

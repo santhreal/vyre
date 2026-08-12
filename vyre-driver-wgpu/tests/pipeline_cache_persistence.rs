@@ -10,7 +10,8 @@ use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::ProgramGraph;
-use vyre_libs::fixture_catalog::{fp_contract, OpEntry};
+use vyre_foundation::operation::SemanticOperation;
+use vyre_libs::fixture_catalog::fp_contract;
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
@@ -18,7 +19,7 @@ const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
 const PIPELINE_CACHE_CASE: &str = "vyre-libs::nn::softmax";
 const CACHE_HIT_LATENCY_BUDGET: Duration = Duration::from_millis(500);
 
-fn compile_case(case: &OpEntry) -> (Duration, Vec<Vec<u8>>) {
+fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
     let inputs = (case
         .test_inputs
         .expect("Fix: persistence regression requires deterministic test inputs"))(
@@ -165,7 +166,7 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
     (Duration::from_nanos(nanos), outputs)
 }
 
-fn helper_case(case_id: &str) -> &'static OpEntry {
+fn helper_case(case_id: &str) -> SemanticOperation {
     vyre_libs::fixture_catalog::all_entries()
         .find(|entry| entry.id == case_id)
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
@@ -218,7 +219,7 @@ fn compiled_pipeline_cache_helper_process() {
     };
     let case_id =
         std::env::var(HELPER_CASE_ID).expect("Fix: helper process must receive a harness case id");
-    let (compile_time, output) = compile_case(helper_case(&case_id));
+    let (compile_time, output) = compile_case(&helper_case(&case_id));
     fs::write(
         output_root.join("compile_nanos.txt"),
         compile_time.as_nanos().to_string(),

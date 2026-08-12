@@ -510,7 +510,7 @@ fn usize_from_u32(value: u32, field: &'static str) -> usize {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || four_russians_apply_byte_lut("lhs", "rhs", "lut", "out", 2),
         Some(|| {
@@ -531,7 +531,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         DENSE_MATVEC_OP_ID,
         || four_russians_dense_matvec_byte_lut("frontier", "tile_lut", "out", 1, 1),
         Some(|| {

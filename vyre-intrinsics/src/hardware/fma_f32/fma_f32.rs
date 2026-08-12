@@ -61,7 +61,7 @@ fn expected_output() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::harness::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         id: OP_ID,
         semantic_version: 1,
         signature: Some(crate::harness::F32_TERNARY_SIGNATURE),

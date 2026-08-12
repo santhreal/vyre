@@ -194,7 +194,7 @@ fn fixture_outputs() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || base64_decode("input", "output", 8),
         Some(fixture_inputs),

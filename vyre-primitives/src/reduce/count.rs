@@ -23,7 +23,7 @@ pub fn cpu_ref(bitset: &[u32]) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || reduce_count("bitset", "out", 2),
         Some(|| {

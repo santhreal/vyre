@@ -21,8 +21,8 @@ private consumer tree into a platform crate.
 ## Tier 2.5 substrate: `vyre-primitives`
 
 The substrate every downstream analyzer lowers into. Every feature-gated domain
-ships a CPU reference, a `fn(...) -> Program` builder, and `OpEntry`
-registration.
+ships a CPU reference, a `fn(...) -> Program` builder, and one canonical
+`OperationRegistration`.
 
 
 | domain      | feature     | purpose                                                                                                                                                                   |

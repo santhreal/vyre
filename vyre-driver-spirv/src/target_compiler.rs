@@ -6,6 +6,7 @@ use vyre_megakernel::{
 
 use crate::{backend::SpirvBackend, SPIRV_BACKEND_ID};
 
+pub(crate) const SPIRV_TARGET_FORMAT: &str = "spv";
 const SPIRV_TARGET_FORMAT_VERSION: u16 = 1;
 
 pub(crate) struct SpirvTargetCompiler {
@@ -34,7 +35,7 @@ impl TargetCompiler for SpirvTargetCompiler {
 }
 
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
-    let format = TargetPayloadFormat::new("spv", SPIRV_TARGET_FORMAT_VERSION).map_err(|error| {
+    let format = TargetPayloadFormat::new(SPIRV_TARGET_FORMAT, SPIRV_TARGET_FORMAT_VERSION).map_err(|error| {
         BackendError::KernelCompileFailed {
             backend: SPIRV_BACKEND_ID.to_string(),
             compiler_message: format!(

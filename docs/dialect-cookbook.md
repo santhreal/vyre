@@ -205,9 +205,12 @@ must not accept a caller-owned `Program` or run another optimization route.
 ```rust
 inventory::submit! {
     vyre_driver::BackendRegistration {
-        id: "my-backend",
+        id: BACKEND_ID,
+        target_id: TARGET_ID,
+        payload_format: Some(TARGET_PAYLOAD_FORMAT),
         factory: acquire_backend,
         supported_ops,
+        semantic_operations,
         target_compiler: Some(target_compiler_factory),
         materializer: Some(materializer_factory),
     }

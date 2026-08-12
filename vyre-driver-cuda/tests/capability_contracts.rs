@@ -164,11 +164,11 @@ fn cuda_backend_caps_match_driver_attributes() {
 #[test]
 fn cuda_is_canonical_dispatch_backend_when_linked() {
     assert!(
-        vyre_driver::backend::backend_precedence("cuda") < 10,
+        vyre_driver::backend::backend_precedence("cuda").expect("valid backend registry") < 10,
         "Fix: CUDA must outrank wgpu for this release when both live dispatch backends are linked."
     );
     assert!(
-        vyre_driver::backend::backend_dispatches("cuda"),
+        vyre_driver::backend::backend_dispatches("cuda").expect("valid backend registry"),
         "Fix: CUDA must advertise live dispatch capability for release routing."
     );
 }

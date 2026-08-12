@@ -4,8 +4,7 @@
 //! neutral program builders and deterministic byte fixtures; it has no backend
 //! or harness-crate dependency.
 
-pub use vyre_foundation::operation::OperationRegistration as OpEntry;
-use vyre_foundation::operation::{OperationRegistry, OperationTier};
+use vyre_foundation::operation::{OperationRegistry, OperationTier, SemanticOperation};
 /// Floating-point parity policy for upper execution harnesses.
 pub mod fp_contract;
 
@@ -17,7 +16,7 @@ pub type InputsFn = vyre_foundation::operation::OperationFixtures;
 pub type ExpectedFn = vyre_foundation::operation::OperationFixtures;
 
 /// Iterate over canonical library composition registrations.
-pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
+pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()
         .iter()
         .filter(|entry| entry.tier == OperationTier::Library)

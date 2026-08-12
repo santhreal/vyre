@@ -320,7 +320,7 @@ fn mat_vec_into(matrix: &[f64], vector: &[f64], n: usize, out: &mut [f64]) {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || qsvt_block_encode("a", "norm", "a_scaled", 4),
         Some(|| {

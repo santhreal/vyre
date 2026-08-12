@@ -81,7 +81,7 @@ pub fn try_cpu_ref_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || scatter("src", "indices", "dst", 4),
         Some(|| {

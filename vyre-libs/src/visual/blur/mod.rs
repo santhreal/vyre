@@ -394,7 +394,7 @@ fn gaussian_blur_pass(
 pub use vyre_primitives::math::conv1d::gaussian_weights;
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

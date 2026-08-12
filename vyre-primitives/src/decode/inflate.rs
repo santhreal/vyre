@@ -184,7 +184,7 @@ pub fn inflate_stored(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         INFLATE_STORED_OP_ID,
         || inflate_stored("input", "output", "inflated_len", 10),
         Some(|| vec![vec![

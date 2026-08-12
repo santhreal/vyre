@@ -585,7 +585,7 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_MAX_PASS_OP_ID,
         || attention_max_pass_program("q", "k", "out", 2, 2),
         Some(|| {
@@ -605,7 +605,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_SUM_PASS_OP_ID,
         || attention_sum_pass_program("q", "k", "max", "out", 2, 2),
         Some(|| {
@@ -626,7 +626,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         ATTENTION_WRITE_PASS_OP_ID,
         || {
             attention_write_pass_program(AttentionWritePassProgramSpec {

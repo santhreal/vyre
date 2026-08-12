@@ -210,7 +210,7 @@ pub fn reference_line_index(source: &[u8]) -> Vec<u32> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || line_index("source", "lines", 5),
         Some(|| {

@@ -110,25 +110,18 @@ pub fn inline_calls_with_mode(
     Ok(program.with_rewritten_wrapped_entry(entry))
 }
 
-/// Resolve inline calls against the process-wide dialect lookup.
+/// Resolve inline calls against the canonical semantic operation registry.
 ///
-/// Foundation does not host a dialect registry, so it asks through the
-/// `DialectLookup` dependency-inversion boundary that the driver layer
-/// installs. An op resolves when it is registered AND carries a
-/// composition body; intrinsics have no body to inline and stay
-/// unresolved, as does any op id when no provider is installed. Callers
-/// that need a different registry pass their own resolver to
-/// [`inline_calls_with_resolver`].
-///
-/// This is what lets a registered op call another registered op and still
-/// reach a backend. While this returned `None` unconditionally, the
-/// canonical pre-emit pipeline resolved nothing at all, so every
-/// `Expr::Call` outside `vyre-aot` failed with [`Error::InlineUnknownOp`].
+/// An operation resolves only when its sole semantic record carries a neutral
+/// composition body. Signature-only and target-only operations remain
+/// unresolved. Callers that need an isolated fixture registry pass an explicit
+/// resolver to [`inline_calls_with_resolver`].
 #[inline]
 #[must_use]
 pub fn default_resolver(op_id: &str) -> Option<Program> {
-    let lookup = crate::dispatch::dialect_lookup::dialect_lookup()?;
-    lookup.lookup(lookup.intern_op(op_id))?.program()
+    crate::operation::OperationRegistry::global()
+        .get(op_id)?
+        .program()
 }
 
 /// Whether the program contains any `Expr::Call` at all.

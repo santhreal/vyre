@@ -181,7 +181,7 @@ fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
 }
 
 // ───────────────────────────────────────────────────────────────────
-// Gate 3: Every OpEntry must declare test fixtures
+// Gate 3: Every semantic operation must declare test fixtures
 // ───────────────────────────────────────────────────────────────────
 
 #[test]

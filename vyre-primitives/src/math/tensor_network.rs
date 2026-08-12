@@ -137,7 +137,7 @@ pub fn try_greedy_contract_order_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || tn_pair_contract("a", "b", "c", 2, 2, 2),
         Some(|| {

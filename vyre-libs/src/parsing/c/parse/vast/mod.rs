@@ -58,8 +58,6 @@ pub use typedef_ann::{
 // while sharing one explicit helper surface. If a helper becomes specific to a
 // single pass, move it into that pass instead of growing this shared prelude.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::fixture_catalog::OpEntry;
 use vyre_primitives::predicate::node_kind;
 
 pub use super::vast_kinds::{

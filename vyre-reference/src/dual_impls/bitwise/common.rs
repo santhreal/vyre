@@ -153,6 +153,10 @@ macro_rules! define_binary_bitwise_dual {
                 reference_b::reference(input)
             }
         }
+
+        inventory::submit! {
+            $crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
+        }
     };
 }
 
@@ -190,6 +194,10 @@ macro_rules! define_unary_bitwise_dual {
             fn reference_b(input: &[u8]) -> Vec<u8> {
                 reference_b::reference(input)
             }
+        }
+
+        inventory::submit! {
+            $crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
         }
     };
 }

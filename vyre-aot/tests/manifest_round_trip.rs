@@ -1,6 +1,6 @@
 //! Manifest serialization contract for canonical artifact packages.
 
-use vyre_aot::artifact::Target;
+use vyre_aot::artifact::TargetId;
 use vyre_aot::manifest::Manifest;
 
 /// Regression: the packaging manifest must preserve canonical artifact identities exactly.
@@ -10,7 +10,8 @@ fn manifest_round_trips_through_serde_json() {
         schema: Manifest::SCHEMA_VERSION.to_string(),
         aot_version: "0.7.2".to_string(),
         artifact_name: "test-artifact".to_string(),
-        target: Target::Ptx,
+        target: TargetId::from_owned("external-manifest-target".to_string()).unwrap(),
+        target_payload_format: "external-payload-format".to_string(),
         envelope_file: "artifact.vmk.lzma".to_string(),
         envelope_compression: "lzma".to_string(),
         envelope_sha256_hex: "11".repeat(32),

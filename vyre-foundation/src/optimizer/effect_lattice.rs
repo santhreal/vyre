@@ -136,8 +136,7 @@ pub enum EffectLevel {
 }
 
 impl EffectLevel {
-    /// Lift a single-op `SideEffectClass` declaration into the lattice. Used
-    /// when scanning `OpDef` metadata to derive an op's lattice point.
+    /// Lift a single-operation `SideEffectClass` into the lattice.
     #[must_use]
     pub fn from_class(class: SideEffectClass) -> Self {
         match class {

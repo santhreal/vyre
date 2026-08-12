@@ -2,8 +2,8 @@
 //!
 //! Category A composition  -  the kernel body is
 //! [`vyre_primitives::hash::fnv1a::fnv1a32_program_dyn`]; the Tier-3
-//! wrapper stamps the `vyre-libs::hash::fnv1a32` op id, carries the
-//! `OpEntry` fixtures, and exposes the universal `(input, out)`
+//! wrapper stamps the `vyre-libs::hash::fnv1a32` operation id, carries the
+//! semantic operation fixtures, and exposes the universal `(input, out)`
 //! signature the harness uses.
 
 use vyre_foundation::ir::Program;
@@ -43,7 +43,7 @@ pub fn fnv1a32_n(input: &str, out: &str, n: u32) -> Program {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

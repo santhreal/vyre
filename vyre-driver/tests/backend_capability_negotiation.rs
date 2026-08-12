@@ -33,7 +33,7 @@ impl VyreBackend for MinimalBackend {
 #[test]
 fn unknown_backend_reports_no_dispatch_capability() {
     assert!(
-        !backend_dispatches("nonexistent-backend"),
+        !backend_dispatches("nonexistent-backend").expect("valid empty backend registry"),
         "Fix: unknown backends must report dispatches=false"
     );
 }
@@ -41,7 +41,7 @@ fn unknown_backend_reports_no_dispatch_capability() {
 #[test]
 fn unknown_backend_gets_lowest_precedence() {
     assert_eq!(
-        backend_precedence("nonexistent-backend"),
+        backend_precedence("nonexistent-backend").expect("valid empty backend registry"),
         u32::MAX,
         "Fix: unknown backends must get lowest precedence"
     );
@@ -50,7 +50,7 @@ fn unknown_backend_gets_lowest_precedence() {
 #[test]
 fn empty_registry_by_precedence_is_empty() {
     // vyre-driver has no backend dependencies, so the in-crate view is empty
-    let sorted = registered_backends_by_precedence();
+    let sorted = registered_backends_by_precedence().expect("valid empty backend registry");
     assert!(
         sorted.is_empty(),
         "Fix: vyre-driver alone must see zero backends; sorted list was non-empty"
@@ -60,9 +60,23 @@ fn empty_registry_by_precedence_is_empty() {
 #[test]
 fn empty_registry_iter_is_empty() {
     assert!(
-        registered_backends().is_empty(),
+        registered_backends()
+            .expect("valid empty backend registry")
+            .is_empty(),
         "Fix: vyre-driver alone must see zero backends"
     );
+}
+
+/// WHY: registry discovery must freeze once; rebuilding on each query would
+/// leak owned registration storage. This does not measure allocator internals.
+#[test]
+fn repeated_registry_queries_return_one_immutable_allocation() {
+    let first = registered_backends().expect("valid empty backend registry");
+    for _ in 0..1_024 {
+        let current = registered_backends().expect("valid empty backend registry");
+        assert_eq!(current.as_ptr(), first.as_ptr());
+        assert_eq!(current.len(), first.len());
+    }
 }
 
 #[test]

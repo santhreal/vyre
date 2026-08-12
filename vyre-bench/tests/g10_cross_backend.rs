@@ -15,8 +15,11 @@ fn test_cross_backend_elementwise() {
 
     // Get the list of dispatch-capable backends
     let backends: Vec<&str> = vyre_driver::backend::registered_backends_by_precedence_slice()
+        .expect("valid backend registry")
         .iter()
-        .filter(|reg| vyre_driver::backend::backend_dispatches(reg.id))
+        .filter(|reg| {
+            vyre_driver::backend::backend_dispatches(reg.id).expect("valid backend registry")
+        })
         .map(|reg| reg.id)
         .collect();
 

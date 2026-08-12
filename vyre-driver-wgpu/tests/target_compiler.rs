@@ -49,6 +49,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 #[test]
 fn registered_target_compiler_emits_selected_wgsl_bundle() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("WGPU target compiler registration must be linked");
@@ -69,6 +70,7 @@ fn registered_target_compiler_emits_selected_wgsl_bundle() {
 #[test]
 fn registered_target_facets_resolve_canonical_operations() {
     let facets = vyre_driver::backend::registered_target_operation_facets()
+        .expect("valid target facet registry")
         .iter()
         .filter(|facet| facet.target_id == vyre_driver_wgpu::WGPU_BACKEND_ID)
         .collect::<Vec<_>>();
@@ -92,6 +94,7 @@ fn registered_target_facets_resolve_canonical_operations() {
 #[test]
 fn registered_materializer_executes_authenticated_wgsl() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("WGPU materializer registration must be linked");

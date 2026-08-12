@@ -222,7 +222,7 @@ pub fn try_differentiable_argmax_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || {
             softmax_step("pre_exp", "out", 4)

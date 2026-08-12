@@ -10,14 +10,14 @@ use std::fs;
 use std::path::Path;
 
 use serde_json::json;
-use vyre_aot::{package_artifact, Target};
+use vyre_aot::package_artifact;
 
 fn package(dir: &Path) -> serde_json::Value {
     let envelope = common::compiled_artifact();
     package_artifact(
         dir,
         &envelope,
-        Target::Ptx,
+        common::fixture_target(),
         &[1_u8, 2, 3, 5, 8, 13, 21, 34],
         "generated-loader-contract",
         "",
@@ -34,11 +34,13 @@ fn write_manifest(dir: &Path, manifest: &serde_json::Value) {
     .expect("manifest write must succeed");
 }
 
+/// WHY: persisted manifests from the pre-target-identity schema must fail before
+/// any artifact bytes are trusted. This does not validate later schema migrations.
 #[test]
-fn generated_loader_rejects_schema_mismatch_before_envelope_reads() {
+fn generated_loader_rejects_stale_v3_schema_before_envelope_reads() {
     let dir = tempfile::tempdir().expect("tempdir must be available");
     let mut manifest = package(dir.path());
-    manifest["schema"] = json!("vyre-aot-manifest-v2");
+    manifest["schema"] = json!("vyre-aot-manifest-v3");
     write_manifest(dir.path(), &manifest);
     fs::remove_file(dir.path().join("artifact.vmk.lzma")).unwrap();
 
@@ -86,7 +88,7 @@ fn generated_loader_projects_target_module_and_abi_from_envelope() {
     package_artifact(
         dir.path(),
         &expected,
-        Target::Ptx,
+        common::fixture_target(),
         &[1_u8, 2, 3, 5, 8, 13, 21, 34],
         "generated-loader-contract",
         "",
@@ -98,6 +100,10 @@ fn generated_loader_projects_target_module_and_abi_from_envelope() {
     assert_eq!(loaded.kernel_bytes, b"target-payload-fixture");
     assert_eq!(loaded.weight_bytes, [1_u8, 2, 3, 5, 8, 13, 21, 34]);
     assert_eq!(loaded.manifest.entry_point, "main");
+    assert_eq!(
+        loaded.manifest.target_payload_format,
+        "fixture-target-format"
+    );
     assert_eq!(loaded.manifest.dispatch.workgroup_size, [64, 1, 1]);
     assert_eq!(loaded.manifest.dispatch.grid_size, [1, 1, 1]);
     assert_eq!(loaded.manifest.buffers.len(), 2);

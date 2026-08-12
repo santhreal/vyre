@@ -1,15 +1,16 @@
 //! Cat-C hardware intrinsic differential harness.
 //!
-//! Iterates every registered `OpEntry` whose id begins with
+//! Iterates every canonical `SemanticOperation` whose id begins with
 //! `vyre-intrinsics::hardware::` and asserts the CPU reference matches
 //! the declared `expected_output` bit-for-bit. This is the lightweight
 //! gate; GPU conform tests run separately through the backend lowering
 //! and dispatch suites.
 
-use vyre_intrinsics::harness::{all_entries, OpEntry};
+use vyre_foundation::operation::SemanticOperation;
+use vyre_intrinsics::harness::all_entries;
 use vyre_reference::value::Value;
 
-fn run_cpu(entry: &OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
+fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let program = entry
         .program()
         .expect("Fix: registered hardware intrinsic must provide a neutral builder");
@@ -43,7 +44,7 @@ fn hardware_intrinsics_match_expected_output() {
             entry.id
         );
         for (case, (case_inputs, case_expected)) in inputs.iter().zip(expected.iter()).enumerate() {
-            let got = run_cpu(entry, case_inputs);
+            let got = run_cpu(&entry, case_inputs);
             assert_eq!(
                 &got, case_expected,
                 "{} case {}: CPU ref drifted from expected_output",

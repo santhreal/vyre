@@ -44,7 +44,6 @@ mod ownership;
 mod package_readiness;
 mod platform_boundary;
 mod print_composition;
-mod recursion_gate;
 mod release_backend_rows;
 mod release_benchmarks;
 mod release_conformance;
@@ -80,7 +79,7 @@ fn print_help() {
            shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer\n\
            check-cat-a                         Run every Cat-A pre-merge gate\n\
            check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)\n\
-           compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)\n\
+           compile <program.vir> --to TARGET   Emit authenticated payloads through linked target compiler facets\n\
            conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage\n\
            dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version\n\
            docs-check                           Validate manifest-backed documentation lifecycle and generated navigation\n\
@@ -106,7 +105,7 @@ fn print_help() {
            release-conformance [--backend all] Generate real backend conformance artifacts\n\
            release-evidence                    Generate cheap structural release evidence artifacts\n\
            vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure\n\
-           recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
+           primitive-admission-gate             Enforce canonical LEGO primitive adoption and exceptions\n\
            heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls\n\
            verify-rewrite-proofs               Verify optimizer rewrite proof fixtures\n\
            hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers\n\
@@ -156,7 +155,7 @@ fn main() {
         "release-conformance" => release_conformance::run(&args),
         "release-evidence" => release_evidence::run(&args),
         "vyre-release-gate" => vyre_release_gate::run(&args),
-        "recursion-gate" => recursion_gate::run(&args),
+        "primitive-admission-gate" => lego_audit::run_primitive_admission_gate(),
         "heuristic-audit" => heuristic_audit::run(&args),
         "hygiene-matrix" => hygiene_matrix::run(&args),
         "trace-f32" => trace_f32::run_cmd(&args),

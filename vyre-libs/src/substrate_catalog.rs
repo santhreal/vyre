@@ -3,7 +3,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::builder::{
     build_indexed_map, strided_accumulate_child, INDEXED_MAP_OP_ID, STRIDED_ACCUMULATE_OP_ID,
 };
-use crate::fixture_catalog::OpEntry;
 use crate::region::wrap_anonymous;
 
 fn u32s(words: &[u32]) -> Vec<u8> {
@@ -60,7 +59,7 @@ fn strided_accumulate_program() -> Program {
 }
 
 inventory::submit! {
-    OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,
@@ -77,7 +76,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

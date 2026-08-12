@@ -20,8 +20,8 @@ use crate::{
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] for uniform-control-flow violations,
-/// out-of-bounds stores, malformed loops, or expression evaluation failures.
+/// Returns [`ReferenceError`] for uniform-control-flow violations, out-of-bounds
+/// stores, malformed loops, or expression evaluation failures.
 pub fn step<'a>(
     invocation: &mut Invocation<'a>,
     memory: &mut Memory,

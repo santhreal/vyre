@@ -600,7 +600,7 @@ fn symmetric_eigen_jacobi_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         // m = r_prev*nk = 4 rows, n = rem = 2 columns, r_next = 1 (rank-1 truncation).
         //

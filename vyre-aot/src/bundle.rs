@@ -33,7 +33,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 }
 use thiserror::Error;
 
-use crate::artifact::Target;
+use crate::artifact::{registration, TargetId};
 use crate::launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 use crate::manifest::Manifest;
 use crate::VERSION;
@@ -90,15 +90,15 @@ pub enum BundleError {
 pub fn bundle(
     out_dir: &Path,
     envelope: &ArtifactEnvelope,
-    target: Target,
+    target: TargetId,
     weights: &[u8],
     artifact_name: &str,
     launcher_opts: &LauncherOpts,
     notes: &str,
 ) -> Result<DeploymentBundle, BundleError> {
-    validate_artifact_for_bundle(envelope, target, weights)?;
+    validate_artifact_for_bundle(envelope, &target, weights)?;
     let launcher_tree: BTreeMap<PathBuf, String> =
-        emit_launcher_rust(envelope, target, launcher_opts)?;
+        emit_launcher_rust(envelope, target.clone(), launcher_opts)?;
     fs::create_dir_all(out_dir)?;
     let mut written =
         write_package_files(out_dir, envelope, target, weights, artifact_name, notes)?;
@@ -142,12 +142,12 @@ pub fn bundle(
 pub fn package_artifact(
     out_dir: &Path,
     envelope: &ArtifactEnvelope,
-    target: Target,
+    target: TargetId,
     weights: &[u8],
     artifact_name: &str,
     notes: &str,
 ) -> Result<DeploymentBundle, BundleError> {
-    validate_artifact_for_bundle(envelope, target, weights)?;
+    validate_artifact_for_bundle(envelope, &target, weights)?;
     fs::create_dir_all(out_dir)?;
     Ok(DeploymentBundle {
         files: write_package_files(out_dir, envelope, target, weights, artifact_name, notes)?,
@@ -157,7 +157,7 @@ pub fn package_artifact(
 fn write_package_files(
     out_dir: &Path,
     envelope: &ArtifactEnvelope,
-    target: Target,
+    target: TargetId,
     weights: &[u8],
     artifact_name: &str,
     notes: &str,
@@ -173,12 +173,13 @@ fn write_package_files(
     let weights_path = out_dir.join(&weights_filename);
     fs::write(&weights_path, &weights_compressed)?;
 
-    let target_payload = target_payload(envelope, target)?;
+    let target_payload = target_payload(envelope, &target)?;
     let manifest = Manifest {
         schema: Manifest::SCHEMA_VERSION.to_string(),
         aot_version: VERSION.to_string(),
         artifact_name: artifact_name.to_string(),
         target,
+        target_payload_format: target_payload.format().identity().to_string(),
         envelope_file: envelope_filename,
         envelope_compression: "lzma".to_string(),
         envelope_sha256_hex: sha256_hex(&envelope_bytes),
@@ -234,7 +235,7 @@ pub fn read_bundle_artifact(
             "neutral artifact digest does not match manifest identity".to_string(),
         ));
     }
-    if digest_hex(target_payload(&envelope, manifest.target)?.digest())
+    if digest_hex(target_payload(&envelope, &manifest.target)?.digest())
         != manifest.target_payload_digest_hex
     {
         return Err(BundleError::InvalidArtifact(
@@ -246,7 +247,7 @@ pub fn read_bundle_artifact(
 
 fn validate_artifact_for_bundle(
     envelope: &ArtifactEnvelope,
-    target: Target,
+    target: &TargetId,
     weights: &[u8],
 ) -> Result<(), BundleError> {
     let payload = target_payload(envelope, target)?;
@@ -374,11 +375,18 @@ fn validate_weight_payload_fits_first_finite_resource(
     Ok(())
 }
 
-fn target_payload(
-    envelope: &ArtifactEnvelope,
-    target: Target,
-) -> Result<&TargetPayload, BundleError> {
-    let identity = target.aot_target_id();
+fn target_payload<'envelope>(
+    envelope: &'envelope ArtifactEnvelope,
+    target: &TargetId,
+) -> Result<&'envelope TargetPayload, BundleError> {
+    let registration =
+        registration(target).map_err(|error| BundleError::InvalidArtifact(error.to_string()))?;
+    let identity = registration.payload_format.ok_or_else(|| {
+        BundleError::InvalidArtifact(format!(
+            "target `{}` has no registered target-payload format",
+            target.as_str()
+        ))
+    })?;
     let mut matches = envelope
         .target_payloads()
         .iter()

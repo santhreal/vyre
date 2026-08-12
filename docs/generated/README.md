@@ -4,4 +4,4 @@
 
 `OP_INVENTORY.md` is a browsing view generated from the same live schema by `cargo_full run --bin xtask -- list-ops --write docs/generated/OP_INVENTORY.md`.
 
-Do not hand-edit either artifact. Regenerate them after changing an `OpEntry`, runtime `OpDef`, built `Program`, Cargo feature, law registration, or backend matrix row.
+Do not hand-edit either artifact. Regenerate them after changing an `OperationRegistration`, built `Program`, callable signature, reference or target facet, Cargo feature, law registration, or backend matrix row.

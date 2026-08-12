@@ -194,7 +194,7 @@ fn poly5_fixture_expected(values: &[f32]) -> Vec<f32> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         POLY5_F32_OP_ID,
         || newton_schulz_poly5_f32("mat", "output", 2, 2),
         Some(|| vec![vec![

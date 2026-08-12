@@ -157,7 +157,7 @@ pub fn classify_from_histogram(histogram: &[u32; 256], count: u32) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         ENCODING_CLASSIFY_OP_ID,
         || encoding_classify("histogram", "encoding", 5),
         Some(|| {

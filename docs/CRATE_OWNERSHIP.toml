@@ -1029,6 +1029,17 @@ boundary = "private"
 seam = "lowering"
 
 [[crate.dependency]]
+package = "vyre-megakernel"
+purpose = "neutral artifact compilation and target payload contracts"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "megakernel-compiler"
+
+[[crate.dependency]]
 package = "vyre-primitives"
 purpose = "reusable semantic Program builders"
 features = ["bitset", "fixpoint", "graph", "hash", "inventory-registry", "label", "matching", "math", "nn", "parsing", "predicate", "reduce", "text"]

@@ -463,7 +463,9 @@ mod tests {
     #[test]
     fn neutral_driver_alone_sees_no_backends() {
         assert!(
-            registered_backends().is_empty(),
+            registered_backends()
+                .expect("valid empty backend registry")
+                .is_empty(),
             "the neutral driver crate links no concrete backend registrations. \
              Fix: if a concrete backend crate was added as a dependency, move this \
              assertion into that crate's test suite."

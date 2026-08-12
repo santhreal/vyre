@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use vyre_megakernel::target::TargetModuleBundle;
 use vyre_megakernel::{ArtifactEnvelope, TargetResourceAccess, TargetResourceMemory};
 
-const MANIFEST_SCHEMA_VERSION: &str = "vyre-aot-manifest-v3";
+const MANIFEST_SCHEMA_VERSION: &str = "vyre-aot-manifest-v4";
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,6 +22,7 @@ struct PackageManifest {
     aot_version: String,
     artifact_name: String,
     target: String,
+    target_payload_format: String,
     envelope_file: String,
     envelope_compression: String,
     envelope_sha256_hex: String,
@@ -70,6 +71,7 @@ pub struct Manifest {
     pub aot_version: String,
     pub artifact_name: String,
     pub target: String,
+    pub target_payload_format: String,
     pub entry_point: String,
     pub dispatch: DispatchConfig,
     pub buffers: Vec<BufferEntry>,
@@ -111,17 +113,17 @@ pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error
     let mut matching = envelope
         .target_payloads()
         .iter()
-        .filter(|payload| payload.format().identity() == package.target);
+        .filter(|payload| payload.format().identity() == package.target_payload_format);
     let payload = matching.next().ok_or_else(|| {
         format!(
-            "artifact envelope has no {:?} target payload. Fix: package the selected compiler payload.",
-            package.target
+            "artifact envelope has no {:?} target payload for target {:?}. Fix: package the selected compiler payload.",
+            package.target_payload_format, package.target
         )
     })?;
     if matching.next().is_some() {
         return Err(format!(
-            "artifact envelope has multiple {:?} target payload versions. Fix: package one exact target format.",
-            package.target
+            "artifact envelope has multiple {:?} target payload versions for target {:?}. Fix: package one exact target format.",
+            package.target_payload_format, package.target
         )
         .into());
     }
@@ -216,6 +218,7 @@ pub fn load_bundle(dir: &Path) -> Result<LoadedBundle, Box<dyn std::error::Error
             aot_version: package.aot_version,
             artifact_name: package.artifact_name,
             target: package.target,
+            target_payload_format: package.target_payload_format,
             entry_point: entry.name.clone(),
             dispatch: DispatchConfig {
                 workgroup_size: geometry.workgroup_size,
@@ -242,6 +245,7 @@ fn validate_package_manifest(manifest: &PackageManifest) -> Result<(), Box<dyn s
     if manifest.aot_version.is_empty()
         || manifest.artifact_name.is_empty()
         || manifest.target.is_empty()
+        || manifest.target_payload_format.is_empty()
     {
         return Err(
             "manifest identity fields are empty. Fix: regenerate the deployment bundle.".into(),

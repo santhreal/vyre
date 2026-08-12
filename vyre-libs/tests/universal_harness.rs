@@ -10,15 +10,16 @@ use vyre_driver::{
     backend::{backend_dispatches, registered_backends},
     BackendRegistration, DispatchConfig,
 };
+use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
-use vyre_libs::fixture_catalog::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::all_entries;
 use vyre_reference::value::Value;
 
 #[test]
 fn universal_cat_a_harness() {
     for entry in all_entries() {
-        let program = build_program(entry);
+        let program = build_program(&entry);
 
         assert_valid(&program, entry.id);
 
@@ -43,8 +44,8 @@ fn universal_cat_a_harness() {
             output_buffer_indices(&program).len()
         );
 
-        check_oracle(entry, &program, fingerprint);
-        check_registered_backends(entry, &program);
+        check_oracle(&entry, &program, fingerprint);
+        check_registered_backends(&entry, &program);
     }
 }
 /// WHY: every registered semantic program must already be at the optimizer
@@ -52,7 +53,7 @@ fn universal_cat_a_harness() {
 #[test]
 fn registered_optimizer_is_idempotent_for_all_cat_a_entries() {
     for entry in all_entries() {
-        let program = build_program(entry);
+        let program = build_program(&entry);
         let optimized_once = optimize(program).expect("registered optimizer must converge");
         let optimized_twice =
             optimize(optimized_once.clone()).expect("registered optimizer must converge");
@@ -94,7 +95,7 @@ fn assert_valid(program: &Program, id: &str) {
     );
 }
 
-fn check_oracle(entry: &OpEntry, program: &Program, _fingerprint: Hash) {
+fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash) {
     let cpu_ref = entry.expected_output;
     if cpu_ref.is_none() {
         panic!(
@@ -198,7 +199,7 @@ fn le_word_at(bytes: &[u8], byte_index: usize) -> Option<u32> {
     Some(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
 }
 
-fn check_registered_backends(entry: &OpEntry, program: &Program) {
+fn check_registered_backends(entry: &SemanticOperation, program: &Program) {
     let Some(test_inputs) = entry.test_inputs else {
         panic!(
             "{} has no test_inputs. Fix: every Cat-A entry must provide backend input cases.",
@@ -212,13 +213,13 @@ fn check_registered_backends(entry: &OpEntry, program: &Program) {
     let input_cases = test_inputs();
     let expected_cases = expected_output();
 
-    for backend in registered_backends() {
+    for backend in registered_backends().expect("valid backend registry") {
         run_backend_contract(entry, program, backend, &input_cases, &expected_cases);
     }
 }
 
 fn run_backend_contract(
-    entry: &OpEntry,
+    entry: &SemanticOperation,
     program: &Program,
     backend: &BackendRegistration,
     input_cases: &[Vec<Vec<u8>>],
@@ -235,7 +236,7 @@ fn run_backend_contract(
         }
     };
 
-    if backend_dispatches(backend.id) {
+    if backend_dispatches(backend.id).expect("valid backend registry") {
         let lowered = optimize(program.clone()).expect("registered optimizer must converge");
         for (case_idx, (inputs, expected)) in input_cases.iter().zip(expected_cases).enumerate() {
             let actual = instance
@@ -280,7 +281,7 @@ fn output_buffer_indices(program: &Program) -> Vec<usize> {
         .collect()
 }
 
-fn build_program(entry: &OpEntry) -> Program {
+fn build_program(entry: &SemanticOperation) -> Program {
     entry
         .program()
         .expect("Fix: registered library operation must provide a neutral builder")

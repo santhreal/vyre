@@ -357,7 +357,7 @@ pub fn try_csr_queue_strided_forward_traverse_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         CSR_QUEUE_STRIDED_FORWARD_OP_ID,
         || csr_queue_strided_forward_traverse(
             "active_queue",

@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use vyre_driver::aot::{emit_aot_launcher_target, AotLauncherRequest};
-use vyre_driver_cuda as _;
+use vyre_driver_cuda::{self as _, CUDA_TARGET_ID};
 
 fn request(include_collectives: bool) -> AotLauncherRequest<'static> {
     request_with_ttt(include_collectives, false)
@@ -14,7 +14,7 @@ fn request_with_ttt(
     include_ttt_loop: bool,
 ) -> AotLauncherRequest<'static> {
     AotLauncherRequest {
-        target: "secondary_text",
+        target: CUDA_TARGET_ID,
         crate_name: "test-launcher",
         include_collectives,
         include_ttt_loop,
@@ -23,7 +23,7 @@ fn request_with_ttt(
 
 #[test]
 fn ptx_launcher_tree_has_required_files() {
-    let files = emit_aot_launcher_target("secondary_text", &request(true))
+    let files = emit_aot_launcher_target(&CUDA_TARGET_ID, &request(true))
         .expect("Fix: vyre-driver-cuda must register the PTX launcher emitter.");
 
     for path in ["src/main.rs", "src/cuda_ffi.rs", "src/nccl_ffi.rs"] {
@@ -43,7 +43,7 @@ fn ptx_launcher_tree_has_required_files() {
 
 #[test]
 fn ptx_launcher_main_calls_cuda_driver_api() {
-    let files = emit_aot_launcher_target("secondary_text", &request(true))
+    let files = emit_aot_launcher_target(&CUDA_TARGET_ID, &request(true))
         .expect("Fix: vyre-driver-cuda must emit PTX launcher files.");
     let main = &files.files[&PathBuf::from("src/main.rs")];
 
@@ -65,7 +65,7 @@ fn ptx_launcher_main_calls_cuda_driver_api() {
 
 #[test]
 fn ptx_launcher_collectives_are_optional() {
-    let with_collectives = emit_aot_launcher_target("secondary_text", &request(true))
+    let with_collectives = emit_aot_launcher_target(&CUDA_TARGET_ID, &request(true))
         .expect("Fix: PTX launcher with collectives must emit.");
     assert!(
         with_collectives
@@ -74,7 +74,7 @@ fn ptx_launcher_collectives_are_optional() {
         "Fix: collectives-enabled PTX launcher must include NCCL FFI."
     );
 
-    let without_collectives = emit_aot_launcher_target("secondary_text", &request(false))
+    let without_collectives = emit_aot_launcher_target(&CUDA_TARGET_ID, &request(false))
         .expect("Fix: PTX launcher without collectives must emit.");
     assert!(
         !without_collectives
@@ -86,7 +86,7 @@ fn ptx_launcher_collectives_are_optional() {
 
 #[test]
 fn ptx_launcher_ttt_loop_is_cuda_owned_not_rejected() {
-    let files = emit_aot_launcher_target("secondary_text", &request_with_ttt(false, true))
+    let files = emit_aot_launcher_target(&CUDA_TARGET_ID, &request_with_ttt(false, true))
         .expect("Fix: CUDA PTX launcher must own eval-time TTT loops instead of rejecting them.");
     let main = &files.files[&PathBuf::from("src/main.rs")];
 
@@ -112,7 +112,7 @@ fn ptx_launcher_ttt_loop_is_cuda_owned_not_rejected() {
 
 #[test]
 fn ptx_launcher_reuses_kernel_argument_storage_across_ttt_steps() {
-    let files = emit_aot_launcher_target("secondary_text", &request_with_ttt(false, true))
+    let files = emit_aot_launcher_target(&CUDA_TARGET_ID, &request_with_ttt(false, true))
         .expect("Fix: CUDA PTX launcher must emit reusable kernel argument storage.");
     let cuda_ffi = &files.files[&PathBuf::from("src/cuda_ffi.rs")];
 
@@ -141,7 +141,7 @@ fn ptx_launcher_reuses_kernel_argument_storage_across_ttt_steps() {
 
 #[test]
 fn ptx_launcher_fails_loudly_on_manifest_size_overflow() {
-    let files = emit_aot_launcher_target("secondary_text", &request(false))
+    let files = emit_aot_launcher_target(&CUDA_TARGET_ID, &request(false))
         .expect("Fix: vyre-driver-cuda must emit PTX launcher files.");
     let main = &files.files[&PathBuf::from("src/main.rs")];
 

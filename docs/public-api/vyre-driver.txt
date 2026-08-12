@@ -4,7 +4,6 @@
 #[non_exhaustive] pub enum vyre_driver::SortBackend
 #[non_exhaustive] pub enum vyre_driver::SpecValue
 #[non_exhaustive] pub enum vyre_driver::SubgroupOp
-#[non_exhaustive] pub enum vyre_driver::Target
 #[non_exhaustive] pub enum vyre_driver::backend::BackendError
 #[non_exhaustive] pub enum vyre_driver::backend::ErrorCode
 #[non_exhaustive] pub enum vyre_driver::fusion::FusionDecision
@@ -12,12 +11,10 @@
 #[non_exhaustive] pub enum vyre_driver::registry::EnforceVerdict
 #[non_exhaustive] pub enum vyre_driver::registry::MigrationError
 #[non_exhaustive] pub enum vyre_driver::registry::MutationClass
-#[non_exhaustive] pub enum vyre_driver::registry::Target
 #[non_exhaustive] pub enum vyre_driver::registry::enforce::EnforceVerdict
 #[non_exhaustive] pub enum vyre_driver::registry::migration::AttrValue
 #[non_exhaustive] pub enum vyre_driver::registry::migration::MigrationError
 #[non_exhaustive] pub enum vyre_driver::registry::mutation::MutationClass
-#[non_exhaustive] pub enum vyre_driver::registry::registry::Target
 #[non_exhaustive] pub enum vyre_driver::routing::SortBackend
 #[non_exhaustive] pub enum vyre_driver::specialization::SpecValue
 #[non_exhaustive] pub enum vyre_driver::subgroup::SubgroupOp
@@ -54,7 +51,6 @@ impl core::error::Error for vyre_driver::megakernel_frontier::MegakernelFrontier
 impl core::error::Error for vyre_driver::multi_query_execution::MultiQueryExecutionError
 impl core::error::Error for vyre_driver::persistent::QueueFull
 impl core::error::Error for vyre_driver::registry::migration::MigrationError
-impl core::error::Error for vyre_driver::registry::registry::DuplicateOpIdError
 impl core::error::Error for vyre_driver::residency::ResidentGraphReuseTelemetryError
 impl core::error::Error for vyre_driver::result_compaction::ResultCompactionError
 impl core::error::Error for vyre_driver::tuner::NaturalGradientTuningError
@@ -74,7 +70,6 @@ impl core::fmt::Display for vyre_driver::multi_query_execution::MultiQueryExecut
 impl core::fmt::Display for vyre_driver::persistent::QueueFull
 impl core::fmt::Display for vyre_driver::registry::migration::MigrationError
 impl core::fmt::Display for vyre_driver::registry::migration::Semver
-impl core::fmt::Display for vyre_driver::registry::registry::DuplicateOpIdError
 impl core::fmt::Display for vyre_driver::residency::ResidentGraphReuseTelemetryError
 impl core::fmt::Display for vyre_driver::result_compaction::ResultCompactionError
 impl core::fmt::Display for vyre_driver::tuner::NaturalGradientTuningError
@@ -83,12 +78,8 @@ impl inventory::Collect for vyre_driver::BackendRegistration
 impl inventory::Collect for vyre_driver::aot::AotLauncherEmitter
 impl inventory::Collect for vyre_driver::backend::BackendCapability
 impl inventory::Collect for vyre_driver::backend::BackendPrecedence
-impl inventory::Collect for vyre_driver::registry::dialect::DialectRegistration
-impl inventory::Collect for vyre_driver::registry::dialect::OpBackendTarget
-impl inventory::Collect for vyre_driver::registry::dialect::OpDefRegistration
 impl inventory::Collect for vyre_driver::registry::migration::Deprecation
 impl inventory::Collect for vyre_driver::registry::migration::Migration
-impl serde_core::ser::Serialize for vyre_driver::registry::registry::Target
 impl vyre_driver::BackendError
 impl vyre_driver::BackendRegistration
 impl vyre_driver::BindingSet
@@ -150,17 +141,12 @@ impl vyre_driver::pipeline::cache::PipelineCacheMissEvidence
 impl vyre_driver::pipeline::cache::PipelineCacheMissReason
 impl vyre_driver::pipeline::cache::PipelineFeatureFlags
 impl vyre_driver::pipeline::hashing::PipelineDeviceFingerprint
-impl vyre_driver::registry::dialect::OpDefRegistration
 impl vyre_driver::registry::migration::AttrMap
 impl vyre_driver::registry::migration::Deprecation
 impl vyre_driver::registry::migration::Migration
 impl vyre_driver::registry::migration::MigrationRegistry
 impl vyre_driver::registry::migration::Semver
 impl vyre_driver::registry::mutation::MutationClass
-impl vyre_driver::registry::registry::DialectRegistry
-impl vyre_driver::registry::registry::DuplicateOpIdError
-impl vyre_driver::registry::registry::Target
-impl vyre_driver::registry::toml_loader::TomlDialectStore
 impl vyre_driver::reservation_policy::ReservationPolicy
 impl vyre_driver::residency::ResidentGraphReuseTelemetry
 impl vyre_driver::resident_transfer_fusion::ResidentUploadBytes<'_>
@@ -191,10 +177,7 @@ impl vyre_driver::tuner::TunerProgramKey
 impl vyre_driver::validation::LaunchGeometryLimits
 impl vyre_driver::validation::ProgramValidationCaps
 impl vyre_driver::validation::ValidationCache
-impl vyre_foundation::dispatch::dialect_lookup::DialectLookup for vyre_driver::registry::registry::DialectRegistry
-impl vyre_foundation::dispatch::dialect_lookup::private::Sealed for vyre_driver::registry::registry::DialectRegistry
 impl<'a> vyre_driver::device_extraction::ExtractionDevice<'a>
-impl<'de> serde_core::de::Deserialize<'de> for vyre_driver::registry::registry::Target
 impl<A: vyre_driver::registry::enforce::EnforceGate, B: vyre_driver::registry::enforce::EnforceGate> vyre_driver::registry::enforce::Chain<A, B>
 impl<A: vyre_driver::registry::enforce::EnforceGate, B: vyre_driver::registry::enforce::EnforceGate> vyre_driver::registry::enforce::EnforceGate for vyre_driver::registry::enforce::Chain<A, B>
 impl<K, S> core::default::Default for vyre_driver::reservation_policy::ReusableIndexScratch<K, S> where S: core::default::Default
@@ -239,15 +222,11 @@ pub const fn vyre_driver::pipeline::cache::PipelineFeatureFlags::bits(self) -> u
 pub const fn vyre_driver::pipeline::cache::PipelineFeatureFlags::contains(self, other: Self) -> bool
 pub const fn vyre_driver::pipeline::cache::PipelineFeatureFlags::empty() -> Self
 pub const fn vyre_driver::pipeline::cache::PipelineFeatureFlags::union(self, other: Self) -> Self
-pub const fn vyre_driver::registry::dialect::OpDefRegistration::new(op: fn() -> vyre_foundation::dispatch::dialect_lookup::OpDef) -> Self
 pub const fn vyre_driver::registry::migration::Deprecation::new(op_id: &'static str, deprecated_since: vyre_driver::registry::migration::Semver, note: &'static str) -> Self
 pub const fn vyre_driver::registry::migration::Migration::new(from: (&'static str, vyre_driver::registry::migration::Semver), to: (&'static str, vyre_driver::registry::migration::Semver), rewrite: fn(&mut vyre_driver::registry::migration::AttrMap) -> core::result::Result<(), vyre_driver::registry::migration::MigrationError>) -> Self
 pub const fn vyre_driver::registry::migration::Semver::new(major: u32, minor: u32, patch: u32) -> Self
 pub const fn vyre_driver::registry::mutation::MutationClass::requires_byte_parity(self) -> bool
 pub const fn vyre_driver::registry::mutation::MutationClass::uses_law_proof(self) -> bool
-pub const fn vyre_driver::registry::registry::DuplicateOpIdError::first_registrant(&self) -> &'static str
-pub const fn vyre_driver::registry::registry::DuplicateOpIdError::op_id(&self) -> &'static str
-pub const fn vyre_driver::registry::registry::DuplicateOpIdError::second_registrant(&self) -> &'static str
 pub const fn vyre_driver::reservation_policy::ReservationPolicy::new(context: &'static str, fix: &'static str) -> Self
 pub const fn vyre_driver::residency::ResidentGraphReuseTelemetry::cold_upload(upload_bytes: u64) -> Self
 pub const fn vyre_driver::residency::ResidentGraphReuseTelemetry::from_counters(cold_uploads: u64, warm_reuses: u64, upload_bytes: u64, avoided_upload_bytes: u64) -> Self
@@ -290,10 +269,8 @@ pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::PUSH_CONSTANTS: Se
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SPECULATIVE: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::SUBGROUP_OPS: Self
 pub const vyre_driver::pipeline::cache::PipelineFeatureFlags::TENSOR_CORES: Self
-pub const vyre_driver::registry::CODE_PARSE: vyre_foundation::diagnostics::DiagnosticCode
 pub const vyre_driver::registry::INDIRECT_DISPATCH_OP_ID: &str
 pub const vyre_driver::registry::core_indirect::INDIRECT_DISPATCH_OP_ID: &str
-pub const vyre_driver::registry::toml_loader::CODE_PARSE: vyre_foundation::diagnostics::DiagnosticCode
 pub const vyre_driver::shape_prediction::MAX_HISTORY: usize
 pub const vyre_driver::speculate::COUNTER_TAIL_BYTES: usize
 pub const vyre_driver::speculate::DEFAULT_THRESHOLD_PCT: u32
@@ -567,7 +544,7 @@ pub fn vyre_driver::allocation::try_reserve_hash_map_to_capacity<K, V, S>(map: &
 pub fn vyre_driver::allocation::try_reserve_hash_set_to_capacity<T, S>(set: &mut std::collections::hash::set::HashSet<T, S>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError> where T: core::cmp::Eq + core::hash::Hash, S: core::hash::BuildHasher
 pub fn vyre_driver::allocation::try_reserve_vec_to_capacity<T>(vec: &mut alloc::vec::Vec<T>, target_capacity: usize) -> core::result::Result<(), alloc::collections::TryReserveError>
 pub fn vyre_driver::aot::AotLauncherFiles::from_entries(dependencies: alloc::vec::Vec<vyre_driver::aot::LauncherDependency>, entries: impl core::iter::traits::collect::IntoIterator<Item = (std::path::PathBuf, alloc::string::String)>) -> Self
-pub fn vyre_driver::aot::emit_aot_launcher_target(target: &str, request: &vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, vyre_driver::BackendError>
+pub fn vyre_driver::aot::emit_aot_launcher_target(target: &vyre_foundation::operation::TargetId, request: &vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, vyre_driver::BackendError>
 pub fn vyre_driver::aot::registered_aot_launcher_emitters() -> alloc::vec::Vec<&'static vyre_driver::aot::AotLauncherEmitter>
 pub fn vyre_driver::arm_independence::ArmBindingSummary::default() -> Self
 pub fn vyre_driver::arm_independence::ArmBindingSummary::new() -> Self
@@ -696,8 +673,8 @@ pub fn vyre_driver::backend::VyreBackend::upload_resident_many(&self, _uploads: 
 pub fn vyre_driver::backend::VyreBackend::version(&self) -> &'static str
 pub fn vyre_driver::backend::acquire(id: &str) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub fn vyre_driver::backend::acquire_preferred_dispatch_backend() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
-pub fn vyre_driver::backend::backend_dispatches(id: &str) -> bool
-pub fn vyre_driver::backend::backend_precedence(id: &str) -> u32
+pub fn vyre_driver::backend::backend_dispatches(id: &str) -> core::result::Result<bool, vyre_driver::BackendError>
+pub fn vyre_driver::backend::backend_precedence(id: &str) -> core::result::Result<u32, vyre_driver::BackendError>
 pub fn vyre_driver::backend::backend_registration(id: &str) -> core::result::Result<&'static vyre_driver::BackendRegistration, vyre_driver::BackendError>
 pub fn vyre_driver::backend::borrowed_input_slices<'a>(inputs: &'a [alloc::vec::Vec<u8>], field: &'static str) -> core::result::Result<smallvec::SmallVec<[&'a [u8]; 8]>, vyre_driver::BackendError>
 pub fn vyre_driver::backend::core_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
@@ -709,10 +686,10 @@ pub fn vyre_driver::backend::dialect_only_supported_ops() -> &'static std::colle
 pub fn vyre_driver::backend::lowering::LowerableOp::lower_binary(&self, ctx: &mut (), program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::backend::lowering::LowerableOp::lower_expression(&self, ctx: &mut dyn vyre_driver::backend::lowering::TargetGenCtx, program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<(), alloc::string::String>
 pub fn vyre_driver::backend::lowering::TargetGenCtx::register_expression(&mut self, format: &str) -> core::result::Result<(), ()>
-pub fn vyre_driver::backend::registered_backends() -> &'static [&'static vyre_driver::BackendRegistration]
-pub fn vyre_driver::backend::registered_backends_by_precedence() -> alloc::vec::Vec<&'static vyre_driver::BackendRegistration>
-pub fn vyre_driver::backend::registered_backends_by_precedence_slice() -> &'static [&'static vyre_driver::BackendRegistration]
-pub fn vyre_driver::backend::registered_target_operation_facets() -> &'static [vyre_foundation::operation::TargetOperationFacet]
+pub fn vyre_driver::backend::registered_backends() -> core::result::Result<&'static [vyre_driver::BackendRegistration], vyre_driver::BackendError>
+pub fn vyre_driver::backend::registered_backends_by_precedence() -> core::result::Result<alloc::vec::Vec<&'static vyre_driver::BackendRegistration>, vyre_driver::BackendError>
+pub fn vyre_driver::backend::registered_backends_by_precedence_slice() -> core::result::Result<&'static [&'static vyre_driver::BackendRegistration], vyre_driver::BackendError>
+pub fn vyre_driver::backend::registered_target_operation_facets() -> core::result::Result<&'static [vyre_foundation::operation::TargetOperationFacet], vyre_driver::BackendError>
 pub fn vyre_driver::backend::replace_output_buffers_preserving_slots(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers)
 pub fn vyre_driver::backend::replace_output_buffers_preserving_slots_with_memory_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::backend::OutputReplacementStats
 pub fn vyre_driver::backend::replace_output_buffers_preserving_slots_with_stats(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers) -> vyre_driver::backend::OutputSlotStats
@@ -764,7 +741,6 @@ pub fn vyre_driver::cache_invalidation::impacted_entries_into(intervention_mask:
 pub fn vyre_driver::coerce_to_pow2_with_tail_mask(element_count: u32) -> vyre_driver::TailMaskPolicy
 pub fn vyre_driver::command_reuse_policy::decide_command_reuse(inputs: vyre_driver::command_reuse_policy::CommandReuseInputs) -> vyre_driver::command_reuse_policy::CommandReuseDecision
 pub fn vyre_driver::default_dispatch_with_device_buffers(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&dyn vyre_driver::DeviceBuffer], outputs: &mut [&mut dyn vyre_driver::DeviceBuffer], config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::default_validator() -> bool
 pub fn vyre_driver::device_convergence::DeviceConvergencePlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::device_convergence::plan_device_convergence(max_device_iterations: u32, changed_flag_bytes: u32, requested_host_iteration_polls: u32) -> core::result::Result<vyre_driver::device_convergence::DeviceConvergencePlan, vyre_driver::device_convergence::DeviceConvergencePlanError>
 pub fn vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError::arithmetic_overflow(field: &'static str) -> Self
@@ -1024,15 +1000,13 @@ pub fn vyre_driver::program_walks::try_dispatch_param_words_into(bindings: &[vyr
 pub fn vyre_driver::record_speculative_variant_race(store: &mut vyre_driver::autotune_store::AutotuneStore, keys: vyre_driver::speculate::SpeculativeVariantKeys<'_>, race: vyre_driver::speculate::SpeculativeVariantRace) -> vyre_driver::speculate::SpeculativeVariantDecision
 pub fn vyre_driver::registry::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> vyre_driver::registry::enforce::EnforceVerdict
 pub fn vyre_driver::registry::EnforceGate::name(&self) -> &'static str
-pub fn vyre_driver::registry::default_validator() -> bool
 pub fn vyre_driver::registry::deprecation_diagnostic(dep: &vyre_driver::registry::migration::Deprecation) -> vyre_foundation::diagnostics::Diagnostic
-pub fn vyre_driver::registry::dialect::default_validator() -> bool
 pub fn vyre_driver::registry::enforce::Chain<A, B>::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> vyre_driver::registry::enforce::EnforceVerdict
 pub fn vyre_driver::registry::enforce::Chain<A, B>::name(&self) -> &'static str
 pub fn vyre_driver::registry::enforce::Chain<A, B>::new(first: A, second: B) -> Self
 pub fn vyre_driver::registry::enforce::EnforceGate::evaluate(&self, program: &vyre_foundation::ir_inner::model::program::core::Program) -> vyre_driver::registry::enforce::EnforceVerdict
 pub fn vyre_driver::registry::enforce::EnforceGate::name(&self) -> &'static str
-pub fn vyre_driver::registry::intrinsic_adapter::validate_intrinsic_lowering(lowering: &vyre_foundation::dispatch::dialect_lookup::OpDef) -> core::result::Result<&'static vyre_foundation::operation::OperationRegistration, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
+pub fn vyre_driver::registry::intrinsic_adapter::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
 pub fn vyre_driver::registry::migration::AttrMap::get(&self, key: &str) -> core::option::Option<&vyre_driver::registry::migration::AttrValue>
 pub fn vyre_driver::registry::migration::AttrMap::insert(&mut self, key: impl core::convert::Into<alloc::string::String>, value: vyre_driver::registry::migration::AttrValue) -> core::option::Option<vyre_driver::registry::migration::AttrValue>
 pub fn vyre_driver::registry::migration::AttrMap::is_empty(&self) -> bool
@@ -1048,31 +1022,7 @@ pub fn vyre_driver::registry::migration::MigrationRegistry::global() -> &'static
 pub fn vyre_driver::registry::migration::MigrationRegistry::lookup(&self, op_id: &str, from: vyre_driver::registry::migration::Semver) -> core::option::Option<&'static vyre_driver::registry::migration::Migration>
 pub fn vyre_driver::registry::migration::Semver::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::registry::migration::deprecation_diagnostic(dep: &vyre_driver::registry::migration::Deprecation) -> vyre_foundation::diagnostics::Diagnostic
-pub fn vyre_driver::registry::registry::DialectRegistry::get_lowering(&self, id: vyre_foundation::dispatch::dialect_lookup::InternedOpId, target: vyre_driver::registry::registry::Target) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
-pub fn vyre_driver::registry::registry::DialectRegistry::global() -> arc_swap::Guard<alloc::sync::Arc<Self>>
-pub fn vyre_driver::registry::registry::DialectRegistry::install(new: Self)
-pub fn vyre_driver::registry::registry::DialectRegistry::intern_op(&self, name: &str) -> vyre_foundation::dispatch::dialect_lookup::InternedOpId
-pub fn vyre_driver::registry::registry::DialectRegistry::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = &'static vyre_foundation::dispatch::dialect_lookup::OpDef> + '_
-pub fn vyre_driver::registry::registry::DialectRegistry::lookup(&self, id: vyre_foundation::dispatch::dialect_lookup::InternedOpId) -> core::option::Option<&'static vyre_foundation::dispatch::dialect_lookup::OpDef>
-pub fn vyre_driver::registry::registry::DialectRegistry::provider_id(&self) -> &'static str
-pub fn vyre_driver::registry::registry::DialectRegistry::try_global() -> core::result::Result<arc_swap::Guard<alloc::sync::Arc<Self>>, alloc::string::String>
-pub fn vyre_driver::registry::registry::DialectRegistry::validate_no_duplicates<'a>(defs: impl core::iter::traits::collect::IntoIterator<Item = &'a vyre_foundation::dispatch::dialect_lookup::OpDef>) -> core::result::Result<(), vyre_driver::registry::registry::DuplicateOpIdError>
-pub fn vyre_driver::registry::registry::DuplicateOpIdError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_driver::registry::registry::Target::aot_target_id(self) -> &'static str
-pub fn vyre_driver::registry::registry::Target::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
-pub fn vyre_driver::registry::registry::Target::extension(self) -> &'static str
-pub fn vyre_driver::registry::registry::Target::serialize<S>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::contains_op(&self, op_id: &str) -> bool
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::diagnostics(&self) -> &[vyre_foundation::diagnostics::Diagnostic]
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::dialect(&self, id: &str) -> core::option::Option<&vyre_driver::registry::toml_loader::DialectManifest>
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::from_env() -> Self
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::load_file(&mut self, path: &std::path::Path)
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::manifests(&self) -> alloc::vec::Vec<&vyre_driver::registry::toml_loader::DialectManifest>
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::ops_in(&self, dialect: &str) -> &[vyre_driver::registry::toml_loader::OpManifest]
-pub fn vyre_driver::registry::toml_loader::TomlDialectStore::scan_dir(&mut self, dir: &std::path::Path)
-pub fn vyre_driver::registry::toml_loader::workspace_dialect_fixture_path() -> std::path::PathBuf
-pub fn vyre_driver::registry::validate_intrinsic_lowering(lowering: &vyre_foundation::dispatch::dialect_lookup::OpDef) -> core::result::Result<&'static vyre_foundation::operation::OperationRegistration, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
-pub fn vyre_driver::registry::workspace_dialect_fixture_path() -> std::path::PathBuf
+pub fn vyre_driver::registry::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
 pub fn vyre_driver::replace_output_buffers_preserving_slots(incoming: vyre_driver::OutputBuffers, outputs: &mut vyre_driver::OutputBuffers)
 pub fn vyre_driver::reservation_policy::ReservationPolicy::clear_vec_slots<T>(slots: &mut [alloc::vec::Vec<T>])
 pub fn vyre_driver::reservation_policy::ReservationPolicy::ensure_vec_slots_at_least<T>(self, slots: &mut alloc::vec::Vec<alloc::vec::Vec<T>>, slot_count: usize, item: &'static str) -> core::result::Result<(), vyre_driver::BackendError>
@@ -1242,7 +1192,7 @@ pub fn vyre_driver::tuner::TunerProgramKey::from_program(program: &vyre_foundati
 pub fn vyre_driver::tuner::identity_fisher_q16(candidate_count: usize) -> alloc::vec::Vec<u32>
 pub fn vyre_driver::tuner::identity_fisher_q16_into(candidate_count: usize, out: &mut alloc::vec::Vec<u32>)
 pub fn vyre_driver::validate_buffer_ownership<'a>(self_backend_id: &str, buffers: impl core::iter::traits::collect::IntoIterator<Item = &'a dyn vyre_driver::DeviceBuffer>) -> core::result::Result<(), vyre_driver::BackendError>
-pub fn vyre_driver::validate_intrinsic_lowering(lowering: &vyre_foundation::dispatch::dialect_lookup::OpDef) -> core::result::Result<&'static vyre_foundation::operation::OperationRegistration, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
+pub fn vyre_driver::validate_intrinsic_lowering(operation_id: &'static str) -> core::result::Result<vyre_foundation::operation::SemanticOperation, vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError>
 pub fn vyre_driver::validate_program_for_backend(backend: &dyn vyre_driver::VyreBackend, program: &vyre_foundation::ir_inner::model::program::core::Program, config: &vyre_driver::DispatchConfig) -> core::result::Result<(), vyre_driver::BackendError>
 pub fn vyre_driver::validation::LaunchGeometryLimits::blocks_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
 pub fn vyre_driver::validation::LaunchGeometryLimits::resident_threads_per_compute_unit(&self, workgroup_threads: u32) -> core::option::Option<u32>
@@ -1316,17 +1266,11 @@ pub mod vyre_driver::pipeline_fusion
 pub mod vyre_driver::program_walks
 pub mod vyre_driver::registry
 pub mod vyre_driver::registry::core_indirect
-pub mod vyre_driver::registry::dialect
 pub mod vyre_driver::registry::enforce
-pub mod vyre_driver::registry::interner
 pub mod vyre_driver::registry::intrinsic_adapter
 pub mod vyre_driver::registry::io
-pub mod vyre_driver::registry::lowering
 pub mod vyre_driver::registry::migration
 pub mod vyre_driver::registry::mutation
-pub mod vyre_driver::registry::op_def
-pub mod vyre_driver::registry::registry
-pub mod vyre_driver::registry::toml_loader
 pub mod vyre_driver::reservation_policy
 pub mod vyre_driver::residency
 pub mod vyre_driver::resident_transfer_fusion
@@ -1358,18 +1302,12 @@ pub struct vyre_driver::DeviceIdentity
 pub struct vyre_driver::DeviceProfile
 pub struct vyre_driver::DeviceSignature
 pub struct vyre_driver::DeviceSignatureTable
-pub struct vyre_driver::Dialect
-pub struct vyre_driver::DialectRegistration
-pub struct vyre_driver::DialectRegistry
 pub struct vyre_driver::DiskPipelineCache
 pub struct vyre_driver::Distribution
-pub struct vyre_driver::DuplicateOpIdError
 pub struct vyre_driver::ExtractionDevice<'a>
 pub struct vyre_driver::HostShimBuffer
 pub struct vyre_driver::IndirectDispatch
 pub struct vyre_driver::LaunchPlan
-pub struct vyre_driver::OpBackendTarget
-pub struct vyre_driver::OpDefRegistration
 pub struct vyre_driver::OutputBindingLayout
 pub struct vyre_driver::OutputLayout
 pub struct vyre_driver::PipelineCacheIdentity
@@ -1511,33 +1449,15 @@ pub struct vyre_driver::program_walks::TailMaskPolicy
 pub struct vyre_driver::registry::AttrMap
 pub struct vyre_driver::registry::Chain<A, B>
 pub struct vyre_driver::registry::Deprecation
-pub struct vyre_driver::registry::Dialect
-pub struct vyre_driver::registry::DialectManifest
-pub struct vyre_driver::registry::DialectRegistration
-pub struct vyre_driver::registry::DialectRegistry
-pub struct vyre_driver::registry::DuplicateOpIdError
 pub struct vyre_driver::registry::Migration
 pub struct vyre_driver::registry::MigrationRegistry
-pub struct vyre_driver::registry::OpBackendTarget
-pub struct vyre_driver::registry::OpDefRegistration
-pub struct vyre_driver::registry::OpManifest
 pub struct vyre_driver::registry::Semver
-pub struct vyre_driver::registry::TomlDialectStore
-pub struct vyre_driver::registry::dialect::Dialect
-pub struct vyre_driver::registry::dialect::DialectRegistration
-pub struct vyre_driver::registry::dialect::OpBackendTarget
-pub struct vyre_driver::registry::dialect::OpDefRegistration
 pub struct vyre_driver::registry::enforce::Chain<A, B>
 pub struct vyre_driver::registry::migration::AttrMap
 pub struct vyre_driver::registry::migration::Deprecation
 pub struct vyre_driver::registry::migration::Migration
 pub struct vyre_driver::registry::migration::MigrationRegistry
 pub struct vyre_driver::registry::migration::Semver
-pub struct vyre_driver::registry::registry::DialectRegistry
-pub struct vyre_driver::registry::registry::DuplicateOpIdError
-pub struct vyre_driver::registry::toml_loader::DialectManifest
-pub struct vyre_driver::registry::toml_loader::OpManifest
-pub struct vyre_driver::registry::toml_loader::TomlDialectStore
 pub struct vyre_driver::reservation_policy::ReservationPolicy
 pub struct vyre_driver::reservation_policy::ReusableIndexScratch<K, S>
 pub struct vyre_driver::residency::ResidentGraphReuseTelemetry
@@ -1612,33 +1532,18 @@ pub trait vyre_driver::registry::EnforceGate: vyre_driver::registry::enforce::pr
 pub trait vyre_driver::registry::enforce::EnforceGate: vyre_driver::registry::enforce::private::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_driver::strategy::LoweringStrategy: core::marker::Send + core::marker::Sync + core::fmt::Debug
 pub trait vyre_driver::tuner::BackendTimer
-pub type vyre_driver::AotTargetId = &'static str
 pub type vyre_driver::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
-pub type vyre_driver::aot::AotTargetId = &'static str
 pub type vyre_driver::backend::OutputBuffers = alloc::vec::Vec<alloc::vec::Vec<u8>>
 pub type vyre_driver::input_identity::ExactInputKey = [u8; 32]
 pub type vyre_driver::reservation_policy::StagingReservationFailureAdapter<E> = fn(&'static str, usize, alloc::string::String) -> E
 pub type vyre_driver::shape_prediction::ShapeFingerprint = [u32; 8]
 pub type vyre_driver::tuner::BackendTimer::Error
-pub use vyre_driver::AttrSchema
-pub use vyre_driver::AttrType
-pub use vyre_driver::Category
+pub use vyre_driver::AotTargetId
 pub use vyre_driver::Diagnostic
 pub use vyre_driver::DiagnosticCode
-pub use vyre_driver::InternedOpId
-pub use vyre_driver::LoweringCtx
-pub use vyre_driver::LoweringTable
-pub use vyre_driver::NativeModule
-pub use vyre_driver::NativeModuleBuilder
-pub use vyre_driver::OpDef
 pub use vyre_driver::OpLocation
-pub use vyre_driver::PrimaryBinaryBuilder
-pub use vyre_driver::PrimaryTextBuilder
-pub use vyre_driver::SecondaryTextBuilder
 pub use vyre_driver::Severity
-pub use vyre_driver::Signature
-pub use vyre_driver::TextModule
-pub use vyre_driver::TypedParam
+pub use vyre_driver::aot::AotTargetId
 pub use vyre_driver::backend::node_op_id
 pub use vyre_driver::backend::validation::node_op_id
 pub use vyre_driver::diagnostics::Diagnostic
@@ -1648,39 +1553,6 @@ pub use vyre_driver::diagnostics::DiagnosticStage
 pub use vyre_driver::diagnostics::OpLocation
 pub use vyre_driver::diagnostics::RetryClass
 pub use vyre_driver::diagnostics::Severity
-pub use vyre_driver::intern_string
-pub use vyre_driver::registry::AttrSchema
-pub use vyre_driver::registry::AttrType
-pub use vyre_driver::registry::Category
-pub use vyre_driver::registry::InternedOpId
-pub use vyre_driver::registry::LoweringCtx
-pub use vyre_driver::registry::LoweringTable
-pub use vyre_driver::registry::NativeModule
-pub use vyre_driver::registry::NativeModuleBuilder
-pub use vyre_driver::registry::OpDef
-pub use vyre_driver::registry::PrimaryBinaryBuilder
-pub use vyre_driver::registry::PrimaryTextBuilder
-pub use vyre_driver::registry::SecondaryTextBuilder
-pub use vyre_driver::registry::Signature
-pub use vyre_driver::registry::TextModule
-pub use vyre_driver::registry::TypedParam
-pub use vyre_driver::registry::intern_string
-pub use vyre_driver::registry::interner::InternedOpId
-pub use vyre_driver::registry::interner::intern_string
-pub use vyre_driver::registry::lowering::LoweringCtx
-pub use vyre_driver::registry::lowering::LoweringTable
-pub use vyre_driver::registry::lowering::NativeModule
-pub use vyre_driver::registry::lowering::NativeModuleBuilder
-pub use vyre_driver::registry::lowering::PrimaryBinaryBuilder
-pub use vyre_driver::registry::lowering::PrimaryTextBuilder
-pub use vyre_driver::registry::lowering::SecondaryTextBuilder
-pub use vyre_driver::registry::lowering::TextModule
-pub use vyre_driver::registry::op_def::AttrSchema
-pub use vyre_driver::registry::op_def::AttrType
-pub use vyre_driver::registry::op_def::Category
-pub use vyre_driver::registry::op_def::OpDef
-pub use vyre_driver::registry::op_def::Signature
-pub use vyre_driver::registry::op_def::TypedParam
 pub vyre_driver::BackendError::CooperativeResidencyExceeded
 pub vyre_driver::BackendError::CooperativeResidencyExceeded::detail: alloc::string::String
 pub vyre_driver::BackendError::CooperativeResidencyExceeded::grid_blocks: u64
@@ -1718,8 +1590,12 @@ pub vyre_driver::BackendLayoutSlot::read_only: bool
 pub vyre_driver::BackendRegistration::factory: fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub vyre_driver::BackendRegistration::id: &'static str
 pub vyre_driver::BackendRegistration::materializer: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError>>
+pub vyre_driver::BackendRegistration::payload_format: core::option::Option<&'static str>
+pub vyre_driver::BackendRegistration::reference_oracle: bool
+pub vyre_driver::BackendRegistration::semantic_operations: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::BackendRegistration::supported_ops: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::BackendRegistration::target_compiler: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>>
+pub vyre_driver::BackendRegistration::target_id: vyre_foundation::operation::TargetId
 pub vyre_driver::Binding::binding: u32
 pub vyre_driver::Binding::buffer_index: usize
 pub vyre_driver::Binding::element_count: u32
@@ -1808,13 +1684,6 @@ pub vyre_driver::DeviceTimingQuality::DeviceTimestamps
 pub vyre_driver::DeviceTimingQuality::HardwareCounters
 pub vyre_driver::DeviceTimingQuality::HostEnqueueWait
 pub vyre_driver::DeviceTimingQuality::HostOnly
-pub vyre_driver::Dialect::backends_required: &'static [vyre_spec::intrinsic_descriptor::Backend]
-pub vyre_driver::Dialect::id: &'static str
-pub vyre_driver::Dialect::ops: &'static [&'static str]
-pub vyre_driver::Dialect::parent: core::option::Option<&'static str>
-pub vyre_driver::Dialect::validator: fn() -> bool
-pub vyre_driver::Dialect::version: u32
-pub vyre_driver::DialectRegistration::dialect: fn() -> vyre_driver::registry::dialect::Dialect
 pub vyre_driver::DispatchConfig::cooperative: bool
 pub vyre_driver::DispatchConfig::dispatch_elements: core::option::Option<u32>
 pub vyre_driver::DispatchConfig::dispatch_grid: core::option::Option<[u32; 3]>
@@ -1838,8 +1707,6 @@ pub vyre_driver::ExtractionDevice::profile: &'a vyre_driver::device_profile::Dev
 pub vyre_driver::ExtractionDevice::trace_jit: core::option::Option<vyre_driver::trace_jit_policy::TraceJitInputs>
 pub vyre_driver::IndirectDispatch::count_buffer: vyre_foundation::ir_inner::model::expr::Ident
 pub vyre_driver::IndirectDispatch::count_offset: u64
-pub vyre_driver::IntrinsicRegistrationError::SignatureMismatch
-pub vyre_driver::IntrinsicRegistrationError::SignatureMismatch::id: &'static str
 pub vyre_driver::IntrinsicRegistrationError::UnknownId
 pub vyre_driver::IntrinsicRegistrationError::UnknownId::id: &'static str
 pub vyre_driver::LaunchPlan::element_count: u32
@@ -1851,9 +1718,6 @@ pub vyre_driver::MutationClass::Cosmetic
 pub vyre_driver::MutationClass::Lowering
 pub vyre_driver::MutationClass::Semantic
 pub vyre_driver::MutationClass::Structural
-pub vyre_driver::OpBackendTarget::op: &'static str
-pub vyre_driver::OpBackendTarget::target: &'static str
-pub vyre_driver::OpDefRegistration::op: fn() -> vyre_foundation::dispatch::dialect_lookup::OpDef
 pub vyre_driver::OutputBindingLayout::binding: u32
 pub vyre_driver::OutputBindingLayout::layout: vyre_driver::OutputLayout
 pub vyre_driver::OutputBindingLayout::name: alloc::sync::Arc<str>
@@ -1952,27 +1816,19 @@ pub vyre_driver::SubgroupOp::ShuffleXor
 pub vyre_driver::TailMaskPolicy::original_count: u32
 pub vyre_driver::TailMaskPolicy::rounded_count: u32
 pub vyre_driver::TailMaskPolicy::tail_lanes: u32
-pub vyre_driver::Target::Extension(&'static str)
-pub vyre_driver::Target::NativeModule
-pub vyre_driver::Target::PrimaryBinary
-pub vyre_driver::Target::PrimaryText
-pub vyre_driver::Target::Ptx
-pub vyre_driver::Target::ReferenceBackend
-pub vyre_driver::Target::SecondaryText
-pub vyre_driver::Target::SpirV
 pub vyre_driver::TimedDispatchResult::device_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::enqueue_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::outputs: vyre_driver::OutputBuffers
 pub vyre_driver::TimedDispatchResult::wait_ns: core::option::Option<u64>
 pub vyre_driver::TimedDispatchResult::wall_ns: u64
 pub vyre_driver::aot::AotLauncherEmitter::emit: fn(&vyre_driver::aot::AotLauncherRequest<'_>) -> core::result::Result<vyre_driver::aot::AotLauncherFiles, alloc::string::String>
-pub vyre_driver::aot::AotLauncherEmitter::target: vyre_driver::aot::AotTargetId
+pub vyre_driver::aot::AotLauncherEmitter::target: vyre_foundation::operation::TargetId
 pub vyre_driver::aot::AotLauncherFiles::dependencies: alloc::vec::Vec<vyre_driver::aot::LauncherDependency>
 pub vyre_driver::aot::AotLauncherFiles::files: alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>
 pub vyre_driver::aot::AotLauncherRequest::crate_name: &'a str
 pub vyre_driver::aot::AotLauncherRequest::include_collectives: bool
 pub vyre_driver::aot::AotLauncherRequest::include_ttt_loop: bool
-pub vyre_driver::aot::AotLauncherRequest::target: vyre_driver::aot::AotTargetId
+pub vyre_driver::aot::AotLauncherRequest::target: vyre_foundation::operation::TargetId
 pub vyre_driver::aot::LauncherDependency::name: &'static str
 pub vyre_driver::aot::LauncherDependency::spec: &'static str
 pub vyre_driver::arm_independence::ArmBindingSummary::reads: vyre_driver::arm_independence::BindingSlotSet
@@ -2024,8 +1880,12 @@ pub vyre_driver::backend::BackendPrecedence::rank: u32
 pub vyre_driver::backend::BackendRegistration::factory: fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>
 pub vyre_driver::backend::BackendRegistration::id: &'static str
 pub vyre_driver::backend::BackendRegistration::materializer: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError>>
+pub vyre_driver::backend::BackendRegistration::payload_format: core::option::Option<&'static str>
+pub vyre_driver::backend::BackendRegistration::reference_oracle: bool
+pub vyre_driver::backend::BackendRegistration::semantic_operations: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::backend::BackendRegistration::supported_ops: fn() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
 pub vyre_driver::backend::BackendRegistration::target_compiler: core::option::Option<fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_megakernel::target::TargetCompiler>, vyre_driver::BackendError>>
+pub vyre_driver::backend::BackendRegistration::target_id: vyre_foundation::operation::TargetId
 pub vyre_driver::backend::BoundResource::Host(alloc::vec::Vec<u8>)
 pub vyre_driver::backend::BoundResource::Resident(vyre_driver::Resource)
 pub vyre_driver::backend::Completion::artifact: vyre_megakernel::Digest
@@ -2730,23 +2590,10 @@ pub vyre_driver::registry::AttrValue::U32(u32)
 pub vyre_driver::registry::Deprecation::deprecated_since: vyre_driver::registry::migration::Semver
 pub vyre_driver::registry::Deprecation::note: &'static str
 pub vyre_driver::registry::Deprecation::op_id: &'static str
-pub vyre_driver::registry::Dialect::backends_required: &'static [vyre_spec::intrinsic_descriptor::Backend]
-pub vyre_driver::registry::Dialect::id: &'static str
-pub vyre_driver::registry::Dialect::ops: &'static [&'static str]
-pub vyre_driver::registry::Dialect::parent: core::option::Option<&'static str>
-pub vyre_driver::registry::Dialect::validator: fn() -> bool
-pub vyre_driver::registry::Dialect::version: u32
-pub vyre_driver::registry::DialectManifest::description: core::option::Option<alloc::string::String>
-pub vyre_driver::registry::DialectManifest::dialect: alloc::string::String
-pub vyre_driver::registry::DialectManifest::ops: alloc::vec::Vec<vyre_driver::registry::toml_loader::OpManifest>
-pub vyre_driver::registry::DialectManifest::version: alloc::string::String
-pub vyre_driver::registry::DialectRegistration::dialect: fn() -> vyre_driver::registry::dialect::Dialect
 pub vyre_driver::registry::EnforceVerdict::Allow
 pub vyre_driver::registry::EnforceVerdict::Deny
 pub vyre_driver::registry::EnforceVerdict::Deny::detail: alloc::string::String
 pub vyre_driver::registry::EnforceVerdict::Deny::policy: &'static str
-pub vyre_driver::registry::IntrinsicRegistrationError::SignatureMismatch
-pub vyre_driver::registry::IntrinsicRegistrationError::SignatureMismatch::id: &'static str
 pub vyre_driver::registry::IntrinsicRegistrationError::UnknownId
 pub vyre_driver::registry::IntrinsicRegistrationError::UnknownId::id: &'static str
 pub vyre_driver::registry::Migration::from: (&'static str, vyre_driver::registry::migration::Semver)
@@ -2765,42 +2612,13 @@ pub vyre_driver::registry::MutationClass::Cosmetic
 pub vyre_driver::registry::MutationClass::Lowering
 pub vyre_driver::registry::MutationClass::Semantic
 pub vyre_driver::registry::MutationClass::Structural
-pub vyre_driver::registry::OpBackendTarget::op: &'static str
-pub vyre_driver::registry::OpBackendTarget::target: &'static str
-pub vyre_driver::registry::OpDefRegistration::op: fn() -> vyre_foundation::dispatch::dialect_lookup::OpDef
-pub vyre_driver::registry::OpManifest::category: alloc::string::String
-pub vyre_driver::registry::OpManifest::id: alloc::string::String
-pub vyre_driver::registry::OpManifest::inputs: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_driver::registry::OpManifest::laws: alloc::vec::Vec<alloc::string::String>
-pub vyre_driver::registry::OpManifest::outputs: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_driver::registry::OpManifest::summary: core::option::Option<alloc::string::String>
 pub vyre_driver::registry::Semver::major: u32
 pub vyre_driver::registry::Semver::minor: u32
 pub vyre_driver::registry::Semver::patch: u32
-pub vyre_driver::registry::Target::Extension(&'static str)
-pub vyre_driver::registry::Target::NativeModule
-pub vyre_driver::registry::Target::PrimaryBinary
-pub vyre_driver::registry::Target::PrimaryText
-pub vyre_driver::registry::Target::Ptx
-pub vyre_driver::registry::Target::ReferenceBackend
-pub vyre_driver::registry::Target::SecondaryText
-pub vyre_driver::registry::Target::SpirV
-pub vyre_driver::registry::dialect::Dialect::backends_required: &'static [vyre_spec::intrinsic_descriptor::Backend]
-pub vyre_driver::registry::dialect::Dialect::id: &'static str
-pub vyre_driver::registry::dialect::Dialect::ops: &'static [&'static str]
-pub vyre_driver::registry::dialect::Dialect::parent: core::option::Option<&'static str>
-pub vyre_driver::registry::dialect::Dialect::validator: fn() -> bool
-pub vyre_driver::registry::dialect::Dialect::version: u32
-pub vyre_driver::registry::dialect::DialectRegistration::dialect: fn() -> vyre_driver::registry::dialect::Dialect
-pub vyre_driver::registry::dialect::OpBackendTarget::op: &'static str
-pub vyre_driver::registry::dialect::OpBackendTarget::target: &'static str
-pub vyre_driver::registry::dialect::OpDefRegistration::op: fn() -> vyre_foundation::dispatch::dialect_lookup::OpDef
 pub vyre_driver::registry::enforce::EnforceVerdict::Allow
 pub vyre_driver::registry::enforce::EnforceVerdict::Deny
 pub vyre_driver::registry::enforce::EnforceVerdict::Deny::detail: alloc::string::String
 pub vyre_driver::registry::enforce::EnforceVerdict::Deny::policy: &'static str
-pub vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError::SignatureMismatch
-pub vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError::SignatureMismatch::id: &'static str
 pub vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError::UnknownId
 pub vyre_driver::registry::intrinsic_adapter::IntrinsicRegistrationError::UnknownId::id: &'static str
 pub vyre_driver::registry::migration::AttrValue::Bool(bool)
@@ -2831,24 +2649,6 @@ pub vyre_driver::registry::mutation::MutationClass::Cosmetic
 pub vyre_driver::registry::mutation::MutationClass::Lowering
 pub vyre_driver::registry::mutation::MutationClass::Semantic
 pub vyre_driver::registry::mutation::MutationClass::Structural
-pub vyre_driver::registry::registry::Target::Extension(&'static str)
-pub vyre_driver::registry::registry::Target::NativeModule
-pub vyre_driver::registry::registry::Target::PrimaryBinary
-pub vyre_driver::registry::registry::Target::PrimaryText
-pub vyre_driver::registry::registry::Target::Ptx
-pub vyre_driver::registry::registry::Target::ReferenceBackend
-pub vyre_driver::registry::registry::Target::SecondaryText
-pub vyre_driver::registry::registry::Target::SpirV
-pub vyre_driver::registry::toml_loader::DialectManifest::description: core::option::Option<alloc::string::String>
-pub vyre_driver::registry::toml_loader::DialectManifest::dialect: alloc::string::String
-pub vyre_driver::registry::toml_loader::DialectManifest::ops: alloc::vec::Vec<vyre_driver::registry::toml_loader::OpManifest>
-pub vyre_driver::registry::toml_loader::DialectManifest::version: alloc::string::String
-pub vyre_driver::registry::toml_loader::OpManifest::category: alloc::string::String
-pub vyre_driver::registry::toml_loader::OpManifest::id: alloc::string::String
-pub vyre_driver::registry::toml_loader::OpManifest::inputs: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_driver::registry::toml_loader::OpManifest::laws: alloc::vec::Vec<alloc::string::String>
-pub vyre_driver::registry::toml_loader::OpManifest::outputs: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub vyre_driver::registry::toml_loader::OpManifest::summary: core::option::Option<alloc::string::String>
 pub vyre_driver::residency::ResidentGraphReuseTelemetry::avoided_upload_bytes: u64
 pub vyre_driver::residency::ResidentGraphReuseTelemetry::cold_uploads: u64
 pub vyre_driver::residency::ResidentGraphReuseTelemetry::upload_bytes: u64

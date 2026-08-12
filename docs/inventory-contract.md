@@ -10,15 +10,19 @@ validated view before exposing deterministic behavior.
 
 | Registration | Owner | Purpose |
 |---|---|---|
-| `OpDefRegistration` | `vyre-driver::registry` | Frozen operation definitions used by drivers |
-| `BackendRegistration` | `vyre-driver::backend::registry` | Backend factories and stable backend IDs |
-| `ExtensionRegistration` | `vyre-foundation::dispatch::extension` | Opaque IR extension ownership |
+| `OperationRegistration` | `vyre-foundation::operation` | Canonical semantic identity, signature, neutral builder, laws, fixtures, and tolerance |
+| `ReferenceFacet` | `vyre-reference` | Portable reference implementation keyed by semantic operation ID |
+| `BackendRegistration` | concrete driver crate via `vyre-driver` contract | Backend factory, validated `TargetId`, oracle classification, support set, compiler, and materializer facets |
+| typed `Extension*Registration` and opaque resolvers | `vyre-foundation::dispatch::extension` | Opaque IR data, operator, expression, and node ownership |
 
-Semantic operations enter through the foundation-owned
-`OperationRegistration` registry. Library, primitive, intrinsic, and driver
-catalogs are filtered views over that authority. The generated
-`docs/generated/OP_SCHEMA.json` joins registrations with built programs,
-backend evidence, laws, and composition chains.
+Library, primitive, intrinsic, driver, conformance, and documentation catalogs
+are derived views over the canonical semantic registry. The generated
+`docs/generated/OP_SCHEMA.json` joins semantics with reference, target,
+algebraic-law, Cargo-feature, and composition evidence.
 
-Duplicate stable IDs, invalid metadata, and registry drift must fail before
-dispatch.
+Duplicate backend IDs, target IDs, target facets, and owner-local backend
+metadata return `BackendError` during deterministic registry startup before
+lookup or dispatch. Invalid linked semantic-operation or reference-facet
+inventories abort their owner's first lookup with the conflicting identity.
+Each registry freezes one sorted owned view and never selects a provider by
+link order.

@@ -4,13 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# The facade package name is `vyre`.
-vyre = "0.4.2"
-vyre-driver = "0.4.2"
 inventory = "=0.3.24"
+vyre = "0.7.2"
+vyre-driver = "0.7.2"
+vyre-foundation = "0.7.2"
 
 [workspace]
 
 [patch.crates-io]
 vyre = { path = "../../vyre" }
 vyre-driver = { path = "../../vyre-driver" }
+vyre-foundation = { path = "../../vyre-foundation" }

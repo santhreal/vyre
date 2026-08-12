@@ -31,8 +31,8 @@ Two crates own the complete route:
 4. **No backend ships without a green matrix.** CI blocks publish on
    `vyre-conform`'s matrix returning zero divergences.
 5. **No exemptions.** The `UniversalDiffExemption` registry has been
-   removed. Tolerance for approximate ops is encoded in
-   `OpEntry::tolerance()` (e.g. ULP budgets for transcendental kernels).
+   removed. Tolerance for approximate operations is encoded in the canonical
+   `OperationRegistration` (for example ULP budgets for transcendental kernels).
    Every other op must match byte-for-byte or fail the matrix. There is
    no skip path for missing fixtures, capabilities, or known failures.
 
@@ -65,8 +65,8 @@ driver crates. Benchmark orchestration remains in `vyre-bench`.
    fixture. The runner will diff your backend's dispatch against the
    CPU reference automatically.
 4. **Tolerance contracts**: for ops whose contracts already permit
-   backend-defined drift (e.g. `softmax`, `attention`), set the ULP
-   tolerance in the `OpEntry` registration. All other ops must reach
+   backend-defined drift (for example `softmax` and `attention`), set the ULP
+   tolerance in the canonical `OperationRegistration`. All other ops must reach
    byte-identity across every backend.
 
 See `vyre-conform/tests/parity_matrix.rs` for the end-to-end

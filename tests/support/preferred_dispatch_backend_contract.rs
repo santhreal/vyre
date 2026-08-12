@@ -11,9 +11,12 @@ pub(crate) fn assert_backend_registry_metadata<LinkRegistration: 'static>(
 ) {
     let _link_inventory_registration = std::any::TypeId::of::<LinkRegistration>();
 
-    assert!(backend_dispatches(backend_id), "{dispatch_message}");
+    assert!(
+        backend_dispatches(backend_id).expect("valid backend registry"),
+        "{dispatch_message}"
+    );
     assert_eq!(
-        backend_precedence(backend_id),
+        backend_precedence(backend_id).expect("valid backend registry"),
         expected_precedence,
         "{precedence_message}"
     );

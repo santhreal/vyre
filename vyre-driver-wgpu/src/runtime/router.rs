@@ -100,7 +100,7 @@ impl BackendRouter {
         _program: &Program,
         source: Override<'_>,
     ) -> Result<RouterDecision, BackendError> {
-        let registered = vyre_driver::backend::registered_backends();
+        let registered = vyre_driver::backend::registered_backends()?;
 
         let forced: Option<String> = match source {
             Override::FromEnv => env::var(OVERRIDE_ENV).ok(),
@@ -110,9 +110,16 @@ impl BackendRouter {
         if let Some(forced) = forced {
             let forced = forced.trim();
             if !forced.is_empty() {
-                let hit = registered.iter().find(|r| {
-                    r.id == forced && backend_dispatches(r.id) && !is_reference_oracle_backend(r.id)
+                let hit = registered.iter().find_map(|registration| {
+                    (registration.id == forced && !registration.reference_oracle)
+                        .then_some(registration)
                 });
+                let hit = match hit {
+                    Some(registration) if backend_dispatches(registration.id)? => {
+                        Some(registration)
+                    }
+                    _ => None,
+                };
                 return match hit {
                     Some(reg) => Ok(RouterDecision {
                         backend: reg.id,
@@ -128,13 +135,15 @@ impl BackendRouter {
         // V7-EXT-021: precedence comes from the BackendPrecedence inventory
         // submitted by each backend crate, not a hardcoded driver-side table.
         // Walk backends in precedence order and return the first hit.
-        for reg in registered_backends_by_precedence_slice() {
-            if registered.iter().any(|r| r.id == reg.id)
-                && backend_dispatches(reg.id)
-                && !is_reference_oracle_backend(reg.id)
+        for registration in registered_backends_by_precedence_slice()? {
+            if registered
+                .iter()
+                .any(|candidate| candidate.id == registration.id)
+                && backend_dispatches(registration.id)?
+                && !registration.reference_oracle
             {
                 return Ok(RouterDecision {
-                    backend: reg.id,
+                    backend: registration.id,
                     reason: Reason::Precedence,
                 });
             }
@@ -148,14 +157,12 @@ impl BackendRouter {
     /// Enumerate every registered backend in precedence order. Inventory-driven
     /// per V7-EXT-021  -  backends without a submitted `BackendPrecedence`
     /// trail every backend that has one (rank `u32::MAX`).
-    #[must_use]
-    pub fn enumerate_by_precedence() -> Vec<&'static BackendRegistration> {
-        registered_backends_by_precedence_slice().to_vec()
+    /// # Errors
+    ///
+    /// Returns the validated registry startup error when providers conflict.
+    pub fn enumerate_by_precedence() -> Result<Vec<&'static BackendRegistration>, BackendError> {
+        Ok(registered_backends_by_precedence_slice()?.to_vec())
     }
-}
-
-fn is_reference_oracle_backend(id: &str) -> bool {
-    matches!(id, "cpu-ref" | "reference")
 }
 
 #[cfg(test)]
@@ -174,8 +181,8 @@ mod tests {
         // V7-EXT-021: precedence is now inventory-driven. wgpu submits
         // rank 30 in this crate's lib.rs; cpu-ref (when registered)
         // must trail it.
-        let wgpu_rank = backend_precedence("wgpu");
-        let ref_rank = backend_precedence("cpu-ref");
+        let wgpu_rank = backend_precedence("wgpu").expect("valid backend registry");
+        let ref_rank = backend_precedence("cpu-ref").expect("valid backend registry");
         assert!(
             wgpu_rank < ref_rank || ref_rank == u32::MAX,
             "wgpu (rank {wgpu_rank}) must take precedence over the CPU reference oracle (rank {ref_rank})"
@@ -185,12 +192,15 @@ mod tests {
     #[test]
     fn enumerate_by_precedence_is_inventory_driven() {
         // Replaces the BACKEND_PRECEDENCE static-slice assertion.
-        let ranked = BackendRouter::enumerate_by_precedence();
+        let ranked = BackendRouter::enumerate_by_precedence().expect("valid backend registry");
         // wgpu registers in this crate; it must appear with a finite rank.
         let wgpu = ranked.iter().find(|r| r.id == "wgpu").expect(
             "Fix: wgpu backend registered in this crate; restore this invariant before continuing.",
         );
-        assert_eq!(backend_precedence(wgpu.id), 30);
+        assert_eq!(
+            backend_precedence(wgpu.id).expect("valid backend registry"),
+            30
+        );
     }
 
     #[test]
@@ -228,7 +238,7 @@ mod tests {
         // The picked backend must have a registered precedence rank
         // (V7-EXT-021: replaces the BACKEND_PRECEDENCE static-slice check).
         assert!(
-            backend_precedence(decision.backend) < u32::MAX,
+            backend_precedence(decision.backend).expect("valid backend registry") < u32::MAX,
             "picked backend {} did not submit a BackendPrecedence inventory entry",
             decision.backend
         );

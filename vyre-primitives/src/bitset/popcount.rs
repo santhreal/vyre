@@ -86,7 +86,7 @@ mod non_panic_wrapper_tests {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || bitset_popcount("input", "count", 2),
         Some(|| {

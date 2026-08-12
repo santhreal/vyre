@@ -3,7 +3,7 @@ use super::program_serial::csr_forward_or_changed;
 use crate::graph::program_graph::ProgramGraphShape;
 
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || csr_forward_or_changed(ProgramGraphShape::new(4, 4), "frontier", "changed", 1),
         Some(|| {

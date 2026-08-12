@@ -358,7 +358,7 @@ fn fixture_u32(values: &[u32]) -> Vec<u8> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         SUM_F32_OP_ID,
         || workgroup_sum_f32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -371,7 +371,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         SUM_U32_OP_ID,
         || workgroup_sum_u32("values", "out", 4, 4),
         Some(|| vec![vec![
@@ -384,7 +384,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         MAX_F32_OP_ID,
         || workgroup_max_f32("values", "out", 4, 4),
         Some(|| vec![vec![

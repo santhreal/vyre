@@ -439,7 +439,7 @@ pub fn base64_decode(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         BASE64_DECODE_OP_ID,
         || base64_decode("input", "table", "output", "decoded_len", 4),
         Some(|| vec![vec![

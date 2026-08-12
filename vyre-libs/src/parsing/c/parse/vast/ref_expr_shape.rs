@@ -472,7 +472,7 @@ fn witness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         BUILD_VAST_OP_ID,
         || c11_build_vast_nodes("tok_types", "tok_starts", "tok_lens", Expr::u32(9), "out_vast_nodes", "out_count"),
         Some(witness_inputs),
@@ -509,7 +509,7 @@ fn classify_witness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         CLASSIFY_VAST_OP_ID,
         || c11_classify_vast_node_kinds("vast_nodes", Expr::u32(9), "out_typed_vast_nodes"),
         Some(classify_witness_inputs),
@@ -561,7 +561,7 @@ fn expression_shape_witness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         EXPR_SHAPE_OP_ID,
         || c11_build_expression_shape_nodes(
             "raw_vast_nodes",
@@ -617,7 +617,7 @@ fn annotate_witness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         ANNOTATE_TYPEDEF_OP_ID,
         || c11_annotate_typedef_names(
             "vast_nodes",

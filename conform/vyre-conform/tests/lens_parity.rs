@@ -1,7 +1,7 @@
 //! Unified parity harness using the `lens` module.
 //!
-//! One test file that iterates every registered `OpEntry` and runs each
-//! of the three primary lenses (witness, cpu_vs_backend when a backend
+//! One test file that iterates every registered `SemanticOperation` and runs
+//! each of the three primary lenses (witness, cpu_vs_backend when a backend
 //! is linked, fixpoint when a contract is registered). This is the
 //! consolidation target that replaces the scattered per-file parity
 //! tests across `vyre-libs`, `vyre-driver-*`, and `conform/`.
@@ -33,7 +33,7 @@ fn every_op_passes_the_witness_lens() {
     let mut failures = Vec::with_capacity(failure_capacity);
     let mut passed = 0usize;
     for entry in entries {
-        let outcome = lens::witness(entry);
+        let outcome = lens::witness(&entry);
         if outcome.is_pass() {
             passed += 1;
         }
@@ -177,14 +177,18 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
         vec![vec![]]
     }
 
-    let entry = vyre_libs::fixture_catalog::OpEntry::new(
-        "vyre-conform::synthetic::sin_ulp_probe",
-        vyre_foundation::operation::OperationTier::External,
-        Some(build_sin_program),
-        Some(sin_inputs),
-        None,
-    )
-    .with_category("conform");
+    let entry = vyre_foundation::operation::SemanticOperation {
+        id: "vyre-conform::synthetic::sin_ulp_probe",
+        semantic_version: 1,
+        signature: None,
+        tier: vyre_foundation::operation::OperationTier::External,
+        category: Some("conform"),
+        build: Some(build_sin_program),
+        test_inputs: Some(sin_inputs),
+        expected_output: None,
+        laws: &[],
+        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
+    };
 
     let backend = build_registered_backend();
     let outcome = lens::cpu_vs_backend(&entry, backend);
@@ -200,9 +204,11 @@ fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
         .ok()
         .filter(|value| !value.trim().is_empty());
     vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| {
             vyre_driver::backend::backend_dispatches(registration.id)
+                .expect("valid backend registry")
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)

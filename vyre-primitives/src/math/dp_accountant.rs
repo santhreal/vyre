@@ -156,7 +156,7 @@ pub fn rdp_to_dp(rdp: f64, alpha: f64, delta: f64) -> f64 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || {
             gaussian_rdp_step("alpha", "sigma_sq", "out", 4)

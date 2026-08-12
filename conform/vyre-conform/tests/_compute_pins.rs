@@ -5,12 +5,12 @@ use std::sync::Arc;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::issue_bundle_cert;
 use vyre_conform_spec::{BundleCertificate, ConformanceCase};
-use vyre_driver::registry::{
-    Category, LoweringTable, OpDef, OpDefRegistration, Signature, TypedParam,
-};
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 use vyre_primitives::wire::pack_u32_slice as bytes_u32;
+use vyre_reference::ReferenceFacet;
 
-const TEST_IDENTITY_U32_OP: &str = "vyre-conform.test.identity_u32";
+const TEST_IDENTITY_U32_OP: &str = "vyre_conform_test::identity_u32";
 
 fn identity_u32_cpu_ref(input: &[u8], output: &mut Vec<u8>) {
     output.clear();
@@ -31,15 +31,18 @@ const TEST_IDENTITY_U32_SIGNATURE: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: TEST_IDENTITY_U32_OP,
-        dialect: "vyre-conform-test",
-        category: Category::Intrinsic,
-        signature: TEST_IDENTITY_U32_SIGNATURE,
-        lowerings: LoweringTable::new(identity_u32_cpu_ref),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(
+        TEST_IDENTITY_U32_OP,
+        OperationTier::External,
+        None,
+        None,
+        None,
+    )
+    .with_signature(TEST_IDENTITY_U32_SIGNATURE)
+    .with_category("vyre-conform-test")
+}
+inventory::submit! {
+    ReferenceFacet::new(TEST_IDENTITY_U32_OP, identity_u32_cpu_ref)
 }
 
 fn deterministic_key() -> SigningKey {
@@ -154,9 +157,6 @@ fn region_chain_intrinsic_dialect() -> Program {
 
 #[test]
 fn compute_pins() {
-    // Initialize driver registry so dialect ops resolve
-    let _ = vyre_driver::registry::DialectRegistry::global();
-
     let key = deterministic_key();
     let pubkey = hex::encode(key.verifying_key().to_bytes());
     eprintln!("PUBKEY: {}", pubkey);

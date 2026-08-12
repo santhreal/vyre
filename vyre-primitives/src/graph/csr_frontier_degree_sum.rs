@@ -175,7 +175,7 @@ pub fn try_csr_frontier_degree_sum_cpu(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || csr_frontier_degree_sum(ProgramGraphShape::new(4, 4)),
         Some(|| {
@@ -355,8 +355,8 @@ mod tests {
 
     #[test]
     fn op_id_is_canonical_and_stable() {
-        // Op ids appear in serialized OpDef metadata + bench attribution;
-        // changing it is a wire-format-visible change.
+        // Operation ids appear in serialized semantic metadata and benchmark
+        // attribution; changing one is wire-format-visible.
         assert_eq!(OP_ID, "vyre-primitives::graph::csr_frontier_degree_sum");
     }
 }

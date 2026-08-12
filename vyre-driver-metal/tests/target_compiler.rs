@@ -50,6 +50,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 #[test]
 fn registered_target_compiler_emits_selected_metal_bundle() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
         .expect("Metal target compiler registration must be linked on every host");
@@ -73,6 +74,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
 #[test]
 fn registered_materializer_reports_platform_unavailability() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
         .expect("Metal materializer registration must be linked");
@@ -91,6 +93,7 @@ fn registered_materializer_reports_platform_unavailability() {
 #[test]
 fn registered_materializer_executes_authenticated_msl() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
         .expect("Metal materializer registration must be linked");

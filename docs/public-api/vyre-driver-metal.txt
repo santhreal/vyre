@@ -1,3 +1,4 @@
 pub const vyre_driver_metal::METAL_BACKEND_ID: &str
+pub const vyre_driver_metal::METAL_TARGET_ID: vyre_foundation::operation::TargetId
 pub fn vyre_driver_metal::acquire() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::vyre_backend::VyreBackend>, vyre_driver::backend::error::BackendError>
 pub mod vyre_driver_metal

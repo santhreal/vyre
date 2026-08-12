@@ -887,10 +887,21 @@ fn check_3_primitive_coverage(ops: &[OpInfo]) -> usize {
     flagged
 }
 
+/// Enforce only the canonical primitive adoption and exception contract.
+pub(crate) fn run_primitive_admission_gate() {
+    let ops = collect_ops();
+    let failures = check_3_primitive_coverage(&ops);
+    if failures != 0 {
+        eprintln!("primitive-admission-gate: {failures} hard failure(s)");
+        process::exit(1);
+    }
+    println!("primitive-admission-gate: canonical caller and exception evidence agrees");
+}
+
 /// Check 6: composition-chain coverage  -  every non-leaf op should have
 /// at least one child Region with a `source_region` pointing at
-/// another registered op. Ops that explicitly declare `leaf = true`
-/// are exempt (future OpEntry field).
+/// another registered op. Ops that explicitly declare leaf status in the
+/// canonical operation contract are exempt.
 fn check_6_composition_chain_coverage(ops: &[OpInfo]) -> usize {
     let mut flagged = 0usize;
     println!("[6/10] Composition-chain coverage (non-leaf ops must have ≥ 1 child Region with source_region)");

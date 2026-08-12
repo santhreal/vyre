@@ -9,10 +9,14 @@ impl core::error::Error for vyre_reference::ReferenceError
 impl core::error::Error for vyre_reference::dual_impls::common::EvalError
 impl core::fmt::Display for vyre_reference::ReferenceError
 impl core::fmt::Display for vyre_reference::dual_impls::common::EvalError
+impl inventory::Collect for vyre_reference::DualReferenceFacet
+impl inventory::Collect for vyre_reference::ReferenceFacet
 impl vyre_foundation::visit::expr::ExprVisitor for vyre_reference::workgroup::LocalSlots
 impl vyre_foundation::visit::traits::NodeVisitor for vyre_reference::workgroup::LocalSlots
+impl vyre_reference::DualReferenceFacet
 impl vyre_reference::OobReport
 impl vyre_reference::ReferenceError
+impl vyre_reference::ReferenceFacet
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::add::AddDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::arith::mul::MulDualReference
 impl vyre_reference::dual::DualReference for vyre_reference::dual_impls::bitwise::and::AndDualReference
@@ -48,8 +52,9 @@ impl vyre_reference::workgroup::InvocationIds
 impl vyre_reference::workgroup::LocalSlots
 impl vyre_reference::workgroup::Memory
 impl<'a> vyre_reference::workgroup::Invocation<'a>
+pub const fn vyre_reference::DualReferenceFacet::new(operation_id: &'static str, reference_a: vyre_reference::dual::ReferenceFn, reference_b: vyre_reference::dual::ReferenceFn) -> Self
+pub const fn vyre_reference::ReferenceFacet::new(operation_id: &'static str, execute: vyre_spec::intrinsic_descriptor::CpuFn) -> Self
 pub const fn vyre_reference::subgroup::SubgroupSimulator::width(&self) -> usize
-pub const vyre_reference::dialect_dispatch::REFERENCE_BACKEND_NAME: &str
 pub const vyre_reference::dual_impls::arith::add::OP_ID: &str
 pub const vyre_reference::dual_impls::arith::mul::OP_ID: &str
 pub const vyre_reference::dual_impls::bitwise::and::OP_ID: &str
@@ -197,7 +202,9 @@ pub fn vyre_reference::reference_eval_oob_report(program: &vyre_foundation::ir_i
 pub fn vyre_reference::reference_eval_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_with_dispatch_oob_report(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<(alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::OobReport), vyre_reference::ReferenceError>
 pub fn vyre_reference::reference_eval_with_grid(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], grid: [u32; 3]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
-pub fn vyre_reference::resolve_dual(op_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
+pub fn vyre_reference::reference_facets() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &'static vyre_reference::ReferenceFacet>
+pub fn vyre_reference::reference_fn(operation_id: &str) -> core::option::Option<vyre_spec::intrinsic_descriptor::CpuFn>
+pub fn vyre_reference::resolve_dual(operation_id: &str) -> core::option::Option<(vyre_reference::dual::ReferenceFn, vyre_reference::dual::ReferenceFn)>
 pub fn vyre_reference::run_arena_reference(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value]) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::run_arena_reference_with_dispatch(program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[vyre_reference::value::Value], min_dispatch_elements: u32) -> core::result::Result<alloc::vec::Vec<vyre_reference::value::Value>, vyre_reference::ReferenceError>
 pub fn vyre_reference::run_storage_graph(nodes: &[(vyre_foundation::ir_inner::model::node_kind::NodeId, vyre_foundation::ir_inner::model::node_kind::NodeStorage)], outputs: &[vyre_foundation::ir_inner::model::node_kind::NodeId]) -> core::result::Result<alloc::vec::Vec<vyre_foundation::ir_inner::model::node_kind::Value>, vyre_reference::ReferenceError>
@@ -346,12 +353,13 @@ pub mod vyre_reference::execution::op_count
 pub mod vyre_reference::execution::sequential
 pub mod vyre_reference::flat_cpu
 pub mod vyre_reference::ieee754
-pub mod vyre_reference::registry_architecture
 pub mod vyre_reference::subgroup
 pub mod vyre_reference::value
 pub mod vyre_reference::workgroup
+pub struct vyre_reference::DualReferenceFacet
 pub struct vyre_reference::OobReport
 pub struct vyre_reference::ReferenceError
+pub struct vyre_reference::ReferenceFacet
 pub struct vyre_reference::dual_impls::EvalError
 pub struct vyre_reference::dual_impls::arith::add::AddDualReference
 pub struct vyre_reference::dual_impls::arith::mul::MulDualReference
@@ -378,9 +386,14 @@ pub type vyre_reference::workgroup::LocalSlots::Break = core::convert::Infallibl
 pub use vyre_reference::cpu_op::CategoryAOp
 pub use vyre_reference::cpu_op::CpuFn
 pub use vyre_reference::cpu_op::CpuOp
+pub vyre_reference::DualReferenceFacet::operation_id: &'static str
+pub vyre_reference::DualReferenceFacet::reference_a: vyre_reference::dual::ReferenceFn
+pub vyre_reference::DualReferenceFacet::reference_b: vyre_reference::dual::ReferenceFn
 pub vyre_reference::OobReport::oob_atomics: u64
 pub vyre_reference::OobReport::oob_loads: u64
 pub vyre_reference::OobReport::oob_stores: u64
+pub vyre_reference::ReferenceFacet::execute: vyre_spec::intrinsic_descriptor::CpuFn
+pub vyre_reference::ReferenceFacet::operation_id: &'static str
 pub vyre_reference::execution::sequential::SequentialWorkgroup::size: [u32; 3]
 pub vyre_reference::value::Value::Array(alloc::vec::Vec<vyre_reference::value::Value>)
 pub vyre_reference::value::Value::Bool(bool)

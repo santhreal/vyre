@@ -1,34 +1,131 @@
-//! Minimal external extension demo.
-//!
-//! Builds a one-store vyre Program from outside the workspace and
-//! confirms it round-trips through wire encode + decode + reference
-//! evaluation. The earlier two-arg `Expr::Opaque(u32, Vec<u8>)`
-//! shape was replaced by `Expr::opaque(impl ExprNode)` in 0.6  - 
-//! this example uses the public builder API so external crates can
-//! follow the supported path.
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+//! External semantic operation and target registration fixture.
 
-fn build_extension_program() -> Program {
+use std::collections::{BTreeMap, HashSet};
+use std::sync::LazyLock;
+
+use vyre::compiler::{
+    self, compile_selected_modules, CompileRequest, Digest, EmittedTargetModule, ExternalFacts,
+    SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+};
+use vyre::ir::{BufferDecl, DataType, Expr, Node, OpId, Program, ProgramGraph};
+use vyre_driver::{BackendError, BackendRegistration};
+use vyre_foundation::operation::{
+    OperationRegistration, OperationRegistry, OperationTier, TargetId,
+};
+
+const OPERATION_ID: &str = "external_ir_extension::identity";
+const TARGET_NAME: &str = "external-ir-fixture";
+const TARGET_ID: TargetId = TargetId::expect_valid(TARGET_NAME);
+
+fn build_operation() -> Program {
     Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::u32(0),
-            Expr::add(Expr::u32(40), Expr::u32(2)),
-        )],
+        vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     )
 }
 
+inventory::submit! {
+    OperationRegistration::new(
+        OPERATION_ID,
+        OperationTier::External,
+        Some(build_operation),
+        None,
+        None,
+    )
+    .with_category("fixture")
+}
+
+struct ExternalTargetCompiler {
+    format: TargetPayloadFormat,
+}
+
+impl TargetCompiler for ExternalTargetCompiler {
+    fn format(&self) -> &TargetPayloadFormat {
+        &self.format
+    }
+
+    fn compile(
+        &self,
+        artifact: &compiler::Artifact,
+    ) -> Result<TargetPayload, TargetCompileError> {
+        compile_selected_modules(artifact, self.format.clone(), |program| {
+            let bytes = program
+                .to_wire()
+                .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
+            Ok(EmittedTargetModule {
+                entry_point: "external_entry".to_string(),
+                bytes,
+            })
+        })
+    }
+}
+
+fn unavailable_dispatch() -> Result<Box<dyn vyre_driver::VyreBackend>, BackendError> {
+    Err(BackendError::new(
+        "external fixture target has no dispatch device. Fix: use its target compiler facet only.",
+    ))
+}
+
+fn supported_operations() -> &'static HashSet<OpId> {
+    static OPERATIONS: LazyLock<HashSet<OpId>> =
+        LazyLock::new(|| HashSet::from([OPERATION_ID.into()]));
+    &OPERATIONS
+}
+
+fn target_compiler() -> Result<Box<dyn TargetCompiler>, BackendError> {
+    let format = TargetPayloadFormat::new(TARGET_NAME, 1)
+        .map_err(|error| BackendError::new(format!("target format is invalid: {error}")))?;
+    Ok(Box::new(ExternalTargetCompiler { format }))
+}
+
+inventory::submit! {
+    BackendRegistration {
+        id: TARGET_NAME,
+        target_id: TARGET_ID,
+        payload_format: Some(TARGET_NAME),
+        reference_oracle: false,
+        factory: unavailable_dispatch,
+        semantic_operations: supported_operations,
+        supported_ops: supported_operations,
+        target_compiler: Some(target_compiler),
+        materializer: None,
+    }
+}
+
 fn main() {
-    let program = build_extension_program();
-    let wire = program
-        .to_wire()
-        .unwrap_or_else(|error| panic!("Fix: extension Program must encode: {error}"));
+    let operation = OperationRegistry::global()
+        .get(OPERATION_ID)
+        .expect("linked extension operation");
+    let program = operation.program().expect("neutral operation body");
+    let graph = ProgramGraph::from_program("extension", program).expect("valid extension graph");
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .expect("valid extension compile request");
+    let artifact = compiler::compile(&request).expect("neutral extension artifact");
+    let target = vyre_driver::backend::backend_registration(TARGET_NAME)
+        .expect("linked extension target");
+    let compiler = target.target_compiler().expect("extension target compiler");
+    let envelope =
+        compiler::attach_target(artifact, compiler.as_ref()).expect("authenticated target payload");
+    let payload = envelope
+        .require_target_payload(compiler.format())
+        .expect("attached extension payload");
+    assert!(
+        vyre_driver::backend::registered_target_operation_facets()
+            .expect("valid target facet registry")
+            .iter()
+            .any(|facet| facet.operation_id == OPERATION_ID && facet.target_id == TARGET_ID)
+    );
+
     println!(
-        "External extension program built: {} buffers, {} entry nodes, {} wire bytes.",
-        program.buffers().len(),
-        program.entry().len(),
-        wire.len()
+        "registered {OPERATION_ID} for target {} with {} payload bytes",
+        TARGET_ID.as_str(),
+        payload.bytes().len()
     );
 }

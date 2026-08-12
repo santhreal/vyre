@@ -1,7 +1,7 @@
 use super::program::{dominator_tree_program, OP_ID};
 
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || dominator_tree_program(4, 4, 4, "idom"),
         Some(|| {

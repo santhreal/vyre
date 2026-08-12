@@ -136,6 +136,7 @@ pub const vyre_driver_cuda::CUDA_EGRAPH_SIGNATURE_REFRESH_KERNEL_PARAM_COUNT: us
 pub const vyre_driver_cuda::CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_ENTRY: &str
 pub const vyre_driver_cuda::CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT: usize
 pub const vyre_driver_cuda::CUDA_REGEX_HARDWARE_COMPARISON_SCHEMA_VERSION: u32
+pub const vyre_driver_cuda::CUDA_TARGET_ID: vyre_foundation::operation::TargetId
 pub const vyre_driver_cuda::CUDA_TOKEN_FACT_DEGREE_PROFILE_BUCKETS: usize
 pub const vyre_driver_cuda::CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS: [u64; 16]
 pub const vyre_driver_cuda::CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION: u32

@@ -1,6 +1,6 @@
 //! The `vyre-libs` parsing and AST building domain library.
 //!
-//! Exposes registered `OpEntry` definitions for structural analysis and
+//! Exposes registered semantic operations for structural analysis and
 //! full-grammar Shunting-Yard AST generation entirely on GPU.
 //!
 //! Architected as disjoint, language-isolated registered passes:

@@ -16,6 +16,7 @@ exclude = ["**/.proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL
 
 [dependencies]
 rayon = { workspace = true }
+inventory.workspace = true
 vyre-foundation.workspace = true
 vyre-primitives = { workspace = true, features = ["hash", "matching"] }
 

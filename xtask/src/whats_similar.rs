@@ -25,11 +25,10 @@
 //! cargo xtask whats-similar --all --top 50
 //! ```
 //!
-//! Pre-write workflow: register your candidate op (even a skeletal
-//! `OpEntry { build: || trivial_program(), .. }` works), run
-//! whats-similar against its id, decide whether to reuse, merge, or
-//! ship as new. The fingerprint sees the IR shape, not the function
-//! name, so renaming will not hide a duplicate.
+//! Pre-write workflow: submit the candidate as an `OperationRegistration`, run
+//! whats-similar against its id, decide whether to reuse, merge, or ship as new.
+//! The fingerprint sees the IR shape, not the function name, so renaming will
+//! not hide a duplicate.
 //!
 //! ## Why not file-based?
 //!
@@ -96,7 +95,7 @@ fn run_target_query(
         Some(op) => op,
         None => {
             eprintln!(
-                "Fix: op id `{op_id}` not found in any registry. Register the candidate via `inventory::submit! {{ OpEntry {{ id: \"...\", build: || ..., .. }} }}` before running whats-similar."
+                "Fix: operation id `{op_id}` is absent from OperationRegistry. Submit one OperationRegistration with a neutral builder before running whats-similar."
             );
             process::exit(1);
         }
@@ -523,7 +522,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
             }
             "--file" => {
                 return Err(
-                    "Fix: whats-similar compares registered OpEntry programs; register the candidate and pass its id with --op-id <id>"
+                    "Fix: whats-similar compares canonical SemanticOperation programs; submit the candidate and pass its id with --op-id <id>"
                         .to_string(),
                 );
             }
@@ -701,7 +700,7 @@ mod tests {
             "x.rs".to_string(),
         ];
         let err = parse_args(&args).unwrap_err();
-        assert!(err.contains("register the candidate"));
+        assert!(err.contains("submit the candidate"));
     }
 
     /// This test keeps every operation routed through a shared builder in one audit taxonomy so emitted-shape similarity is not reported as reinvention.

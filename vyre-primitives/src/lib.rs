@@ -175,9 +175,9 @@ pub(crate) mod fixed_u32_matmul;
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;
 
-/// Tier-2.5 primitive registry. See [`harness::OpEntry`]. Gated
-/// behind the `inventory-registry` feature so default builds stay
-/// dep-free; the conform harness + xtask enable the feature.
+/// Tier-2.5 primitive registry backed by canonical `OperationRegistration`
+/// records. Gated behind `inventory-registry` so default builds stay
+/// dependency-minimal; conformance and tooling enable the feature.
 #[cfg(feature = "inventory-registry")]
 pub mod harness;
 

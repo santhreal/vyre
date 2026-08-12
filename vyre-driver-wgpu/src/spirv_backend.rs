@@ -1,9 +1,7 @@
 //! SPIR-V backend module (C-B7).
 //!
-//! Reuses every `LoweringTable::primary_text` builder by feeding the
-//! resulting `naga::Module` through `naga::back::spv::write_vec`
-//! instead of `naga::back::wgsl::write_string`. The naga::Module
-//! is identical; only the emitter changes.
+//! Emits the canonical `naga::Module` through `naga::back::spv::write_vec`
+//! instead of `naga::back::wgsl::write_string`. Only the target writer changes.
 //!
 //! The backend runs through wgpu with the Vulkan adapter selected.
 //! Testing byte-identity between the WGSL path (wgpu default) and

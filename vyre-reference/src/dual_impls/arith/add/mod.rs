@@ -11,3 +11,7 @@ define_arith_dual_reference!(
     u32::wrapping_add,
     super::super::common::wrapping_add_bits_reference
 );
+
+inventory::submit! {
+    crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
+}

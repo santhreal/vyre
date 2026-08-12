@@ -1,101 +1,65 @@
-# external_ir_extension
+# External operation and target extension
 
-A minimal worked example of extending vyre's IR from a third-party
-crate  -  no fork, no patch, no internal access required. If you are a
-consumer writing a new op, new dialect, or new analysis pass, this is
-the starting template.
+This standalone crate registers one semantic operation and one target compiler
+without editing a Vyre workspace crate.
 
-## What the example demonstrates
-
-1. Building a vyre `Expr` that uses an opaque extension payload  -  the
-   escape hatch for extensions whose semantics are not known to the
-   core IR.
-2. Registering an `OpDef` in the `DialectRegistry` via
-   `OpDefRegistration` so validators, the wire decoder, and the
-   backend dispatch machinery all learn about the new op at link
-   time.
-3. Keeping the extension crate decoupled: it depends only on
-   `vyre` and `vyre-driver`, never on concrete backend crates or
-   downstream tooling.
-
-Running the example:
+## Run
 
 ```bash
-cd libs/performance/matching/vyre/examples/external_ir_extension
-cargo run
-# → Successfully built external extension: Opaque(42, [1, 2, 3])
+cargo run --manifest-path examples/external_ir_extension/Cargo.toml
 ```
 
-## Anatomy  -  how an external crate plugs into vyre
+The executable resolves the linked semantic operation, builds a validated
+`ProgramGraph`, compiles its neutral artifact, attaches the extension-owned
+target payload, and verifies the derived operation-to-target facet.
 
-Every extension follows the same four-step recipe:
+## Semantic operation
 
-1. **Claim an op tag range.** Core vyre uses tags `0..0x7F`. External
-   dialects claim a disjoint range (convention: `0x80..0xFF` for
-   internal forks, `0x100..` for published dialects). A published
-   `DIALECTS.md` index (in progress, tracked by `dialect-registry`)
-   will arbitrate overlapping claims the same way IANA arbitrates
-   ports.
-2. **Define the `OpDef`.** Give each op a stable name, a `Category`
-   (A, B, or C per the migration doc), algebraic laws it obeys, and
-   a signature. See `vyre-spec` for the trait surface.
-3. **Register at link time.** Use `inventory::submit!` with an
-   `OpDefRegistration`. Do NOT call a setup function from `main`;
-   registration runs automatically via the `inventory` runtime-init
-   hooks so consumer tooling (surgec, pyrograph, warpscan) picks up
-   your op without linking-order surprises.
-4. **Provide backend emitters and CPU refs.** If your op is
-   Category-A (pure composition), no backend work is needed  -  you
-   build a `Program` from existing primitives. Category-B / -C
-   require a CPU reference and a Naga emitter arm in each backend
-   that claims to support your op.
+Submit one `vyre_foundation::operation::OperationRegistration`. The record owns
+the stable operation ID, semantic tier, neutral `Program` builder, fixtures,
+laws, and tolerance. `OperationRegistry` is the only semantic lookup.
 
-## Why Opaque exists
+```rust
+inventory::submit! {
+    OperationRegistration::new(
+        OPERATION_ID,
+        OperationTier::External,
+        Some(build_operation),
+        None,
+        None,
+    )
+}
+```
 
-Opaque extensions are the IR's extensibility primitive. Core vyre
-does not interpret an opaque payload's bytes; it preserves them
-byte-for-byte and routes them to the registered resolver for that
-extension kind.
+An operation with flat byte-call semantics may separately submit one
+`vyre_reference::ReferenceFacet` from a crate that depends on
+`vyre-reference`. Missing reference support is an explicit absence. It does not
+execute a placeholder.
 
-This means:
+## Target
 
-- New dialects do not require a core release.
-- A consumer that links the owning extension crate gets byte-identical
-  passthrough semantics for the opaque payload on `to_wire` /
-  `from_wire`.
-- A consumer that does **not** link the owning extension crate fails
-  loudly at decode time with a `Fix:` error naming the missing
-  resolver. Unknown opaque kinds are never dropped or silently
-  reinterpreted.
-- The wire format remains stable because adding a new opaque kind does
-  not change how core `Expr` / `Node` variants are encoded.
+Submit one `vyre_driver::BackendRegistration` from the target-owning crate. The
+record carries the validated `TargetId`, supported operation IDs, pure
+`TargetCompiler`, and optional materializer. The driver derives
+`TargetOperationFacet` rows by joining this record with the canonical semantic
+registry.
+
+The fixture target emits the compiler-selected module as opaque wire bytes. It
+has no device or dispatch path, so its factory and materializer fail explicitly.
+A production target provides its own backend and materializer in the same
+concrete driver crate.
 
 ## Boundaries
 
-This example deliberately:
+- Semantic records contain no target compiler or CPU function.
+- Reference facets are owned by `vyre-reference`.
+- Target identities, format names, compilers, and materializers are owned by
+  concrete target crates.
+- Dialect/category data is a derived namespace view, not a second operation
+  registry.
+- Typed opaque IR extension registrations remain separate from semantic
+  operation registration.
 
-- Does NOT implement a real backend emitter. A real extension that
-  needs GPU execution must ship emitter arms in
-  `vyre-driver-wgpu` / `vyre-driver-spirv` (or a third-party
-  backend).
-- Does NOT implement a CPU reference. Category-B / -C extensions
-  need `CpuOp` impls to participate in conformance.
-- Does NOT register in `inventory`  -  the example's `main` just builds
-  an opaque expression and prints it, to keep the surface area small.
-  Production extensions MUST register and ship the matching opaque
-  resolver so consumers decode the payload as passthrough instead of
-  hitting the loud missing-resolver failure path.
-
-## Next steps for a real extension
-
-1. Read the [architecture contract](../../docs/ARCHITECTURE.md) for the
-   frontend, operation, compiler-facet, and materializer boundaries.
-2. Read the [optimization control plane](../../docs/optimization/README.md)
-   before adding an operation or optimization pass.
-3. Read the [conformance guide](../../conform/vyre-conform/README.md) and prove
-   parity against the CPU reference on every registered target.
-4. Register semantic operation identity in `vyre-foundation` and ship each
-   required target facet in the target's owning driver crate.
-
-See `src/main.rs` for the minimal call graph; grep the workspace for
-`inventory::submit!` to see real registrations that ship today.
+See [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md),
+[`docs/inventory-contract.md`](../../docs/inventory-contract.md), and
+[`docs/optimization/README.md`](../../docs/optimization/README.md).

@@ -1,27 +1,14 @@
 //! A registered op whose body calls another registered op must lower.
 //!
-//! The composition-discipline gate tells an over-budget op to "split into
-//! smaller compositions connected via `Expr::Call`". That instruction was
-//! unfollowable: the canonical pre-emit pipeline inlines through
-//! `vyre_foundation::ir::inline_calls`, whose default resolver returned
-//! `None` for every op id, so any split op died with `InlineUnknownOp`
-//! before a backend saw it. Only `vyre-aot` passed a real resolver. The
-//! result was a gate mandating a structure the pipeline refused to
-//! compile, and every op that needed splitting stayed a monolith.
-//!
-//! The default resolver now asks the installed dialect lookup. These tests
-//! pin that a split op survives the whole path: the call resolves against
-//! the registry, and real PTX comes out the other end.
-//!
-//! Scope: a callee takes SCALAR arguments. It cannot take a buffer, so a
-//! phase that indexes a table is still not splittable. See BACKLOG.md R26
-//! for what a first-class buffer-reference expression would need.
+//! The canonical pre-emit pipeline must resolve composition calls through the
+//! sole semantic operation registry. These tests prove a split operation
+//! survives verified lowering and emits target code without a driver-owned
+//! definition or provider installation.
 
-use vyre_driver::registry::{
-    Category, DialectRegistry, OpDef, OpDefRegistration, Signature, TypedParam,
-};
 use vyre_driver::DispatchConfig;
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 const CALLEE_OP_ID: &str = "test::split_lowering::row_pair_sum";
 const CALLER_OP_ID: &str = "test::split_lowering::caller";
@@ -83,28 +70,21 @@ const CALLEE_SIG: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: CALLEE_OP_ID,
-        dialect: "test",
-        category: Category::Composite,
-        signature: CALLEE_SIG,
-        lowerings: vyre_foundation::LoweringTable::empty(),
-        laws: &[],
-        compose: Some(row_pair_sum),
-    })
-}
-
-/// Force the process-wide registry to exist so the default inline
-/// resolver has a provider to ask.
-fn install_registry() {
-    let _ = DialectRegistry::global();
+    OperationRegistration::new(
+        CALLEE_OP_ID,
+        OperationTier::External,
+        Some(row_pair_sum),
+        None,
+        None,
+    )
+    .with_signature(CALLEE_SIG)
+    .with_category("test")
 }
 
 /// The call resolves and disappears. Before the fix this failed with
 /// `InlineUnknownOp` naming the callee.
 #[test]
 fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
-    install_registry();
     let prepared = vyre_lower::lower_verified(&caller())
         .unwrap_or_else(|error| panic!("split op must survive verified lowering: {error}"))
         .program;
@@ -119,7 +99,6 @@ fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
 /// argument replaces every read of it.
 #[test]
 fn the_callees_input_buffer_does_not_leak_into_the_caller() {
-    install_registry();
     let prepared = vyre_lower::lower_verified(&caller())
         .expect("verified lowering")
         .program;
@@ -134,7 +113,6 @@ fn the_callees_input_buffer_does_not_leak_into_the_caller() {
 /// register-computed because the invocation id reached the store intact.
 #[test]
 fn a_split_op_emits_ptx() {
-    install_registry();
     let ptx = vyre_driver_cuda::codegen::program_to_ptx(&caller(), &DispatchConfig::default())
         .unwrap_or_else(|error| panic!("split op must emit PTX: {error}"));
     let stores: Vec<&str> = ptx

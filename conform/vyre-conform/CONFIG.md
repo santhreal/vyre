@@ -30,18 +30,17 @@ flag always wins. There is no config file: the runner reads no
 
 ## Tier B  -  the witness corpus
 
-Every conformance witness the runner executes comes from the
-`inventory`-registered op harnesses in `vyre-libs`, `vyre-intrinsics` and
-`vyre-primitives`. `unified_entries` chains those three catalogs, and each entry
-carries the program builder, its test inputs and its expected output. That is
-the whole corpus: `vyre-conform dispatch --ops all` runs exactly the ops those
-three crates register.
+Every conformance witness the runner executes comes from canonical
+`OperationRegistration` records linked by `vyre-libs`, `vyre-intrinsics`, and
+`vyre-primitives`. `unified_entries` joins the registry view used by those
+crates. Each operation carries its program builder, deterministic test inputs,
+and expected output.
 
-To add a witness pair today, register an `OpEntry` next to the op it covers:
+Submit a witness-bearing semantic operation next to its implementation:
 
 ```rust
 inventory::submit! {
-    crate::harness::OpEntry::new(
+    vyre_foundation::operation::OperationRegistration::library(
         MY_OP_ID,
         || my_op("input", "output", 2, 2),
         Some(|| vec![vec![/* input bytes */]]),

@@ -140,7 +140,7 @@ pub fn tfn_scalar_mix_cpu(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || tfn_scalar_mix("features", "weights", "out", 1, 2, 2),
         Some(|| {

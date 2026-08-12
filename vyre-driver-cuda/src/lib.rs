@@ -240,9 +240,12 @@ use crate::backend::staging_reserve::reserve_smallvec;
 use smallvec::SmallVec;
 use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, Resource, VyreBackend};
 use vyre_foundation::ir::Program;
+use vyre_foundation::operation::TargetId;
 
 /// Stable backend identifier for registration and conform certificates.
 pub const CUDA_BACKEND_ID: &str = "cuda";
+/// Validated target identity owned by the CUDA driver.
+pub const CUDA_TARGET_ID: TargetId = TargetId::expect_valid(CUDA_BACKEND_ID);
 
 /// CUDA implementation of [`vyre_driver::DeviceBuffer`]. Wraps a
 /// [`backend::CudaResidentBuffer`] handle so consumers can hold a
@@ -1114,11 +1117,19 @@ pub fn cuda_supported_ops() -> &'static std::collections::HashSet<vyre_foundatio
     vyre_driver::backend::validation::default_supported_ops_with_trap()
 }
 
+fn cuda_semantic_operations() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
+    vyre_driver::backend::dialect_only_supported_ops()
+}
+
 inventory::submit! {
     BackendRegistration {
         id: CUDA_BACKEND_ID,
+        target_id: CUDA_TARGET_ID,
+        payload_format: Some(target_compiler::CUDA_TARGET_FORMAT),
+        reference_oracle: false,
         factory: cuda_factory,
         supported_ops: cuda_supported_ops,
+        semantic_operations: cuda_semantic_operations,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }
@@ -1142,7 +1153,7 @@ inventory::submit! {
 
 inventory::submit! {
     vyre_driver::aot::AotLauncherEmitter {
-        target: "secondary_text",
+        target: CUDA_TARGET_ID,
         emit: aot_launcher::emit_launcher,
     }
 }

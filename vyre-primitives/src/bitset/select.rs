@@ -116,7 +116,7 @@ pub fn select1_query(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || select1_query("bits", "queries", "out", 4, 5),
         Some(|| {

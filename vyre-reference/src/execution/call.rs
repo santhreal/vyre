@@ -3,7 +3,8 @@
 use crate::ReferenceError;
 use vyre_foundation::cpu_op::CpuFn;
 use vyre_foundation::ir::{DataType, Expr, Program};
-use vyre_foundation::{dialect_lookup, TypedParam};
+use vyre_foundation::operation::OperationRegistry;
+use vyre_foundation::TypedParam;
 
 use crate::execution::expr_cast::spec_output_value;
 use crate::{
@@ -21,22 +22,17 @@ pub(crate) fn eval_call(
     memory: &mut Memory,
     program: &Program,
 ) -> Result<Value, crate::ReferenceError> {
-    let resolved = resolve_call(call_expr, op_id, invocation)?;
-    let def = resolved.def;
-
+    let ResolvedCall { operation } = resolve_call(call_expr, op_id, invocation)?;
+    let signature = operation.signature.ok_or_else(|| {
+        ReferenceError::new(format!(
+            "op `{op_id}` has no callable signature. Fix: attach a Signature to its canonical OperationRegistration before reference execution."
+        ))
+    })?;
     {
-        validate_arity(op_id, args.len(), def.signature.inputs.len())?;
-        let input = encode_inputs(
-            op_id,
-            args,
-            def.signature.inputs,
-            invocation,
-            memory,
-            program,
-        )?;
+        validate_arity(op_id, args.len(), signature.inputs.len())?;
+        let input = encode_inputs(op_id, args, signature.inputs, invocation, memory, program)?;
 
-        let out_bytes = def
-            .signature
+        let out_bytes = signature
             .outputs
             .first()
             .map(|p| match p.ty {
@@ -47,10 +43,14 @@ pub(crate) fn eval_call(
             })
             .unwrap_or(256);
         let mut output = Vec::with_capacity(out_bytes);
-        invoke_cpu_ref(op_id, def.lowerings.cpu_ref, &input, &mut output)?;
+        let cpu_ref = crate::reference_fn(op_id).ok_or_else(|| {
+            ReferenceError::new(format!(
+                "op `{op_id}` has no CPU reference implementation. Fix: register one ReferenceFacet for this canonical operation or inline its composition body."
+            ))
+        })?;
+        invoke_cpu_ref(op_id, cpu_ref, &input, &mut output)?;
 
-        let parsed_out_type = def
-            .signature
+        let parsed_out_type = signature
             .outputs
             .first()
             .map(|p| match p.ty {
@@ -73,14 +73,6 @@ pub(crate) fn invoke_cpu_ref(
     input: &[u8],
     output: &mut Vec<u8>,
 ) -> Result<(), ReferenceError> {
-    // The sentinel is not an implementation: it clears the output buffer and
-    // returns. Calling it would report success while computing nothing, so
-    // every op that still carries it fails closed here instead.
-    if vyre_foundation::cpu_op::is_cpu_reference_sentinel(cpu_ref) {
-        return Err(ReferenceError::new(format!(
-            "op `{op_id}` has no CPU reference implementation: its lowering table still holds the non-executable sentinel. Fix: register a real `cpu_ref` for this intrinsic, or give the op a composition body so the interpreter can inline and execute it."
-        )));
-    }
     let original_len = output.len();
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cpu_ref(input, output))).map_err(
         |payload| {
@@ -111,18 +103,12 @@ fn resolve_call(
     if let Some(resolved) = invocation.op_cache.get(&call_expr).copied() {
         return Ok(resolved);
     }
-    let lookup = dialect_lookup().ok_or_else(|| {
+    let operation = OperationRegistry::global().get(op_id).ok_or_else(|| {
         ReferenceError::new(format!(
-            "unsupported call `{op_id}`: no DialectLookup is installed. Fix: initialize vyre-driver before running the reference interpreter or inline the callee as IR."
+            "unsupported call `{op_id}`. Fix: submit one canonical OperationRegistration or inline the callee as IR."
         ))
     })?;
-    let interned = lookup.intern_op(op_id);
-    let def = lookup.lookup(interned).ok_or_else(|| {
-        ReferenceError::new(format!(
-            "unsupported call `{op_id}`. Fix: register the op in DialectRegistry or inline the callee as IR."
-        ))
-    })?;
-    let resolved = ResolvedCall { def };
+    let resolved = ResolvedCall { operation };
     invocation.op_cache.insert(call_expr, resolved);
     Ok(resolved)
 }

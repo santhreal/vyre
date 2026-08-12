@@ -15,8 +15,8 @@ use vyre_foundation::ir::model::expr::GeneratorRef;
 #[cfg(test)]
 use vyre_foundation::ir::BufferAccess;
 use vyre_foundation::ir::{Expr, Node, Program};
+use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::visit::{visit_node_preorder, visit_preorder, ExprVisitor, NodeVisitor};
-use vyre_foundation::OpDef;
 
 use crate::ReferenceError;
 
@@ -429,7 +429,7 @@ pub struct Invocation<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ResolvedCall {
-    pub(crate) def: &'static OpDef,
+    pub(crate) operation: SemanticOperation,
 }
 
 /// Interpreter continuation stack.

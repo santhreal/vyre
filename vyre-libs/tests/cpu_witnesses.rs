@@ -11,10 +11,10 @@
 use vyre_libs::fixture_catalog::all_entries;
 use vyre_reference::value::Value;
 
-fn entry(id: &'static str) -> &'static vyre_libs::fixture_catalog::OpEntry {
+fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {
     all_entries()
         .find(|entry| entry.id == id)
-        .unwrap_or_else(|| panic!("Fix: missing OpEntry for {id}"))
+        .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {id}"))
 }
 
 fn assert_entry_matches_declared_witness(id: &'static str) {

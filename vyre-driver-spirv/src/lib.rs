@@ -41,6 +41,9 @@ use vyre_foundation::ir::Program;
 
 /// Stable backend identifier for conform certificates.
 pub const SPIRV_BACKEND_ID: &str = "spirv";
+/// Validated target identity owned by the SPIR-V driver.
+pub const SPIRV_TARGET_ID: vyre_foundation::operation::TargetId =
+    vyre_foundation::operation::TargetId::expect_valid(SPIRV_BACKEND_ID);
 
 /// Live Vulkan-backed SPIR-V backend.
 ///
@@ -276,8 +279,12 @@ pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundati
 inventory::submit! {
     BackendRegistration {
         id: SPIRV_BACKEND_ID,
+        target_id: SPIRV_TARGET_ID,
+        payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),
+        reference_oracle: false,
         factory: spirv_factory,
         supported_ops: spirv_supported_ops,
+        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }

@@ -100,7 +100,7 @@ pub fn cpu_ref(values: &[u32]) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         WORKGROUP_ANY_U32_OP_ID,
         || workgroup_any_u32("values", "out", 4),
         Some(|| vec![vec![

@@ -3,9 +3,8 @@
 //!
 //! Spec: `docs/region-chain.md` (Phase J).
 //!
-//! Walks the registered op inventories (`vyre_libs::fixture_catalog`,
-//! `vyre_primitives::harness`, and `vyre_intrinsics::harness`), finds the
-//! matching OpEntry, calls `build()`, and recurses into every
+//! Walks the linked canonical operation registry, finds the matching
+//! `SemanticOperation`, calls its builder, and recurses into every
 //! `Node::Region` in the Program's entry body extracting the generator
 //! name. Output is an indented tree showing how a public op
 //! decomposes through its composition chain down to the leaves.

@@ -10,7 +10,7 @@ pub(super) fn execute_run_matrix(
     match suite {
         SuiteKind::CrossBackend if config.backend_id.is_none() => {
             let mut reports = Vec::new();
-            for backend in dispatch_backend_ids() {
+            for backend in dispatch_backend_ids()? {
                 let mut cfg = config.clone();
                 cfg.backend_id = Some(backend.to_string());
                 reports.push(execute_suite(registry, suite, &cfg));
@@ -30,12 +30,15 @@ pub(super) fn execute_run_matrix(
     }
 }
 
-fn dispatch_backend_ids() -> Vec<&'static str> {
-    vyre_driver::backend::registered_backends_by_precedence_slice()
-        .iter()
-        .filter(|backend| vyre_driver::backend::backend_dispatches(backend.id))
-        .map(|backend| backend.id)
-        .collect()
+fn dispatch_backend_ids() -> anyhow::Result<Vec<&'static str>> {
+    let registered = vyre_driver::backend::registered_backends_by_precedence_slice()?;
+    let mut backends = Vec::new();
+    for backend in registered {
+        if vyre_driver::backend::backend_dispatches(backend.id)? {
+            backends.push(backend.id);
+        }
+    }
+    Ok(backends)
 }
 
 pub(super) fn write_run_reports(reports: &[ReportSchema], output: &str) -> anyhow::Result<()> {

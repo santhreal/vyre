@@ -127,8 +127,8 @@ impl OpShape {
     }
 }
 
-/// Canonical semantic intrinsic registration.
-pub use vyre_foundation::operation::OperationRegistration as OpEntry;
+/// Canonical semantic intrinsic view.
+pub use vyre_foundation::operation::SemanticOperation;
 
 /// Intrinsic-specific conformance geometry keyed by canonical operation identity.
 pub struct IntrinsicFacet {
@@ -159,7 +159,7 @@ pub fn intrinsic_facet(operation_id: &str) -> Option<&'static IntrinsicFacet> {
 }
 
 /// Iterate canonical hardware-facing semantic intrinsic registrations.
-pub fn all_entries() -> impl Iterator<Item = &'static OpEntry> {
+pub fn all_entries() -> impl Iterator<Item = SemanticOperation> {
     OperationRegistry::global()
         .iter()
         .filter(|entry| entry.tier == OperationTier::Intrinsic)

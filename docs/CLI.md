@@ -14,7 +14,7 @@ rebuild every binary, execute every help route, and reject drift.
 | `xtask` | `audit_rule_contracts` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `scaffold_rule` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `print-composition`, `recursion-gate`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
+| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
 | `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
@@ -292,7 +292,7 @@ bench-release [--backend all]        Run the legacy cross-backend release benchm
 shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer
 check-cat-a                         Run every Cat-A pre-merge gate
 check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)
-compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)
+compile <program.vir> --to TARGET   Emit authenticated payloads through linked target compiler facets
 conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage
 dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version
 docs-check                           Validate manifest-backed documentation lifecycle and generated navigation
@@ -308,6 +308,7 @@ op-matrix [--output PATH]           Generate operation/backend coverage evidence
 optimization-matrix [--output PATH] Generate release optimization integration evidence
 package-readiness [--output PATH]  Generate pre-publish package order evidence
 optimization-corpus [--output PATH]  Generate release optimization corpus manifest
+optimization-docs [--output PATH] [--check] Generate/check the source-owned optimizer pass reference
 platform-boundary                  Fail on consumer names in platform crate docs/comments
 version-matrix [--output PATH]      Generate Vyre manifest version matrix
 catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift
@@ -317,7 +318,7 @@ release-benchmarks [--backend cuda] Generate long-running release benchmark arti
 release-conformance [--backend all] Generate real backend conformance artifacts
 release-evidence                    Generate cheap structural release evidence artifacts
 vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure
-recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)
+primitive-admission-gate             Enforce canonical LEGO primitive adoption and exceptions
 heuristic-audit [--strict]          Surface hand-rolled heuristics that should be self-consumer calls
 verify-rewrite-proofs               Verify optimizer rewrite proof fixtures
 hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers

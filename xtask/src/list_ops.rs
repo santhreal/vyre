@@ -142,18 +142,24 @@ fn build_markdown(operations: &[OperationRecord]) -> String {
                 format!("({inputs}) -> ({outputs})")
             };
             let oracle = format!(
-                "reference={} inputs={} expected={} tolerance={} ULP",
+                "reference={} flat-facet={} inputs={} expected={} tolerance={} ULP",
                 row.oracle.reference_eval,
+                row.oracle.flat_reference_facet,
                 row.oracle.fixture_inputs,
                 row.oracle.expected_output,
                 row.oracle.tolerance_ulp
             );
-            let backends = row
+            let mut backends = row
                 .backend_support
                 .iter()
                 .map(|(backend, support)| format!("{backend}:{}", support.status))
-                .collect::<Vec<_>>()
-                .join("<br>");
+                .collect::<Vec<_>>();
+            backends.extend(
+                row.target_facets
+                    .iter()
+                    .map(|target| format!("target:{target}")),
+            );
+            let backends = backends.join("<br>");
             let laws = if row.laws.is_empty() {
                 "none declared".to_string()
             } else {

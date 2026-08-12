@@ -106,7 +106,7 @@ assert_eq!(expected, 7.0);
    backend lowering.
 2. Add a submodule under `hardware/`. Implement the builder, exact reference
    semantics, and the concrete-driver lowering.
-3. Submit a `harness::OpEntry` with a stable
+3. Submit one `OperationRegistration` with a stable
    `vyre-intrinsics::hardware::*` ID, deterministic fixtures, the `hardware`
    category, and an `OpShape`.
 4. Add the operation's release-backend rows and proof paths to

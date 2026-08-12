@@ -1,28 +1,25 @@
 /// Op id of the callee the expr-variant bundle calls.
 ///
 /// `Expr::Call` is a real IR variant, so the coverage bundle has to carry one,
-/// and the target has to be a registered op. Validation resolves every call
-/// through the dialect lookup and rejects an unresolvable one with V016 before
-/// the reference interpreter ever runs, which is what a placeholder id like
-/// `unknown.op` used to hit. Registering a real zero-argument callee keeps the
-/// Call variant covered and keeps the bundle dispatchable.
-const SYNTHETIC_CALLEE_OP_ID: &str = "conform.synthetic_callee";
+/// and its semantic owner must be registered. Validation rejects an unknown
+/// identity with V016 before the unreachable branch reaches execution.
+const SYNTHETIC_CALLEE_OP_ID: &str = "vyre_conform::synthetic_callee";
 
 inventory::submit! {
-    vyre_driver::registry::dialect::OpDefRegistration::new(|| vyre_driver::registry::OpDef {
-        id: SYNTHETIC_CALLEE_OP_ID,
-        dialect: "conform",
-        category: vyre_driver::registry::Category::Intrinsic,
-        signature: vyre_driver::registry::Signature {
-            inputs: &[],
-            outputs: &[],
-            attrs: &[],
-            bytes_extraction: false,
-        },
-        lowerings: vyre_foundation::dialect_lookup::LoweringTable::empty(),
-        laws: &[],
-        compose: None,
+    vyre_foundation::operation::OperationRegistration::new(
+        SYNTHETIC_CALLEE_OP_ID,
+        vyre_foundation::operation::OperationTier::External,
+        None,
+        None,
+        None,
+    )
+    .with_signature(vyre_foundation::dialect_lookup::Signature {
+        inputs: &[],
+        outputs: &[],
+        attrs: &[],
+        bytes_extraction: false,
     })
+    .with_category("conform")
 }
 
 fn synthetic_entries() -> Vec<UnifiedEntry> {
@@ -306,7 +303,7 @@ fn assert_valid(op_id: &str, program: &Program, runners: &[BackendRunner]) {
 fn assert_region_chain(op_id: &str, program: &Program) {
     let first = program.entry().first().unwrap_or_else(|| {
         panic!(
-            "Fix: {} built an empty Program; OpEntry::build must return a region-wrapped body.",
+            "Fix: {} built an empty Program; the semantic operation builder must return a region-wrapped body.",
             op_id
         )
     });

@@ -186,11 +186,16 @@ pub(crate) fn run(args: &[String]) {
         });
     }
     entries.sort_by(|left, right| left.id.cmp(&right.id));
-    let dispatch_backends: Vec<String> = registered_backends_by_precedence_slice()
-        .iter()
-        .filter(|backend| backend_dispatches(backend.id))
-        .map(|backend| backend.id.to_string())
-        .collect();
+    let registered_backends = registered_backends_by_precedence_slice()
+        .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
+    let mut dispatch_backends = Vec::new();
+    for backend in registered_backends {
+        if backend_dispatches(backend.id)
+            .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"))
+        {
+            dispatch_backends.push(backend.id.to_string());
+        }
+    }
     let fixture_required_count = entries
         .iter()
         .filter(|entry| entry.requires_fixture)

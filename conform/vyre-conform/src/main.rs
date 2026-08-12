@@ -15,10 +15,7 @@ use vyre_conform_spec::{
     ConformanceResult, ReplayCapsule, ReplayMinimization, ReplayMismatch,
     REPLAY_CAPSULE_SCHEMA_VERSION,
 };
-use vyre_driver::{
-    backend::{backend_dispatches, registered_backends},
-    registry::DialectRegistry,
-};
+use vyre_driver::backend::{backend_dispatches, registered_backends};
 use vyre_reference::value::Value;
 
 #[cfg(feature = "gpu")]
@@ -105,7 +102,7 @@ struct ProofOptions {
 /// Per-case fixture bytes  -  one outer Vec per dispatch case, one
 /// middle Vec per declared buffer, one inner Vec of raw byte content.
 type FixtureCases = Vec<Vec<Vec<u8>>>;
-/// Signature of the zero-argument closure an `OpEntry` ships as its
+/// Signature of the zero-argument closure a `SemanticOperation` ships as its
 /// `test_inputs` / `expected_output` generator.
 type FixtureFn = fn() -> FixtureCases;
 
@@ -225,24 +222,10 @@ fn print_usage() {
 
 fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<ConformanceResult>, String> {
     let entries = unified_entries();
-    let mut pairs = Vec::with_capacity(entries.len());
+    let selected_entries = select_entries(&entries, ops, None)?;
+    let mut pairs = Vec::with_capacity(selected_entries.len());
     let backend_id = backend_id.to_string();
 
-    let mut selected_entries = Vec::with_capacity(entries.len());
-    for entry in entries {
-        if ops != "all" && entry.id != ops {
-            continue;
-        }
-        selected_entries.push(entry);
-    }
-
-    if ops != "all" && selected_entries.is_empty() {
-        return Err(format!(
-            "unknown op `{ops}`. Fix: pass `--ops all` or one registered OpEntry id."
-        ));
-    }
-
-    pairs.reserve(selected_entries.len());
     for entry in selected_entries {
         let prepared = match prepare_entry(entry) {
             Ok(prepared) => prepared,
@@ -275,33 +258,32 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<ConformanceResult>,
         pairs.push(compare_backend_against_reference(backend, &prepared));
     }
 
-    if ops != "all" && pairs.is_empty() {
-        return Err(format!(
-            "unknown op `{ops}`. Fix: pass `--ops all` or one registered OpEntry id."
-        ));
-    }
-
     Ok(pairs)
 }
 
 fn backend_registration(
     backend_id: &str,
 ) -> Result<&'static vyre_driver::BackendRegistration, String> {
+    let registrations = registered_backends()
+        .map_err(|error| format!("backend registry startup failed: {error}"))?;
     let requested = if backend_id == "auto" {
-        registered_backends()
-            .iter()
-            .copied()
-            .find(|registration| backend_dispatches(registration.id))
-            .map(|registration| registration.id)
-            .ok_or_else(|| {
-                "no dispatch-capable backend is linked into this binary. Fix: link a concrete driver crate that registers compiler and materializer facets.".to_string()
-            })?
+        let mut requested = None;
+        for registration in registrations {
+            if backend_dispatches(registration.id)
+                .map_err(|error| format!("backend registry startup failed: {error}"))?
+            {
+                requested = Some(registration.id);
+                break;
+            }
+        }
+        requested.ok_or_else(|| {
+            "no dispatch-capable backend is linked into this binary. Fix: link a concrete driver crate that registers compiler and materializer facets.".to_string()
+        })?
     } else {
         backend_id
     };
-    registered_backends()
+    registrations
         .iter()
-        .copied()
         .find(|registration| registration.id == requested)
         .ok_or_else(|| {
             format!(
@@ -310,13 +292,19 @@ fn backend_registration(
         })
 }
 
-fn dispatch_capable_backends() -> Vec<&'static vyre_driver::BackendRegistration> {
+fn dispatch_capable_backends() -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
     force_link_backend_inventory();
-    registered_backends()
-        .iter()
-        .copied()
-        .filter(|backend| backend_dispatches(backend.id))
-        .collect()
+    let registrations = registered_backends()
+        .map_err(|error| format!("backend registry startup failed: {error}"))?;
+    let mut backends = Vec::new();
+    for backend in registrations {
+        if backend_dispatches(backend.id)
+            .map_err(|error| format!("backend registry startup failed: {error}"))?
+        {
+            backends.push(backend);
+        }
+    }
+    Ok(backends)
 }
 
 fn force_link_backend_inventory() {
@@ -432,34 +420,41 @@ fn select_entries(
 ) -> Result<Vec<UnifiedEntry>, String> {
     let mut selected = Vec::new();
     let mut matched_ops_filter = false;
-    for (entry_index, entry) in all_entries.iter().copied().enumerate() {
+    let mut executable_index = 0usize;
+    for entry in all_entries.iter().copied() {
         if ops_filter != "all" && entry.id != ops_filter {
             continue;
         }
         matched_ops_filter = true;
+        if entry.build.is_none() {
+            continue;
+        }
         if let Some(shard) = shard {
-            if entry_index % shard.count != shard.index {
+            if executable_index % shard.count != shard.index {
+                executable_index += 1;
                 continue;
             }
         }
+        executable_index += 1;
         selected.push(entry);
     }
     if ops_filter != "all" && !matched_ops_filter {
         return Err(format!(
-            "unknown op `{ops_filter}`. Fix: pass `--ops all` or one registered OpEntry id."
+            "unknown op `{ops_filter}`. Fix: pass `--ops all` or one registered semantic operation id."
+        ));
+    }
+    if ops_filter != "all" && selected.is_empty() {
+        return Err(format!(
+            "operation `{ops_filter}` is registered as signature-only and has no neutral Program builder, so it is not executable conformance input. Fix: select an operation with a canonical Program builder."
         ));
     }
     if selected.is_empty() {
         return Err(
-            "proof selection matched zero ops. Fix: choose a shard that contains at least one registered op or remove `--shard`."
+            "proof selection matched zero executable ops. Fix: choose a shard that contains at least one operation with a canonical Program builder or remove `--shard`."
                 .to_string(),
         );
     }
     Ok(selected)
-}
-
-fn is_reference_backend(backend_id: &str) -> bool {
-    backend_id == "cpu-ref" || backend_id == "reference"
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {
@@ -1263,8 +1258,7 @@ fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
 
 fn emit_plan(args: impl IntoIterator<Item = String>) -> Result<(), String> {
     let options = parse_proof_options("plan", args)?;
-    let _reg = DialectRegistry::global();
-    let all_backends = dispatch_capable_backends();
+    let all_backends = dispatch_capable_backends()?;
     if all_backends.is_empty() {
         return Err(
             "plan refused to emit: no dispatch-capable backend is linked into this binary. \
@@ -1713,8 +1707,7 @@ fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String> {
             .into_owned()
         });
 
-    let _reg = DialectRegistry::global();
-    let all_backends = dispatch_capable_backends();
+    let all_backends = dispatch_capable_backends()?;
     if all_backends.is_empty() {
         return Err(
             "prove refused to emit the certificate: no dispatch-capable backend is linked into this binary. \
@@ -1726,10 +1719,7 @@ fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String> {
         );
     }
     let backends = select_backends(&all_backends, &options.backend_filter)?;
-    if !backends
-        .iter()
-        .any(|backend| !is_reference_backend(backend.id))
-    {
+    if !backends.iter().any(|backend| !backend.reference_oracle) {
         return Err(
             "prove refused to emit the certificate: the selected backend set only contains reference dispatch backends. \
              Fix: build with `--features gpu` so certificate generation proves at least one real GPU backend \
@@ -1947,6 +1937,39 @@ fn hash_optional_usize(hasher: &mut blake3::Hasher, value: Option<usize>) {
 mod tests {
     use super::*;
     use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
+    fn test_program() -> Program {
+        Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
+    }
+
+    /// WHY: signature-only semantic records belong in catalogs but cannot
+    /// become false conformance failures or executable shard members.
+    #[test]
+    fn selection_excludes_signature_only_operations() {
+        let entries = [
+            UnifiedEntry {
+                id: "core.signature_only",
+                build: None,
+                test_inputs: None,
+                expected_output: None,
+            },
+            UnifiedEntry {
+                id: "core.executable",
+                build: Some(test_program),
+                test_inputs: None,
+                expected_output: None,
+            },
+        ];
+
+        let selected = select_entries(&entries, "all", None).expect("one executable operation");
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].id, "core.executable");
+
+        let error = match select_entries(&entries, "core.signature_only", None) {
+            Ok(_) => panic!("signature-only operations must remain non-executable"),
+            Err(error) => error,
+        };
+        assert!(error.contains("registered as signature-only"), "{error}");
+    }
 
     #[test]
     fn backend_dispatch_plan_accepts_fixture_backed_runtime_sized_read_input() {

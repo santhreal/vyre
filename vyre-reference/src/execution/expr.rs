@@ -23,8 +23,8 @@ pub use crate::oob::Buffer;
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] when expression lowering or flat execution
-/// fails. The recursive evaluator is retained only as a test oracle.
+/// Returns [`ReferenceError`] when expression lowering or flat execution fails.
+/// The recursive evaluator is retained only as a test oracle.
 pub fn eval(
     expr: &Expr,
     invocation: &mut Invocation<'_>,
@@ -38,7 +38,7 @@ pub fn eval(
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] on operand type errors, malformed atomic or call
+/// Returns [`ReferenceError`] on operand type errors, malformed atomic or call
 /// expressions, unsupported variants, or float operands.
 pub(crate) fn eval_frame_oracle(
     expr: &Expr,
@@ -377,8 +377,8 @@ pub(crate) fn eval_frame_oracle(
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] if the buffer is read-only, uniform,
-/// or does not exist in the program declaration.
+/// Returns [`ReferenceError`] if the buffer is read-only, uniform, or does not
+/// exist in the program declaration.
 pub fn buffer_mut<'a>(
     memory: &'a mut Memory,
     program: &Program,

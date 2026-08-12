@@ -334,7 +334,7 @@ pub fn cpu_ref_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || bellman_shortest_path("src", "dst", "weight", "dist", "next_dist", "changed", 4, 4, 10),
         Some(|| {

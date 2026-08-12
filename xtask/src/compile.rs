@@ -1,237 +1,186 @@
-//! `cargo xtask compile`  -  multi-target emitter harness.
+//! `cargo xtask compile`  -  authenticated registered-target payload harness.
 //!
-//! P7.4 contract: one IR → backend artifacts + a
-//! byte-proof-equivalence certificate. The WGSL path is wired through
-//! `vyre-driver-wgpu`; targets without an installed emitter fail with
-//! an actionable error instead of writing synthetic artifacts.
+//! The command decodes one frontend `Program`, adapts it to `ProgramGraph`,
+//! compiles one neutral artifact, and invokes the pure compiler facet submitted
+//! by each requested target owner. Target names, formats, and emission details
+//! never live in this shared tool.
 //!
 //! Usage:
 //!
 //! ```sh
-//! cargo xtask compile <program.vir> \
-//!     [--to wgsl] [--to spirv] [--to secondary_text] [--to native_module] [--to hlsl] \
-//!     [--output-dir <dir>]
+//! cargo xtask compile <program.vir> --to <registered-target-id> \
+//!     [--to <registered-target-id>] [--output-dir <dir>]
 //! ```
 //!
-//! Every `--to TARGET` writes `<dir>/<fp>.<ext>` where `<fp>` is the
-//! blake3 of the canonicalized IR (8 chars prefix for readability;
-//! full 64-char form lives in the companion JSON manifest).
+//! Every target writes an authenticated `TargetPayload` frame named by the
+//! neutral artifact digest and request position. The companion JSON manifest
+//! records the full digest and requested target identities.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
+use vyre_driver_cuda as _;
+use vyre_driver_spirv as _;
+use vyre_driver_wgpu as _;
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_megakernel::{
+    Artifact, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetPayload,
+};
+
 const MAX_XTASK_COMPILE_INPUT_BYTES: u64 = 64 * 1024 * 1024;
-
-/// Supported compile targets. Each implies a file extension +
-/// emitter path. The emitters themselves live in backend crates;
-/// this enum is the frozen taxonomy consumers pin against.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Target {
-    PrimaryText,
-    PrimaryBinary,
-    SecondaryText,
-    Metal,
-    Hlsl,
-}
-
-impl Target {
-    fn parse(s: &str) -> Option<Self> {
-        match s {
-            "wgsl" => Some(Self::PrimaryText),
-            "spirv" => Some(Self::PrimaryBinary),
-            "secondary_text" => Some(Self::SecondaryText),
-            "native_module" => Some(Self::Metal),
-            "hlsl" => Some(Self::Hlsl),
-            _ => None,
-        }
-    }
-
-    fn ext(self) -> &'static str {
-        match self {
-            Self::PrimaryText => "wgsl",
-            Self::PrimaryBinary => "spv",
-            Self::SecondaryText => "secondary_text",
-            Self::Metal => "native_module",
-            Self::Hlsl => "hlsl",
-        }
-    }
-}
+const MAX_XTASK_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
+const XTASK_SEARCH_BUDGET: SearchBudget = SearchBudget::new(256, 100_000, 1, 0, 1_000_000_000);
 
 pub(crate) fn run(args: &[String]) {
-    // Parse: compile <input> --to <t1> [--to <t2>] ... [--output-dir <d>]
-    let mut idx = 2; // skip binary + "compile"
-    if idx >= args.len() {
-        eprintln!(
-            "Fix: missing input wire file. Usage: cargo_full run --bin xtask -- compile <program.vir> --to <target>"
-        );
+    let (input_path, targets, output_dir) = parse_args(args).unwrap_or_else(|error| {
+        eprintln!("{error}");
         process::exit(2);
-    }
-    let input_path = PathBuf::from(&args[idx]);
-    idx += 1;
-
-    let mut targets: Vec<Target> = Vec::new();
-    let mut out_dir = PathBuf::from("target/vyre-compile");
-
-    while idx < args.len() {
-        match args[idx].as_str() {
-            "--to" => {
-                idx += 1;
-                if idx >= args.len() {
-                    eprintln!("Fix: --to requires a target name");
-                    process::exit(2);
-                }
-                match Target::parse(&args[idx]) {
-                    Some(t) => targets.push(t),
-                    None => {
-                        eprintln!(
-                            "Fix: unknown target '{}'. Supported: wgsl, spirv, secondary_text, native_module, hlsl",
-                            args[idx]
-                        );
-                        process::exit(2);
-                    }
-                }
-                idx += 1;
-            }
-            "--output-dir" => {
-                idx += 1;
-                if idx >= args.len() {
-                    eprintln!("Fix: --output-dir requires a path");
-                    process::exit(2);
-                }
-                out_dir = PathBuf::from(&args[idx]);
-                idx += 1;
-            }
-            other => {
-                eprintln!("Fix: unknown arg '{other}'");
-                process::exit(2);
-            }
-        }
-    }
-
-    if targets.is_empty() {
+    });
+    let wire = read_bytes_bounded(&input_path).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot read {}: {error}", input_path.display());
+        process::exit(1);
+    });
+    let program = Program::from_wire(&wire).unwrap_or_else(|error| {
+        eprintln!("Fix: wire decode failed: {error}");
+        process::exit(1);
+    });
+    let artifact = compile_neutral(program).unwrap_or_else(|error| {
+        eprintln!("{error}");
+        process::exit(1);
+    });
+    fs::create_dir_all(&output_dir).unwrap_or_else(|error| {
         eprintln!(
-            "Fix: no --to targets specified. Must pass at least one (wgsl, spirv, secondary_text, native_module, hlsl)."
+            "Fix: cannot create output directory {}: {error}",
+            output_dir.display()
         );
-        process::exit(2);
-    }
-
-    let wire = match read_bytes_bounded(&input_path) {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("Fix: can't read {}: {e}", input_path.display());
-            process::exit(1);
-        }
-    };
-
-    // Decode + canonicalize (content-addressed fingerprint basis).
-    let program = match vyre_foundation::ir::Program::from_wire(&wire) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("Fix: wire decode failed: {e}");
-            process::exit(1);
-        }
-    };
-    let canonical =
-        vyre_foundation::optimizer::passes::algebraic::canonicalize_engine::run(program);
-    let canonical_wire = match canonical.to_wire() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("Fix: canonical re-encode failed: {e}");
-            process::exit(1);
-        }
-    };
-    let fp = *blake3::hash(&canonical_wire).as_bytes();
-    let mut fp_hex = String::with_capacity(fp.len() * 2);
-    for b in &fp {
-        use std::fmt::Write;
-        write!(&mut fp_hex, "{b:02x}")
-            .expect("Fix: format to String never fails; restore this invariant before continuing.");
-    }
-    let fp_prefix = &fp_hex[..16];
-
-    if let Err(e) = fs::create_dir_all(&out_dir) {
-        eprintln!("Fix: can't create output dir {}: {e}", out_dir.display());
         process::exit(1);
-    }
+    });
 
-    // Emit each target through the owning backend crate. Targets
-    // without an installed emitter fail before writing a misleading
-    // artifact.
-    for target in &targets {
-        let artifact_path = out_dir.join(format!("{fp_prefix}.{}", target.ext()));
-        let artifact = match emit_target(*target, &canonical) {
-            Ok(bytes) => bytes,
-            Err(message) => {
-                eprintln!("{message}");
-                process::exit(1);
-            }
-        };
-        if let Err(e) = fs::write(&artifact_path, artifact) {
-            eprintln!("Fix: can't write {}: {e}", artifact_path.display());
+    let digest = digest_hex(artifact.digest());
+    let prefix = &digest[..16];
+    for (index, target) in targets.iter().enumerate() {
+        let payload = compile_registered_target(&artifact, target).unwrap_or_else(|error| {
+            eprintln!("{error}");
             process::exit(1);
-        }
-        println!("emitted: {}", artifact_path.display());
+        });
+        let bytes = payload.to_bytes().unwrap_or_else(|error| {
+            eprintln!(
+                "Fix: authenticated payload for registered target `{target}` could not encode: {error}"
+            );
+            process::exit(1);
+        });
+        let path = output_dir.join(format!("{prefix}.{index}.vtp"));
+        fs::write(&path, bytes).unwrap_or_else(|error| {
+            eprintln!("Fix: cannot write {}: {error}", path.display());
+            process::exit(1);
+        });
+        println!("emitted: {}", path.display());
     }
 
-    // Manifest: full fingerprint + target list for proof-of-equivalence.
-    let manifest_path = out_dir.join(format!("{fp_prefix}.manifest.json"));
-    let manifest = serde_json_manifest(&fp_hex, &targets);
-    if let Err(e) = fs::write(&manifest_path, manifest) {
-        eprintln!("Fix: can't write manifest: {e}");
+    let manifest_path = output_dir.join(format!("{prefix}.manifest.json"));
+    let manifest = serde_json::to_string_pretty(&serde_json::json!({
+        "artifact": digest,
+        "targets": targets,
+    }))
+    .expect("target manifest contains only strings")
+        + "\n";
+    fs::write(&manifest_path, manifest).unwrap_or_else(|error| {
+        eprintln!("Fix: cannot write {}: {error}", manifest_path.display());
         process::exit(1);
-    }
+    });
     println!("manifest: {}", manifest_path.display());
 }
 
-fn emit_target(
-    target: Target,
-    canonical: &vyre_foundation::ir::Program,
-) -> Result<Vec<u8>, String> {
-    match target {
-        Target::PrimaryText => {
-            let wgsl = vyre_driver_wgpu::emit::lower(canonical)
-                .map_err(|error| format!("Fix: WGSL lowering failed: {error}"))?;
-            Ok(wgsl.into_bytes())
+fn parse_args(args: &[String]) -> Result<(PathBuf, Vec<String>, PathBuf), String> {
+    let input = args.get(2).ok_or_else(|| {
+        "Fix: missing input wire file. Usage: cargo_full run --bin xtask -- compile <program.vir> --to <registered-target-id>".to_string()
+    })?;
+    let mut targets = Vec::new();
+    let mut output_dir = PathBuf::from("target/vyre-compile");
+    let mut index = 3;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--to" => {
+                index += 1;
+                let target = args
+                    .get(index)
+                    .filter(|target| !target.trim().is_empty())
+                    .ok_or_else(|| {
+                        "Fix: --to requires a non-empty registered target id".to_string()
+                    })?;
+                targets.push(target.clone());
+                index += 1;
+            }
+            "--output-dir" => {
+                index += 1;
+                let path = args
+                    .get(index)
+                    .filter(|path| !path.trim().is_empty())
+                    .ok_or_else(|| "Fix: --output-dir requires a path".to_string())?;
+                output_dir = PathBuf::from(path);
+                index += 1;
+            }
+            other => return Err(format!("Fix: unknown compile argument `{other}`")),
         }
-        Target::PrimaryBinary => Err(
-            "Fix: SPIR-V artifact emission has no installed xtask emitter; use vyre-driver-spirv directly or add its emitter here before requesting --to spirv."
-                .to_string(),
-        ),
-        Target::SecondaryText => Err(
-            "Fix: PTX artifact emission requires the CUDA backend crate to provide an emitter before --to secondary_text can be used."
-                .to_string(),
-        ),
-        Target::Metal => {
-            let descriptor = vyre_lower::lower_verified(canonical)
-                .map_err(|error| format!("Fix: Metal verified lowering failed: {error}"))?
-                .descriptor;
-            vyre_emit_metal::emit_artifact_bytes(&descriptor)
-                .map_err(|error| format!("Fix: Metal native_module emission failed: {error}"))
-        }
-        Target::Hlsl => Err(
-            "Fix: HLSL artifact emission requires a DXC backend emitter before --to hlsl can be used."
-                .to_string(),
-        ),
     }
+    if targets.is_empty() {
+        return Err(
+            "Fix: no --to target specified. Pass one target id from the linked target registry."
+                .to_string(),
+        );
+    }
+    Ok((PathBuf::from(input), targets, output_dir))
 }
 
-fn serde_json_manifest(fp_hex: &str, targets: &[Target]) -> String {
-    let mut out = String::new();
-    out.push_str("{\n");
-    out.push_str(&format!("  \"fingerprint\": \"{fp_hex}\",\n"));
-    out.push_str("  \"targets\": [\n");
-    for (i, t) in targets.iter().enumerate() {
-        let comma = if i + 1 < targets.len() { "," } else { "" };
-        out.push_str(&format!("    \"{}\"{comma}\n", t.ext()));
-    }
-    out.push_str("  ]\n");
-    out.push_str("}\n");
-    out
+fn compile_neutral(program: Program) -> Result<Artifact, String> {
+    let graph = ProgramGraph::from_program("xtask-compile", program)
+        .map_err(|error| format!("Fix: Program cannot enter the canonical graph: {error}"))?;
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        XTASK_SEARCH_BUDGET,
+        MAX_XTASK_ARTIFACT_BYTES,
+    )
+    .validate()
+    .map_err(|error| format!("Fix: compile request is invalid: {error}"))?;
+    vyre_megakernel::compile(&request)
+        .map_err(|error| format!("Fix: neutral artifact compilation failed: {error}"))
 }
 
-fn read_bytes_bounded(path: &PathBuf) -> io::Result<Vec<u8>> {
+fn compile_registered_target(
+    artifact: &Artifact,
+    target_id: &str,
+) -> Result<TargetPayload, String> {
+    let registration = vyre_driver::backend::registered_backends()
+        .map_err(|error| format!("Fix: backend registry startup failed: {error}"))?
+        .iter()
+        .find(|registration| registration.target_id.as_str() == target_id)
+        .ok_or_else(|| {
+            format!(
+                "Fix: target `{target_id}` is not linked. Link its concrete driver crate or select a linked target id."
+            )
+        })?;
+    let compiler = registration
+        .target_compiler()
+        .map_err(|error| format!("Fix: target `{target_id}` has no compiler facet: {error}"))?;
+    compiler
+        .compile(artifact)
+        .map_err(|error| format!("Fix: target `{target_id}` rejected the artifact: {error}"))
+}
+
+fn digest_hex(digest: Digest) -> String {
+    let mut output = String::with_capacity(digest.as_bytes().len() * 2);
+    for byte in digest.as_bytes() {
+        use std::fmt::Write;
+        write!(&mut output, "{byte:02x}").expect("formatting bytes into a String cannot fail");
+    }
+    output
+}
+
+fn read_bytes_bounded(path: &Path) -> io::Result<Vec<u8>> {
     let mut reader = fs::File::open(path)?.take(MAX_XTASK_COMPILE_INPUT_BYTES.saturating_add(1));
     let mut bytes = Vec::new();
     reader.read_to_end(&mut bytes)?;
@@ -239,7 +188,7 @@ fn read_bytes_bounded(path: &PathBuf) -> io::Result<Vec<u8>> {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
-                "{} exceeds {MAX_XTASK_COMPILE_INPUT_BYTES} byte xtask compile input cap",
+                "{} exceeds the {MAX_XTASK_COMPILE_INPUT_BYTES}-byte compile input cap",
                 path.display()
             ),
         ));
@@ -249,44 +198,27 @@ fn read_bytes_bounded(path: &PathBuf) -> io::Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{emit_target, Target};
-    use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
+    use super::{compile_neutral, compile_registered_target};
+    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
     #[test]
-    fn native_module_target_emits_metal_artifact_json() {
+    fn linked_target_compiler_emits_authenticated_payload() {
         let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(16),
-            ],
-            [64, 1, 1],
-            vec![Node::Store {
-                buffer: Ident::from("out"),
-                index: Expr::InvocationId { axis: 0 },
-                value: Expr::LitU32(7),
-            }],
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+            [1, 1, 1],
+            vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
         );
+        let artifact = compile_neutral(program).expect("neutral fixture artifact");
+        let registration = vyre_driver::backend::registered_backends()
+            .expect("valid backend registry")
+            .iter()
+            .find(|registration| registration.target_compiler.is_some())
+            .expect("xtask must link at least one concrete target compiler");
+        let payload = compile_registered_target(&artifact, registration.target_id.as_str())
+            .expect("linked target compiler must emit an authenticated payload");
 
-        let bytes = emit_target(Target::Metal, &program).expect(
-            "Fix: xtask native_module target must route through vyre-emit-metal instead of the historical placeholder error.",
-        );
-        let json: serde_json::Value = serde_json::from_slice(&bytes)
-            .expect("Fix: native_module target must emit structured JSON artifact bytes.");
-
-        assert_eq!(json["target"], "native_module");
-        let entry_point = json["entry_point"]
-            .as_str()
-            .expect("Fix: native_module artifact must record the emitted Metal function name.");
-        assert_eq!(json["workgroup_size"], serde_json::json!([64, 1, 1]));
-        assert_eq!(json["schema"], 3);
-        assert!(
-            json["msl"]
-                .as_str()
-                .is_some_and(|source| !source.is_empty() && source.contains(entry_point)),
-            "native_module artifact must carry generated MSL source containing the emitted entry point"
-        );
-        assert_eq!(json["bindings"][0]["name"], "out");
-        assert_eq!(json["bindings"][0]["metal_buffer_index"], 0);
-        assert_eq!(json["sizes_buffer_index"], 1);
+        assert_eq!(payload.neutral_artifact(), artifact.digest());
+        assert!(!payload.bytes().is_empty());
+        assert!(!payload.format().identity().is_empty());
     }
 }

@@ -114,6 +114,7 @@ fn program_compilation_uses_one_deterministic_spirv_writer() {
 #[test]
 fn registered_target_compiler_emits_spirv_module_bundle() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
         .expect("SPIR-V registration must be force-linked");
@@ -137,6 +138,7 @@ fn registered_target_compiler_emits_spirv_module_bundle() {
 #[test]
 fn registered_materializer_executes_artifact_instance() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_spirv::SPIRV_BACKEND_ID)
         .expect("SPIR-V registration must be force-linked");

@@ -58,7 +58,7 @@ pub fn byte_shuffle(input: &str, output: &str, n: u32, elem_bytes: u32) -> Resul
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

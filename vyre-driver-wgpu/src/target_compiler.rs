@@ -4,6 +4,7 @@ use vyre_megakernel::{
     TargetPayload, TargetPayloadFormat,
 };
 
+pub(crate) const WGPU_TARGET_FORMAT: &str = "wgsl";
 pub(crate) const WGPU_TARGET_FORMAT_VERSION: u16 = 2;
 
 pub(crate) const WGPU_TARGET_MODULE_SCHEMA_VERSION: u16 = 1;
@@ -64,7 +65,7 @@ impl TargetCompiler for WgpuTargetCompiler {
 }
 
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
-    let format = TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION).map_err(|error| {
+    let format = TargetPayloadFormat::new(WGPU_TARGET_FORMAT, WGPU_TARGET_FORMAT_VERSION).map_err(|error| {
         BackendError::KernelCompileFailed {
             backend: "wgpu".to_string(),
             compiler_message: format!(

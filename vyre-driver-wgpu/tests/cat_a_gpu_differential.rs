@@ -7,9 +7,9 @@
 //!   2. Through `vyre_driver_wgpu::WgpuBackend::dispatch`  -  the real
 //!      GPU path downstream consumers will actually hit.
 //!
-//! The test asserts byte-identity between the two unless the op's
-//! `OpEntry` explicitly permits backend-defined transcendental drift
-//! in ULPs. Any divergence beyond that contract is a P0 finding: a
+//! The test asserts byte identity between the two unless the canonical
+//! `OperationRegistration` permits backend-defined transcendental drift in
+//! ULPs. Any divergence beyond that contract is a P0 finding: a
 //! Cat-A op that passes CPU conform but diverges on the 5090 would
 //! silently corrupt every downstream consumer that dispatches the op
 //! on GPU.
@@ -21,11 +21,10 @@
 //!
 //! Byte-identity CPU ↔ GPU differential sweep.
 //!
-//! V7-TEST-025 reset: the earlier per-op `diff_*` functions were
-//! consolidated into a single `diff_universal_registry` test that
-//! iterates every registered OpEntry. The consolidated test runs
-//! every OpEntry whose build() + test_inputs() yields a Program and
-//! fails loudly if fixtures or backend capabilities are missing.
+//! The earlier per-operation `diff_*` functions were consolidated into one
+//! `diff_universal_registry` test that iterates every canonical semantic
+//! operation. The test runs every operation whose builder and fixtures yield a
+//! `Program`, and fails when fixtures or backend capabilities are missing.
 //!
 //! Per-op failure reproducers  -  when a specific GPU-side bug shows
 //! up  -  live under findings.toml with a blocker + fix_plan. See
@@ -173,13 +172,13 @@ fn assert_diff(op: &'static str, tolerance: u32, program: &Program, inputs: Vec<
     }
 }
 
-fn entry_by_id(op_id: &str) -> &'static vyre_libs::fixture_catalog::OpEntry {
+fn entry_by_id(op_id: &str) -> vyre_foundation::operation::SemanticOperation {
     vyre_libs::fixture_catalog::all_entries()
         .find(|entry| entry.id == op_id)
-        .expect("Fix: expected OpEntry to be registered")
+        .expect("Fix: expected canonical operation registration")
 }
 
-fn run_entry_diff(entry: &'static vyre_libs::fixture_catalog::OpEntry) {
+fn run_entry_diff(entry: &vyre_foundation::operation::SemanticOperation) {
     let program = entry.program().unwrap_or_else(|| {
         panic!(
             "Fix: executable operation `{}` must provide a program",
@@ -198,13 +197,13 @@ fn run_entry_diff(entry: &'static vyre_libs::fixture_catalog::OpEntry) {
         );
     }
 }
-fn primitive_entry_by_id(op_id: &str) -> &'static vyre_primitives::harness::OpEntry {
+fn primitive_entry_by_id(op_id: &str) -> vyre_foundation::operation::SemanticOperation {
     vyre_primitives::harness::all_entries()
         .find(|entry| entry.id == op_id)
-        .expect("Fix: expected primitive OpEntry to be registered")
+        .expect("Fix: expected canonical primitive operation registration")
 }
 
-fn run_primitive_entry_diff(entry: &'static vyre_primitives::harness::OpEntry) {
+fn run_primitive_entry_diff(entry: &vyre_foundation::operation::SemanticOperation) {
     let program = entry.program().unwrap_or_else(|| {
         panic!(
             "Fix: executable operation `{}` must provide a program",
@@ -244,35 +243,35 @@ fn missing_capability_reason(program: &vyre::ir::Program) -> Option<String> {
 
 #[test]
 fn diff_softmax_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::nn::softmax"));
+    run_entry_diff(&entry_by_id("vyre-libs::nn::softmax"));
 }
 
 #[test]
 fn diff_attention_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::nn::attention"));
+    run_entry_diff(&entry_by_id("vyre-libs::nn::attention"));
 }
 
 #[test]
 fn diff_flash_attention_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::nn::flash_attention"));
+    run_entry_diff(&entry_by_id("vyre-libs::nn::flash_attention"));
 }
 
 #[test]
 fn diff_ast_cse_structural_hash_primitive_regression() {
-    run_primitive_entry_diff(primitive_entry_by_id(
+    run_primitive_entry_diff(&primitive_entry_by_id(
         "vyre-primitives::parsing::ast_cse_structural_hash",
     ));
 }
 
 #[test]
 fn diff_fnv1a64_primitive_regression() {
-    run_primitive_entry_diff(primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
+    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
 #[test]
 fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::hash::fnv1a64"));
-    run_primitive_entry_diff(primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
+    run_entry_diff(&entry_by_id("vyre-libs::hash::fnv1a64"));
+    run_primitive_entry_diff(&primitive_entry_by_id("vyre-primitives::hash::fnv1a64"));
 }
 
 /// FINDING-GPU-7 regression. `substring_search` (binding 0 haystack, 1 needle,
@@ -286,7 +285,7 @@ fn diff_fnv1a64_then_primitive_fnv1a64_regression() {
 #[cfg(feature = "matching-substring")]
 #[test]
 fn diff_substring_search_gpu_regression() {
-    run_entry_diff(entry_by_id("vyre-libs::scan::substring_search"));
+    run_entry_diff(&entry_by_id("vyre-libs::scan::substring_search"));
 }
 
 #[test]

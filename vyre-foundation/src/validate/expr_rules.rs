@@ -89,14 +89,7 @@ pub(crate) fn validate_expr(
                 }
                 validate_expr(arg, buffers, scope, options, report, depth_level + 1);
             }
-            validate_call(
-                op_id.as_str(),
-                args,
-                buffers,
-                scope,
-                options,
-                &mut report.errors,
-            );
+            validate_call(op_id.as_str(), args, buffers, scope, &mut report.errors);
         }
         Expr::Fma { a, b, c } => {
             validate_expr(a, buffers, scope, options, report, depth_level + 1);
@@ -286,16 +279,13 @@ pub(crate) fn output_marker_count(buffers: &[BufferDecl]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dialect_lookup::{
-        intern_string, private::Sealed, Category, DialectLookup, InternedOpId, LoweringTable,
-        OpDef, Signature, TypedParam,
-    };
+    use crate::dialect_lookup::{Signature, TypedParam};
     use crate::ir_inner::model::expr::{ExprNode, Ident};
+    use crate::operation::{OperationRegistration, OperationTier};
     use crate::validate::BackendValidationCapabilities;
     use rustc_hash::FxHashMap;
     use std::any::Any;
     use std::sync::Arc;
-    use std::sync::OnceLock;
 
     #[derive(Debug)]
     struct SubgroupBackend {
@@ -324,43 +314,27 @@ mod tests {
         report
     }
 
-    struct CallLookup;
+    const CALL_OP_ID: &str = "test::call_u32";
+    const CALL_SIGNATURE: Signature = Signature {
+        inputs: &[TypedParam {
+            name: "x",
+            ty: "u32",
+        }],
+        outputs: &[],
+        attrs: &[],
+        bytes_extraction: false,
+    };
 
-    impl Sealed for CallLookup {}
-
-    impl DialectLookup for CallLookup {
-        fn provider_id(&self) -> &'static str {
-            "validate.expr_rules.call_lookup"
-        }
-
-        fn intern_op(&self, name: &str) -> InternedOpId {
-            intern_string(name)
-        }
-
-        fn lookup(&self, id: InternedOpId) -> Option<&'static OpDef> {
-            (id == intern_string("test.call.u32")).then(call_op_def)
-        }
-    }
-
-    fn call_op_def() -> &'static OpDef {
-        static DEF: OnceLock<OpDef> = OnceLock::new();
-        DEF.get_or_init(|| OpDef {
-            id: "test.call.u32",
-            dialect: "test",
-            category: Category::Intrinsic,
-            signature: Signature {
-                inputs: &[TypedParam {
-                    name: "x",
-                    ty: "u32",
-                }],
-                outputs: &[],
-                attrs: &[],
-                bytes_extraction: false,
-            },
-            lowerings: LoweringTable::empty(),
-            laws: &[],
-            compose: None,
-        })
+    inventory::submit! {
+        OperationRegistration::new(
+            CALL_OP_ID,
+            OperationTier::External,
+            None,
+            None,
+            None,
+        )
+        .with_signature(CALL_SIGNATURE)
+        .with_category("test")
     }
 
     #[derive(Debug)]
@@ -612,56 +586,33 @@ mod tests {
     }
 
     #[test]
-    fn call_resolution_uses_supplied_lookup() {
-        let lookup = CallLookup;
+    fn unknown_call_uses_canonical_operation_registry() {
         let report = validate_subgroup_expr(
-            Expr::call("missing.call", vec![Expr::u32(1)]),
-            ValidationOptions::default().with_dialect_lookup(&lookup),
+            Expr::call("missing::call", vec![Expr::u32(1)]),
+            ValidationOptions::default(),
         );
         assert!(
             report
                 .errors
                 .iter()
                 .any(|error| error.message().contains("V016")),
-            "unknown call must be resolved and rejected when lookup is supplied: {:?}",
+            "unknown call must be rejected by the canonical registry: {:?}",
             report.errors
         );
     }
 
     #[test]
-    fn call_signature_mismatch_uses_supplied_lookup() {
-        let lookup = CallLookup;
+    fn call_signature_mismatch_uses_canonical_operation_registry() {
         let report = validate_subgroup_expr(
-            Expr::call("test.call.u32", vec![Expr::bool(true)]),
-            ValidationOptions::default().with_dialect_lookup(&lookup),
+            Expr::call(CALL_OP_ID, vec![Expr::bool(true)]),
+            ValidationOptions::default(),
         );
         assert!(
             report
                 .errors
                 .iter()
                 .any(|error| error.message().contains("V022")),
-            "typed call mismatch must be rejected from supplied lookup: {:?}",
-            report.errors
-        );
-    }
-
-    /// A call with an unknown op_id must be rejected even when no dialect lookup
-    /// is registered. Previously `validate_call` silently returned without emitting
-    /// any error, letting arbitrary `Expr::Call` nodes pass validation.
-    #[test]
-    fn call_with_no_lookup_is_rejected_with_v016() {
-        // ValidationOptions::default() has neither a supplied lookup nor a global
-        // registry entry, so no lookup is resolvable.
-        let report = validate_subgroup_expr(
-            Expr::call(
-                "no_such_op_ever_registered",
-                vec![Expr::u32(1), Expr::bool(true)],
-            ),
-            ValidationOptions::default(),
-        );
-        assert!(
-            report.errors.iter().any(|e| e.message().contains("V016")),
-            "call with no lookup must be rejected with V016, got: {:?}",
+            "typed call mismatch must be rejected from the canonical signature: {:?}",
             report.errors
         );
     }

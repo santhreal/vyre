@@ -5,11 +5,11 @@ use std::path::PathBuf;
 
 use crate::BackendError;
 
-/// Stable AOT target identifier.
-pub type AotTargetId = &'static str;
+/// Stable validated AOT target identity.
+pub use vyre_foundation::operation::TargetId as AotTargetId;
 
 /// One dependency entry required by a generated launcher crate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LauncherDependency {
     /// Dependency name in the emitted `Cargo.toml`.
     pub name: &'static str,
@@ -85,12 +85,12 @@ pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
 /// launcher generation for `target`, or [`BackendError::KernelCompileFailed`]
 /// when the concrete launcher emitter rejects the request.
 pub fn emit_aot_launcher_target(
-    target: &str,
+    target: &AotTargetId,
     request: &AotLauncherRequest<'_>,
 ) -> Result<AotLauncherFiles, BackendError> {
     let Some(emitter) = inventory::iter::<AotLauncherEmitter>
         .into_iter()
-        .find(|emitter| emitter.target == target)
+        .find(|emitter| &emitter.target == target)
     else {
         return Err(BackendError::UnsupportedFeature {
             name: format!("aot launcher target `{target}`"),

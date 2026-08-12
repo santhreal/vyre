@@ -10,8 +10,8 @@ use vyre_driver_wgpu as _;
 #[test]
 fn wgpu_production_route_executes_canonical_artifact() {
     let registration = registered_backends()
+        .expect("valid backend registry")
         .iter()
-        .copied()
         .find(|registration| registration.id == "wgpu")
         .expect("Fix: the gpu feature must link the wgpu registration");
     let program = Program::wrapped(

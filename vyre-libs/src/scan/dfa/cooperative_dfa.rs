@@ -231,7 +231,7 @@ fn fixture_expected_output() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || {
             let (_, compiled, _) = fixture_case();

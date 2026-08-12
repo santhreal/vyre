@@ -1,5 +1,6 @@
 //! Canonical semantic operation registration and derived catalog views.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
@@ -9,6 +10,64 @@ use crate::program_caps::{scan as scan_capabilities, RequiredCapabilities};
 
 /// Deterministic fixture input cases. One case contains declaration-ordered buffers.
 pub type OperationFixtures = fn() -> Vec<Vec<Vec<u8>>>;
+/// One immutable semantic record used by validation, inlining, conformance,
+/// documentation, and target-facet joins.
+#[derive(Clone, Copy, Debug)]
+pub struct SemanticOperation {
+    /// Stable operation identifier.
+    pub id: &'static str,
+    /// Semantic schema version.
+    pub semantic_version: u32,
+    /// Explicit callable signature when the operation is used through `Expr::Call`.
+    pub signature: Option<&'static Signature>,
+    /// Semantic tier.
+    pub tier: OperationTier,
+    /// Derived dialect/category namespace.
+    pub category: Option<&'static str>,
+    /// Optional neutral program builder.
+    pub build: Option<fn() -> Program>,
+    /// Deterministic fixture inputs.
+    pub test_inputs: Option<OperationFixtures>,
+    /// Deterministic fixture outputs.
+    pub expected_output: Option<OperationFixtures>,
+    /// Algebraic or semantic law identifiers.
+    pub laws: &'static [&'static str],
+    /// Numerical comparison policy.
+    pub tolerance: TolerancePolicy,
+}
+
+impl SemanticOperation {
+    /// Build the canonical program and stamp its stable operation identity.
+    #[must_use]
+    pub fn program(self) -> Option<Program> {
+        self.build.map(|build| build().with_entry_op_id(self.id))
+    }
+
+    /// Derive target-neutral capability requirements from the canonical program.
+    #[must_use]
+    pub fn required_capabilities(self) -> Option<RequiredCapabilities> {
+        self.program().map(|program| scan_capabilities(&program))
+    }
+
+    /// Derive target-neutral effects from the canonical program.
+    #[must_use]
+    pub fn effects(self) -> Option<OperationEffects> {
+        self.program()
+            .map(|program| OperationEffects::from_program(&program))
+    }
+
+    /// Return the coarse category.
+    #[must_use]
+    pub const fn category(self) -> Option<&'static str> {
+        self.category
+    }
+
+    /// Return the permitted f32 drift in ULPs.
+    #[must_use]
+    pub const fn tolerance(self) -> u32 {
+        self.tolerance.f32_ulp
+    }
+}
 
 /// Coarse semantic tier used by catalog and conformance consumers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -265,6 +324,22 @@ impl OperationRegistration {
             .map(|program| OperationEffects::from_program(&program))
     }
 }
+impl From<&'static OperationRegistration> for SemanticOperation {
+    fn from(registration: &'static OperationRegistration) -> Self {
+        Self {
+            id: registration.id,
+            semantic_version: registration.semantic_version,
+            signature: registration.signature.as_ref(),
+            tier: registration.tier,
+            category: registration.category,
+            build: registration.build,
+            test_inputs: registration.test_inputs,
+            expected_output: registration.expected_output,
+            laws: registration.laws,
+            tolerance: registration.tolerance,
+        }
+    }
+}
 
 inventory::collect!(OperationRegistration);
 
@@ -350,22 +425,116 @@ impl OperationRegistry {
 
     /// Resolve one stable operation identity.
     #[must_use]
-    pub fn get(&self, id: &str) -> Option<&'static OperationRegistration> {
-        self.by_id.get(id).copied()
+    pub fn get(&self, id: &str) -> Option<SemanticOperation> {
+        self.by_id.get(id).copied().map(SemanticOperation::from)
     }
 
     /// Iterate registrations in stable operation-id order.
-    pub fn iter(&self) -> impl ExactSizeIterator<Item = &'static OperationRegistration> + '_ {
-        self.ordered.iter().copied()
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = SemanticOperation> + '_ {
+        self.ordered.iter().copied().map(SemanticOperation::from)
     }
 }
 
-/// Target-specific capability facet keyed by canonical semantic operation id.
+/// Validated target identity carried by target-owned facet registrations.
+///
+/// Linked target owners construct borrowed identities at declaration time.
+/// Deserialized manifests retain owned identities without leaking storage.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TargetId(Cow<'static, str>);
+
+impl TargetId {
+    /// Construct a borrowed target identity from an owner-defined stable spelling.
+    ///
+    /// # Errors
+    ///
+    /// Empty or whitespace-padded identities are rejected.
+    pub const fn new(id: &'static str) -> Result<Self, &'static str> {
+        if id.is_empty() || has_surrounding_ascii_whitespace(id.as_bytes()) {
+            return Err("target identity must be non-empty and contain no surrounding whitespace");
+        }
+        Ok(Self(Cow::Borrowed(id)))
+    }
+
+    /// Construct an owned target identity from persisted or caller-supplied data.
+    ///
+    /// # Errors
+    ///
+    /// Empty or whitespace-padded identities are rejected.
+    pub fn from_owned(id: String) -> Result<Self, &'static str> {
+        if id.is_empty() || has_surrounding_ascii_whitespace(id.as_bytes()) {
+            return Err("target identity must be non-empty and contain no surrounding whitespace");
+        }
+        Ok(Self(Cow::Owned(id)))
+    }
+
+    /// Return the stable owner-defined spelling.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        self.0.as_ref()
+    }
+
+    /// Construct a validated borrowed target identity for a compile-time constant.
+    ///
+    /// # Panics
+    ///
+    /// Panics when the identity is empty or has surrounding whitespace.
+    #[must_use]
+    pub const fn expect_valid(id: &'static str) -> Self {
+        if id.is_empty() || has_surrounding_ascii_whitespace(id.as_bytes()) {
+            panic!("target identity must be non-empty and contain no surrounding whitespace");
+        }
+        Self(Cow::Borrowed(id))
+    }
+}
+
+impl serde::Serialize for TargetId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for TargetId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let id = <String as serde::Deserialize>::deserialize(deserializer)?;
+        Self::from_owned(id).map_err(serde::de::Error::custom)
+    }
+}
+
+impl std::fmt::Display for TargetId {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl PartialEq<&str> for TargetId {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+
+const fn has_surrounding_ascii_whitespace(bytes: &[u8]) -> bool {
+    matches!(bytes.first(), Some(byte) if byte.is_ascii_whitespace())
+        || matches!(bytes.last(), Some(byte) if byte.is_ascii_whitespace())
+}
+
+/// Derived target-specific capability keyed by canonical semantic operation id.
+///
+/// Concrete drivers submit one backend registration containing their validated
+/// target identity, compiler, materializer, and supported-operation set. The
+/// shared driver joins that record with [`OperationRegistry`] to produce this
+/// read-only view without a second operation submission.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TargetOperationFacet {
     /// Canonical semantic operation id.
     pub operation_id: &'static str,
-    /// Registered target compiler/materializer id.
-    pub target_id: &'static str,
+    /// Validated target identity from the concrete driver's registration.
+    pub target_id: TargetId,
     /// Target facet schema version.
     pub version: u32,
 }

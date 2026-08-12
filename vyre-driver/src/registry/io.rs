@@ -1,32 +1,6 @@
-//! Category C zero-copy I/O intrinsics.
-//!
-//! The `io` dialect declares ops that move bytes between persistent
-//! storage and GPU memory without a CPU staging copy. These are
-//! Category C  -  they have no portable lowering. A concrete backend
-//! opts in by registering a `BackendRegistration` that supplies
-//! `primary_text` / `primary_binary` / `secondary_text` / `native_module` builders.
-//!
-//! The ops are opt-in: a backend registers concrete io_uring /
-//! GPUDirect Storage lowerings before it can execute them. A program
-//! that uses these ops fails capability checks with a clear message
-//! unless such a backend is linked.
-//!
-//! The ops:
-//!
-//! * `io.dma_from_nvme(fd, offset, length)`  -  stream bytes directly
-//!   from an NVMe block device into GPU memory.
-//! * `io.write_back_to_nvme(handle, fd, offset)`  -  stream GPU bytes
-//!   back to an NVMe block device.
-//! * `mem.zerocopy_map(fd)`  -  map a file descriptor so that the GPU
-//!   can read it as its own address space (GDS).
-//! * `mem.unmap(handle)`  -  release a `mem.zerocopy_map` reservation.
-//!
-//! Even without lowerings, the ops are compositional in vyre IR:
-//! frontends can write Programs against them today, and the Program
-//! validates. Execution succeeds only when a backend that supports
-//! the `io` dialect is registered.
+//! Canonical target-only I/O and memory operation registrations.
 
-use crate::{Category, Signature, TypedParam};
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::operation::{OperationRegistration, OperationTier};
 
 const OP_DMA_FROM_NVME: &str = "io.dma_from_nvme";
@@ -105,25 +79,16 @@ inventory::submit! {
         .with_signature(SIG_DMA_FROM_NVME)
         .with_category("io")
 }
-
 inventory::submit! {
-    OperationRegistration::new(
-        OP_WRITE_BACK_TO_NVME,
-        OperationTier::Runtime,
-        None,
-        None,
-        None,
-    )
-    .with_signature(SIG_WRITE_BACK_TO_NVME)
-    .with_category("io")
+    OperationRegistration::new(OP_WRITE_BACK_TO_NVME, OperationTier::Runtime, None, None, None)
+        .with_signature(SIG_WRITE_BACK_TO_NVME)
+        .with_category("io")
 }
-
 inventory::submit! {
     OperationRegistration::new(OP_ZEROCOPY_MAP, OperationTier::Runtime, None, None, None)
         .with_signature(SIG_ZEROCOPY_MAP)
         .with_category("mem")
 }
-
 inventory::submit! {
     OperationRegistration::new(OP_UNMAP, OperationTier::Runtime, None, None, None)
         .with_signature(SIG_UNMAP)
@@ -133,80 +98,22 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::registry::{DialectRegistry, Target};
+    use vyre_foundation::operation::OperationRegistry;
 
     #[test]
-    fn every_io_op_registers() -> Result<(), String> {
-        let _lock = crate::registry::registry_test_lock();
-        DialectRegistry::install(DialectRegistry::from_inventory());
-        let reg = DialectRegistry::global();
-        for op in [
-            OP_DMA_FROM_NVME,
-            OP_WRITE_BACK_TO_NVME,
-            OP_ZEROCOPY_MAP,
-            OP_UNMAP,
+    fn io_operations_are_signature_only_semantic_records() {
+        for (id, category) in [
+            (OP_DMA_FROM_NVME, "io"),
+            (OP_WRITE_BACK_TO_NVME, "io"),
+            (OP_ZEROCOPY_MAP, "mem"),
+            (OP_UNMAP, "mem"),
         ] {
-            let id = reg.intern_op(op);
-            let def = reg.lookup(id).ok_or_else(|| {
-                format!("Fix: op `{op}` must have one canonical OperationRegistration.")
-            })?;
-            assert_eq!(def.id, op);
-            assert_eq!(def.category, Category::Intrinsic);
+            let operation = OperationRegistry::global()
+                .get(id)
+                .expect("canonical I/O operation");
+            assert_eq!(operation.category, Some(category));
+            assert!(operation.signature.is_some());
+            assert!(operation.program().is_none());
         }
-        Ok(())
-    }
-
-    #[test]
-    fn io_ops_have_no_gpu_lowering() {
-        let _lock = crate::registry::registry_test_lock();
-        DialectRegistry::install(DialectRegistry::from_inventory());
-        let reg = DialectRegistry::global();
-        for op in [
-            OP_DMA_FROM_NVME,
-            OP_WRITE_BACK_TO_NVME,
-            OP_ZEROCOPY_MAP,
-            OP_UNMAP,
-        ] {
-            let id = reg.intern_op(op);
-            // No backend opts into io ops yet; target lowerings
-            // lowerings are all None. The capability-negotiation
-            // layer surfaces a `BackendError::Unsupported` in this
-            // case (see B-B5 backend trait split for the checked
-            // path).
-            assert!(
-                reg.get_lowering(id, Target::PrimaryText).is_none(),
-                "{op} must not carry a primary-text lowering until a backend opts in"
-            );
-        }
-    }
-
-    #[test]
-    fn io_ops_use_structured_intrinsic_sentinel_not_custom_cpu_paths() {
-        let _lock = crate::registry::registry_test_lock();
-        DialectRegistry::install(DialectRegistry::from_inventory());
-        let reg = DialectRegistry::global();
-        for op in [
-            OP_DMA_FROM_NVME,
-            OP_WRITE_BACK_TO_NVME,
-            OP_ZEROCOPY_MAP,
-            OP_UNMAP,
-        ] {
-            let id = reg.intern_op(op);
-            let def = reg.lookup(id).unwrap();
-            assert!(
-                vyre_foundation::cpu_op::is_cpu_reference_sentinel(def.lowerings.cpu_ref),
-                "{op} must not install a custom CPU path; Category C io ops require concrete backend lowering"
-            );
-        }
-    }
-
-    #[test]
-    fn io_dialect_is_distinct_from_stdlib() {
-        let _lock = crate::registry::registry_test_lock();
-        DialectRegistry::install(DialectRegistry::from_inventory());
-        let reg = DialectRegistry::global();
-        let id = reg.intern_op(OP_DMA_FROM_NVME);
-        let def = reg.lookup(id).unwrap();
-        assert_eq!(def.dialect, "io");
     }
 }

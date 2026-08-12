@@ -45,6 +45,9 @@ mod thread_pool;
 mod wait_backoff;
 
 pub use device_buffer::{WgpuDeviceBuffer, WGPU_BACKEND_ID};
+use vyre_foundation::operation::TargetId;
+/// Validated target identity owned by the WGPU driver.
+pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;
 use std::sync::{atomic::AtomicBool, Arc};
@@ -212,11 +215,15 @@ pub fn artifact_materializer(
 
 inventory::submit! {
     vyre_driver::BackendRegistration {
-        id: "wgpu",
+        id: WGPU_BACKEND_ID,
+        target_id: WGPU_TARGET_ID,
+        payload_format: Some(target_compiler::WGPU_TARGET_FORMAT),
+        reference_oracle: false,
         factory: || WgpuBackend::acquire().map(|backend| {
             Box::new(backend) as Box<dyn vyre_driver::VyreBackend>
         }),
         supported_ops: vyre_driver::backend::validation::default_supported_ops_with_trap,
+        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
         target_compiler: Some(target_compiler::target_compiler_factory),
         materializer: Some(materializer::materializer_factory),
     }

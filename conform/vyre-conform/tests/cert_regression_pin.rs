@@ -15,10 +15,10 @@ use ed25519_dalek::{Signer, SigningKey};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_conform::{issue_bundle_cert, verify_bundle_against_reference, verify_cert_signature_hex};
 use vyre_conform_spec::{BundleCertificate, ConformanceCase};
-use vyre_driver::registry::{
-    Category, LoweringTable, OpDef, OpDefRegistration, Signature, TypedParam,
-};
+use vyre_foundation::dialect_lookup::{Signature, TypedParam};
+use vyre_foundation::operation::{OperationRegistration, OperationTier};
 use vyre_primitives::wire::pack_u32_slice as bytes_u32;
+use vyre_reference::ReferenceFacet;
 
 #[cfg(feature = "gpu")]
 use vyre_driver_metal as _;
@@ -27,7 +27,7 @@ use vyre_driver_wgpu as _;
 
 type BundleBuilderFn = fn() -> (Program, Vec<ConformanceCase>);
 
-const TEST_IDENTITY_U32_OP: &str = "vyre-conform.test.identity_u32";
+const TEST_IDENTITY_U32_OP: &str = "vyre_conform_test::identity_u32";
 
 fn identity_u32_cpu_ref(input: &[u8], output: &mut Vec<u8>) {
     output.clear();
@@ -48,15 +48,18 @@ const TEST_IDENTITY_U32_SIGNATURE: Signature = Signature {
 };
 
 inventory::submit! {
-    OpDefRegistration::new(|| OpDef {
-        id: TEST_IDENTITY_U32_OP,
-        dialect: "vyre-conform-test",
-        category: Category::Intrinsic,
-        signature: TEST_IDENTITY_U32_SIGNATURE,
-        lowerings: LoweringTable::new(identity_u32_cpu_ref),
-        laws: &[],
-        compose: None,
-    })
+    OperationRegistration::new(
+        TEST_IDENTITY_U32_OP,
+        OperationTier::External,
+        None,
+        None,
+        None,
+    )
+    .with_signature(TEST_IDENTITY_U32_SIGNATURE)
+    .with_category("vyre-conform-test")
+}
+inventory::submit! {
+    ReferenceFacet::new(TEST_IDENTITY_U32_OP, identity_u32_cpu_ref)
 }
 
 // ---------------------------------------------------------------------------
@@ -230,8 +233,7 @@ fn bundle_composed_nested() -> (Program, Vec<ConformanceCase>) {
 // Bundle 5  -  Region-chain with executable dialect op
 //
 // Contains a Node::Region (intrinsic-like generator) and an Expr::call to a
-// dialect op. The CPU reference resolves the call via the DialectRegistry; the
-// bundle cert hashes are still stable.
+// operation registry; the bundle certificate hashes remain stable.
 // ---------------------------------------------------------------------------
 fn bundle_region_chain_intrinsic_dialect() -> (Program, Vec<ConformanceCase>) {
     let body = vec![
@@ -303,10 +305,6 @@ fn bundle_region_chain_backend_witness() -> (Program, Vec<ConformanceCase>) {
 // ---------------------------------------------------------------------------
 #[test]
 fn cert_regression_pin_all_five_bundles() {
-    // Initialise driver registry so dialect ops (e.g. core.indirect_dispatch)
-    // resolve during reference_eval.
-    let _ = vyre_driver::registry::DialectRegistry::global();
-
     let key = deterministic_signing_key();
 
     // Drifts are collected rather than asserted one at a time. A wire-format or
@@ -437,8 +435,6 @@ fn cert_regression_pin_all_five_bundles() {
 // Missing backend registration is a release-host failure, not a skipped test.
 #[test]
 fn cert_regression_pin_backend_verification_gpu() {
-    let _ = vyre_driver::registry::DialectRegistry::global();
-
     let cases: Vec<(&str, BundleBuilderFn)> = vec![
         ("trivial_const", bundle_trivial_const),
         ("one_op_add", bundle_one_op_add),
@@ -451,8 +447,8 @@ fn cert_regression_pin_backend_verification_gpu() {
     ];
 
     let backend = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
-        .copied()
         .find(|registration| registration.id == "wgpu")
         .expect("Fix: wgpu backend must be registered in the GPU certificate regression lane");
 

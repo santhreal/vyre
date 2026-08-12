@@ -15,7 +15,7 @@ fn cpu_vs_backend_lens_every_eligible_op() {
     let mut failures: Vec<String> = Vec::new();
     let mut passed = 0usize;
     for entry in vyre_libs::fixture_catalog::all_entries() {
-        match lens::cpu_vs_backend(entry, be) {
+        match lens::cpu_vs_backend(&entry, be) {
             LensOutcome::Pass { cases } => {
                 passed += 1;
                 println!("  pass {} ({cases} cases)", entry.id);
@@ -44,7 +44,7 @@ fn fixpoint_lens_every_registered_contract() {
         if vyre_libs::fixture_catalog::fixpoint_contract(entry.id).is_none() {
             continue;
         }
-        match lens::fixpoint(entry, be) {
+        match lens::fixpoint(&entry, be) {
             LensOutcome::Pass { cases } => {
                 println!("  pass {} ({cases} cases)", entry.id);
             }

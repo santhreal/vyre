@@ -6,6 +6,7 @@ use vyre_megakernel::{
 
 use crate::METAL_BACKEND_ID;
 
+pub(crate) const METAL_TARGET_FORMAT: &str = "msl";
 pub(crate) const METAL_TARGET_FORMAT_VERSION: u16 = 2;
 
 pub(crate) struct MetalTargetCompiler {
@@ -42,7 +43,7 @@ impl TargetCompiler for MetalTargetCompiler {
 
 pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, BackendError> {
     let format =
-        TargetPayloadFormat::new("msl", METAL_TARGET_FORMAT_VERSION).map_err(|error| {
+        TargetPayloadFormat::new(METAL_TARGET_FORMAT, METAL_TARGET_FORMAT_VERSION).map_err(|error| {
             BackendError::KernelCompileFailed {
                 backend: METAL_BACKEND_ID.to_string(),
                 compiler_message: format!(

@@ -282,7 +282,7 @@ pub fn try_modified_gram_schmidt_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || randomized_projection_step("a", "omega", "y", 1, 2, 2),
         Some(|| {

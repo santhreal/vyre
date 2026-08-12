@@ -12,9 +12,9 @@ The crate is feature-gated per domain so a consumer that wants only
 bitset operations does not pay for the matching DFA, the d-DNNF
 compiler, or the cryptographic hash family. Each domain is a feature
 flag; a crate-level marker type lives at
-`vyre-primitives::<domain>::*` and registers through
-`inventory::submit!(OpEntry { … })` so `vyre::registered_primitives()`
-enumerates every primitive the current build links.
+`vyre-primitives::<domain>::*` and submits one
+`OperationRegistration::primitive(...)` so the canonical operation registry
+enumerates every primitive linked into the current binary.
 
 The crate intentionally has zero concrete backend dependencies. It
 depends only on `vyre-foundation` + `vyre-spec`.

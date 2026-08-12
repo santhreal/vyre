@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 use vyre_driver::aot::{AotLauncherRequest, LauncherDependency};
 
-use crate::artifact::Target;
+use crate::artifact::{registration, TargetId};
 use vyre_megakernel::ArtifactEnvelope;
 
 /// Options controlling launcher emission.
@@ -40,7 +40,7 @@ impl Default for LauncherOpts {
 pub enum LauncherError {
     /// No linked driver owns launcher generation for the artifact target.
     #[error("vyre-aot launcher: target {0} has no linked launcher emitter")]
-    TargetNotEnabled(&'static str),
+    TargetNotEnabled(TargetId),
 
     /// The target-owned launcher emitter rejected the request.
     #[error("vyre-aot launcher: target emitter failed: {0}")]
@@ -63,10 +63,14 @@ pub enum LauncherError {
 /// rejects the request.
 pub fn emit_launcher_rust(
     envelope: &ArtifactEnvelope,
-    selected_target: Target,
+    selected_target: TargetId,
     opts: &LauncherOpts,
 ) -> Result<BTreeMap<PathBuf, String>, LauncherError> {
-    let target = selected_target.aot_target_id();
+    let registration = registration(&selected_target)
+        .map_err(|_| LauncherError::TargetNotEnabled(selected_target.clone()))?;
+    let target = registration
+        .payload_format
+        .ok_or_else(|| LauncherError::TargetNotEnabled(selected_target.clone()))?;
     let matching_payloads = envelope
         .target_payloads()
         .iter()
@@ -78,20 +82,19 @@ pub fn emit_launcher_rust(
         )));
     }
     let request = AotLauncherRequest {
-        target,
+        target: selected_target.clone(),
         crate_name: &opts.crate_name,
         include_collectives: opts.include_collectives,
         include_ttt_loop: opts.include_ttt_loop,
     };
 
-    let target_files = vyre_driver::aot::emit_aot_launcher_target(target, &request).map_err(
-        |error| match error {
+    let target_files = vyre_driver::aot::emit_aot_launcher_target(&selected_target, &request)
+        .map_err(|error| match error {
             vyre_driver::BackendError::UnsupportedFeature { .. } => {
-                LauncherError::TargetNotEnabled(target)
+                LauncherError::TargetNotEnabled(selected_target.clone())
             }
             other => LauncherError::Backend(other.to_string()),
-        },
-    )?;
+        })?;
 
     let mut tree = target_files.files;
     tree.insert(

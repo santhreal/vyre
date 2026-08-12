@@ -52,9 +52,9 @@
 //! Turn defaults off with `default-features = false` and cherry-pick
 //! what you need.
 
-// P1.11 (closed): `OpEntry` is now POD over `&'static str` + `fn(...)`,
-// so stdlib auto-traits give us `Send + Sync` for free. No `unsafe`
-// anywhere in vyre-libs  -  `forbid` catches any future regression.
+// Semantic catalog entries are immutable values over static identifiers and
+// function pointers, so the standard auto-traits provide Send + Sync without
+// unsafe code.
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![allow(

@@ -730,7 +730,7 @@ fn fixture_tree_words() -> Vec<u32> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         PREORDER_OP_ID,
         || ast_walk_preorder("nodes", "out", 3, 3),
         Some(|| vec![vec![
@@ -743,7 +743,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         POSTORDER_OP_ID,
         || ast_walk_postorder("nodes", "out", 3, 3),
         Some(|| vec![vec![

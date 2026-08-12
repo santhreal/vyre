@@ -49,3 +49,20 @@ fn operation_identity_resolves_semantics() {
         .expect("capabilities must derive");
     assert_eq!(capabilities.max_workgroup_size, [1, 1, 1]);
 }
+
+/// WHY: target IDs are opaque owner data, but malformed identities must fail
+/// before they become cache, artifact, or routing keys.
+#[test]
+fn target_identity_rejects_empty_and_padded_values() {
+    use vyre_foundation::operation::TargetId;
+
+    assert!(TargetId::new("").is_err());
+    assert!(TargetId::new(" target").is_err());
+    assert!(TargetId::new("target ").is_err());
+    assert_eq!(
+        TargetId::new("external-target")
+            .expect("canonical target identity")
+            .as_str(),
+        "external-target"
+    );
+}

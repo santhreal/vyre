@@ -6,12 +6,13 @@
 //! argument, including the `buffer<T>` parameters that take a whole buffer
 //! rather than a value.
 
-use crate::dialect_lookup::{dialect_lookup, OpDef};
+use crate::dialect_lookup::Signature;
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::DataType;
+use crate::operation::OperationRegistry;
 use crate::validate::typecheck::expr_type;
-use crate::validate::{err, Binding, ValidationError, ValidationOptions};
+use crate::validate::{err, Binding, ValidationError};
 use rustc_hash::FxHashMap;
 
 pub(crate) fn validate_call(
@@ -19,40 +20,32 @@ pub(crate) fn validate_call(
     args: &[Expr],
     buffers: &FxHashMap<&str, &BufferDecl>,
     scope: &FxHashMap<crate::ir::Ident, Binding>,
-    options: ValidationOptions<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
-    let lookup = if let Some(lookup) = options.dialect_lookup {
-        lookup
-    } else if let Some(lookup) = dialect_lookup() {
-        lookup
-    } else {
+    let Some(operation) = OperationRegistry::global().get(op_id) else {
         errors.push(err(format!(
-            "V016: call references op `{op_id}` but no dialect lookup is registered for this \
-             validation pass. Fix: supply a lookup via \
-             `ValidationOptions::with_dialect_lookup(...)` or inline all calls before validation."
+            "V016: call references unknown op `{op_id}`. Fix: submit one canonical OperationRegistration for `{op_id}` or inline/remove this call."
         )));
         return;
     };
-    let interned = lookup.intern_op(op_id);
-    let Some(def) = lookup.lookup(interned) else {
+    let Some(signature) = operation.signature else {
         errors.push(err(format!(
-            "V016: call references unknown op `{op_id}`. Fix: register the dialect that owns `{op_id}` before validation, or inline/remove this call."
+            "V016: call references operation `{op_id}` without a callable signature. Fix: attach a Signature to its canonical OperationRegistration or inline the composition."
         )));
         return;
     };
-    validate_call_signature(op_id, def, args, buffers, scope, errors);
+    validate_call_signature(op_id, signature, args, buffers, scope, errors);
 }
 
 fn validate_call_signature(
     op_id: &str,
-    def: &OpDef,
+    signature: &Signature,
     args: &[Expr],
     buffers: &FxHashMap<&str, &BufferDecl>,
     scope: &FxHashMap<crate::ir::Ident, Binding>,
     errors: &mut Vec<ValidationError>,
 ) {
-    let expected = def.signature.inputs.len();
+    let expected = signature.inputs.len();
     if args.len() != expected {
         errors.push(err(format!(
             "V020: call `{op_id}` has {} arguments but signature expects {expected}. Fix: pass exactly {expected} arguments in the order declared by the op signature.",
@@ -61,7 +54,7 @@ fn validate_call_signature(
         return;
     }
 
-    for (index, (arg, param)) in args.iter().zip(def.signature.inputs.iter()).enumerate() {
+    for (index, (arg, param)) in args.iter().zip(signature.inputs.iter()).enumerate() {
         if let Some(element) = buffer_element_spelling(param.ty) {
             validate_buffer_argument(op_id, index, param.name, element, arg, buffers, errors);
             continue;

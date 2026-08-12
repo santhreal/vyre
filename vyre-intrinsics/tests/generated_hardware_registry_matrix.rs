@@ -7,7 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use vyre_intrinsics::harness::{all_entries, intrinsic_facet, HardwareSemantic, OpEntry, OpShape};
+use vyre_foundation::operation::SemanticOperation;
+use vyre_intrinsics::harness::{all_entries, intrinsic_facet, HardwareSemantic, OpShape};
 use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]
@@ -55,14 +56,14 @@ const EXPECTED: &[ExpectedHardwareEntry] = &[
     },
 ];
 
-fn hardware_entries() -> BTreeMap<&'static str, &'static OpEntry> {
+fn hardware_entries() -> BTreeMap<&'static str, SemanticOperation> {
     all_entries()
         .filter(|entry| entry.category() == Some("hardware"))
         .map(|entry| (entry.id, entry))
         .collect()
 }
 
-fn run_cpu(entry: &OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
+fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let program = entry
         .program()
         .expect("Fix: registered hardware intrinsic must provide a neutral builder");

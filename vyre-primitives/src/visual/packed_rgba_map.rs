@@ -47,7 +47,7 @@ pub fn packed_rgba_map(input: &str, output: &str, count: u32) -> Program {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || packed_rgba_map("in", "out", 4),
         Some(|| {

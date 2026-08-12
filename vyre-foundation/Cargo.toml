@@ -37,7 +37,6 @@ smallvec.workspace = true
 blake3.workspace = true
 bytemuck.workspace = true
 inventory.workspace = true
-lasso.workspace = true
 bumpalo.workspace = true
 im.workspace = true
 libm.workspace = true

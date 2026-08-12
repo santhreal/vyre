@@ -123,7 +123,7 @@ pub fn try_monoidal_compose_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || monoidal_compose("f", "g", "out", 2, 2, 2),
         Some(|| {

@@ -382,16 +382,6 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
             entry.id
         );
     }
-
-    for registration in inventory::iter::<vyre_driver::OpDefRegistration> {
-        let def = (registration.op)();
-        let tier = classify_op_id(def.id);
-        assert!(
-            matches!(tier, OpTier::Runtime | OpTier::Library),
-            "Fix: driver registry op `{}` must use a runtime namespace or a deliberate Tier 3 Cat-B duplicate id.",
-            def.id
-        );
-    }
 }
 
 fn registered_ops() -> Vec<RegisteredOp> {

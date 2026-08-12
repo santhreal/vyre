@@ -604,7 +604,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BinOp, DataType, Expr, Node, Program};
+    use vyre_foundation::ir::{DataType, Expr, Node, Program};
     use vyre_lower::{
         BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
         KernelOp, KernelOpKind, LiteralValue, MemoryClass,

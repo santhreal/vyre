@@ -8,7 +8,7 @@ use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileRequest, Digest, ExternalFacts, SearchBudget, TargetCompiler,
 };
 
-use crate::artifact::Target;
+use crate::artifact::{registration, TargetId};
 
 const MAX_NEUTRAL_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 
@@ -17,9 +17,9 @@ const MAX_NEUTRAL_ARTIFACT_BYTES: u64 = 64 * 1024 * 1024;
 pub enum CompileError {
     /// The chosen target has no linked compiler facet.
     #[error(
-        "vyre-aot: target {0:?} has no linked target compiler. Fix: link the concrete driver crate that registers this target."
+        "vyre-aot: target `{0}` has no linked target compiler. Fix: link the concrete driver crate that registers this target."
     )]
-    TargetNotEnabled(Target),
+    TargetNotEnabled(TargetId),
 
     /// Frontend call expansion failed.
     #[error("vyre-aot: frontend Program preparation failed: {0}")]
@@ -45,14 +45,14 @@ pub enum CompileError {
 }
 
 /// Compile a `Program` through the canonical graph compiler and a registered target facet.
-pub fn compile(program: &Program, target: Target) -> Result<ArtifactEnvelope, CompileError> {
+pub fn compile(program: &Program, target: TargetId) -> Result<ArtifactEnvelope, CompileError> {
     compile_with_resolver(program, target, None)
 }
 
 /// Compile with a caller-supplied resolver to inline `Expr::Call` nodes.
 pub fn compile_with_resolver(
     program: &Program,
-    target: Target,
+    target: TargetId,
     resolver: Option<OpResolver>,
 ) -> Result<ArtifactEnvelope, CompileError> {
     let inlined = match resolver {
@@ -61,22 +61,16 @@ pub fn compile_with_resolver(
         None => program.clone(),
     };
     let neutral = compile_neutral_artifact(&inlined)?;
-    let compiler = registered_target_compiler(target)?;
+    let compiler = registered_target_compiler(&target)?;
     vyre_megakernel::attach_target(neutral, compiler.as_ref())
         .map_err(|error| CompileError::TargetCompilation(error.to_string()))
 }
 
-fn registered_target_compiler(target: Target) -> Result<Box<dyn TargetCompiler>, CompileError> {
-    let identity = target.aot_target_id();
-    for registration in vyre_driver::backend::registered_backends() {
-        let Ok(compiler) = registration.target_compiler() else {
-            continue;
-        };
-        if compiler.format().identity() == identity {
-            return Ok(compiler);
-        }
-    }
-    Err(CompileError::TargetNotEnabled(target))
+fn registered_target_compiler(target: &TargetId) -> Result<Box<dyn TargetCompiler>, CompileError> {
+    registration(target)
+        .map_err(|_| CompileError::TargetNotEnabled(target.clone()))?
+        .target_compiler()
+        .map_err(|_| CompileError::TargetNotEnabled(target.clone()))
 }
 
 fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError> {
@@ -101,7 +95,11 @@ fn compile_neutral_artifact(program: &Program) -> Result<Artifact, CompileError>
 }
 
 #[cfg(test)]
-pub(crate) fn artifact_fixture(program: &Program, target_bytes: Vec<u8>) -> ArtifactEnvelope {
+pub(crate) fn artifact_fixture(
+    program: &Program,
+    payload_format: &str,
+    target_bytes: Vec<u8>,
+) -> ArtifactEnvelope {
     use vyre_megakernel::{
         TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
         TargetResourceBinding, TargetResourceMemory,
@@ -133,7 +131,7 @@ pub(crate) fn artifact_fixture(program: &Program, target_bytes: Vec<u8>) -> Arti
     };
     let payload = TargetPayload::new(
         &neutral,
-        TargetPayloadFormat::new(Target::Ptx.aot_target_id(), 1).unwrap(),
+        TargetPayloadFormat::new(payload_format, 1).unwrap(),
         vec![entry],
         target_bytes,
     )

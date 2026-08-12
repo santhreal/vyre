@@ -14,6 +14,9 @@ use vyre_reference::value::Value;
 
 /// Stable backend id for the pure-Rust reference interpreter.
 pub const CPU_REF_BACKEND_ID: &str = "cpu-ref";
+/// Validated identity for the non-production reference target.
+pub const CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId =
+    vyre_foundation::operation::TargetId::expect_valid(CPU_REF_BACKEND_ID);
 
 /// Dispatch backend backed by `vyre_reference::reference_eval`.
 #[derive(Debug, Default, Clone, Copy)]
@@ -137,8 +140,12 @@ fn acquire_cpu_ref() -> Result<Box<dyn VyreBackend>, BackendError> {
 inventory::submit! {
     BackendRegistration {
         id: CPU_REF_BACKEND_ID,
+        target_id: CPU_REF_TARGET_ID,
+        payload_format: None,
+        reference_oracle: true,
         factory: acquire_cpu_ref,
         supported_ops: core_supported_ops,
+        semantic_operations: vyre_driver::backend::dialect_only_supported_ops,
         target_compiler: None,
         materializer: None,
     }

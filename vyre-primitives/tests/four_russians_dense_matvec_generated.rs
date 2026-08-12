@@ -9,7 +9,7 @@ use common::u32_bytes;
 use vyre_primitives::bitset::four_russians::{
     dense_matvec_byte_lut, dense_matvec_byte_lut_words, dense_matvec_cpu_ref,
     four_russians_dense_matvec_byte_lut, frontier_words_for_byte_tiles, BYTE_TILE_STATES,
-    BYTE_TILE_WIDTH, DENSE_MATVEC_OP_ID,
+    BYTE_TILE_WIDTH,
 };
 use vyre_reference::value::Value;
 

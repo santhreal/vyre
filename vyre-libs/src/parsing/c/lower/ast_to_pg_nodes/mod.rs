@@ -31,8 +31,6 @@ pub use reference::{
 // that pass instead of growing this shared prelude.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::fixture_catalog::OpEntry;
-#[cfg(any(test, feature = "cpu-parity"))]
 use vyre_foundation::ir::Expr;
 #[cfg(any(test, feature = "cpu-parity"))]
 use vyre_primitives::predicate::node_kind;

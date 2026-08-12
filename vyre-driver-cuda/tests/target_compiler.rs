@@ -49,6 +49,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 #[test]
 fn registered_target_compiler_emits_selected_ptx_bundle() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("CUDA target compiler registration must be linked");
@@ -67,6 +68,7 @@ fn registered_target_compiler_emits_selected_ptx_bundle() {
 #[test]
 fn registered_materializer_executes_authenticated_ptx() {
     let registration = vyre_driver::backend::registered_backends()
+        .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("CUDA materializer registration must be linked");

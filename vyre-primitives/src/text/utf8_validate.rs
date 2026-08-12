@@ -463,7 +463,7 @@ fn cpu_class_at(source: &[u8], idx: usize) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || utf8_validate("source", "classes", 8),
         Some(|| {

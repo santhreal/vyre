@@ -53,7 +53,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             }
 
             inventory::submit! {
-                crate::harness::OpEntry {
+                vyre_foundation::operation::OperationRegistration {
                     id: OP_ID,
                     semantic_version: 1,
                     signature: Some(crate::harness::U32_UNARY_SIGNATURE),
@@ -159,7 +159,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             }
 
             inventory::submit! {
-                crate::harness::OpEntry {
+                vyre_foundation::operation::OperationRegistration {
                     id: OP_ID,
                     semantic_version: 1,
                     signature: Some(crate::harness::U32_UNARY_SIGNATURE),

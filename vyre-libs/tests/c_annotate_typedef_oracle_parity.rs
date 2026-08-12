@@ -5,16 +5,16 @@
 //! (a hand-written Rust walker, not derived from the IR). Other suites use the
 //! oracle as their source of truth for building typed VAST, but NOTHING pinned the
 //! GPU builder itself against it, so a divergence between the IR annotator and the
-//! oracle would go unnoticed (and the OpEntry conformance registry does not register
-//! ANNOTATE_TYPEDEF_OP_ID; see BACKLOG.md PARITY-typedef-annotate-opentry).
+//! oracle would go unnoticed. The canonical operation registry now carries
+//! `ANNOTATE_TYPEDEF_OP_ID`; this differential independently pins the oracle boundary.
 //!
 //! This differential runs the GPU builder through `reference_eval` and asserts its
 //! annotated VAST is BYTE-IDENTICAL to the oracle's, over the canonical VAST built by
 //! the (already-covered) `reference_c11_build_vast_nodes`. It exercises the exact
 //! typedef-visibility resolution that matters: a typedef name reused as a type, a
 //! reuse across a brace scope, and a control case with no typedef so the flags stay
-//! clear. It also PROVES the witness encoding a future OpEntry registration needs
-//! (GPU builder ← expanded u32-per-byte haystack; oracle ← raw source bytes).
+//! clear. It also proves the witness encoding used by the canonical operation
+//! registration (GPU builder ← expanded u32-per-byte haystack; oracle ← raw source bytes).
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 

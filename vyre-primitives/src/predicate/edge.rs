@@ -112,7 +112,7 @@ mod tests {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || edge(ProgramGraphShape::new(4, 2), "fin", "fout", 0xFFFF_FFFF),
         Some(|| {

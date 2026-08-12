@@ -184,6 +184,7 @@ graph TD
   C33 --> C21
   C33 --> C22
   C33 --> C23
+  C33 --> C25
   C33 --> C26
   C33 --> C27
   C33 --> C31
@@ -332,6 +333,7 @@ graph TD
 | `xtask` | `vyre-libs` | product operation builders | `crypto`, `full`, `logical`, `matching`, `math`, `nn`, `nn-moe`, `parsing`, `security`, `visual` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `xtask` | `vyre-lints` | source policy enforcement | None | `always` | `normal` | `false` | `true` | `private` | `lint-policy` |
 | `xtask` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
+| `xtask` | `vyre-megakernel` | neutral artifact compilation and target payload contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `xtask` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `fixpoint`, `graph`, `hash`, `inventory-registry`, `label`, `matching`, `math`, `nn`, `parsing`, `predicate`, `reduce`, `text` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `xtask` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |
 | `xtask` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |

@@ -311,7 +311,7 @@ pub fn pack_u32(words: &[u32]) -> Vec<u8> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || bracket_match("kinds", "stack", "match_pairs", 4, 4),
         Some(|| vec![vec![

@@ -214,7 +214,7 @@ pub fn reference_eval_warm_start(current: &[u32], next: &[u32], seed: &[u32]) ->
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || bitset_fixpoint("current", "next", NAME_CHANGED_FLAG, 1),
         Some(|| {

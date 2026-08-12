@@ -99,7 +99,7 @@ pub mod perf;
 /// Program capability analysis.
 pub mod program_caps;
 
-/// Dispatch surface (dialect_lookup, extension, extern_registry).
+/// Operation schema and opaque IR extension surfaces.
 pub mod dispatch;
 
 /// Algebraic-laws surface (algebraic_law_registry, composition).
@@ -117,7 +117,6 @@ pub use algebra::algebraic_law_registry::{
 };
 pub use analysis::graph_view;
 pub use dispatch::dialect_lookup;
-pub use dispatch::extern_registry;
 pub use memory_model::MemoryOrdering;
 
 /// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
@@ -130,17 +129,7 @@ pub use analysis::graph_view::{
     from_graph, to_graph, DataEdge, DataflowKind, EdgeKind, GraphNode, GraphValidateError,
     NodeGraph,
 };
-pub use dispatch::dialect_lookup::{
-    dialect_lookup, install_dialect_lookup, intern_string, AttrSchema, AttrType, Category,
-    DialectLookup, InternedOpId, LoweringCtx, LoweringTable, NativeModule, NativeModuleBuilder,
-    OpDef, PrimaryBinaryBuilder, PrimaryTextBuilder, SecondaryTextBuilder, Signature, TextModule,
-    TypedParam,
-};
-pub use dispatch::extern_registry::{
-    all_ops as all_extern_ops, dialects as extern_dialects,
-    ops_in_dialect as extern_ops_in_dialect, verify as verify_extern_registry, ExternDialect,
-    ExternOp, ExternVerifyError,
-};
+pub use dispatch::dialect_lookup::{AttrSchema, AttrType, Signature, TypedParam};
 
 // The generated AST is owner-local; public consumers use `pub mod ir`.
 mod ir_inner {

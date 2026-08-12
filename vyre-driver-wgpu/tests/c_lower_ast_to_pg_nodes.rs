@@ -13,8 +13,9 @@ use vyre::ir::{Expr, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
+use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::fixture_catalog::{all_entries, OpEntry};
+use vyre_libs::fixture_catalog::all_entries;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
@@ -328,10 +329,10 @@ fn c_function_pointer_array_prototype_fixture_tokens() -> (Vec<u32>, Vec<u32>, V
     let tok_starts = starts_for_lens(&tok_lens);
     (tok_types, tok_starts, tok_lens)
 }
-fn entry() -> &'static OpEntry {
+fn entry() -> SemanticOperation {
     all_entries()
         .find(|entry| entry.id == OP_ID)
-        .unwrap_or_else(|| panic!("Fix: missing OpEntry for {OP_ID}"))
+        .unwrap_or_else(|| panic!("Fix: missing canonical operation registration for {OP_ID}"))
 }
 fn assert_reference_witnesses(
     program: &Program,

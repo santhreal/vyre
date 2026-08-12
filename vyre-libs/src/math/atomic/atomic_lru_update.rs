@@ -36,7 +36,7 @@ pub fn atomic_lru_update_u32(buffer: &str, index: Expr, timestamp: Expr) -> Prog
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

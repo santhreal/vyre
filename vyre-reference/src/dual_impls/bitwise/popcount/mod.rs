@@ -21,3 +21,7 @@ pub mod reference_b {
         super::super::common::popcount_bits(input)
     }
 }
+
+inventory::submit! {
+    crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
+}

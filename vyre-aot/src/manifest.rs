@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::artifact::Target;
+use crate::artifact::TargetId;
 
 /// Top-level package manifest written beside the canonical envelope.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -14,8 +14,10 @@ pub struct Manifest {
     pub aot_version: String,
     /// Caller-supplied package name.
     pub artifact_name: String,
-    /// Driver target used to select the attached payload.
-    pub target: Target,
+    /// Opaque concrete-driver target used to select the attached payload.
+    pub target: TargetId,
+    /// Concrete-driver-owned target payload format selected for this package.
+    pub target_payload_format: String,
     /// Compressed canonical envelope filename within the package.
     pub envelope_file: String,
     /// Compression applied to the envelope file.
@@ -39,5 +41,5 @@ pub struct Manifest {
 
 impl Manifest {
     /// Package schema written by this build.
-    pub const SCHEMA_VERSION: &'static str = "vyre-aot-manifest-v3";
+    pub const SCHEMA_VERSION: &'static str = "vyre-aot-manifest-v4";
 }

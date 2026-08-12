@@ -191,7 +191,7 @@ fn adler32_body(input: &str, out: &str, n: u32) -> Vec<Node> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         ADLER32_OP_ID,
         || adler32_program("input", "out", 3),
         Some(|| {

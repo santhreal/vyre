@@ -318,9 +318,12 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
+    let registrations = registered_backends_by_precedence_slice()
+        .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
     let mut backends = Vec::new();
-    for registration in registered_backends_by_precedence_slice() {
-        let dispatches = backend_dispatches(registration.id);
+    for registration in registrations {
+        let dispatches = backend_dispatches(registration.id)
+            .unwrap_or_else(|error| panic!("backend registry startup failed: {error}"));
         let acquire_result = acquire(registration.id);
         let (acquire_ok, acquire_error) = match acquire_result {
             Ok(_) => (true, None),
@@ -328,7 +331,8 @@ pub(crate) fn run(args: &[String]) {
         };
         backends.push(BackendEntry {
             id: registration.id.to_string(),
-            precedence: backend_precedence(registration.id),
+            precedence: backend_precedence(registration.id)
+                .unwrap_or_else(|error| panic!("backend registry startup failed: {error}")),
             dispatches,
             acquire_ok,
             acquire_error,

@@ -267,14 +267,21 @@ fn buflen_of_undeclared_buffer_is_rejected() {
 }
 
 // ============================================================================
-// 5. Unknown op call rejection
+// 5. Unknown operation call rejection
 // ============================================================================
 
-// NOTE: `DialectLookup` is a sealed trait (`private::Sealed`), so integration
-// tests cannot construct a custom lookup. Without an active lookup the
-// validator silently accepts unknown `Expr::Call` nodes. The rejection
-// contract for unknown op calls is enforced in the in-crate unit tests at
-// `src/validate/expr_rules.rs` (`call_resolution_uses_supplied_lookup`).
+#[test]
+fn unknown_operation_call_is_rejected() {
+    let program = output_program(vec![Node::let_bind(
+        "x",
+        Expr::call("missing::operation", vec![]),
+    )]);
+    let errors = validate(&program);
+    assert!(
+        errors.iter().any(|error| error.message().contains("V016")),
+        "unknown operation calls must fail canonical registry validation: {errors:?}"
+    );
+}
 
 // ============================================================================
 // 6. Type mismatch in Select

@@ -474,8 +474,8 @@ fn packaged_envelope_admits_through_runtime_without_recompile() {
     let expected_neutral = neutral.digest();
     let node = neutral.nodes()[0].id;
     let resource = neutral.resources()[0].value;
-    // Match the AOT package payload format identity contract (`Target::Ptx.aot_target_id()` + version 1).
-    let required = format("secondary_text", 1);
+    // Match the fixture package payload format identity and version.
+    let required = format("fixture-target-format", 1);
     let attached = TargetPayload::new(
         &neutral,
         required.clone(),
@@ -698,8 +698,12 @@ fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendE
 
 static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
     id: "test-artifact",
+    target_id: vyre_foundation::operation::TargetId::expect_valid("test-artifact"),
+    payload_format: None,
+    reference_oracle: false,
     factory: test_backend_factory,
     supported_ops: test_supported_ops,
+    semantic_operations: test_supported_ops,
     target_compiler: None,
     materializer: Some(test_materializer_factory),
 };

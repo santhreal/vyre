@@ -146,7 +146,7 @@ pub fn try_mz_project_step_cpu_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || {
             mz_project_step("a", "b", "out", 4)

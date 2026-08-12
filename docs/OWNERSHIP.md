@@ -525,7 +525,7 @@ Generate evidence and enforce repository, release, documentation, and architectu
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -542,6 +542,7 @@ Generate evidence and enforce repository, release, documentation, and architectu
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lints` | source policy enforcement | `private` | `lint-policy` |
 | `vyre-lower` | verified backend-neutral representation lowering | `private` | `lowering` |
+| `vyre-megakernel` | neutral artifact compilation and target payload contracts | `private` | `megakernel-compiler` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-reference` | independent semantic oracle execution | `private` | `reference-semantics` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |

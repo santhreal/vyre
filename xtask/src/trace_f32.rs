@@ -1,6 +1,6 @@
 //! `cargo xtask trace-f32 <op_id>`  -  run an op's registered fixture on the
 //! pure-Rust reference interpreter and dump output bytes as the exact
-//! `Vec<Vec<Vec<u8>>>` literal that paste into `OpEntry::expected_output`.
+//! `Vec<Vec<Vec<u8>>>` literal that can be used as `OperationRegistration::expected_output`.
 //!
 //! Purpose: mechanise V7-TEST-002/003/004 (softmax / attention / layer_norm
 //! f32 fixtures) and any future op whose expected outputs are too unwieldy
@@ -21,8 +21,6 @@
 use std::process;
 
 use vyre::ir::Program;
-use vyre_intrinsics::harness::OpEntry as IntrinsicsEntry;
-use vyre_libs::fixture_catalog::OpEntry as LibsEntry;
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 
@@ -33,9 +31,9 @@ pub(crate) fn run_cmd(args: &[String]) {
         None => {
             eprintln!(
                 "Fix: usage: cargo_full run --bin xtask -- trace-f32 <op_id>\n\
-                 Walks vyre-libs + vyre-intrinsics inventories, finds the registered \
-                 OpEntry, runs its `test_inputs()` against `vyre_reference::reference_eval`, \
-                 and prints the byte-identical expected-output literal."
+                 Walks the linked canonical operation registry, finds the registered \
+                 semantic operation, runs its `test_inputs()` against \
+                 `vyre_reference::reference_eval`, and prints the byte-identical expected-output literal."
             );
             process::exit(1);
         }
@@ -46,8 +44,8 @@ pub(crate) fn run_cmd(args: &[String]) {
         None => {
             eprintln!(
                 "Fix: op id '{op_id}' not registered, or registered without `test_inputs`. \
-                 Add `test_inputs: Some(|| vec![vec![/* input bytes per buffer */]])` \
-                 to its `OpEntry` first; this tool then computes the expected outputs."
+                 Add `test_inputs` to its canonical `OperationRegistration` first; \
+                 this tool then computes the expected outputs."
             );
             process::exit(1);
         }
@@ -89,9 +87,7 @@ pub(crate) fn run_cmd(args: &[String]) {
 }
 
 fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
-    if let Some(entry) =
-        vyre_libs::fixture_catalog::all_entries().find(|e: &&LibsEntry| e.id == op_id)
-    {
+    if let Some(entry) = vyre_libs::fixture_catalog::all_entries().find(|entry| entry.id == op_id) {
         let inputs = entry.test_inputs?;
         return Some((
             entry
@@ -100,9 +96,7 @@ fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
             (inputs)(),
         ));
     }
-    if let Some(entry) =
-        vyre_intrinsics::harness::all_entries().find(|e: &&IntrinsicsEntry| e.id == op_id)
-    {
+    if let Some(entry) = vyre_intrinsics::harness::all_entries().find(|entry| entry.id == op_id) {
         let inputs = entry.test_inputs?;
         return Some((
             entry

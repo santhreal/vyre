@@ -246,7 +246,7 @@ fn semantic_witness_expected() -> Vec<Vec<Vec<u8>>> {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         OP_ID,
         || c_lower_ast_to_pg_nodes("vast_nodes", Expr::u32(witness_node_count()), "out_pg_nodes"),
         Some(witness_inputs),
@@ -255,7 +255,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         SEMANTIC_OP_ID,
         || c_lower_ast_to_pg_semantic_graph(
             "vast_nodes",

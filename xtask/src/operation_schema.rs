@@ -35,6 +35,7 @@ pub(crate) struct OperationRecord {
     pub(crate) features: Vec<String>,
     pub(crate) oracle: OracleContract,
     pub(crate) backend_support: BTreeMap<String, BackendSupport>,
+    pub(crate) target_facets: Vec<String>,
     pub(crate) laws: Vec<String>,
     pub(crate) composition_chain: Vec<CompositionStep>,
 }
@@ -69,6 +70,7 @@ pub(crate) struct BufferSignature {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct OracleContract {
     pub(crate) reference_eval: bool,
+    pub(crate) flat_reference_facet: bool,
     pub(crate) fixture_inputs: bool,
     pub(crate) expected_output: bool,
     pub(crate) tolerance_ulp: u32,
@@ -263,11 +265,27 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             .insert(registration.law.name().to_string());
     }
 
+    let flat_reference_ids = vyre_reference::reference_facets()
+        .map(|facet| facet.operation_id)
+        .collect::<BTreeSet<_>>();
+    let mut target_facets: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+    match vyre_driver::backend::registered_target_operation_facets() {
+        Ok(facets) => {
+            for facet in facets {
+                target_facets
+                    .entry(facet.operation_id)
+                    .or_default()
+                    .insert(facet.target_id.as_str().to_string());
+            }
+        }
+        Err(error) => errors.push(format!("target facet registry startup failed: {error}")),
+    }
+
     let live = vyre_foundation::operation::OperationRegistry::global()
         .iter()
         .map(|entry| LiveEntry {
             id: entry.id,
-            signature: entry.signature.as_ref(),
+            signature: entry.signature,
             tier: entry.tier,
             build: entry.build,
             category: entry.category(),
@@ -369,12 +387,18 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             signature,
             features,
             oracle: OracleContract {
+                flat_reference_facet: flat_reference_ids.contains(entry.id),
                 reference_eval,
                 fixture_inputs: entry.has_inputs,
                 expected_output: entry.has_expected,
                 tolerance_ulp: entry.tolerance_ulp,
             },
             backend_support: support,
+            target_facets: target_facets
+                .remove(entry.id)
+                .unwrap_or_default()
+                .into_iter()
+                .collect(),
             laws,
             composition_chain,
         });
@@ -402,8 +426,8 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         *category_counts.entry(record.category.clone()).or_insert(0) += 1;
     }
     let schema = OperationSchema {
-        schema_version: 2,
-        authority: "live OpEntry and runtime OpDef registrations, built Program and dialect signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows".to_string(),
+        schema_version: 3,
+        authority: "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows".to_string(),
         operation_count: records.len(),
         tier_counts,
         category_counts,
@@ -424,9 +448,9 @@ pub(crate) fn validate_schema(
     expected: Option<&OperationSchema>,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
-    if schema.schema_version != 2 {
+    if schema.schema_version != 3 {
         errors.push(format!(
-            "operation schema version must be 2, found {}",
+            "operation schema version must be 3, found {}",
             schema.schema_version
         ));
     }
@@ -503,6 +527,20 @@ pub(crate) fn validate_schema(
         if reference_status == Some("supported") && !op.oracle.reference_eval {
             errors.push(format!(
                 "operation `{}` does not declare its supported reference oracle",
+                op.id
+            ));
+        }
+        let mut sorted_target_facets = op.target_facets.clone();
+        sorted_target_facets.sort();
+        sorted_target_facets.dedup();
+        if sorted_target_facets != op.target_facets
+            || op
+                .target_facets
+                .iter()
+                .any(|target| target.trim().is_empty())
+        {
+            errors.push(format!(
+                "operation `{}` target facets must be non-empty identities in sorted unique order",
                 op.id
             ));
         }

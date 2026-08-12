@@ -191,7 +191,7 @@ fn store_state_nodes(out: &str) -> Vec<Node> {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         BLAKE3_G_OP_ID,
         || blake3_g_program("state", "message", "out"),
         Some(|| {
@@ -211,7 +211,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         BLAKE3_ROUND_OP_ID,
         || blake3_round_program("state", "message", "out"),
         Some(|| {

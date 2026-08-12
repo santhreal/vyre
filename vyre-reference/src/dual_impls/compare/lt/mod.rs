@@ -12,3 +12,7 @@ define_compare_dual_reference!(
     |left, right| left < right,
     super::super::common::lt_bytes
 );
+
+inventory::submit! {
+    crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
+}

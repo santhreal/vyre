@@ -495,11 +495,12 @@ mod tests {
     }
 
     use super::*;
+    use crate::CUDA_TARGET_ID;
     use vyre_driver::aot::AotLauncherRequest;
 
     fn request(include_ttt_loop: bool) -> AotLauncherRequest<'static> {
         AotLauncherRequest {
-            target: "secondary_text",
+            target: CUDA_TARGET_ID,
             crate_name: "vyre_cuda_launcher_test",
             include_collectives: false,
             include_ttt_loop,

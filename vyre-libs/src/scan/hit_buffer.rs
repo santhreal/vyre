@@ -292,7 +292,7 @@ mod emit_then_compact_tests {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         EMIT_HIT_OP_ID,
         || emit_hit(
             "rule_id",
@@ -308,7 +308,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry::library(
+    vyre_foundation::operation::OperationRegistration::library(
         COMPACT_HITS_OP_ID,
         || compact_hits("out_hits", "out_cursor", DEFAULT_MAX_HITS),
         Some(compact_hits_inputs),

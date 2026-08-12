@@ -1,6 +1,7 @@
 impl vyre_driver::backend::private::Sealed for vyre_driver_reference::CpuRefBackend
 impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_reference::CpuRefBackend
 pub const vyre_driver_reference::CPU_REF_BACKEND_ID: &str
+pub const vyre_driver_reference::CPU_REF_TARGET_ID: vyre_foundation::operation::TargetId
 pub fn vyre_driver_reference::CpuRefBackend::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
 pub fn vyre_driver_reference::CpuRefBackend::id(&self) -> &'static str
 pub fn vyre_driver_reference::CpuRefBackend::max_compute_workgroups_per_dimension(&self) -> u32

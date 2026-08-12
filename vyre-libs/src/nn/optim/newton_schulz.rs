@@ -19,7 +19,7 @@ pub fn newton_schulz_5step(mat: &str, output: &str, rows: u32, cols: u32) -> Pro
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

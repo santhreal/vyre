@@ -305,7 +305,7 @@ fn structural_hash(op: u32, left: u32, right: u32) -> u32 {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || ast_cse_structural_hash_program(2, 8),
         Some(|| vec![vec![

@@ -333,7 +333,7 @@ pub fn try_reference_line_splice_classify_into(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || line_splice_classify(256),
         Some(|| {

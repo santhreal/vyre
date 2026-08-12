@@ -49,7 +49,7 @@ pub fn ema_apply(ema: &str, theta: &str, n: u32, decay: f32) -> Program {
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

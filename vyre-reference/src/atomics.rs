@@ -12,8 +12,8 @@ use crate::ReferenceError;
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] if `AtomicOp::CompareExchange` is
-/// invoked without an `expected` value.
+/// Returns [`ReferenceError`] if `AtomicOp::CompareExchange` is invoked without
+/// an `expected` value.
 pub fn apply(
     op: AtomicOp,
     old: u32,
@@ -85,7 +85,7 @@ pub fn atomic_lru_update(old: u32, value: u32) -> (u32, u32) {
 ///
 /// # Errors
 ///
-/// Returns [`ReferenceError::Interp`] if `expected` is `None`.
+/// Returns [`ReferenceError`] if `expected` is `None`.
 pub fn atomic_compare_exchange(
     old: u32,
     expected: Option<u32>,

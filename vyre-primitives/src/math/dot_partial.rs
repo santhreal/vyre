@@ -100,7 +100,7 @@ pub fn dot_partial_program(q_buffer: &str, k_buffer: &str, out: &str, d: u32) ->
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         OP_ID,
         || dot_partial_program("q", "k", "out", 2),
         Some(|| {

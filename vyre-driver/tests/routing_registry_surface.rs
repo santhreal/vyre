@@ -1,18 +1,10 @@
-//! Failure-oriented tests for the routing registry public surface.
-//!
-//! Guarantees:
-//! - `RoutingTable` reports `None` for unknown call sites
-//! - `DialectRegistry` reports `None` for unknown ops / unsupported targets
-//! - Duplicate-op errors are actionable and name both registrants
+//! Failure-oriented tests for routing and registered backend contracts.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use vyre_driver::{
-    BackendError, BackendRegistration, DialectRegistry, OpDef, RoutingTable, SortBackend, Target,
-    VyreBackend,
-};
+use vyre_driver::{BackendError, BackendRegistration, RoutingTable, SortBackend, VyreBackend};
 use vyre_foundation::ir::OpId;
 
 #[test]
@@ -37,93 +29,6 @@ fn routing_table_empty_input_distribution() {
     );
 }
 
-#[test]
-fn dialect_registry_lookup_miss_returns_none() {
-    let guard = DialectRegistry::global();
-    let unknown = guard.intern_op("definitely.not.a.real.op");
-    assert!(
-        guard.lookup(unknown).is_none(),
-        "Fix: DialectRegistry::lookup must return None for unknown ops"
-    );
-}
-
-#[test]
-fn dialect_registry_get_lowering_miss_for_unsupported_target() {
-    let guard = DialectRegistry::global();
-    // Even if an op exists, extension targets return None until a concrete
-    // backend has registered a lowering for that stable target id.
-    let unknown = guard.intern_op("also.not.real");
-    assert!(
-        guard
-            .get_lowering(unknown, Target::Extension("extension-text"))
-            .is_none(),
-        "Fix: get_lowering must return None when no lowering is registered for the target"
-    );
-    assert!(
-        guard
-            .get_lowering(unknown, Target::Extension("extension-binary"))
-            .is_none(),
-        "Fix: get_lowering must return None when no lowering is registered for the target"
-    );
-    assert!(
-        guard
-            .get_lowering(unknown, Target::Extension("extension-native"))
-            .is_none(),
-        "Fix: get_lowering must return None when no lowering is registered for the target"
-    );
-    assert!(
-        guard
-            .get_lowering(unknown, Target::Extension("extension-alt"))
-            .is_none(),
-        "Fix: get_lowering must return None when no lowering is registered for the target"
-    );
-}
-
-#[test]
-fn duplicate_op_id_error_is_actionable() {
-    let defs = vec![
-        OpDef {
-            id: "dup.op",
-            ..OpDef::default()
-        },
-        OpDef {
-            id: "dup.op",
-            ..OpDef::default()
-        },
-    ];
-    let err = DialectRegistry::validate_no_duplicates(defs.iter())
-        .expect_err("duplicate ids must be rejected");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("Fix:"),
-        "Fix: DuplicateOpIdError must be actionable; got: {msg}"
-    );
-    assert_eq!(err.op_id(), "dup.op");
-    assert_eq!(err.first_registrant(), "<unknown dialect>");
-    assert_eq!(err.second_registrant(), "<unknown dialect>");
-}
-
-#[test]
-fn duplicate_op_id_error_with_dialect_names_is_actionable() {
-    let defs = vec![
-        OpDef {
-            id: "dup.op",
-            dialect: "dialect-a",
-            ..OpDef::default()
-        },
-        OpDef {
-            id: "dup.op",
-            dialect: "dialect-b",
-            ..OpDef::default()
-        },
-    ];
-    let err = DialectRegistry::validate_no_duplicates(defs.iter())
-        .expect_err("duplicate ids must be rejected");
-    assert_eq!(err.first_registrant(), "dialect-a");
-    assert_eq!(err.second_registrant(), "dialect-b");
-    assert!(err.to_string().contains("Fix:"));
-}
-
 fn unavailable_backend() -> Result<Box<dyn VyreBackend>, BackendError> {
     Err(BackendError::UnsupportedFeature {
         name: "test backend".into(),
@@ -141,8 +46,12 @@ fn no_supported_ops() -> &'static HashSet<OpId> {
 fn backend_registration_without_artifact_facets_fails_explicitly() {
     let registration = BackendRegistration {
         id: "test",
+        target_id: vyre_foundation::operation::TargetId::expect_valid("test"),
+        payload_format: None,
+        reference_oracle: false,
         factory: unavailable_backend,
         supported_ops: no_supported_ops,
+        semantic_operations: no_supported_ops,
         target_compiler: None,
         materializer: None,
     };

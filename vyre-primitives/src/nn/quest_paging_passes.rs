@@ -231,7 +231,7 @@ pub fn quest_select_top_k(
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_ZERO_FILL_OP_ID,
         || quest_zero_fill("io", 4),
         Some(|| {
@@ -245,7 +245,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_SCORE_PAGES_OP_ID,
         || quest_score_pages("q", "meta", "scores", 4, 2),
         Some(|| {
@@ -265,7 +265,7 @@ inventory::submit! {
 
 #[cfg(feature = "inventory-registry")]
 inventory::submit! {
-    crate::harness::OpEntry::primitive(
+    vyre_foundation::operation::OperationRegistration::primitive(
         QUEST_SELECT_TOP_K_OP_ID,
         || quest_select_top_k("scores", "io", 4, 1, -1.0),
         Some(|| {

@@ -9,7 +9,8 @@ use support::u32_out_buffer;
 #[test]
 fn cpu_ref_registers_as_dispatch_backend() {
     assert!(
-        backend_dispatches(vyre_driver_reference::CPU_REF_BACKEND_ID),
+        backend_dispatches(vyre_driver_reference::CPU_REF_BACKEND_ID)
+            .expect("valid backend registry"),
         "Fix: vyre-driver-reference must register cpu-ref as a dispatch-capable backend."
     );
 

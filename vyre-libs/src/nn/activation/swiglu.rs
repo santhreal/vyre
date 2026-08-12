@@ -83,7 +83,7 @@ fn build_swiglu(gate: &str, up: &str, output: &str, n: u32, dtype: DataType) -> 
 }
 
 inventory::submit! {
-    crate::fixture_catalog::OpEntry {
+    vyre_foundation::operation::OperationRegistration {
         semantic_version: 1,
         signature: None,
         tier: vyre_foundation::operation::OperationTier::Library,

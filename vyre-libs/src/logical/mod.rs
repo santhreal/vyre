@@ -18,7 +18,7 @@ macro_rules! define_wrapped_bitset_binary {
             }
 
             inventory::submit! {
-                crate::fixture_catalog::OpEntry {
+                vyre_foundation::operation::OperationRegistration {
                     semantic_version: 1,
                     signature: None,
                     tier: vyre_foundation::operation::OperationTier::Library,
@@ -59,7 +59,7 @@ macro_rules! define_synthesized_logical_binary {
             }
 
             inventory::submit! {
-                crate::fixture_catalog::OpEntry {
+                vyre_foundation::operation::OperationRegistration {
                     semantic_version: 1,
                     signature: None,
                     tier: vyre_foundation::operation::OperationTier::Library,

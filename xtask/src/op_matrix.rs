@@ -273,30 +273,14 @@ fn manual_records() -> Vec<OpRecord> {
 
 fn registered_records() -> Result<Vec<OpRecord>, String> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
-    let mut inlined_callees = BTreeSet::new();
 
     let registry = vyre_foundation::operation::OperationRegistry::global();
     for entry in registry.iter() {
         push_registered(&mut ids, entry.id, "vyre-foundation::operation")?;
     }
-    for registration in inventory::iter::<vyre_driver::OpDefRegistration> {
-        let def = (registration.op)();
-        if registry.get(def.id).is_none() {
-            return Err(format!(
-                "Fix: driver operation view `{}` has no canonical semantic registration.",
-                def.id
-            ));
-        }
-        if def.category == vyre_driver::Category::Composite {
-            inlined_callees.insert(def.id);
-        }
-    }
 
     ids.into_iter()
-        .map(|(id, sources)| {
-            let inlined_callee = inlined_callees.contains(id.as_str());
-            record_for_registered_id(&id, sources, inlined_callee)
-        })
+        .map(|(id, sources)| record_for_registered_id(&id, sources, false))
         .collect()
 }
 
