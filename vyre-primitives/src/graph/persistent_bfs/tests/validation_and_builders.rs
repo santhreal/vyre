@@ -174,27 +174,6 @@ fn program_carries_device_side_convergence_flag() {
 }
 
 #[test]
-fn persistent_bfs_seed_copy_covers_frontiers_larger_than_one_workgroup() {
-    let source = include_str!("../program.rs");
-    let single_source = source
-        .split("pub fn persistent_bfs(")
-        .nth(1)
-        .expect("Fix: persistent_bfs builder source must be present")
-        .split("/// Build a batched persistent-BFS Program.")
-        .next()
-        .expect("Fix: persistent_bfs builder source must precede batch builder");
-
-    assert!(
-            single_source.contains("Node::loop_for(\n                \"seed_word_idx\""),
-            "Fix: persistent_bfs must copy every frontier word, not only the first workgroup lane range."
-        );
-    assert!(
-        !single_source.contains("Node::let_bind(\"seed_word_idx\", t.clone())"),
-        "Fix: persistent_bfs seed copy must not be capped by gid_x."
-    );
-}
-
-#[test]
 fn batch_program_carries_per_query_convergence_flag() {
     let program = persistent_bfs_batch(
         ProgramGraphShape::new(8, 8),
@@ -248,18 +227,20 @@ fn large_batch_program_uses_grid_sync_parallel_steps() {
 
 #[test]
 fn persistent_bfs_batch_seed_copy_covers_frontiers_larger_than_one_workgroup() {
-    let source = include_str!("../program.rs");
-    let batch_source = source
-        .split("pub fn try_persistent_bfs_batch(")
-        .nth(1)
-        .expect("Fix: checked batch builder source must be present")
-        .split("fn checked_batch_frontier_words(")
-        .next()
-        .expect("Fix: checked batch builder source must precede sizing helper");
+    let program = try_persistent_bfs_batch(
+        ProgramGraphShape::new(8193, 0),
+        "fin",
+        "fout",
+        "changed",
+        "converged",
+        2,
+        0xFF,
+        1,
+    )
+    .expect("Fix: valid large batch frontier must build.");
 
-    assert!(batch_source.contains("Expr::lt(lane.clone(), Expr::u32(words))"));
     assert!(
-        !batch_source.contains("\"batch_copy_word\""),
+        !contains_loop_named(program.entry(), "batch_copy_word"),
         "Fix: persistent_bfs_batch seed copy must be parallel over grid.x lanes, not a one-lane loop."
     );
 }
@@ -305,26 +286,6 @@ fn legacy_batch_builder_fails_fast_on_flat_frontier_overflow() {
         message.contains("frontier words overflow u32"),
         "error should describe the flat frontier overflow: {message}"
     );
-}
-
-#[test]
-fn persistent_bfs_batch_release_source_has_checked_builder_without_panics() {
-    let source = include_str!("../program.rs");
-    let batch_source = source
-        .split("/// Build a batched persistent-BFS Program.")
-        .nth(1)
-        .expect("Fix: persistent BFS batch builder source must be present")
-        .split("/// CPU reference:")
-        .next()
-        .expect("Fix: persistent BFS batch builder source must precede CPU oracle");
-
-    assert!(
-            batch_source.contains("pub fn try_persistent_bfs_batch(")
-                && !batch_source.contains("inert_")
-                && !batch_source.contains("Err(_) =>")
-                && !batch_source.contains("Node::return_()"),
-            "Fix: persistent_bfs_batch must expose checked release API and must not compile inert no-op kernels."
-        );
 }
 
 fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {

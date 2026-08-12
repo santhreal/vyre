@@ -271,6 +271,34 @@ fn grid_sync_two_level(fanout: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u
 }
 
 #[test]
+fn grid_sync_seed_copy_preserves_every_frontier_word() {
+    let node_count = 8193;
+    let offsets = vec![0_u32; node_count as usize + 1];
+    let targets = [0_u32];
+    let masks = [1_u32];
+    let mut seed = (0..bitset_words(node_count))
+        .map(|word| 0x9e37_79b9_u32.wrapping_mul(word.wrapping_add(1)))
+        .collect::<Vec<_>>();
+    let trailing_bits = node_count % 32;
+    if trailing_bits != 0 {
+        let mask = (1_u32 << trailing_bits) - 1;
+        *seed
+            .last_mut()
+            .expect("Fix: a nonempty graph must have one frontier word") &= mask;
+    }
+
+    let (device_frontier, device_changed, device_converged) =
+        run_device(node_count, &offsets, &targets, &masks, &seed, u32::MAX, 0);
+
+    assert_eq!(
+        device_frontier, seed,
+        "Fix: grid-sync persistent_bfs must copy every seed frontier word."
+    );
+    assert_eq!(device_changed, 0);
+    assert_eq!(device_converged, 0);
+}
+
+#[test]
 fn grid_sync_converged_word_matches_oracle_across_the_budget_boundary() {
     // 258 nodes (> 256) forces the grid-sync program; diameter 2 keeps it cheap.
     let (node_count, offsets, targets, masks, seed) = grid_sync_two_level(256);

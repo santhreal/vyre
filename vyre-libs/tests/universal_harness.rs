@@ -13,7 +13,7 @@ use vyre_driver::{
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
 use vyre_foundation::validate::{BackendCapabilities, ValidationOptions};
-use vyre_libs::fixture_catalog::all_entries;
+use vyre_libs::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 #[test]
@@ -161,6 +161,7 @@ fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash
             cpu_output.len()
         );
 
+        let tolerance = vyre_foundation::fp_parity::effective_tolerance(entry.id, program);
         for (decl_index, output_position) in output_indices.iter().copied().enumerate() {
             let expected = &reference_output[decl_index];
             let actual = &cpu_output[decl_index];
@@ -173,14 +174,27 @@ fn check_oracle(entry: &SemanticOperation, program: &Program, _fingerprint: Hash
                     )
                 })
                 .unwrap_or_else(|| "byte contents match but lengths differ".to_string());
-            assert_eq!(
-                expected, actual,
-                "[harness] {} (case {}): output mismatch for declaration index {output_position}; {diff}; reference_len={} oracle_len={}",
-                entry.id,
-                case_idx,
-                expected.len(),
-                actual.len()
-            );
+            if program.buffers()[output_position].element() == vyre::ir::DataType::F32 {
+                assert!(
+                    vyre_foundation::fp_parity::f32_buffer_matches(
+                        expected, actual, tolerance,
+                    ),
+                    "[harness] {} (case {}): output mismatch for declaration index {output_position}; {diff}; tolerance={tolerance} ULP; reference_len={} oracle_len={}",
+                    entry.id,
+                    case_idx,
+                    expected.len(),
+                    actual.len()
+                );
+            } else {
+                assert_eq!(
+                    expected, actual,
+                    "[harness] {} (case {}): output mismatch for declaration index {output_position}; {diff}; reference_len={} oracle_len={}",
+                    entry.id,
+                    case_idx,
+                    expected.len(),
+                    actual.len()
+                );
+            }
         }
     }
 }

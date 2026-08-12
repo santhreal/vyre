@@ -140,26 +140,18 @@ fn two_variable_tokens_each_collapse_at_their_own_origin() {
 }
 
 #[test]
-fn open_ended_repeat_window_is_documented_limitation() {
-    // Open-ended repeats (`+`, `*`, `{n,}`, i.e. `max = None`) have NO finite
-    // maximum length, so the windowed-replay architecture (which caps each
-    // origin's walk at `max_pattern_len`) fundamentally cannot cover them
-    // `build_repetition` records only the MIN length for the open case. This
-    // test PINS that limitation so a future open-ended fix (route unbounded
-    // repeats through the uncapped single-pass path, or reject them at
-    // DFA-window compile (see BACKLOG) trips here and updates the expectation).
-    // `k[0-9]+` -> min length 1 (prefix) + 1 (one mandatory digit) == 2.
+fn open_ended_repeat_window_uses_the_bounded_replay_policy() {
     let plus = dfa_for("k[0-9]+");
     assert_eq!(
-        plus.dfa.max_pattern_len, 2,
-        "open-ended `+` records only the MIN window (prefix + one repeat); \
-         longer matches under-scan on the windowed path, a documented limitation"
+        plus.dfa.max_pattern_len,
+        vyre_libs::scan::regex_compile::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+        "open-ended `+` must use the finite default replay budget"
     );
-    // `{n,}` (lower bound only) is the same open case: `k[0-9]{3,}` -> 1 + 3 == 4.
     let lower_bounded = dfa_for("k[0-9]{3,}");
     assert_eq!(
-        lower_bounded.dfa.max_pattern_len, 4,
-        "open-ended `{{3,}}` records only the MIN window (prefix + 3 repeats)"
+        lower_bounded.dfa.max_pattern_len,
+        vyre_libs::scan::regex_compile::DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
+        "open-ended `{{3,}}` must use the same finite default replay budget"
     );
 }
 
