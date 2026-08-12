@@ -5,9 +5,9 @@
 use std::sync::Arc;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::memory_model::MemoryOrdering;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
+use vyre_foundation::memory_model::MemoryOrdering;
 use vyre_reference::value::Value;
 use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
 
@@ -220,10 +220,11 @@ pub(crate) fn compiled_cuda_outputs_with_config(
         outputs[output_index] = completion
             .outputs
             .get(&resource.value)
+            .or_else(|| completion.retained.get(&resource.value))
             .cloned()
             .unwrap_or_else(|| {
                 panic!(
-                    "Fix: CUDA generated case `{case_name}` completion omitted output `{}`",
+                    "Fix: CUDA generated case `{case_name}` completion omitted writable value `{}`",
                     binding.name
                 )
             });
