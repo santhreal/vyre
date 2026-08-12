@@ -46,7 +46,8 @@ fn artifact() -> vyre_megakernel::Artifact {
     vyre_megakernel::compile(&request).unwrap()
 }
 
-/// WHY: pure Metal target compilation must remain available without a live Apple device.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+/// WHY: pure Metal target compilation remains available without acquiring a device on Apple hosts.
 #[test]
 fn registered_target_compiler_emits_selected_metal_bundle() {
     let registration = vyre_driver::backend::registered_backends()
@@ -69,23 +70,15 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
     assert_eq!(payload.neutral_artifact(), artifact.digest());
 }
 
-/// WHY: the registered materializer must fail explicitly when Metal.framework is unavailable.
+/// WHY: non-Apple hosts must not publish a fake linked Metal backend.
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]
-fn registered_materializer_reports_platform_unavailability() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
+fn non_apple_hosts_publish_no_metal_registration() {
+    let registrations =
+        vyre_driver::backend::registered_backends().expect("valid backend registry");
+    assert!(registrations
         .iter()
-        .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
-        .expect("Metal materializer registration must be linked");
-    let error = registration
-        .materializer()
-        .err()
-        .expect("non-Apple Metal materialization must fail explicitly");
-    assert!(matches!(
-        error,
-        vyre_driver::BackendError::UnsupportedFeature { .. }
-    ));
+        .all(|registration| registration.id != vyre_driver_metal::METAL_BACKEND_ID));
 }
 
 /// WHY: native Metal materialization must execute the authenticated structured MSL artifact.

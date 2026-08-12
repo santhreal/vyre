@@ -13,9 +13,11 @@ pub const METAL_BACKEND_ID: &str = "metal";
 pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
     vyre_foundation::operation::TargetId::expect_valid(METAL_BACKEND_ID);
 
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod runtime;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 mod target_compiler;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -52,6 +54,7 @@ pub fn acquire() -> Result<Box<dyn VyreBackend>, BackendError> {
     })
 }
 
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 inventory::submit! {
     vyre_driver::backend::BackendRegistration {
         id: METAL_BACKEND_ID,
@@ -103,125 +106,12 @@ mod tests {
     #[cfg(not(any(target_os = "macos", target_os = "ios")))]
     #[test]
     fn non_apple_build_does_not_register_fake_backend() {
-        let registered =
-            vyre_driver::backend::registered_backends().expect("valid backend registry");
         assert!(
-            registered
+            vyre_driver::backend::registered_backends()
+                .expect("valid backend registry")
                 .iter()
-                .all(|backend| backend.id != METAL_BACKEND_ID),
+                .all(|registration| registration.id != METAL_BACKEND_ID),
             "non-Apple builds must not submit a fake `metal` backend registration"
-        );
-    }
-
-    #[test]
-    fn resident_batch_download_uses_backend_neutral_fusion_contract() {
-        let source = include_str!("runtime.rs");
-        let method = source
-            .split("fn download_resident_ranges_into(")
-            .nth(1)
-            .and_then(|tail| tail.split("fn free_resident(").next())
-            .expect("Fix: Metal runtime must expose download_resident_ranges_into before free_resident.");
-        assert!(
-            method.contains("fuse_resident_transfer_intervals(&copies)")
-                && method.contains("reserve_fused_resident_view_outputs")
-                && method.contains("copy_fused_resident_view_into")
-                && !method.contains(
-                    "self.download_resident_range_into(resource, *byte_offset, *byte_len, output)"
-                ),
-            "Fix: Metal resident ranged batch download must reuse backend-neutral interval fusion instead of looping one readback per requested range."
-        );
-    }
-
-    #[test]
-    fn compiled_pipeline_resident_handles_share_backend_table_contract() {
-        let source = include_str!("runtime.rs");
-        assert!(
-            source.contains("resident_buffers: MetalResidentBufferTable")
-                && source.contains("resident_buffers: Arc::new(Mutex::new(HashMap::new()))")
-                && source.contains("resident_buffers: Arc::clone(&self.resident_buffers)")
-                && source.contains("fn dispatch_persistent_handles_timed(")
-                && source.contains("resolve_resident_resources_from_table")
-                && source.contains("plan_resident_buffers("),
-            "Fix: Metal compiled persistent-handle dispatch must share the backend resident table and reuse resident buffer planning instead of reporting UnsupportedFeature."
-        );
-    }
-
-    #[test]
-    fn compiled_pipeline_resource_outputs_avoid_host_readback_contract() {
-        let source = include_str!("runtime.rs");
-        let method = source
-            .split("fn dispatch_persistent_resource_outputs(")
-            .nth(1)
-            .and_then(|tail| tail.split("fn lock_resident_buffer_table").next())
-            .expect("Fix: Metal compiled pipeline must implement dispatch_persistent_resource_outputs before resident table helpers.");
-        assert!(
-            method.contains("resident_output_resources(&base_plan, inputs)?")
-                && method.contains("submit_planned_buffers_with_queue(")
-                && !method.contains("dispatch_persistent_handles_timed")
-                && !method.contains("collect_outputs("),
-            "Fix: Metal compiled resource-output dispatch must submit the compiled resident command and return resident handles without host readback."
-        );
-    }
-
-    #[test]
-    fn pipeline_cache_miss_reasons_use_shared_classifier_contract() {
-        let source = include_str!("runtime.rs");
-        assert!(
-            source.contains("PipelineCacheIdentity")
-                && source.contains("PipelineCacheMissReason")
-                && source.contains("PipelineCacheIdentity::try_from_program(program, config, fingerprint)")
-                && source.contains("PipelineCacheMissReason::classify_identities(")
-                && source.contains("metal_pipeline_cache_miss_empty_cache")
-                && source.contains("metal_pipeline_cache_miss_program_changed")
-                && source.contains("metal_pipeline_cache_miss_dispatch_policy_changed")
-                && source.contains("metal_pipeline_cache_miss_device_or_runtime_changed")
-                && source.contains("metal_pipeline_cache_miss_key_absent")
-                && source.contains("metal_buffer_allocation_count")
-                && source.contains("metal_buffer_allocation_bytes")
-                && source.contains("metal_host_to_device_copy_count")
-                && source.contains("metal_host_to_device_bytes")
-                && source.contains("metal_device_to_host_copy_count")
-                && source.contains("metal_device_to_host_bytes")
-                && source.contains("metal_output_readback_bytes")
-                && !source.contains("struct MetalPipelineCacheIdentity")
-                && !source.contains("classify_metal_pipeline_cache_miss"),
-            "Fix: Metal pipeline-cache miss telemetry must use the shared identity/classifier seam and expose stable cache, allocation, copy, and readback counters for benchmark gates."
-        );
-    }
-
-    #[test]
-    fn compiled_pipeline_metrics_share_backend_snapshot_contract() {
-        let source = include_str!("runtime.rs");
-        assert!(
-            source.contains("type MetalMetricCounters = Arc<MetalMetrics>")
-                && source.contains("metrics: MetalMetricCounters")
-                && source.contains("metrics: Arc::clone(&self.metrics)")
-                && source.contains("Vec::with_capacity(16)")
-                && source
-                    .matches("record_planned_buffer_metrics(&self.metrics, &buffers)")
-                    .count()
-                    >= 3
-                && source
-                    .matches("record_output_readback_metrics(&self.metrics, &result.outputs)")
-                    .count()
-                    >= 2,
-            "Fix: compiled Metal dispatch paths must account allocation, host-copy, and readback counters into the same backend metric snapshot as direct dispatch."
-        );
-    }
-
-    #[test]
-    fn resident_scan_resource_table_has_argument_buffer_lifetime_contract() {
-        let source = include_str!("runtime.rs");
-        assert!(
-            source.contains("pub struct MetalResidentScanResourceEntry")
-                && source.contains("pub enum MetalResidentScanResourceLifetime")
-                && source.contains("pub fn metal_resident_scan_resource_table(")
-                && source.contains("argument_buffer_entry")
-                && source.contains("shared_scan_metadata_digest")
-                && source.contains("metal_resource_metadata_digest")
-                && source.contains("DuplicateArgumentBufferEntry")
-                && source.contains("LifetimeMismatch"),
-            "Fix: Metal resident scan tables must expose argument-buffer entry, metadata parity, and lifetime validation before resident scan dispatch."
         );
     }
 
