@@ -186,6 +186,30 @@ fn test_eliminate_dead_lets_computes_live_in() {
 }
 
 #[test]
+fn loop_shadowing_preserves_live_outer_binding() {
+    let nodes = vec![
+        Node::let_bind("i", Expr::u32(99)),
+        Node::loop_for(
+            "i",
+            Expr::u32(0),
+            Expr::u32(1),
+            vec![Node::store("out", Expr::u32(0), Expr::var("i"))],
+        ),
+        Node::store("out", Expr::u32(1), Expr::var("i")),
+    ];
+    let result =
+        crate::optimizer::passes::fusion_cse::dce::eliminate_dead_lets::eliminate_dead_lets(
+            nodes,
+            im::HashSet::new(),
+        );
+
+    assert!(
+        matches!(&result.nodes[0], Node::Let { name, value: Expr::LitU32(99) } if name == "i"),
+        "the outer binding remains live after the loop-local shadow"
+    );
+}
+
+#[test]
 fn test_async_load_offset_keeps_let_alive() {
     // Reproducer for the vfs::resolve cat_a_gpu_differential panic on
     // 2026-05-02: AsyncLoad's `offset` Expr was not walked for live

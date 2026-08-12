@@ -61,11 +61,15 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: HashSet<Ident>) 
                 to,
                 body,
             } => {
+                let outer_var_live = live.contains(&var);
                 let mut body_live_after = live.clone();
                 body_live_after.insert(var.clone());
                 let body_result = eliminate_dead_lets(body, body_live_after);
                 live.extend(body_result.live_in);
                 live.remove(&var);
+                if outer_var_live {
+                    live.insert(var.clone());
+                }
                 collect_expr_refs(&from, &mut live);
                 collect_expr_refs(&to, &mut live);
                 kept.push(Node::Loop {
