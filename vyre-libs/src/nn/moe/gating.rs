@@ -115,8 +115,14 @@ fn weight_write_body(
     k: u32,
 ) -> Vec<Node> {
     vec![
-        Node::let_bind("max_score", Expr::load(STATS_SCRATCH, Expr::u32(0))),
-        Node::let_bind("sum_exp", Expr::load(STATS_SCRATCH, Expr::u32(1))),
+        Node::let_bind(
+            "weight_max_score",
+            Expr::load(STATS_SCRATCH, Expr::u32(0)),
+        ),
+        Node::let_bind(
+            "weight_sum_exp",
+            Expr::load(STATS_SCRATCH, Expr::u32(1)),
+        ),
         Node::loop_for(
             "j",
             Expr::u32(0),
@@ -135,10 +141,10 @@ fn weight_write_body(
                             op: UnOp::Exp,
                             operand: Box::new(Expr::sub(
                                 Expr::var("best_score"),
-                                Expr::var("max_score"),
+                                Expr::var("weight_max_score"),
                             )),
                         },
-                        Expr::var("sum_exp"),
+                        Expr::var("weight_sum_exp"),
                     ),
                 ),
             ],
@@ -302,7 +308,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn u32_words(bytes: &[u8]) -> Vec<u32> {
