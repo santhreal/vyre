@@ -15,10 +15,13 @@ use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::staging_reserve::reserve_vec;
 use crate::device::CudaDeviceCaps;
 use crate::megakernel_scheduler::{
-    plan_cuda_megakernel_memory_budget, select_cuda_megakernel_topology,
-    select_cuda_megakernel_topology_stable, CudaMegakernelExecutionPlan, CudaMegakernelGraphShape,
-    CudaMegakernelMemoryBudget, CudaMegakernelMemoryError, CudaMegakernelScheduleSample,
-    CudaMegakernelTopology, CudaMegakernelTopologyDecision,
+    select_cuda_megakernel_topology, select_cuda_megakernel_topology_stable,
+    CudaMegakernelScheduleSample,
+};
+use vyre_driver::megakernel_execution::{
+    plan_megakernel_memory_budget, MegakernelExecutionPlan, MegakernelExecutionTopology,
+    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
+    MegakernelTopologyDecision,
 };
 
 const DEFAULT_MAX_MEGAKERNEL_PLANS: usize = 256;
@@ -141,9 +144,9 @@ struct CudaMegakernelPlanIdentityKey {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CudaMegakernelCachedPlan {
     /// Selected topology for this key.
-    pub topology: CudaMegakernelTopology,
+    pub topology: MegakernelExecutionTopology,
     /// Full decision telemetry used when the plan was inserted.
-    pub decision: CudaMegakernelTopologyDecision,
+    pub decision: MegakernelTopologyDecision,
 }
 
 /// Runtime counters for [`CudaMegakernelPlanCache`].
@@ -169,7 +172,8 @@ struct CudaMegakernelPlanCacheEntry {
 #[derive(Debug)]
 pub struct CudaMegakernelPlanCache {
     entries: FxHashMap<CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheEntry>,
-    latest_by_identity: FxHashMap<CudaMegakernelPlanIdentityKey, (u64, CudaMegakernelTopology)>,
+    latest_by_identity:
+        FxHashMap<CudaMegakernelPlanIdentityKey, (u64, MegakernelExecutionTopology)>,
     eviction_queue: BinaryHeap<Reverse<(u64, CudaMegakernelPlanCacheKey)>>,
     max_entries: usize,
     serial: u64,
@@ -218,8 +222,8 @@ impl CudaMegakernelPlanCache {
     pub fn get_or_insert_with(
         &mut self,
         key: CudaMegakernelPlanCacheKey,
-        build: impl FnOnce() -> CudaMegakernelTopologyDecision,
-    ) -> Result<CudaMegakernelCachedPlan, CudaMegakernelMemoryError> {
+        build: impl FnOnce() -> MegakernelTopologyDecision,
+    ) -> Result<CudaMegakernelCachedPlan, MegakernelMemoryError> {
         let serial = self.advance_serial()?;
         if let Some(entry) = self.entries.get_mut(&key) {
             increment_plan_cache_counter(&mut self.hits, "megakernel plan-cache hit counter");
@@ -267,11 +271,11 @@ impl CudaMegakernelPlanCache {
         analysis_kind: CudaMegakernelAnalysisKind,
         device: CudaMegakernelDeviceKey,
         sample: CudaMegakernelScheduleSample,
-        graph: CudaMegakernelGraphShape,
-        memory: CudaMegakernelMemoryBudget,
+        graph: MegakernelGraphShape,
+        memory: MegakernelMemoryBudget,
         launch_overhead_ns: f64,
         fusion_pressure: f64,
-    ) -> Result<CudaMegakernelCachedPlan, CudaMegakernelMemoryError> {
+    ) -> Result<CudaMegakernelCachedPlan, MegakernelMemoryError> {
         let effective_fusion_pressure = if device.supports_grid_sync {
             fusion_pressure
         } else {
@@ -325,7 +329,7 @@ impl CudaMegakernelPlanCache {
         analysis_kind: CudaMegakernelAnalysisKind,
         device: CudaMegakernelDeviceKey,
         sample: CudaMegakernelScheduleSample,
-        graph: CudaMegakernelGraphShape,
+        graph: MegakernelGraphShape,
         bytes_per_node: u64,
         bytes_per_edge: u64,
         frontier_bytes: u64,
@@ -334,9 +338,9 @@ impl CudaMegakernelPlanCache {
         budget_bytes: u64,
         launch_overhead_ns: f64,
         fusion_pressure: f64,
-    ) -> Result<CudaMegakernelExecutionPlan, CudaMegakernelMemoryError> {
-        let sparse_memory = plan_cuda_megakernel_memory_budget(
-            CudaMegakernelTopology::SparseFrontier,
+    ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
+        let sparse_memory = plan_megakernel_memory_budget(
+            MegakernelExecutionTopology::SparseFrontier,
             graph,
             bytes_per_node,
             bytes_per_edge,
@@ -351,14 +355,14 @@ impl CudaMegakernelPlanCache {
             device,
             sample,
             graph,
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: sparse_memory.required_bytes,
                 budget_bytes,
             },
             launch_overhead_ns,
             fusion_pressure,
         )?;
-        match plan_cuda_megakernel_memory_budget(
+        match plan_megakernel_memory_budget(
             cached.topology,
             graph,
             bytes_per_node,
@@ -368,16 +372,16 @@ impl CudaMegakernelPlanCache {
             output_bytes,
             budget_bytes,
         ) {
-            Ok(memory) => Ok(CudaMegakernelExecutionPlan {
+            Ok(memory) => Ok(MegakernelExecutionPlan {
                 topology: cached.topology,
                 memory,
                 downgraded_to_sparse: false,
             }),
-            Err(CudaMegakernelMemoryError::OverBudget { .. })
-                if cached.topology != CudaMegakernelTopology::SparseFrontier =>
+            Err(MegakernelMemoryError::OverBudget { .. })
+                if cached.topology != MegakernelExecutionTopology::SparseFrontier =>
             {
-                let memory = plan_cuda_megakernel_memory_budget(
-                    CudaMegakernelTopology::SparseFrontier,
+                let memory = plan_megakernel_memory_budget(
+                    MegakernelExecutionTopology::SparseFrontier,
                     graph,
                     bytes_per_node,
                     bytes_per_edge,
@@ -386,8 +390,8 @@ impl CudaMegakernelPlanCache {
                     output_bytes,
                     budget_bytes,
                 )?;
-                Ok(CudaMegakernelExecutionPlan {
-                    topology: CudaMegakernelTopology::SparseFrontier,
+                Ok(MegakernelExecutionPlan {
+                    topology: MegakernelExecutionTopology::SparseFrontier,
                     memory,
                     downgraded_to_sparse: true,
                 })
@@ -419,7 +423,7 @@ impl CudaMegakernelPlanCache {
         graph_layout_hash: u64,
         analysis_kind: CudaMegakernelAnalysisKind,
         device: CudaMegakernelDeviceKey,
-    ) -> Option<CudaMegakernelTopology> {
+    ) -> Option<MegakernelExecutionTopology> {
         self.latest_by_identity
             .get(&CudaMegakernelPlanIdentityKey {
                 graph_layout_hash,
@@ -433,7 +437,7 @@ impl CudaMegakernelPlanCache {
         &mut self,
         identity: CudaMegakernelPlanIdentityKey,
         serial: u64,
-        topology: CudaMegakernelTopology,
+        topology: MegakernelExecutionTopology,
     ) {
         match self.latest_by_identity.get(&identity) {
             Some((latest_serial, _)) if *latest_serial > serial => {}
@@ -457,7 +461,7 @@ impl CudaMegakernelPlanCache {
         }
     }
 
-    fn evict_until_below_limit(&mut self) -> Result<(), CudaMegakernelMemoryError> {
+    fn evict_until_below_limit(&mut self) -> Result<(), MegakernelMemoryError> {
         while self.entries.len() >= self.max_entries {
             let Some(Reverse((last_seen, lru_key))) = self.eviction_queue.pop() else {
                 break;
@@ -486,7 +490,7 @@ impl CudaMegakernelPlanCache {
         Ok(())
     }
 
-    fn advance_serial(&mut self) -> Result<u64, CudaMegakernelMemoryError> {
+    fn advance_serial(&mut self) -> Result<u64, MegakernelMemoryError> {
         if let Some(next) = self.serial.checked_add(1) {
             self.serial = next;
             return Ok(next);
@@ -495,20 +499,20 @@ impl CudaMegakernelPlanCache {
         self.serial =
             self.serial
                 .checked_add(1)
-                .ok_or(CudaMegakernelMemoryError::ByteCountOverflow {
+                .ok_or(MegakernelMemoryError::ByteCountOverflow {
                     field: "megakernel plan-cache LRU serial after rebase",
                 })?;
         Ok(self.serial)
     }
 
-    fn rebase_lru_serials(&mut self) -> Result<(), CudaMegakernelMemoryError> {
+    fn rebase_lru_serials(&mut self) -> Result<(), MegakernelMemoryError> {
         let mut ordered = Vec::new();
         reserve_vec(
             &mut ordered,
             self.entries.len(),
             "megakernel plan-cache LRU rebase scratch",
         )
-        .map_err(|_| CudaMegakernelMemoryError::ByteCountOverflow {
+        .map_err(|_| MegakernelMemoryError::ByteCountOverflow {
             field: "megakernel plan-cache LRU rebase scratch",
         })?;
         for (key, entry) in &self.entries {
@@ -521,7 +525,7 @@ impl CudaMegakernelPlanCache {
         for (_, key) in ordered {
             serial = serial
                 .checked_add(1)
-                .ok_or(CudaMegakernelMemoryError::ByteCountOverflow {
+                .ok_or(MegakernelMemoryError::ByteCountOverflow {
                     field: "megakernel plan-cache LRU rebase serial",
                 })?;
             let topology = if let Some(entry) = self.entries.get_mut(&key) {
@@ -614,11 +618,11 @@ mod tests {
         CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
         CudaMegakernelPlanCacheKey,
     };
-    use crate::megakernel_scheduler::{
-        CudaMegakernelGraphShape, CudaMegakernelScheduleSample, CudaMegakernelTopology,
-        CudaMegakernelTopologyDecision,
-    };
+    use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
+    use vyre_driver::megakernel_execution::{
+        MegakernelExecutionTopology, MegakernelGraphShape, MegakernelTopologyDecision,
+    };
 
     fn device() -> CudaMegakernelDeviceKey {
         CudaMegakernelDeviceKey {
@@ -649,8 +653,8 @@ mod tests {
         )
     }
 
-    fn decision(topology: CudaMegakernelTopology) -> CudaMegakernelTopologyDecision {
-        CudaMegakernelTopologyDecision {
+    fn decision(topology: MegakernelExecutionTopology) -> MegakernelTopologyDecision {
+        MegakernelTopologyDecision {
             topology,
             memory_pressure_bps: 1_000,
             average_degree_bps: 20_000,
@@ -663,14 +667,16 @@ mod tests {
         let mut cache = CudaMegakernelPlanCache::new();
         let key = key(42, CudaMegakernelAnalysisKind::Ifds, 0.52, 2_400);
         let first = cache
-            .get_or_insert_with(key, || decision(CudaMegakernelTopology::FusedWave))
+            .get_or_insert_with(key, || decision(MegakernelExecutionTopology::FusedWave))
             .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
         let second = cache
-            .get_or_insert_with(key, || decision(CudaMegakernelTopology::SparseFrontier))
+            .get_or_insert_with(key, || {
+                decision(MegakernelExecutionTopology::SparseFrontier)
+            })
             .expect("Fix: CUDA megakernel plan-cache hit should fit telemetry counters.");
 
         assert_eq!(first, second);
-        assert_eq!(second.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(second.topology, MegakernelExecutionTopology::FusedWave);
         let stats = cache.stats();
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 1);
@@ -716,16 +722,22 @@ mod tests {
         let third = key(3, CudaMegakernelAnalysisKind::Dataflow, 0.1, 1_000);
 
         cache
-            .get_or_insert_with(first, || decision(CudaMegakernelTopology::SparseFrontier))
+            .get_or_insert_with(first, || {
+                decision(MegakernelExecutionTopology::SparseFrontier)
+            })
             .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
         cache
-            .get_or_insert_with(second, || decision(CudaMegakernelTopology::HybridFrontier))
+            .get_or_insert_with(second, || {
+                decision(MegakernelExecutionTopology::HybridFrontier)
+            })
             .expect("Fix: CUDA megakernel plan-cache insert should fit telemetry counters.");
         cache
-            .get_or_insert_with(first, || decision(CudaMegakernelTopology::DenseFrontier))
+            .get_or_insert_with(first, || {
+                decision(MegakernelExecutionTopology::DenseFrontier)
+            })
             .expect("Fix: CUDA megakernel plan-cache hit should fit telemetry counters.");
         cache
-            .get_or_insert_with(third, || decision(CudaMegakernelTopology::FusedWave))
+            .get_or_insert_with(third, || decision(MegakernelExecutionTopology::FusedWave))
             .expect("Fix: CUDA megakernel plan-cache eviction should fit telemetry counters.");
 
         let stats = cache.stats();
@@ -734,11 +746,13 @@ mod tests {
         assert_eq!(stats.evictions, 1);
         assert_eq!(stats.entries, 2);
         let reloaded_second = cache
-            .get_or_insert_with(second, || decision(CudaMegakernelTopology::DenseFrontier))
+            .get_or_insert_with(second, || {
+                decision(MegakernelExecutionTopology::DenseFrontier)
+            })
             .expect("Fix: CUDA megakernel plan-cache reload should fit telemetry counters.");
         assert_eq!(
             reloaded_second.topology,
-            CudaMegakernelTopology::DenseFrontier
+            MegakernelExecutionTopology::DenseFrontier
         );
     }
 
@@ -750,11 +764,11 @@ mod tests {
             frontier_density: 0.90,
             readback_bytes: 1 << 20,
         };
-        let graph = crate::megakernel_scheduler::CudaMegakernelGraphShape {
+        let graph = vyre_driver::megakernel_execution::MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let memory = crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+        let memory = vyre_driver::megakernel_execution::MegakernelMemoryBudget {
             required_bytes: 1_024,
             budget_bytes: 16_384,
         };
@@ -780,7 +794,7 @@ mod tests {
                     ..sample
                 },
                 graph,
-                crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+                vyre_driver::megakernel_execution::MegakernelMemoryBudget {
                     required_bytes: 1_100,
                     budget_bytes: 16_384,
                 },
@@ -790,7 +804,7 @@ mod tests {
             .expect("Fix: CUDA megakernel topology cache hit should fit telemetry counters.");
 
         assert_eq!(first, second);
-        assert_eq!(first.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(first.topology, MegakernelExecutionTopology::FusedWave);
         assert_eq!(cache.stats().hits, 1);
         assert_eq!(cache.stats().misses, 1);
     }
@@ -798,11 +812,11 @@ mod tests {
     #[test]
     fn cache_stabilizes_topology_across_adjacent_pressure_buckets() {
         let mut cache = CudaMegakernelPlanCache::new();
-        let graph = crate::megakernel_scheduler::CudaMegakernelGraphShape {
+        let graph = vyre_driver::megakernel_execution::MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let memory = crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+        let memory = vyre_driver::megakernel_execution::MegakernelMemoryBudget {
             required_bytes: 1_024,
             budget_bytes: 16_384,
         };
@@ -839,8 +853,11 @@ mod tests {
             )
             .expect("Fix: CUDA megakernel topology stabilization should fit telemetry counters.");
 
-        assert_eq!(dense.topology, CudaMegakernelTopology::DenseFrontier);
-        assert_eq!(near_dense.topology, CudaMegakernelTopology::DenseFrontier);
+        assert_eq!(dense.topology, MegakernelExecutionTopology::DenseFrontier);
+        assert_eq!(
+            near_dense.topology,
+            MegakernelExecutionTopology::DenseFrontier
+        );
         assert_eq!(cache.stats().hits, 0);
         assert_eq!(cache.stats().misses, 2);
     }
@@ -853,7 +870,7 @@ mod tests {
             frontier_density: 0.90,
             readback_bytes: 1 << 20,
         };
-        let graph = crate::megakernel_scheduler::CudaMegakernelGraphShape {
+        let graph = vyre_driver::megakernel_execution::MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
@@ -864,7 +881,7 @@ mod tests {
                 device(),
                 sample,
                 graph,
-                crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+                vyre_driver::megakernel_execution::MegakernelMemoryBudget {
                     required_bytes: 1_024,
                     budget_bytes: 16_384,
                 },
@@ -879,7 +896,7 @@ mod tests {
                 device(),
                 sample,
                 graph,
-                crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+                vyre_driver::megakernel_execution::MegakernelMemoryBudget {
                     required_bytes: 15_500,
                     budget_bytes: 16_384,
                 },
@@ -888,8 +905,14 @@ mod tests {
             )
             .expect("Fix: CUDA megakernel topology reselection should fit telemetry counters.");
 
-        assert_eq!(low_pressure.topology, CudaMegakernelTopology::FusedWave);
-        assert_eq!(red_zone.topology, CudaMegakernelTopology::SparseFrontier);
+        assert_eq!(
+            low_pressure.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
+        assert_eq!(
+            red_zone.topology,
+            MegakernelExecutionTopology::SparseFrontier
+        );
         assert_eq!(cache.stats().hits, 0);
         assert_eq!(cache.stats().misses, 2);
     }
@@ -924,11 +947,11 @@ mod tests {
     #[test]
     fn cache_reselects_when_readback_launch_or_fusion_pressure_changes() {
         let mut cache = CudaMegakernelPlanCache::new();
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let memory = crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+        let memory = vyre_driver::megakernel_execution::MegakernelMemoryBudget {
             required_bytes: 1_024,
             budget_bytes: 16_384,
         };
@@ -965,8 +988,14 @@ mod tests {
             )
             .expect("Fix: CUDA megakernel topology pressure split should fit telemetry counters.");
 
-        assert_ne!(low_pressure.topology, CudaMegakernelTopology::FusedWave);
-        assert_eq!(high_pressure.topology, CudaMegakernelTopology::FusedWave);
+        assert_ne!(
+            low_pressure.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
+        assert_eq!(
+            high_pressure.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
         assert_eq!(cache.stats().hits, 0);
         assert_eq!(cache.stats().misses, 2);
     }
@@ -987,11 +1016,11 @@ mod tests {
                     frontier_density: 0.50,
                     readback_bytes: 1 << 20,
                 },
-                CudaMegakernelGraphShape {
+                MegakernelGraphShape {
                     node_count: 1_000,
                     edge_count: 4_000,
                 },
-                crate::megakernel_scheduler::CudaMegakernelMemoryBudget {
+                vyre_driver::megakernel_execution::MegakernelMemoryBudget {
                     required_bytes: 1_024,
                     budget_bytes: 16_384,
                 },
@@ -1002,7 +1031,7 @@ mod tests {
 
         assert_ne!(
             plan.topology,
-            CudaMegakernelTopology::FusedWave,
+            MegakernelExecutionTopology::FusedWave,
             "Fix: CUDA megakernel planner must not select cooperative fused-wave topology when the device key says grid sync is unavailable."
         );
     }
@@ -1015,7 +1044,7 @@ mod tests {
             frontier_density: 0.90,
             readback_bytes: 1 << 20,
         };
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
@@ -1057,8 +1086,8 @@ mod tests {
             )
             .expect("Fix: equivalent CUDA execution pressure bucket should reuse the cached topology and still validate memory.");
 
-        assert_eq!(first.topology, CudaMegakernelTopology::FusedWave);
-        assert_eq!(second.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(first.topology, MegakernelExecutionTopology::FusedWave);
+        assert_eq!(second.topology, MegakernelExecutionTopology::FusedWave);
         assert_eq!(second.memory.scratch_bytes, 8_192);
         assert!(!second.downgraded_to_sparse);
         assert_eq!(cache.stats().hits, 1);
@@ -1078,7 +1107,7 @@ mod tests {
                     frontier_density: 0.50,
                     readback_bytes: 1 << 20,
                 },
-                CudaMegakernelGraphShape {
+                MegakernelGraphShape {
                     node_count: 1_000,
                     edge_count: 4_000,
                 },
@@ -1093,7 +1122,7 @@ mod tests {
             )
             .expect("Fix: sparse CUDA downgrade must fit after cached fused topology exceeds exact budget.");
 
-        assert_eq!(plan.topology, CudaMegakernelTopology::SparseFrontier);
+        assert_eq!(plan.topology, MegakernelExecutionTopology::SparseFrontier);
         assert!(plan.downgraded_to_sparse);
         assert_eq!(plan.memory.scratch_bytes, 10_000);
         assert_eq!(cache.stats().misses, 1);
@@ -1106,15 +1135,19 @@ mod tests {
         let first = key(1, CudaMegakernelAnalysisKind::Ifds, 0.10, 1_000);
         let second = key(2, CudaMegakernelAnalysisKind::Ifds, 0.20, 1_000);
         cache
-            .get_or_insert_with(first, || decision(CudaMegakernelTopology::SparseFrontier))
+            .get_or_insert_with(first, || {
+                decision(MegakernelExecutionTopology::SparseFrontier)
+            })
             .expect("Fix: first plan insert should fit");
         cache
-            .get_or_insert_with(second, || decision(CudaMegakernelTopology::DenseFrontier))
+            .get_or_insert_with(second, || {
+                decision(MegakernelExecutionTopology::DenseFrontier)
+            })
             .expect("Fix: second plan insert should fit");
         cache.serial = u64::MAX;
 
         cache
-            .get_or_insert_with(first, || decision(CudaMegakernelTopology::FusedWave))
+            .get_or_insert_with(first, || decision(MegakernelExecutionTopology::FusedWave))
             .expect(
                 "Fix: LRU serial exhaustion must rebase instead of failing the CUDA dispatch path",
             );
@@ -1138,12 +1171,14 @@ mod tests {
         let mut cache = CudaMegakernelPlanCache::new();
         let key = key(3, CudaMegakernelAnalysisKind::Ifds, 0.10, 1_000);
         cache
-            .get_or_insert_with(key, || decision(CudaMegakernelTopology::SparseFrontier))
+            .get_or_insert_with(key, || {
+                decision(MegakernelExecutionTopology::SparseFrontier)
+            })
             .expect("Fix: plan insert should fit");
         cache.hits = u64::MAX;
 
         cache
-            .get_or_insert_with(key, || decision(CudaMegakernelTopology::DenseFrontier))
+            .get_or_insert_with(key, || decision(MegakernelExecutionTopology::DenseFrontier))
             .expect("Fix: counter exhaustion must not fail the CUDA dispatch path");
 
         assert_eq!(cache.stats().hits, u64::MAX);

@@ -13,62 +13,26 @@ use crate::backend::staging_reserve::CudaStorageReserveFailure;
 use crate::megakernel_plan_cache::{
     CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
 };
-use crate::megakernel_scheduler::{
-    CudaMegakernelExecutionPlan, CudaMegakernelGraphShape, CudaMegakernelMemoryError,
-    CudaMegakernelScheduleSample,
-};
+use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
 use vyre_driver::megakernel_barrier::{
-    plan_megakernel_barriers, plan_megakernel_barriers_with_scratch, MegakernelBarrierGroup,
     MegakernelBarrierPlan, MegakernelBarrierPlanError, MegakernelBarrierScratch,
     MegakernelWaveDependency,
+};
+use vyre_driver::megakernel_execution::{
+    MegakernelExecutionPlan, MegakernelGraphShape, MegakernelMemoryError,
 };
 use vyre_driver::megakernel_frontier::{
     plan_megakernel_frontier_memory_with_scratch, MegakernelFrontierMemoryPlanError,
     MegakernelFrontierWave,
 };
 
-/// Directed dependency between two CUDA megakernel dataflow waves.
-pub type CudaMegakernelWaveDependency = MegakernelWaveDependency;
-
-/// One barrier-free group of independent CUDA megakernel waves.
-pub type CudaMegakernelBarrierGroup = MegakernelBarrierGroup;
-
-/// Barrier plan for CUDA megakernel execution.
-pub type CudaMegakernelBarrierPlan = MegakernelBarrierPlan;
-
-/// Caller-owned scratch for repeated CUDA megakernel barrier planning.
-pub type CudaMegakernelBarrierScratch = MegakernelBarrierScratch;
-
-/// Barrier planning failure.
-pub type CudaMegakernelBarrierPlanError = MegakernelBarrierPlanError;
-
-/// Plan minimum global barriers for a CUDA megakernel wave dependency DAG.
-pub fn plan_cuda_megakernel_barriers(
-    wave_count: usize,
-    dependencies: &[CudaMegakernelWaveDependency],
-) -> Result<CudaMegakernelBarrierPlan, CudaMegakernelBarrierPlanError> {
-    plan_megakernel_barriers(wave_count, dependencies)
-}
-
-/// Plan minimum global barriers using caller-owned temporary storage.
-pub fn plan_cuda_megakernel_barriers_with_scratch(
-    wave_count: usize,
-    dependencies: &[CudaMegakernelWaveDependency],
-    scratch: &mut CudaMegakernelBarrierScratch,
-) -> Result<CudaMegakernelBarrierPlan, CudaMegakernelBarrierPlanError> {
-    plan_megakernel_barriers_with_scratch(wave_count, dependencies, scratch)
-}
-
-/// Frontier-typed CUDA megakernel wave memory envelope.
-pub type CudaMegakernelFrontierWave = MegakernelFrontierWave;
-
 /// Dependency-aware CUDA megakernel execution plan for frontier waves.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CudaMegakernelFrontierExecutionPlan {
     /// Cache-backed topology and memory-budget plan.
-    pub execution: CudaMegakernelExecutionPlan,
+    pub execution: MegakernelExecutionPlan,
     /// Minimum global-barrier grouping for the wave dependencies.
-    pub barriers: CudaMegakernelBarrierPlan,
+    pub barriers: MegakernelBarrierPlan,
     /// Peak frontier bytes across any fused barrier-free group.
     pub peak_frontier_bytes: u64,
     /// Peak scratch bytes across any fused barrier-free group.
@@ -86,7 +50,7 @@ pub struct CudaMegakernelFrontierExecutionPlan {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CudaMegakernelFrontierExecutionPlanError {
     /// Dependency graph cannot be barrier-planned.
-    Barrier(CudaMegakernelBarrierPlanError),
+    Barrier(MegakernelBarrierPlanError),
     /// Peak wave bytes overflowed while grouping a barrier-free phase.
     ByteCountOverflow {
         /// Field being accumulated.
@@ -102,7 +66,7 @@ pub enum CudaMegakernelFrontierExecutionPlanError {
         field: &'static str,
     },
     /// Cache-backed execution memory planning failed.
-    Memory(CudaMegakernelMemoryError),
+    Memory(MegakernelMemoryError),
     /// Frontier planning result storage could not be reserved.
     StorageReserveFailed {
         /// Field being reserved.
@@ -161,14 +125,14 @@ impl std::fmt::Display for CudaMegakernelFrontierExecutionPlanError {
 
 impl std::error::Error for CudaMegakernelFrontierExecutionPlanError {}
 
-impl From<CudaMegakernelBarrierPlanError> for CudaMegakernelFrontierExecutionPlanError {
-    fn from(error: CudaMegakernelBarrierPlanError) -> Self {
+impl From<MegakernelBarrierPlanError> for CudaMegakernelFrontierExecutionPlanError {
+    fn from(error: MegakernelBarrierPlanError) -> Self {
         Self::Barrier(error)
     }
 }
 
-impl From<CudaMegakernelMemoryError> for CudaMegakernelFrontierExecutionPlanError {
-    fn from(error: CudaMegakernelMemoryError) -> Self {
+impl From<MegakernelMemoryError> for CudaMegakernelFrontierExecutionPlanError {
+    fn from(error: MegakernelMemoryError) -> Self {
         Self::Memory(error)
     }
 }
@@ -213,17 +177,16 @@ pub fn plan_cuda_frontier_megakernel_execution(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph: CudaMegakernelGraphShape,
+    graph: MegakernelGraphShape,
     bytes_per_node: u64,
     bytes_per_edge: u64,
-    waves: &[CudaMegakernelFrontierWave],
-    dependencies: &[CudaMegakernelWaveDependency],
+    waves: &[MegakernelFrontierWave],
+    dependencies: &[MegakernelWaveDependency],
     budget_bytes: u64,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
 ) -> Result<CudaMegakernelFrontierExecutionPlan, CudaMegakernelFrontierExecutionPlanError> {
-    let mut scratch =
-        CudaMegakernelBarrierScratch::try_with_capacity(waves.len(), dependencies.len())?;
+    let mut scratch = MegakernelBarrierScratch::try_with_capacity(waves.len(), dependencies.len())?;
     plan_cuda_frontier_megakernel_execution_with_scratch(
         cache,
         graph_layout_hash,
@@ -249,15 +212,15 @@ pub fn plan_cuda_frontier_megakernel_execution_with_scratch(
     analysis_kind: CudaMegakernelAnalysisKind,
     device: CudaMegakernelDeviceKey,
     sample: CudaMegakernelScheduleSample,
-    graph: CudaMegakernelGraphShape,
+    graph: MegakernelGraphShape,
     bytes_per_node: u64,
     bytes_per_edge: u64,
-    waves: &[CudaMegakernelFrontierWave],
-    dependencies: &[CudaMegakernelWaveDependency],
+    waves: &[MegakernelFrontierWave],
+    dependencies: &[MegakernelWaveDependency],
     budget_bytes: u64,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-    scratch: &mut CudaMegakernelBarrierScratch,
+    scratch: &mut MegakernelBarrierScratch,
 ) -> Result<CudaMegakernelFrontierExecutionPlan, CudaMegakernelFrontierExecutionPlanError> {
     let graph_bytes = graph_resident_bytes(graph, bytes_per_node, bytes_per_edge)?;
     let memory_plan = plan_megakernel_frontier_memory_with_scratch(
@@ -301,7 +264,7 @@ pub fn plan_cuda_frontier_megakernel_execution_with_scratch(
 }
 
 fn graph_resident_bytes(
-    graph: CudaMegakernelGraphShape,
+    graph: MegakernelGraphShape,
     bytes_per_node: u64,
     bytes_per_edge: u64,
 ) -> Result<u64, CudaMegakernelFrontierExecutionPlanError> {
@@ -326,21 +289,23 @@ fn graph_resident_bytes(
 mod tests {
     use super::{
         plan_cuda_frontier_megakernel_execution,
-        plan_cuda_frontier_megakernel_execution_with_scratch, plan_cuda_megakernel_barriers,
-        plan_cuda_megakernel_barriers_with_scratch, CudaMegakernelBarrierPlanError,
-        CudaMegakernelBarrierScratch, CudaMegakernelFrontierExecutionPlanError,
-        CudaMegakernelFrontierWave, CudaMegakernelWaveDependency,
+        plan_cuda_frontier_megakernel_execution_with_scratch,
+        CudaMegakernelFrontierExecutionPlanError,
     };
     use crate::megakernel_plan_cache::{
         CudaMegakernelAnalysisKind, CudaMegakernelDeviceKey, CudaMegakernelPlanCache,
     };
-    use crate::megakernel_scheduler::{
-        CudaMegakernelGraphShape, CudaMegakernelScheduleSample, CudaMegakernelTopology,
+    use crate::megakernel_scheduler::CudaMegakernelScheduleSample;
+    use vyre_driver::megakernel_barrier::{
+        plan_megakernel_barriers, plan_megakernel_barriers_with_scratch,
+        MegakernelBarrierPlanError, MegakernelBarrierScratch, MegakernelWaveDependency,
     };
+    use vyre_driver::megakernel_execution::{MegakernelExecutionTopology, MegakernelGraphShape};
+    use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 
     #[test]
     fn independent_waves_share_one_barrier_free_group() {
-        let plan = plan_cuda_megakernel_barriers(4, &[])
+        let plan = plan_megakernel_barriers(4, &[])
             .expect("Fix: independent CUDA megakernel waves should not need barriers.");
 
         assert_eq!(plan.global_barriers, 0);
@@ -350,18 +315,18 @@ mod tests {
 
     #[test]
     fn dependency_chain_requires_one_barrier_between_each_wave() {
-        let plan = plan_cuda_megakernel_barriers(
+        let plan = plan_megakernel_barriers(
             4,
             &[
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 1,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 1,
                     after: 2,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 2,
                     after: 3,
                 },
@@ -378,22 +343,22 @@ mod tests {
 
     #[test]
     fn diamond_dependencies_fuse_middle_waves() {
-        let plan = plan_cuda_megakernel_barriers(
+        let plan = plan_megakernel_barriers(
             4,
             &[
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 1,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 2,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 1,
                     after: 3,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 2,
                     after: 3,
                 },
@@ -410,9 +375,9 @@ mod tests {
     #[test]
     fn barrier_planner_uses_csr_adjacency_for_wide_wave_graphs() {
         let dependencies = (1..1_025)
-            .map(|after| CudaMegakernelWaveDependency { before: 0, after })
+            .map(|after| MegakernelWaveDependency { before: 0, after })
             .collect::<Vec<_>>();
-        let plan = plan_cuda_megakernel_barriers(1_025, &dependencies)
+        let plan = plan_megakernel_barriers(1_025, &dependencies)
             .expect("Fix: wide CUDA megakernel dependency fanout must schedule without per-wave adjacency allocation.");
 
         assert_eq!(plan.global_barriers, 1);
@@ -475,33 +440,32 @@ mod tests {
 
     #[test]
     fn barrier_planner_reuses_caller_owned_csr_scratch_across_shapes() {
-        let mut scratch = CudaMegakernelBarrierScratch::try_with_capacity(1_025, 1_024)
+        let mut scratch = MegakernelBarrierScratch::try_with_capacity(1_025, 1_024)
             .expect("Fix: wide reusable CUDA megakernel barrier scratch should fit");
         let wide_dependencies = (1..1_025)
-            .map(|after| CudaMegakernelWaveDependency { before: 0, after })
+            .map(|after| MegakernelWaveDependency { before: 0, after })
             .collect::<Vec<_>>();
-        let wide =
-            plan_cuda_megakernel_barriers_with_scratch(1_025, &wide_dependencies, &mut scratch)
-                .expect(
-                    "Fix: wide CUDA megakernel dependency fanout should plan with reusable scratch",
-                );
+        let wide = plan_megakernel_barriers_with_scratch(1_025, &wide_dependencies, &mut scratch)
+            .expect(
+                "Fix: wide CUDA megakernel dependency fanout should plan with reusable scratch",
+            );
         let wave_capacity = scratch.wave_capacity();
         let dependency_capacity = scratch.dependency_capacity();
 
         assert_eq!(wide.groups[1].waves.len(), 1_024);
 
-        let narrow = plan_cuda_megakernel_barriers_with_scratch(
+        let narrow = plan_megakernel_barriers_with_scratch(
             4,
             &[
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 1,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 1,
                     after: 2,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 2,
                     after: 3,
                 },
@@ -518,31 +482,31 @@ mod tests {
     #[test]
     fn frontier_execution_planner_accepts_reusable_barrier_scratch() {
         let mut cache = CudaMegakernelPlanCache::new();
-        let mut scratch = CudaMegakernelBarrierScratch::try_with_capacity(3, 2)
+        let mut scratch = MegakernelBarrierScratch::try_with_capacity(3, 2)
             .expect("Fix: frontier reusable CUDA megakernel barrier scratch should fit");
         let waves = [
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 128,
                 scratch_bytes: 64,
                 output_bytes: 32,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 256,
                 scratch_bytes: 128,
                 output_bytes: 64,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 512,
                 scratch_bytes: 256,
                 output_bytes: 128,
             },
         ];
         let dependencies = [
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 0,
                 after: 1,
             },
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 1,
                 after: 2,
             },
@@ -558,7 +522,7 @@ mod tests {
                 frontier_density: 0.4,
                 readback_bytes: 16,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 256,
                 edge_count: 512,
             },
@@ -580,9 +544,9 @@ mod tests {
 
     #[test]
     fn invalid_or_cyclic_dependencies_fail_loudly() {
-        let invalid = plan_cuda_megakernel_barriers(
+        let invalid = plan_megakernel_barriers(
             2,
-            &[CudaMegakernelWaveDependency {
+            &[MegakernelWaveDependency {
                 before: 0,
                 after: 2,
             }],
@@ -590,17 +554,17 @@ mod tests {
         .expect_err("Fix: invalid CUDA megakernel wave index must fail before planning.");
         assert!(matches!(
             invalid,
-            CudaMegakernelBarrierPlanError::InvalidWave { .. }
+            MegakernelBarrierPlanError::InvalidWave { .. }
         ));
 
-        let cycle = plan_cuda_megakernel_barriers(
+        let cycle = plan_megakernel_barriers(
             2,
             &[
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 1,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 1,
                     after: 0,
                 },
@@ -611,7 +575,7 @@ mod tests {
         );
         assert_eq!(
             cycle,
-            CudaMegakernelBarrierPlanError::Cycle {
+            MegakernelBarrierPlanError::Cycle {
                 unscheduled_waves: 2
             }
         );
@@ -630,48 +594,48 @@ mod tests {
                 frontier_density: 0.90,
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
             16,
             8,
             &[
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 1_024,
                     scratch_bytes: 512,
                     output_bytes: 256,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 2_048,
                     scratch_bytes: 1_024,
                     output_bytes: 512,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 4_096,
                     scratch_bytes: 2_048,
                     output_bytes: 1_024,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 8_192,
                     scratch_bytes: 4_096,
                     output_bytes: 2_048,
                 },
             ],
             &[
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 1,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 0,
                     after: 2,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 1,
                     after: 3,
                 },
-                CudaMegakernelWaveDependency {
+                MegakernelWaveDependency {
                     before: 2,
                     after: 3,
                 },
@@ -689,7 +653,10 @@ mod tests {
         assert_eq!(plan.peak_output_bytes, 2_048);
         assert_eq!(plan.amortized_readback_bytes, 1 << 20);
         assert_eq!(plan.max_group_width, 2);
-        assert_eq!(plan.execution.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(
+            plan.execution.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
         assert_eq!(plan.execution.memory.frontier_bytes, 8_192);
     }
 
@@ -706,19 +673,19 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 0,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
             16,
             8,
             &[
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 1_024,
                     scratch_bytes: 512,
                     output_bytes: 3_072,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 1_024,
                     scratch_bytes: 512,
                     output_bytes: 3_072,
@@ -735,7 +702,7 @@ mod tests {
         assert_eq!(plan.amortized_readback_bytes, 6_144);
         assert_eq!(
             plan.execution.topology,
-            CudaMegakernelTopology::FusedWave,
+            MegakernelExecutionTopology::FusedWave,
             "Fix: high static fused-group output pressure must trigger megakernel fusion even when the previous telemetry interval had no final readback."
         );
     }
@@ -744,17 +711,17 @@ mod tests {
     fn frontier_execution_splits_independent_layers_to_fit_fused_memory_budget() {
         let mut cache = CudaMegakernelPlanCache::new();
         let waves = [
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 10,
                 scratch_bytes: 10,
                 output_bytes: 10,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 10,
                 scratch_bytes: 10,
                 output_bytes: 10,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 10,
                 scratch_bytes: 10,
                 output_bytes: 10,
@@ -770,7 +737,7 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 4_096,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1,
                 edge_count: 0,
             },
@@ -790,7 +757,10 @@ mod tests {
         assert_eq!(plan.peak_frontier_bytes, 10);
         assert_eq!(plan.peak_scratch_bytes, 10);
         assert_eq!(plan.peak_output_bytes, 10);
-        assert_eq!(plan.execution.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(
+            plan.execution.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
         assert_eq!(plan.execution.memory.required_bytes, 60);
     }
 
@@ -807,13 +777,13 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 4_096,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 100,
                 edge_count: 100,
             },
             8,
             8,
-            &[CudaMegakernelFrontierWave {
+            &[MegakernelFrontierWave {
                 frontier_bytes: 1,
                 scratch_bytes: 1,
                 output_bytes: 1,
@@ -848,13 +818,13 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 4_096,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1,
                 edge_count: 0,
             },
             0,
             0,
-            &[CudaMegakernelFrontierWave {
+            &[MegakernelFrontierWave {
                 frontier_bytes: 100,
                 scratch_bytes: 100,
                 output_bytes: 100,
@@ -880,12 +850,12 @@ mod tests {
     fn frontier_execution_plan_reuses_cached_topology_for_equivalent_pressure() {
         let mut cache = CudaMegakernelPlanCache::new();
         let waves = [
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 1_024,
                 scratch_bytes: 512,
                 output_bytes: 256,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: 2_048,
                 scratch_bytes: 1_024,
                 output_bytes: 512,
@@ -902,7 +872,7 @@ mod tests {
 
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
@@ -925,7 +895,7 @@ mod tests {
                 frontier_density: 0.91,
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
@@ -939,8 +909,14 @@ mod tests {
         )
         .expect("Fix: equivalent frontier execution pressure should reuse cached topology.");
 
-        assert_eq!(first.execution.topology, CudaMegakernelTopology::FusedWave);
-        assert_eq!(second.execution.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(
+            first.execution.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
+        assert_eq!(
+            second.execution.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
         assert_eq!(cache.stats().hits, 1);
     }
 
@@ -957,19 +933,19 @@ mod tests {
                 frontier_density: 0.90,
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1,
                 edge_count: 1,
             },
             1,
             1,
             &[
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: u64::MAX,
                     scratch_bytes: 1,
                     output_bytes: 1,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 1,
                     scratch_bytes: 1,
                     output_bytes: 1,

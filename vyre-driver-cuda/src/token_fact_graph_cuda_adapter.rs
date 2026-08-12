@@ -6,7 +6,7 @@ use crate::backend::accounting::{
     checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,
     CudaArithmeticOverflow,
 };
-use crate::megakernel_scheduler::CudaMegakernelGraphShape;
+use vyre_driver::megakernel_execution::MegakernelGraphShape;
 use vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraph;
 
 /// Number of rank buckets carried for token/fact out-degree skew planning.
@@ -23,7 +23,7 @@ const CUDA_TOKEN_FACT_DEGREE_PROFILE_MAX_RANK: usize = 32_768;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CudaTokenFactGraphLayout {
     /// Scheduler-visible graph shape.
-    pub graph_shape: CudaMegakernelGraphShape,
+    pub graph_shape: MegakernelGraphShape,
     /// Maximum outgoing CSR row degree in the resident token/fact graph.
     pub max_out_degree: u64,
     /// Prefix sums of top out-degrees at `CUDA_TOKEN_FACT_DEGREE_PROFILE_RANKS`.
@@ -48,7 +48,7 @@ impl CudaTokenFactGraphLayout {
     /// edge count as the maximum possible row degree.
     #[must_use]
     pub const fn from_aggregate_fields(
-        graph_shape: CudaMegakernelGraphShape,
+        graph_shape: MegakernelGraphShape,
         node_record_bytes: u64,
         edge_record_bytes: u64,
         node_bytes: u64,
@@ -155,7 +155,7 @@ pub fn adapt_token_fact_graph_to_cuda_layout(
     )?;
 
     Ok(CudaTokenFactGraphLayout {
-        graph_shape: CudaMegakernelGraphShape {
+        graph_shape: MegakernelGraphShape {
             node_count,
             edge_count,
         },
@@ -248,7 +248,9 @@ fn csr_out_degree_profile(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::megakernel_scheduler::{plan_cuda_megakernel_memory_budget, CudaMegakernelTopology};
+    use vyre_driver::megakernel_execution::{
+        plan_megakernel_memory_budget, MegakernelExecutionTopology,
+    };
     use vyre_self_substrate::device_resident_token_fact_graph::{
         plan_device_resident_token_fact_graph, TokenFactEdge, TokenFactEdgeKind, TokenFactNode,
         TokenFactNodeKind,
@@ -299,8 +301,8 @@ mod tests {
         assert_eq!(cuda.node_bytes, 96);
         assert_eq!(cuda.edge_bytes, 32);
         assert_eq!(cuda.resident_bytes, 152);
-        let memory = plan_cuda_megakernel_memory_budget(
-            CudaMegakernelTopology::SparseFrontier,
+        let memory = plan_megakernel_memory_budget(
+            MegakernelExecutionTopology::SparseFrontier,
             cuda.graph_shape,
             cuda.node_record_bytes,
             cuda.edge_record_bytes,
@@ -433,7 +435,7 @@ mod tests {
     #[test]
     fn aggregate_layout_constructor_preserves_legacy_safe_edge_bound() {
         let layout = CudaTokenFactGraphLayout::from_aggregate_fields(
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 4,
                 edge_count: 9,
             },

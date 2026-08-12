@@ -4,18 +4,19 @@ use crate::backend::accounting::{checked_mul_u64_count as checked_mul, CudaArith
 use crate::backend::staging_reserve::{
     reserve_typed_vec as reserve_vec, CudaStorageReserveFailure,
 };
-use crate::megakernel_barrier_planner::{CudaMegakernelFrontierWave, CudaMegakernelWaveDependency};
+use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
+use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_self_substrate::frontier_typed_ir::FrontierTypedPlan;
 
 /// CUDA-ready frontier wave input derived from a frontier-typed IR plan.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CudaFrontierTypedIrInput {
     /// CUDA wave byte envelopes.
-    pub waves: Vec<CudaMegakernelFrontierWave>,
+    pub waves: Vec<MegakernelFrontierWave>,
     /// Active work items per CUDA frontier wave.
     pub active_items: Vec<u64>,
     /// Dependencies preserving frontier-typed wave order.
-    pub dependencies: Vec<CudaMegakernelWaveDependency>,
+    pub dependencies: Vec<MegakernelWaveDependency>,
 }
 
 impl CudaFrontierTypedIrInput {
@@ -159,14 +160,14 @@ pub fn adapt_frontier_typed_ir_to_cuda_into(
     out.try_reserve_for_waves(plan.waves.len())?;
     for wave in &plan.waves {
         out.active_items.push(wave.active_items);
-        out.waves.push(CudaMegakernelFrontierWave {
+        out.waves.push(MegakernelFrontierWave {
             frontier_bytes: wave.active_items * frontier_bytes_per_active_item,
             scratch_bytes: wave.active_items * scratch_bytes_per_active_item,
             output_bytes: output_bytes_per_wave,
         });
     }
     for index in 1..plan.waves.len() {
-        out.dependencies.push(CudaMegakernelWaveDependency {
+        out.dependencies.push(MegakernelWaveDependency {
             before: index - 1,
             after: index,
         });
@@ -184,7 +185,7 @@ const fn dependency_capacity(wave_count: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::megakernel_barrier_planner::plan_cuda_megakernel_barriers;
+    use vyre_driver::megakernel_barrier::plan_megakernel_barriers;
     use vyre_self_substrate::frontier_typed_ir::{
         plan_frontier_typed_ir, FrontierDependency, FrontierDomain, FrontierNode,
     };
@@ -222,12 +223,12 @@ mod tests {
         assert_eq!(
             cuda.waves,
             vec![
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 32,
                     scratch_bytes: 64,
                     output_bytes: 32,
                 },
-                CudaMegakernelFrontierWave {
+                MegakernelFrontierWave {
                     frontier_bytes: 48,
                     scratch_bytes: 96,
                     output_bytes: 32,
@@ -236,12 +237,12 @@ mod tests {
         );
         assert_eq!(
             cuda.dependencies,
-            vec![CudaMegakernelWaveDependency {
+            vec![MegakernelWaveDependency {
                 before: 0,
                 after: 1,
             }]
         );
-        let barriers = plan_cuda_megakernel_barriers(cuda.waves.len(), &cuda.dependencies)
+        let barriers = plan_megakernel_barriers(cuda.waves.len(), &cuda.dependencies)
             .expect("Fix: adapted frontier dependencies should barrier-plan");
         assert_eq!(barriers.global_barriers, 1);
         assert_eq!(barriers.groups[0].waves, vec![0]);
@@ -313,11 +314,11 @@ mod tests {
         assert!(
             source.contains("fn try_reserve_for_waves(")
                 && source.contains("reserve_typed_vec as reserve_vec")
-                && source.contains("dependencies.push(CudaMegakernelWaveDependency"),
+                && source.contains("dependencies.push(MegakernelWaveDependency"),
             "Fix: frontier-typed CUDA adapter must build dependency edges with explicit fallible preallocated storage."
         );
         assert!(
-            !source.contains(concat!(".map(|index| ", "CudaMegakernelWaveDependency"))
+            !source.contains(concat!(".map(|index| ", "MegakernelWaveDependency"))
                 && !source.contains(concat!(".collect", "();")),
             "Fix: frontier-typed CUDA adapter must not use iterator collect staging on dependency-wave conversion."
         );

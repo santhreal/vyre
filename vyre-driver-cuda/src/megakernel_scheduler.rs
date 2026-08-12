@@ -1,10 +1,10 @@
 //! CUDA telemetry adapter for the scale-aware megakernel scheduler.
 
 use vyre_driver::megakernel_execution::{
-    plan_megakernel_execution, plan_megakernel_memory_budget, select_megakernel_topology,
-    select_megakernel_topology_stable, MegakernelExecutionPlan, MegakernelExecutionSample,
-    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
-    MegakernelMemoryError, MegakernelMemoryPlan, MegakernelTopologyDecision,
+    plan_megakernel_execution, select_megakernel_topology, select_megakernel_topology_stable,
+    MegakernelExecutionPlan, MegakernelExecutionSample, MegakernelExecutionTopology,
+    MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
+    MegakernelTopologyDecision,
 };
 use vyre_self_substrate::megakernel_schedule::{
     try_schedule_via_scale_aware_samples_into, MegakernelScaleSample, MegakernelScheduleError,
@@ -22,27 +22,6 @@ pub struct CudaMegakernelScheduleSample {
     /// Observed final readback byte volume.
     pub readback_bytes: u64,
 }
-
-/// Device-side megakernel execution topology selected for a dataflow wave.
-pub type CudaMegakernelTopology = MegakernelExecutionTopology;
-
-/// Static graph shape used by CUDA topology selection.
-pub type CudaMegakernelGraphShape = MegakernelGraphShape;
-
-/// Device memory envelope for a candidate CUDA megakernel plan.
-pub type CudaMegakernelMemoryBudget = MegakernelMemoryBudget;
-
-/// Detailed CUDA megakernel memory plan.
-pub type CudaMegakernelMemoryPlan = MegakernelMemoryPlan;
-
-/// Complete CUDA megakernel execution plan selected from runtime telemetry.
-pub type CudaMegakernelExecutionPlan = MegakernelExecutionPlan;
-
-/// Memory planning failure for CUDA megakernel execution.
-pub type CudaMegakernelMemoryError = MegakernelMemoryError;
-
-/// Topology decision with the pressure metrics that caused it.
-pub type CudaMegakernelTopologyDecision = MegakernelTopologyDecision;
 
 impl CudaMegakernelScheduleSample {
     /// Build one scheduler sample from an observed CUDA telemetry interval.
@@ -74,11 +53,11 @@ impl CudaMegakernelScheduleSample {
 #[must_use]
 pub fn select_cuda_megakernel_topology(
     sample: CudaMegakernelScheduleSample,
-    graph: CudaMegakernelGraphShape,
-    memory: CudaMegakernelMemoryBudget,
+    graph: MegakernelGraphShape,
+    memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-) -> CudaMegakernelTopologyDecision {
+) -> MegakernelTopologyDecision {
     select_megakernel_topology(
         sample.execution_sample(),
         graph,
@@ -92,12 +71,12 @@ pub fn select_cuda_megakernel_topology(
 #[must_use]
 pub fn select_cuda_megakernel_topology_stable(
     sample: CudaMegakernelScheduleSample,
-    graph: CudaMegakernelGraphShape,
-    memory: CudaMegakernelMemoryBudget,
+    graph: MegakernelGraphShape,
+    memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-    previous_topology: CudaMegakernelTopology,
-) -> CudaMegakernelTopologyDecision {
+    previous_topology: MegakernelExecutionTopology,
+) -> MegakernelTopologyDecision {
     select_megakernel_topology_stable(
         sample.execution_sample(),
         graph,
@@ -108,33 +87,10 @@ pub fn select_cuda_megakernel_topology_stable(
     )
 }
 
-/// Compute and validate a CUDA megakernel device-memory plan.
-pub fn plan_cuda_megakernel_memory_budget(
-    topology: CudaMegakernelTopology,
-    graph: CudaMegakernelGraphShape,
-    bytes_per_node: u64,
-    bytes_per_edge: u64,
-    frontier_bytes: u64,
-    scratch_bytes: u64,
-    output_bytes: u64,
-    budget_bytes: u64,
-) -> Result<CudaMegakernelMemoryPlan, CudaMegakernelMemoryError> {
-    plan_megakernel_memory_budget(
-        topology,
-        graph,
-        bytes_per_node,
-        bytes_per_edge,
-        frontier_bytes,
-        scratch_bytes,
-        output_bytes,
-        budget_bytes,
-    )
-}
-
 /// Select a CUDA megakernel topology and validate its device-memory plan.
 pub fn plan_cuda_megakernel_execution(
     sample: CudaMegakernelScheduleSample,
-    graph: CudaMegakernelGraphShape,
+    graph: MegakernelGraphShape,
     bytes_per_node: u64,
     bytes_per_edge: u64,
     frontier_bytes: u64,
@@ -143,7 +99,7 @@ pub fn plan_cuda_megakernel_execution(
     budget_bytes: u64,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
-) -> Result<CudaMegakernelExecutionPlan, CudaMegakernelMemoryError> {
+) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
     plan_megakernel_execution(
         sample.execution_sample(),
         graph,
@@ -198,13 +154,15 @@ pub fn schedule_megakernel_from_cuda_samples_into(
 #[cfg(test)]
 mod tests {
     use super::{
-        plan_cuda_megakernel_execution, plan_cuda_megakernel_memory_budget,
-        schedule_megakernel_from_cuda_samples_into, select_cuda_megakernel_topology,
-        select_cuda_megakernel_topology_stable, CudaMegakernelGraphShape,
-        CudaMegakernelMemoryBudget, CudaMegakernelMemoryError, CudaMegakernelScheduleSample,
-        CudaMegakernelTopology,
+        plan_cuda_megakernel_execution, schedule_megakernel_from_cuda_samples_into,
+        select_cuda_megakernel_topology, select_cuda_megakernel_topology_stable,
+        CudaMegakernelScheduleSample,
     };
     use crate::backend::CudaTelemetrySnapshot;
+    use vyre_driver::megakernel_execution::{
+        plan_megakernel_memory_budget, MegakernelExecutionTopology, MegakernelGraphShape,
+        MegakernelMemoryBudget, MegakernelMemoryError,
+    };
     use vyre_self_substrate::megakernel_schedule::MegakernelScheduleError;
 
     #[test]
@@ -225,7 +183,7 @@ mod tests {
         assert!(!production.contains("checked_mul_u64_count"));
         assert!(!production.contains("fn pressure_bps("));
         assert!(!production.contains("fn topology_scratch_bytes("));
-        assert!(!production.contains("enum CudaMegakernelTopology"));
+        assert!(!production.contains("enum MegakernelExecutionTopology"));
         assert!(
             !source.contains(concat!("min(10_000)", " as u32")),
             "Fix: CUDA scheduler pressure export must use a checked conversion even after clamping."
@@ -287,21 +245,24 @@ mod tests {
             frontier_density: 0.01,
             readback_bytes: 1024,
         };
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 10_000,
         };
         let low_density = select_cuda_megakernel_topology(
             sample,
             graph,
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: 1_000,
                 budget_bytes: 10_000,
             },
             100.0,
             0.0,
         );
-        assert_eq!(low_density.topology, CudaMegakernelTopology::SparseFrontier);
+        assert_eq!(
+            low_density.topology,
+            MegakernelExecutionTopology::SparseFrontier
+        );
 
         let memory_red_zone = select_cuda_megakernel_topology(
             CudaMegakernelScheduleSample {
@@ -310,7 +271,7 @@ mod tests {
                 ..sample
             },
             graph,
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: 95,
                 budget_bytes: 100,
             },
@@ -319,7 +280,7 @@ mod tests {
         );
         assert_eq!(
             memory_red_zone.topology,
-            CudaMegakernelTopology::SparseFrontier
+            MegakernelExecutionTopology::SparseFrontier
         );
         assert_eq!(memory_red_zone.memory_pressure_bps, 9_500);
     }
@@ -332,11 +293,11 @@ mod tests {
                 frontier_density: 0.01,
                 readback_bytes: 256,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: 1_000,
                 budget_bytes: 10_000,
             },
@@ -346,7 +307,7 @@ mod tests {
 
         assert_eq!(
             decision.topology,
-            CudaMegakernelTopology::WarpSparseFrontier
+            MegakernelExecutionTopology::WarpSparseFrontier
         );
         assert_eq!(decision.average_degree_bps, 40_000);
         assert_eq!(
@@ -357,11 +318,11 @@ mod tests {
 
     #[test]
     fn topology_selector_uses_dense_hybrid_and_fused_bands() {
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let memory = CudaMegakernelMemoryBudget {
+        let memory = MegakernelMemoryBudget {
             required_bytes: 1_000,
             budget_bytes: 10_000,
         };
@@ -378,7 +339,7 @@ mod tests {
         );
         assert_eq!(
             block_dense.topology,
-            CudaMegakernelTopology::BlockDenseFrontier
+            MegakernelExecutionTopology::BlockDenseFrontier
         );
 
         let dense = select_cuda_megakernel_topology(
@@ -392,7 +353,7 @@ mod tests {
             100.0,
             0.0,
         );
-        assert_eq!(dense.topology, CudaMegakernelTopology::DenseFrontier);
+        assert_eq!(dense.topology, MegakernelExecutionTopology::DenseFrontier);
 
         let hybrid = select_cuda_megakernel_topology(
             CudaMegakernelScheduleSample {
@@ -408,7 +369,7 @@ mod tests {
             100.0,
             0.0,
         );
-        assert_eq!(hybrid.topology, CudaMegakernelTopology::HybridFrontier);
+        assert_eq!(hybrid.topology, MegakernelExecutionTopology::HybridFrontier);
 
         let fused = select_cuda_megakernel_topology(
             CudaMegakernelScheduleSample {
@@ -421,17 +382,17 @@ mod tests {
             250.0,
             0.90,
         );
-        assert_eq!(fused.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(fused.topology, MegakernelExecutionTopology::FusedWave);
         assert_eq!(fused.launch_pressure_bps, 2_500);
     }
 
     #[test]
     fn stable_topology_selector_prevents_cuda_variant_flapping_near_thresholds() {
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let memory = CudaMegakernelMemoryBudget {
+        let memory = MegakernelMemoryBudget {
             required_bytes: 1_000,
             budget_bytes: 10_000,
         };
@@ -445,11 +406,11 @@ mod tests {
             memory,
             100.0,
             0.0,
-            CudaMegakernelTopology::SparseFrontier,
+            MegakernelExecutionTopology::SparseFrontier,
         );
         assert_eq!(
             sparse_to_hybrid.topology,
-            CudaMegakernelTopology::SparseFrontier
+            MegakernelExecutionTopology::SparseFrontier
         );
 
         let dense_to_hybrid = select_cuda_megakernel_topology_stable(
@@ -462,11 +423,11 @@ mod tests {
             memory,
             100.0,
             0.0,
-            CudaMegakernelTopology::DenseFrontier,
+            MegakernelExecutionTopology::DenseFrontier,
         );
         assert_eq!(
             dense_to_hybrid.topology,
-            CudaMegakernelTopology::DenseFrontier
+            MegakernelExecutionTopology::DenseFrontier
         );
 
         let fused_to_hybrid = select_cuda_megakernel_topology_stable(
@@ -479,19 +440,22 @@ mod tests {
             memory,
             130.0,
             0.65,
-            CudaMegakernelTopology::FusedWave,
+            MegakernelExecutionTopology::FusedWave,
         );
-        assert_eq!(fused_to_hybrid.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(
+            fused_to_hybrid.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
     }
 
     #[test]
     fn memory_planner_bounds_peak_bytes_by_topology() {
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let plan = plan_cuda_megakernel_memory_budget(
-            CudaMegakernelTopology::FusedWave,
+        let plan = plan_megakernel_memory_budget(
+            MegakernelExecutionTopology::FusedWave,
             graph,
             16,
             8,
@@ -510,12 +474,12 @@ mod tests {
 
     #[test]
     fn memory_planner_fails_loudly_when_budget_is_exceeded() {
-        let graph = CudaMegakernelGraphShape {
+        let graph = MegakernelGraphShape {
             node_count: 1_000,
             edge_count: 4_000,
         };
-        let err = plan_cuda_megakernel_memory_budget(
-            CudaMegakernelTopology::DenseFrontier,
+        let err = plan_megakernel_memory_budget(
+            MegakernelExecutionTopology::DenseFrontier,
             graph,
             16,
             8,
@@ -528,8 +492,8 @@ mod tests {
 
         assert!(matches!(
             err,
-            CudaMegakernelMemoryError::OverBudget {
-                topology: CudaMegakernelTopology::DenseFrontier,
+            MegakernelMemoryError::OverBudget {
+                topology: MegakernelExecutionTopology::DenseFrontier,
                 ..
             }
         ));
@@ -541,9 +505,9 @@ mod tests {
 
     #[test]
     fn memory_planner_rejects_overflowing_graph_shapes() {
-        let err = plan_cuda_megakernel_memory_budget(
-            CudaMegakernelTopology::SparseFrontier,
-            CudaMegakernelGraphShape {
+        let err = plan_megakernel_memory_budget(
+            MegakernelExecutionTopology::SparseFrontier,
+            MegakernelGraphShape {
                 node_count: u64::MAX,
                 edge_count: 0,
             },
@@ -557,7 +521,7 @@ mod tests {
         .expect_err("overflowing graph byte count must be rejected");
         assert!(matches!(
             err,
-            CudaMegakernelMemoryError::ByteCountOverflow {
+            MegakernelMemoryError::ByteCountOverflow {
                 field: "node layout bytes"
             }
         ));
@@ -571,11 +535,11 @@ mod tests {
                 frontier_density: 0.95,
                 readback_bytes: u64::MAX,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_u64 << 60,
                 edge_count: 1_u64 << 62,
             },
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: 1_u64 << 62,
                 budget_bytes: 1_u64 << 63,
             },
@@ -598,7 +562,7 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
@@ -613,7 +577,7 @@ mod tests {
         )
         .expect("Fix: fused execution should fit this explicit device-memory budget");
 
-        assert_eq!(plan.topology, CudaMegakernelTopology::FusedWave);
+        assert_eq!(plan.topology, MegakernelExecutionTopology::FusedWave);
         assert!(!plan.downgraded_to_sparse);
         assert_eq!(plan.memory.scratch_bytes, 8_192);
     }
@@ -626,7 +590,7 @@ mod tests {
                 frontier_density: 0.50,
                 readback_bytes: 1 << 20,
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 1_000,
                 edge_count: 4_000,
             },
@@ -641,7 +605,7 @@ mod tests {
         )
         .expect("Fix: sparse downgrade should fit even when fused topology exceeds the budget");
 
-        assert_eq!(plan.topology, CudaMegakernelTopology::SparseFrontier);
+        assert_eq!(plan.topology, MegakernelExecutionTopology::SparseFrontier);
         assert!(plan.downgraded_to_sparse);
         assert_eq!(plan.memory.scratch_bytes, 10_000);
     }

@@ -25,16 +25,10 @@
 mod aot_launcher;
 /// CUDA backend core: device management and dispatch.
 pub mod backend;
-/// Benchmark-driven CUDA optimization pass selection.
-pub mod benchmark_pass_selection;
 /// PTX code generation from vyre IR.
 pub mod codegen;
 /// CUDA device capability probing.
 pub mod device;
-/// Device-side diagnostic aggregation and compact readback planning.
-pub mod device_diagnostic_aggregation;
-/// Device-side work queue planning for dependent dataflow.
-pub mod device_work_queue;
 /// CUDA upload planning for GPU e-graph device images.
 pub mod egraph_device_image;
 /// CUDA launch-wave planning for resident e-graph device images.
@@ -51,14 +45,10 @@ mod instrumentation;
 pub mod jit_cache;
 /// Actionable CUDA kernel capability diagnostics.
 pub mod kernel_failure_diagnostics;
-/// Adjacent-stage CUDA launch fusion planning.
-pub mod launch_fusion;
 mod materializer;
 /// Bounded CUDA megakernel plan cache keyed by graph, analysis, device, and
 /// runtime pressure buckets.
 pub mod megakernel_plan_cache;
-/// Multi-query CUDA execution planning over shared resident graphs.
-pub mod multi_query_execution;
 mod numeric;
 /// Occupancy-aware empirical autotuning (I4): pure estimator that picks
 /// the workgroup size with the highest predicted hardware occupancy from
@@ -77,9 +67,8 @@ pub mod profiler;
 pub mod regex_hardware_comparison;
 /// Repeated execution over persistent CUDA-resident graph state.
 pub mod resident_graph_session;
-/// Compact result readback planning.
-pub mod result_compaction;
 mod stream;
+// Neutral policies are imported from `vyre-driver`; CUDA exports only concrete behavior.
 /// A fixed synthetic device envelope for context-free estimator tests. Not a
 /// probe, and not this machine's values: never derive a hardware decision from it.
 pub mod synthetic_device_caps;
@@ -95,33 +84,13 @@ pub use backend::{
     CudaBackend, CudaPtxSourceCacheSnapshot, CudaResidentBuffer, CudaStreamOrderedPool,
     CudaTelemetrySnapshot,
 };
-pub use benchmark_pass_selection::{
-    select_cuda_benchmark_passes, select_cuda_benchmark_passes_with_scratch,
-    CudaBenchmarkPassCandidate, CudaBenchmarkPassSelectionError, CudaBenchmarkPassSelectionPlan,
-    CudaBenchmarkPassSelectionSample, CudaBenchmarkPassSelectionScratch,
-    CudaBenchmarkPassSkipReason, CudaSkippedBenchmarkPass,
-};
 pub use stream::CudaLaunchResourceCounts;
 /// CUDA megakernel global-barrier minimization for dependency-typed waves.
 pub mod megakernel_barrier_planner;
-/// CUDA megakernel convergence planning for iterative fixed-point analyses.
-pub mod megakernel_convergence;
 pub mod megakernel_scheduler;
 /// Release gate for steady-state CUDA megakernel speedup claims.
 pub mod megakernel_speedup_gate;
 pub use device::{CudaDeviceCaps, CudaDeviceHandle};
-pub use device_diagnostic_aggregation::{
-    plan_cuda_device_diagnostic_aggregation, plan_cuda_device_diagnostic_aggregation_with_scratch,
-    CudaDiagnosticAggregationError, CudaDiagnosticAggregationPlan,
-    CudaDiagnosticAggregationScratch, CudaDiagnosticCompactRange, CudaDiagnosticShard,
-};
-pub use device_work_queue::{
-    plan_cuda_device_work_queue, plan_cuda_device_work_queue_backpressure,
-    plan_cuda_device_work_queue_with_expansion, CudaDeviceWorkQueueBackpressurePlan,
-    CudaDeviceWorkQueueDrainStrategy, CudaDeviceWorkQueueError,
-    CudaDeviceWorkQueueExpansionProfile, CudaDeviceWorkQueuePlan, CudaDeviceWorkQueueProfile,
-    CudaWorkQueueHostSync,
-};
 pub use egraph_device_image::{
     plan_cuda_egraph_device_upload, plan_cuda_egraph_device_upload_from_image,
     plan_cuda_egraph_device_upload_from_image_ref, CudaEGraphDeviceBorrowedUploadPlan,
@@ -167,43 +136,23 @@ pub use kernel_failure_diagnostics::{
     CudaKernelLaunchDiagnosticScratch, CudaKernelLaunchEnvelope, CudaKernelLaunchEnvelopeError,
     CudaKernelLaunchShape, CudaKernelRequirement,
 };
-pub use launch_fusion::{
-    plan_cuda_launch_fusion, plan_cuda_launch_fusion_with_scratch, CudaFusionStage,
-    CudaLaunchFusionError, CudaLaunchFusionGroup, CudaLaunchFusionPlan, CudaLaunchFusionScratch,
-};
 pub use megakernel_barrier_planner::{
     plan_cuda_frontier_megakernel_execution, plan_cuda_frontier_megakernel_execution_with_scratch,
-    plan_cuda_megakernel_barriers, plan_cuda_megakernel_barriers_with_scratch,
-    CudaMegakernelBarrierGroup, CudaMegakernelBarrierPlan, CudaMegakernelBarrierPlanError,
-    CudaMegakernelBarrierScratch, CudaMegakernelFrontierExecutionPlan,
-    CudaMegakernelFrontierExecutionPlanError, CudaMegakernelFrontierWave,
-    CudaMegakernelWaveDependency,
-};
-pub use megakernel_convergence::{
-    plan_cuda_device_convergence, CudaConvergenceReadbackPolicy, CudaDeviceConvergencePlan,
-    CudaDeviceConvergencePlanError,
+    CudaMegakernelFrontierExecutionPlan, CudaMegakernelFrontierExecutionPlanError,
 };
 pub use megakernel_plan_cache::{
     CudaMegakernelAnalysisKind, CudaMegakernelCachedPlan, CudaMegakernelDeviceKey,
     CudaMegakernelPlanCache, CudaMegakernelPlanCacheKey, CudaMegakernelPlanCacheStats,
 };
 pub use megakernel_scheduler::{
-    plan_cuda_megakernel_execution, plan_cuda_megakernel_memory_budget,
     schedule_megakernel_from_cuda_samples, schedule_megakernel_from_cuda_samples_into,
-    select_cuda_megakernel_topology, CudaMegakernelExecutionPlan, CudaMegakernelGraphShape,
-    CudaMegakernelMemoryBudget, CudaMegakernelMemoryError, CudaMegakernelMemoryPlan,
-    CudaMegakernelScheduleSample, CudaMegakernelTopology, CudaMegakernelTopologyDecision,
+    select_cuda_megakernel_topology, CudaMegakernelScheduleSample,
 };
 pub use megakernel_speedup_gate::{
     format_validated_cuda_megakernel_speedup_evidence_csv,
     validate_cuda_megakernel_speedup_evidence_csv, validate_cuda_megakernel_speedup_gate,
     CudaMegakernelSpeedupGateError, CudaMegakernelSpeedupProof, CudaMegakernelSpeedupSample,
     MEGAKERNEL_SPEEDUP_EVIDENCE_CSV_HEADER,
-};
-pub use multi_query_execution::{
-    plan_cuda_multi_query_execution, plan_cuda_multi_query_execution_with_scratch, CudaMultiQuery,
-    CudaMultiQueryExecutionError, CudaMultiQueryExecutionPlan, CudaMultiQueryExecutionScratch,
-    CudaMultiQueryGroup,
 };
 pub use optimizer::CudaOptimizerDispatcher;
 pub use regex_hardware_comparison::{
@@ -216,11 +165,6 @@ pub use resident_graph_session::{
     CudaResidentGraphSessionError, CudaResidentGraphSessionEvidence,
     CudaResidentGraphSessionEvidenceError, CudaResidentGraphSessionPlan,
     CudaResidentGraphSessionProfile,
-};
-pub use result_compaction::{
-    plan_cuda_result_compaction, plan_cuda_result_compaction_with_scratch, CudaCompactResultRecord,
-    CudaResultCompactionError, CudaResultCompactionPlan, CudaResultCompactionScratch,
-    CudaResultSlot,
 };
 pub use token_fact_frontier_execution::{
     plan_cuda_token_fact_frontier_execution, plan_cuda_token_fact_frontier_execution_with_scratch,

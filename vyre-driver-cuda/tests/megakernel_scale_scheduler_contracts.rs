@@ -1,12 +1,15 @@
 //! CUDA telemetry to scale-aware megakernel scheduler contracts.
 
+use vyre_driver::megakernel_barrier::MegakernelWaveDependency;
+use vyre_driver::megakernel_execution::{
+    MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+};
+use vyre_driver::megakernel_frontier::MegakernelFrontierWave;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{
     plan_cuda_frontier_megakernel_execution, schedule_megakernel_from_cuda_samples,
     select_cuda_megakernel_topology, CudaBackend, CudaMegakernelAnalysisKind,
-    CudaMegakernelDeviceKey, CudaMegakernelFrontierWave, CudaMegakernelGraphShape,
-    CudaMegakernelMemoryBudget, CudaMegakernelPlanCache, CudaMegakernelScheduleSample,
-    CudaMegakernelTopology, CudaMegakernelWaveDependency,
+    CudaMegakernelDeviceKey, CudaMegakernelPlanCache, CudaMegakernelScheduleSample,
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -93,11 +96,11 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     );
     let dense_decision = select_cuda_megakernel_topology(
         scheduler_large,
-        CudaMegakernelGraphShape {
+        MegakernelGraphShape {
             node_count: 65_536,
             edge_count: 262_144,
         },
-        CudaMegakernelMemoryBudget {
+        MegakernelMemoryBudget {
             required_bytes: large.readback_bytes.saturating_mul(2),
             budget_bytes: large.readback_bytes.saturating_mul(16),
         },
@@ -107,7 +110,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             dense_decision.topology,
-            CudaMegakernelTopology::DenseFrontier | CudaMegakernelTopology::FusedWave
+            MegakernelExecutionTopology::DenseFrontier | MegakernelExecutionTopology::FusedWave
         ),
         "Fix: real dense CUDA telemetry must select a dense or fused megakernel topology, got {:?}.",
         dense_decision
@@ -119,7 +122,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             CudaMegakernelAnalysisKind::Dataflow,
             CudaMegakernelDeviceKey::from(&backend.caps),
             scheduler_large,
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 65_536,
                 edge_count: 262_144,
             },
@@ -142,7 +145,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
                 frontier_density: (large.frontier_density + 0.01).min(1.0),
                 ..scheduler_large
             },
-            CudaMegakernelGraphShape {
+            MegakernelGraphShape {
                 node_count: 65_536,
                 edge_count: 262_144,
             },
@@ -185,48 +188,48 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         CudaMegakernelAnalysisKind::ParserFrontend,
         CudaMegakernelDeviceKey::from(&backend.caps),
         scheduler_large,
-        CudaMegakernelGraphShape {
+        MegakernelGraphShape {
             node_count: 65_536,
             edge_count: 262_144,
         },
         16,
         8,
         &[
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: large.readback_bytes / 8,
                 scratch_bytes: large.readback_bytes / 16,
                 output_bytes: large.readback_bytes / 16,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: large.readback_bytes / 4,
                 scratch_bytes: large.readback_bytes / 16,
                 output_bytes: large.readback_bytes / 8,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: large.readback_bytes / 4,
                 scratch_bytes: large.readback_bytes / 16,
                 output_bytes: large.readback_bytes / 8,
             },
-            CudaMegakernelFrontierWave {
+            MegakernelFrontierWave {
                 frontier_bytes: large.readback_bytes / 2,
                 scratch_bytes: large.readback_bytes / 8,
                 output_bytes: large.readback_bytes / 4,
             },
         ],
         &[
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 0,
                 after: 1,
             },
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 0,
                 after: 2,
             },
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 1,
                 after: 3,
             },
-            CudaMegakernelWaveDependency {
+            MegakernelWaveDependency {
                 before: 2,
                 after: 3,
             },
@@ -248,7 +251,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             frontier_plan.execution.topology,
-            CudaMegakernelTopology::DenseFrontier | CudaMegakernelTopology::FusedWave
+            MegakernelExecutionTopology::DenseFrontier | MegakernelExecutionTopology::FusedWave
         ),
         "Fix: dense live CUDA frontier planning must keep a dense/fused execution topology."
     );
@@ -262,11 +265,11 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             frontier_density: 0.01,
             ..scheduler_small
         },
-        CudaMegakernelGraphShape {
+        MegakernelGraphShape {
             node_count: 65_536,
             edge_count: 262_144,
         },
-        CudaMegakernelMemoryBudget {
+        MegakernelMemoryBudget {
             required_bytes: small.readback_bytes,
             budget_bytes: large.readback_bytes.saturating_mul(16),
         },
@@ -276,7 +279,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
     assert!(
         matches!(
             sparse_decision.topology,
-            CudaMegakernelTopology::WarpSparseFrontier | CudaMegakernelTopology::SparseFrontier
+            MegakernelExecutionTopology::WarpSparseFrontier | MegakernelExecutionTopology::SparseFrontier
         ),
         "Fix: sparse CUDA telemetry must not be routed through dense megakernel topology; got {:?}.",
         sparse_decision.topology
@@ -284,11 +287,11 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
 
     let mut plan_cache = CudaMegakernelPlanCache::new();
     let device_key = CudaMegakernelDeviceKey::from(&backend.caps);
-    let graph = CudaMegakernelGraphShape {
+    let graph = MegakernelGraphShape {
         node_count: 65_536,
         edge_count: 262_144,
     };
-    let memory = CudaMegakernelMemoryBudget {
+    let memory = MegakernelMemoryBudget {
         required_bytes: large.readback_bytes.saturating_mul(2),
         budget_bytes: large.readback_bytes.saturating_mul(16),
     };
@@ -311,7 +314,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             ..large
         },
         graph,
-        CudaMegakernelMemoryBudget {
+        MegakernelMemoryBudget {
             required_bytes: memory.required_bytes.saturating_add(256),
             budget_bytes: memory.budget_bytes,
         },
@@ -335,7 +338,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
             device_key,
             large,
             graph,
-            CudaMegakernelMemoryBudget {
+            MegakernelMemoryBudget {
                 required_bytes: memory.budget_bytes.saturating_mul(95) / 100,
                 budget_bytes: memory.budget_bytes,
             },
@@ -347,7 +350,7 @@ fn cuda_runtime_telemetry_drives_scale_aware_megakernel_schedule() {
         );
     assert_eq!(
         red_zone.topology,
-        CudaMegakernelTopology::SparseFrontier,
+        MegakernelExecutionTopology::SparseFrontier,
         "Fix: CUDA megakernel plan cache must not reuse a fused/dense plan when memory pressure moves into the red zone."
     );
 }
