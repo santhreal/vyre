@@ -17,7 +17,7 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileRequest, Digest,
     ExternalFacts, SearchBudget, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
-    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_runtime::{
     admit_artifact, admit_cached_artifact, admit_envelope, classify_backend_error,
@@ -29,7 +29,7 @@ use vyre_runtime::{
 const FRAME_HEADER_BYTES: usize = 10;
 const FRAME_DIGEST_BYTES: usize = 32;
 const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v2\0";
+const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v3\0";
 
 fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
     let mut graph = ProgramGraph::new();
@@ -119,6 +119,7 @@ fn queue_payload(neutral: &Artifact) -> TargetPayload {
         .enumerate()
         .map(|(slot, resource)| TargetResourceBinding {
             resource: resource.value,
+            group: 0,
             slot: slot as u32,
             memory: TargetResourceMemory::Global,
             access: TargetResourceAccess::ReadWrite,
@@ -127,9 +128,11 @@ fn queue_payload(neutral: &Artifact) -> TargetPayload {
     TargetPayload::new(
         neutral,
         format("test.cache-target", 1),
+        profile("test.cache-target", 1),
         vec![TargetEntryPoint {
             name: "queue".to_string(),
             node: ArtifactNodeId(0),
+            workgroup_size: [1, 1, 1],
             grid_size: [1, 1, 1],
             dynamic_shared_bytes: 0,
             resource_bindings: bindings,
@@ -143,14 +146,21 @@ fn format(identity: &str, version: u16) -> TargetPayloadFormat {
     TargetPayloadFormat::new(identity, version).expect("fixture format must be valid")
 }
 
+fn profile(identity: &str, generation: u64) -> TargetProfile {
+    TargetProfile::new(identity, generation, [64, 1, 1], 64, 1_024, 0)
+        .expect("fixture profile must be valid")
+}
+
 fn entry() -> TargetEntryPoint {
     TargetEntryPoint {
         name: "entry".into(),
         node: ArtifactNodeId(0),
+        workgroup_size: [8, 1, 1],
         grid_size: [4, 1, 1],
         dynamic_shared_bytes: 64,
         resource_bindings: vec![TargetResourceBinding {
             resource: ArtifactValueId(0),
+            group: 0,
             slot: 3,
             memory: TargetResourceMemory::Global,
             access: TargetResourceAccess::ReadOnly,
@@ -159,8 +169,16 @@ fn entry() -> TargetEntryPoint {
 }
 
 fn payload(neutral: &Artifact, payload_format: TargetPayloadFormat, bytes: &[u8]) -> TargetPayload {
-    TargetPayload::new(neutral, payload_format, vec![entry()], bytes.to_vec())
-        .expect("fixture payload must be valid")
+    let generation = u64::from(payload_format.version());
+    let profile = profile(payload_format.identity(), generation);
+    TargetPayload::new(
+        neutral,
+        payload_format,
+        profile,
+        vec![entry()],
+        bytes.to_vec(),
+    )
+    .expect("fixture payload must be valid")
 }
 
 fn envelope_bytes(neutral: Artifact, payloads: impl IntoIterator<Item = TargetPayload>) -> Vec<u8> {
@@ -241,7 +259,7 @@ fn reassociate_payload(
     let original_json = serde_json::to_vec(&original_neutral).expect("digest must serialize");
     let replacement_json = serde_json::to_vec(&replacement_neutral).expect("digest must serialize");
     let body = replace_once(frame_body(payload), &original_json, &replacement_json);
-    encode_frame(b"VTP0", 2, TARGET_PAYLOAD_DIGEST_DOMAIN, &body)
+    encode_frame(b"VTP0", 3, TARGET_PAYLOAD_DIGEST_DOMAIN, &body)
 }
 
 /// Regression: admission returns the exact requested bytes and canonical neutral identity.
@@ -479,13 +497,16 @@ fn packaged_envelope_admits_through_runtime_without_recompile() {
     let attached = TargetPayload::new(
         &neutral,
         required.clone(),
+        profile("fixture-target-format", 1),
         vec![TargetEntryPoint {
             name: "main".into(),
             node,
+            workgroup_size: [64, 1, 1],
             grid_size: [1, 1, 1],
             dynamic_shared_bytes: 0,
             resource_bindings: vec![TargetResourceBinding {
                 resource,
+                group: 0,
                 slot: 0,
                 memory: TargetResourceMemory::Global,
                 access: TargetResourceAccess::ReadOnly,
@@ -559,6 +580,7 @@ static TEST_SUPPORTED_OPS: LazyLock<HashSet<vyre_foundation::ir::OpId>> =
 struct TestDevice {
     identity: DeviceIdentity,
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl Device for TestDevice {
@@ -568,6 +590,10 @@ impl Device for TestDevice {
 
     fn target_format(&self) -> &TargetPayloadFormat {
         &self.format
+    }
+
+    fn target_profile(&self) -> &TargetProfile {
+        &self.profile
     }
 
     fn is_healthy(&self) -> bool {
@@ -692,6 +718,7 @@ fn test_materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendE
                 generation,
             },
             format: format("test.cache-target", 1),
+            profile: profile("test.cache-target", 1),
         },
     }))
 }

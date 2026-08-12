@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::LazyLock;
 
 use vyre_aot::{
-    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory,
+    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Program, ProgramGraph, ShapeDim, ValueContract,
@@ -37,6 +37,7 @@ fn no_operations() -> &'static HashSet<vyre_foundation::ir::OpId> {
 
 struct FixtureTargetCompiler {
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl TargetCompiler for FixtureTargetCompiler {
@@ -44,30 +45,41 @@ impl TargetCompiler for FixtureTargetCompiler {
         &self.format
     }
 
+    fn profile(&self) -> &TargetProfile {
+        &self.profile
+    }
+
     fn compile(
         &self,
         artifact: &vyre_megakernel::Artifact,
     ) -> Result<TargetPayload, TargetCompileError> {
-        compile_selected_modules(artifact, self.format.clone(), |program| {
-            let bytes = program
-                .to_wire()
-                .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
-            Ok(EmittedTargetModule {
-                entry_point: "main".to_string(),
-                bytes,
-            })
-        })
+        compile_selected_modules(
+            artifact,
+            self.format.clone(),
+            self.profile.clone(),
+            |selected, _profile| {
+                Ok(EmittedTargetModule {
+                    entry_point: "main".to_string(),
+                    grid_size: [1, 1, 1],
+                    dynamic_shared_bytes: 0,
+                    workgroup_size: selected.descriptor.dispatch.workgroup_size,
+                    resource_bindings: selected.canonical_bindings.clone(),
+                    bytes: b"target-payload-fixture".to_vec(),
+                })
+            },
+        )
     }
 }
 
 fn fixture_target_compiler() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError> {
-    Ok(Box::new(FixtureTargetCompiler {
-        format: TargetPayloadFormat::new("fixture-target-format", 1).map_err(|error| {
-            vyre_driver::BackendError::new(format!(
-                "fixture target format is invalid: {error}. Fix: repair the fixture format."
-            ))
-        })?,
-    }))
+    let format = TargetPayloadFormat::new("fixture-target-format", 1).map_err(|error| {
+        vyre_driver::BackendError::new(format!(
+            "fixture target format is invalid: {error}. Fix: repair the fixture format."
+        ))
+    })?;
+    let profile = TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 0, 0)
+        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+    Ok(Box::new(FixtureTargetCompiler { format, profile }))
 }
 
 inventory::submit! {
@@ -150,9 +162,15 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
         .unwrap()
         .value;
     let group = &neutral.fusion()[0];
+    let program = Program::from_wire(&neutral.nodes()[0].program).unwrap();
+    let descriptor = vyre_lower::lower_verified(&program).unwrap().descriptor;
+    let program = program.to_wire().unwrap();
     let module_bytes = TargetModuleBundle::new(vec![TargetModuleImage {
         group: group.id,
         stage: group.stage,
+        nodes: group.members.clone(),
+        program,
+        descriptor,
         entry_point: "main".into(),
         bytes: b"target-payload-fixture".to_vec(),
     }])
@@ -161,20 +179,24 @@ pub(crate) fn compiled_artifact_with_grid(grid_size: [u32; 3]) -> ArtifactEnvelo
     let payload = TargetPayload::new(
         &neutral,
         TargetPayloadFormat::new("fixture-target-format", 1).unwrap(),
+        TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 0, 0).unwrap(),
         vec![TargetEntryPoint {
             name: "main".into(),
             node,
+            workgroup_size: [64, 1, 1],
             grid_size,
             dynamic_shared_bytes: 0,
             resource_bindings: vec![
                 TargetResourceBinding {
                     resource: params,
+                    group: 0,
                     slot: 0,
                     memory: TargetResourceMemory::Global,
                     access: TargetResourceAccess::ReadOnly,
                 },
                 TargetResourceBinding {
                     resource: out,
+                    group: 0,
                     slot: 1,
                     memory: TargetResourceMemory::Global,
                     access: TargetResourceAccess::WriteOnly,

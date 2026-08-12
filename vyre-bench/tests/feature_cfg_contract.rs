@@ -106,10 +106,7 @@ fn every_benchmark_feature_guard_is_declared() {
         );
     }
 
-    assert_eq!(
-        used, declared,
-        "source guards and Cargo features diverged"
-    );
+    assert_eq!(used, declared, "source guards and Cargo features diverged");
 }
 
 /// Proves nested `cfg` and `cfg_attr` predicates cannot evade the feature inventory.

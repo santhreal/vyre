@@ -8,8 +8,8 @@ use vyre_driver::{
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    fuse_selected_module, selected_modules, Artifact, ArtifactValueId, Digest, ResourceLifetime,
-    TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 
 use crate::backend::CudaBackend;
@@ -19,6 +19,7 @@ use crate::{CudaBackendRegistration, CUDA_BACKEND_ID};
 struct CudaDevice {
     identity: DeviceIdentity,
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl Device for CudaDevice {
@@ -28,6 +29,10 @@ impl Device for CudaDevice {
 
     fn target_format(&self) -> &TargetPayloadFormat {
         &self.format
+    }
+
+    fn target_profile(&self) -> &TargetProfile {
+        &self.profile
     }
 
     fn is_healthy(&self) -> bool {
@@ -86,8 +91,13 @@ impl ArtifactMaterializer for CudaMaterializer {
                 backend: CUDA_BACKEND_ID.to_string(),
             });
         }
+        if payload.profile() != self.descriptor.target_profile() {
+            return Err(invalid_module(
+                "target payload profile does not match the acquired materializer profile",
+            ));
+        }
         let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = selected_modules(artifact).map_err(compile_error)?;
+        let selected = artifact.fusion();
         if bundle.modules.len() != selected.len() {
             return Err(invalid_module(
                 "target module count must equal the compiler-selected fusion-group count",
@@ -105,9 +115,12 @@ impl ArtifactMaterializer for CudaMaterializer {
             .zip(selected)
             .zip(payload.entries())
         {
-            if image.group != selected.group || image.stage != selected.stage {
+            if image.group != selected.id
+                || image.stage != selected.stage
+                || image.nodes != selected.members
+            {
                 return Err(invalid_module(
-                    "target module group/stage identity must match the neutral selected plan",
+                    "target module group/stage/node identity must match the neutral selected plan",
                 ));
             }
             if image.entry_point != "main" {
@@ -131,7 +144,9 @@ impl ArtifactMaterializer for CudaMaterializer {
             let mut config = DispatchConfig::default();
             config.grid_override = Some(entry.grid_size);
             config.dispatch_grid = Some(entry.grid_size);
-            let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
+            let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
+                invalid_module(&format!("selected Program is malformed: {error}"))
+            })?);
             let prepared = self.backend.prepare_static_dispatch(&program, &config)?;
             let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
             self.backend.module_for_ptx_with_key(ptx, module_key)?;
@@ -405,6 +420,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
         message: format!("CUDA artifact device acquisition failed: {message}"),
     })?;
     let format = TargetPayloadFormat::new("ptx", 1).map_err(compile_error)?;
+    let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     let device = backend.caps.name.clone();
     Ok(Box::new(CudaMaterializer {
@@ -419,6 +435,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
                 generation,
             },
             format,
+            profile,
         },
     }))
 }

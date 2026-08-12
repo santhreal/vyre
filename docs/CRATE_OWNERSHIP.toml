@@ -18,6 +18,17 @@ default_features = true
 boundary = "public"
 seam = "foundation-ir"
 
+[[crate.dependency]]
+package = "vyre-lower"
+purpose = "single verified selected-module representation lowering"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "lowering"
+
 [[crate]]
 package = "vyre"
 path = "vyre"

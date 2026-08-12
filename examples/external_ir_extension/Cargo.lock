@@ -692,6 +692,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-lower"
+version = "0.7.2"
+dependencies = [
+ "im",
+ "rustc-hash",
+ "serde",
+ "smallvec",
+ "thiserror",
+ "vyre-foundation",
+]
+
+[[package]]
 name = "vyre-macros"
 version = "0.7.2"
 dependencies = [
@@ -709,6 +721,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "vyre-foundation",
+ "vyre-lower",
 ]
 
 [[package]]

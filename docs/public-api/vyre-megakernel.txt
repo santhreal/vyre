@@ -9,6 +9,7 @@ impl vyre_megakernel::ExternalFacts
 impl vyre_megakernel::SearchBudget
 impl vyre_megakernel::TargetPayload
 impl vyre_megakernel::TargetPayloadFormat
+impl vyre_megakernel::TargetProfile
 impl vyre_megakernel::ValidatedCompileRequest
 impl vyre_megakernel::legality::FusionRejectionReason
 impl vyre_megakernel::target::TargetModuleBundle
@@ -25,15 +26,19 @@ pub const fn vyre_megakernel::SearchBudget::new(max_candidates: u32, max_cpu_wor
 pub const fn vyre_megakernel::TargetPayload::digest(&self) -> vyre_megakernel::Digest
 pub const fn vyre_megakernel::TargetPayload::format(&self) -> &vyre_megakernel::TargetPayloadFormat
 pub const fn vyre_megakernel::TargetPayload::neutral_artifact(&self) -> vyre_megakernel::Digest
+pub const fn vyre_megakernel::TargetPayload::profile(&self) -> &vyre_megakernel::TargetProfile
 pub const fn vyre_megakernel::TargetPayload::schema_version(&self) -> u16
 pub const fn vyre_megakernel::TargetPayloadFormat::version(&self) -> u16
+pub const fn vyre_megakernel::TargetProfile::generation(&self) -> u64
+pub const fn vyre_megakernel::TargetProfile::max_dynamic_shared_bytes(&self) -> u32
+pub const fn vyre_megakernel::TargetProfile::max_invocations_per_workgroup(&self) -> u32
+pub const fn vyre_megakernel::TargetProfile::max_workgroup_size(&self) -> [u32; 3]
+pub const fn vyre_megakernel::TargetProfile::subgroup_size(&self) -> u32
 pub const fn vyre_megakernel::ValidatedCompileRequest::facts(&self) -> &vyre_megakernel::ExternalFacts
 pub const fn vyre_megakernel::ValidatedCompileRequest::graph(&self) -> &vyre_foundation::ir_inner::model::program_graph::ProgramGraph
 pub const fn vyre_megakernel::ValidatedCompileRequest::max_artifact_bytes(&self) -> u64
 pub const fn vyre_megakernel::ValidatedCompileRequest::search_budget(&self) -> vyre_megakernel::SearchBudget
-pub const fn vyre_megakernel::artifact_abi(artifact: &vyre_megakernel::Artifact) -> &vyre_megakernel::ArtifactAbi
 pub const fn vyre_megakernel::legality::FusionRejectionReason::code(self) -> &'static str
-pub const fn vyre_megakernel::target::artifact_abi(artifact: &vyre_megakernel::Artifact) -> &vyre_megakernel::ArtifactAbi
 pub const vyre_megakernel::ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16
 pub const vyre_megakernel::ARTIFACT_SCHEMA_VERSION: u16
 pub const vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION: u16
@@ -67,28 +72,28 @@ pub fn vyre_megakernel::CompileRequest::validate(self) -> core::result::Result<v
 pub fn vyre_megakernel::ExternalFacts::new(configuration_digest: vyre_megakernel::Digest, symbolic_bindings: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>) -> Self
 pub fn vyre_megakernel::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::TargetCompiler::format(&self) -> &vyre_megakernel::TargetPayloadFormat
+pub fn vyre_megakernel::TargetCompiler::profile(&self) -> &vyre_megakernel::TargetProfile
 pub fn vyre_megakernel::TargetPayload::bytes(&self) -> &[u8]
 pub fn vyre_megakernel::TargetPayload::entries(&self) -> &[vyre_megakernel::TargetEntryPoint]
 pub fn vyre_megakernel::TargetPayload::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
-pub fn vyre_megakernel::TargetPayload::new(neutral: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, entries: alloc::vec::Vec<vyre_megakernel::TargetEntryPoint>, bytes: alloc::vec::Vec<u8>) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::TargetPayload::new(neutral: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, entries: alloc::vec::Vec<vyre_megakernel::TargetEntryPoint>, bytes: alloc::vec::Vec<u8>) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetPayload::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::TargetPayloadFormat::identity(&self) -> &str
 pub fn vyre_megakernel::TargetPayloadFormat::new(identity: impl core::convert::Into<alloc::string::String>, version: u16) -> core::result::Result<Self, vyre_megakernel::CompileError>
+pub fn vyre_megakernel::TargetProfile::identity(&self) -> &str
+pub fn vyre_megakernel::TargetProfile::new(identity: impl core::convert::Into<alloc::string::String>, generation: u64, max_workgroup_size: [u32; 3], max_invocations_per_workgroup: u32, max_dynamic_shared_bytes: u32, subgroup_size: u32) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_megakernel::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::target::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::compile(request: &vyre_megakernel::ValidatedCompileRequest) -> core::result::Result<vyre_megakernel::Artifact, vyre_megakernel::CompileError>
-pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, emit: impl core::ops::function::FnMut(&vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_megakernel::target::EmittedTargetModule, vyre_megakernel::target::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
-pub fn vyre_megakernel::fuse_selected_module(module: &vyre_megakernel::target::SelectedModule) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_megakernel::target::TargetCompileError>
+pub fn vyre_megakernel::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, emit: impl core::ops::function::FnMut(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::TargetProfile) -> core::result::Result<vyre_megakernel::target::EmittedTargetModule, vyre_megakernel::target::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::legality::analyze_fusion_pair(graph: &vyre_foundation::ir_inner::model::program_graph::ProgramGraph, from: vyre_megakernel::ArtifactNodeId, to: vyre_megakernel::ArtifactNodeId, value: vyre_megakernel::ArtifactValueId) -> vyre_megakernel::legality::FusionDecision
-pub fn vyre_megakernel::selected_modules(artifact: &vyre_megakernel::Artifact) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::target::SelectedModule>, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::target::TargetCompiler::compile(&self, artifact: &vyre_megakernel::Artifact) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::target::TargetCompiler::format(&self) -> &vyre_megakernel::TargetPayloadFormat
+pub fn vyre_megakernel::target::TargetCompiler::profile(&self) -> &vyre_megakernel::TargetProfile
 pub fn vyre_megakernel::target::TargetModuleBundle::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::target::TargetModuleBundle::new(modules: alloc::vec::Vec<vyre_megakernel::target::TargetModuleImage>) -> Self
 pub fn vyre_megakernel::target::TargetModuleBundle::to_bytes(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_megakernel::target::TargetCompileError>
 pub fn vyre_megakernel::target::attach_target(artifact: vyre_megakernel::Artifact, compiler: &dyn vyre_megakernel::target::TargetCompiler) -> core::result::Result<vyre_megakernel::ArtifactEnvelope, vyre_megakernel::target::TargetCompileError>
-pub fn vyre_megakernel::target::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, emit: impl core::ops::function::FnMut(&vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_megakernel::target::EmittedTargetModule, vyre_megakernel::target::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
-pub fn vyre_megakernel::target::fuse_selected_module(module: &vyre_megakernel::target::SelectedModule) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_megakernel::target::TargetCompileError>
-pub fn vyre_megakernel::target::selected_modules(artifact: &vyre_megakernel::Artifact) -> core::result::Result<alloc::vec::Vec<vyre_megakernel::target::SelectedModule>, vyre_megakernel::target::TargetCompileError>
+pub fn vyre_megakernel::target::compile_selected_modules(artifact: &vyre_megakernel::Artifact, format: vyre_megakernel::TargetPayloadFormat, profile: vyre_megakernel::TargetProfile, emit: impl core::ops::function::FnMut(&vyre_megakernel::target::SelectedLowering, &vyre_megakernel::TargetProfile) -> core::result::Result<vyre_megakernel::target::EmittedTargetModule, vyre_megakernel::target::TargetCompileError>) -> core::result::Result<vyre_megakernel::TargetPayload, vyre_megakernel::target::TargetCompileError>
 pub mod vyre_megakernel
 pub mod vyre_megakernel::cost
 pub mod vyre_megakernel::legality
@@ -118,17 +123,19 @@ pub struct vyre_megakernel::ResourceEnvelope
 pub struct vyre_megakernel::ResourceRecord
 pub struct vyre_megakernel::SearchBudget
 pub struct vyre_megakernel::SearchWork
-pub struct vyre_megakernel::SelectedModule
+pub struct vyre_megakernel::SelectedLowering
 pub struct vyre_megakernel::SelectedPlan
 pub struct vyre_megakernel::TargetEntryPoint
 pub struct vyre_megakernel::TargetModuleBundle
 pub struct vyre_megakernel::TargetModuleImage
 pub struct vyre_megakernel::TargetPayload
 pub struct vyre_megakernel::TargetPayloadFormat
+pub struct vyre_megakernel::TargetProfile
 pub struct vyre_megakernel::TargetResourceBinding
 pub struct vyre_megakernel::ValidatedCompileRequest
 pub struct vyre_megakernel::cost::CostBreakdown
 pub struct vyre_megakernel::target::EmittedTargetModule
+pub struct vyre_megakernel::target::SelectedLowering
 pub struct vyre_megakernel::target::SelectedModule
 pub struct vyre_megakernel::target::TargetModuleBundle
 pub struct vyre_megakernel::target::TargetModuleImage
@@ -155,7 +162,11 @@ pub vyre_megakernel::DependencyKind::Data
 pub vyre_megakernel::DependencyKind::Materialization
 pub vyre_megakernel::DependencyKind::Retained
 pub vyre_megakernel::EmittedTargetModule::bytes: alloc::vec::Vec<u8>
+pub vyre_megakernel::EmittedTargetModule::dynamic_shared_bytes: u32
 pub vyre_megakernel::EmittedTargetModule::entry_point: alloc::string::String
+pub vyre_megakernel::EmittedTargetModule::grid_size: [u32; 3]
+pub vyre_megakernel::EmittedTargetModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::EmittedTargetModule::workgroup_size: [u32; 3]
 pub vyre_megakernel::EntryAbiRecord::inputs: alloc::vec::Vec<vyre_megakernel::ArtifactValueId>
 pub vyre_megakernel::EntryAbiRecord::node: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::EntryAbiRecord::outputs: alloc::vec::Vec<vyre_megakernel::ArtifactValueId>
@@ -212,10 +223,14 @@ pub vyre_megakernel::SearchWork::cpu_work: u64
 pub vyre_megakernel::SearchWork::elapsed_ns: u64
 pub vyre_megakernel::SearchWork::measurements: u32
 pub vyre_megakernel::SearchWork::target_compilations: u32
-pub vyre_megakernel::SelectedModule::group: vyre_megakernel::FusionGroupId
-pub vyre_megakernel::SelectedModule::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
-pub vyre_megakernel::SelectedModule::programs: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>
-pub vyre_megakernel::SelectedModule::stage: u32
+pub vyre_megakernel::SelectedLowering::abi: vyre_megakernel::ArtifactAbi
+pub vyre_megakernel::SelectedLowering::artifact: vyre_megakernel::Digest
+pub vyre_megakernel::SelectedLowering::canonical_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::SelectedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_megakernel::SelectedLowering::group: vyre_megakernel::FusionGroupId
+pub vyre_megakernel::SelectedLowering::logical_element_count: u32
+pub vyre_megakernel::SelectedLowering::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::SelectedLowering::stage: u32
 pub vyre_megakernel::SelectedPlan::barriers: alloc::vec::Vec<vyre_megakernel::BarrierRecord>
 pub vyre_megakernel::SelectedPlan::candidates_explored: u32
 pub vyre_megakernel::SelectedPlan::fusion: alloc::vec::Vec<vyre_megakernel::FusionRecord>
@@ -234,16 +249,21 @@ pub vyre_megakernel::TargetEntryPoint::grid_size: [u32; 3]
 pub vyre_megakernel::TargetEntryPoint::name: alloc::string::String
 pub vyre_megakernel::TargetEntryPoint::node: vyre_megakernel::ArtifactNodeId
 pub vyre_megakernel::TargetEntryPoint::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::TargetEntryPoint::workgroup_size: [u32; 3]
 pub vyre_megakernel::TargetModuleBundle::modules: alloc::vec::Vec<vyre_megakernel::target::TargetModuleImage>
 pub vyre_megakernel::TargetModuleBundle::schema_version: u16
 pub vyre_megakernel::TargetModuleImage::bytes: alloc::vec::Vec<u8>
+pub vyre_megakernel::TargetModuleImage::descriptor: vyre_lower::descriptor::KernelDescriptor
 pub vyre_megakernel::TargetModuleImage::entry_point: alloc::string::String
 pub vyre_megakernel::TargetModuleImage::group: vyre_megakernel::FusionGroupId
+pub vyre_megakernel::TargetModuleImage::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::TargetModuleImage::program: alloc::vec::Vec<u8>
 pub vyre_megakernel::TargetModuleImage::stage: u32
 pub vyre_megakernel::TargetResourceAccess::ReadOnly
 pub vyre_megakernel::TargetResourceAccess::ReadWrite
 pub vyre_megakernel::TargetResourceAccess::WriteOnly
 pub vyre_megakernel::TargetResourceBinding::access: vyre_megakernel::TargetResourceAccess
+pub vyre_megakernel::TargetResourceBinding::group: u32
 pub vyre_megakernel::TargetResourceBinding::memory: vyre_megakernel::TargetResourceMemory
 pub vyre_megakernel::TargetResourceBinding::resource: vyre_megakernel::ArtifactValueId
 pub vyre_megakernel::TargetResourceBinding::slot: u32
@@ -264,7 +284,19 @@ pub vyre_megakernel::legality::FusionRejectionReason::SynchronizationBoundary
 pub vyre_megakernel::legality::FusionRejectionReason::UnknownGraphMember
 pub vyre_megakernel::legality::FusionRejectionReason::WorkgroupMismatch
 pub vyre_megakernel::target::EmittedTargetModule::bytes: alloc::vec::Vec<u8>
+pub vyre_megakernel::target::EmittedTargetModule::dynamic_shared_bytes: u32
 pub vyre_megakernel::target::EmittedTargetModule::entry_point: alloc::string::String
+pub vyre_megakernel::target::EmittedTargetModule::grid_size: [u32; 3]
+pub vyre_megakernel::target::EmittedTargetModule::resource_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::target::EmittedTargetModule::workgroup_size: [u32; 3]
+pub vyre_megakernel::target::SelectedLowering::abi: vyre_megakernel::ArtifactAbi
+pub vyre_megakernel::target::SelectedLowering::artifact: vyre_megakernel::Digest
+pub vyre_megakernel::target::SelectedLowering::canonical_bindings: alloc::vec::Vec<vyre_megakernel::TargetResourceBinding>
+pub vyre_megakernel::target::SelectedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_megakernel::target::SelectedLowering::group: vyre_megakernel::FusionGroupId
+pub vyre_megakernel::target::SelectedLowering::logical_element_count: u32
+pub vyre_megakernel::target::SelectedLowering::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::target::SelectedLowering::stage: u32
 pub vyre_megakernel::target::SelectedModule::group: vyre_megakernel::FusionGroupId
 pub vyre_megakernel::target::SelectedModule::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
 pub vyre_megakernel::target::SelectedModule::programs: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>
@@ -277,6 +309,9 @@ pub vyre_megakernel::target::TargetCompileError::Unsupported(alloc::string::Stri
 pub vyre_megakernel::target::TargetModuleBundle::modules: alloc::vec::Vec<vyre_megakernel::target::TargetModuleImage>
 pub vyre_megakernel::target::TargetModuleBundle::schema_version: u16
 pub vyre_megakernel::target::TargetModuleImage::bytes: alloc::vec::Vec<u8>
+pub vyre_megakernel::target::TargetModuleImage::descriptor: vyre_lower::descriptor::KernelDescriptor
 pub vyre_megakernel::target::TargetModuleImage::entry_point: alloc::string::String
 pub vyre_megakernel::target::TargetModuleImage::group: vyre_megakernel::FusionGroupId
+pub vyre_megakernel::target::TargetModuleImage::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
+pub vyre_megakernel::target::TargetModuleImage::program: alloc::vec::Vec<u8>
 pub vyre_megakernel::target::TargetModuleImage::stage: u32

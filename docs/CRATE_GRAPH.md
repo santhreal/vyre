@@ -154,6 +154,7 @@ graph TD
   C21 --> C31
   C23 --> C16
   C25 --> C16
+  C25 --> C23
   C26 --> C16
   C26 --> C31
   C27 --> C16
@@ -303,6 +304,7 @@ graph TD
 | `vyre-libs` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
 | `vyre-lower` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-megakernel` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
+| `vyre-megakernel` | `vyre-lower` | single verified selected-module representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-primitives` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `true` | `true` | `private` | `foundation-ir` |
 | `vyre-primitives` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-reference` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |

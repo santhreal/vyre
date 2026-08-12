@@ -392,6 +392,7 @@ pub fn vyre_driver::CompiledPipeline::id(&self) -> &str
 pub fn vyre_driver::Device::identity(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::Device::is_healthy(&self) -> bool
 pub fn vyre_driver::Device::target_format(&self) -> &vyre_megakernel::envelope::TargetPayloadFormat
+pub fn vyre_driver::Device::target_profile(&self) -> &vyre_megakernel::envelope::TargetProfile
 pub fn vyre_driver::DeviceBuffer::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_driver::DeviceBuffer::as_any_mut(&mut self) -> &mut dyn core::any::Any
 pub fn vyre_driver::DeviceBuffer::backend_id(&self) -> &'static str
@@ -593,6 +594,7 @@ pub fn vyre_driver::backend::CompiledPipeline::id(&self) -> &str
 pub fn vyre_driver::backend::Device::identity(&self) -> &vyre_driver::DeviceIdentity
 pub fn vyre_driver::backend::Device::is_healthy(&self) -> bool
 pub fn vyre_driver::backend::Device::target_format(&self) -> &vyre_megakernel::envelope::TargetPayloadFormat
+pub fn vyre_driver::backend::Device::target_profile(&self) -> &vyre_megakernel::envelope::TargetProfile
 pub fn vyre_driver::backend::DeviceBuffer::as_any(&self) -> &dyn core::any::Any
 pub fn vyre_driver::backend::DeviceBuffer::as_any_mut(&mut self) -> &mut dyn core::any::Any
 pub fn vyre_driver::backend::DeviceBuffer::backend_id(&self) -> &'static str

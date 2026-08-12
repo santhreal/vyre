@@ -3380,6 +3380,7 @@ dependencies = [
  "thiserror 2.0.19",
  "vyre-driver",
  "vyre-foundation",
+ "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
@@ -3903,6 +3904,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.19",
  "vyre-foundation",
+ "vyre-lower",
 ]
 
 [[package]]

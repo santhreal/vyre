@@ -7,8 +7,8 @@ use vyre_driver::{
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    fuse_selected_module, selected_modules, Artifact, ArtifactValueId, Digest, ResourceLifetime,
-    TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
@@ -16,6 +16,7 @@ use crate::{vulkan, SPIRV_BACKEND_ID};
 struct SpirvDevice {
     identity: DeviceIdentity,
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl Device for SpirvDevice {
@@ -25,6 +26,10 @@ impl Device for SpirvDevice {
 
     fn target_format(&self) -> &TargetPayloadFormat {
         &self.format
+    }
+
+    fn target_profile(&self) -> &TargetProfile {
+        &self.profile
     }
 
     fn is_healthy(&self) -> bool {
@@ -58,8 +63,14 @@ impl ArtifactMaterializer for SpirvMaterializer {
                 backend: SPIRV_BACKEND_ID.to_string(),
             });
         }
+        if payload.profile() != self.descriptor.target_profile() {
+            return Err(BackendError::InvalidProgram {
+                fix: "Fix: target payload profile must match the acquired materializer profile."
+                    .to_string(),
+            });
+        }
         let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = selected_modules(artifact).map_err(compile_error)?;
+        let selected = artifact.fusion();
         if bundle.modules.len() != selected.len() {
             return Err(BackendError::InvalidProgram {
                 fix: "Fix: target module count must equal the compiler-selected fusion-group count. Recompile the payload from this artifact.".to_string(),
@@ -78,9 +89,12 @@ impl ArtifactMaterializer for SpirvMaterializer {
             .zip(selected)
             .zip(payload.entries())
         {
-            if image.group != selected.group || image.stage != selected.stage {
+            if image.group != selected.id
+                || image.stage != selected.stage
+                || image.nodes != selected.members
+            {
                 return Err(BackendError::InvalidProgram {
-                    fix: "Fix: target module group/stage identity must match the neutral selected plan. Recompile the payload.".to_string(),
+                    fix: "Fix: target module group/stage/node identity must match the neutral selected plan. Recompile the payload.".to_string(),
                 });
             }
             if image.bytes.len() % 4 != 0 {
@@ -108,8 +122,15 @@ impl ArtifactMaterializer for SpirvMaterializer {
             let mut config = DispatchConfig::default();
             config.grid_override = Some(entry.grid_size);
             config.dispatch_grid = Some(entry.grid_size);
+            let program = Program::from_wire(&image.program).map_err(|error| {
+                BackendError::InvalidProgram {
+                    fix: format!(
+                        "Fix: selected Program is malformed: {error}. Recompile the payload."
+                    ),
+                }
+            })?;
             modules.push(SpirvExecutableModule {
-                program: fuse_selected_module(&selected).map_err(compile_error)?,
+                program,
                 words,
                 config,
             });
@@ -337,6 +358,7 @@ impl Submission for ReadySubmission {
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let native = Arc::new(vulkan::VulkanDevice::acquire()?);
     let format = TargetPayloadFormat::new("spv", 1).map_err(compile_error)?;
+    let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     Ok(Box::new(SpirvMaterializer {
         device: native,
@@ -347,6 +369,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
                 generation,
             },
             format,
+            profile,
         },
     }))
 }

@@ -28,14 +28,14 @@ mod select;
 pub mod target;
 
 pub use envelope::{
-    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
-    TargetResourceBinding, TargetResourceMemory, ARTIFACT_ENVELOPE_SCHEMA_VERSION,
-    TARGET_PAYLOAD_SCHEMA_VERSION,
+    ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
+    TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
+    ARTIFACT_ENVELOPE_SCHEMA_VERSION, TARGET_PAYLOAD_SCHEMA_VERSION,
 };
 pub use target::{
-    artifact_abi, attach_target, compile_selected_modules, fuse_selected_module, selected_modules,
-    EmittedTargetModule, SelectedModule, TargetCompileError, TargetCompiler, TargetModuleBundle,
-    TargetModuleImage, TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
+    attach_target, compile_selected_modules, EmittedTargetModule, SelectedLowering,
+    TargetCompileError, TargetCompiler, TargetModuleBundle, TargetModuleImage,
+    TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
 
 use std::collections::{BTreeMap, BTreeSet};

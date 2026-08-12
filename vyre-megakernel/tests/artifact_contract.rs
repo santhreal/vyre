@@ -11,8 +11,8 @@ use vyre_foundation::ir::{
 use vyre_megakernel::{
     compile,
     legality::{analyze_fusion_pair, FusionDecision, FusionRejectionReason},
-    selected_modules, Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest,
-    DependencyKind, Digest, ExternalFacts, SearchBudget,
+    Artifact, ArtifactNodeId, ArtifactValueId, CompileError, CompileRequest, DependencyKind,
+    Digest, ExternalFacts, SearchBudget,
 };
 
 const LIMIT: u64 = 1_000_000;
@@ -310,22 +310,6 @@ fn round_trip_preserves_typed_ids_abi_plan_and_digest() {
         .dependencies()
         .iter()
         .any(|edge| edge.kind == DependencyKind::Retained));
-}
-/// WHY: every target compiler must receive the same selected modules and dependency stages.
-#[test]
-fn selected_modules_decode_exact_planner_groups() {
-    let artifact = compile(&request(LIMIT)).unwrap();
-    let modules = selected_modules(&artifact).expect("selected modules must decode");
-    assert_eq!(modules.len(), 2);
-    assert_eq!(modules[0].stage, 0);
-    assert_eq!(modules[0].nodes, [ArtifactNodeId(0), ArtifactNodeId(1)]);
-    assert_eq!(modules[0].programs.len(), 2);
-    assert_eq!(modules[1].stage, 1);
-    assert_eq!(modules[1].nodes, [ArtifactNodeId(2)]);
-    assert_eq!(
-        modules[0].programs[0].canonical_wire_bytes().unwrap(),
-        artifact.nodes()[0].program
-    );
 }
 /// WHY: the compiler must select profitable legal fusion while preserving lifecycle boundaries.
 #[test]

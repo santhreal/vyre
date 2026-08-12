@@ -116,7 +116,7 @@ pub use vyre_megakernel as compiler;
 /// Canonical compiler artifact and request types.
 pub use vyre_megakernel::{
     Artifact, ArtifactEnvelope, CompileRequest, ExternalFacts, SearchBudget, TargetPayload,
-    TargetPayloadFormat, ValidatedCompileRequest,
+    TargetPayloadFormat, TargetProfile, ValidatedCompileRequest,
 };
 
 /// Authenticated artifact admission, materialization, submission, and recovery.

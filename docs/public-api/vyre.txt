@@ -24,6 +24,7 @@ pub use vyre::SearchBudget
 pub use vyre::Submission
 pub use vyre::TargetPayload
 pub use vyre::TargetPayloadFormat
+pub use vyre::TargetProfile
 pub use vyre::ValidatedCompileRequest
 pub use vyre::Value
 pub use vyre::admit_artifact

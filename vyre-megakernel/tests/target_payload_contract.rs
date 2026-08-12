@@ -10,7 +10,7 @@ use vyre_megakernel::{
     attach_target, compile, Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
     CompileError, CompileRequest, Digest, ExternalFacts, FusionGroupId, SearchBudget,
     TargetCompileError, TargetCompiler, TargetEntryPoint, TargetModuleBundle, TargetModuleImage,
-    TargetPayload, TargetPayloadFormat, TargetResourceAccess, TargetResourceBinding,
+    TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
 };
 
@@ -61,8 +61,21 @@ fn neutral_artifact(workgroup_size: [u32; 3]) -> Artifact {
 fn format(version: u16) -> TargetPayloadFormat {
     TargetPayloadFormat::new("test.target-binary", version).expect("fixture format must be valid")
 }
+
+fn profile(version: u16) -> TargetProfile {
+    TargetProfile::new(
+        "test.target-binary",
+        u64::from(version),
+        [64, 1, 1],
+        64,
+        1_024,
+        0,
+    )
+    .expect("fixture profile must be valid")
+}
 struct FixtureCompiler {
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl TargetCompiler for FixtureCompiler {
@@ -70,9 +83,19 @@ impl TargetCompiler for FixtureCompiler {
         &self.format
     }
 
+    fn profile(&self) -> &TargetProfile {
+        &self.profile
+    }
+
     fn compile(&self, artifact: &Artifact) -> Result<TargetPayload, TargetCompileError> {
-        TargetPayload::new(artifact, self.format.clone(), vec![entry()], vec![4, 2])
-            .map_err(Into::into)
+        TargetPayload::new(
+            artifact,
+            self.format.clone(),
+            self.profile.clone(),
+            vec![entry()],
+            vec![4, 2],
+        )
+        .map_err(Into::into)
     }
 }
 
@@ -81,7 +104,10 @@ impl TargetCompiler for FixtureCompiler {
 fn target_compiler_attaches_exactly_one_authenticated_payload() {
     let neutral = neutral_artifact([8, 1, 1]);
     let neutral_digest = neutral.digest();
-    let compiler = FixtureCompiler { format: format(9) };
+    let compiler = FixtureCompiler {
+        format: format(9),
+        profile: profile(9),
+    };
 
     let envelope = attach_target(neutral, &compiler).expect("target attachment must succeed");
 
@@ -97,10 +123,12 @@ fn entry() -> TargetEntryPoint {
     TargetEntryPoint {
         name: "entry".into(),
         node: ArtifactNodeId(0),
+        workgroup_size: [8, 1, 1],
         grid_size: [4, 1, 1],
         dynamic_shared_bytes: 64,
         resource_bindings: vec![TargetResourceBinding {
             resource: ArtifactValueId(0),
+            group: 0,
             slot: 3,
             memory: TargetResourceMemory::Global,
             access: TargetResourceAccess::ReadOnly,
@@ -113,8 +141,14 @@ fn entry() -> TargetEntryPoint {
 fn neutral_envelope_and_target_payload_round_trip_exactly() {
     let neutral = neutral_artifact([8, 1, 1]);
     let neutral_digest = neutral.digest();
-    let payload = TargetPayload::new(&neutral, format(7), vec![entry()], vec![0, 3, 7, 255])
-        .expect("valid target payload must bind");
+    let payload = TargetPayload::new(
+        &neutral,
+        format(7),
+        profile(7),
+        vec![entry()],
+        vec![0, 3, 7, 255],
+    )
+    .expect("valid target payload must bind");
     let payload_digest = payload.digest();
     let mut envelope = ArtifactEnvelope::new(neutral);
     envelope
@@ -145,7 +179,7 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
     let first = neutral_artifact([8, 1, 1]);
     let second = neutral_artifact([16, 1, 1]);
     assert_ne!(first.digest(), second.digest());
-    let payload = TargetPayload::new(&first, format(1), vec![entry()], vec![9, 8, 7])
+    let payload = TargetPayload::new(&first, format(1), profile(1), vec![entry()], vec![9, 8, 7])
         .expect("payload must bind to its source artifact");
     let mut wrong_envelope = ArtifactEnvelope::new(second);
 
@@ -166,10 +200,16 @@ fn target_payload_rejects_a_different_neutral_artifact_digest() {
 #[test]
 fn target_payload_schema_and_format_version_skew_are_rejected() {
     let neutral = neutral_artifact([8, 1, 1]);
-    let payload = TargetPayload::new(&neutral, format(2), vec![entry()], vec![1, 2, 3])
-        .expect("payload must construct");
+    let payload = TargetPayload::new(
+        &neutral,
+        format(2),
+        profile(2),
+        vec![entry()],
+        vec![1, 2, 3],
+    )
+    .expect("payload must construct");
     let mut payload_bytes = payload.to_bytes().expect("payload must encode");
-    payload_bytes[4..6].copy_from_slice(&3u16.to_le_bytes());
+    payload_bytes[4..6].copy_from_slice(&4u16.to_le_bytes());
     let schema_error = TargetPayload::from_bytes(&payload_bytes)
         .expect_err("unsupported attachment schema must fail before body admission");
     assert_eq!(
@@ -202,8 +242,14 @@ fn target_payload_schema_and_format_version_skew_are_rejected() {
 #[test]
 fn corrupted_target_payload_identity_is_rejected() {
     let neutral = neutral_artifact([8, 1, 1]);
-    let payload = TargetPayload::new(&neutral, format(1), vec![entry()], vec![11, 22, 33])
-        .expect("payload must construct");
+    let payload = TargetPayload::new(
+        &neutral,
+        format(1),
+        profile(1),
+        vec![entry()],
+        vec![11, 22, 33],
+    )
+    .expect("payload must construct");
     let mut bytes = payload.to_bytes().expect("payload must encode");
     bytes[10] ^= 1;
 
@@ -219,9 +265,17 @@ fn corrupted_target_payload_identity_is_rejected() {
 /// WHY: authenticated payload bytes must not admit duplicate or out-of-order selected modules.
 #[test]
 fn target_module_bundle_rejects_noncanonical_module_order() {
+    let program = Program::wrapped(Vec::new(), [1, 1, 1], Vec::new());
+    let descriptor = vyre_lower::lower_verified(&program)
+        .expect("fixture lowering must succeed")
+        .descriptor;
+    let program = program.to_wire().expect("fixture Program must encode");
     let image = |stage, group| TargetModuleImage {
         group: FusionGroupId(group),
         stage,
+        nodes: vec![ArtifactNodeId(group)],
+        program: program.clone(),
+        descriptor: descriptor.clone(),
         entry_point: format!("group_{group}"),
         bytes: vec![group as u8],
     };
@@ -230,10 +284,11 @@ fn target_module_bundle_rejects_noncanonical_module_order() {
         vec![image(0, 1), image(0, 0)],
         vec![image(0, 0), image(0, 0)],
     ] {
-        let bytes = serde_json::to_vec(&TargetModuleBundle {
+        let bytes = TargetModuleBundle {
             schema_version: vyre_megakernel::TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
             modules,
-        })
+        }
+        .to_bytes()
         .expect("fixture bundle must encode");
         let error = TargetModuleBundle::from_bytes(&bytes)
             .expect_err("noncanonical stage/group order must fail admission");

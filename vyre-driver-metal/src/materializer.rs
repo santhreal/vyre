@@ -11,8 +11,8 @@ mod native {
     };
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{
-        fuse_selected_module, selected_modules, Artifact, ArtifactValueId, Digest,
-        ResourceLifetime, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+        Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+        TargetPayloadFormat, TargetProfile,
     };
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
@@ -22,6 +22,7 @@ mod native {
     struct MetalDevice {
         identity: DeviceIdentity,
         format: TargetPayloadFormat,
+        profile: TargetProfile,
     }
 
     impl Device for MetalDevice {
@@ -31,6 +32,10 @@ mod native {
 
         fn target_format(&self) -> &TargetPayloadFormat {
             &self.format
+        }
+
+        fn target_profile(&self) -> &TargetProfile {
+            &self.profile
         }
 
         fn is_healthy(&self) -> bool {
@@ -64,8 +69,13 @@ mod native {
                     backend: METAL_BACKEND_ID.to_string(),
                 });
             }
+            if payload.profile() != self.descriptor.target_profile() {
+                return Err(invalid_module(
+                    "target payload profile does not match the acquired materializer profile",
+                ));
+            }
             let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-            let selected = selected_modules(artifact).map_err(compile_error)?;
+            let selected = artifact.fusion();
             if bundle.modules.len() != selected.len() {
                 return Err(invalid_module(
                     "target module count must equal the compiler-selected fusion-group count",
@@ -83,9 +93,12 @@ mod native {
                 .zip(selected)
                 .zip(payload.entries())
             {
-                if image.group != selected.group || image.stage != selected.stage {
+                if image.group != selected.id
+                    || image.stage != selected.stage
+                    || image.nodes != selected.members
+                {
                     return Err(invalid_module(
-                        "target module group/stage identity must match the neutral selected plan",
+                        "target module group/stage/node identity must match the neutral selected plan",
                     ));
                 }
                 let target: vyre_emit_metal::MetalArtifact = serde_json::from_slice(&image.bytes)
@@ -105,7 +118,9 @@ mod native {
                 let mut config = DispatchConfig::default();
                 config.grid_override = Some(entry.grid_size);
                 config.dispatch_grid = Some(entry.grid_size);
-                let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
+                let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
+                    invalid_module(&format!("selected Program is malformed: {error}"))
+                })?);
                 if target.workgroup_size != program.workgroup_size {
                     return Err(invalid_module(
                         "Metal artifact workgroup geometry disagrees with the selected Program",
@@ -325,6 +340,7 @@ mod native {
         let backend = Arc::new(MetalBackend::acquire()?);
         let format =
             TargetPayloadFormat::new("msl", METAL_TARGET_FORMAT_VERSION).map_err(compile_error)?;
+        let profile = crate::target_compiler::target_profile()?;
         let generation = ResidentOwner::new()?.get();
         let device = backend.artifact_device_name();
         Ok(Box::new(MetalMaterializer {
@@ -336,6 +352,7 @@ mod native {
                     generation,
                 },
                 format,
+                profile,
             },
         }))
     }

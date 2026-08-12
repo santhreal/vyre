@@ -157,6 +157,7 @@ fn registered_materializer_executes_artifact_instance() {
     let wrong_format = TargetPayload::new(
         &artifact,
         TargetPayloadFormat::new("not-spv", 1).unwrap(),
+        payload.profile().clone(),
         payload.entries().to_vec(),
         payload.bytes().to_vec(),
     )
@@ -168,6 +169,7 @@ fn registered_materializer_executes_artifact_instance() {
     let malformed = TargetPayload::new(
         &artifact,
         payload.format().clone(),
+        payload.profile().clone(),
         payload.entries().to_vec(),
         vec![1],
     )
@@ -181,6 +183,7 @@ fn registered_materializer_executes_artifact_instance() {
     let invalid_spirv = TargetPayload::new(
         &artifact,
         payload.format().clone(),
+        payload.profile().clone(),
         payload.entries().to_vec(),
         invalid_spirv_bundle.to_bytes().unwrap(),
     )
@@ -193,6 +196,7 @@ fn registered_materializer_executes_artifact_instance() {
     let missing_module = TargetPayload::new(
         &artifact,
         payload.format().clone(),
+        payload.profile().clone(),
         payload.entries().to_vec(),
         empty_bundle.to_bytes().unwrap(),
     )
@@ -208,6 +212,7 @@ fn registered_materializer_executes_artifact_instance() {
     let wrong_group = TargetPayload::new(
         &artifact,
         payload.format().clone(),
+        payload.profile().clone(),
         payload.entries().to_vec(),
         wrong_bundle.to_bytes().unwrap(),
     )

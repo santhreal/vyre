@@ -127,17 +127,22 @@ flowchart TD
 1. Frontends and builders produce typed `Program` values.
 2. `ProgramGraph` centralizes graph adaptation, typed value identity, constants,
    lifetimes, effects, and validation.
-3. The megakernel compiler performs verified semantic optimization and lowering,
-   explores legal whole-graph schedules under a recorded finite budget, and
-   returns the best valid explored plan. It does not claim a mathematical global
-   optimum.
-4. `attach_target` invokes a registered pure target compiler and authenticates
-   ordered target modules, ABI, entry identity, and default entry geometry.
-5. A concrete materializer admits authenticated bytes and creates an
-   `ArtifactInstance` associated with one materializer generation.
-6. Runtime builds a typed `BindingSet`, rejects zero invocation extents, submits
+3. The megakernel compiler performs semantic optimization, explores legal
+   whole-graph schedules under a recorded finite budget, and returns the best
+   valid explored plan. It does not claim a mathematical global optimum.
+4. `attach_target` invokes a registered pure target compiler. The shared
+   selected-module boundary fuses each selected group and runs verified lowering
+   once. Concrete target compilers consume that immutable product and return
+   exact module bytes, workgroup and grid geometry, dynamic shared bytes, and
+   descriptor-to-artifact binding projections for an explicit target profile.
+5. The target payload authenticates the profile generation, selected node and
+   stage identities, verified descriptor, module format and bytes, geometry,
+   binding projection, and neutral artifact digest.
+6. A concrete materializer admits authenticated target state without fusing,
+   lowering, or re-inferring geometry and creates an `ArtifactInstance`.
+7. Runtime builds a typed `BindingSet`, rejects zero invocation extents, submits
    work, waits for completion, and reads outputs by artifact value identity.
-7. Recovery rematerializes authenticated artifact bytes. It does not lower or
+8. Recovery rematerializes authenticated artifact bytes. It does not lower or
    compile a raw `Program` during submission.
 
 Raw `Program` execution remains only in explicitly named reference, parity, and

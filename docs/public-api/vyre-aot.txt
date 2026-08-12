@@ -45,6 +45,7 @@ pub use vyre_aot::TargetEntryPoint
 pub use vyre_aot::TargetId
 pub use vyre_aot::TargetPayload
 pub use vyre_aot::TargetPayloadFormat
+pub use vyre_aot::TargetProfile
 pub use vyre_aot::TargetResourceAccess
 pub use vyre_aot::TargetResourceBinding
 pub use vyre_aot::TargetResourceMemory

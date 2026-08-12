@@ -101,7 +101,7 @@ pub(crate) fn artifact_fixture(
     target_bytes: Vec<u8>,
 ) -> ArtifactEnvelope {
     use vyre_megakernel::{
-        TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetResourceAccess,
+        TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
         TargetResourceBinding, TargetResourceMemory,
     };
 
@@ -109,6 +109,7 @@ pub(crate) fn artifact_fixture(
     let entry = TargetEntryPoint {
         name: "main".to_string(),
         node: neutral.nodes()[0].id,
+        workgroup_size: program.workgroup_size,
         grid_size: [1, 1, 1],
         dynamic_shared_bytes: 0,
         resource_bindings: neutral
@@ -117,6 +118,7 @@ pub(crate) fn artifact_fixture(
             .iter()
             .map(|resource| TargetResourceBinding {
                 resource: resource.value,
+                group: 0,
                 slot: resource.slot,
                 memory: TargetResourceMemory::Global,
                 access: match resource.access {
@@ -132,6 +134,7 @@ pub(crate) fn artifact_fixture(
     let payload = TargetPayload::new(
         &neutral,
         TargetPayloadFormat::new(payload_format, 1).unwrap(),
+        TargetProfile::new(payload_format, 1, [1_024, 1_024, 64], 1_024, 65_536, 0).unwrap(),
         vec![entry],
         target_bytes,
     )

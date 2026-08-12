@@ -9,14 +9,14 @@ use crate::{
 /// Current schema for the artifact envelope that carries neutral data and target payloads.
 pub const ARTIFACT_ENVELOPE_SCHEMA_VERSION: u16 = 2;
 /// Current schema for one target payload attachment.
-pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 2;
+pub const TARGET_PAYLOAD_SCHEMA_VERSION: u16 = 3;
 
 const ENVELOPE_MAGIC: &[u8; 4] = b"VME0";
 const TARGET_PAYLOAD_MAGIC: &[u8; 4] = b"VTP0";
 const FRAME_HEADER_BYTES: usize = 10;
 const DIGEST_BYTES: usize = 32;
 const ENVELOPE_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-envelope-v2\0";
-const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v2\0";
+const TARGET_PAYLOAD_DIGEST_DOMAIN: &[u8] = b"vyre-megakernel-target-payload-v3\0";
 
 /// Versioned identity of target bytes without assigning concrete target semantics.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -62,6 +62,116 @@ impl TargetPayloadFormat {
     }
 }
 
+/// Immutable capability profile used for pure target compilation.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TargetProfile {
+    identity: String,
+    generation: u64,
+    max_workgroup_size: [u32; 3],
+    max_invocations_per_workgroup: u32,
+    max_dynamic_shared_bytes: u32,
+    subgroup_size: u32,
+}
+
+impl TargetProfile {
+    /// Construct one target-owned compilation profile.
+    pub fn new(
+        identity: impl Into<String>,
+        generation: u64,
+        max_workgroup_size: [u32; 3],
+        max_invocations_per_workgroup: u32,
+        max_dynamic_shared_bytes: u32,
+        subgroup_size: u32,
+    ) -> Result<Self, CompileError> {
+        let identity = identity.into();
+        if identity.is_empty() {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                "target_payload.profile.identity",
+                "target profile identity is empty",
+                "supply the stable profile identity owned by the target compiler",
+            ));
+        }
+        if generation == 0 {
+            return Err(failure(
+                CompilerFailureKind::TargetPayloadVersionSkew,
+                "target_payload.profile.generation",
+                "target profile generation zero is reserved",
+                "supply a positive compiler/materializer generation",
+            ));
+        }
+        if let Some(axis) = max_workgroup_size.iter().position(|extent| *extent == 0) {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                format!("target_payload.profile.max_workgroup_size[{axis}]"),
+                "target profile workgroup limit is zero",
+                "supply positive workgroup limits for every axis",
+            ));
+        }
+        if max_invocations_per_workgroup == 0 {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                "target_payload.profile.max_invocations_per_workgroup",
+                "target profile invocation limit is zero",
+                "supply a positive invocation limit",
+            ));
+        }
+        if subgroup_size != 0 && !subgroup_size.is_power_of_two() {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                "target_payload.profile.subgroup_size",
+                "target profile subgroup width is not a power of two",
+                "supply zero for no subgroup constraint or a power-of-two subgroup width",
+            ));
+        }
+        Ok(Self {
+            identity,
+            generation,
+            max_workgroup_size,
+            max_invocations_per_workgroup,
+            max_dynamic_shared_bytes,
+            subgroup_size,
+        })
+    }
+
+    /// Stable target-owned profile identity.
+    #[must_use]
+    pub fn identity(&self) -> &str {
+        &self.identity
+    }
+
+    /// Compiler/materializer contract generation.
+    #[must_use]
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Maximum supported workgroup dimensions.
+    #[must_use]
+    pub const fn max_workgroup_size(&self) -> [u32; 3] {
+        self.max_workgroup_size
+    }
+
+    /// Maximum supported invocations in one workgroup.
+    #[must_use]
+    pub const fn max_invocations_per_workgroup(&self) -> u32 {
+        self.max_invocations_per_workgroup
+    }
+
+    /// Maximum dynamic shared bytes per entry.
+    #[must_use]
+    pub const fn max_dynamic_shared_bytes(&self) -> u32 {
+        self.max_dynamic_shared_bytes
+    }
+
+    /// Required subgroup width, or zero when subgroup width is not constrained.
+    #[must_use]
+    pub const fn subgroup_size(&self) -> u32 {
+        self.subgroup_size
+    }
+}
+
 /// Neutral memory class required by one target resource binding.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -92,7 +202,9 @@ pub enum TargetResourceAccess {
 pub struct TargetResourceBinding {
     /// Canonical resource identity from [`Artifact::resources`].
     pub resource: ArtifactValueId,
-    /// Target entry binding slot.
+    /// Target resource group or descriptor set.
+    pub group: u32,
+    /// Target entry binding slot within `group`.
     pub slot: u32,
     /// Required memory class.
     pub memory: TargetResourceMemory,
@@ -108,7 +220,9 @@ pub struct TargetEntryPoint {
     pub name: String,
     /// Canonical neutral node implemented by this entry.
     pub node: ArtifactNodeId,
-    /// Target grid dimensions. Workgroup dimensions remain in the neutral geometry record.
+    /// Exact target workgroup dimensions.
+    pub workgroup_size: [u32; 3],
+    /// Exact target grid dimensions.
     pub grid_size: [u32; 3],
     /// Entry-local dynamic shared byte requirement.
     pub dynamic_shared_bytes: u32,
@@ -122,6 +236,7 @@ struct TargetPayloadBody {
     schema_version: u16,
     neutral_artifact: Digest,
     format: TargetPayloadFormat,
+    profile: TargetProfile,
     entries: Vec<TargetEntryPoint>,
     bytes: Vec<u8>,
 }
@@ -138,6 +253,7 @@ impl TargetPayload {
     pub fn new(
         neutral: &Artifact,
         format: TargetPayloadFormat,
+        profile: TargetProfile,
         mut entries: Vec<TargetEntryPoint>,
         bytes: Vec<u8>,
     ) -> Result<Self, CompileError> {
@@ -151,13 +267,16 @@ impl TargetPayload {
         }
         entries.sort_by(|left, right| left.name.cmp(&right.name));
         for entry in &mut entries {
-            entry.resource_bindings.sort_by_key(|binding| binding.slot);
+            entry
+                .resource_bindings
+                .sort_by_key(|binding| (binding.group, binding.slot));
         }
-        validate_entries(neutral, &entries)?;
+        validate_entries(neutral, &profile, &entries)?;
         let body = TargetPayloadBody {
             schema_version: TARGET_PAYLOAD_SCHEMA_VERSION,
             neutral_artifact: neutral.digest(),
             format,
+            profile,
             entries,
             bytes,
         };
@@ -181,6 +300,12 @@ impl TargetPayload {
     #[must_use]
     pub const fn format(&self) -> &TargetPayloadFormat {
         &self.body.format
+    }
+
+    /// Immutable target capability profile used during compilation.
+    #[must_use]
+    pub const fn profile(&self) -> &TargetProfile {
+        &self.body.profile
     }
 
     /// Canonical entry metadata.
@@ -462,7 +587,7 @@ fn validate_target_payload(
             "discard the payload and materialize bytes from this exact neutral artifact",
         ));
     }
-    validate_entries(neutral, payload.entries())?;
+    validate_entries(neutral, payload.profile(), payload.entries())?;
     let digest = body_digest(TARGET_PAYLOAD_DIGEST_DOMAIN, &payload.body)?;
     if digest != payload.digest() {
         return Err(failure(
@@ -475,7 +600,11 @@ fn validate_target_payload(
     Ok(())
 }
 
-fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<(), CompileError> {
+fn validate_entries(
+    neutral: &Artifact,
+    profile: &TargetProfile,
+    entries: &[TargetEntryPoint],
+) -> Result<(), CompileError> {
     if entries.is_empty() {
         return Err(failure(
             CompilerFailureKind::MalformedTargetPayload,
@@ -523,24 +652,84 @@ fn validate_entries(neutral: &Artifact, entries: &[TargetEntryPoint]) -> Result<
                 "compile a complete neutral artifact before attaching target bytes",
             ));
         }
-        if let Some(axis) = entry.grid_size.iter().position(|extent| *extent == 0) {
+        for (field, geometry) in [
+            ("workgroup_size", entry.workgroup_size),
+            ("grid_size", entry.grid_size),
+        ] {
+            if let Some(axis) = geometry.iter().position(|extent| *extent == 0) {
+                return Err(failure(
+                    CompilerFailureKind::MalformedTargetPayload,
+                    format!("{path}.{field}[{axis}]"),
+                    "target entry geometry extent is zero",
+                    "materialize explicit positive target geometry",
+                ));
+            }
+        }
+        let limits = profile.max_workgroup_size();
+        if let Some(axis) = entry
+            .workgroup_size
+            .iter()
+            .zip(limits)
+            .position(|(extent, limit)| *extent > limit)
+        {
             return Err(failure(
                 CompilerFailureKind::MalformedTargetPayload,
-                format!("{path}.grid_size[{axis}]"),
-                "target entry grid extent is zero",
-                "materialize explicit positive target grid dimensions",
+                format!("{path}.workgroup_size[{axis}]"),
+                format!(
+                    "target workgroup extent {} exceeds profile limit {}",
+                    entry.workgroup_size[axis], limits[axis]
+                ),
+                "emit geometry admitted by the authenticated target profile",
+            ));
+        }
+        let invocations = entry
+            .workgroup_size
+            .iter()
+            .try_fold(1u32, |product, extent| product.checked_mul(*extent))
+            .ok_or_else(|| {
+                failure(
+                    CompilerFailureKind::MalformedTargetPayload,
+                    format!("{path}.workgroup_size"),
+                    "target workgroup invocation count overflows u32",
+                    "emit bounded workgroup geometry",
+                )
+            })?;
+        if invocations > profile.max_invocations_per_workgroup() {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                format!("{path}.workgroup_size"),
+                format!(
+                    "target workgroup has {invocations} invocations, exceeding profile limit {}",
+                    profile.max_invocations_per_workgroup()
+                ),
+                "emit geometry admitted by the authenticated target profile",
+            ));
+        }
+        if entry.dynamic_shared_bytes > profile.max_dynamic_shared_bytes() {
+            return Err(failure(
+                CompilerFailureKind::MalformedTargetPayload,
+                format!("{path}.dynamic_shared_bytes"),
+                format!(
+                    "target entry requires {} dynamic shared bytes, exceeding profile limit {}",
+                    entry.dynamic_shared_bytes,
+                    profile.max_dynamic_shared_bytes()
+                ),
+                "emit shared-memory requirements admitted by the authenticated target profile",
             ));
         }
         let mut slots = BTreeSet::new();
         let mut resources = BTreeSet::new();
         for (binding_index, binding) in entry.resource_bindings.iter().enumerate() {
             let binding_path = format!("{path}.resource_bindings[{binding_index}]");
-            if !slots.insert(binding.slot) {
+            if !slots.insert((binding.group, binding.slot)) {
                 return Err(failure(
                     CompilerFailureKind::MalformedTargetPayload,
                     format!("{binding_path}.slot"),
-                    format!("duplicate target binding slot {}", binding.slot),
-                    "associate each target binding slot exactly once",
+                    format!(
+                        "duplicate target binding group {} slot {}",
+                        binding.group, binding.slot
+                    ),
+                    "associate each target binding group/slot exactly once",
                 ));
             }
             if !resources.insert(binding.resource) {

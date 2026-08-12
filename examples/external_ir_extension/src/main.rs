@@ -6,6 +6,7 @@ use std::sync::LazyLock;
 use vyre::compiler::{
     self, compile_selected_modules, CompileRequest, Digest, EmittedTargetModule, ExternalFacts,
     SearchBudget, TargetCompileError, TargetCompiler, TargetPayload, TargetPayloadFormat,
+    TargetProfile,
 };
 use vyre::ir::{BufferDecl, DataType, Expr, Node, OpId, Program, ProgramGraph};
 use vyre_driver::{BackendError, BackendRegistration};
@@ -38,6 +39,7 @@ inventory::submit! {
 
 struct ExternalTargetCompiler {
     format: TargetPayloadFormat,
+    profile: TargetProfile,
 }
 
 impl TargetCompiler for ExternalTargetCompiler {
@@ -45,19 +47,30 @@ impl TargetCompiler for ExternalTargetCompiler {
         &self.format
     }
 
+    fn profile(&self) -> &TargetProfile {
+        &self.profile
+    }
+
     fn compile(
         &self,
         artifact: &compiler::Artifact,
     ) -> Result<TargetPayload, TargetCompileError> {
-        compile_selected_modules(artifact, self.format.clone(), |program| {
-            let bytes = program
-                .to_wire()
-                .map_err(|error| TargetCompileError::Emission(error.to_string()))?;
-            Ok(EmittedTargetModule {
-                entry_point: "external_entry".to_string(),
-                bytes,
-            })
-        })
+        compile_selected_modules(
+            artifact,
+            self.format.clone(),
+            self.profile.clone(),
+            |selected, _profile| {
+                let bytes = selected.descriptor.id.as_bytes().to_vec();
+                Ok(EmittedTargetModule {
+                    entry_point: "external_entry".to_string(),
+                    grid_size: [selected.logical_element_count, 1, 1],
+                    dynamic_shared_bytes: 0,
+                    workgroup_size: selected.descriptor.dispatch.workgroup_size,
+                    resource_bindings: selected.canonical_bindings.clone(),
+                    bytes,
+                })
+            },
+        )
     }
 }
 
@@ -76,7 +89,9 @@ fn supported_operations() -> &'static HashSet<OpId> {
 fn target_compiler() -> Result<Box<dyn TargetCompiler>, BackendError> {
     let format = TargetPayloadFormat::new(TARGET_NAME, 1)
         .map_err(|error| BackendError::new(format!("target format is invalid: {error}")))?;
-    Ok(Box::new(ExternalTargetCompiler { format }))
+    let profile = TargetProfile::new(TARGET_NAME, 1, [1, 1, 1], 1, 0, 0)
+        .map_err(|error| BackendError::new(format!("target profile is invalid: {error}")))?;
+    Ok(Box::new(ExternalTargetCompiler { format, profile }))
 }
 
 inventory::submit! {

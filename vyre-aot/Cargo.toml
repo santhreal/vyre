@@ -36,5 +36,6 @@ ptx = []
 
 [dev-dependencies]
 vyre-test-support.workspace = true
+vyre-lower.workspace = true
 tempfile.workspace = true
 inventory.workspace = true

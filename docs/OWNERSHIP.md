@@ -417,11 +417,12 @@ Explore and select legal whole-ProgramGraph fusion schedules under explicit Sear
 - Path: `vyre-megakernel`
 - Owner: `megakernel-compiler`
 - Layer: `compiler-boundary`
-- Internal production dependencies: `vyre-foundation`
+- Internal production dependencies: `vyre-foundation`, `vyre-lower`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
+| `vyre-lower` | single verified selected-module representation lowering | `private` | `lowering` |
 
 ### `vyre-primitives`
 

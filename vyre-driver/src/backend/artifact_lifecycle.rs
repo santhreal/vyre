@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use vyre_megakernel::{Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat};
+use vyre_megakernel::{
+    Artifact, ArtifactValueId, Digest, TargetPayload, TargetPayloadFormat, TargetProfile,
+};
 
 use super::BackendError;
 
@@ -21,6 +23,8 @@ pub trait Device: Send + Sync {
     fn identity(&self) -> &DeviceIdentity;
     /// Exact target payload representation admitted by this device.
     fn target_format(&self) -> &TargetPayloadFormat;
+    /// Exact immutable compilation profile admitted by this device.
+    fn target_profile(&self) -> &TargetProfile;
     /// Whether new materialization and submission are currently allowed.
     fn is_healthy(&self) -> bool;
 }

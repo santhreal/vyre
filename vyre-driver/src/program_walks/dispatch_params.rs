@@ -205,9 +205,7 @@ mod tests {
             [256, 1, 1],
             vec![vyre_foundation::ir::Node::let_bind(
                 "mask",
-                vyre_foundation::ir::Expr::subgroup_ballot(
-                    vyre_foundation::ir::Expr::bool(true),
-                ),
+                vyre_foundation::ir::Expr::subgroup_ballot(vyre_foundation::ir::Expr::bool(true)),
             )],
         );
 

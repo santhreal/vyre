@@ -9,8 +9,8 @@ use vyre_driver::{
 };
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    fuse_selected_module, selected_modules, Artifact, ArtifactValueId, Digest, ResourceLifetime,
-    TargetModuleBundle, TargetPayload, TargetPayloadFormat,
+    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    TargetPayloadFormat, TargetProfile,
 };
 
 use crate::descriptor_mapping::descriptor_bind_group;
@@ -24,6 +24,7 @@ use vyre_lower::TRAP_SIDECAR_NAME;
 struct WgpuDevice {
     identity: DeviceIdentity,
     format: TargetPayloadFormat,
+    profile: TargetProfile,
     lost: Arc<AtomicBool>,
 }
 
@@ -34,6 +35,10 @@ impl Device for WgpuDevice {
 
     fn target_format(&self) -> &TargetPayloadFormat {
         &self.format
+    }
+
+    fn target_profile(&self) -> &TargetProfile {
+        &self.profile
     }
 
     fn is_healthy(&self) -> bool {
@@ -94,8 +99,13 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 backend: WGPU_BACKEND_ID.to_string(),
             });
         }
+        if payload.profile() != self.descriptor.target_profile() {
+            return Err(invalid_module(
+                "target payload profile does not match the acquired materializer profile",
+            ));
+        }
         let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = selected_modules(artifact).map_err(compile_error)?;
+        let selected = artifact.fusion();
         if bundle.modules.len() != selected.len() {
             return Err(invalid_module(
                 "target module count must equal the compiler-selected fusion-group count",
@@ -113,9 +123,12 @@ impl ArtifactMaterializer for WgpuMaterializer {
             .zip(selected)
             .zip(payload.entries())
         {
-            if image.group != selected.group || image.stage != selected.stage {
+            if image.group != selected.id
+                || image.stage != selected.stage
+                || image.nodes != selected.members
+            {
                 return Err(invalid_module(
-                    "target module group/stage identity must match the neutral selected plan",
+                    "target module group/stage/node identity must match the neutral selected plan",
                 ));
             }
             if image.entry_point != "main" {
@@ -143,9 +156,11 @@ impl ArtifactMaterializer for WgpuMaterializer {
             let mut config = DispatchConfig::default();
             config.grid_override = Some(entry.grid_size);
             config.dispatch_grid = Some(entry.grid_size);
-            let program = Arc::new(fuse_selected_module(&selected).map_err(compile_error)?);
+            let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
+                invalid_module(&format!("selected Program is malformed: {error}"))
+            })?);
             let binding_plan = BindingPlan::build(&program)?;
-            let input_slots = target
+            let input_slots = image
                 .descriptor
                 .bindings
                 .slots
@@ -169,7 +184,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
             let pipeline = WgpuPipeline::compile_target_with_device_queue(
                 &program,
                 &target.wgsl,
-                &target.descriptor,
+                &image.descriptor,
                 &config,
                 self.backend.adapter_info.clone(),
                 self.backend.enabled_features,
@@ -503,6 +518,7 @@ pub(crate) fn materializer_for_backend(
 ) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let format =
         TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION).map_err(compile_error)?;
+    let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     let device = backend.adapter_name.to_string();
     let lost = Arc::clone(&backend.device_lost);
@@ -515,6 +531,7 @@ pub(crate) fn materializer_for_backend(
                 generation,
             },
             format,
+            profile,
             lost,
         },
     }))
