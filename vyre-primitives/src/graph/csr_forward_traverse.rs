@@ -15,11 +15,15 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::graph::csr_frontier_step::{csr_frontier_step_program, CsrFrontierStepKind};
+use crate::graph::csr_frontier_step::{
+    csr_forward_step_excluding_program, csr_frontier_step_program, CsrFrontierStepKind,
+};
 use crate::graph::program_graph::ProgramGraphShape;
 
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse";
+/// Canonical op id for a forward step that excludes selected source nodes.
+pub const EXCLUDING_OP_ID: &str = "vyre-primitives::graph::csr_forward_traverse_excluding";
 
 pub use crate::graph::csr_frontier_step::{
     csr_frontier_step_dispatch_grid as csr_forward_traverse_dispatch_grid, BINDING_FRONTIER_IN,
@@ -59,6 +63,27 @@ pub fn csr_forward_traverse(
     allow_mask: u32,
 ) -> Program {
     csr_forward_traverse_with_op_id(OP_ID, shape, frontier_in, frontier_out, allow_mask)
+}
+/// Build one CSR forward step while excluding source nodes selected by a bitset.
+///
+/// Destination nodes remain observable when reached. Exclusion applies only
+/// when a selected node would become the source of a later traversal step.
+#[must_use]
+pub fn csr_forward_traverse_excluding(
+    shape: ProgramGraphShape,
+    frontier_in: &str,
+    excluded_sources: &str,
+    frontier_out: &str,
+    allow_mask: u32,
+) -> Program {
+    csr_forward_step_excluding_program(
+        EXCLUDING_OP_ID,
+        shape,
+        frontier_in,
+        excluded_sources,
+        frontier_out,
+        allow_mask,
+    )
 }
 
 /// Build a CSR forward step under a caller-owned op id.
@@ -193,6 +218,38 @@ pub fn cpu_ref_into(
             }
         }
     }
+}
+
+#[cfg(feature = "inventory-registry")]
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::primitive(
+        EXCLUDING_OP_ID,
+        || csr_forward_traverse_excluding(
+            ProgramGraphShape::new(4, 4),
+            "fin",
+            "excluded",
+            "fout",
+            0xFFFF_FFFF,
+        ),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            vec![vec![
+                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
+                to_bytes(&[0, 2, 3, 4, 4]),       // pg_edge_offsets
+                to_bytes(&[1, 2, 3, 3]),          // pg_edge_targets
+                to_bytes(&[1, 1, 1, 1]),          // pg_edge_kind_mask
+                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
+                to_bytes(&[0b0011]),              // frontier_in = {0, 1}
+                to_bytes(&[0b0010]),              // excluded_sources = {1}
+                to_bytes(&[0]),                   // frontier_out
+            ]]
+        }),
+        Some(|| {
+            let to_bytes = |w: &[u32]| crate::wire::pack_u32_slice(w);
+            // Source 0 reaches {1, 2}; excluded source 1 does not reach 3.
+            vec![vec![to_bytes(&[0b0110])]]
+        }),
+    )
 }
 
 #[cfg(feature = "inventory-registry")]

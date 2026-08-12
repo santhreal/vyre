@@ -75,9 +75,14 @@ pub(crate) fn csr_frontier_step_program(
     );
 
     let body = match kind {
-        CsrFrontierStepKind::Forward => {
-            forward_body(shape.node_count, frontier_in, frontier_out, allow_mask, t)
-        }
+        CsrFrontierStepKind::Forward => forward_body(
+            shape.node_count,
+            frontier_in,
+            None,
+            frontier_out,
+            allow_mask,
+            t,
+        ),
         CsrFrontierStepKind::Backward => vec![Node::if_then(
             Expr::lt(t.clone(), Expr::u32(shape.node_count)),
             backward_body(shape.node_count, frontier_in, frontier_out, allow_mask, t),
@@ -91,6 +96,65 @@ pub(crate) fn csr_frontier_step_program(
             generator: Ident::from(op_id),
             source_region: None,
             body: Arc::new(body),
+        }],
+    )
+}
+/// Build a forward CSR step that excludes active source nodes selected by
+/// `excluded_sources`.
+#[must_use]
+pub(crate) fn csr_forward_step_excluding_program(
+    op_id: &'static str,
+    shape: ProgramGraphShape,
+    frontier_in: &str,
+    excluded_sources: &str,
+    frontier_out: &str,
+    allow_mask: u32,
+) -> Program {
+    let t = Expr::InvocationId { axis: 0 };
+    let words = crate::bitset::bitset_words(shape.node_count);
+    let mut buffers = shape.read_only_buffers();
+    buffers.push(
+        BufferDecl::storage(
+            frontier_in,
+            BINDING_FRONTIER_IN,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(words),
+    );
+    buffers.push(
+        BufferDecl::storage(
+            excluded_sources,
+            BINDING_FRONTIER_OUT,
+            BufferAccess::ReadOnly,
+            DataType::U32,
+        )
+        .with_count(words),
+    );
+    buffers.push(
+        BufferDecl::storage(
+            frontier_out,
+            BINDING_FRONTIER_OUT + 1,
+            BufferAccess::ReadWrite,
+            DataType::U32,
+        )
+        .with_count(words),
+    );
+
+    Program::wrapped(
+        buffers,
+        CSR_FRONTIER_STEP_WORKGROUP_SIZE,
+        vec![Node::Region {
+            generator: Ident::from(op_id),
+            source_region: None,
+            body: Arc::new(forward_body(
+                shape.node_count,
+                frontier_in,
+                Some(excluded_sources),
+                frontier_out,
+                allow_mask,
+                t,
+            )),
         }],
     )
 }
@@ -125,29 +189,69 @@ pub(crate) fn active_frontier_source_lane(
 fn forward_body(
     node_count: u32,
     frontier_in: &str,
+    excluded_sources: Option<&str>,
     frontier_out: &str,
     allow_mask: u32,
     t: Expr,
 ) -> Vec<Node> {
-    // If `src` is active in frontier_in, walk its CSR edge row via the ONE
-    // canonical edge-scan (crate::graph::edge_scan) and set each allowed `dst`
-    // in frontier_out. Two-buffer forward step: source read from frontier_in
-    // (via active_frontier_source_lane), no changed-flag work, so the walk gets an
-    // empty on_new_bit and an identity frontier index.
-    vec![active_frontier_source_lane(
-        node_count,
-        frontier_in,
-        t,
-        crate::graph::edge_scan::csr_edge_expand_nodes(
-            ProgramGraphShape::new(node_count, 0),
-            frontier_out,
-            Expr::var("src"),
-            |word| word,
-            Vec::new,
-            allow_mask,
-            "",
+    let active_body = crate::graph::edge_scan::csr_edge_expand_nodes(
+        ProgramGraphShape::new(node_count, 0),
+        frontier_out,
+        Expr::var("src"),
+        |word| word,
+        Vec::new,
+        allow_mask,
+        "",
+    );
+    let source_lane = match excluded_sources {
+        Some(excluded_sources) => active_frontier_source_lane_excluding(
+            node_count,
+            frontier_in,
+            excluded_sources,
+            t,
+            active_body,
         ),
-    )]
+        None => active_frontier_source_lane(node_count, frontier_in, t, active_body),
+    };
+    vec![source_lane]
+}
+
+fn active_frontier_source_lane_excluding(
+    node_count: u32,
+    frontier_in: &str,
+    excluded_sources: &str,
+    source: Expr,
+    active_body: Vec<Node>,
+) -> Node {
+    Node::if_then(
+        Expr::lt(source.clone(), Expr::u32(node_count)),
+        vec![
+            Node::let_bind("src", source),
+            Node::let_bind("word_idx", Expr::shr(Expr::var("src"), Expr::u32(5))),
+            Node::let_bind(
+                "bit_mask",
+                Expr::shl(Expr::u32(1), Expr::bitand(Expr::var("src"), Expr::u32(31))),
+            ),
+            Node::let_bind("src_word", Expr::load(frontier_in, Expr::var("word_idx"))),
+            Node::let_bind(
+                "excluded_word",
+                Expr::load(excluded_sources, Expr::var("word_idx")),
+            ),
+            Node::if_then(
+                Expr::and(
+                    Expr::ne(
+                        Expr::bitand(Expr::var("src_word"), Expr::var("bit_mask")),
+                        Expr::u32(0),
+                    ),
+                    Expr::eq(
+                        Expr::bitand(Expr::var("excluded_word"), Expr::var("bit_mask")),
+                        Expr::u32(0),
+                    ),
+                ),
+                active_body,
+            ),
+        ],
+    )
 }
 
 fn backward_body(
