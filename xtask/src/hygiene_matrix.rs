@@ -1,11 +1,13 @@
 //! Source hygiene release evidence for Vyre.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::path::{Path, PathBuf};
 
+use quote::ToTokens;
 use serde::{Deserialize, Serialize};
+use syn::visit::Visit;
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize)]
@@ -236,6 +238,7 @@ pub(crate) fn run(args: &[String]) {
     for root in &roots {
         scan_root(root, &mut scanned_files, &mut findings);
     }
+    scan_source_inspection_test_files(&roots[0], &mut scanned_files, &mut findings);
     scan_release_xtask(&roots[0], &mut scanned_files, &mut findings);
     scan_release_tooling(&roots[0], &mut scanned_files, &mut findings);
     scan_release_docs(&roots[0], &mut scanned_files, &mut findings);
@@ -560,6 +563,9 @@ fn is_cpu_parity_oracle_source(normalized_path: &str) -> bool {
 fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool) -> &'static str {
     if surface == "generated" || surface == "example" {
         return "informational";
+    }
+    if pattern == "source_inspection_test" {
+        return "release_blocker";
     }
     if surface == "test" || pattern.starts_with("test_") {
         return "test_hygiene";
@@ -1136,6 +1142,50 @@ fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
         scan_file(path, scanned_files, findings);
     }
 }
+fn scan_source_inspection_test_files(
+    root: &Path,
+    scanned_files: &mut usize,
+    findings: &mut Vec<HygieneFinding>,
+) {
+    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
+        let name = entry.file_name().to_string_lossy();
+        !matches!(
+            name.as_ref(),
+            "target" | "target-codex" | "target_tests" | ".git" | ".cargo-target" | "release"
+        )
+    }) {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                push_walk_error(root, &error, findings);
+                continue;
+            }
+        };
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+            continue;
+        }
+        let path_string = path.display().to_string();
+        let is_test_file = path_string.contains("/tests/")
+            || path_string.ends_with("/tests.rs")
+            || path_string.ends_with("_test.rs")
+            || path_string.ends_with("_tests.rs")
+            || path_string.contains("_tests_")
+            || path_string.contains("_test_");
+        if !is_test_file {
+            continue;
+        }
+        let text = match read_text_bounded(path) {
+            Ok(text) => text,
+            Err(error) => {
+                push_read_error(path, "unreadable_source_file", error, findings);
+                continue;
+            }
+        };
+        *scanned_files += 1;
+        scan_source_inspection_tests(path, &text, findings);
+    }
+}
 
 fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for module in [
@@ -1432,6 +1482,297 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
                 text: line.trim().to_string(),
             });
         }
+    }
+    scan_source_inspection_tests(path, &text, findings);
+}
+
+#[derive(Default)]
+struct RustSourceFactsVisitor {
+    reads_rust_source: bool,
+    calls_read_to_string: bool,
+    mentions_rust_path: bool,
+    inspects_text: bool,
+    callees: BTreeSet<String>,
+    aliases: BTreeMap<String, String>,
+}
+
+impl RustSourceFactsVisitor {
+    fn callee_name(expression: &syn::Expr) -> Option<String> {
+        match expression {
+            syn::Expr::Path(path) => path
+                .path
+                .segments
+                .last()
+                .map(|segment| segment.ident.to_string()),
+            syn::Expr::Paren(paren) => Self::callee_name(&paren.expr),
+            _ => None,
+        }
+    }
+
+    fn resolved_callee(&self, name: String) -> String {
+        self.aliases.get(&name).cloned().unwrap_or(name)
+    }
+}
+
+impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
+    fn visit_macro(&mut self, expression: &'ast syn::Macro) {
+        if expression.path.is_ident("include_str")
+            && syn::parse2::<syn::LitStr>(expression.tokens.clone())
+                .is_ok_and(|path| path.value().ends_with(".rs"))
+        {
+            self.reads_rust_source = true;
+        }
+        self.callees.extend(
+            expression
+                .tokens
+                .to_string()
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .filter(|token| !token.is_empty())
+                .map(ToOwned::to_owned),
+        );
+        syn::visit::visit_macro(self, expression);
+    }
+
+    fn visit_expr_call(&mut self, expression: &'ast syn::ExprCall) {
+        if let Some(name) = Self::callee_name(&expression.func) {
+            let name = self.resolved_callee(name);
+            if name == "read_to_string" {
+                self.calls_read_to_string = true;
+                let arguments = expression.args.to_token_stream().to_string();
+                self.reads_rust_source |= arguments.contains(".rs");
+            }
+            self.callees.insert(name);
+        }
+        syn::visit::visit_expr_call(self, expression);
+    }
+
+    fn visit_expr_path(&mut self, expression: &'ast syn::ExprPath) {
+        if let Some(segment) = expression.path.segments.last() {
+            self.callees.insert(segment.ident.to_string());
+            if segment.ident == "read_to_string" {
+                self.calls_read_to_string = true;
+            }
+        }
+        syn::visit::visit_expr_path(self, expression);
+    }
+
+    fn visit_expr_method_call(&mut self, expression: &'ast syn::ExprMethodCall) {
+        let method = expression.method.to_string();
+        if method == "read_to_string" {
+            self.calls_read_to_string = true;
+        }
+        if matches!(
+            method.as_str(),
+            "contains" | "split" | "matches" | "starts_with" | "ends_with"
+        ) {
+            self.inspects_text = true;
+        }
+        self.callees.insert(method);
+        if let syn::Expr::Path(receiver) = expression.receiver.as_ref() {
+            if let Some(segment) = receiver.path.segments.last() {
+                self.callees.insert(segment.ident.to_string());
+            }
+        }
+        syn::visit::visit_expr_method_call(self, expression);
+    }
+
+    fn visit_expr_lit(&mut self, expression: &'ast syn::ExprLit) {
+        if let syn::Lit::Str(value) = &expression.lit {
+            let value = value.value();
+            if value == "rs" || value.ends_with(".rs") {
+                self.mentions_rust_path = true;
+            }
+        }
+        syn::visit::visit_expr_lit(self, expression);
+    }
+
+    fn visit_local(&mut self, local: &'ast syn::Local) {
+        if let (syn::Pat::Ident(alias), Some(initializer)) = (&local.pat, &local.init) {
+            if let Some(target) = Self::callee_name(&initializer.expr) {
+                self.aliases.insert(alias.ident.to_string(), target);
+            }
+        }
+        syn::visit::visit_local(self, local);
+    }
+}
+
+fn attrs_are_test(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|attribute| {
+        attribute
+            .path()
+            .segments
+            .last()
+            .is_some_and(|segment| segment.ident == "test")
+    })
+}
+
+struct SourceInspectionFunction {
+    line: usize,
+    name: String,
+    is_test: bool,
+    facts: RustSourceFactsVisitor,
+}
+
+#[derive(Default)]
+struct SourceInspectionFunctionCollector {
+    cfg_test_depth: usize,
+    functions: Vec<SourceInspectionFunction>,
+}
+
+impl SourceInspectionFunctionCollector {
+    fn push_function(&mut self, name: String, line: usize, is_test: bool, block: &syn::Block) {
+        let mut facts = RustSourceFactsVisitor::default();
+        facts.visit_block(block);
+        let mut tokens = block.to_token_stream().to_string();
+        tokens.retain(|character| !character.is_whitespace());
+        if !is_test {
+            facts.calls_read_to_string |= tokens.contains("read_to_string");
+            facts.mentions_rust_path |= tokens.contains("\"rs\"")
+                || tokens.contains(".rs\"")
+                || (tokens.contains("extension()") && tokens.contains("==\"rs\""));
+            if tokens.contains("read_to_string") {
+                facts.calls_read_to_string = true;
+                facts.callees.insert("read_to_string".to_string());
+            }
+            facts.reads_rust_source |= facts.calls_read_to_string && facts.mentions_rust_path;
+        }
+        facts.inspects_text |= [
+            ".contains(",
+            ".split(",
+            ".matches(",
+            ".starts_with(",
+            ".ends_with(",
+        ]
+        .iter()
+        .any(|needle| tokens.contains(needle));
+        if !is_test && facts.calls_read_to_string && facts.mentions_rust_path {
+            facts.reads_rust_source = true;
+        }
+        self.functions.push(SourceInspectionFunction {
+            line,
+            name,
+            is_test,
+            facts,
+        });
+    }
+}
+
+impl<'ast> Visit<'ast> for SourceInspectionFunctionCollector {
+    fn visit_item_fn(&mut self, item: &'ast syn::ItemFn) {
+        self.push_function(
+            item.sig.ident.to_string(),
+            item.sig.ident.span().start().line,
+            self.cfg_test_depth != 0 || attrs_are_test(&item.attrs),
+            &item.block,
+        );
+        for statement in &item.block.stmts {
+            syn::visit::visit_stmt(self, statement);
+        }
+    }
+
+    fn visit_impl_item_fn(&mut self, item: &'ast syn::ImplItemFn) {
+        self.push_function(
+            item.sig.ident.to_string(),
+            item.sig.ident.span().start().line,
+            self.cfg_test_depth != 0 || attrs_are_test(&item.attrs),
+            &item.block,
+        );
+        for statement in &item.block.stmts {
+            syn::visit::visit_stmt(self, statement);
+        }
+    }
+    fn visit_item_mod(&mut self, item: &'ast syn::ItemMod) {
+        let is_test_module = item.attrs.iter().any(|attribute| {
+            attribute.path().is_ident("cfg")
+                && attribute
+                    .meta
+                    .to_token_stream()
+                    .to_string()
+                    .contains("test")
+        });
+        if is_test_module {
+            self.cfg_test_depth += 1;
+        }
+        if let Some((_, items)) = &item.content {
+            for nested in items {
+                self.visit_item(nested);
+            }
+        }
+        if is_test_module {
+            self.cfg_test_depth -= 1;
+        }
+    }
+
+    fn visit_item_impl(&mut self, item: &'ast syn::ItemImpl) {
+        for implementation_item in &item.items {
+            if let syn::ImplItem::Fn(function) = implementation_item {
+                self.visit_impl_item_fn(function);
+            }
+        }
+    }
+}
+
+fn source_inspection_test_findings(file: &syn::File) -> Vec<(usize, String)> {
+    let mut collector = SourceInspectionFunctionCollector::default();
+    collector.visit_file(file);
+    let functions = &collector.functions;
+    let mut by_name = BTreeMap::<&str, Vec<usize>>::new();
+    for (index, function) in functions.iter().enumerate() {
+        by_name.entry(&function.name).or_default().push(index);
+    }
+    let mut findings = Vec::new();
+
+    for (test_index, test) in functions
+        .iter()
+        .enumerate()
+        .filter(|(_, function)| function.is_test)
+    {
+        let mut stack = vec![test_index];
+        let mut visited = BTreeSet::new();
+        let mut reads_rust_source = false;
+        let mut calls_read_to_string = false;
+        let mut mentions_rust_path = false;
+        let mut inspects_text = false;
+        while let Some(index) = stack.pop() {
+            if !visited.insert(index) {
+                continue;
+            }
+            let facts = &functions[index].facts;
+            reads_rust_source |= facts.reads_rust_source;
+            calls_read_to_string |= facts.calls_read_to_string;
+            mentions_rust_path |= facts.mentions_rust_path;
+            inspects_text |= facts.inspects_text;
+            for callee in &facts.callees {
+                if let Some(indices) = by_name.get(callee.as_str()) {
+                    stack.extend(indices);
+                }
+            }
+        }
+        if reads_rust_source && inspects_text {
+            findings.push((test.line, test.name.clone()));
+        }
+    }
+    findings.sort();
+    findings.dedup();
+    findings
+}
+
+fn scan_source_inspection_tests(path: &Path, text: &str, findings: &mut Vec<HygieneFinding>) {
+    if path.file_name().and_then(|name| name.to_str()) == Some("hygiene_matrix.rs") {
+        return;
+    }
+    let Ok(file) = syn::parse_file(text) else {
+        return;
+    };
+    for (line, test) in source_inspection_test_findings(&file) {
+        findings.push(HygieneFinding {
+            path: path.display().to_string(),
+            line,
+            pattern: "source_inspection_test",
+            text: format!(
+                "test `{test}` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead."
+            ),
+        });
     }
 }
 
@@ -1938,6 +2279,10 @@ fn raw_string_end_at(bytes: &[u8], index: usize, hashes: usize) -> bool {
             .is_some_and(|suffix| suffix.iter().all(|byte| *byte == b'#'))
 }
 
+fn read_text_bounded(path: &Path) -> io::Result<String> {
+    crate::output_arg::read_text_bounded(path, MAX_HYGIENE_SCAN_FILE_BYTES, "hygiene scan")
+}
+
 fn update_brace_depth(current: usize, line: &str) -> usize {
     let mut state = BraceDepthState::with_depth(current);
     state.update(line);
@@ -1948,7 +2293,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
     crate::output_arg::parse_output_arg(
         args,
         "hygiene-matrix",
-        "Scans Vyre shipped Rust source for release hygiene blockers.",
+        "Writes source hygiene release evidence.",
         default_output,
     )
 }
@@ -1960,25 +2305,166 @@ fn default_output() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("release/evidence/hygiene/hygiene-matrix.json"))
 }
 
-fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_HYGIENE_SCAN_FILE_BYTES.saturating_add(1));
-    let mut text = String::new();
-    reader.read_to_string(&mut text)?;
-    if text.len() as u64 > MAX_HYGIENE_SCAN_FILE_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_HYGIENE_SCAN_FILE_BYTES} byte hygiene scan read cap",
-                path.display()
-            ),
-        ));
-    }
-    Ok(text)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn source_inspection_test_scanner_is_syntax_aware_and_fail_closed() {
+        let forbidden = r#"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn freezes_helper_spelling() {
+                    let source = include_str!("owner.rs");
+                    assert!(source.contains("fn helper"));
+                }
+            }
+        "#;
+        let allowed = r###"
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn verifies_product_text() {
+                    let template = include_str!("launcher.rs.tmpl");
+                    assert!(template.contains("pub fn launch"));
+                }
+
+                #[test]
+                fn verifies_behavior() {
+                    let summary = ResultSummary { source: "derived_pair_envelope" };
+                    assert!(summary.source.contains("derived_pair_envelope"));
+                }
+
+                #[test]
+                fn scanner_fixture_is_data() {
+                    let forbidden = r##"include_str!("owner.rs").contains("fn helper")"##;
+                    assert!(forbidden.contains("owner.rs"));
+                }
+            }
+        "###;
+        let mut findings = Vec::new();
+        scan_source_inspection_tests(Path::new("driver/src/lib.rs"), forbidden, &mut findings);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].pattern, "source_inspection_test");
+        assert!(findings[0].text.contains("freezes_helper_spelling"));
+
+        findings.clear();
+        scan_source_inspection_tests(Path::new("driver/src/lib.rs"), allowed, &mut findings);
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn source_inspection_test_scanner_covers_integration_files_and_inline_test_modules() {
+        let root = tempfile::tempdir().expect("Fix: scanner fixture root must be creatable.");
+        let inline = root.path().join("driver/src/lib.rs");
+        let integration = root.path().join("driver/tests/source_contract.rs");
+        std::fs::create_dir_all(
+            inline
+                .parent()
+                .expect("Fix: inline scanner fixture must have a parent."),
+        )
+        .expect("Fix: inline scanner fixture directory must be creatable.");
+        std::fs::create_dir_all(
+            integration
+                .parent()
+                .expect("Fix: integration scanner fixture must have a parent."),
+        )
+        .expect("Fix: integration scanner fixture directory must be creatable.");
+        std::fs::write(
+            &inline,
+            r#"
+                #[cfg(test)]
+                mod tests {
+                    #[test]
+                    fn inline_contract() {
+                        let source = include_str!("owner.rs");
+                        assert!(source.contains("fn helper"));
+                    }
+                }
+            "#,
+        )
+        .expect("Fix: inline scanner fixture must be writable.");
+        std::fs::write(
+            &integration,
+            r#"
+                #[test]
+                fn integration_contract() {
+                    let source = include_str!("../src/lib.rs");
+                    assert!(source.contains("fn helper"));
+                }
+            "#,
+        )
+        .expect("Fix: integration scanner fixture must be writable.");
+
+        let mut findings = Vec::new();
+        let mut scanned_files = 0;
+        scan_root(root.path(), &mut scanned_files, &mut findings);
+        scan_source_inspection_test_files(root.path(), &mut scanned_files, &mut findings);
+
+        let source_findings = findings
+            .iter()
+            .filter(|finding| finding.pattern == "source_inspection_test")
+            .collect::<Vec<_>>();
+        assert_eq!(
+            source_findings.len(),
+            2,
+            "Fix: the repository scanner must reject source-shape tests in both inline modules and integration-test files."
+        );
+        assert!(source_findings
+            .iter()
+            .any(|finding| finding.path == inline.display().to_string()));
+        assert!(source_findings
+            .iter()
+            .any(|finding| finding.path == integration.display().to_string()));
+    }
+
+    #[test]
+    fn source_inspection_test_scanner_rejects_transitive_nested_and_aliased_walks() {
+        let forbidden = r#"
+            use std::path::{Path, PathBuf};
+
+            #[test]
+            fn freezes_architecture_spelling() {
+                assert!(collect_sources(Path::new("src")).is_empty());
+            }
+
+            struct Helpers;
+
+            impl Helpers {
+                fn rust_files(root: &Path) -> Vec<PathBuf> {
+                    collect_sources(root)
+                }
+            }
+
+            fn collect_sources(root: &Path) -> Vec<PathBuf> {
+                let mut files = Vec::new();
+                for entry in std::fs::read_dir(root).unwrap() {
+                    let path = entry.unwrap().path();
+                    if path.extension().is_some_and(|extension| extension == "rs") {
+                        let source = std::fs::read_to_string(&path).unwrap();
+                        if source.contains("fn helper") {
+                            files.push(path);
+                        }
+                    }
+                }
+                files
+            }
+
+            #[test]
+            fn unrelated_behavior_remains_allowed() {
+                assert_eq!(2 + 2, 4);
+            }
+        "#;
+        let mut findings = Vec::new();
+        scan_source_inspection_tests(
+            Path::new("driver/tests/source_contract.rs"),
+            forbidden,
+            &mut findings,
+        );
+
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].text.contains("freezes_architecture_spelling"));
+    }
 
     #[test]
     fn hidden_fallback_scan_ignores_guard_implementation_text() {
@@ -2070,6 +2556,26 @@ mod tests {
         assert_eq!(classes[1].surface, "test");
         assert_eq!(classes[1].risk, "test_hygiene");
         assert!(!classes[1].release_blocker);
+    }
+
+    #[test]
+    fn source_inspection_tests_are_release_blockers() {
+        let findings = vec![HygieneFinding {
+            path: "driver/tests/source_contracts.rs".to_string(),
+            line: 7,
+            pattern: "source_inspection_test",
+            text: "test inspects Rust source text".to_string(),
+        }];
+
+        let classes = classify_findings(
+            Path::new("."),
+            &findings,
+            &std::collections::BTreeSet::new(),
+        );
+
+        assert_eq!(classes[0].surface, "test");
+        assert_eq!(classes[0].risk, "release_blocker");
+        assert!(classes[0].release_blocker);
     }
 
     #[test]

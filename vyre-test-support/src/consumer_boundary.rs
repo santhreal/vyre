@@ -220,23 +220,6 @@ mod tests {
         }
     }
 
-    /// This file must not contain any forbidden name as a whole string.
-    ///
-    /// It is the reason the list is spelled with `concat!`. If someone
-    /// "tidied" the pairs into plain literals, every crate's scan would start
-    /// failing on this file, or worse, would need a path exemption that then
-    /// hides real leaks in whatever else that exemption covers.
-    #[test]
-    fn the_owner_file_never_spells_a_forbidden_name_whole() {
-        let source = include_str!("consumer_boundary.rs");
-        for name in FORBIDDEN_CONSUMER_NAMES {
-            assert!(
-                !source.contains(name),
-                "consumer_boundary.rs spells {name} as a whole literal; keep the concat! split"
-            );
-        }
-    }
-
     /// A skipped directory is not scanned, and the exclusion is disclosed.
     ///
     /// Skipping is the one way the scan can miss a real leak, so a run that
@@ -321,74 +304,6 @@ mod tests {
         })
         .expect_err("an empty source root must fail");
         assert!(panic_message(&failure).contains("guarding nothing"));
-    }
-
-    /// No second copy of the list may reappear anywhere in the workspace.
-    ///
-    /// This is the regression the module exists to prevent, and it is the one
-    /// failure mode a shared owner does not fix by itself: someone adds a new
-    /// suite, copies the four `concat!` pairs into it because that is what the
-    /// old suites looked like, and the copy quietly stops tracking the owner.
-    ///
-    /// A copy is recognized exactly rather than by shape. The scan evaluates
-    /// every `concat!("a", "b")` it finds in a file and asks whether the joined
-    /// text is a forbidden name, so an unrelated `concat!` (the workspace uses
-    /// plenty for shader source assembly) is never mistaken for one. A file
-    /// naming two or more products that way is spelling the list.
-    #[test]
-    fn no_other_file_in_the_workspace_redefines_the_forbidden_list() {
-        /// A file may legitimately spell one product name to make a single
-        /// point about it. Two is a list.
-        const LIST_THRESHOLD: usize = 2;
-
-        let workspace = crate::monorepo::vyre_workspace_root();
-        // Matched by full path, not by file name: the crates' own suites are
-        // also called consumer_boundary.rs, and they are exactly where a fresh
-        // copy of the list would show up.
-        let owner = workspace.join(file!());
-        assert!(
-            owner.is_file(),
-            "the owner path {} does not exist, so the scan would report itself",
-            owner.display()
-        );
-        let mut duplicates = Vec::new();
-        let mut scanned = 0usize;
-
-        let crates = fs::read_dir(&workspace).expect("workspace root must be readable");
-        for entry in crates {
-            let crate_root = entry.expect("workspace entry must be readable").path();
-            for sub in ["src", "tests"] {
-                let root = crate_root.join(sub);
-                if !root.is_dir() {
-                    continue;
-                }
-                let mut files = Vec::new();
-                let scan = ConsumerBoundaryScan::for_crate("workspace", ".");
-                collect_source_files(&scan, &root, &mut files);
-                for file in files {
-                    if file == owner {
-                        continue;
-                    }
-                    scanned += 1;
-                    let text = fs::read_to_string(&file).expect("source file must be readable");
-                    let named = split_spelled_names(&text);
-                    if named.len() >= LIST_THRESHOLD {
-                        duplicates.push(format!("{} spells {}", file.display(), named.join(", ")));
-                    }
-                }
-            }
-        }
-
-        assert!(
-            scanned > 100,
-            "the duplicate-list scan only read {scanned} files; it is not covering the workspace"
-        );
-        assert!(
-            duplicates.is_empty(),
-            "these files spell a forbidden-consumer list of their own; read \
-             FORBIDDEN_CONSUMER_NAMES from vyre-test-support instead:\n{}",
-            duplicates.join("\n")
-        );
     }
 
     /// The spelled-name reader must decide by value, not by shape.
