@@ -246,7 +246,30 @@ impl PendingReplacements {
 
 fn fuse_nodes(nodes: &[Node], buffers: &[crate::ir::BufferDecl], program: &Program) -> Vec<Node> {
     let use_counts = cached_var_uses(program);
-    fuse_nodes_with_counts(nodes, buffers, &use_counts)
+    let mutable_names = assigned_names(program);
+    fuse_nodes_with_counts(nodes, buffers, &use_counts, &mutable_names)
+}
+
+fn assigned_names(program: &Program) -> FxHashSet<Ident> {
+    let mut names = FxHashSet::default();
+    let mut stack: Vec<&Node> = program.entry().iter().collect();
+    while let Some(node) = stack.pop() {
+        match node {
+            Node::Assign { name, .. } => {
+                names.insert(name.clone());
+            }
+            Node::If {
+                then, otherwise, ..
+            } => {
+                stack.extend(then);
+                stack.extend(otherwise);
+            }
+            Node::Loop { body, .. } | Node::Block(body) => stack.extend(body),
+            Node::Region { body, .. } => stack.extend(body.iter()),
+            _ => {}
+        }
+    }
+    names
 }
 
 #[expect(
@@ -257,6 +280,7 @@ fn fuse_nodes_with_counts(
     nodes: &[Node],
     buffers: &[crate::ir::BufferDecl],
     use_counts: &FxHashMap<Ident, usize>,
+    mutable_names: &FxHashSet<Ident>,
 ) -> Vec<Node> {
     let mut replacements = PendingReplacements::default();
     let mut fused = Vec::with_capacity(nodes.len());
@@ -265,7 +289,7 @@ fn fuse_nodes_with_counts(
     for node in nodes {
         if is_control_flow_boundary(node) {
             replacements.flush_all(&mut fused);
-            let node_to_push = fuse_control_flow_node(node, buffers, use_counts);
+            let node_to_push = fuse_control_flow_node(node, buffers, use_counts, mutable_names);
 
             if let Some(prev) = fused.last_mut() {
                 if let Some(combined) = try_fuse_regions(prev, &node_to_push, buffers) {
@@ -283,6 +307,7 @@ fn fuse_nodes_with_counts(
                 // SSA single-use criterion: a binding used exactly once can
                 // always be inlined at its use site without code duplication.
                 if use_counts.get(name).copied().unwrap_or(0) == 1
+                    && !mutable_names.contains(name)
                     // Purity gate: only inline expressions without side effects
                     // (no atomics, no opaque calls, no subgroup ops).
                     && is_fusable_expr(value) =>
@@ -391,7 +416,12 @@ fn fuse_nodes_with_counts(
             }
             Node::If { .. } | Node::Loop { .. } | Node::Block(_) | Node::Region { .. } => {
                 replacements.flush_all(&mut fused);
-                fused.push(fuse_control_flow_node(node, buffers, use_counts));
+                fused.push(fuse_control_flow_node(
+                    node,
+                    buffers,
+                    use_counts,
+                    mutable_names,
+                ));
             }
         }
     }
@@ -410,6 +440,7 @@ fn fuse_control_flow_node(
     node: &Node,
     buffers: &[crate::ir::BufferDecl],
     use_counts: &FxHashMap<Ident, usize>,
+    mutable_names: &FxHashSet<Ident>,
 ) -> Node {
     match node {
         Node::If {
@@ -418,8 +449,8 @@ fn fuse_control_flow_node(
             otherwise,
         } => Node::if_then_else(
             cond.clone(),
-            fuse_nodes_with_counts(then, buffers, use_counts),
-            fuse_nodes_with_counts(otherwise, buffers, use_counts),
+            fuse_nodes_with_counts(then, buffers, use_counts, mutable_names),
+            fuse_nodes_with_counts(otherwise, buffers, use_counts, mutable_names),
         ),
         Node::Loop {
             var,
@@ -430,9 +461,14 @@ fn fuse_control_flow_node(
             var,
             from.clone(),
             to.clone(),
-            fuse_nodes_with_counts(body, buffers, use_counts),
+            fuse_nodes_with_counts(body, buffers, use_counts, mutable_names),
         ),
-        Node::Block(nodes) => Node::block(fuse_nodes_with_counts(nodes, buffers, use_counts)),
+        Node::Block(nodes) => Node::block(fuse_nodes_with_counts(
+            nodes,
+            buffers,
+            use_counts,
+            mutable_names,
+        )),
         Node::Region {
             generator,
             source_region,
@@ -440,7 +476,12 @@ fn fuse_control_flow_node(
         } => Node::Region {
             generator: generator.clone(),
             source_region: source_region.clone(),
-            body: std::sync::Arc::new(fuse_nodes_with_counts(body, buffers, use_counts)),
+            body: std::sync::Arc::new(fuse_nodes_with_counts(
+                body,
+                buffers,
+                use_counts,
+                mutable_names,
+            )),
         },
         _ => node.clone(),
     }

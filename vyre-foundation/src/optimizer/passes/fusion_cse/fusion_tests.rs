@@ -52,6 +52,42 @@ fn statement_shaped_entry_runs_fusion_before_top_level_reconciliation() {
     assert_eq!(optimized_again, optimized);
 }
 
+/// WHY: a single-use binding is not SSA when a later `Assign` mutates it.
+/// Inlining and deleting that declaration leaves an invalid assignment target.
+/// This covers the declaration-preservation boundary, not assignment semantics.
+#[test]
+fn mutable_single_use_binding_keeps_its_declaration() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
+        [1, 1, 1],
+        vec![
+            Node::let_bind("state", Expr::u32(1)),
+            Node::assign("state", Expr::u32(2)),
+            Node::store("out", Expr::u32(0), Expr::var("state")),
+        ],
+    );
+
+    let optimized = PassScheduler::with_passes(vec![ProgramPassKind::new(Fusion)])
+        .run(program)
+        .expect("fusion must preserve mutable declarations");
+    let [Node::Region { body, .. }] = optimized.entry() else {
+        panic!("fusion must preserve the canonical root region");
+    };
+
+    assert!(matches!(
+        body.as_slice(),
+        [
+            Node::Let { name, .. },
+            Node::Assign { name: assigned, .. },
+            Node::Store { .. }
+        ] if name == "state" && assigned == "state"
+    ));
+    assert!(
+        crate::validate::validate(&optimized).is_empty(),
+        "fusion output must retain a declared assignment target"
+    );
+}
+
 #[test]
 fn preserves_happens_before_for_load_followed_by_write() {
     let program = Program::wrapped(
