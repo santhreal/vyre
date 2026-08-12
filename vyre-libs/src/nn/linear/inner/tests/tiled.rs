@@ -62,9 +62,9 @@ fn linear_tiled_accepts_logical_output_fixture_for_padded_storage() {
         "Fix: linear_tiled must expose only the logical output bytes."
     );
 
-    let x = crate::test_support::byte_pack::u32_bytes(&(0..4).collect::<Vec<_>>());
-    let w = crate::test_support::byte_pack::u32_bytes(&(0..16).collect::<Vec<_>>());
-    let bias = crate::test_support::byte_pack::u32_bytes(&[0, 0, 0, 0]);
+    let x = crate::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
+    let w = crate::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
+    let bias = crate::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
     let outputs = vyre_reference::reference_eval(
         &program,
         &[
@@ -78,7 +78,7 @@ fn linear_tiled_accepts_logical_output_fixture_for_padded_storage() {
 
     assert_eq!(
         outputs[0].to_bytes(),
-        crate::test_support::byte_pack::u32_bytes(&[56, 62, 68, 74])
+        crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])
     );
 }
 

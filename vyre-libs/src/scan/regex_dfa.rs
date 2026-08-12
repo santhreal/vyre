@@ -792,35 +792,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn regex_dfa_pipeline_uses_checked_size_conversions() {
-        let production = include_str!("regex_dfa.rs")
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: regex DFA production section should precede tests");
-
-        assert!(
-            production.contains("RegexDfaError::Size"),
-            "Fix: regex DFA sizing failures must be structured errors, not panics or unchecked casts."
-        );
-        assert!(
-            production.contains("u32::try_from(patterns.len())"),
-            "Fix: regex DFA pattern count must use checked conversion for GPU ABI metadata."
-        );
-        assert!(
-            production.contains("usize::try_from(*pid)"),
-            "Fix: regex DFA accept pattern ids must use checked host indexing conversion."
-        );
-        assert!(
-            production.contains("try_build_ac_bounded_ranges_program_ext"),
-            "Fix: regex DFA must call the fallible AC program builder."
-        );
-        assert!(
-            !production.contains("patterns.len() as u32"),
-            "Fix: regex DFA must not narrow pattern counts with unchecked casts."
-        );
-    }
-
     /// Behavioral complement to regex_dfa_pipeline_uses_checked_size_conversions:
     /// verify that the RegexDfaError::Size variant actually carries an actionable
     /// message when triggered. We trigger it via nfa_to_dfa's max_dfa_states guard

@@ -45,7 +45,7 @@ fn every_registered_primitive_is_oob_clean_on_its_fixtures() {
     // union_find `uf_root_b` shadow that only string-matching inline tests had missed.)
     let mut invalid_programs: Vec<String> = Vec::new();
 
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         total_ops += 1;
         let Some(inputs_fn) = entry.test_inputs else {
             // No fixture ⇒ not exercised by this gate. Counted (not silently
@@ -143,7 +143,7 @@ fn every_registered_primitive_is_oob_clean_on_its_fixtures() {
 fn every_registered_primitive_program_is_ir_valid() {
     let mut invalid = Vec::new();
     let mut total = 0usize;
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         total += 1;
         let program = entry
             .program()
@@ -191,7 +191,7 @@ fn every_registered_primitive_is_oob_clean_under_grid_overfire() {
     let mut offenders = Vec::new();
     let mut checked_cases = 0usize;
 
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };
@@ -251,7 +251,7 @@ fn every_registered_primitive_output_is_invariant_under_grid_overfire() {
     let mut offenders = Vec::new();
     let mut checked_cases = 0usize;
 
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };
@@ -329,7 +329,7 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
     let mut offenders = Vec::new();
     let mut checked_cases = 0usize;
 
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };

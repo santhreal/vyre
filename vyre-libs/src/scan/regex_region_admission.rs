@@ -319,8 +319,9 @@ pub fn regex_admission_by_region_program(
 #[cfg(all(test, feature = "matching-regex", feature = "matching-dfa"))]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::regex_dfa::build_regex_dfa_pipeline;
-    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::pack_u32_slice;
 
     const MAX_MATCHES: u32 = 4096;
     const MAX_DFA_STATES: usize = 16_384;

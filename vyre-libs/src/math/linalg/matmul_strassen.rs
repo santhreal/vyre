@@ -173,13 +173,13 @@ inventory::submit! {
         build: Some(|| matmul_strassen_2x2("a", "b", "c")),
         test_inputs: Some(|| {
             // A = [[1, 2], [3, 4]], B = [[5, 6], [7, 8]]
-            let a = crate::test_support::byte_pack::f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
-            let b = crate::test_support::byte_pack::f32_bytes(&[5.0, 6.0, 7.0, 8.0]);
+            let a = crate::fixture_bytes::f32_bytes(&[1.0, 2.0, 3.0, 4.0]);
+            let b = crate::fixture_bytes::f32_bytes(&[5.0, 6.0, 7.0, 8.0]);
             vec![vec![a, b]]
         }),
         expected_output: Some(|| {
             // C = A · B = [[19, 22], [43, 50]]
-            vec![vec![crate::test_support::byte_pack::f32_bytes(&[19.0, 22.0, 43.0, 50.0])]]
+            vec![vec![crate::fixture_bytes::f32_bytes(&[19.0, 22.0, 43.0, 50.0])]]
         }),
         category: Some("math"),
     }
@@ -485,7 +485,7 @@ pub fn matmul_strassen_one_level(a: &str, b: &str, c: &str, n: u32) -> Result<Pr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {

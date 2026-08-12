@@ -35,7 +35,7 @@ const MAX_LOOPS: usize = 8;
 fn every_op_is_under_complexity_budget() {
     let mut violations = Vec::new();
 
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         let program = entry
             .program()
             .expect("Fix: conformance operation must provide a neutral builder");
@@ -79,7 +79,7 @@ fn every_op_is_under_complexity_budget() {
 
 #[test]
 fn no_op_reinvents_another_registered_op() {
-    let entries: Vec<_> = vyre_libs::fixture_catalog::all_entries().collect();
+    let entries: Vec<_> = vyre_libs::operation_catalog::all_entries().collect();
     let programs: Vec<(&str, Program)> = entries
         .iter()
         .map(|e| {
@@ -188,7 +188,7 @@ fn collect_region_generators<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
 fn every_op_has_test_fixtures() {
     let mut missing = Vec::new();
 
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         // CRITIQUE_CONFORM_2026-04-23 M7: the original gate required
         // BOTH fixtures to be missing before failing. An op that
         // shipped only one half (test_inputs without expected_output
@@ -218,7 +218,7 @@ fn every_op_has_test_fixtures() {
 #[test]
 fn print_complexity_report() {
     let mut report = Vec::new();
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         let program = entry
             .program()
             .expect("Fix: conformance operation must provide a neutral builder");

@@ -404,10 +404,10 @@ fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
 fn release_notes(id: &str, tier: OpTier) -> String {
     match tier {
         OpTier::Intrinsic => {
-            "Source-backed row generated from vyre-intrinsics::harness; every intrinsic id must stay in the hardware namespace and pass hardware_conform.".to_string()
+            "Source-backed row generated from vyre-intrinsics::operation_catalog; every intrinsic id must stay in the hardware namespace and pass hardware_conform.".to_string()
         }
         OpTier::Primitive => {
-            "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace.".to_string()
+            "Source-backed row generated from vyre-primitives::operation_catalog; primitive ids must stay in the Tier 2.5 namespace.".to_string()
         }
         OpTier::Library => {
             "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace.".to_string()

@@ -174,9 +174,9 @@ inventory::submit! {
             let params: [u32; 4] = [0, 0, 64, 0b0000_1011]; // CHUNK_START | CHUNK_END | ROOT
 
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&iv),
-                crate::test_support::byte_pack::u32_bytes(&msg),
-                crate::test_support::byte_pack::u32_bytes(&params),
+                crate::fixture_bytes::u32_bytes(&iv),
+                crate::fixture_bytes::u32_bytes(&msg),
+                crate::fixture_bytes::u32_bytes(&params),
             ]]
         }),
         expected_output: Some(|| vec![

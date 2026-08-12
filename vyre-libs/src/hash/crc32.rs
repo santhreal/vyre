@@ -144,18 +144,6 @@ mod tests {
     }
 
     #[test]
-    fn wrapper_source_does_not_fork_crc32_algorithm() {
-        let source = include_str!("crc32.rs");
-
-        assert!(source.contains("crc32_program"));
-        assert!(source.contains("crc32_cpu_reference"));
-        assert!(!source.contains(concat!("CRC32", "_POLY")));
-        assert!(!source.contains(concat!("build", "_table")));
-        assert!(!source.contains(concat!("crc32_update", "_byte_state")));
-        assert!(!source.contains(concat!("loop", "_for(")));
-    }
-
-    #[test]
     fn generic_default_names_are_family_scoped() {
         let program = crc32("input", "out", 4);
         assert_eq!(

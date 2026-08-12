@@ -62,9 +62,8 @@ Buffer-shape descriptors used by every compositional op.
 Per-op contract types (precondition/postcondition pairs the
 conform suite checks).
 
-### `harness.rs`
-Discovery surface  -  `vyre-libs::harness::iter()` enumerates every
-shipped op.
+### `operation_catalog.rs`
+Derived library-tier view over the canonical foundation operation registry.
 
 ### `representation/`
 Frozen wire-form types that downstream frontends rely on (PackedAst,

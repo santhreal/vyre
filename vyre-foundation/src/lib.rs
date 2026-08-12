@@ -23,6 +23,8 @@ extern crate self as vyre;
 
 /// Shared structured diagnostic protocol.
 pub mod diagnostics;
+/// Shared floating-point parity policy and typed buffer comparison.
+pub mod fp_parity;
 /// Canonical semantic operation registration and target facet views.
 pub mod operation;
 

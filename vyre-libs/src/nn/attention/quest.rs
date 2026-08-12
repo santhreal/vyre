@@ -124,7 +124,7 @@ inventory::submit! {
             // io_queue[0..2] = [2, 1] (top-2 in descending score).
             // io_queue[2..4] = [0, 0] (zero-filled on pass 1).
             let io_queue = [2u32, 1, 0, 0];
-            vec![vec![to_f32_bytes(&scores), crate::test_support::byte_pack::u32_bytes(&io_queue)]]
+            vec![vec![to_f32_bytes(&scores), crate::fixture_bytes::u32_bytes(&io_queue)]]
         }),
         category: Some("nn"),
     }
@@ -133,9 +133,9 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
-    use crate::test_support::byte_pack::decode_f32;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     #[test]

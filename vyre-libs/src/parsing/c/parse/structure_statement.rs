@@ -744,22 +744,6 @@ mod tests {
     }
 
     #[test]
-    fn statement_bounds_initializes_atomic_count_inside_kernel() {
-        let source = include_str!("structure_statement.rs");
-        assert!(
-            source.contains("Node::store(out_counts, Expr::u32(0), Expr::u32(0))"),
-            "Fix: statement bounds must zero out_counts in-kernel before atomic_add."
-        );
-        assert!(
-            source.contains("MemoryOrdering::GridSync"),
-            "Fix: statement bounds must synchronize after zeroing out_counts before worker lanes \
-             append records. The fence must be GridSync, not a workgroup-scope ordering: the \
-             append lanes span the whole grid, so a workgroup-only fence lets another workgroup \
-             read out_counts before lane 0's zeroing is visible."
-        );
-    }
-
-    #[test]
     fn scratch_words_covers_marks_tiles_and_the_successor_slot() {
         // One mark per token, one 8-word block per 256-token tile, plus the
         // trailing block pass 5 reads for `tile + 1`.

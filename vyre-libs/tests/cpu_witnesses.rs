@@ -8,7 +8,7 @@
     feature = "crypto-blake3"
 ))]
 
-use vyre_libs::fixture_catalog::all_entries;
+use vyre_libs::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> vyre_foundation::operation::SemanticOperation {

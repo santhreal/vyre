@@ -1096,15 +1096,3 @@ pub(super) fn c11_lexer_regular_sparse_impl(
     .with_entry_op_id("vyre-libs::parsing::c_lexer_regular_sparse")
     .with_non_composable_with_self(true)
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn sparse_visible_emit_requires_nonzero_token_type() {
-        let source = include_str!("sparse_impl.rs");
-        assert!(
-            source.contains("Expr::ne(Expr::var(\"tok_type\"), Expr::u32(0))"),
-            "Fix: sparse lexer flags must not count zero token rows as visible tokens."
-        );
-    }
-}

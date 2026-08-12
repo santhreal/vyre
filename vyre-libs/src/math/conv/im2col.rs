@@ -16,8 +16,8 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use crate::fixture_bytes::f32_bytes;
 use crate::region::wrap_anonymous;
-use crate::test_support::byte_pack::f32_bytes;
 
 const OP_ID: &str = "vyre-libs::math::conv::im2col_3x3";
 
@@ -157,7 +157,7 @@ fn naive_im2col_3x3(input: &[f32], h: usize, w: usize) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {

@@ -6,7 +6,7 @@ use proptest::prelude::*;
 use vyre::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::fixture_catalog::all_entries;
+use vyre_libs::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 fn entry(id: &'static str) -> SemanticOperation {
@@ -124,7 +124,7 @@ proptest! {
 
     #[test]
     fn layer_norm_finite_values_match_harness(input in bounded_layer_norm_case()) {
-        use vyre_libs::fixture_catalog::fp_contract::{compare_output_buffers, BufferParity};
+        use vyre_foundation::fp_parity::{compare_output_buffers, BufferParity};
 
         let operation = entry("vyre-libs::nn::layer_norm");
         let program = operation.program().expect("Fix: registered library operation must provide a neutral builder");

@@ -80,7 +80,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
         id: OP_ID,
         semantic_version: 1,
-        signature: Some(crate::harness::F32_UNARY_SIGNATURE),
+        signature: Some(crate::operation_catalog::F32_UNARY_SIGNATURE),
         tier: vyre_foundation::operation::OperationTier::Intrinsic,
         category: Some("hardware"),
         build: Some(|| inverse_sqrt_f32("input", "out", 4)),
@@ -92,13 +92,13 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::IntrinsicFacet {
+    crate::operation_catalog::IntrinsicFacet {
         operation_id: OP_ID,
-        shape: crate::harness::OpShape::new(
+        shape: crate::operation_catalog::OpShape::new(
             1,
             1,
             4,
-            crate::harness::HardwareSemantic::InverseSqrtF32,
+            crate::operation_catalog::HardwareSemantic::InverseSqrtF32,
         ),
     }
 }

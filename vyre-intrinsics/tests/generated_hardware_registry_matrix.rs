@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::operation::SemanticOperation;
-use vyre_intrinsics::harness::{all_entries, intrinsic_facet, HardwareSemantic, OpShape};
+use vyre_intrinsics::operation_catalog::{all_entries, intrinsic_facet, HardwareSemantic, OpShape};
 use vyre_reference::value::Value;
 
 #[derive(Clone, Copy)]

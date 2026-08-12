@@ -358,12 +358,12 @@ inventory::submit! {
         ).unwrap_or_else(|_| unreachable!("Fix: catalog fixture uses valid power-of-two buffers."))),
         test_inputs: Some(|| {
             vec![vec![
-                crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
-                crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0, 0.0]),
+                crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             ]]
         }),
         expected_output: Some(|| {
-            vec![vec![crate::test_support::byte_pack::f32_bytes(&[5.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0])]]
+            vec![vec![crate::fixture_bytes::f32_bytes(&[5.0, 0.0, 3.0, 0.0, 5.0, 0.0, 7.0, 0.0])]]
         }),
         category: Some("math"),
     }
@@ -372,7 +372,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {

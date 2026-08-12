@@ -123,8 +123,8 @@ pub fn batch_matmul(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::decode_f32;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::decode_f32;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     #[test]

@@ -32,10 +32,8 @@
 /// every tier. Spec: `docs/region-chain.md`.
 pub mod region;
 
-/// Canonical intrinsic identities, signatures, semantic classifications,
-/// neutral builders, and deterministic fixtures.
-#[doc(hidden)]
-pub mod harness;
+/// Canonical intrinsic semantic registrations and owner-specific geometry.
+pub mod operation_catalog;
 
 /// Category C hardware intrinsics  -  subgroup collectives, barriers, bit intrinsics, FMA, inverseSqrt.
 #[cfg(feature = "hardware")]

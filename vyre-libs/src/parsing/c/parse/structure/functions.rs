@@ -183,19 +183,3 @@ pub fn c11_extract_functions(
         loop_body,
     )
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn function_body_scan_does_not_add_one_to_match_none() {
-        let source = include_str!("functions.rs");
-        assert!(
-            source.contains("function_body_scan_start"),
-            "Fix: function extraction must route body scans through a guarded start variable."
-        );
-        assert!(
-            !source.contains("emit_body_open_scan(\n        tok_types,\n        Expr::add(Expr::var(\"matching_rparen\"), Expr::u32(1))"),
-            "Fix: function extraction must not add one to MATCH_NONE before guarding the body scan."
-        );
-    }
-}

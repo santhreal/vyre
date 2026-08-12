@@ -138,7 +138,7 @@ fn softmax_top_k_fixture_expected() -> Vec<Vec<Vec<u8>>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {

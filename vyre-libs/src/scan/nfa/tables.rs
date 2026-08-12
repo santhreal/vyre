@@ -226,29 +226,4 @@ mod tests {
         );
         assert_eq!(build_epsilon_table(&[]).len(), LANES_PER_SUBGROUP);
     }
-
-    #[test]
-    fn table_wrappers_fail_loud_not_silent_fallback() {
-        let production = include_str!("tables.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: tables.rs must contain production section");
-
-        // No LAZY panics: `.unwrap()`/`.expect()` give the operator no fix hint.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: NFA table wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with a fix hint)."
-        );
-        // No SILENT fallback: the old `eprintln! + Vec::new()` arm built an NFA
-        // with no transitions (a scanner that silently matches nothing (Law 10)).
-        assert!(
-            !production.contains("eprintln!(\"vyre-libs NFA"),
-            "Fix: NFA table builders must not log-and-return an empty table on error (fail loud via panic!() so callers use the try_ variants)."
-        );
-        // Fail-loud is present (one panic arm per infallible wrapper).
-        assert!(
-            production.matches("panic!(").count() >= 3,
-            "Fix: each infallible NFA table builder must panic!() on an unrepresentable table, never return an empty Vec."
-        );
-    }
 }

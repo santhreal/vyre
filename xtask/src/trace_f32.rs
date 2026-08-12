@@ -87,7 +87,8 @@ pub(crate) fn run_cmd(args: &[String]) {
 }
 
 fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
-    if let Some(entry) = vyre_libs::fixture_catalog::all_entries().find(|entry| entry.id == op_id) {
+    if let Some(entry) = vyre_libs::operation_catalog::all_entries().find(|entry| entry.id == op_id)
+    {
         let inputs = entry.test_inputs?;
         return Some((
             entry
@@ -96,7 +97,9 @@ fn resolve(op_id: &str) -> Option<(Program, Vec<Vec<Vec<u8>>>)> {
             (inputs)(),
         ));
     }
-    if let Some(entry) = vyre_intrinsics::harness::all_entries().find(|entry| entry.id == op_id) {
+    if let Some(entry) =
+        vyre_intrinsics::operation_catalog::all_entries().find(|entry| entry.id == op_id)
+    {
         let inputs = entry.test_inputs?;
         return Some((
             entry

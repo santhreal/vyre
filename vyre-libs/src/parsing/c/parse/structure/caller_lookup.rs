@@ -41,18 +41,42 @@ pub(super) fn emit_enclosing_function_lookup(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn function_record_body_loads_avoid_adjacent_vector_load_fusion() {
-        let source = include_str!("caller_lookup.rs");
-        let end_pos = source
-            .find("\"fn_body_end\"")
-            .expect("Fix: malformed C structure lookup must return parse Err, not panic - function lookup binds body end");
-        let start_pos = source
-            .find("\"fn_body_start\"")
-            .expect("Fix: malformed C structure lookup must return parse Err, not panic - function lookup binds body start");
-        assert!(
-            end_pos < start_pos,
-            "Fix: 3-word function records must not load body_start/body_end in adjacent ascending order because PTX vector-load fusion requires stronger alignment than record stride 3 provides."
-        );
+    fn function_record_body_loads_use_alignment_safe_order() {
+        let nodes = emit_enclosing_function_lookup("functions", Expr::u32(1), Expr::u32(0));
+        let loop_body = match &nodes[1] {
+            Node::Loop { body, .. } => body,
+            other => panic!(
+                "Fix: caller lookup must contain one bounded function-record loop, got {other:?}."
+            ),
+        };
+        let load_offset = |node: &Node, expected_name: &str| {
+            match node {
+            Node::Let {
+                name,
+                value:
+                    Expr::Load {
+                        buffer,
+                        index,
+                    },
+            } if name.as_str() == expected_name && buffer.as_str() == "functions" => match index.as_ref() {
+                Expr::BinOp {
+                    op: vyre_foundation::ir::BinOp::Add,
+                    right,
+                    ..
+                } => match right.as_ref() {
+                    Expr::LitU32(offset) => *offset,
+                    other => panic!("Fix: function-record load offset must be a u32 literal, got {other:?}."),
+                },
+                other => panic!("Fix: function-record load must index record base plus field offset, got {other:?}."),
+            },
+            other => panic!("Fix: expected `{expected_name}` function-record load, got {other:?}."),
+        }
+        };
+
+        assert_eq!(load_offset(&loop_body[1], "fn_body_end"), 2);
+        assert_eq!(load_offset(&loop_body[2], "fn_body_start"), 1);
     }
 }

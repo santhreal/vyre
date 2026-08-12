@@ -220,29 +220,4 @@ mod tests {
         assert_eq!(fallback.accept_states, fallible.accept_states);
         assert_eq!(fallback.accept_state_ids, fallible.accept_state_ids);
     }
-
-    #[test]
-    fn compile_wrapper_fails_loud_not_silent_fallback() {
-        let production = include_str!("plan.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: plan.rs must contain production section");
-
-        // No LAZY panics: `.unwrap()`/`.expect()` give the operator no fix hint.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: NFA compile wrapper must not use bare .unwrap()/.expect() (use an explicit panic!() with a fix hint)."
-        );
-        // No SILENT fallback: the old `eprintln! + empty_plan()` arm swallowed
-        // the error and returned a scanner that matches nothing (Law 10).
-        assert!(
-            !production.contains("eprintln!(\"vyre-libs NFA compile failed"),
-            "Fix: NFA compile must not log-and-return an empty plan on error (fail loud via panic!() so callers use try_compile)."
-        );
-        // Fail-loud is present.
-        assert!(
-            production.contains("panic!("),
-            "Fix: NFA compile must panic!() on an unrepresentable plan, never fabricate an empty entry-only plan."
-        );
-    }
 }

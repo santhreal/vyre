@@ -5,7 +5,7 @@
 //! *black box*  -  opaque provenance that defeats the vision's
 //! auditability promise.
 //!
-//! The test walks every op in `vyre_libs::fixture_catalog::all_entries()`,
+//! The test walks every op in `vyre_libs::operation_catalog::all_entries()`,
 //! builds its Program, collects the set of generator names referenced
 //! anywhere in the Region chain, and asserts every generator name
 //! either (a) resolves to a registered op id, or (b) is an
@@ -65,13 +65,13 @@ fn walk(node: &Node, out: &mut BTreeSet<String>) {
 
 fn registered_op_ids() -> BTreeSet<String> {
     let mut out = BTreeSet::new();
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         out.insert(entry.id.to_string());
     }
-    for entry in vyre_intrinsics::harness::all_entries() {
+    for entry in vyre_intrinsics::operation_catalog::all_entries() {
         out.insert(entry.id.to_string());
     }
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         out.insert(entry.id.to_string());
     }
     out
@@ -116,7 +116,7 @@ fn generator_is_allowed(generator: &str, registered: &BTreeSet<String>) -> bool 
 fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     let registered = registered_op_ids();
     let mut offenders: Vec<(String, Vec<String>)> = Vec::new();
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         let program = entry
             .program()
             .expect("Fix: registered library operation must provide a neutral builder");

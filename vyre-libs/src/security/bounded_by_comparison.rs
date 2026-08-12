@@ -88,7 +88,7 @@ inventory::submit! {
     // AUDIT_2026-04-24 F-BBC-01: raised from 64 to 4096 so deep
     // dominance trees don't silently truncate; same reasoning as
     // dominator_tree.
-    crate::fixture_catalog::ConvergenceContract {
+    crate::operation_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }
@@ -185,7 +185,7 @@ mod tests {
             node_count
         );
 
-        let contract = crate::fixture_catalog::convergence_contract(OP_ID)
+        let contract = crate::operation_catalog::convergence_contract(OP_ID)
             .expect("Fix: bounded_by_comparison must have a ConvergenceContract");
         assert!(
             contract.max_iterations >= node_count,

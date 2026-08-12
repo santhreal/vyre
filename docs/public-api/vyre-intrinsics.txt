@@ -1,3 +1,7 @@
+impl inventory::Collect for vyre_intrinsics::operation_catalog::IntrinsicFacet
+impl vyre_intrinsics::operation_catalog::OpShape
+pub const fn vyre_intrinsics::operation_catalog::OpShape::new(input_buffers: u8, output_buffers: u8, lane_bytes: u8, semantic: vyre_intrinsics::operation_catalog::HardwareSemantic) -> Self
+pub const fn vyre_intrinsics::operation_catalog::OpShape::total_buffers(self) -> u8
 pub const vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32::OP_ID: &str
 pub const vyre_intrinsics::hardware::fma_f32::fma_f32::OP_ID: &str
 pub const vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32::OP_ID: &str
@@ -7,6 +11,11 @@ pub const vyre_intrinsics::hardware::subgroup_add::subgroup_add::OP_ID: &str
 pub const vyre_intrinsics::hardware::subgroup_ballot::subgroup_ballot::OP_ID: &str
 pub const vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle::OP_ID: &str
 pub const vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier::OP_ID: &str
+pub const vyre_intrinsics::operation_catalog::F32_TERNARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
+pub const vyre_intrinsics::operation_catalog::F32_UNARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
+pub const vyre_intrinsics::operation_catalog::U32_BINARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
+pub const vyre_intrinsics::operation_catalog::U32_UNARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
+pub enum vyre_intrinsics::operation_catalog::HardwareSemantic
 pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_intrinsics::hardware::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
@@ -25,6 +34,8 @@ pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle(values: &st
 pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_intrinsics::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_intrinsics::operation_catalog::intrinsic_facet(operation_id: &str) -> core::option::Option<&'static vyre_intrinsics::operation_catalog::IntrinsicFacet>
 pub fn vyre_intrinsics::region::wrap(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_intrinsics::region::wrap_anonymous(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
 pub fn vyre_intrinsics::region::wrap_child(generator: &str, parent: vyre_foundation::ir_inner::model::expr::GeneratorRef, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>) -> vyre_foundation::ir_inner::model::generated::Node
@@ -48,4 +59,21 @@ pub mod vyre_intrinsics::hardware::subgroup_shuffle
 pub mod vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle
 pub mod vyre_intrinsics::hardware::workgroup_barrier
 pub mod vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier
+pub mod vyre_intrinsics::operation_catalog
 pub mod vyre_intrinsics::region
+pub struct vyre_intrinsics::operation_catalog::IntrinsicFacet
+pub struct vyre_intrinsics::operation_catalog::OpShape
+pub use vyre_intrinsics::operation_catalog::SemanticOperation
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::BarrierIdentityU32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::FmaF32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::InverseSqrtF32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::SubgroupAddU32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::SubgroupBallotU32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::SubgroupShuffleU32
+pub vyre_intrinsics::operation_catalog::HardwareSemantic::UnaryU32Map
+pub vyre_intrinsics::operation_catalog::IntrinsicFacet::operation_id: &'static str
+pub vyre_intrinsics::operation_catalog::IntrinsicFacet::shape: vyre_intrinsics::operation_catalog::OpShape
+pub vyre_intrinsics::operation_catalog::OpShape::input_buffers: u8
+pub vyre_intrinsics::operation_catalog::OpShape::lane_bytes: u8
+pub vyre_intrinsics::operation_catalog::OpShape::output_buffers: u8
+pub vyre_intrinsics::operation_catalog::OpShape::semantic: vyre_intrinsics::operation_catalog::HardwareSemantic

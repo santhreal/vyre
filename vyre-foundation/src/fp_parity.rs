@@ -4,8 +4,8 @@
 //! bounded ULP window because GPU backends may contract multiply-add
 //! sequences and may use native approximate transcendental instructions.
 
-use vyre_foundation::ir::{DataType, Expr, Node, Program, UnOp};
-use vyre_foundation::operation::OperationRegistry;
+use crate::ir::{DataType, Expr, Node, Program, UnOp};
+use crate::operation::OperationRegistry;
 
 /// Maximum accepted reference-oracle error against correctly-rounded f32
 /// transcendentals.
@@ -149,7 +149,7 @@ fn expr_has_transcendental(expr: &Expr) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferDecl, DataType};
+    use crate::ir::{BufferDecl, DataType};
 
     #[test]
     fn elementary_f32_program_gets_contraction_budget() {

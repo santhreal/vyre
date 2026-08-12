@@ -138,9 +138,9 @@ inventory::submit! {
             let haystack = b"abracadabra";
 
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
-                crate::test_support::byte_pack::u32_bytes(&compiled.transitions),
-                crate::test_support::byte_pack::u32_bytes(&compiled.accept),
+                crate::fixture_bytes::u32_bytes(&haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+                crate::fixture_bytes::u32_bytes(&compiled.transitions),
+                crate::fixture_bytes::u32_bytes(&compiled.accept),
             ]]
         }),
         expected_output: Some(|| vec![

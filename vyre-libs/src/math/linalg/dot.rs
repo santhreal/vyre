@@ -241,7 +241,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::decode_u32_one as decode_one;
+    use crate::fixture_bytes::decode_u32_one as decode_one;
     use vyre_reference::value::Value;
 
     #[test]
@@ -257,8 +257,8 @@ mod tests {
             let outputs = vyre_reference::reference_eval(
                 &program,
                 &[
-                    Value::from(crate::test_support::byte_pack::u32_bytes(&lhs)),
-                    Value::from(crate::test_support::byte_pack::u32_bytes(&rhs)),
+                    Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
+                    Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
                     Value::from(vec![0u8; core::mem::size_of::<u32>()]),
                 ],
             )
@@ -285,8 +285,8 @@ mod tests {
         let outputs = vyre_reference::reference_eval(
             &program,
             &[
-                Value::from(crate::test_support::byte_pack::u32_bytes(&lhs)),
-                Value::from(crate::test_support::byte_pack::u32_bytes(&rhs)),
+                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
+                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
                 Value::from(vec![0u8; 4]),
             ],
         )
@@ -313,8 +313,8 @@ mod tests {
         let outputs = vyre_reference::reference_eval(
             &program,
             &[
-                Value::from(crate::test_support::byte_pack::u32_bytes(&lhs)),
-                Value::from(crate::test_support::byte_pack::u32_bytes(&rhs)),
+                Value::from(crate::fixture_bytes::u32_bytes(&lhs)),
+                Value::from(crate::fixture_bytes::u32_bytes(&rhs)),
                 Value::from(vec![0u8; 4]),
             ],
         )

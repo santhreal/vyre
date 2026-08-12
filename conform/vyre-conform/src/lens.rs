@@ -1,21 +1,14 @@
 //! Reusable conform lenses: ways of comparing backend output to a truth
 //! oracle, one primitive per semantic.
 //!
-//! Every parity test in the workspace ultimately does one of:
-//! - *witness*  -  run on the CPU reference, assert equality to
-//!   `expected_output`.
-//! - *cpu_vs_backend*  -  run on both, assert byte-identity (or ULP
-//!   tolerance) between them.
-//! - *fixpoint*  -  dispatch the backend in a loop until a convergence
-//!   flag clears, then compare the final state to the CPU reference.
-//!
-//! Each test picks a lens, passes an op iterator, and the shared code
-//! does the rest with missing coverage represented as failure.
+//! Every parity test runs a fixture witness, compares reference and target
+//! execution, or drives a stateful operation to its registered convergence
+//! bound.
 
 use vyre_driver::{BackendError, BackendRegistration, DispatchConfig};
 use vyre_foundation::ir::{BufferAccess, Program};
 use vyre_foundation::operation::SemanticOperation;
-use vyre_libs::fixture_catalog::{convergence_contract, fixpoint_contract, FixpointContract};
+use vyre_libs::operation_catalog::convergence_contract;
 use vyre_reference::value::Value;
 use vyre_reference::ReferenceError;
 
@@ -193,16 +186,11 @@ pub fn witness(entry: &SemanticOperation) -> LensOutcome {
 /// Compiles the operation for the supplied registered target, executes the
 /// authenticated artifact and CPU reference, and compares outputs under the
 /// operation's declared tolerance. Missing fixtures and target failures are
-/// hard failures. Fixpoint operations are routed to [`fixpoint`] instead.
+/// hard failures. Stateful operations route to [`convergence`].
 pub fn cpu_vs_backend(
     entry: &SemanticOperation,
     backend: &'static BackendRegistration,
 ) -> LensOutcome {
-    // Fixpoint ops need a convergence loop; route them to the fixpoint
-    // lens automatically instead of skipping.
-    if fixpoint_contract(entry.id).is_some() {
-        return fixpoint(entry, backend);
-    }
     // Convergence-contract ops need iterative dispatch until the state
     // stabilises; route them to the convergence lens.
     if convergence_contract(entry.id).is_some() {
@@ -415,57 +403,10 @@ fn compare_iterative_lens_cases(
     }
 }
 
-/// Fixpoint lens: dispatch the op repeatedly until its convergence flag
-/// clears, then compare the final state to the CPU reference.
-///
-/// The contract comes from [`fixpoint_contract`] (`converged_flag_buffer`,
-/// `max_iterations`). Each dispatch: zero the flag, run the program,
-/// read the flag's first word; if zero, the op has converged. The CPU
-/// reference is expected to reach the same final state after iterating
-/// under the same loop.
-pub fn fixpoint(entry: &SemanticOperation, backend: &'static BackendRegistration) -> LensOutcome {
-    let Some(contract) = fixpoint_contract(entry.id) else {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!("{}: no FixpointContract registered for this op. Fix: register a contract or use the cpu_vs_backend lens.", entry.id),
-        };
-    };
-    let setup = match prepare_iterative_lens(entry, "fixpoint") {
-        Ok(setup) => setup,
-        Err(outcome) => return outcome,
-    };
-    let Some(flag_index) = index_of_buffer(&setup.program, contract.converged_flag_buffer) else {
-        return LensOutcome::Fail {
-            case_index: 0,
-            detail: format!(
-                "program does not declare buffer `{}` named by FixpointContract.",
-                contract.converged_flag_buffer
-            ),
-        };
-    };
-    compare_iterative_lens_cases(
-        &setup,
-        backend,
-        "fixpoint",
-        contract.max_iterations,
-        |inputs| cpu_fixpoint(&setup.program, inputs, flag_index, contract),
-        |inputs| {
-            gpu_fixpoint(
-                backend,
-                &setup.program,
-                inputs,
-                flag_index,
-                contract,
-                &setup.config,
-            )
-        },
-    )
-}
-
 /// Convergence lens: dispatch the op repeatedly until the RW state
 /// stabilises, then compare the final state to the CPU reference.
 ///
-/// Used for ops that register a [`vyre_libs::fixture_catalog::ConvergenceContract`],
+/// Used for ops that register a [`vyre_libs::operation_catalog::ConvergenceContract`],
 /// such as graph-traversal steps whose program performs one transfer step.
 /// The lens infers the `current` (RO input) and `next` (RW output)
 /// buffers, copies `next` → `current` between iterations, and stops
@@ -668,60 +609,6 @@ fn production_session(
         .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))
 }
 
-fn cpu_fixpoint(
-    program: &Program,
-    initial_inputs: &[Vec<u8>],
-    flag_index: usize,
-    contract: &FixpointContract,
-) -> Result<Vec<Vec<u8>>, LoopError> {
-    let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
-    for _ in 0..contract.max_iterations {
-        // Zero the convergence flag buffer (first u32) before the step.
-        if let Some(buffer) = state.get_mut(flag_index) {
-            if buffer.len() >= 4 {
-                buffer[0..4].copy_from_slice(&0u32.to_le_bytes());
-            }
-        }
-        let outputs = run_cpu(program, &state).map_err(LoopError::Reference)?;
-        // `vyre_reference::reference_eval` returns the RW buffers in the same
-        // declaration order as the inputs. Merge the RW outputs back
-        // into `state` by index.
-        merge_rw(&mut state, &outputs, program);
-        if flag_word(&state, flag_index) == 0 {
-            return Ok(state);
-        }
-    }
-    Err(LoopError::DidNotConverge)
-}
-
-fn gpu_fixpoint(
-    backend: &'static BackendRegistration,
-    program: &Program,
-    initial_inputs: &[Vec<u8>],
-    flag_index: usize,
-    contract: &FixpointContract,
-    _config: &DispatchConfig,
-) -> Result<Vec<Vec<u8>>, LoopError> {
-    let mut state: Vec<Vec<u8>> = initial_inputs.to_vec();
-    let production = production_session(backend, program)?;
-    for _ in 0..contract.max_iterations {
-        if let Some(buffer) = state.get_mut(flag_index) {
-            if buffer.len() >= 4 {
-                buffer[0..4].copy_from_slice(&0u32.to_le_bytes());
-            }
-        }
-        let borrowed_state: Vec<&[u8]> = state.iter().map(Vec::as_slice).collect();
-        let outputs = production
-            .submit(&borrowed_state)
-            .map_err(|error| LoopError::Backend(BackendError::new(error.to_string())))?;
-        merge_rw(&mut state, &outputs, program);
-        if flag_word(&state, flag_index) == 0 {
-            return Ok(state);
-        }
-    }
-    Err(LoopError::DidNotConverge)
-}
-
 fn merge_rw(state: &mut [Vec<u8>], outputs: &[Vec<u8>], program: &Program) {
     // Reference and production artifact execution return writable buffers in
     // canonical binding order. Walk the declarations in the same order.
@@ -733,14 +620,6 @@ fn merge_rw(state: &mut [Vec<u8>], outputs: &[Vec<u8>], program: &Program) {
             }
         }
     }
-}
-
-fn flag_word(state: &[Vec<u8>], flag_index: usize) -> u32 {
-    state
-        .get(flag_index)
-        .filter(|buffer| buffer.len() >= 4)
-        .map(|buffer| u32::from_le_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]))
-        .unwrap_or(0)
 }
 
 fn index_of_buffer(program: &Program, name: &str) -> Option<usize> {
@@ -819,21 +698,13 @@ mod convergence_tests {
 
     #[test]
     fn convergence_contract_ops_are_discoverable() {
-        // Every op with a ConvergenceContract must be discoverable and
-        // must NOT also have a FixpointContract.
-        let convergent_ids: Vec<&str> = vyre_libs::fixture_catalog::all_entries()
-            .filter_map(|e| convergence_contract(e.id).map(|_| e.id))
+        let convergent_ids: Vec<&str> = vyre_libs::operation_catalog::all_entries()
+            .filter_map(|entry| convergence_contract(entry.id).map(|_| entry.id))
             .collect();
         assert!(
             !convergent_ids.is_empty(),
             "expected at least one ConvergenceContract-registered op"
         );
-        for id in &convergent_ids {
-            assert!(
-                fixpoint_contract(id).is_none(),
-                "{id}: must not register BOTH ConvergenceContract and FixpointContract"
-            );
-        }
     }
 
     #[test]

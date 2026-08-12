@@ -105,8 +105,8 @@ fn welford_invalid_program(input: &str, sum_out: &str, sum_sq_out: &str) -> Prog
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::decode_f32_one as decode_one;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::decode_f32_one as decode_one;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     #[test]

@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::Program;
 
-use crate::test_support::byte_pack::bytes_to_u32;
+use crate::fixture_bytes::bytes_to_u32;
 
 /// Rewrite the `match_count` buffer to `lanes` output words so the reference
 /// backend materializes one count slot per dispatched lane.

@@ -396,7 +396,7 @@ fn linear_workgroup(size: [u32; 3]) -> [u32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
     use vyre_reference::value::Value;
 
     fn next_u32(state: &mut u32) -> u32 {
@@ -679,8 +679,8 @@ inventory::submit! {
             let b: Vec<u32> = (0..16).map(|i| i + 1).collect();
 
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&a),
-                crate::test_support::byte_pack::u32_bytes(&b),
+                crate::fixture_bytes::u32_bytes(&a),
+                crate::fixture_bytes::u32_bytes(&b),
             ]]
         }),
         expected_output: Some(|| {
@@ -717,14 +717,14 @@ inventory::submit! {
         test_inputs: Some(|| {
 
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&[1, 2, 3, 4]),
-                crate::test_support::byte_pack::u32_bytes(&[5, 6, 7, 8]),
-                crate::test_support::byte_pack::u32_bytes(&[10, 20]),
+                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
+                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
+                crate::fixture_bytes::u32_bytes(&[10, 20]),
             ]]
         }),
         expected_output: Some(|| {
 
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[29, 42, 53, 70])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
         }),
         category: Some("math"),
     }
@@ -741,13 +741,13 @@ inventory::submit! {
         build: Some(|| matmul_bias("a", "b", "bias", "out", 1, 1, 1)),
         test_inputs: Some(|| {
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&[2]),
-                crate::test_support::byte_pack::u32_bytes(&[3]),
-                crate::test_support::byte_pack::u32_bytes(&[5]),
+                crate::fixture_bytes::u32_bytes(&[2]),
+                crate::fixture_bytes::u32_bytes(&[3]),
+                crate::fixture_bytes::u32_bytes(&[5]),
             ]]
         }),
         expected_output: Some(|| {
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[11])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[11])]]
         }),
         category: Some("math"),
     }

@@ -135,13 +135,13 @@ inventory::submit! {
         }),
         test_inputs: Some(|| {
             // 4x4 input = identity matrix; 3x3 box kernel
-            let input = crate::test_support::byte_pack::f32_bytes(&[
+            let input = crate::fixture_bytes::f32_bytes(&[
                 1.0, 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0, 0.0,
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0,
             ]);
-            let kernel = crate::test_support::byte_pack::f32_bytes(&[1.0; 9]);
+            let kernel = crate::fixture_bytes::f32_bytes(&[1.0; 9]);
             vec![vec![input, kernel]]
         }),
         expected_output: Some(|| {
@@ -159,7 +159,7 @@ inventory::submit! {
             //  [2, 3, 2, 1],
             //  [1, 2, 3, 2],
             //  [0, 1, 2, 2]]
-            vec![vec![crate::test_support::byte_pack::f32_bytes(&[
+            vec![vec![crate::fixture_bytes::f32_bytes(&[
                 2.0, 2.0, 1.0, 0.0,
                 2.0, 3.0, 2.0, 1.0,
                 1.0, 2.0, 3.0, 2.0,
@@ -173,7 +173,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {

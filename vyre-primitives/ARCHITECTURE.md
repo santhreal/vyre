@@ -92,9 +92,8 @@ Idempotent / OverflowWrapping).
 Range-bound helpers consumed by both the matching and dataflow
 stacks.
 
-### `harness.rs`
-Per-primitive CPU reference + GPU programmatic build, exported as
-the canonical conform-suite probe set.
+### `operation_catalog.rs`
+Feature-gated primitive-tier view over the canonical foundation operation registry.
 
 ## Public types
 

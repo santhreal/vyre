@@ -175,11 +175,9 @@ pub(crate) mod fixed_u32_matmul;
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;
 
-/// Tier-2.5 primitive registry backed by canonical `OperationRegistration`
-/// records. Gated behind `inventory-registry` so default builds stay
-/// dependency-minimal; conformance and tooling enable the feature.
+/// Derived view over canonical primitive operation registrations.
 #[cfg(feature = "inventory-registry")]
-pub mod harness;
+pub mod operation_catalog;
 
 /// Text primitives.
 #[cfg(feature = "text")]

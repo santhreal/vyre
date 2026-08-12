@@ -89,13 +89,13 @@ inventory::submit! {
             })
         }),
         test_inputs: Some(|| {
-            let weights = crate::test_support::byte_pack::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
-            let values = crate::test_support::byte_pack::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
+            let weights = crate::fixture_bytes::f32_bytes(&[0.5, 0.25, 0.125, 0.125]);
+            let values = crate::fixture_bytes::f32_bytes(&[1.0, 2.0, 4.0, 8.0]);
             vec![vec![weights, values]]
         }),
         expected_output: Some(|| {
             // 0.5*1 + 0.25*2 + 0.125*4 + 0.125*8 = 0.5 + 0.5 + 0.5 + 1.0 = 2.5
-            vec![vec![crate::test_support::byte_pack::f32_bytes(&[2.5_f32])]]
+            vec![vec![crate::fixture_bytes::f32_bytes(&[2.5_f32])]]
         }),
         category: Some("math"),
     }
@@ -104,8 +104,8 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::decode_f32_one as decode_one;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::decode_f32_one as decode_one;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn run(weights: &[f32], values: &[f32]) -> f32 {

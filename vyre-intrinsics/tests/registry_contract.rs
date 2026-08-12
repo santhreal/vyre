@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::Node;
 use vyre_foundation::operation::{OperationRegistry, OperationTier};
-use vyre_intrinsics::harness::{all_entries, intrinsic_facet};
+use vyre_intrinsics::operation_catalog::{all_entries, intrinsic_facet};
 
 /// Positive: the linked catalog is deterministic, fully signed, and its
 /// fixtures are stable across repeated reads.

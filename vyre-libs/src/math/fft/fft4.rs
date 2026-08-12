@@ -153,12 +153,12 @@ inventory::submit! {
         build: Some(|| fft4_complex("input", "output")),
         test_inputs: Some(|| {
             // Real-valued sequence [1, 0, 0, 0] (impulse): all bins = 1+0i
-            let input = crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+            let input = crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
             vec![vec![input]]
         }),
         expected_output: Some(|| {
             // FFT of impulse = uniform [1, 1, 1, 1] across all bins.
-            vec![vec![crate::test_support::byte_pack::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])]]
+            vec![vec![crate::fixture_bytes::f32_bytes(&[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])]]
         }),
         category: Some("math"),
     }
@@ -167,7 +167,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn decode(bytes: &[u8]) -> Vec<f32> {

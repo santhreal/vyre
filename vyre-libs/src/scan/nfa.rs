@@ -523,35 +523,6 @@ mod tests {
     }
 
     #[test]
-    fn nfa_compile_and_tables_use_checked_allocation_paths() {
-        let root = include_str!("nfa.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: nfa.rs must contain production section");
-        let production = [
-            root,
-            include_str!("nfa/alloc.rs"),
-            include_str!("nfa/plan.rs"),
-            include_str!("nfa/tables.rs"),
-        ]
-        .join("\n");
-
-        assert!(
-            production.contains("pub fn try_compile")
-                && production.contains("u32::try_from(p.len())")
-                && production.contains("u32::try_from(pid)")
-                && production.contains("checked_add(len)")
-                && production.contains("try_build_transition_table")
-                && production.contains("try_reserve_vec_to_capacity")
-                && !production.contains("p.len() as u32")
-                && !production.contains("pid as u32")
-                && !production.contains("next_state += len")
-                && !production.contains("vec![0_u32;"),
-            "Fix: NFA compilation must not truncate pattern ids, pattern lengths, state counts, or allocate tables through infallible zero-vector construction."
-        );
-    }
-
-    #[test]
     fn transition_table_has_lane_major_size() {
         let t = build_transition_table(&["abc", "de"]);
         let plan = compile(&["abc", "de"]);

@@ -7,7 +7,6 @@ pub mod bundle_cert;
 pub mod cert;
 pub mod convergence_lens;
 pub mod dispatch_grid;
-mod fp_contract;
 pub mod fp_parity;
 pub mod lens;
 pub mod minimizer;

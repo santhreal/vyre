@@ -7,7 +7,7 @@
 //! and dispatch suites.
 
 use vyre_foundation::operation::SemanticOperation;
-use vyre_intrinsics::harness::all_entries;
+use vyre_intrinsics::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 fn run_cpu(entry: &SemanticOperation, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {

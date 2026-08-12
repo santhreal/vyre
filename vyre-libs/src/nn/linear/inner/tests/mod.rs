@@ -3,7 +3,7 @@ use vyre_reference::value::Value;
 use super::relu::linear_relu;
 use super::rms_norm::{rms_norm_linear, try_rms_norm_linear};
 use super::tiled::{linear_tiled, linear_tiled_reference};
-use crate::test_support::byte_pack::{decode_f32 as bytes_to_f32, f32_bytes as to_f32_bytes};
+use crate::fixture_bytes::{decode_f32 as bytes_to_f32, f32_bytes as to_f32_bytes};
 use vyre_foundation::ir::Program;
 
 const TOLERANCE_ULP: u32 = 2;

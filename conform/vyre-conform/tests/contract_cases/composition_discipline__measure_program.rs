@@ -105,7 +105,7 @@ fn measure_node(node: &Node, depth: usize, stats: &mut Complexity) {
         }
         Node::Return
         | Node::Barrier {
-            ordering: vyre::memory_model::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
         }
         | Node::IndirectDispatch { .. }
         | Node::AsyncLoad { .. }
@@ -271,7 +271,7 @@ fn hash_node(node: &Node, h: &mut u64) {
         }
         Node::Return => mix(h, 10),
         Node::Barrier {
-            ordering: vyre::memory_model::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
         } => mix(h, 11),
         Node::IndirectDispatch { .. } => mix(h, 12),
         Node::AsyncLoad { .. } => mix(h, 13),

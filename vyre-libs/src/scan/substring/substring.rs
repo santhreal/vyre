@@ -147,12 +147,12 @@ inventory::submit! {
             let to_u32_vec = |s: &str| s.bytes().map(u32::from).collect::<Vec<_>>();
             vec![
                 vec![
-                    crate::test_support::byte_pack::u32_bytes(&to_u32_vec("abcabc++")),
-                    crate::test_support::byte_pack::u32_bytes(&to_u32_vec("abc")),
+                    crate::fixture_bytes::u32_bytes(&to_u32_vec("abcabc++")),
+                    crate::fixture_bytes::u32_bytes(&to_u32_vec("abc")),
                 ],
                 vec![
-                    crate::test_support::byte_pack::u32_bytes(&to_u32_vec("xyzxyzxy")),
-                    crate::test_support::byte_pack::u32_bytes(&to_u32_vec("xyz")),
+                    crate::fixture_bytes::u32_bytes(&to_u32_vec("xyzxyzxy")),
+                    crate::fixture_bytes::u32_bytes(&to_u32_vec("xyz")),
                 ]
             ]
         }),
@@ -163,8 +163,8 @@ inventory::submit! {
             //   fires.
             // Case 1: haystack="xyzxyzxy", needle="xyz". Matches at
             //   i ∈ {0, 3}.
-            let case0 = crate::test_support::byte_pack::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
-            let case1 = crate::test_support::byte_pack::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
+            let case0 = crate::fixture_bytes::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
+            let case1 = crate::fixture_bytes::u32_bytes(&[1u32, 0, 0, 1, 0, 0, 0, 0]);
             vec![vec![case0], vec![case1]]
         }),
         category: Some("scan"),

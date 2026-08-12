@@ -16,16 +16,12 @@
 //! // `program` is a standard vyre_foundation::ir::Program you dispatch against any backend.
 //! ```
 //!
-//! ## Why a single `vyre-libs` crate, not five?
+//! ## Domain ownership
 //!
-//! The initial proposal suggested `vyre-nn`, `vyre-math`, `vyre-match`,
-//! `vyre-crypto`, `vyre-graph-stitch` as five standalone crates. That
-//! is the right endpoint  -  each becomes its own crates.io identity
-//! with its own community  -  but the migration cost at 0.6 is wrong.
-//! This crate starts as one, with public modules for each domain; when
-//! a module has its own consumer base + maturity, it promotes to a
-//! dedicated crate without breaking downstream code (the
-//! `vyre-libs::nn` path moves to `vyre-nn::` via a re-export shim).
+//! Each public domain module owns its product-level compositions. A domain may
+//! move to a dedicated crate only through a clean public cutover that migrates
+//! every caller and removes the old path. This crate does not promise
+//! compatibility reexports or parallel old/new routes.
 //!
 //! `vyre-graph-stitch` was deliberately omitted  -  "logical linker for
 //! emitted graphs" is a `vyre-foundation` concern (IR composition),
@@ -120,9 +116,8 @@ pub mod descriptor;
 
 pub use descriptor::{BufferDescriptor, ProgramDescriptor};
 
-/// Neutral program fixtures consumed by upper conformance harnesses.
-#[doc(hidden)]
-pub mod fixture_catalog;
+/// Derived view over canonical library operation registrations.
+pub mod operation_catalog;
 
 /// Math dialect  -  linear algebra, scans, broadcasting.
 #[cfg(any(
@@ -246,12 +241,12 @@ pub use signatures::{
     F32_F32_F32_INPUTS, F32_F32_INPUTS, F32_INPUTS, F32_OUTPUTS, I32_OUTPUTS, U32_INPUTS,
     U32_OUTPUTS, U32_U32_INPUTS,
 };
+/// Owner-local byte fixtures for semantic operation registrations and tests.
+pub(crate) mod fixture_bytes;
 /// Pre-sweep shader snapshot migration entries, collected via inventory.
 /// `pub(crate)` because the registry is an internal pre-sweep tool  -
 /// downstream dialects do not submit through this path.
 pub(crate) mod test_migration;
-/// Test support components for vyre-libs.
-pub mod test_support;
 
 /// Re-export the small set of vyre types every composition function
 /// returns. Consumers can `use vyre_libs::prelude::*` and get the API

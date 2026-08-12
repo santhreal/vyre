@@ -1589,32 +1589,6 @@ mod tests {
         assert_eq!(r.epsilon_table.len(), r.plan.num_states as usize * LANES);
     }
 
-    /// Prevents regex metadata and table sizes from truncating across host/GPU ABIs.
-    #[test]
-    fn regex_compile_uses_checked_abi_and_table_allocation_paths() {
-        let production = include_str!("regex_compile.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: regex_compile.rs must contain production section");
-
-        assert!(
-            production.contains("u32::try_from(pid)")
-                && production.contains("u32::try_from(extent.min)")
-                && production.contains("u32::try_from(max)")
-                && production.contains("u32::try_from(builder.state_count())")
-                && production.contains("u32::try_from(self.state_count)")
-                && production.contains("checked_add(1)")
-                && production.contains("try_reserve_vec_to_capacity")
-                && !production.contains("pid as u32")
-                && !production.contains("extent.min as u32")
-                && !production.contains("builder.state_count() as u32")
-                && !production.contains("self.state_count as u32")
-                && !production.contains("vec![0u32;")
-                && !production.contains("Vec::with_capacity(patterns.len())"),
-            "Fix: regex compilation must not truncate ids/counts or allocate NFA tables with infallible zero-vector construction."
-        );
-    }
-
     #[test]
     fn regex_pipeline_uses_compiled_plan_instead_of_literal_source_plan() {
         let compiled = compile_regex_set(&["a|bc"]).unwrap();

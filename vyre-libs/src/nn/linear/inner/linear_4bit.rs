@@ -1058,8 +1058,8 @@ pub fn linear_4bit_affine_grouped_batched_typed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
-    use crate::test_support::byte_pack::u32_bytes;
+    use crate::fixture_bytes::f32_bytes;
+    use crate::fixture_bytes::u32_bytes;
     use vyre_reference::value::Value;
 
     fn expr_contains_subgroup_shuffle(expr: &Expr) -> bool {

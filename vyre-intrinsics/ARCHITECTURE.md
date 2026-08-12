@@ -12,9 +12,8 @@ The 9 Cat-C ops: `bit_reverse_u32`, `popcount_u32`, `fma_f32`,
 subgroup ops backed by Naga 25+ subgroup lowering:
 `subgroup_ballot`, `subgroup_shuffle`, `subgroup_add`.
 
-### `harness.rs`
-Hardware-conform differential harness. Cross-checks every
-intrinsic's CPU reference against its naga-emitted GPU output.
+### `operation_catalog.rs`
+Intrinsic semantic registrations and owner-specific conformance geometry.
 
 ### `region.rs`
 Region-wrap helpers for intrinsic program construction.

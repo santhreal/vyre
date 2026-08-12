@@ -82,7 +82,7 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
         id: OP_ID,
         semantic_version: 1,
-        signature: Some(crate::harness::U32_BINARY_SIGNATURE),
+        signature: Some(crate::operation_catalog::U32_BINARY_SIGNATURE),
         tier: vyre_foundation::operation::OperationTier::Intrinsic,
         category: Some("hardware"),
         build: Some(|| subgroup_shuffle("values", "lanes", "out", 4)),
@@ -94,13 +94,13 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    crate::harness::IntrinsicFacet {
+    crate::operation_catalog::IntrinsicFacet {
         operation_id: OP_ID,
-        shape: crate::harness::OpShape::new(
+        shape: crate::operation_catalog::OpShape::new(
             2,
             1,
             4,
-            crate::harness::HardwareSemantic::SubgroupShuffleU32,
+            crate::operation_catalog::HardwareSemantic::SubgroupShuffleU32,
         ),
     }
 }

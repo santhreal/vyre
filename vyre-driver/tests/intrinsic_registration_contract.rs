@@ -2,7 +2,7 @@
 
 use vyre_driver::{validate_intrinsic_lowering, IntrinsicRegistrationError};
 use vyre_foundation::operation::OperationRegistry;
-use vyre_intrinsics::harness::all_entries;
+use vyre_intrinsics::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 const INTRINSIC_ID: &str = "vyre-intrinsics::hardware::bit_reverse_u32";

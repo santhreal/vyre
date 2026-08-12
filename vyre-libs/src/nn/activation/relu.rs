@@ -80,7 +80,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::u32_bytes;
+    use crate::fixture_bytes::u32_bytes;
     use vyre_reference::value::Value;
 
     #[test]

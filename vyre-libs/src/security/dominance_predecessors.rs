@@ -103,7 +103,7 @@ inventory::submit! {
     // don't silently truncate at the 64th step and produce false
     // negatives. Fixpoint drivers exit early when the frontier
     // stops growing, so a higher ceiling has no cost on flat graphs.
-    crate::fixture_catalog::ConvergenceContract {
+    crate::operation_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }

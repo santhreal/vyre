@@ -10,7 +10,7 @@ use vyre_primitives::hash::fnv1a::fnv1a32_program;
 
 #[test]
 fn inventory_registry_exposes_primitives() {
-    let mut ids: Vec<_> = vyre_primitives::harness::all_entries()
+    let mut ids: Vec<_> = vyre_primitives::operation_catalog::all_entries()
         .map(|e| e.id)
         .collect();
     ids.sort_unstable();

@@ -11,13 +11,9 @@ use std::sync::LazyLock;
 use vyre_foundation::dialect_lookup::{AttrSchema, Signature, TypedParam};
 use vyre_foundation::operation::{OperationRegistry, OperationTier};
 
-pub type Fixture = Vec<Vec<u8>>;
-pub type Fixtures = Vec<Fixture>;
-pub type InputsFn = fn() -> Fixtures;
-pub type ExpectedFn = fn() -> Fixtures;
-
 const NO_ATTRS: &[AttrSchema] = &[];
 
+/// Unary unsigned-32 buffer signature.
 pub const U32_UNARY_SIGNATURE: Signature = Signature {
     inputs: &[TypedParam {
         name: "input",
@@ -31,6 +27,7 @@ pub const U32_UNARY_SIGNATURE: Signature = Signature {
     bytes_extraction: false,
 };
 
+/// Binary unsigned-32 buffer signature.
 pub const U32_BINARY_SIGNATURE: Signature = Signature {
     inputs: &[
         TypedParam {
@@ -50,6 +47,7 @@ pub const U32_BINARY_SIGNATURE: Signature = Signature {
     bytes_extraction: false,
 };
 
+/// Unary floating-point buffer signature.
 pub const F32_UNARY_SIGNATURE: Signature = Signature {
     inputs: &[TypedParam {
         name: "input",
@@ -63,6 +61,7 @@ pub const F32_UNARY_SIGNATURE: Signature = Signature {
     bytes_extraction: false,
 };
 
+/// Ternary floating-point buffer signature.
 pub const F32_TERNARY_SIGNATURE: Signature = Signature {
     inputs: &[
         TypedParam {
@@ -86,26 +85,40 @@ pub const F32_TERNARY_SIGNATURE: Signature = Signature {
     bytes_extraction: false,
 };
 
+/// Intrinsic execution semantics used by conformance geometry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HardwareSemantic {
+    /// Element-wise unsigned-32 unary map.
     UnaryU32Map,
+    /// Identity operation with barrier semantics.
     BarrierIdentityU32,
+    /// Fused floating-point multiply-add.
     FmaF32,
+    /// Floating-point inverse square root.
     InverseSqrtF32,
+    /// Subgroup unsigned-32 addition.
     SubgroupAddU32,
+    /// Subgroup ballot over unsigned predicates.
     SubgroupBallotU32,
+    /// Subgroup unsigned-32 shuffle.
     SubgroupShuffleU32,
 }
 
+/// Buffer and lane geometry for one intrinsic facet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct OpShape {
+    /// Number of input buffers.
     pub input_buffers: u8,
+    /// Number of output buffers.
     pub output_buffers: u8,
+    /// Bytes in one lane.
     pub lane_bytes: u8,
+    /// Intrinsic execution semantics.
     pub semantic: HardwareSemantic,
 }
 
 impl OpShape {
+    /// Construct one intrinsic geometry record.
     #[must_use]
     pub const fn new(
         input_buffers: u8,
@@ -121,6 +134,7 @@ impl OpShape {
         }
     }
 
+    /// Return total input and output buffer arity.
     #[must_use]
     pub const fn total_buffers(self) -> u8 {
         self.input_buffers + self.output_buffers

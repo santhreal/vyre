@@ -401,11 +401,12 @@ pub fn build_ac_bounded_count_prefilter_program(dfa: &CompiledDfa) -> Program {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::classic_ac::classic_ac_compile;
     use crate::scan::classic_ac::classic_ac_scan_counts;
     use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
-    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::pack_u32_slice;
 
     #[test]
     fn bounded_count_program_reference_eval_matches_cpu_count() {

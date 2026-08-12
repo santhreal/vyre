@@ -501,7 +501,7 @@ fn prepare_entry(entry: UnifiedEntry) -> Result<PreparedEntry, String> {
         }
     }
     let input_plan = backend_dispatch_plan(&program)?;
-    let convergence_max_iterations = vyre_libs::fixture_catalog::convergence_contract(entry.id)
+    let convergence_max_iterations = vyre_libs::operation_catalog::convergence_contract(entry.id)
         .map(|contract| contract.max_iterations);
     let reference_cases = prepare_reference_cases(
         entry.id,

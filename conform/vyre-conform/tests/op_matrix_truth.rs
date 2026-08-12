@@ -356,7 +356,7 @@ fn op_matrix_scan_construct_tiers_have_proof_and_diagnostics() {
 
 #[test]
 fn registry_namespaces_do_not_pollute_other_tiers() {
-    for entry in vyre_intrinsics::harness::all_entries() {
+    for entry in vyre_intrinsics::operation_catalog::all_entries() {
         assert_eq!(
             classify_op_id(entry.id),
             OpTier::Intrinsic,
@@ -365,7 +365,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         );
     }
 
-    for entry in vyre_primitives::harness::all_entries() {
+    for entry in vyre_primitives::operation_catalog::all_entries() {
         assert_eq!(
             classify_op_id(entry.id),
             OpTier::Primitive,
@@ -374,7 +374,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         );
     }
 
-    for entry in vyre_libs::fixture_catalog::all_entries() {
+    for entry in vyre_libs::operation_catalog::all_entries() {
         let tier = classify_op_id(entry.id);
         assert!(
             matches!(tier, OpTier::Library | OpTier::External),

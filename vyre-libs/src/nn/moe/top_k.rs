@@ -62,7 +62,7 @@ pub fn top_k(input: &str, output_indices: &str, n: u32, k: u32) -> Program {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::f32_bytes;
+    use crate::fixture_bytes::f32_bytes;
     use vyre_reference::value::Value;
 
     fn u32_from_bytes(bytes: &[u8]) -> Vec<u32> {

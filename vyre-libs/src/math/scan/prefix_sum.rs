@@ -66,7 +66,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::{bytes_to_u32 as decode_u32_words, u32_bytes};
+    use crate::fixture_bytes::{bytes_to_u32 as decode_u32_words, u32_bytes};
     use vyre_foundation::ir::{BufferAccess, Expr, Node};
     use vyre_reference::value::Value;
 

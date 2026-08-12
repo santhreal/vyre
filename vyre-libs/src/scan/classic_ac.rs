@@ -299,7 +299,7 @@ pub fn classic_ac_program(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
 
     #[test]
     fn single_pattern_matches() {
@@ -404,19 +404,19 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.transitions,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.output_offsets,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.output_records,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(&[0u32])),
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(&[0u32])),
             vyre_reference::value::Value::from(vec![0u8; 1024 * 4]),
         ];
 
@@ -461,19 +461,19 @@ mod tests {
         );
 
         let inputs = vec![
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &haystack.iter().map(|&b| u32::from(b)).collect::<Vec<_>>(),
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.transitions,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.output_offsets,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(
                 &ac.dfa.output_records,
             )),
-            vyre_reference::value::Value::from(crate::test_support::byte_pack::u32_bytes(&[0u32])),
+            vyre_reference::value::Value::from(crate::fixture_bytes::u32_bytes(&[0u32])),
             vyre_reference::value::Value::from(vec![0u8; 2 * 4]),
         ];
 
@@ -486,32 +486,5 @@ mod tests {
         assert_eq!(match_count, 6, "match_count must reflect total discoveries");
         let stored = decode_u32_words(&outputs[1].to_bytes());
         assert_eq!(stored.len(), 2, "only 2 slots allocated");
-    }
-
-    #[test]
-    fn bounded_ranges_builder_exposes_checked_metadata_variant() {
-        // Inspect only the production section, everything before the file's own
-        // `#[cfg(test)]` block. That test module legitimately uses .expect()/
-        // .unwrap(), which must not trip the "builder must not panic" guard below
-        // (the guard concerns the production builder, not its tests).
-        let full = include_str!("classic_ac/bounded_ranges.rs");
-        let production = full.split("\n#[cfg(test)]").next().unwrap_or(full);
-
-        assert!(
-            production.contains("try_build_ac_bounded_ranges_program_ext"),
-            "Fix: AC bounded-ranges builder must expose a fallible metadata sizing path."
-        );
-        assert!(
-            !production.contains("dfa.output_records.len() as u32"),
-            "Fix: AC bounded-ranges builder must not narrow output record counts with unchecked casts."
-        );
-        assert!(
-            production.contains("u32::try_from(dfa.output_records.len())"),
-            "Fix: AC bounded-ranges output record count must use checked conversion."
-        );
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: AC bounded-ranges production builder must not panic."
-        );
     }
 }

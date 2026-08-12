@@ -121,7 +121,7 @@ inventory::submit! {
     // AUDIT_2026-04-24 F-SB-01: raised from 64 to 4096 so taint
     // sanitization on deep call chains doesn't truncate silently;
     // same reasoning as flows_to / taint_flow.
-    crate::fixture_catalog::ConvergenceContract {
+    crate::operation_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }

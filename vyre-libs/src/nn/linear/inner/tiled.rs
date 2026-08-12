@@ -170,9 +170,9 @@ inventory::submit! {
         //   out[3] = 0*3 + 1*7 + 2*11 + 3*15 =  7 + 22 + 45 = 74
         test_inputs: Some(|| {
 
-            let x = crate::test_support::byte_pack::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = crate::test_support::byte_pack::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = crate::test_support::byte_pack::u32_bytes(&[0, 0, 0, 0]);
+            let x = crate::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
+            let w = crate::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
+            let bias = crate::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
             // The output buffer is declared with `with_count(out_dim) = 4`
             // u32s = 16 bytes. The CPU reference and the GPU dispatch both
             // honor that buffer length; an over-allocated input slot would
@@ -182,7 +182,7 @@ inventory::submit! {
         }),
         expected_output: Some(|| {
 
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[56, 62, 68, 74])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
         }),
         category: Some("nn"),
     }
@@ -202,14 +202,14 @@ inventory::submit! {
         }),
         test_inputs: Some(|| {
 
-            let x = crate::test_support::byte_pack::u32_bytes(&(0..4).collect::<Vec<_>>());
-            let w = crate::test_support::byte_pack::u32_bytes(&(0..16).collect::<Vec<_>>());
-            let bias = crate::test_support::byte_pack::u32_bytes(&[0, 0, 0, 0]);
+            let x = crate::fixture_bytes::u32_bytes(&(0..4).collect::<Vec<_>>());
+            let w = crate::fixture_bytes::u32_bytes(&(0..16).collect::<Vec<_>>());
+            let bias = crate::fixture_bytes::u32_bytes(&[0, 0, 0, 0]);
             vec![vec![x, w, bias]]
         }),
         expected_output: Some(|| {
 
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[56, 62, 68, 74])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[56, 62, 68, 74])]]
         }),
         category: Some("nn"),
     }

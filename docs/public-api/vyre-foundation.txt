@@ -485,6 +485,9 @@ pub const fn vyre_foundation::validate::validation_error::ValidationError::retry
 pub const fn vyre_foundation::validate::validation_error::ValidationPhase::as_str(self) -> &'static str
 pub const vyre_foundation::algebra::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
+pub const vyre_foundation::fp_parity::BACKEND_ELEMENTARY_F32_ULP_BUDGET: u32
+pub const vyre_foundation::fp_parity::BACKEND_TRANSCENDENTAL_ULP_BUDGET: u32
+pub const vyre_foundation::fp_parity::REFERENCE_TRANSCENDENTAL_ULP_BUDGET: u32
 pub const vyre_foundation::ir::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NESTING_DEPTH: usize
 pub const vyre_foundation::ir::DEFAULT_MAX_NODE_COUNT: usize
@@ -660,6 +663,7 @@ pub enum vyre_foundation::execution_plan::PlanError
 pub enum vyre_foundation::execution_plan::PolicyRoute
 pub enum vyre_foundation::execution_plan::ProvenanceStrategy
 pub enum vyre_foundation::execution_plan::ReadbackStrategy
+pub enum vyre_foundation::fp_parity::BufferParity
 pub enum vyre_foundation::ir::NodeStorage
 pub enum vyre_foundation::ir::ProgramGraphError
 pub enum vyre_foundation::ir::ShapeDim
@@ -814,6 +818,11 @@ pub fn vyre_foundation::extension::try_resolve_atomic_op(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
+pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
+pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
+pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> bool
+pub fn vyre_foundation::fp_parity::f32_ulp_tolerance(program: &vyre_foundation::ir::Program) -> u32
+pub fn vyre_foundation::fp_parity::ulp_distance(left: f32, right: f32) -> core::option::Option<u32>
 pub fn vyre_foundation::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::from_graph(graph: vyre_foundation::analysis::graph_view::NodeGraph) -> core::result::Result<vyre_foundation::ir::Program, vyre_foundation::analysis::graph_view::GraphValidateError>
 pub fn vyre_foundation::graph_view::to_graph(program: &vyre_foundation::ir::Program) -> vyre_foundation::analysis::graph_view::NodeGraph
@@ -2545,6 +2554,7 @@ pub mod vyre_foundation::execution_plan
 pub mod vyre_foundation::execution_plan::fusion
 pub mod vyre_foundation::execution_plan::memory_budget
 pub mod vyre_foundation::extension
+pub mod vyre_foundation::fp_parity
 pub mod vyre_foundation::graph_view
 pub mod vyre_foundation::hashing
 pub mod vyre_foundation::ir
@@ -3507,6 +3517,8 @@ pub vyre_foundation::extension::OpaqueExprResolver::deserialize: vyre_foundation
 pub vyre_foundation::extension::OpaqueExprResolver::kind: &'static str
 pub vyre_foundation::extension::OpaqueNodeResolver::deserialize: vyre_foundation::dispatch::extension::NodeExtensionDeserializer
 pub vyre_foundation::extension::OpaqueNodeResolver::kind: &'static str
+pub vyre_foundation::fp_parity::BufferParity::Mismatch(alloc::string::String)
+pub vyre_foundation::fp_parity::BufferParity::Ok
 pub vyre_foundation::graph_view::DataEdge::from: u32
 pub vyre_foundation::graph_view::DataEdge::kind: vyre_foundation::analysis::graph_view::EdgeKind
 pub vyre_foundation::graph_view::DataEdge::to: u32

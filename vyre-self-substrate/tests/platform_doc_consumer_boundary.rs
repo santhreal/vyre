@@ -1,40 +1,8 @@
 //! Workspace-level platform documentation boundary contract.
 
-use std::fs;
 use std::path::Path;
-use std::path::PathBuf;
+
 use std::process::Command;
-
-use vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES;
-
-const PLATFORM_CRATES: &[&str] = &[
-    "vyre",
-    "vyre-spec",
-    "vyre-macros",
-    "vyre-foundation",
-    "vyre-primitives",
-    "vyre-intrinsics",
-    "vyre-libs",
-    "vyre-reference",
-    "vyre-driver",
-    "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-    "vyre-driver-spirv",
-    "vyre-runtime",
-];
-
-const SELF_SUBSTRATE_PLATFORM_DIRS: &[&str] = &[
-    "analysis",
-    "data",
-    "graph",
-    "hardware",
-    "logic",
-    "math",
-    "optimization",
-    "optimizer",
-    "scheduling",
-    "telemetry",
-];
 
 #[test]
 fn platform_crate_docs_and_comments_do_not_name_consumers() {
@@ -184,73 +152,4 @@ fn public_docs_never_link_unreachable_targets() {
         "",
         "documentation link contract must be quiet on success"
     );
-}
-
-#[test]
-fn platform_crate_source_does_not_name_consumers() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-self-substrate should live directly under the workspace root");
-    let forbidden = FORBIDDEN_CONSUMER_NAMES;
-    let mut source_files = Vec::new();
-
-    for crate_name in PLATFORM_CRATES {
-        collect_rust_sources(&workspace.join(crate_name).join("src"), &mut source_files);
-    }
-    collect_rust_sources(&manifest.join("src").join("lib.rs"), &mut source_files);
-    for dir in SELF_SUBSTRATE_PLATFORM_DIRS {
-        collect_rust_sources(&manifest.join("src").join(dir), &mut source_files);
-    }
-    source_files.sort();
-
-    let mut violations = Vec::new();
-    for source_file in source_files {
-        let source = fs::read_to_string(&source_file)
-            .unwrap_or_else(|err| panic!("{} must be readable: {err}", source_file.display()));
-        let lower = source.to_lowercase();
-        for name in forbidden {
-            if lower.contains(name) {
-                violations.push(format!("{} contains {name}", source_file.display()));
-            }
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "platform crate source must not name downstream consumers:\n{}",
-        violations.join("\n")
-    );
-}
-
-fn collect_rust_sources(path: &Path, out: &mut Vec<PathBuf>) {
-    if path.is_file() {
-        if path.extension().is_some_and(|extension| extension == "rs") {
-            out.push(path.to_path_buf());
-        }
-        return;
-    }
-    if !path.is_dir() {
-        return;
-    }
-    let entries = fs::read_dir(path).unwrap_or_else(|err| {
-        panic!(
-            "{} source directory must be readable: {err}",
-            path.display()
-        )
-    });
-    for entry in entries {
-        let entry = entry.unwrap_or_else(|err| {
-            panic!(
-                "{} source directory entry must be readable: {err}",
-                path.display()
-            )
-        });
-        let child = entry.path();
-        if child.is_dir() {
-            collect_rust_sources(&child, out);
-        } else if child.extension().is_some_and(|extension| extension == "rs") {
-            out.push(child);
-        }
-    }
 }

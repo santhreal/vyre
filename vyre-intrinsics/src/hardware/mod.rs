@@ -56,7 +56,7 @@ macro_rules! define_unary_u32_hardware_intrinsic {
                 vyre_foundation::operation::OperationRegistration {
                     id: OP_ID,
                     semantic_version: 1,
-                    signature: Some(crate::harness::U32_UNARY_SIGNATURE),
+                    signature: Some(crate::operation_catalog::U32_UNARY_SIGNATURE),
                     tier: vyre_foundation::operation::OperationTier::Intrinsic,
                     category: Some("hardware"),
                     build: Some(|| $function("input", "out", 4)),
@@ -68,13 +68,13 @@ macro_rules! define_unary_u32_hardware_intrinsic {
             }
 
             inventory::submit! {
-                crate::harness::IntrinsicFacet {
+                crate::operation_catalog::IntrinsicFacet {
                     operation_id: OP_ID,
-                    shape: crate::harness::OpShape::new(
+                    shape: crate::operation_catalog::OpShape::new(
                                     1,
                                     1,
                                     4,
-                                    crate::harness::HardwareSemantic::UnaryU32Map,
+                                    crate::operation_catalog::HardwareSemantic::UnaryU32Map,
                                 ),
                 }
             }
@@ -162,7 +162,7 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
                 vyre_foundation::operation::OperationRegistration {
                     id: OP_ID,
                     semantic_version: 1,
-                    signature: Some(crate::harness::U32_UNARY_SIGNATURE),
+                    signature: Some(crate::operation_catalog::U32_UNARY_SIGNATURE),
                     tier: vyre_foundation::operation::OperationTier::Intrinsic,
                     category: Some("hardware"),
                     build: Some(|| $function("input", "out", 4)),
@@ -174,13 +174,13 @@ macro_rules! define_barrier_u32_hardware_intrinsic {
             }
 
             inventory::submit! {
-                crate::harness::IntrinsicFacet {
+                crate::operation_catalog::IntrinsicFacet {
                     operation_id: OP_ID,
-                    shape: crate::harness::OpShape::new(
+                    shape: crate::operation_catalog::OpShape::new(
                                     1,
                                     1,
                                     4,
-                                    crate::harness::HardwareSemantic::BarrierIdentityU32,
+                                    crate::operation_catalog::HardwareSemantic::BarrierIdentityU32,
                                 ),
                 }
             }

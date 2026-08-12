@@ -347,12 +347,12 @@ inventory::submit! {
         build: Some(|| matmul_tiled("a", "b", "out", 2, 2, 2, 2)),
         test_inputs: Some(|| {
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&[1, 2, 3, 4]),
-                crate::test_support::byte_pack::u32_bytes(&[5, 6, 7, 8]),
+                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
+                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
             ]]
         }),
         expected_output: Some(|| {
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[19, 22, 43, 50])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[19, 22, 43, 50])]]
         }),
         category: Some("math"),
     }
@@ -369,13 +369,13 @@ inventory::submit! {
         build: Some(|| matmul_bias_tiled("a", "b", "bias", "out", 2, 2, 2, 2)),
         test_inputs: Some(|| {
             vec![vec![
-                crate::test_support::byte_pack::u32_bytes(&[1, 2, 3, 4]),
-                crate::test_support::byte_pack::u32_bytes(&[5, 6, 7, 8]),
-                crate::test_support::byte_pack::u32_bytes(&[10, 20]),
+                crate::fixture_bytes::u32_bytes(&[1, 2, 3, 4]),
+                crate::fixture_bytes::u32_bytes(&[5, 6, 7, 8]),
+                crate::fixture_bytes::u32_bytes(&[10, 20]),
             ]]
         }),
         expected_output: Some(|| {
-            vec![vec![crate::test_support::byte_pack::u32_bytes(&[29, 42, 53, 70])]]
+            vec![vec![crate::fixture_bytes::u32_bytes(&[29, 42, 53, 70])]]
         }),
         category: Some("math"),
     }
@@ -384,7 +384,7 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32_words;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32_words;
     use vyre_reference::value::Value;
 
     fn output_zero_bytes(program: &Program) -> Vec<u8> {
@@ -519,8 +519,8 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                crate::test_support::byte_pack::u32_bytes(&a),
-                crate::test_support::byte_pack::u32_bytes(&b),
+                crate::fixture_bytes::u32_bytes(&a),
+                crate::fixture_bytes::u32_bytes(&b),
                 output_zero_bytes(&program),
             ],
         );
@@ -549,9 +549,9 @@ mod tests {
         let actual = run_program(
             &program,
             vec![
-                crate::test_support::byte_pack::u32_bytes(&a),
-                crate::test_support::byte_pack::u32_bytes(&b),
-                crate::test_support::byte_pack::u32_bytes(&bias),
+                crate::fixture_bytes::u32_bytes(&a),
+                crate::fixture_bytes::u32_bytes(&b),
+                crate::fixture_bytes::u32_bytes(&bias),
                 output_zero_bytes(&program),
             ],
         );

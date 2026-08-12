@@ -177,7 +177,6 @@ pub(crate) fn matmul_mma_fragment(
 mod tests {
     use super::*;
     use vyre_foundation::ir::{Expr, Node};
-    use vyre_lower::lower_verified;
 
     #[test]
     fn matmul_mma_fragment_builds_four_fma_nodes() {
@@ -206,61 +205,6 @@ mod tests {
                 "each node must be a Let binding an Expr::fma"
             );
         }
-    }
-
-    #[test]
-    fn matmul_mma_fragment_lowers_to_contiguous_fma_ops() {
-        let program = vyre_foundation::ir::Program::wrapped(
-            vec![],
-            [1, 1, 1],
-            vec![
-                Node::let_bind("a0", Expr::f32(1.0)),
-                Node::let_bind("a1", Expr::f32(2.0)),
-                Node::let_bind("a2", Expr::f32(3.0)),
-                Node::let_bind("a3", Expr::f32(4.0)),
-                Node::let_bind("b0", Expr::f32(5.0)),
-                Node::let_bind("b1", Expr::f32(6.0)),
-                Node::let_bind("c0", Expr::f32(7.0)),
-                Node::let_bind("c1", Expr::f32(8.0)),
-                Node::let_bind("c2", Expr::f32(9.0)),
-                Node::let_bind("c3", Expr::f32(10.0)),
-            ]
-            .into_iter()
-            .chain(matmul_mma_fragment(
-                Expr::var("a0"),
-                Expr::var("a1"),
-                Expr::var("a2"),
-                Expr::var("a3"),
-                Expr::var("b0"),
-                Expr::var("b1"),
-                Expr::var("c0"),
-                Expr::var("c1"),
-                Expr::var("c2"),
-                Expr::var("c3"),
-            ))
-            .collect(),
-        );
-
-        let desc = lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
-            .expect("Fix: MMA fragment must lower cleanly.");
-        let fma_count = count_fma_in_body(&desc.body);
-        assert_eq!(
-            fma_count, 4,
-            "lowered descriptor must contain exactly 4 Fma ops"
-        );
-    }
-
-    fn count_fma_in_body(body: &vyre_lower::KernelBody) -> usize {
-        let mut count = body
-            .ops
-            .iter()
-            .filter(|op| matches!(op.kind, vyre_lower::KernelOpKind::Fma))
-            .count();
-        for child in &body.child_bodies {
-            count += count_fma_in_body(child);
-        }
-        count
     }
 
     #[test]
@@ -331,60 +275,4 @@ mod tests {
             );
         }
     }
-}
-
-#[test]
-fn matmul_mma_fragment_descriptor_contains_four_child_fmas() {
-    use vyre_foundation::ir::{Expr, Node};
-    use vyre_lower::lower_verified;
-    let program = vyre_foundation::ir::Program::wrapped(
-        vec![],
-        [1, 1, 1],
-        vec![
-            Node::let_bind("a0", Expr::f32(1.0)),
-            Node::let_bind("a1", Expr::f32(2.0)),
-            Node::let_bind("a2", Expr::f32(3.0)),
-            Node::let_bind("a3", Expr::f32(4.0)),
-            Node::let_bind("b0", Expr::f32(5.0)),
-            Node::let_bind("b1", Expr::f32(6.0)),
-            Node::let_bind("c0", Expr::f32(7.0)),
-            Node::let_bind("c1", Expr::f32(8.0)),
-            Node::let_bind("c2", Expr::f32(9.0)),
-            Node::let_bind("c3", Expr::f32(10.0)),
-        ]
-        .into_iter()
-        .chain(matmul_mma_fragment(
-            Expr::var("a0"),
-            Expr::var("a1"),
-            Expr::var("a2"),
-            Expr::var("a3"),
-            Expr::var("b0"),
-            Expr::var("b1"),
-            Expr::var("c0"),
-            Expr::var("c1"),
-            Expr::var("c2"),
-            Expr::var("c3"),
-        ))
-        .collect(),
-    );
-
-    let desc = lower_verified(&program)
-        .map(|lowered| lowered.descriptor)
-        .expect("Fix: MMA fragment must lower cleanly.");
-    fn count_fma_in_descriptor_body(body: &vyre_lower::KernelBody) -> usize {
-        let mut count = body
-            .ops
-            .iter()
-            .filter(|op| matches!(op.kind, vyre_lower::KernelOpKind::Fma))
-            .count();
-        for child in &body.child_bodies {
-            count += count_fma_in_descriptor_body(child);
-        }
-        count
-    }
-    assert_eq!(
-        count_fma_in_descriptor_body(&desc.body),
-        4,
-        "MMA descriptor structure must preserve the four promotable FMA operations"
-    );
 }

@@ -76,7 +76,7 @@ inventory::submit! {
 inventory::submit! {
     // AUDIT_2026-04-24 F-TF-03: max_iterations matches flows_to at
     // 4096 so deep taint paths don't hit a silent 64-step truncation.
-    crate::fixture_catalog::ConvergenceContract {
+    crate::operation_catalog::ConvergenceContract {
         op_id: OP_ID,
         max_iterations: 4096,
     }

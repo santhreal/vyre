@@ -122,12 +122,13 @@ pub fn build_ac_bounded_count_suffix2_prefilter_program(dfa: &CompiledDfa) -> Pr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixture_bytes::bytes_to_u32 as decode_u32;
+    use crate::fixture_bytes::pack_haystack_u32;
     use crate::scan::classic_ac::test_helpers::with_reference_dispatch_lanes;
     use crate::scan::classic_ac::{
         classic_ac_candidate_end_byte_mask_words, classic_ac_compile, classic_ac_scan_counts,
     };
-    use crate::test_support::byte_pack::bytes_to_u32 as decode_u32;
-    use vyre_primitives::wire::{pack_bytes_as_u32_slice as pack_haystack_u32, pack_u32_slice};
+    use vyre_primitives::wire::pack_u32_slice;
 
     fn suffix2_candidate(
         previous: u8,

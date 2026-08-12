@@ -15,6 +15,7 @@ impl core::error::Error for vyre_libs::parsing::lr_tables::ParseError
 impl core::error::Error for vyre_libs::scan::post_process::PostProcessError
 impl core::fmt::Display for vyre_libs::parsing::lr_tables::ParseError
 impl core::fmt::Display for vyre_libs::scan::post_process::PostProcessError
+impl inventory::Collect for vyre_libs::operation_catalog::ConvergenceContract
 impl vyre_libs::builder::BuildOptions
 impl vyre_libs::descriptor::BufferDescriptor
 impl vyre_libs::descriptor::ProgramDescriptor
@@ -399,6 +400,8 @@ pub fn vyre_libs::nn::quant::q2_k_linear(x: &str, w_packed: &str, w_scales: &str
 pub fn vyre_libs::nn::quant::q2_k_unpack(packed: &str, scales: &str, mins: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, alloc::string::String>
 pub fn vyre_libs::nn::quant::q4_k_linear(x: &str, w_packed: &str, w_scales: &str, w_mins: &str, b: &str, out: &str, in_dim: u32, out_dim: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, alloc::string::String>
 pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, alloc::string::String>
+pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
+pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
 pub fn vyre_libs::parsing::core::delimiter::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::parsing::core::delimiter::core_delimiter_match(tok_types: &str, tok_depths: &str, tok_count: u32, open_tok_id: u32, close_tok_id: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action
@@ -549,14 +552,6 @@ pub fn vyre_libs::tensor_ref::TensorRef::u32_2d(name: impl core::convert::Into<v
 pub fn vyre_libs::tensor_ref::check_dtype(r: &vyre_libs::tensor_ref::TensorRef, expected: vyre_spec::data_type::DataType, op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::tensor_ref::check_shape(r: &vyre_libs::tensor_ref::TensorRef, expected: &[u32], op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
 pub fn vyre_libs::tensor_ref::check_unique_names(refs: &[&vyre_libs::tensor_ref::TensorRef], op: &'static str) -> core::result::Result<(), vyre_libs::tensor_ref::TensorRefError>
-pub fn vyre_libs::test_support::byte_pack::bytes_to_u32(slice: &[u8]) -> alloc::vec::Vec<u32>
-pub fn vyre_libs::test_support::byte_pack::decode_f32(bytes: &[u8]) -> alloc::vec::Vec<f32>
-pub fn vyre_libs::test_support::byte_pack::decode_f32_one(bytes: &[u8]) -> f32
-pub fn vyre_libs::test_support::byte_pack::decode_u32_one(bytes: &[u8]) -> u32
-pub fn vyre_libs::test_support::byte_pack::f32_bytes(values: &[f32]) -> alloc::vec::Vec<u8>
-pub fn vyre_libs::test_support::byte_pack::try_decode_f32_one(bytes: &[u8]) -> core::result::Result<f32, alloc::string::String>
-pub fn vyre_libs::test_support::byte_pack::try_decode_u32_one(bytes: &[u8]) -> core::result::Result<u32, alloc::string::String>
-pub fn vyre_libs::test_support::byte_pack::u32_bytes(words: &[u32]) -> alloc::vec::Vec<u8>
 pub mod vyre_libs
 pub mod vyre_libs::buffer_names
 pub mod vyre_libs::builder
@@ -650,6 +645,7 @@ pub mod vyre_libs::nn::quant::gptq
 pub mod vyre_libs::nn::quant::int4
 pub mod vyre_libs::nn::quant::int6
 pub mod vyre_libs::nn::quant::int8
+pub mod vyre_libs::operation_catalog
 pub mod vyre_libs::parsing
 pub mod vyre_libs::parsing::core
 pub mod vyre_libs::parsing::core::ast
@@ -676,8 +672,6 @@ pub mod vyre_libs::scan::post_process
 pub mod vyre_libs::scan::substring
 pub mod vyre_libs::signatures
 pub mod vyre_libs::tensor_ref
-pub mod vyre_libs::test_support
-pub mod vyre_libs::test_support::byte_pack
 pub mod vyre_libs::text
 pub mod vyre_libs::text::char_class
 pub static vyre_libs::parsing::lr_tables::ACTION_TABLE: &[u32]
@@ -691,6 +685,7 @@ pub struct vyre_libs::math::linalg::MatmulBiasTiled
 pub struct vyre_libs::math::linalg::MatmulTiled
 pub struct vyre_libs::nn::linear::Linear
 pub struct vyre_libs::nn::norm::LayerNorm
+pub struct vyre_libs::operation_catalog::ConvergenceContract
 pub struct vyre_libs::parsing::lr_tables::LrTables
 pub struct vyre_libs::parsing::lr_tables::Production
 pub struct vyre_libs::parsing::source_cache::ParsedSourceLru<T>
@@ -718,6 +713,11 @@ pub use vyre_libs::decode::hex_decode_table
 pub use vyre_libs::decode::ziftsieve::ZiftsieveExtract
 pub use vyre_libs::decode::ziftsieve::ziftsieve_reference_extract_literals
 pub use vyre_libs::decode::ziftsieve_reference_extract_literals
+pub use vyre_libs::operation_catalog::reparent_program_children
+pub use vyre_libs::operation_catalog::tag_program
+pub use vyre_libs::operation_catalog::wrap
+pub use vyre_libs::operation_catalog::wrap_anonymous
+pub use vyre_libs::operation_catalog::wrap_child
 pub use vyre_libs::parsing::core::delimiter::CLOSE_BRACE
 pub use vyre_libs::parsing::core::delimiter::MATCH_NONE
 pub use vyre_libs::parsing::core::delimiter::OPEN_BRACE
@@ -888,6 +888,8 @@ pub vyre_libs::nn::norm::LastDimL2NormError::EmptyShape::rows: u32
 pub vyre_libs::nn::norm::LastDimL2NormError::EmptyShape::width: u32
 pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype
 pub vyre_libs::nn::norm::LastDimL2NormError::UnsupportedDtype::dtype: vyre_spec::data_type::DataType
+pub vyre_libs::operation_catalog::ConvergenceContract::max_iterations: u32
+pub vyre_libs::operation_catalog::ConvergenceContract::op_id: &'static str
 pub vyre_libs::parsing::lr_tables::Action::Accept
 pub vyre_libs::parsing::lr_tables::Action::Error
 pub vyre_libs::parsing::lr_tables::Action::Reduce(u32)

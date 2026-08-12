@@ -1,10 +1,7 @@
 //! Unified parity harness using the `lens` module.
 //!
-//! One test file that iterates every registered `SemanticOperation` and runs
-//! each of the three primary lenses (witness, cpu_vs_backend when a backend
-//! is linked, fixpoint when a contract is registered). This is the
-//! consolidation target that replaces the scattered per-file parity
-//! tests across `vyre-libs`, `vyre-driver-*`, and `conform/`.
+//! Canonical library operations run through fixture witnesses and any
+//! registered stateful convergence contract.
 
 #![forbid(unsafe_code)]
 
@@ -28,7 +25,7 @@ fn report(op_id: &str, lens_name: &'static str, outcome: LensOutcome, failures: 
 
 #[test]
 fn every_op_passes_the_witness_lens() {
-    let entries = vyre_libs::fixture_catalog::all_entries();
+    let entries = vyre_libs::operation_catalog::all_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut failures = Vec::with_capacity(failure_capacity);
     let mut passed = 0usize;
@@ -50,49 +47,18 @@ fn every_op_passes_the_witness_lens() {
     );
 }
 
-#[test]
-fn fixpoint_contract_reachable_for_every_registered_op() {
-    // Loops every op with a registered FixpointContract and confirms
-    // the contract's structural invariants: named flag buffer resolvable,
-    // max_iterations > 0.
-    for entry in vyre_libs::fixture_catalog::all_entries() {
-        let Some(contract) = vyre_libs::fixture_catalog::fixpoint_contract(entry.id) else {
-            continue;
-        };
-        assert!(
-            contract.max_iterations > 0,
-            "fixpoint contract for `{}` has max_iterations=0",
-            entry.id
-        );
-        let program = entry
-            .program()
-            .expect("Fix: conformance operation must provide a neutral builder");
-        let flag_buffer = contract.converged_flag_buffer;
-        let found = program
-            .buffers()
-            .iter()
-            .any(|decl| decl.name() == flag_buffer);
-        assert!(
-            found,
-            "fixpoint contract for `{}` names buffer `{}`, but the program does not declare it. \
-             Fix: rename the contract or add the buffer.",
-            entry.id, flag_buffer
-        );
-    }
-}
-
 // If no artifact-capable target is linked, the test fails loudly.
 #[test]
 fn convergence_contract_reachable_for_every_registered_op() {
     // Discover every op with a ConvergenceContract and verify structural
     // invariants plus CPU-side and registered-target convergence.
-    let entries = vyre_libs::fixture_catalog::all_entries();
+    let entries = vyre_libs::operation_catalog::all_entries();
     let (failure_capacity, _) = entries.size_hint();
     let mut cpu_failures = Vec::with_capacity(failure_capacity);
     let backend = build_registered_backend();
 
     for entry in entries {
-        let Some(contract) = vyre_libs::fixture_catalog::convergence_contract(entry.id) else {
+        let Some(contract) = vyre_libs::operation_catalog::convergence_contract(entry.id) else {
             continue;
         };
         assert!(

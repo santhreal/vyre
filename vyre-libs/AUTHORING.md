@@ -79,15 +79,12 @@ impl MyOp {
     pub fn build(self) -> Result<Program, TensorRefError> { /* ... */ }
 }
 
-/// Back-compat free function.
-pub fn my_op(input: &str, output: &str, n: u32) -> Program {
-    MyOp::new(TensorRef::f32_1d(input, n), TensorRef::f32_1d(output, n))
-        .build()
-        .unwrap_or_else(|err| panic!("Fix: my_op build failed: {err}"))
-}
 ```
 
-The free function is back-compat only. New callers use the builder.
+Existing public functions remain canonical only while they are the one supported
+path. A builder cutover migrates every caller and removes the replaced function
+in the same major-version change. Do not add wrapper aliases that keep both
+surfaces alive.
 
 ## 3. Write a CPU reference
 

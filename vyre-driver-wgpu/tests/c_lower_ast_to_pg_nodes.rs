@@ -15,7 +15,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::fixture_catalog::all_entries;
+use vyre_libs::operation_catalog::all_entries;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
