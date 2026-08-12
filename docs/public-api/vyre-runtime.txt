@@ -35,8 +35,8 @@ impl core::cmp::PartialEq for vyre_runtime::resident_work_queue::resident::Resid
 impl core::convert::From<vyre_driver::backend::error::BackendError> for vyre_runtime::PipelineError
 impl core::convert::From<vyre_megakernel::CompileError> for vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl core::convert::From<vyre_runtime::replay::ReplayLogError> for vyre_runtime::PipelineError
-impl core::default::Default for vyre_runtime::GpuStream<'_>
 impl core::default::Default for vyre_runtime::InMemoryPipelineCache
+impl core::default::Default for vyre_runtime::UringCompletionPump<'_>
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueConfig
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentQueueTelemetry
 impl core::default::Default for vyre_runtime::resident_work_queue::ResidentSizingPolicy
@@ -44,8 +44,8 @@ impl core::default::Default for vyre_runtime::resident_work_queue::automata_work
 impl core::default::Default for vyre_runtime::resident_work_queue::policy::ResidentLaunchPolicy
 impl core::default::Default for vyre_runtime::tenant::TenantRegistry
 impl core::error::Error for vyre_runtime::PipelineCacheMetricError
-impl core::fmt::Debug for vyre_runtime::model_residency::ArtifactInstanceBinding
-impl core::fmt::Debug for vyre_runtime::model_residency::ModelResidency
+impl core::fmt::Debug for vyre_runtime::resource_residency::ArtifactInstanceBinding
+impl core::fmt::Debug for vyre_runtime::resource_residency::ResourceResidency
 impl core::fmt::Debug for vyre_runtime::tenant::TenantHandle
 impl core::fmt::Display for vyre_runtime::PipelineCacheMetricError
 impl core::marker::Send for vyre_runtime::uring::ring::IoUringState
@@ -54,7 +54,7 @@ impl core::marker::Send for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
 impl core::marker::Sync for vyre_runtime::uring::ring::IoUringState
 impl core::marker::Sync for vyre_runtime::uring::stream::AsyncUringStream<'_>
 impl core::marker::Sync for vyre_runtime::uring::stream::GpuMappedBuffer<'_>
-impl core::ops::drop::Drop for vyre_runtime::model_residency::ModelResidency
+impl core::ops::drop::Drop for vyre_runtime::resource_residency::ResourceResidency
 impl core::ops::drop::Drop for vyre_runtime::uring::ring::IoUringState
 impl vyre_runtime::DiskCache
 impl vyre_runtime::InMemoryPipelineCache
@@ -70,13 +70,6 @@ impl vyre_runtime::artifact_admission::AdmittedArtifact
 impl vyre_runtime::artifact_admission::ArtifactAdmissionError
 impl vyre_runtime::artifact_admission::ArtifactSession
 impl vyre_runtime::artifact_admission::RetainedArtifactSession
-impl vyre_runtime::checkpoint::SafetensorIndex
-impl vyre_runtime::checkpoint::ShardedSafetensorIndex
-impl vyre_runtime::checkpoint::VerifiedCheckpointIdentity
-impl vyre_runtime::model_residency::ArtifactInstanceBinding
-impl vyre_runtime::model_residency::MaterializerResidencyDevice
-impl vyre_runtime::model_residency::ModelResidency
-impl vyre_runtime::model_residency::ResidencyDevice for vyre_runtime::model_residency::MaterializerResidencyDevice
 impl vyre_runtime::persistent_executor::PersistentExecutor
 impl vyre_runtime::replay::ReplayFailureEvidence
 impl vyre_runtime::replay::RingLog
@@ -137,6 +130,10 @@ impl vyre_runtime::resident_work_queue::task::TaskQueueSnapshot
 impl vyre_runtime::resident_work_queue::task::TaskState
 impl vyre_runtime::resident_work_queue::task::TaskWorkItem
 impl vyre_runtime::resident_work_queue::telemetry::SketchTelemetryScratch
+impl vyre_runtime::resource_residency::ArtifactInstanceBinding
+impl vyre_runtime::resource_residency::MaterializerResourceDevice
+impl vyre_runtime::resource_residency::ResidentResourceDevice for vyre_runtime::resource_residency::MaterializerResourceDevice
+impl vyre_runtime::resource_residency::ResourceResidency
 impl vyre_runtime::routing::RoutingEngine
 impl vyre_runtime::routing::RoutingPolicy for vyre_runtime::routing::standard_policy::StandardPolicy
 impl vyre_runtime::scheduler::WorkStealingScheduler
@@ -148,7 +145,7 @@ impl vyre_runtime::uring::driver::NvmeGpuIngestTelemetry
 impl vyre_runtime::uring::gpudirect::GpuDirectCapability
 impl vyre_runtime::uring::io_loop::ResidentIoLoop
 impl vyre_runtime::uring::ring::IoUringState
-impl<'a> vyre_runtime::GpuStream<'a>
+impl<'a> vyre_runtime::UringCompletionPump<'a>
 impl<'a> vyre_runtime::resident_work_queue::mixed_work::MixedWorkProtocolPlan<'a>
 impl<'a> vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>
 impl<'a> vyre_runtime::uring::pump::UringResidentQueuePump<'a>
@@ -160,11 +157,6 @@ pub const fn vyre_runtime::PipelineCacheMetricError::field(&self) -> &'static st
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::envelope(&self) -> &vyre_megakernel::envelope::ArtifactEnvelope
 pub const fn vyre_runtime::artifact_admission::AdmittedArtifact::neutral(&self) -> &vyre_megakernel::Artifact
 pub const fn vyre_runtime::artifact_admission::ArtifactAdmissionError::diagnostic(&self) -> &vyre_foundation::diagnostics::Diagnostic
-pub const fn vyre_runtime::checkpoint::SafetensorIndex::identity(&self) -> &vyre_runtime::checkpoint::SafetensorShardIdentity
-pub const fn vyre_runtime::checkpoint::ShardedSafetensorIndex::manifest_digest(&self) -> [u8; 32]
-pub const fn vyre_runtime::checkpoint::VerifiedCheckpointIdentity::content_digest(&self) -> [u8; 32]
-pub const fn vyre_runtime::checkpoint::VerifiedCheckpointIdentity::manifest_digest(&self) -> [u8; 32]
-pub const fn vyre_runtime::model_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::resident_work_queue::CountMinSketch::depth(&self) -> usize
 pub const fn vyre_runtime::resident_work_queue::CountMinSketch::width(&self) -> usize
 pub const fn vyre_runtime::resident_work_queue::ResidentGridLimits::new(max_workgroup_size_x: u32, max_compute_workgroups_per_dimension: u32, max_compute_invocations_per_workgroup: u32) -> Self
@@ -233,13 +225,13 @@ pub const fn vyre_runtime::resident_work_queue::workspace_layout::ResidentWorksp
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::first_workspace_region<R>(id: R, words: u32, record_words: u32, capacity_records: u32) -> vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
 pub const fn vyre_runtime::resident_work_queue::workspace_layout::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
 pub const fn vyre_runtime::resident_work_queue::workspace_record_words(record_words: u32, capacity_records: u32) -> core::option::Option<u32>
+pub const fn vyre_runtime::resource_residency::ArtifactInstanceBinding::byte_len(&self) -> u64
 pub const fn vyre_runtime::tenant::TenantQuota::bounded(max_outstanding_slots: u64, max_staging_bytes: u64, max_resident_handles: u64) -> Self
 pub const fn vyre_runtime::tenant::TenantQuota::unbounded() -> Self
 pub const fn vyre_runtime::tenant::TenantSelectionScratch::new() -> Self
 pub const vyre_runtime::OPCODE_RANGE_PER_TENANT: u32
 pub const vyre_runtime::TENANT_ID_MAX: u32
 pub const vyre_runtime::TENANT_OPCODE_BASE: u32
-pub const vyre_runtime::checkpoint::VERIFIED_CHECKPOINT_IDENTITY_VERSION: &str
 pub const vyre_runtime::resident_work_queue::ARG0_WORD: u32
 pub const vyre_runtime::resident_work_queue::ARGS_PER_SLOT: u32
 pub const vyre_runtime::resident_work_queue::AUTOMATA_WORKLIST_EVIDENCE_SCHEMA_VERSION: u32
@@ -420,11 +412,8 @@ pub const vyre_runtime::uring::stream::IORING_OP_READ_FIXED: u8
 pub const vyre_runtime::uring::stream::IORING_OP_URING_CMD: u8
 pub enum vyre_runtime::ArtifactSessionError
 pub enum vyre_runtime::ReplayFailureClass
+pub enum vyre_runtime::UringPollState
 pub enum vyre_runtime::artifact_admission::ArtifactSessionError
-pub enum vyre_runtime::checkpoint::SafetensorDtype
-pub enum vyre_runtime::checkpoint::SafetensorError
-pub enum vyre_runtime::model_residency::ModelAdmissionStatus
-pub enum vyre_runtime::model_residency::ModelResidencyError
 pub enum vyre_runtime::pipeline_cache::InMemoryEvictionReason
 pub enum vyre_runtime::replay::ReplayFailureClass
 pub enum vyre_runtime::resident_work_queue::AutomataWorklistMode
@@ -464,6 +453,8 @@ pub enum vyre_runtime::resident_work_queue::telemetry::RingStatus
 pub enum vyre_runtime::resident_work_queue::telemetry::RuntimeEvidenceMetricFamily
 pub enum vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceLayoutError<R>
 pub enum vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec<R>
+pub enum vyre_runtime::resource_residency::ResourceAdmissionStatus
+pub enum vyre_runtime::resource_residency::ResourceResidencyError
 pub enum vyre_runtime::uring::GpuDirectCapability
 pub enum vyre_runtime::uring::NativeReadPath
 pub enum vyre_runtime::uring::driver::NativeReadPath
@@ -477,12 +468,6 @@ pub fn vyre_runtime::DiskCache::metrics(&self) -> vyre_runtime::PipelineCacheMet
 pub fn vyre_runtime::DiskCache::new(root: impl core::convert::Into<std::path::PathBuf>) -> core::result::Result<Self, vyre_runtime::DiskCacheError>
 pub fn vyre_runtime::DiskCache::put(&self, fp: vyre_runtime::PipelineFingerprint, artifact: alloc::vec::Vec<u8>)
 pub fn vyre_runtime::DiskCache::root(&self) -> &std::path::Path
-pub fn vyre_runtime::GpuStream<'_>::default() -> Self
-pub fn vyre_runtime::GpuStream<'a>::is_shutdown_requested(&self) -> bool
-pub fn vyre_runtime::GpuStream<'a>::new() -> Self
-pub fn vyre_runtime::GpuStream<'a>::poll(&mut self) -> core::result::Result<u32, vyre_runtime::PipelineError>
-pub fn vyre_runtime::GpuStream<'a>::request_shutdown(&mut self)
-pub fn vyre_runtime::GpuStream<'a>::with_uring(self, stream: vyre_runtime::uring::stream::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::InMemoryPipelineCache::cached_bytes(&self) -> usize
 pub fn vyre_runtime::InMemoryPipelineCache::default() -> Self
 pub fn vyre_runtime::InMemoryPipelineCache::eviction_reports(&self) -> alloc::vec::Vec<vyre_runtime::pipeline_cache::InMemoryEvictionReport>
@@ -516,6 +501,12 @@ pub fn vyre_runtime::PipelineError::from(err: vyre_runtime::replay::ReplayLogErr
 pub fn vyre_runtime::PipelineError::is_drain_incomplete(&self) -> bool
 pub fn vyre_runtime::PipelineFingerprint::hex(&self) -> alloc::string::String
 pub fn vyre_runtime::PipelineFingerprint::of(artifact: &vyre_megakernel::Artifact) -> Self
+pub fn vyre_runtime::UringCompletionPump<'_>::default() -> Self
+pub fn vyre_runtime::UringCompletionPump<'a>::is_shutdown_requested(&self) -> bool
+pub fn vyre_runtime::UringCompletionPump<'a>::new() -> Self
+pub fn vyre_runtime::UringCompletionPump<'a>::poll(&mut self) -> core::result::Result<vyre_runtime::UringPollState, vyre_runtime::PipelineError>
+pub fn vyre_runtime::UringCompletionPump<'a>::request_shutdown(&mut self)
+pub fn vyre_runtime::UringCompletionPump<'a>::with_uring(self, stream: vyre_runtime::uring::stream::AsyncUringStream<'a>) -> Self
 pub fn vyre_runtime::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::admit_cached_artifact(store: &dyn vyre_runtime::PipelineCacheStore, fingerprint: &vyre_runtime::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
@@ -554,47 +545,7 @@ pub fn vyre_runtime::artifact_admission::RetainedArtifactSession::submit_and_wai
 pub fn vyre_runtime::artifact_admission::admit_artifact(envelope_bytes: &[u8], required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_cached_artifact(store: &dyn vyre_runtime::PipelineCacheStore, fingerprint: &vyre_runtime::PipelineFingerprint, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<core::option::Option<vyre_runtime::artifact_admission::AdmittedArtifact>, vyre_runtime::artifact_admission::ArtifactAdmissionError>
 pub fn vyre_runtime::artifact_admission::admit_envelope(envelope: vyre_megakernel::envelope::ArtifactEnvelope, required_format: &vyre_megakernel::envelope::TargetPayloadFormat) -> core::result::Result<vyre_runtime::artifact_admission::AdmittedArtifact, vyre_runtime::artifact_admission::ArtifactAdmissionError>
-pub fn vyre_runtime::checkpoint::SafetensorIndex::open(path: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, vyre_runtime::checkpoint::SafetensorError>
-pub fn vyre_runtime::checkpoint::SafetensorIndex::path(&self) -> &std::path::Path
-pub fn vyre_runtime::checkpoint::SafetensorIndex::tensor(&self, name: &str) -> core::option::Option<&vyre_runtime::checkpoint::SafetensorEntry>
-pub fn vyre_runtime::checkpoint::SafetensorIndex::tensors(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &vyre_runtime::checkpoint::SafetensorEntry>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::open(checkpoint_root: impl core::convert::AsRef<std::path::Path>, index_path: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, vyre_runtime::checkpoint::SafetensorError>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::shards(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&std::path::Path, &vyre_runtime::checkpoint::SafetensorIndex)>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::tensor(&self, name: &str) -> core::option::Option<&vyre_runtime::checkpoint::CheckpointTensor>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::tensors(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&str, &vyre_runtime::checkpoint::CheckpointTensor)>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::validate_requirements<'a>(&self, requirements: impl core::iter::traits::collect::IntoIterator<Item = vyre_runtime::checkpoint::SafetensorRequirement<'a>>) -> core::result::Result<(), vyre_runtime::checkpoint::SafetensorError>
-pub fn vyre_runtime::checkpoint::ShardedSafetensorIndex::verify_shards<'a>(&self, expected: impl core::iter::traits::collect::IntoIterator<Item = vyre_runtime::checkpoint::ExpectedShardDigest<'a>>) -> core::result::Result<vyre_runtime::checkpoint::VerifiedCheckpointIdentity, vyre_runtime::checkpoint::SafetensorError>
-pub fn vyre_runtime::checkpoint::VerifiedCheckpointIdentity::shard_digests(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&std::path::Path, &[u8; 32])>
 pub fn vyre_runtime::classify_backend_error(error: &vyre_driver::backend::error::BackendError) -> vyre_foundation::diagnostics::RetryClass
-pub fn vyre_runtime::model_residency::ArtifactInstanceBinding::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_runtime::model_residency::ArtifactInstanceBinding::instance(&self) -> &alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>
-pub fn vyre_runtime::model_residency::ArtifactInstanceBinding::name(&self) -> &str
-pub fn vyre_runtime::model_residency::ArtifactInstanceBinding::new(name: impl core::convert::Into<alloc::string::String>, instance: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>, byte_len: u64) -> Self
-pub fn vyre_runtime::model_residency::MaterializerResidencyDevice::allocate(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::MaterializerResidencyDevice::free(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::MaterializerResidencyDevice::new(materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> Self
-pub fn vyre_runtime::model_residency::MaterializerResidencyDevice::upload_at(&self, resource: &vyre_driver::backend::resource::Resource, offset: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::MaterializerResidencyDevice::upload_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::ModelResidency::active_sequences(&self, key: vyre_runtime::model_residency::ModelResidencyKey) -> core::result::Result<u64, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::admit_model(&self, request: vyre_runtime::model_residency::ModelAdmission<'_>) -> core::result::Result<vyre_runtime::model_residency::ModelLease, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::artifact(&self, key: vyre_runtime::model_residency::ModelResidencyKey, name: &str) -> core::result::Result<alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::cancel_sequence(&self, lease: vyre_runtime::model_residency::SequenceLease) -> core::result::Result<(), vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::drop(&mut self)
-pub fn vyre_runtime::model_residency::ModelResidency::evict_model(&self, key: vyre_runtime::model_residency::ModelResidencyKey) -> core::result::Result<(), vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::finish_sequence(&self, lease: vyre_runtime::model_residency::SequenceLease) -> core::result::Result<(), vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_runtime::model_residency::ModelResidency::new(materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, budget_bytes: u64) -> Self
-pub fn vyre_runtime::model_residency::ModelResidency::replace_artifact_instance(&self, key: vyre_runtime::model_residency::ModelResidencyKey, name: &str, instance: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>) -> core::result::Result<(), vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::reset_sequence(&self, lease: vyre_runtime::model_residency::SequenceLease) -> core::result::Result<vyre_runtime::model_residency::SequenceLease, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::sequence_state(&self, lease: vyre_runtime::model_residency::SequenceLease, name: &str) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::start_sequence(&self, model: vyre_runtime::model_residency::ModelResidencyKey, specs: &[vyre_runtime::model_residency::SequenceStateSpec<'_>]) -> core::result::Result<vyre_runtime::model_residency::SequenceLease, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::used_bytes(&self) -> core::result::Result<u64, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::weight(&self, key: vyre_runtime::model_residency::ModelResidencyKey, name: &str) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::model_residency::ModelResidencyError>
-pub fn vyre_runtime::model_residency::ModelResidency::with_device(device: alloc::sync::Arc<dyn vyre_runtime::model_residency::ResidencyDevice>, budget_bytes: u64) -> Self
-pub fn vyre_runtime::model_residency::ResidencyDevice::allocate(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::ResidencyDevice::free(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::ResidencyDevice::upload_at(&self, resource: &vyre_driver::backend::resource::Resource, offset: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
-pub fn vyre_runtime::model_residency::ResidencyDevice::upload_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::artifact(&self) -> core::result::Result<vyre_megakernel::Digest, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::device(&self) -> core::result::Result<vyre_driver::backend::artifact_lifecycle::DeviceIdentity, vyre_runtime::artifact_admission::ArtifactSessionError>
 pub fn vyre_runtime::persistent_executor::PersistentExecutor::from_bytes(registration: &'static vyre_driver::backend::registry::inventory_streams::BackendRegistration, envelope_bytes: &[u8], initial: vyre_runtime::persistent_executor::ResidentQueueState) -> core::result::Result<Self, vyre_runtime::artifact_admission::ArtifactSessionError>
@@ -960,6 +911,35 @@ pub fn vyre_runtime::resident_work_queue::workspace_layout::build_workspace_regi
 pub fn vyre_runtime::resident_work_queue::workspace_layout::next_record_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
 pub fn vyre_runtime::resident_work_queue::workspace_layout::next_workspace_region<R: core::marker::Copy>(previous: vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>, id: R, words: u32, record_words: u32, capacity_records: u32) -> core::option::Option<vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>>
 pub fn vyre_runtime::resident_work_queue::write_default_priority_offsets(control_bytes: &mut [u8], total_slots: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::instance(&self) -> &alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>
+pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::name(&self) -> &str
+pub fn vyre_runtime::resource_residency::ArtifactInstanceBinding::new(name: impl core::convert::Into<alloc::string::String>, instance: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>, byte_len: u64) -> Self
+pub fn vyre_runtime::resource_residency::MaterializerResourceDevice::allocate(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::MaterializerResourceDevice::free(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::MaterializerResourceDevice::new(materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>) -> Self
+pub fn vyre_runtime::resource_residency::MaterializerResourceDevice::upload_at(&self, resource: &vyre_driver::backend::resource::Resource, offset: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::MaterializerResourceDevice::upload_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::ResidentResourceDevice::allocate(&self, byte_len: usize) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::ResidentResourceDevice::free(&self, resource: vyre_driver::backend::resource::Resource) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::ResidentResourceDevice::upload_at(&self, resource: &vyre_driver::backend::resource::Resource, offset: usize, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::ResidentResourceDevice::upload_many(&self, uploads: &[(&vyre_driver::backend::resource::Resource, &[u8])]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::active_states(&self, key: vyre_runtime::resource_residency::ResourceSetKey) -> core::result::Result<u64, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::admit_resource_set(&self, request: vyre_runtime::resource_residency::ResourceSetAdmission<'_>) -> core::result::Result<vyre_runtime::resource_residency::ResourceSetLease, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::artifact(&self, key: vyre_runtime::resource_residency::ResourceSetKey, name: &str) -> core::result::Result<alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::cancel_state(&self, lease: vyre_runtime::resource_residency::StateLease) -> core::result::Result<(), vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::drop(&mut self)
+pub fn vyre_runtime::resource_residency::ResourceResidency::evict_resource_set(&self, key: vyre_runtime::resource_residency::ResourceSetKey) -> core::result::Result<(), vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::finish_state(&self, lease: vyre_runtime::resource_residency::StateLease) -> core::result::Result<(), vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_runtime::resource_residency::ResourceResidency::immutable_resource(&self, key: vyre_runtime::resource_residency::ResourceSetKey, name: &str) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::mutable_state(&self, lease: vyre_runtime::resource_residency::StateLease, name: &str) -> core::result::Result<vyre_driver::backend::resource::Resource, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::new(materializer: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactMaterializer>, budget_bytes: u64) -> Self
+pub fn vyre_runtime::resource_residency::ResourceResidency::replace_artifact_instance(&self, key: vyre_runtime::resource_residency::ResourceSetKey, name: &str, instance: alloc::sync::Arc<dyn vyre_driver::backend::artifact_lifecycle::ArtifactInstance>) -> core::result::Result<(), vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::reset_state(&self, lease: vyre_runtime::resource_residency::StateLease) -> core::result::Result<vyre_runtime::resource_residency::StateLease, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::start_state(&self, resource_set: vyre_runtime::resource_residency::ResourceSetKey, specs: &[vyre_runtime::resource_residency::MutableStateSpec<'_>]) -> core::result::Result<vyre_runtime::resource_residency::StateLease, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::used_bytes(&self) -> core::result::Result<u64, vyre_runtime::resource_residency::ResourceResidencyError>
+pub fn vyre_runtime::resource_residency::ResourceResidency::with_device(device: alloc::sync::Arc<dyn vyre_runtime::resource_residency::ResidentResourceDevice>, budget_bytes: u64) -> Self
 pub fn vyre_runtime::routing::RoutingEngine::new(policy: impl vyre_runtime::routing::RoutingPolicy + 'static) -> Self
 pub fn vyre_runtime::routing::RoutingEngine::route(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingDecision
 pub fn vyre_runtime::routing::RoutingEngine::route_with_explanation(&self, plan: &vyre_foundation::execution_plan::ExecutionPlan) -> vyre_runtime::routing::RoutingExplanation
@@ -1056,8 +1036,6 @@ pub fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::len(&self) -> usize
 pub fn vyre_runtime::uring::stream::GpuMappedBuffer<'a>::sub_region(&self, offset: usize, len: usize) -> core::result::Result<Self, vyre_runtime::PipelineError>
 pub mod vyre_runtime
 pub mod vyre_runtime::artifact_admission
-pub mod vyre_runtime::checkpoint
-pub mod vyre_runtime::model_residency
 pub mod vyre_runtime::persistent_executor
 pub mod vyre_runtime::pipeline_cache
 pub mod vyre_runtime::recovery
@@ -1095,6 +1073,7 @@ pub mod vyre_runtime::resident_work_queue::task
 pub mod vyre_runtime::resident_work_queue::telemetry
 pub mod vyre_runtime::resident_work_queue::workspace_adapter
 pub mod vyre_runtime::resident_work_queue::workspace_layout
+pub mod vyre_runtime::resource_residency
 pub mod vyre_runtime::routing
 pub mod vyre_runtime::routing::standard_policy
 pub mod vyre_runtime::scheduler
@@ -1111,7 +1090,6 @@ pub struct vyre_runtime::ArtifactAdmissionError
 pub struct vyre_runtime::ArtifactSession
 pub struct vyre_runtime::DiskCache
 pub struct vyre_runtime::GpuMappedBuffer<'a>
-pub struct vyre_runtime::GpuStream<'a>
 pub struct vyre_runtime::InMemoryPipelineCache
 pub struct vyre_runtime::LayeredPipelineCache
 pub struct vyre_runtime::PersistentExecutor
@@ -1127,28 +1105,11 @@ pub struct vyre_runtime::RetainedArtifactSession
 pub struct vyre_runtime::RingLog
 pub struct vyre_runtime::TenantHandle
 pub struct vyre_runtime::TenantRegistry
+pub struct vyre_runtime::UringCompletionPump<'a>
 pub struct vyre_runtime::artifact_admission::AdmittedArtifact
 pub struct vyre_runtime::artifact_admission::ArtifactAdmissionError
 pub struct vyre_runtime::artifact_admission::ArtifactSession
 pub struct vyre_runtime::artifact_admission::RetainedArtifactSession
-pub struct vyre_runtime::checkpoint::CheckpointTensor
-pub struct vyre_runtime::checkpoint::ExpectedShardDigest<'a>
-pub struct vyre_runtime::checkpoint::SafetensorEntry
-pub struct vyre_runtime::checkpoint::SafetensorIndex
-pub struct vyre_runtime::checkpoint::SafetensorRequirement<'a>
-pub struct vyre_runtime::checkpoint::SafetensorShardIdentity
-pub struct vyre_runtime::checkpoint::ShardedSafetensorIndex
-pub struct vyre_runtime::checkpoint::VerifiedCheckpointIdentity
-pub struct vyre_runtime::model_residency::ArtifactInstanceBinding
-pub struct vyre_runtime::model_residency::ImmutableWeightUpload<'a>
-pub struct vyre_runtime::model_residency::MaterializerResidencyDevice
-pub struct vyre_runtime::model_residency::ModelAdmission<'a>
-pub struct vyre_runtime::model_residency::ModelLease
-pub struct vyre_runtime::model_residency::ModelResidency
-pub struct vyre_runtime::model_residency::ModelResidencyKey
-pub struct vyre_runtime::model_residency::SequenceId(pub u64)
-pub struct vyre_runtime::model_residency::SequenceLease
-pub struct vyre_runtime::model_residency::SequenceStateSpec<'a>
 pub struct vyre_runtime::persistent_executor::PersistentExecutor
 pub struct vyre_runtime::persistent_executor::ResidentQueueCompletion
 pub struct vyre_runtime::persistent_executor::ResidentQueueState
@@ -1291,6 +1252,16 @@ pub struct vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeCapacity
 pub struct vyre_runtime::resident_work_queue::telemetry::TelemetryDecodeScratch
 pub struct vyre_runtime::resident_work_queue::telemetry::WindowTelemetry
 pub struct vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion<R>
+pub struct vyre_runtime::resource_residency::ArtifactInstanceBinding
+pub struct vyre_runtime::resource_residency::ImmutableResourceUpload<'a>
+pub struct vyre_runtime::resource_residency::MaterializerResourceDevice
+pub struct vyre_runtime::resource_residency::MutableStateSpec<'a>
+pub struct vyre_runtime::resource_residency::ResourceResidency
+pub struct vyre_runtime::resource_residency::ResourceSetAdmission<'a>
+pub struct vyre_runtime::resource_residency::ResourceSetKey
+pub struct vyre_runtime::resource_residency::ResourceSetLease
+pub struct vyre_runtime::resource_residency::StateId(pub u64)
+pub struct vyre_runtime::resource_residency::StateLease
 pub struct vyre_runtime::routing::RoutingEngine
 pub struct vyre_runtime::routing::RoutingExplanation
 pub struct vyre_runtime::routing::standard_policy::StandardPolicy
@@ -1321,14 +1292,14 @@ pub struct vyre_runtime::uring::ring::IoUringState
 pub struct vyre_runtime::uring::stream::AsyncUringStream<'a>
 pub struct vyre_runtime::uring::stream::GpuMappedBuffer<'a>
 pub trait vyre_runtime::PipelineCacheStore: core::marker::Send + core::marker::Sync
-pub trait vyre_runtime::model_residency::ResidencyDevice: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::pipeline_cache::PipelineCacheStore: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::resident_work_queue::ResidentWorkspaceAdapter
 pub trait vyre_runtime::resident_work_queue::ring::RingConsumer
 pub trait vyre_runtime::resident_work_queue::ring::RingProducer
 pub trait vyre_runtime::resident_work_queue::workspace_adapter::ResidentWorkspaceAdapter
+pub trait vyre_runtime::resource_residency::ResidentResourceDevice: core::marker::Send + core::marker::Sync
 pub trait vyre_runtime::routing::RoutingPolicy: core::marker::Send + core::marker::Sync
-pub unsafe fn vyre_runtime::GpuStream<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
+pub unsafe fn vyre_runtime::UringCompletionPump<'a>::wait_for_observable(host_visible_addr: *const u32, current: u32, timeout_ns: u64) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::driver::NvmeGpuIngestDriver<'a>::submit_native_nvme_read(&mut self, _nvme_fd: i32, _namespace_id: u32, _starting_lba: u64, _blocks: u32, _bytes_per_block: u32, _slot: u32) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::pump::UringResidentQueuePump<'a>::submit_file_scan(&mut self, fd: i32, file_offset: u64, len: u32, chunk_idx: u32, slot_idx: u32, tenant_id: u32, opcode: u32, args: [u32; 3]) -> core::result::Result<(), vyre_runtime::PipelineError>
 pub unsafe fn vyre_runtime::uring::stream::AsyncUringStream<'a>::submit_nvme_passthrough(&mut self, _fd: i32, _user_data: u64, _nvme_sqe_bytes: &[u8]) -> core::result::Result<(), vyre_runtime::PipelineError>
@@ -1441,178 +1412,13 @@ pub vyre_runtime::TenantError::StagingBackpressure::cap: u64
 pub vyre_runtime::TenantError::StagingBackpressure::requested: u64
 pub vyre_runtime::TenantError::StagingBackpressure::tenant_id: u32
 pub vyre_runtime::TenantError::StagingBackpressure::used: u64
+pub vyre_runtime::UringPollState::Completed(u32)
+pub vyre_runtime::UringPollState::Detached
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Admission(vyre_runtime::artifact_admission::ArtifactAdmissionError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Backend(vyre_driver::backend::error::BackendError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Compile(vyre_megakernel::CompileError)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::State(alloc::string::String)
 pub vyre_runtime::artifact_admission::ArtifactSessionError::Target(vyre_megakernel::target::TargetCompileError)
-pub vyre_runtime::checkpoint::CheckpointTensor::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::CheckpointTensor::tensor: vyre_runtime::checkpoint::SafetensorEntry
-pub vyre_runtime::checkpoint::ExpectedShardDigest::blake3: [u8; 32]
-pub vyre_runtime::checkpoint::ExpectedShardDigest::shard: &'a std::path::Path
-pub vyre_runtime::checkpoint::SafetensorDtype::BF16
-pub vyre_runtime::checkpoint::SafetensorDtype::BOOL
-pub vyre_runtime::checkpoint::SafetensorDtype::F16
-pub vyre_runtime::checkpoint::SafetensorDtype::F32
-pub vyre_runtime::checkpoint::SafetensorDtype::F64
-pub vyre_runtime::checkpoint::SafetensorDtype::F8E4M3
-pub vyre_runtime::checkpoint::SafetensorDtype::F8E5M2
-pub vyre_runtime::checkpoint::SafetensorDtype::I16
-pub vyre_runtime::checkpoint::SafetensorDtype::I32
-pub vyre_runtime::checkpoint::SafetensorDtype::I64
-pub vyre_runtime::checkpoint::SafetensorDtype::I8
-pub vyre_runtime::checkpoint::SafetensorDtype::U16
-pub vyre_runtime::checkpoint::SafetensorDtype::U32
-pub vyre_runtime::checkpoint::SafetensorDtype::U64
-pub vyre_runtime::checkpoint::SafetensorDtype::U8
-pub vyre_runtime::checkpoint::SafetensorEntry::dtype: vyre_runtime::checkpoint::SafetensorDtype
-pub vyre_runtime::checkpoint::SafetensorEntry::file_range: core::ops::range::Range<u64>
-pub vyre_runtime::checkpoint::SafetensorEntry::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorEntry::shape: alloc::vec::Vec<u64>
-pub vyre_runtime::checkpoint::SafetensorError::ByteLength
-pub vyre_runtime::checkpoint::SafetensorError::ByteLength::actual: u64
-pub vyre_runtime::checkpoint::SafetensorError::ByteLength::expected: u64
-pub vyre_runtime::checkpoint::SafetensorError::ByteLength::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::DuplicateRequirement
-pub vyre_runtime::checkpoint::SafetensorError::DuplicateRequirement::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::DuplicateShardDigest
-pub vyre_runtime::checkpoint::SafetensorError::DuplicateShardDigest::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::HeaderTooLarge
-pub vyre_runtime::checkpoint::SafetensorError::HeaderTooLarge::header_len: u64
-pub vyre_runtime::checkpoint::SafetensorError::HeaderTooLarge::maximum: u64
-pub vyre_runtime::checkpoint::SafetensorError::InvalidName
-pub vyre_runtime::checkpoint::SafetensorError::InvalidName::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::Io
-pub vyre_runtime::checkpoint::SafetensorError::Io::detail: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::Io::path: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::Metadata(alloc::string::String)
-pub vyre_runtime::checkpoint::SafetensorError::MissingMappedTensor
-pub vyre_runtime::checkpoint::SafetensorError::MissingMappedTensor::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::MissingMappedTensor::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::MissingRequiredTensor
-pub vyre_runtime::checkpoint::SafetensorError::MissingRequiredTensor::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::MissingShardDigest
-pub vyre_runtime::checkpoint::SafetensorError::MissingShardDigest::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::OffsetOverflow
-pub vyre_runtime::checkpoint::SafetensorError::Overlap
-pub vyre_runtime::checkpoint::SafetensorError::Overlap::left: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::Overlap::right: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::RangeOutOfBounds
-pub vyre_runtime::checkpoint::SafetensorError::RangeOutOfBounds::data_len: u64
-pub vyre_runtime::checkpoint::SafetensorError::RangeOutOfBounds::end: u64
-pub vyre_runtime::checkpoint::SafetensorError::RangeOutOfBounds::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::RangeOutOfBounds::start: u64
-pub vyre_runtime::checkpoint::SafetensorError::RequiredDtype
-pub vyre_runtime::checkpoint::SafetensorError::RequiredDtype::actual: vyre_runtime::checkpoint::SafetensorDtype
-pub vyre_runtime::checkpoint::SafetensorError::RequiredDtype::expected: vyre_runtime::checkpoint::SafetensorDtype
-pub vyre_runtime::checkpoint::SafetensorError::RequiredDtype::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::RequiredShape
-pub vyre_runtime::checkpoint::SafetensorError::RequiredShape::actual: alloc::vec::Vec<u64>
-pub vyre_runtime::checkpoint::SafetensorError::RequiredShape::expected: alloc::vec::Vec<u64>
-pub vyre_runtime::checkpoint::SafetensorError::RequiredShape::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::ShapeOverflow
-pub vyre_runtime::checkpoint::SafetensorError::ShardDigestMismatch
-pub vyre_runtime::checkpoint::SafetensorError::ShardDigestMismatch::actual: [u8; 32]
-pub vyre_runtime::checkpoint::SafetensorError::ShardDigestMismatch::expected: [u8; 32]
-pub vyre_runtime::checkpoint::SafetensorError::ShardDigestMismatch::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::ShardIndex(alloc::string::String)
-pub vyre_runtime::checkpoint::SafetensorError::ShardIndexTooLarge
-pub vyre_runtime::checkpoint::SafetensorError::ShardIndexTooLarge::actual: u64
-pub vyre_runtime::checkpoint::SafetensorError::ShardIndexTooLarge::maximum: u64
-pub vyre_runtime::checkpoint::SafetensorError::ShardLengthChanged
-pub vyre_runtime::checkpoint::SafetensorError::ShardLengthChanged::actual: u64
-pub vyre_runtime::checkpoint::SafetensorError::ShardLengthChanged::indexed: u64
-pub vyre_runtime::checkpoint::SafetensorError::ShardLengthChanged::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::TooManyTensors
-pub vyre_runtime::checkpoint::SafetensorError::TooManyTensors::actual: usize
-pub vyre_runtime::checkpoint::SafetensorError::TooManyTensors::maximum: usize
-pub vyre_runtime::checkpoint::SafetensorError::TruncatedHeader
-pub vyre_runtime::checkpoint::SafetensorError::TruncatedHeader::file_len: u64
-pub vyre_runtime::checkpoint::SafetensorError::TruncatedHeader::header_len: u64
-pub vyre_runtime::checkpoint::SafetensorError::TruncatedPrefix
-pub vyre_runtime::checkpoint::SafetensorError::TruncatedPrefix::file_len: u64
-pub vyre_runtime::checkpoint::SafetensorError::UnexpectedShardDigest
-pub vyre_runtime::checkpoint::SafetensorError::UnexpectedShardDigest::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::UnmappedShardTensor
-pub vyre_runtime::checkpoint::SafetensorError::UnmappedShardTensor::name: alloc::string::String
-pub vyre_runtime::checkpoint::SafetensorError::UnmappedShardTensor::shard: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorError::UnsafeShardPath
-pub vyre_runtime::checkpoint::SafetensorError::UnsafeShardPath::path: std::path::PathBuf
-pub vyre_runtime::checkpoint::SafetensorRequirement::dtype: vyre_runtime::checkpoint::SafetensorDtype
-pub vyre_runtime::checkpoint::SafetensorRequirement::name: &'a str
-pub vyre_runtime::checkpoint::SafetensorRequirement::shape: &'a [u64]
-pub vyre_runtime::checkpoint::SafetensorShardIdentity::data_start: u64
-pub vyre_runtime::checkpoint::SafetensorShardIdentity::file_len: u64
-pub vyre_runtime::checkpoint::SafetensorShardIdentity::header_digest: [u8; 32]
-pub vyre_runtime::model_residency::ImmutableWeightUpload::blake3: [u8; 32]
-pub vyre_runtime::model_residency::ImmutableWeightUpload::bytes: &'a [u8]
-pub vyre_runtime::model_residency::ImmutableWeightUpload::name: &'a str
-pub vyre_runtime::model_residency::ModelAdmission::artifacts: alloc::vec::Vec<vyre_runtime::model_residency::ArtifactInstanceBinding>
-pub vyre_runtime::model_residency::ModelAdmission::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelAdmission::weights: alloc::vec::Vec<vyre_runtime::model_residency::ImmutableWeightUpload<'a>>
-pub vyre_runtime::model_residency::ModelAdmissionStatus::Cold
-pub vyre_runtime::model_residency::ModelAdmissionStatus::Warm
-pub vyre_runtime::model_residency::ModelLease::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelLease::status: vyre_runtime::model_residency::ModelAdmissionStatus
-pub vyre_runtime::model_residency::ModelResidencyError::AccountingUnderflow
-pub vyre_runtime::model_residency::ModelResidencyError::ArtifactNotFound
-pub vyre_runtime::model_residency::ModelResidencyError::ArtifactNotFound::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelResidencyError::ArtifactNotFound::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::Backend
-pub vyre_runtime::model_residency::ModelResidencyError::Backend::detail: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::Backend::operation: &'static str
-pub vyre_runtime::model_residency::ModelResidencyError::ByteLengthOverflow
-pub vyre_runtime::model_residency::ModelResidencyError::ByteLengthOverflow::context: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::DuplicateOrEmptyName
-pub vyre_runtime::model_residency::ModelResidencyError::DuplicateOrEmptyName::kind: &'static str
-pub vyre_runtime::model_residency::ModelResidencyError::DuplicateOrEmptyName::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::LockPoisoned
-pub vyre_runtime::model_residency::ModelResidencyError::ModelInUse
-pub vyre_runtime::model_residency::ModelResidencyError::ModelInUse::active_sequences: u64
-pub vyre_runtime::model_residency::ModelResidencyError::ModelInUse::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelResidencyError::ModelNotResident
-pub vyre_runtime::model_residency::ModelResidencyError::ModelNotResident::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelResidencyError::OutOfMemory
-pub vyre_runtime::model_residency::ModelResidencyError::OutOfMemory::budget: u64
-pub vyre_runtime::model_residency::ModelResidencyError::OutOfMemory::context: &'static str
-pub vyre_runtime::model_residency::ModelResidencyError::OutOfMemory::requested: u64
-pub vyre_runtime::model_residency::ModelResidencyError::OutOfMemory::used: u64
-pub vyre_runtime::model_residency::ModelResidencyError::Release
-pub vyre_runtime::model_residency::ModelResidencyError::Release::context: &'static str
-pub vyre_runtime::model_residency::ModelResidencyError::Release::details: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::Rollback
-pub vyre_runtime::model_residency::ModelResidencyError::Rollback::cleanup: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::Rollback::detail: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::Rollback::operation: &'static str
-pub vyre_runtime::model_residency::ModelResidencyError::SequenceGenerationOverflow
-pub vyre_runtime::model_residency::ModelResidencyError::SequenceGenerationOverflow::sequence: vyre_runtime::model_residency::SequenceId
-pub vyre_runtime::model_residency::ModelResidencyError::SequenceIdentityOverflow
-pub vyre_runtime::model_residency::ModelResidencyError::SequenceNotFound
-pub vyre_runtime::model_residency::ModelResidencyError::SequenceNotFound::sequence: vyre_runtime::model_residency::SequenceId
-pub vyre_runtime::model_residency::ModelResidencyError::StaleSequenceLease
-pub vyre_runtime::model_residency::ModelResidencyError::StaleSequenceLease::actual_generation: u64
-pub vyre_runtime::model_residency::ModelResidencyError::StaleSequenceLease::expected_generation: u64
-pub vyre_runtime::model_residency::ModelResidencyError::StaleSequenceLease::sequence: vyre_runtime::model_residency::SequenceId
-pub vyre_runtime::model_residency::ModelResidencyError::StateNotFound
-pub vyre_runtime::model_residency::ModelResidencyError::StateNotFound::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::StateNotFound::sequence: vyre_runtime::model_residency::SequenceId
-pub vyre_runtime::model_residency::ModelResidencyError::WarmModelMismatch
-pub vyre_runtime::model_residency::ModelResidencyError::WeightDigestMismatch
-pub vyre_runtime::model_residency::ModelResidencyError::WeightDigestMismatch::actual: [u8; 32]
-pub vyre_runtime::model_residency::ModelResidencyError::WeightDigestMismatch::expected: [u8; 32]
-pub vyre_runtime::model_residency::ModelResidencyError::WeightDigestMismatch::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::WeightNotFound
-pub vyre_runtime::model_residency::ModelResidencyError::WeightNotFound::key: vyre_runtime::model_residency::ModelResidencyKey
-pub vyre_runtime::model_residency::ModelResidencyError::WeightNotFound::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyError::ZeroIdentity
-pub vyre_runtime::model_residency::ModelResidencyError::ZeroStateBytes
-pub vyre_runtime::model_residency::ModelResidencyError::ZeroStateBytes::name: alloc::string::String
-pub vyre_runtime::model_residency::ModelResidencyKey::artifact_digest: [u8; 32]
-pub vyre_runtime::model_residency::ModelResidencyKey::checkpoint_digest: [u8; 32]
-pub vyre_runtime::model_residency::SequenceLease::generation: u64
-pub vyre_runtime::model_residency::SequenceLease::id: vyre_runtime::model_residency::SequenceId
-pub vyre_runtime::model_residency::SequenceStateSpec::byte_len: usize
-pub vyre_runtime::model_residency::SequenceStateSpec::name: &'a str
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::device_ns: core::option::Option<u64>
 pub vyre_runtime::persistent_executor::ResidentQueueCompletion::state: vyre_runtime::persistent_executor::ResidentQueueState
 pub vyre_runtime::persistent_executor::ResidentQueueState::control: alloc::vec::Vec<u8>
@@ -2690,6 +2496,75 @@ pub vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegion
 pub vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec::Record::capacity_records: u32
 pub vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec::Record::id: R
 pub vyre_runtime::resident_work_queue::workspace_layout::ResidentWorkspaceRegionSpec::Record::record_words: u32
+pub vyre_runtime::resource_residency::ImmutableResourceUpload::blake3: [u8; 32]
+pub vyre_runtime::resource_residency::ImmutableResourceUpload::bytes: &'a [u8]
+pub vyre_runtime::resource_residency::ImmutableResourceUpload::name: &'a str
+pub vyre_runtime::resource_residency::MutableStateSpec::byte_len: usize
+pub vyre_runtime::resource_residency::MutableStateSpec::name: &'a str
+pub vyre_runtime::resource_residency::ResourceAdmissionStatus::Cold
+pub vyre_runtime::resource_residency::ResourceAdmissionStatus::Warm
+pub vyre_runtime::resource_residency::ResourceResidencyError::AccountingUnderflow
+pub vyre_runtime::resource_residency::ResourceResidencyError::ArtifactNotFound
+pub vyre_runtime::resource_residency::ResourceResidencyError::ArtifactNotFound::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceResidencyError::ArtifactNotFound::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::Backend
+pub vyre_runtime::resource_residency::ResourceResidencyError::Backend::detail: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::Backend::operation: &'static str
+pub vyre_runtime::resource_residency::ResourceResidencyError::ByteLengthOverflow
+pub vyre_runtime::resource_residency::ResourceResidencyError::ByteLengthOverflow::context: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::DuplicateOrEmptyName
+pub vyre_runtime::resource_residency::ResourceResidencyError::DuplicateOrEmptyName::kind: &'static str
+pub vyre_runtime::resource_residency::ResourceResidencyError::DuplicateOrEmptyName::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceDigestMismatch
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceDigestMismatch::actual: [u8; 32]
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceDigestMismatch::expected: [u8; 32]
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceDigestMismatch::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceResidencyError::ImmutableResourceNotFound::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::LockPoisoned
+pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory
+pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::budget: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::context: &'static str
+pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::requested: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::OutOfMemory::used: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::Release
+pub vyre_runtime::resource_residency::ResourceResidencyError::Release::context: &'static str
+pub vyre_runtime::resource_residency::ResourceResidencyError::Release::details: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::ResourceSetInUse
+pub vyre_runtime::resource_residency::ResourceResidencyError::ResourceSetInUse::active_states: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::ResourceSetInUse::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceResidencyError::ResourceSetNotResident
+pub vyre_runtime::resource_residency::ResourceResidencyError::ResourceSetNotResident::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceResidencyError::Rollback
+pub vyre_runtime::resource_residency::ResourceResidencyError::Rollback::cleanup: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::Rollback::detail: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::Rollback::operation: &'static str
+pub vyre_runtime::resource_residency::ResourceResidencyError::StaleStateLease
+pub vyre_runtime::resource_residency::ResourceResidencyError::StaleStateLease::actual_generation: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::StaleStateLease::expected_generation: u64
+pub vyre_runtime::resource_residency::ResourceResidencyError::StaleStateLease::state: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateGenerationOverflow
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateGenerationOverflow::state: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateIdentityOverflow
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateLeaseNotFound
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateLeaseNotFound::state: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateNotFound
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateNotFound::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceResidencyError::StateNotFound::state: vyre_runtime::resource_residency::StateId
+pub vyre_runtime::resource_residency::ResourceResidencyError::WarmResourceSetMismatch
+pub vyre_runtime::resource_residency::ResourceResidencyError::ZeroIdentity
+pub vyre_runtime::resource_residency::ResourceResidencyError::ZeroStateBytes
+pub vyre_runtime::resource_residency::ResourceResidencyError::ZeroStateBytes::name: alloc::string::String
+pub vyre_runtime::resource_residency::ResourceSetAdmission::artifacts: alloc::vec::Vec<vyre_runtime::resource_residency::ArtifactInstanceBinding>
+pub vyre_runtime::resource_residency::ResourceSetAdmission::immutable_resources: alloc::vec::Vec<vyre_runtime::resource_residency::ImmutableResourceUpload<'a>>
+pub vyre_runtime::resource_residency::ResourceSetAdmission::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceSetKey::artifact_digest: [u8; 32]
+pub vyre_runtime::resource_residency::ResourceSetKey::source_digest: [u8; 32]
+pub vyre_runtime::resource_residency::ResourceSetLease::key: vyre_runtime::resource_residency::ResourceSetKey
+pub vyre_runtime::resource_residency::ResourceSetLease::status: vyre_runtime::resource_residency::ResourceAdmissionStatus
+pub vyre_runtime::resource_residency::StateLease::generation: u64
+pub vyre_runtime::resource_residency::StateLease::id: vyre_runtime::resource_residency::StateId
 pub vyre_runtime::routing::RoutingDecision::CpuSimd
 pub vyre_runtime::routing::RoutingDecision::GpuPipeline
 pub vyre_runtime::routing::RoutingDecision::PersistentMegakernel

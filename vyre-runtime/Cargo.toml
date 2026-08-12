@@ -28,14 +28,7 @@ self-substrate-adapters = [
     "vyre-self-substrate/math-solvers",
     "vyre-self-substrate/telemetry",
 ]
-# Compatibility no-op for older manifests. The C workspace adapter lives in
-# `vyre-frontend-c::megakernel_workspace`; runtime owns only the generic seam.
-c-frontend-adapter = []
-# V7-API-008: domain-prefixed feature naming convention. `remote-cache`
-# is the canonical name; `remote` is kept as a back-compat alias for
-# 0.6.x consumers and will be removed in a future semver-major.
 remote-cache = ["ureq"]
-remote = ["remote-cache"]
 # Opt-in NVMe passthrough via `IORING_OP_URING_CMD` (Linux kernel 6.0+).
 uring-cmd-nvme = []
 
@@ -53,8 +46,6 @@ smallvec.workspace = true
 arc-swap = { workspace = true }
 ureq = { workspace = true, optional = true }
 dashmap.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc.workspace = true
@@ -63,6 +54,7 @@ libc.workspace = true
 vyre-test-support.workspace = true
 vyre-driver-reference = { path = "../vyre-driver-reference" }
 tempfile.workspace = true
+serde_json.workspace = true
 criterion.workspace = true
 proptest.workspace = true
 

@@ -1,4 +1,7 @@
-//! Bounded safetensors metadata ingestion for immutable model weights.
+//! Bounded safetensors metadata ingestion and immutable checkpoint identity.
+//!
+//! This adapter validates safetensors headers and sharded indexes without
+//! owning runtime allocation, residency, scheduling, or submission.
 
 use std::collections::BTreeMap;
 use std::fs::{self, File};

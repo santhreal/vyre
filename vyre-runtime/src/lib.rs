@@ -1,9 +1,9 @@
-//! Artifact execution, resident work queues, model residency, and zero-copy IO.
+//! Artifact execution, resident work queues, resource residency, and zero-copy IO.
 //!
 //! Runtime construction starts from an authenticated [`ArtifactSession`].
 //! Immutable compiler artifacts are materialized through registered target
 //! devices; runtime policy owns bindings, retained state, queueing, recovery,
-//! checkpoint residency, IO, and telemetry.
+//! resource residency, IO, and telemetry.
 
 #![deny(missing_docs)]
 #![warn(unreachable_pub)]
@@ -37,7 +37,7 @@ pub enum PipelineError {
     },
     /// Attempted to use io_uring on a non-Linux platform.
     #[error(
-        "io_uring is Linux-only. Fix: run on Linux 5.1+ or construct GpuStream without an io_uring stream"
+        "io_uring is Linux-only. Fix: run on Linux 5.1+ and attach an AsyncUringStream to UringCompletionPump"
     )]
     NotLinux,
     /// Feature required for NVMe passthrough is not enabled.
@@ -102,11 +102,8 @@ impl From<vyre_driver::backend::BackendError> for PipelineError {
 /// Canonical artifact-envelope authentication and exact-format admission.
 pub mod artifact_admission;
 
-/// Bounded safetensors checkpoint metadata ingestion.
-pub mod checkpoint;
-
-/// Immutable model, artifact-instance, and per-sequence state residency.
-pub mod model_residency;
+/// Backend-neutral immutable-resource and mutable-state residency.
+pub mod resource_residency;
 
 /// Resident work-queue protocols, scheduling policy, and runtime IO.
 #[path = "megakernel/mod.rs"]
@@ -143,7 +140,7 @@ pub use tenant::{
     TENANT_OPCODE_BASE,
 };
 
-#[cfg(feature = "remote")]
+#[cfg(feature = "remote-cache")]
 pub use pipeline_cache::RemoteCache;
 pub use pipeline_cache::{
     DiskCache, DiskCacheError, InMemoryPipelineCache, LayeredPipelineCache,
@@ -163,9 +160,11 @@ pub use vyre_foundation::diagnostics::RetryClass;
 #[allow(unsafe_code)]
 pub mod uring;
 
-/// Handle to an orchestrated pipeline. Couples a compiled megakernel
-/// to its submission + completion infrastructure.
-pub struct GpuStream<'a> {
+/// Completion pump for an optional Linux io_uring stream.
+///
+/// Detached pumps report [`UringPollState::Detached`] instead of fabricating a
+/// zero-completion observation.
+pub struct UringCompletionPump<'a> {
     #[cfg(target_os = "linux")]
     uring: Option<uring::AsyncUringStream<'a>>,
     // On macOS / Windows the `uring` field is compiled out, which leaves the
@@ -176,23 +175,32 @@ pub struct GpuStream<'a> {
     shutdown_requested: bool,
 }
 
-impl Default for GpuStream<'_> {
+impl Default for UringCompletionPump<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> GpuStream<'a> {
+/// Result of one non-blocking completion-pump probe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UringPollState {
+    /// No io_uring stream is attached.
+    Detached,
+    /// An attached stream was polled and produced this many completions.
+    Completed(u32),
+}
+
+impl<'a> UringCompletionPump<'a> {
     /// Create a pipeline handle with no io_uring stream attached.
     ///
     /// # Examples
     ///
     /// ```
-    /// use vyre_runtime::GpuStream;
+    /// use vyre_runtime::UringCompletionPump;
     ///
-    /// let stream = GpuStream::new();
+    /// let pump = UringCompletionPump::new();
     ///
-    /// assert!(!stream.is_shutdown_requested());
+    /// assert!(!pump.is_shutdown_requested());
     /// ```
     #[must_use]
     pub fn new() -> Self {
@@ -216,19 +224,19 @@ impl<'a> GpuStream<'a> {
         self
     }
 
-    /// Reap completions and bump the megakernel tail pointer.
+    /// Probe the attached io_uring stream for completions.
     ///
     /// # Errors
     ///
     /// Propagates any uring syscall error from the underlying ring.
-    pub fn poll(&mut self) -> Result<u32, PipelineError> {
+    pub fn poll(&mut self) -> Result<UringPollState, PipelineError> {
         #[cfg(target_os = "linux")]
         {
             if let Some(ref mut stream) = self.uring {
-                return stream.poll();
+                return stream.poll().map(UringPollState::Completed);
             }
         }
-        Ok(0)
+        Ok(UringPollState::Detached)
     }
 
     /// Request graceful shutdown of the pipeline.
@@ -336,22 +344,22 @@ mod tests {
 
     #[test]
     fn construct_stream_has_no_shutdown() {
-        let stream = GpuStream::new();
+        let stream = UringCompletionPump::new();
         assert!(!stream.is_shutdown_requested());
     }
 
     #[test]
     fn shutdown_is_idempotent() {
-        let mut stream = GpuStream::new();
+        let mut stream = UringCompletionPump::new();
         stream.request_shutdown();
         stream.request_shutdown();
         assert!(stream.is_shutdown_requested());
     }
 
     #[test]
-    fn poll_without_uring_returns_zero() {
-        let mut stream = GpuStream::new();
-        assert_eq!(stream.poll().unwrap(), 0);
+    fn poll_without_uring_reports_detached_state() {
+        let mut stream = UringCompletionPump::new();
+        assert_eq!(stream.poll().unwrap(), UringPollState::Detached);
     }
 
     #[test]

@@ -1,0 +1,128 @@
+impl vyre_safetensors::SafetensorIndex
+impl vyre_safetensors::ShardedSafetensorIndex
+impl vyre_safetensors::VerifiedCheckpointIdentity
+pub const fn vyre_safetensors::SafetensorIndex::identity(&self) -> &vyre_safetensors::SafetensorShardIdentity
+pub const fn vyre_safetensors::ShardedSafetensorIndex::manifest_digest(&self) -> [u8; 32]
+pub const fn vyre_safetensors::VerifiedCheckpointIdentity::content_digest(&self) -> [u8; 32]
+pub const fn vyre_safetensors::VerifiedCheckpointIdentity::manifest_digest(&self) -> [u8; 32]
+pub const vyre_safetensors::VERIFIED_CHECKPOINT_IDENTITY_VERSION: &str
+pub enum vyre_safetensors::SafetensorDtype
+pub enum vyre_safetensors::SafetensorError
+pub fn vyre_safetensors::SafetensorIndex::open(path: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, vyre_safetensors::SafetensorError>
+pub fn vyre_safetensors::SafetensorIndex::path(&self) -> &std::path::Path
+pub fn vyre_safetensors::SafetensorIndex::tensor(&self, name: &str) -> core::option::Option<&vyre_safetensors::SafetensorEntry>
+pub fn vyre_safetensors::SafetensorIndex::tensors(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = &vyre_safetensors::SafetensorEntry>
+pub fn vyre_safetensors::ShardedSafetensorIndex::open(checkpoint_root: impl core::convert::AsRef<std::path::Path>, index_path: impl core::convert::AsRef<std::path::Path>) -> core::result::Result<Self, vyre_safetensors::SafetensorError>
+pub fn vyre_safetensors::ShardedSafetensorIndex::shards(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&std::path::Path, &vyre_safetensors::SafetensorIndex)>
+pub fn vyre_safetensors::ShardedSafetensorIndex::tensor(&self, name: &str) -> core::option::Option<&vyre_safetensors::CheckpointTensor>
+pub fn vyre_safetensors::ShardedSafetensorIndex::tensors(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&str, &vyre_safetensors::CheckpointTensor)>
+pub fn vyre_safetensors::ShardedSafetensorIndex::validate_requirements<'a>(&self, requirements: impl core::iter::traits::collect::IntoIterator<Item = vyre_safetensors::SafetensorRequirement<'a>>) -> core::result::Result<(), vyre_safetensors::SafetensorError>
+pub fn vyre_safetensors::ShardedSafetensorIndex::verify_shards<'a>(&self, expected: impl core::iter::traits::collect::IntoIterator<Item = vyre_safetensors::ExpectedShardDigest<'a>>) -> core::result::Result<vyre_safetensors::VerifiedCheckpointIdentity, vyre_safetensors::SafetensorError>
+pub fn vyre_safetensors::VerifiedCheckpointIdentity::shard_digests(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&std::path::Path, &[u8; 32])>
+pub mod vyre_safetensors
+pub struct vyre_safetensors::CheckpointTensor
+pub struct vyre_safetensors::ExpectedShardDigest<'a>
+pub struct vyre_safetensors::SafetensorEntry
+pub struct vyre_safetensors::SafetensorIndex
+pub struct vyre_safetensors::SafetensorRequirement<'a>
+pub struct vyre_safetensors::SafetensorShardIdentity
+pub struct vyre_safetensors::ShardedSafetensorIndex
+pub struct vyre_safetensors::VerifiedCheckpointIdentity
+pub vyre_safetensors::CheckpointTensor::shard: std::path::PathBuf
+pub vyre_safetensors::CheckpointTensor::tensor: vyre_safetensors::SafetensorEntry
+pub vyre_safetensors::ExpectedShardDigest::blake3: [u8; 32]
+pub vyre_safetensors::ExpectedShardDigest::shard: &'a std::path::Path
+pub vyre_safetensors::SafetensorDtype::BF16
+pub vyre_safetensors::SafetensorDtype::BOOL
+pub vyre_safetensors::SafetensorDtype::F16
+pub vyre_safetensors::SafetensorDtype::F32
+pub vyre_safetensors::SafetensorDtype::F64
+pub vyre_safetensors::SafetensorDtype::F8E4M3
+pub vyre_safetensors::SafetensorDtype::F8E5M2
+pub vyre_safetensors::SafetensorDtype::I16
+pub vyre_safetensors::SafetensorDtype::I32
+pub vyre_safetensors::SafetensorDtype::I64
+pub vyre_safetensors::SafetensorDtype::I8
+pub vyre_safetensors::SafetensorDtype::U16
+pub vyre_safetensors::SafetensorDtype::U32
+pub vyre_safetensors::SafetensorDtype::U64
+pub vyre_safetensors::SafetensorDtype::U8
+pub vyre_safetensors::SafetensorEntry::dtype: vyre_safetensors::SafetensorDtype
+pub vyre_safetensors::SafetensorEntry::file_range: core::ops::range::Range<u64>
+pub vyre_safetensors::SafetensorEntry::name: alloc::string::String
+pub vyre_safetensors::SafetensorEntry::shape: alloc::vec::Vec<u64>
+pub vyre_safetensors::SafetensorError::ByteLength
+pub vyre_safetensors::SafetensorError::ByteLength::actual: u64
+pub vyre_safetensors::SafetensorError::ByteLength::expected: u64
+pub vyre_safetensors::SafetensorError::ByteLength::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::DuplicateRequirement
+pub vyre_safetensors::SafetensorError::DuplicateRequirement::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::DuplicateShardDigest
+pub vyre_safetensors::SafetensorError::DuplicateShardDigest::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::HeaderTooLarge
+pub vyre_safetensors::SafetensorError::HeaderTooLarge::header_len: u64
+pub vyre_safetensors::SafetensorError::HeaderTooLarge::maximum: u64
+pub vyre_safetensors::SafetensorError::InvalidName
+pub vyre_safetensors::SafetensorError::InvalidName::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::Io
+pub vyre_safetensors::SafetensorError::Io::detail: alloc::string::String
+pub vyre_safetensors::SafetensorError::Io::path: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::Metadata(alloc::string::String)
+pub vyre_safetensors::SafetensorError::MissingMappedTensor
+pub vyre_safetensors::SafetensorError::MissingMappedTensor::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::MissingMappedTensor::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::MissingRequiredTensor
+pub vyre_safetensors::SafetensorError::MissingRequiredTensor::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::MissingShardDigest
+pub vyre_safetensors::SafetensorError::MissingShardDigest::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::OffsetOverflow
+pub vyre_safetensors::SafetensorError::Overlap
+pub vyre_safetensors::SafetensorError::Overlap::left: alloc::string::String
+pub vyre_safetensors::SafetensorError::Overlap::right: alloc::string::String
+pub vyre_safetensors::SafetensorError::RangeOutOfBounds
+pub vyre_safetensors::SafetensorError::RangeOutOfBounds::data_len: u64
+pub vyre_safetensors::SafetensorError::RangeOutOfBounds::end: u64
+pub vyre_safetensors::SafetensorError::RangeOutOfBounds::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::RangeOutOfBounds::start: u64
+pub vyre_safetensors::SafetensorError::RequiredDtype
+pub vyre_safetensors::SafetensorError::RequiredDtype::actual: vyre_safetensors::SafetensorDtype
+pub vyre_safetensors::SafetensorError::RequiredDtype::expected: vyre_safetensors::SafetensorDtype
+pub vyre_safetensors::SafetensorError::RequiredDtype::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::RequiredShape
+pub vyre_safetensors::SafetensorError::RequiredShape::actual: alloc::vec::Vec<u64>
+pub vyre_safetensors::SafetensorError::RequiredShape::expected: alloc::vec::Vec<u64>
+pub vyre_safetensors::SafetensorError::RequiredShape::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::ShapeOverflow
+pub vyre_safetensors::SafetensorError::ShardDigestMismatch
+pub vyre_safetensors::SafetensorError::ShardDigestMismatch::actual: [u8; 32]
+pub vyre_safetensors::SafetensorError::ShardDigestMismatch::expected: [u8; 32]
+pub vyre_safetensors::SafetensorError::ShardDigestMismatch::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::ShardIndex(alloc::string::String)
+pub vyre_safetensors::SafetensorError::ShardIndexTooLarge
+pub vyre_safetensors::SafetensorError::ShardIndexTooLarge::actual: u64
+pub vyre_safetensors::SafetensorError::ShardIndexTooLarge::maximum: u64
+pub vyre_safetensors::SafetensorError::ShardLengthChanged
+pub vyre_safetensors::SafetensorError::ShardLengthChanged::actual: u64
+pub vyre_safetensors::SafetensorError::ShardLengthChanged::indexed: u64
+pub vyre_safetensors::SafetensorError::ShardLengthChanged::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::TooManyTensors
+pub vyre_safetensors::SafetensorError::TooManyTensors::actual: usize
+pub vyre_safetensors::SafetensorError::TooManyTensors::maximum: usize
+pub vyre_safetensors::SafetensorError::TruncatedHeader
+pub vyre_safetensors::SafetensorError::TruncatedHeader::file_len: u64
+pub vyre_safetensors::SafetensorError::TruncatedHeader::header_len: u64
+pub vyre_safetensors::SafetensorError::TruncatedPrefix
+pub vyre_safetensors::SafetensorError::TruncatedPrefix::file_len: u64
+pub vyre_safetensors::SafetensorError::UnexpectedShardDigest
+pub vyre_safetensors::SafetensorError::UnexpectedShardDigest::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::UnmappedShardTensor
+pub vyre_safetensors::SafetensorError::UnmappedShardTensor::name: alloc::string::String
+pub vyre_safetensors::SafetensorError::UnmappedShardTensor::shard: std::path::PathBuf
+pub vyre_safetensors::SafetensorError::UnsafeShardPath
+pub vyre_safetensors::SafetensorError::UnsafeShardPath::path: std::path::PathBuf
+pub vyre_safetensors::SafetensorRequirement::dtype: vyre_safetensors::SafetensorDtype
+pub vyre_safetensors::SafetensorRequirement::name: &'a str
+pub vyre_safetensors::SafetensorRequirement::shape: &'a [u64]
+pub vyre_safetensors::SafetensorShardIdentity::data_start: u64
+pub vyre_safetensors::SafetensorShardIdentity::file_len: u64
+pub vyre_safetensors::SafetensorShardIdentity::header_digest: [u8; 32]
