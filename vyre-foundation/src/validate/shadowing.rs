@@ -1,4 +1,5 @@
 use crate::validate::{err, Binding, ValidationError, ValidationOptions};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 
 #[inline]
@@ -9,8 +10,10 @@ pub(crate) fn check_local(
     errors: &mut Vec<ValidationError>,
 ) {
     if !options.allow_shadowing && scope.contains_key(name) {
-        errors.push(err(format!(
-            "V008: duplicate local binding `{name}` shadows an outer scope. Fix: choose a unique local name, or opt into nested shadowing with ValidationOptions::with_shadowing(true)."
+        errors.push(err("V008", ValidationPhase::Node, ValidationLocation::Program, format!(
+            "duplicate local binding `{name}` shadows an outer scope"
+        ), format!(
+            "choose a unique local name, or opt into nested shadowing with ValidationOptions::with_shadowing(true)."
         )));
     }
 }
@@ -40,7 +43,7 @@ mod tests {
         let mut errors = Vec::new();
         check_local("x", &scope, ValidationOptions::default(), &mut errors);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message().contains("V008"));
+        assert!(errors[0].code().as_str() == "V008");
     }
 
     #[test]

@@ -453,15 +453,11 @@ impl Program {
                 .all(|node| matches!(node, Node::Region { .. }))
     }
 
-    /// Actionable error text describing why the top-level region invariant
-    /// failed, or `None` when the entry is valid.
+    /// Structural cause for a violated top-level Region invariant.
     #[must_use]
-    pub fn top_level_region_violation(&self) -> Option<String> {
+    pub fn top_level_region_violation_cause(&self) -> Option<String> {
         if self.entry().is_empty() {
-            return Some(
-                "program entry has no top-level Region. Fix: construct runnable programs with Program::wrapped(...) or wrap the body in Node::Region before validation, interpretation, or dispatch."
-                    .to_string(),
-            );
+            return Some("program entry has no top-level Region".to_string());
         }
 
         self.entry()
@@ -470,10 +466,21 @@ impl Program {
             .find(|(_, node)| !matches!(node, Node::Region { .. }))
             .map(|(index, node)| {
                 format!(
-                    "program entry node {index} is `{}` instead of `Node::Region`. Fix: construct runnable programs with Program::wrapped(...) or wrap the top-level body in Node::Region; raw Program::from_raw_parts is reserved for wire decode and negative tests.",
+                    "program entry node {index} is `{}` instead of `Node::Region`",
                     crate::ir_inner::model::node::node_op_id(node)
                 )
             })
+    }
+
+    /// Actionable error text describing why the top-level region invariant
+    /// failed, or `None` when the entry is valid.
+    #[must_use]
+    pub fn top_level_region_violation(&self) -> Option<String> {
+        self.top_level_region_violation_cause().map(|cause| {
+            format!(
+                "{cause}. Fix: construct runnable programs with Program::wrapped(...) or wrap the body in Node::Region before validation, interpretation, or dispatch."
+            )
+        })
     }
 
     /// Mutable entry-point nodes for transformation passes.
@@ -692,8 +699,8 @@ impl Program {
     ///
     /// # Errors
     ///
-    /// Returns [`crate::IrError::WireFormatValidation`] with every validation
-    /// message joined when the structural validator rejects the program.
+    /// Returns [`crate::IrError::Validation`] with every structured issue when
+    /// the structural validator rejects the program.
     pub fn validate(&self) -> crate::error::IrResult<()> {
         if self.validation_mutation_provenance() == ProgramMutationProvenance::Unknown {
             return Err(crate::error::IrError::WireFormatValidation {
@@ -708,14 +715,7 @@ impl Program {
             self.mark_structurally_validated();
             return Ok(());
         }
-        let mut message = String::new();
-        for (index, error) in errors.into_iter().enumerate() {
-            if index > 0 {
-                message.push_str("; ");
-            }
-            message.push_str(error.message());
-        }
-        Err(crate::error::IrError::WireFormatValidation { message })
+        Err(crate::error::IrError::Validation { issues: errors })
     }
 
     #[inline]

@@ -69,6 +69,13 @@ pub enum IrError {
         got: usize,
     },
 
+    /// Structural validation rejected the Program with typed issues.
+    #[error("IR validation rejected the Program: {issues:?}")]
+    Validation {
+        /// Foundation-owned validation issues in deterministic emission order.
+        issues: Vec<crate::validate::ValidationError>,
+    },
+
     /// Wire-format payload failed validation checks.
     #[error(
         "Wire-format validation failed: {message}. Fix: recompile the frontend program set and ensure the compiler only emits valid instructions."

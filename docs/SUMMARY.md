@@ -51,7 +51,6 @@
 - [Vyre Targets](targets.md)
 - [Vyre Thesis](THESIS.md)
 - [What the reference interpreter can and cannot witness](reference-interpreter-witness-limits.md)
-- [vyre Error Codes](error-codes.md)
 - [vyre IR statement semantics](ir-semantics.md)
 - [vyre Memory Model](memory-model.md)
 - [vyre Semver Policy](semver-policy.md)
@@ -138,3 +137,7 @@
 - [Vyre 0.7.2 release notes](release/v0.7.2.md)
 - [Vyre release checklist](RELEASE_CHECKLIST.md)
 - [Vyre release process](RELEASE.md)
+
+# Extension contracts
+
+- [vyre Error Codes](error-codes.md)

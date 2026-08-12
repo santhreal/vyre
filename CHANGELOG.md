@@ -96,6 +96,11 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   features, target conditions, visibility, and destination seam, and optimizer
   pass reference pages are generated from the live pass registry.
 
+- Program validation failures now preserve stable typed rule codes, owning
+  phases, program locations, causes, corrective actions, and retry classes
+  through serialization, diagnostics, execution planning, backend admission,
+  and reference execution.
+
 - Semantic operations now have one foundation-owned
   `OperationRegistration` and validated `OperationRegistry`. Portable flat-byte
   references submit `ReferenceFacet` records in `vyre-reference`; concrete

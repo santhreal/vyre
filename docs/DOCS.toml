@@ -22,6 +22,10 @@ id = "frontend"
 authority = "../vyre-frontend-c/src/lib.rs"
 
 [[owner]]
+id = "foundation"
+authority = "../vyre-foundation/src/lib.rs"
+
+[[owner]]
 id = "historical"
 authority = "DOCS.toml"
 
@@ -987,11 +991,11 @@ nav = false
 path = "error-codes.md"
 title = "vyre Error Codes"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
-authority = "self"
+audience = "extension"
+owner = "foundation"
+kind = "reference"
+section = "Extension contracts"
+authority = "../vyre-foundation/src/validate/validation_error.rs"
 generation = "manual"
 nav = true
 

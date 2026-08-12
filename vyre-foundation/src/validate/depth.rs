@@ -1,4 +1,5 @@
 use crate::validate::{err, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 
 /// Default maximum nested operation-call depth accepted by validation.
 pub const DEFAULT_MAX_CALL_DEPTH: usize = 32;
@@ -41,15 +42,27 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
     limits.node_count = limits.node_count.saturating_add(1);
     if limits.node_count > DEFAULT_MAX_NODE_COUNT && !limits.node_count_reported {
         limits.node_count_reported = true;
-        errors.push(err(format!(
-            "V019: program node count exceeds limit {DEFAULT_MAX_NODE_COUNT}. Fix: split the program into smaller kernels or run an optimization pass before lowering."
-        )));
+        errors.push(err(
+            "V019",
+            ValidationPhase::Limits,
+            ValidationLocation::Program,
+            format!("program node count exceeds limit {DEFAULT_MAX_NODE_COUNT}"),
+            format!(
+            "split the program into smaller kernels or run an optimization pass before lowering."
+        ),
+        ));
     }
     if depth > DEFAULT_MAX_NESTING_DEPTH && !limits.nesting_reported {
         limits.nesting_reported = true;
-        errors.push(err(format!(
-            "V018: program nesting depth {depth} exceeds max {DEFAULT_MAX_NESTING_DEPTH}. Fix: flatten nested If/Loop/Block structures or split the program before lowering."
-        )));
+        errors.push(err(
+            "V018",
+            ValidationPhase::Limits,
+            ValidationLocation::Program,
+            format!("program nesting depth {depth} exceeds max {DEFAULT_MAX_NESTING_DEPTH}"),
+            format!(
+                "flatten nested If/Loop/Block structures or split the program before lowering."
+            ),
+        ));
     }
 }
 
@@ -58,9 +71,13 @@ pub fn check_limits(limits: &mut LimitState, depth: usize, errors: &mut Vec<Vali
 #[must_use]
 pub fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) -> bool {
     if depth > DEFAULT_MAX_EXPR_DEPTH {
-        errors.push(err(format!(
-            "V033: expression nesting depth {depth} exceeds max {DEFAULT_MAX_EXPR_DEPTH}. Fix: split the expression into intermediate let-bindings before lowering."
-        )));
+        errors.push(err(
+            "V033",
+            ValidationPhase::Limits,
+            ValidationLocation::Program,
+            format!("expression nesting depth {depth} exceeds max {DEFAULT_MAX_EXPR_DEPTH}"),
+            format!("split the expression into intermediate let-bindings before lowering."),
+        ));
         return false;
     }
     true
@@ -104,7 +121,7 @@ mod tests {
         let mut errors = Vec::new();
         check_limits(&mut limits, DEFAULT_MAX_NESTING_DEPTH + 1, &mut errors);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message().contains("V018"));
+        assert!(errors[0].code().as_str() == "V018");
     }
 
     #[test]
@@ -128,7 +145,7 @@ mod tests {
         let mut errors = Vec::new();
         assert!(!check_expr_depth(DEFAULT_MAX_EXPR_DEPTH + 1, &mut errors));
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message().contains("V033"));
+        assert!(errors[0].code().as_str() == "V033");
     }
 
     #[test]

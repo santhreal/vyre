@@ -27,9 +27,16 @@ fn examples_are_in_workspace_or_standalone() {
         }
         let name = path.file_name().unwrap().to_string_lossy().to_string();
         let cargo_toml = path.join("Cargo.toml");
+        let template_toml = path.join("Cargo.toml.liquid");
         if !cargo_toml.exists() {
-            // three_substrate_parity has no Cargo.toml  -  baseline it.
-            if name != "three_substrate_parity" {
+            if name != "three_substrate_parity"
+                && !template_toml.is_file()
+                && path.read_dir().is_ok_and(|entries| {
+                    entries
+                        .flatten()
+                        .any(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
+                })
+            {
                 violations.push(format!("{}: missing Cargo.toml", name));
             }
             continue;
@@ -37,9 +44,7 @@ fn examples_are_in_workspace_or_standalone() {
         let content = std::fs::read_to_string(&cargo_toml).unwrap();
         let in_workspace = root_toml.contains(&format!("\"examples/{}\"", name));
         let is_standalone = content.contains("[workspace]");
-        let is_template = name == "libs-template"; // cargo-generate template, not buildable
-
-        if !in_workspace && !is_standalone && !is_template {
+        if !in_workspace && !is_standalone {
             violations.push(format!(
                 "{}: not in workspace members and missing [workspace] declaration",
                 name

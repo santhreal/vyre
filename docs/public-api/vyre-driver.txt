@@ -1579,6 +1579,8 @@ pub vyre_driver::BackendError::PoisonedLock::lock_error: alloc::string::String
 pub vyre_driver::BackendError::UnsupportedFeature
 pub vyre_driver::BackendError::UnsupportedFeature::backend: alloc::string::String
 pub vyre_driver::BackendError::UnsupportedFeature::name: alloc::string::String
+pub vyre_driver::BackendError::Validation
+pub vyre_driver::BackendError::Validation::source: vyre_foundation::validate::validation_error::ValidationError
 pub vyre_driver::BackendLayoutClass::Storage
 pub vyre_driver::BackendLayoutClass::Uniform
 pub vyre_driver::BackendLayoutFingerprint::slots: alloc::vec::Vec<vyre_driver::binding::BackendLayoutSlot>
@@ -1875,6 +1877,8 @@ pub vyre_driver::backend::BackendError::PoisonedLock::lock_error: alloc::string:
 pub vyre_driver::backend::BackendError::UnsupportedFeature
 pub vyre_driver::backend::BackendError::UnsupportedFeature::backend: alloc::string::String
 pub vyre_driver::backend::BackendError::UnsupportedFeature::name: alloc::string::String
+pub vyre_driver::backend::BackendError::Validation
+pub vyre_driver::backend::BackendError::Validation::source: vyre_foundation::validate::validation_error::ValidationError
 pub vyre_driver::backend::BackendPrecedence::id: &'static str
 pub vyre_driver::backend::BackendPrecedence::rank: u32
 pub vyre_driver::backend::BackendRegistration::factory: fn() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError>

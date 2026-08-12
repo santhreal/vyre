@@ -219,4 +219,9 @@ fn default_backend_validation_rejects_distributed_collectives() {
         msg.contains("vyre.node.all_reduce"),
         "driver validation must reject the first unsupported collective explicitly; got: {msg}"
     );
+    assert_eq!(err.code().as_str(), "V056");
+    assert_eq!(
+        err.phase(),
+        vyre_foundation::validate::ValidationPhase::Capability
+    );
 }

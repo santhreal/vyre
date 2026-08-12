@@ -48,15 +48,11 @@ fn backend_errors_contain_fix_guidance() {
     }
 }
 
-/// BackendError::new must synthesize a generic Fix when the caller omits one.
+/// BackendError::new preserves owner-authored messages without parsing prose.
 #[test]
-fn backend_error_new_synthesizes_fix_when_absent() {
+fn backend_error_new_preserves_complete_message() {
     let err = BackendError::new("something broke");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("Fix:"),
-        "BackendError::new must ensure Fix: is present; got: {msg}"
-    );
+    assert_eq!(err.to_string(), "something broke");
 }
 
 // ---------------------------------------------------------------------------

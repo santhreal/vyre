@@ -9,6 +9,7 @@ use crate::validate::depth;
 use crate::validate::report::warn;
 use crate::validate::typecheck::{self, expr_type};
 use crate::validate::{err, Binding, ValidationError, ValidationOptions, ValidationReport};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 
 #[allow(clippy::too_many_lines)]
@@ -28,9 +29,13 @@ pub(crate) fn validate_expr(
         Expr::LitU32(_) | Expr::LitI32(_) | Expr::LitF32(_) | Expr::LitBool(_) => {}
         Expr::Var(name) => {
             if !scope.contains_key(name.as_str()) {
-                report.errors.push(err(format!(
-                    "reference to undeclared variable `{name}`. Fix: add `let {name} = ...;` before this use."
-                )));
+                report.errors.push(err(
+                    "V066",
+                    ValidationPhase::Expression,
+                    ValidationLocation::Program,
+                    format!("reference to undeclared variable `{name}`"),
+                    format!("add `let {name} = ...;` before this use."),
+                ));
             }
         }
         // A buffer reference names a buffer instead of producing a value, so
@@ -40,8 +45,10 @@ pub(crate) fn validate_expr(
         // arguments in that position; reaching it here means it appeared
         // somewhere that expects a value.
         Expr::BufferRef { buffer } => {
-            report.errors.push(err(format!(
-                "V051: buffer reference `{buffer}` is not a value and is legal only as a call argument. Fix: pass it directly as an argument to a composite op, or use `Expr::Load {{ buffer: {buffer}, index }}` to read an element."
+            report.errors.push(err("V051", ValidationPhase::Expression, ValidationLocation::Program, format!(
+                "buffer reference `{buffer}` is not a value and is legal only as a call argument"
+            ), format!(
+                "pass it directly as an argument to a composite op, or use `Expr::Load {{ buffer: {buffer}, index }}` to read an element."
             )));
         }
         Expr::Load { buffer, index } => {
@@ -50,16 +57,24 @@ pub(crate) fn validate_expr(
         }
         Expr::BufLen { buffer } => {
             if !buffers.contains_key(buffer.as_str()) {
-                report.errors.push(err(format!(
-                    "buflen of unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
-                )));
+                report.errors.push(err(
+                    "V067",
+                    ValidationPhase::Expression,
+                    ValidationLocation::Program,
+                    format!("buflen of unknown buffer `{buffer}`"),
+                    format!("declare it in Program::buffers."),
+                ));
             }
         }
         Expr::InvocationId { axis } | Expr::WorkgroupId { axis } | Expr::LocalId { axis } => {
             if *axis > 2 {
-                report.errors.push(err(format!(
-                    "invocation/workgroup ID axis {axis} out of range. Fix: use 0 (x), 1 (y), or 2 (z)."
-                )));
+                report.errors.push(err(
+                    "V068",
+                    ValidationPhase::Expression,
+                    ValidationLocation::Program,
+                    format!("invocation/workgroup ID axis {axis} out of range"),
+                    format!("use 0 (x), 1 (y), or 2 (z)."),
+                ));
             }
         }
         Expr::BinOp { op, left, right } => {
@@ -102,9 +117,18 @@ pub(crate) fn validate_expr(
             for (slot, operand) in [("a", a.as_ref()), ("b", b.as_ref()), ("c", c.as_ref())] {
                 if let Some(ty) = expr_type(operand, buffers, scope) {
                     if ty != DataType::F32 {
-                        report.errors.push(err(format!(
-                            "V028: Fma requires three f32 operands. Fma operand `{slot}` has type `{ty}`, must be `f32`. Fix: cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
-                        )));
+                        report.errors.push(err("V028", ValidationPhase::Type, ValidationLocation::Operand {
+                                node: 0,
+                                operand: match slot {
+                                    "a" => 0,
+                                    "b" => 1,
+                                    _ => 2,
+                                },
+                            }, format!(
+                                "Fma requires three f32 operands. Fma operand `{slot}` has type `{ty}`, must be `f32`"
+                            ), format!(
+                                "cast the operand to F32 before Fma, or use the integer mul/add form explicitly."
+                            )));
                     }
                 }
             }
@@ -124,36 +148,46 @@ pub(crate) fn validate_expr(
             let f_ty = expr_type(false_val, buffers, scope);
             if let (Some(t), Some(f)) = (&t_ty, &f_ty) {
                 if t != f {
-                    report.errors.push(err(format!(
-                        "V029: Select branches have mismatched types: true=`{t}`, false=`{f}`. Fix: cast both branches to the same type before Select."
-                    )));
+                    report.errors.push(err(
+                        "V029",
+                        ValidationPhase::Expression,
+                        ValidationLocation::Program,
+                        format!("Select branches have mismatched types: true=`{t}`, false=`{f}`"),
+                        format!("cast both branches to the same type before Select."),
+                    ));
                 }
             }
         }
         Expr::Cast { target, value } => {
             validate_expr(value, buffers, scope, options, report, depth_level + 1);
             if !options.supports_cast_target(target) {
-                report.errors.push(err(format!(
-                    "V034: backend `{}` does not support cast target `{target}`. Fix: choose a target type this backend supports, or validate against a backend that advertises `{target}` cast support.",
+                report.errors.push(err("V034", ValidationPhase::Expression, ValidationLocation::Program, format!(
+                    "backend `{}` does not support cast target `{target}`",
                     options.backend_name()
-                )));
+                ), format!("choose a target type this backend supports, or validate against a backend that advertises `{target}` cast support")));
             }
             if let Some(src) = expr_type(value, buffers, scope) {
                 if target == &DataType::Bytes && src != DataType::Bytes {
                     report.errors.push(err(
-                        "V023: cast to Bytes is unsupported in target-text lowering. Fix: use buffer load/store directly for byte data."
-                            .to_string(),
+                        "V023",
+                        ValidationPhase::Expression,
+                        ValidationLocation::Program,
+                        "cast to Bytes is unsupported in target-text lowering".to_string(),
+                        "use buffer load/store directly for byte data.".to_string(),
                     ));
                 } else if !cast_is_valid(&src, target) {
                     let legal_targets = cast_target_set(&src);
-                    report.errors.push(err(format!(
-                        "V012: unsupported cast from `{src}` to `{target}`. Source type `{src}` legal targets are {legal_targets}. Choose one of those targets or rewrite this cast expression before validation."
-                    )));
+                    report.errors.push(err("V012", ValidationPhase::Expression, ValidationLocation::Program, format!(
+                        "unsupported cast from `{src}` to `{target}`. Source type `{src}` legal targets are {legal_targets}. Choose one of those targets or rewrite this cast expression before validation"
+                    ), "rewrite the program to satisfy this validation invariant"));
                 } else if cast_is_narrowing(&src, target) {
                     let legal_targets = cast_target_set(&src);
-                    report.warnings.push(warn(format!(
-                        "V035: narrowing cast from `{src}` to `{target}` may truncate high bits. Source type `{src}` legal targets are {legal_targets}. Use a non-narrowing target or prove the source value fits before casting."
-                    )));
+                    report.warnings.push(warn(
+                        "V035",
+                        ValidationLocation::Program,
+                        format!("narrowing cast from `{src}` to `{target}` may truncate high bits"),
+                        format!("source type `{src}` legal targets are {legal_targets}; use a non-narrowing target or prove the source value fits before casting"),
+                    ));
                 }
             }
         }
@@ -202,8 +236,10 @@ pub(crate) fn validate_expr(
             // (and only on backends whose emit happens to catch it).
             if op.is_bitwise() {
                 if let Some(DataType::F32) = expr_type(value, buffers, scope) {
-                    report.errors.push(err(format!(
-                        "V047: subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`). Fix: use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction."
+                    report.errors.push(err("V047", ValidationPhase::Expression, ValidationLocation::Program, format!(
+                        "subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`)"
+                    ), format!(
+                        "use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction."
                     )));
                 }
             }
@@ -223,9 +259,7 @@ fn validate_subgroup_expr_support(
     options: ValidationOptions<'_>,
 ) {
     if !options.requires_subgroup_ops() {
-        errors.push(err(
-            "V041: subgroup expressions require backend subgroup-ops support. Fix: Validate with ValidationOptions::with_backend(backend) where backend.supports_subgroup_ops() == true.".to_string(),
-        ));
+        errors.push(err("V041", ValidationPhase::Expression, ValidationLocation::Program, "subgroup expressions require backend subgroup-ops support".to_string(), "Validate with ValidationOptions::with_backend(backend) where backend.supports_subgroup_ops() == true.".to_string()));
     }
 }
 
@@ -235,28 +269,44 @@ fn validate_expr_extension(
 ) {
     if extension.extension_kind().is_empty() {
         errors.push(err(
-            "V030: opaque expression extension has an empty extension_kind. Fix: return a stable non-empty namespace from ExprNode::extension_kind.",
+            "V030",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            "opaque expression extension has an empty extension_kind",
+            "return a stable non-empty namespace from ExprNode::extension_kind.",
         ));
     }
     if extension.debug_identity().is_empty() {
-        errors.push(err(format!(
-            "V030: opaque expression extension `{}` has an empty debug_identity. Fix: return a stable human-readable identity from ExprNode::debug_identity.",
-            extension.extension_kind()
-        )));
+        errors.push(err(
+            "V030",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!(
+                "opaque expression extension `{}` has an empty debug_identity",
+                extension.extension_kind()
+            ),
+            "return a stable human-readable identity from ExprNode::debug_identity",
+        ));
     }
     if extension.result_type().is_none() {
-        errors.push(err(format!(
-            "V030: opaque expression extension `{}`/`{}` has no static result type. Fix: implement ExprNode::result_type so validation, CSE, and backends know the produced DataType.",
+        errors.push(err("V030", ValidationPhase::Expression, ValidationLocation::Program, format!(
+            "opaque expression extension `{}`/`{}` has no static result type",
             extension.extension_kind(),
             extension.debug_identity()
-        )));
+        ), "implement ExprNode::result_type so validation, CSE, and backends know the produced DataType"));
     }
     if let Err(message) = extension.validate_extension() {
-        errors.push(err(format!(
-            "V030: opaque expression extension `{}`/`{}` failed validation: {message}",
-            extension.extension_kind(),
-            extension.debug_identity()
-        )));
+        errors.push(err(
+            "V030",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!(
+                "opaque expression extension `{}`/`{}` failed validation: {message}",
+                extension.extension_kind(),
+                extension.debug_identity()
+            ),
+            "rewrite the program to satisfy this validation invariant",
+        ));
     }
 }
 
@@ -264,9 +314,13 @@ fn validate_expr_extension(
 pub(crate) fn validate_output_markers(buffers: &[BufferDecl], errors: &mut Vec<ValidationError>) {
     let outputs = output_marker_count(buffers);
     if outputs > 1 {
-        errors.push(err(format!(
-            "V022: program declares {outputs} output buffers. Fix: mark at most one result buffer with BufferDecl::output(...)."
-        )));
+        errors.push(err(
+            "V022",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!("program declares {outputs} output buffers"),
+            format!("mark at most one result buffer with BufferDecl::output(...)."),
+        ));
     }
 }
 
@@ -524,12 +578,11 @@ mod tests {
             );
             assert!(
                 report.errors.iter().any(|error| {
-                    let m = error.message();
-                    m.starts_with("V047:")
-                        && m.contains(op_name)
-                        && m.contains("bitwise reduction")
-                        && m.contains("rejects f32 operands")
-                        && m.contains("Fix:")
+                    error.code().as_str() == "V047"
+                        && error.cause().contains(op_name)
+                        && error.cause().contains("bitwise reduction")
+                        && error.cause().contains("rejects f32 operands")
+                        && !error.corrective_action().is_empty()
                 }),
                 "subgroup `{op_name}` over an f32 operand must be rejected with V047, got {:?}",
                 report.errors
@@ -578,7 +631,7 @@ mod tests {
                 !report
                     .errors
                     .iter()
-                    .any(|error| error.message().starts_with("V047:")),
+                    .any(|error| error.code().as_str() == "V047"),
                 "f32 arithmetic subgroup reduction must not be rejected as bitwise, got {:?}",
                 report.errors
             );
@@ -595,7 +648,7 @@ mod tests {
             report
                 .errors
                 .iter()
-                .any(|error| error.message().contains("V016")),
+                .any(|error| error.code().as_str() == "V016"),
             "unknown call must be rejected by the canonical registry: {:?}",
             report.errors
         );
@@ -611,7 +664,7 @@ mod tests {
             report
                 .errors
                 .iter()
-                .any(|error| error.message().contains("V022")),
+                .any(|error| error.code().as_str() == "V022"),
             "typed call mismatch must be rejected from the canonical signature: {:?}",
             report.errors
         );

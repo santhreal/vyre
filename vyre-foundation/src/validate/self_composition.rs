@@ -6,13 +6,17 @@ use crate::composition::duplicate_self_exclusive_regions;
 use crate::ir::Node;
 #[cfg(test)]
 use crate::validate::{err, ValidationError};
+#[cfg(test)]
+use crate::validate::{ValidationLocation, ValidationPhase};
 
 /// Reject programs that compose the same self-exclusive region twice.
 #[cfg(test)]
 pub(crate) fn validate_self_composition(nodes: &[Node], errors: &mut Vec<ValidationError>) {
     for generator in duplicate_self_exclusive_regions(nodes) {
-        errors.push(err(format!(
-            "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program. Fix: split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
+        errors.push(err("V115", ValidationPhase::Composition, ValidationLocation::Program, format!(
+            "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program"
+        ), format!(
+            "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
         )));
     }
 }
@@ -46,8 +50,10 @@ mod tests {
 
         let mut errors = Vec::new();
         validate_self_composition(program.entry(), &mut errors);
-        assert!(errors
-            .iter()
-            .any(|error| { error.message.contains("marked non-composable with itself") }));
+        assert!(errors.iter().any(|error| {
+            error
+                .message()
+                .contains("marked non-composable with itself")
+        }));
     }
 }

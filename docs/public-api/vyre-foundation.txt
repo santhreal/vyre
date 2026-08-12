@@ -62,6 +62,10 @@
 #[non_exhaustive] pub enum vyre_foundation::transform::compiler::typed_arena::TypedArenaError
 #[non_exhaustive] pub enum vyre_foundation::transform::compiler::visitor_walk::VisitorWalkError
 #[non_exhaustive] pub enum vyre_foundation::transform::parallelism::DispatchGroup
+#[non_exhaustive] pub enum vyre_foundation::validate::ValidationLocation
+#[non_exhaustive] pub enum vyre_foundation::validate::ValidationPhase
+#[non_exhaustive] pub enum vyre_foundation::validate::validation_error::ValidationLocation
+#[non_exhaustive] pub enum vyre_foundation::validate::validation_error::ValidationPhase
 #[non_exhaustive] pub struct vyre_foundation::AlgebraicLawRegistration
 #[non_exhaustive] pub struct vyre_foundation::DataEdge
 #[non_exhaustive] pub struct vyre_foundation::GraphNode
@@ -74,11 +78,8 @@
 #[non_exhaustive] pub struct vyre_foundation::graph_view::DataEdge
 #[non_exhaustive] pub struct vyre_foundation::graph_view::GraphNode
 #[non_exhaustive] pub struct vyre_foundation::graph_view::NodeGraph
-#[non_exhaustive] pub struct vyre_foundation::ir::ValidationError
 #[non_exhaustive] pub struct vyre_foundation::optimizer::cost::CostCertificate
 #[non_exhaustive] pub struct vyre_foundation::program_caps::RequiredCapabilities
-#[non_exhaustive] pub struct vyre_foundation::validate::ValidationError
-#[non_exhaustive] pub struct vyre_foundation::validate::validation_error::ValidationError
 #[repr(u8)] pub enum vyre_foundation::optimizer::program_soa::NodeKind
 impl core::borrow::Borrow<str> for vyre_foundation::ir::Ident
 impl core::clone::Clone for vyre_foundation::ir::Program
@@ -100,6 +101,7 @@ impl core::convert::From<&'static vyre_foundation::operation::OperationRegistrat
 impl core::convert::From<&alloc::string::String> for vyre_foundation::ir::Ident
 impl core::convert::From<&str> for vyre_foundation::ir::Ident
 impl core::convert::From<&vyre_foundation::ir::Ident> for vyre_foundation::ir::Ident
+impl core::convert::From<&vyre_foundation::validate::validation_error::ValidationError> for vyre_foundation::diagnostics::Diagnostic
 impl core::convert::From<alloc::string::String> for vyre_foundation::ir::Ident
 impl core::convert::From<alloc::string::String> for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl core::convert::From<alloc::sync::Arc<str>> for vyre_foundation::ir::Ident
@@ -110,6 +112,7 @@ impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapsho
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::convert::From<vyre_foundation::optimizer::eqsat_gpu::GpuEGraphSnapshotIntegrityError> for vyre_foundation::optimizer::eqsat_gpu::GpuEGraphDeviceImageError
 impl core::convert::From<vyre_foundation::serial::wire::encode::error::WireEncodeErr> for alloc::string::String
+impl core::convert::From<vyre_foundation::validate::validation_error::ValidationError> for vyre_foundation::diagnostics::Diagnostic
 impl core::default::Default for vyre_foundation::execution_plan::SchedulingPolicy
 impl core::default::Default for vyre_foundation::ir::MemoryHints
 impl core::default::Default for vyre_foundation::ir::Program
@@ -133,6 +136,7 @@ impl core::error::Error for vyre_foundation::serial::text::TextParseError
 impl core::error::Error for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl core::error::Error for vyre_foundation::transform::autodiff::error::AutodiffError
 impl core::error::Error for vyre_foundation::transform::collectives::SingleRankCollectiveError
+impl core::error::Error for vyre_foundation::validate::validation_error::ValidationError
 impl core::error::Error for vyre_foundation::vast::VastEditCorpusError
 impl core::fmt::Debug for vyre_foundation::ir::Ident
 impl core::fmt::Debug for vyre_foundation::optimizer::ctx::AnalysisCache
@@ -162,6 +166,7 @@ impl core::fmt::Display for vyre_foundation::serial::text::TextParseError
 impl core::fmt::Display for vyre_foundation::serial::wire::encode::error::WireEncodeErr
 impl core::fmt::Display for vyre_foundation::transform::autodiff::error::AutodiffError
 impl core::fmt::Display for vyre_foundation::transform::collectives::SingleRankCollectiveError
+impl core::fmt::Display for vyre_foundation::validate::validation_error::ValidationCode
 impl core::fmt::Display for vyre_foundation::validate::validation_error::ValidationError
 impl core::fmt::Display for vyre_foundation::vast::VastEditCorpusError
 impl core::hash::Hash for vyre_foundation::ir::Ident
@@ -360,8 +365,9 @@ impl vyre_foundation::transform::compiler::shader_provider::InventoryShaderProvi
 impl vyre_foundation::transform::compiler::string_interner::StringInterner
 impl vyre_foundation::transform::compiler::typed_arena::TypedArena
 impl vyre_foundation::validate::report::ValidationReport
-impl vyre_foundation::validate::report::ValidationWarning
+impl vyre_foundation::validate::validation_error::ValidationCode
 impl vyre_foundation::validate::validation_error::ValidationError
+impl vyre_foundation::validate::validation_error::ValidationPhase
 impl vyre_foundation::vast::VastFile
 impl vyre_foundation::vast::VastHeader
 impl vyre_foundation::vast::VastNode
@@ -369,6 +375,8 @@ impl<'a> vyre_foundation::ir::ArenaProgram<'a>
 impl<'a> vyre_foundation::serial::envelope::WireReader<'a>
 impl<'a> vyre_foundation::validate::options::ValidationOptions<'a>
 impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::operation::TargetId
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::validate::validation_error::ValidationCode
+impl<'de> serde_core::de::Deserialize<'de> for vyre_foundation::validate::validation_error::ValidationError
 impl<K, V> core::default::Default for vyre_foundation::ir::model::program::Scope<K, V>
 impl<K, V> vyre_foundation::ir::model::program::Scope<K, V> where K: core::clone::Clone + core::cmp::Eq + core::hash::Hash, V: core::clone::Clone
 impl<L: vyre_foundation::optimizer::eqsat::ENodeLang, F: core::ops::function::Fn() -> bool> vyre_foundation::optimizer::eqsat::DeviceAwareRule<L, F>
@@ -471,6 +479,10 @@ pub const fn vyre_foundation::serial::wire::encode::error::WireEncodeErr::static
 pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::new(capacity_bytes: u32) -> Self
 pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::reset(&mut self)
 pub const fn vyre_foundation::transform::compiler::typed_arena::TypedArena::used_bytes(&self) -> u32
+pub const fn vyre_foundation::validate::validation_error::ValidationError::location(&self) -> &vyre_foundation::validate::validation_error::ValidationLocation
+pub const fn vyre_foundation::validate::validation_error::ValidationError::phase(&self) -> vyre_foundation::validate::validation_error::ValidationPhase
+pub const fn vyre_foundation::validate::validation_error::ValidationError::retry(&self) -> vyre_foundation::diagnostics::RetryClass
+pub const fn vyre_foundation::validate::validation_error::ValidationPhase::as_str(self) -> &'static str
 pub const vyre_foundation::algebra::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::composition::SELF_EXCLUSIVE_REGION_SUFFIX: &str
 pub const vyre_foundation::ir::DEFAULT_MAX_CALL_DEPTH: usize
@@ -631,6 +643,7 @@ pub const vyre_foundation::validate::validate::DEFAULT_MAX_CALL_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_EXPR_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_NESTING_DEPTH: usize
 pub const vyre_foundation::validate::validate::DEFAULT_MAX_NODE_COUNT: usize
+pub const vyre_foundation::validate::validation_error::ValidationCode::V056: Self
 pub const vyre_foundation::vast::HEADER_LEN: usize
 pub const vyre_foundation::vast::NODE_STRIDE_U32: usize
 pub const vyre_foundation::vast::SENTINEL: u32
@@ -735,6 +748,8 @@ pub fn vyre_foundation::cpu_op::CategoryAOp::program() -> vyre_foundation::ir::P
 pub fn vyre_foundation::cpu_op::CpuOp::cpu(input: &[u8], output: &mut alloc::vec::Vec<u8>)
 pub fn vyre_foundation::diagnostics::Diagnostic::error(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::diagnostics::Diagnostic::from(issue: &vyre_foundation::validate::validation_error::ValidationError) -> Self
+pub fn vyre_foundation::diagnostics::Diagnostic::from(issue: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::note(code: &'static str, message: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::Diagnostic::render_human(&self) -> alloc::string::String
 pub fn vyre_foundation::diagnostics::Diagnostic::to_json(&self) -> alloc::string::String
@@ -745,6 +760,7 @@ pub fn vyre_foundation::diagnostics::Diagnostic::with_fix(self, fix: impl core::
 pub fn vyre_foundation::diagnostics::Diagnostic::with_location(self, location: vyre_foundation::diagnostics::OpLocation) -> Self
 pub fn vyre_foundation::diagnostics::DiagnosticCode::as_str(&self) -> &str
 pub fn vyre_foundation::diagnostics::DiagnosticCode::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::diagnostics::DiagnosticCode::from_owned(code: alloc::string::String) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::op(op_id: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_attr(self, name: impl core::convert::Into<alloc::borrow::Cow<'static, str>>) -> Self
 pub fn vyre_foundation::diagnostics::OpLocation::with_operand(self, index: u32) -> Self
@@ -1074,6 +1090,7 @@ pub fn vyre_foundation::ir::Program::to_text(&self) -> core::result::Result<allo
 pub fn vyre_foundation::ir::Program::to_wire(&self) -> core::result::Result<alloc::vec::Vec<u8>, vyre_foundation::error::IrError>
 pub fn vyre_foundation::ir::Program::to_wire_into(&self, dst: &mut alloc::vec::Vec<u8>) -> core::result::Result<(), vyre_foundation::error::IrError>
 pub fn vyre_foundation::ir::Program::top_level_region_violation(&self) -> core::option::Option<alloc::string::String>
+pub fn vyre_foundation::ir::Program::top_level_region_violation_cause(&self) -> core::option::Option<alloc::string::String>
 pub fn vyre_foundation::ir::Program::try_normalized_cache_digest(&self) -> core::result::Result<[u8; 32], alloc::string::String>
 pub fn vyre_foundation::ir::Program::validate(&self) -> vyre_foundation::error::IrResult<()>
 pub fn vyre_foundation::ir::Program::validation_mutation_provenance(&self) -> vyre_foundation::ir_inner::model::program::meta::ProgramMutationProvenance
@@ -2357,15 +2374,24 @@ pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_backend(s
 pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_backend_capabilities(self, backend_capabilities: vyre_foundation::validate::options::BackendCapabilities) -> Self
 pub fn vyre_foundation::validate::options::ValidationOptions<'a>::with_shadowing(self, allow_shadowing: bool) -> Self
 pub fn vyre_foundation::validate::report::ValidationReport::is_ok(&self) -> bool
-pub fn vyre_foundation::validate::report::ValidationWarning::message(&self) -> &str
 pub fn vyre_foundation::validate::shape_predicate::check_shape_predicates(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate::fma_f32_violations(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate::validate(program: &vyre_foundation::ir::Program) -> alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_foundation::validate::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
 pub fn vyre_foundation::validate::validate_with_options(program: &vyre_foundation::ir::Program, options: vyre_foundation::validate::options::ValidationOptions<'_>) -> vyre_foundation::validate::report::ValidationReport
-pub fn vyre_foundation::validate::validation_error::ValidationError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_foundation::validate::validation_error::ValidationError::message(&self) -> &str
+pub fn vyre_foundation::validate::validation_error::ValidationCode::as_str(&self) -> &str
+pub fn vyre_foundation::validate::validation_error::ValidationCode::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
+pub fn vyre_foundation::validate::validation_error::ValidationCode::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::validate::validation_error::ValidationCode::phase(&self) -> core::option::Option<vyre_foundation::validate::validation_error::ValidationPhase>
+pub fn vyre_foundation::validate::validation_error::ValidationError::cause(&self) -> &str
+pub fn vyre_foundation::validate::validation_error::ValidationError::code(&self) -> &vyre_foundation::validate::validation_error::ValidationCode
+pub fn vyre_foundation::validate::validation_error::ValidationError::corrective_action(&self) -> &str
+pub fn vyre_foundation::validate::validation_error::ValidationError::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
+pub fn vyre_foundation::validate::validation_error::ValidationError::diagnostic(&self) -> vyre_foundation::diagnostics::Diagnostic
+pub fn vyre_foundation::validate::validation_error::ValidationError::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_foundation::validate::validation_error::ValidationError::message(&self) -> alloc::borrow::Cow<'_, str>
+pub fn vyre_foundation::validate::validation_error::ValidationError::trace_event(&self) -> vyre_foundation::validate::validation_error::ValidationTraceEvent
 pub fn vyre_foundation::validate::validation_error::ValidationError::unsupported_op(backend: &'static str, op_id: &alloc::sync::Arc<str>, node_index: usize) -> Self
 pub fn vyre_foundation::vast::VastEditCorpusError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::vast::VastFile::read_row_bytes(file_bytes: &[u8], file_index: u32) -> core::option::Option<Self>
@@ -2804,6 +2830,7 @@ pub struct vyre_foundation::ir::ProgramGraphNode
 pub struct vyre_foundation::ir::ProgramGraphValue
 pub struct vyre_foundation::ir::ProgramStats
 pub struct vyre_foundation::ir::RegionId(pub u32)
+pub struct vyre_foundation::ir::ValidationError
 pub struct vyre_foundation::ir::ValueContract
 pub struct vyre_foundation::ir::VarId(pub u32)
 pub struct vyre_foundation::ir::cse::CseCtx
@@ -3012,14 +3039,18 @@ pub struct vyre_foundation::transform::compiler::visitor_walk::VisitorWalkOp
 pub struct vyre_foundation::transform::inline::InlineCtx
 pub struct vyre_foundation::validate::BackendCapabilities
 pub struct vyre_foundation::validate::LimitState
+pub struct vyre_foundation::validate::ValidationCode(_)
+pub struct vyre_foundation::validate::ValidationError
 pub struct vyre_foundation::validate::ValidationOptions<'a>
 pub struct vyre_foundation::validate::ValidationReport
-pub struct vyre_foundation::validate::ValidationWarning
+pub struct vyre_foundation::validate::ValidationTraceEvent
 pub struct vyre_foundation::validate::depth::LimitState
 pub struct vyre_foundation::validate::options::BackendCapabilities
 pub struct vyre_foundation::validate::options::ValidationOptions<'a>
 pub struct vyre_foundation::validate::report::ValidationReport
-pub struct vyre_foundation::validate::report::ValidationWarning
+pub struct vyre_foundation::validate::validation_error::ValidationCode(_)
+pub struct vyre_foundation::validate::validation_error::ValidationError
+pub struct vyre_foundation::validate::validation_error::ValidationTraceEvent
 pub struct vyre_foundation::vast::VastChangedRange
 pub struct vyre_foundation::vast::VastEdit<'a>
 pub struct vyre_foundation::vast::VastEditCorpusCase<'a>
@@ -3071,6 +3102,8 @@ pub type vyre_foundation::serial::envelope::test_helpers::WireRoundTrip::EncodeE
 pub type vyre_foundation::transform::autodiff::PullbackMap = rustc_hash::FxHashMap<usize, vyre_foundation::ir::Expr>
 pub type vyre_foundation::transform::autodiff::grad::PullbackMap = rustc_hash::FxHashMap<usize, vyre_foundation::ir::Expr>
 pub type vyre_foundation::transform::inline::OpResolver = fn(&str) -> core::option::Option<vyre_foundation::ir::Program>
+pub type vyre_foundation::validate::ValidationWarning = vyre_foundation::diagnostics::Diagnostic
+pub type vyre_foundation::validate::report::ValidationWarning = vyre_foundation::diagnostics::Diagnostic
 pub type vyre_foundation::vast::VastEditDigest = [u8; 32]
 pub type vyre_foundation::visit::Evaluatable::Value
 pub type vyre_foundation::visit::ExprVisitor::Break
@@ -3159,6 +3192,8 @@ pub vyre_foundation::IrError::UnknownDialect::requested: alloc::string::String
 pub vyre_foundation::IrError::UnknownOp
 pub vyre_foundation::IrError::UnknownOp::dialect: alloc::string::String
 pub vyre_foundation::IrError::UnknownOp::op: alloc::string::String
+pub vyre_foundation::IrError::Validation
+pub vyre_foundation::IrError::Validation::issues: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub vyre_foundation::IrError::VersionMismatch
 pub vyre_foundation::IrError::VersionMismatch::expected: u32
 pub vyre_foundation::IrError::VersionMismatch::found: u32
@@ -3310,6 +3345,8 @@ pub vyre_foundation::error::IrError::UnknownDialect::requested: alloc::string::S
 pub vyre_foundation::error::IrError::UnknownOp
 pub vyre_foundation::error::IrError::UnknownOp::dialect: alloc::string::String
 pub vyre_foundation::error::IrError::UnknownOp::op: alloc::string::String
+pub vyre_foundation::error::IrError::Validation
+pub vyre_foundation::error::IrError::Validation::issues: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub vyre_foundation::error::IrError::VersionMismatch
 pub vyre_foundation::error::IrError::VersionMismatch::expected: u32
 pub vyre_foundation::error::IrError::VersionMismatch::found: u32
@@ -3397,6 +3434,8 @@ pub vyre_foundation::execution_plan::PlanError::PeakBudgetExceeded::planned_byte
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::element: vyre_spec::data_type::DataType
 pub vyre_foundation::execution_plan::PlanError::RuntimeSizedBuffer::name: alloc::string::String
+pub vyre_foundation::execution_plan::PlanError::Validation
+pub vyre_foundation::execution_plan::PlanError::Validation::issues: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
 pub vyre_foundation::execution_plan::PolicyRoute::CpuSimd
 pub vyre_foundation::execution_plan::PolicyRoute::GpuPipeline
 pub vyre_foundation::execution_plan::PolicyRoute::PersistentMegakernel
@@ -3750,7 +3789,6 @@ pub vyre_foundation::ir::ShapePredicate::Not(alloc::boxed::Box<vyre_foundation::
 pub vyre_foundation::ir::ShapePredicate::Or(alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>, alloc::boxed::Box<vyre_foundation::ir::ShapePredicate>)
 pub vyre_foundation::ir::UnresolvedCalls::Keep
 pub vyre_foundation::ir::UnresolvedCalls::Reject
-pub vyre_foundation::ir::ValidationError::message: alloc::borrow::Cow<'static, str>
 pub vyre_foundation::ir::Value::Bool(bool)
 pub vyre_foundation::ir::Value::F32(f32)
 pub vyre_foundation::ir::Value::I32(i32)
@@ -5079,13 +5117,36 @@ pub vyre_foundation::validate::BackendCapabilities::supports_subgroup_ops: bool
 pub vyre_foundation::validate::LimitState::nesting_reported: bool
 pub vyre_foundation::validate::LimitState::node_count: usize
 pub vyre_foundation::validate::LimitState::node_count_reported: bool
-pub vyre_foundation::validate::ValidationError::message: alloc::borrow::Cow<'static, str>
+pub vyre_foundation::validate::ValidationLocation::Buffer(alloc::borrow::Cow<'static, str>)
+pub vyre_foundation::validate::ValidationLocation::Expression
+pub vyre_foundation::validate::ValidationLocation::Expression::depth: u32
+pub vyre_foundation::validate::ValidationLocation::Expression::node: u32
+pub vyre_foundation::validate::ValidationLocation::Node(u32)
+pub vyre_foundation::validate::ValidationLocation::Operand
+pub vyre_foundation::validate::ValidationLocation::Operand::node: u32
+pub vyre_foundation::validate::ValidationLocation::Operand::operand: u32
+pub vyre_foundation::validate::ValidationLocation::Operation(alloc::borrow::Cow<'static, str>)
+pub vyre_foundation::validate::ValidationLocation::Program
+pub vyre_foundation::validate::ValidationLocation::Traversal
+pub vyre_foundation::validate::ValidationLocation::Traversal::ordinal: u64
+pub vyre_foundation::validate::ValidationLocation::WorkgroupAxis(u8)
 pub vyre_foundation::validate::ValidationOptions::allow_shadowing: bool
 pub vyre_foundation::validate::ValidationOptions::backend: core::option::Option<&'a dyn vyre_foundation::validate::options::BackendValidationCapabilities>
 pub vyre_foundation::validate::ValidationOptions::backend_capabilities: core::option::Option<vyre_foundation::validate::options::BackendCapabilities>
+pub vyre_foundation::validate::ValidationPhase::Capability
+pub vyre_foundation::validate::ValidationPhase::Composition
+pub vyre_foundation::validate::ValidationPhase::Expression
+pub vyre_foundation::validate::ValidationPhase::Limits
+pub vyre_foundation::validate::ValidationPhase::Memory
+pub vyre_foundation::validate::ValidationPhase::Node
+pub vyre_foundation::validate::ValidationPhase::Program
+pub vyre_foundation::validate::ValidationPhase::Type
 pub vyre_foundation::validate::ValidationReport::errors: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
+pub vyre_foundation::validate::ValidationReport::trace: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationTraceEvent>
 pub vyre_foundation::validate::ValidationReport::warnings: alloc::vec::Vec<vyre_foundation::validate::report::ValidationWarning>
-pub vyre_foundation::validate::ValidationWarning::message: alloc::borrow::Cow<'static, str>
+pub vyre_foundation::validate::ValidationTraceEvent::code: vyre_foundation::validate::validation_error::ValidationCode
+pub vyre_foundation::validate::ValidationTraceEvent::location: vyre_foundation::validate::validation_error::ValidationLocation
+pub vyre_foundation::validate::ValidationTraceEvent::phase: vyre_foundation::validate::validation_error::ValidationPhase
 pub vyre_foundation::validate::depth::LimitState::nesting_reported: bool
 pub vyre_foundation::validate::depth::LimitState::node_count: usize
 pub vyre_foundation::validate::depth::LimitState::node_count_reported: bool
@@ -5105,9 +5166,32 @@ pub vyre_foundation::validate::options::ValidationOptions::allow_shadowing: bool
 pub vyre_foundation::validate::options::ValidationOptions::backend: core::option::Option<&'a dyn vyre_foundation::validate::options::BackendValidationCapabilities>
 pub vyre_foundation::validate::options::ValidationOptions::backend_capabilities: core::option::Option<vyre_foundation::validate::options::BackendCapabilities>
 pub vyre_foundation::validate::report::ValidationReport::errors: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationError>
+pub vyre_foundation::validate::report::ValidationReport::trace: alloc::vec::Vec<vyre_foundation::validate::validation_error::ValidationTraceEvent>
 pub vyre_foundation::validate::report::ValidationReport::warnings: alloc::vec::Vec<vyre_foundation::validate::report::ValidationWarning>
-pub vyre_foundation::validate::report::ValidationWarning::message: alloc::borrow::Cow<'static, str>
-pub vyre_foundation::validate::validation_error::ValidationError::message: alloc::borrow::Cow<'static, str>
+pub vyre_foundation::validate::validation_error::ValidationLocation::Buffer(alloc::borrow::Cow<'static, str>)
+pub vyre_foundation::validate::validation_error::ValidationLocation::Expression
+pub vyre_foundation::validate::validation_error::ValidationLocation::Expression::depth: u32
+pub vyre_foundation::validate::validation_error::ValidationLocation::Expression::node: u32
+pub vyre_foundation::validate::validation_error::ValidationLocation::Node(u32)
+pub vyre_foundation::validate::validation_error::ValidationLocation::Operand
+pub vyre_foundation::validate::validation_error::ValidationLocation::Operand::node: u32
+pub vyre_foundation::validate::validation_error::ValidationLocation::Operand::operand: u32
+pub vyre_foundation::validate::validation_error::ValidationLocation::Operation(alloc::borrow::Cow<'static, str>)
+pub vyre_foundation::validate::validation_error::ValidationLocation::Program
+pub vyre_foundation::validate::validation_error::ValidationLocation::Traversal
+pub vyre_foundation::validate::validation_error::ValidationLocation::Traversal::ordinal: u64
+pub vyre_foundation::validate::validation_error::ValidationLocation::WorkgroupAxis(u8)
+pub vyre_foundation::validate::validation_error::ValidationPhase::Capability
+pub vyre_foundation::validate::validation_error::ValidationPhase::Composition
+pub vyre_foundation::validate::validation_error::ValidationPhase::Expression
+pub vyre_foundation::validate::validation_error::ValidationPhase::Limits
+pub vyre_foundation::validate::validation_error::ValidationPhase::Memory
+pub vyre_foundation::validate::validation_error::ValidationPhase::Node
+pub vyre_foundation::validate::validation_error::ValidationPhase::Program
+pub vyre_foundation::validate::validation_error::ValidationPhase::Type
+pub vyre_foundation::validate::validation_error::ValidationTraceEvent::code: vyre_foundation::validate::validation_error::ValidationCode
+pub vyre_foundation::validate::validation_error::ValidationTraceEvent::location: vyre_foundation::validate::validation_error::ValidationLocation
+pub vyre_foundation::validate::validation_error::ValidationTraceEvent::phase: vyre_foundation::validate::validation_error::ValidationPhase
 pub vyre_foundation::vast::VastChangedRange::new_end: u32
 pub vyre_foundation::vast::VastChangedRange::new_start: u32
 pub vyre_foundation::vast::VastChangedRange::old_end: u32

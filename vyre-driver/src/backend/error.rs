@@ -154,6 +154,14 @@ pub enum BackendError {
         message: String,
     },
 
+    /// Foundation validation rejected the program with a structured issue.
+    #[error("{source}")]
+    Validation {
+        /// Structured foundation-owned validation issue.
+        #[source]
+        source: vyre_foundation::validate::ValidationError,
+    },
+
     /// The program is structurally invalid for this backend.
     #[error("{fix}")]
     InvalidProgram {
@@ -183,10 +191,10 @@ pub enum BackendError {
 }
 
 impl BackendError {
-    /// Build an actionable unclassified backend error.
+    /// Build an unclassified backend error from a complete actionable message.
     ///
-    /// If the supplied message already contains a `Fix: ` section it is used
-    /// verbatim. Otherwise a generic corrective action is appended.
+    /// The message is preserved verbatim. Callers that can identify the
+    /// failure class use a structured variant instead.
     ///
     /// # Examples
     ///
@@ -196,14 +204,9 @@ impl BackendError {
     /// let err = BackendError::new("queue full. Fix: retry with a smaller dispatch size.");
     /// assert_eq!(err.to_string(), "queue full. Fix: retry with a smaller dispatch size.");
     /// ```
+    #[must_use]
     pub fn new(message: impl Into<String>) -> Self {
-        let message = message.into();
-        if message.contains("Fix: ") {
-            return Self::Other(message);
-        }
-        Self::Other(format!(
-            "{message}. Fix: include backend-specific recovery guidance."
-        ))
+        Self::Other(message.into())
     }
 
     /// Build an actionable unsupported-extension error for opaque IR payloads.
@@ -259,6 +262,7 @@ impl BackendError {
             Self::PoisonedLock { .. } => ErrorCode::PoisonedLock,
             Self::KernelCompileFailed { .. } => ErrorCode::KernelCompileFailed,
             Self::DispatchFailed { .. } => ErrorCode::DispatchFailed,
+            Self::Validation { .. } => ErrorCode::InvalidProgram,
             Self::InvalidProgram { .. } => ErrorCode::InvalidProgram,
             Self::CooperativeResidencyExceeded { .. } => ErrorCode::CooperativeResidencyExceeded,
             Self::Other(_) => ErrorCode::Unknown,

@@ -1,4 +1,4 @@
-//! Public API snapshot gate contract (`scripts/check_public_api.sh`).
+//! Public API snapshot gate contract (`scripts/check_public_api_snapshot.sh`).
 
 use std::process::Command;
 
@@ -7,7 +7,7 @@ use super::workspace_root;
 #[test]
 fn public_api_snapshots_match_live_surface() {
     let workspace = workspace_root();
-    let script = workspace.join("scripts/check_public_api.sh");
+    let script = workspace.join("scripts/check_public_api_snapshot.sh");
     assert!(
         script.is_file(),
         "public API gate script must exist: {}",
@@ -18,7 +18,7 @@ fn public_api_snapshots_match_live_surface() {
         .arg(&script)
         .current_dir(&workspace)
         .output()
-        .expect("check_public_api.sh should execute");
+        .expect("check_public_api_snapshot.sh should execute");
 
     assert!(
         output.status.success(),

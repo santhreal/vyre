@@ -100,6 +100,12 @@ impl DiagnosticCode {
         Self(Cow::Borrowed(code))
     }
 
+    /// Construct a code from validated owned data.
+    #[must_use]
+    pub fn from_owned(code: String) -> Self {
+        Self(Cow::Owned(code))
+    }
+
     /// Return the raw stable code.
     #[must_use]
     pub fn as_str(&self) -> &str {

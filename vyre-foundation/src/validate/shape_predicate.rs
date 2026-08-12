@@ -10,6 +10,7 @@
 
 use crate::ir_inner::model::program::Program;
 use crate::validate::{err, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 
 /// Evaluate every buffer's `shape_predicate` against its static `count`.
 /// Returns one validation error per violation.
@@ -21,12 +22,18 @@ pub fn check_shape_predicates(program: &Program) -> Vec<ValidationError> {
             continue;
         };
         if !predicate.holds(buffer.count()) {
-            errors.push(err(format!(
-                "buffer `{}` declared shape predicate `{}` but has count={}. Fix: change the count to satisfy the predicate, or relax the predicate.",
-                buffer.name(),
-                predicate.describe(),
-                buffer.count()
-            )));
+            errors.push(err(
+                "V083",
+                ValidationPhase::Program,
+                ValidationLocation::Program,
+                format!(
+                    "buffer `{}` declared shape predicate `{}` but has count={}",
+                    buffer.name(),
+                    predicate.describe(),
+                    buffer.count()
+                ),
+                "change the count to satisfy the predicate, or relax the predicate",
+            ));
         }
     }
     errors
@@ -65,9 +72,9 @@ mod tests {
         .with_shape_predicate(ShapePredicate::AtLeast(64))]);
         let errors = check_shape_predicates(&prog);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message.contains("`small`"));
-        assert!(errors[0].message.contains("count >= 64"));
-        assert!(errors[0].message.contains("count=7"));
+        assert!(errors[0].message().contains("`small`"));
+        assert!(errors[0].message().contains("count >= 64"));
+        assert!(errors[0].message().contains("count=7"));
     }
 
     #[test]
@@ -95,7 +102,7 @@ mod tests {
         .with_shape_predicate(ShapePredicate::Exactly(7))]);
         let errors = check_shape_predicates(&prog);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message.contains("count == 7"));
+        assert!(errors[0].message().contains("count == 7"));
     }
 
     #[test]

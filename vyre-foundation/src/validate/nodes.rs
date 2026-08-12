@@ -26,6 +26,7 @@ use crate::validate::ValidationOptions;
 #[cfg(test)]
 use crate::validate::ValidationReport;
 use crate::validate::{err, Binding, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 #[cfg(test)]
 use rustc_hash::FxHashSet;
@@ -91,7 +92,11 @@ fn validate_nodes_inner(
     if let Some(pos) = nodes.iter().position(|n| matches!(n, Node::Return)) {
         if pos != nodes.len().saturating_sub(1) {
             report.errors.push(err(
-                "unreachable statements after `return`. Fix: remove statements after `return` or reorder them.".to_string(),
+                "V112",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                "unreachable statements after `return`".to_string(),
+                "remove statements after `return` or reorder them.".to_string(),
             ));
         }
     }
@@ -144,15 +149,22 @@ fn validate_node_inner(
         Node::Assign { name, value } => {
             if let Some(binding) = scope.get(name.as_str()) {
                 if !binding.mutable {
-                    report.errors.push(err(format!(
-                        "V011: assignment to loop variable `{name}`. Fix: loop variables are immutable."
-                    )));
+                    report.errors.push(err(
+                        "V011",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!("assignment to loop variable `{name}`"),
+                        format!("loop variables are immutable."),
+                    ));
                 }
                 if binding.ty_known {
                     if let Some(value_ty) = expr_type(value, buffers, scope) {
                         if value_ty != binding.ty {
-                            report.errors.push(err(format!(
-                                "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
+                            report.errors.push(err("V045", ValidationPhase::Node, ValidationLocation::Program, format!(
+                                "assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`",
+                                declared = binding.ty
+                            ), format!(
+                                "cast the value to `{declared}` or introduce a new binding with the intended type.",
                                 declared = binding.ty
                             )));
                         }
@@ -160,24 +172,30 @@ fn validate_node_inner(
                 }
             } else if let Some(buf) = buffers.get(name.as_str()) {
                 if buf.access != BufferAccess::ReadWrite {
-                    report.errors.push(err(format!(
-                        "assignment to buffer `{name}` requires read-write storage but declared access is `{access:?}`. Fix: use a read-write/output buffer or store into a mutable local binding.",
+                    report.errors.push(err("V119", ValidationPhase::Node, ValidationLocation::Program, format!(
+                        "assignment to buffer `{name}` requires read-write storage but declared access is `{access:?}`",
                         access = buf.access
-                    )));
+                    ), "use a read-write/output buffer or store into a mutable local binding"));
                 }
                 if let Some(value_ty) = expr_type(value, buffers, scope) {
                     let elem = &buf.element;
                     let compatible = store_value_compatible(&value_ty, elem);
                     if !compatible {
-                        report.errors.push(err(format!(
-                            "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."
+                        report.errors.push(err("V045", ValidationPhase::Node, ValidationLocation::Program, format!(
+                            "assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`"
+                        ), format!(
+                            "cast the value to `{elem}` or write to a buffer with the intended element type."
                         )));
                     }
                 }
             } else {
-                report.errors.push(err(format!(
-                    "assignment to undeclared variable `{name}`. Fix: add `let {name} = ...;` before this assignment."
-                )));
+                report.errors.push(err(
+                    "V120",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!("assignment to undeclared variable `{name}`"),
+                    format!("add `let {name} = ...;` before this assignment."),
+                ));
             }
             validate_expr(value, buffers, scope, options, report, 0);
             // Reassignment with a divergent rhs taints the binding's
@@ -199,15 +217,17 @@ fn validate_node_inner(
                     let compatible = store_value_compatible(&val_ty, elem);
                     if !compatible {
                         let legal_targets = store_value_targets(elem);
-                        report.errors.push(err(format!(
-                            "Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}`. Fix: cast/store using one of {}.", legal_targets
+                        report.errors.push(err("V121", ValidationPhase::Node, ValidationLocation::Program, format!("Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}"), format!(
+                            "cast/store using one of {}.", legal_targets
                         )));
                     }
                 }
                 if let Some(index_ty) = expr_type(index, buffers, scope) {
                     if index_ty != DataType::U32 {
-                        report.errors.push(err(format!(
-                            "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`. Fix: cast the index to U32 before storing."
+                        report.errors.push(err("V122", ValidationPhase::Node, ValidationLocation::Program, format!(
+                            "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`"
+                        ), format!(
+                            "cast the index to U32 before storing."
                         )));
                     }
                 }
@@ -224,9 +244,17 @@ fn validate_node_inner(
             validate_expr(cond, buffers, scope, options, report, 0);
             if let Some(cond_ty) = expr_type(cond, buffers, scope) {
                 if !matches!(cond_ty, DataType::U32 | DataType::Bool) {
-                    report.errors.push(err(format!(
-                        "Node::If condition has type `{cond_ty}` but must be `u32` or `bool`. Fix: cast or rewrite the condition expression to produce `u32` or `bool`."
-                    )));
+                    report.errors.push(err(
+                        "V123",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!(
+                            "Node::If condition has type `{cond_ty}` but must be `u32` or `bool`"
+                        ),
+                        format!(
+                            "cast or rewrite the condition expression to produce `u32` or `bool`."
+                        ),
+                    ));
                 }
             }
             // Branches stay non-divergent only when the parent scope is
@@ -268,16 +296,28 @@ fn validate_node_inner(
             validate_expr(to, buffers, scope, options, report, 0);
             if let Some(from_ty) = expr_type(from, buffers, scope) {
                 if from_ty != DataType::U32 {
-                    report.errors.push(err(format!(
-                        "Node::Loop from-bound has type `{from_ty}`; legal loop bound type is `u32`. Fix: cast the `from` bound to `u32`."
-                    )));
+                    report.errors.push(err(
+                        "V124",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!(
+                        "Node::Loop from-bound has type `{from_ty}`; legal loop bound type is `u32`"
+                    ),
+                        format!("cast the `from` bound to `u32`."),
+                    ));
                 }
             }
             if let Some(to_ty) = expr_type(to, buffers, scope) {
                 if to_ty != DataType::U32 {
-                    report.errors.push(err(format!(
-                        "Node::Loop to-bound has type `{to_ty}`; legal loop bound type is `u32`. Fix: cast the `to` bound to `u32`."
-                    )));
+                    report.errors.push(err(
+                        "V125",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!(
+                        "Node::Loop to-bound has type `{to_ty}`; legal loop bound type is `u32`"
+                    ),
+                        format!("cast the `to` bound to `u32`."),
+                    ));
                 }
             }
             shadowing::check_local(var, scope, options, &mut report.errors);
@@ -349,21 +389,32 @@ fn validate_node_inner(
             count_offset,
         } => {
             if count_offset % 4 != 0 {
-                report.errors.push(err(format!(
-                    "indirect dispatch offset {count_offset} is not 4-byte aligned. Fix: use an offset aligned to a u32 dispatch count tuple."
-                )));
+                report.errors.push(err(
+                    "V126",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!("indirect dispatch offset {count_offset} is not 4-byte aligned"),
+                    format!("use an offset aligned to a u32 dispatch count tuple."),
+                ));
             }
             if !buffers.contains_key(count_buffer.as_str()) {
-                report.errors.push(err(format!(
-                    "indirect dispatch references unknown buffer `{count_buffer}`. Fix: declare the count buffer before validation."
-                )));
+                report.errors.push(err(
+                    "V127",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!("indirect dispatch references unknown buffer `{count_buffer}`"),
+                    format!("declare the count buffer before validation."),
+                ));
             }
         }
         Node::AsyncLoad { tag, .. } | Node::AsyncStore { tag, .. } | Node::AsyncWait { tag } => {
             if tag.is_empty() {
                 report.errors.push(err(
-                    "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
-                        .to_string(),
+                    "V128",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    "async stream tag is empty".to_string(),
+                    "use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes.".to_string(),
                 ));
             }
         }
@@ -380,13 +431,19 @@ fn validate_node_inner(
                 (buffers.get(input.as_str()), buffers.get(output.as_str()))
             {
                 if input.element != output.element {
-                    report.errors.push(err(format!(
-                        "V046: collective input/output element mismatch: `{}` is `{}`, `{}` is `{}`. Fix: use matching element types before collective lowering.",
-                        input.name(),
-                        input.element,
-                        output.name(),
-                        output.element
-                    )));
+                    report.errors.push(err(
+                        "V046",
+                        ValidationPhase::Node,
+                        ValidationLocation::Program,
+                        format!(
+                            "collective input/output element mismatch: `{}` is `{}`, `{}` is `{}`",
+                            input.name(),
+                            input.element,
+                            output.name(),
+                            output.element
+                        ),
+                        "use matching element types before collective lowering",
+                    ));
                 }
             }
         }
@@ -429,21 +486,37 @@ fn validate_node_inner(
         Node::Opaque(extension) => {
             if extension.extension_kind().is_empty() {
                 report.errors.push(err(
-                    "V031: opaque node extension has an empty extension_kind. Fix: return a stable non-empty namespace from NodeExtension::extension_kind.",
+                    "V031",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    "opaque node extension has an empty extension_kind",
+                    "return a stable non-empty namespace from NodeExtension::extension_kind.",
                 ));
             }
             if extension.debug_identity().is_empty() {
-                report.errors.push(err(format!(
-                    "V031: opaque node extension `{}` has an empty debug_identity. Fix: return a stable human-readable identity from NodeExtension::debug_identity.",
-                    extension.extension_kind()
-                )));
+                report.errors.push(err(
+                    "V031",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!(
+                        "opaque node extension `{}` has an empty debug_identity",
+                        extension.extension_kind()
+                    ),
+                    "return a stable human-readable identity from NodeExtension::debug_identity",
+                ));
             }
             if let Err(message) = extension.validate_extension() {
-                report.errors.push(err(format!(
-                    "V031: opaque node extension `{}`/`{}` failed validation: {message}",
-                    extension.extension_kind(),
-                    extension.debug_identity()
-                )));
+                report.errors.push(err(
+                    "V031",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!(
+                        "opaque node extension `{}`/`{}` failed validation: {message}",
+                        extension.extension_kind(),
+                        extension.debug_identity()
+                    ),
+                    "rewrite the program to satisfy this validation invariant",
+                ));
             }
         }
     }
@@ -452,9 +525,7 @@ fn validate_node_inner(
 #[cfg(test)]
 fn validate_collective_support(options: ValidationOptions<'_>, errors: &mut Vec<ValidationError>) {
     if !options.supports_distributed_collectives() {
-        errors.push(err(
-            "V046: distributed collective nodes require backend collective support. Fix: validate with BackendCapabilities { supports_distributed_collectives: true, .. } or lower collectives before this backend.".to_string(),
-        ));
+        errors.push(err("V046", ValidationPhase::Node, ValidationLocation::Program, "distributed collective nodes require backend collective support".to_string(), "validate with BackendCapabilities { supports_distributed_collectives: true, .. } or lower collectives before this backend.".to_string()));
     }
 }
 
@@ -465,15 +536,23 @@ fn validate_collective_buffer(
     errors: &mut Vec<ValidationError>,
 ) {
     let Some(buffer) = buffers.get(name.as_str()) else {
-        errors.push(err(format!(
-            "V046: collective references unknown buffer `{name}`. Fix: declare the collective buffer before validation."
-        )));
+        errors.push(err(
+            "V046",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            format!("collective references unknown buffer `{name}`"),
+            format!("declare the collective buffer before validation."),
+        ));
         return;
     };
     if buffer.access == BufferAccess::Workgroup {
-        errors.push(err(format!(
-            "V046: collective buffer `{name}` is workgroup-local. Fix: use device/global storage visible to the distributed backend."
-        )));
+        errors.push(err(
+            "V046",
+            ValidationPhase::Node,
+            ValidationLocation::Program,
+            format!("collective buffer `{name}` is workgroup-local"),
+            format!("use device/global storage visible to the distributed backend."),
+        ));
     }
 }
 
@@ -519,25 +598,42 @@ pub(crate) fn check_constant_store_index(
     }
     match index {
         Expr::LitU32(value) if *value >= buffer.count => {
-            errors.push(err(format!(
-                "V036: store index {value} overflows buffer `{buffer_name}` with count {}. Fix: keep constant store indices below the declared element count.",
-                buffer.count
-            )));
+            errors.push(err(
+                "V036",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                    "store index {value} overflows buffer `{buffer_name}` with count {}",
+                    buffer.count
+                ),
+                "keep constant store indices below the declared element count",
+            ));
         }
         Expr::LitI32(value) if *value < 0 => {
-            errors.push(err(format!(
-                "V036: store index {value} overflows buffer `{buffer_name}` with count {}. Fix: keep constant store indices in 0..{}.",
-                buffer.count,
-                buffer.count
-            )));
+            errors.push(err(
+                "V036",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                    "store index {value} overflows buffer `{buffer_name}` with count {}",
+                    buffer.count
+                ),
+                format!("keep constant store indices in 0..{}", buffer.count),
+            ));
         }
         Expr::LitI32(value) => {
             let as_u32 = u32::try_from(*value).unwrap_or(u32::MAX);
             if as_u32 >= buffer.count {
-                errors.push(err(format!(
-                    "V036: store index {value} overflows buffer `{buffer_name}` with count {}. Fix: keep constant store indices below the declared element count.",
-                    buffer.count
-                )));
+                errors.push(err(
+                    "V036",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!(
+                        "store index {value} overflows buffer `{buffer_name}` with count {}",
+                        buffer.count
+                    ),
+                    "keep constant store indices below the declared element count",
+                ));
             }
         }
         _ => {}

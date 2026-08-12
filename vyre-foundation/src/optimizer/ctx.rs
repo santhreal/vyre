@@ -350,7 +350,7 @@ mod tests {
             missing: "dead_buffer_elim",
         };
         let diag = scheduling_error_to_diagnostic(&err);
-        assert!(diag.message.contains("OPTSCHED001"));
+        assert_eq!(diag.code.as_str(), "OPTSCHED001");
         assert!(diag.message.contains("fusion"));
     }
 
@@ -361,14 +361,14 @@ mod tests {
             fix: "break the cycle",
         };
         let diag = scheduling_error_to_diagnostic(&err);
-        assert!(diag.message.contains("OPTSCHED002"));
+        assert_eq!(diag.code.as_str(), "OPTSCHED002");
     }
 
     #[test]
     fn scheduling_error_duplicate_id() {
         let err = crate::optimizer::PassSchedulingError::DuplicateId { id: "dup_pass" };
         let diag = scheduling_error_to_diagnostic(&err);
-        assert!(diag.message.contains("OPTSCHED003"));
+        assert_eq!(diag.code.as_str(), "OPTSCHED003");
         assert!(diag.message.contains("dup_pass"));
     }
 }

@@ -232,17 +232,12 @@ pub fn validate_program_contract(
     };
     let program = lowered_program.as_ref().unwrap_or(program);
     let report = vyre_foundation::validate::validate_with_options(program, validation_options);
-    if let Some(first) = report.errors.into_iter().next() {
-        return Err(BackendError::InvalidProgram {
-            fix: first.message.into_owned(),
-        });
+    if let Some(source) = report.errors.into_iter().next() {
+        return Err(BackendError::Validation { source });
     }
 
-    validate_supported_ops(program, caps.backend_id, supported_ops).map_err(|error| {
-        BackendError::InvalidProgram {
-            fix: error.to_string(),
-        }
-    })?;
+    validate_supported_ops(program, caps.backend_id, supported_ops)
+        .map_err(|source| BackendError::Validation { source })?;
 
     let required = vyre_foundation::program_caps::scan(program);
     vyre_foundation::program_caps::check_backend_capabilities(

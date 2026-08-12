@@ -13,6 +13,7 @@ use crate::ir_inner::model::types::{AtomicOp, BufferAccess, DataType};
 use crate::memory_model::MemoryOrdering;
 use crate::validate::typecheck::expr_type;
 use crate::validate::{err, Binding, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 
 /// Validate an `Expr::Atomic` against buffer and type rules.
@@ -53,18 +54,30 @@ pub(crate) fn validate_atomic(
     errors: &mut Vec<ValidationError>,
 ) {
     if !ordering.is_valid_for_atomic_rmw() {
-        errors.push(err(format!(
-            "V042: atomic `{op:?}` on buffer `{buffer}` uses invalid memory ordering `{ordering:?}`. Fix: use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
-        )));
+        errors.push(err(
+    "V042",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+            "atomic `{op:?}` on buffer `{buffer}` uses invalid memory ordering `{ordering:?}`"
+        ),
+    format!(
+            "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
+        )
+));
     }
     // VAL-001: the atomic index must be u32. target-text `atomicLoad`/`atomicStore`
     // and friends are indexed by `u32`; an f32 or i32 index slips past
     // validation today and then crashes the backend at dispatch time.
     if let Some(index_ty) = expr_type(index, buffers, scope) {
         if index_ty != DataType::U32 {
-            errors.push(err(format!(
-                "V027: atomic index on buffer `{buffer}` has type `{index_ty}`, must be `u32`. Fix: cast the index to U32 before the atomic operation."
-            )));
+            errors.push(err(
+                "V027",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                format!("atomic index on buffer `{buffer}` has type `{index_ty}`, must be `u32`"),
+                format!("cast the index to U32 before the atomic operation."),
+            ));
         }
     }
     if let Some(buf) = buffers.get(buffer) {
@@ -77,68 +90,126 @@ pub(crate) fn validate_atomic(
         match &buf.access {
             BufferAccess::ReadWrite => {}
             BufferAccess::Workgroup => {
-                errors.push(err(format!(
-                    "V025: atomic `{op:?}` on workgroup buffer `{buffer}` is rejected by the current memory model. Fix: use a storage ReadWrite buffer for atomics."
-                )));
+                errors.push(err(
+    "V025",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+                    "atomic `{op:?}` on workgroup buffer `{buffer}` is rejected by the current memory model"
+                ),
+    format!(
+                    "use a storage ReadWrite buffer for atomics."
+                )
+));
             }
             BufferAccess::ReadOnly => {
-                errors.push(err(format!(
-                    "V009: atomic `{op:?}` targets read-only buffer `{buffer}`. Fix: declare `{buffer}` with BufferAccess::ReadWrite before issuing `{op:?}`."
-                )));
+                errors.push(err(
+                    "V009",
+                    ValidationPhase::Memory,
+                    ValidationLocation::Program,
+                    format!("atomic `{op:?}` targets read-only buffer `{buffer}`"),
+                    format!(
+                        "declare `{buffer}` with BufferAccess::ReadWrite before issuing `{op:?}`."
+                    ),
+                ));
             }
             BufferAccess::Uniform => {
-                errors.push(err(format!(
-                    "V009: atomic `{op:?}` targets uniform buffer `{buffer}`. Fix: move `{buffer}` to BufferAccess::ReadWrite before issuing `{op:?}`."
-                )));
+                errors.push(err(
+                    "V009",
+                    ValidationPhase::Memory,
+                    ValidationLocation::Program,
+                    format!("atomic `{op:?}` targets uniform buffer `{buffer}`"),
+                    format!("move `{buffer}` to BufferAccess::ReadWrite before issuing `{op:?}`."),
+                ));
             }
             other => {
-                errors.push(err(format!(
-                    "V009: atomic `{op:?}` targets unsupported buffer access `{other:?}` on `{buffer}`. Fix: use BufferAccess::ReadWrite storage buffers for atomics."
-                )));
+                errors.push(err(
+                    "V009",
+                    ValidationPhase::Memory,
+                    ValidationLocation::Program,
+                    format!(
+                    "atomic `{op:?}` targets unsupported buffer access `{other:?}` on `{buffer}`"
+                ),
+                    format!("use BufferAccess::ReadWrite storage buffers for atomics."),
+                ));
             }
         }
         if buf.element == DataType::Bytes {
-            errors.push(err(format!(
-                "V013: operation on buffer `{buffer}` with element type `bytes` is not supported. Fix: use a typed buffer."
-            )));
+            errors.push(err(
+                "V013",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                format!(
+                    "operation on buffer `{buffer}` with element type `bytes` is not supported"
+                ),
+                format!("use a typed buffer."),
+            ));
         }
         if buf.element != DataType::U32 {
-            errors.push(err(format!(
-                "V014: atomic on buffer `{buffer}` with non-u32 element type `{elem}`. Fix: atomics only support U32 elements.",
-                elem = buf.element
-            )));
+            errors.push(err(
+                "V014",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                format!(
+                    "atomic on buffer `{buffer}` with non-u32 element type `{elem}`",
+                    elem = buf.element
+                ),
+                "atomics only support U32 elements",
+            ));
         }
         if let Some(val_ty) = expr_type(value, buffers, scope) {
             if val_ty != DataType::U32 {
-                errors.push(err(format!(
-                    "atomic value type `{val_ty}` does not match required `u32`. Fix: ensure the atomic operand is U32."
-                )));
+                errors.push(err(
+                    "V057",
+                    ValidationPhase::Memory,
+                    ValidationLocation::Program,
+                    format!("atomic value type `{val_ty}` does not match required `u32`"),
+                    format!("ensure the atomic operand is U32."),
+                ));
             }
         }
         match (op, expected) {
             (AtomicOp::CompareExchange, Some(expected_expr)) => {
                 if let Some(expected_ty) = expr_type(expected_expr, buffers, scope) {
                     if expected_ty != DataType::U32 {
-                        errors.push(err(format!(
-                            "compare-exchange expected type `{expected_ty}` does not match required `u32`. Fix: ensure Expr::Atomic.expected is U32."
-                        )));
+                        errors.push(err(
+    "V058",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+                            "compare-exchange expected type `{expected_ty}` does not match required `u32`"
+                        ),
+    format!(
+                            "ensure Expr::Atomic.expected is U32."
+                        )
+));
                     }
                 }
             }
             (AtomicOp::CompareExchange, None) => errors.push(err(
-                "compare-exchange atomic is missing expected value. Fix: set Expr::Atomic.expected for AtomicOp::CompareExchange."
-                    .to_string(),
+                "V059",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                "compare-exchange atomic is missing expected value".to_string(),
+                "set Expr::Atomic.expected for AtomicOp::CompareExchange.".to_string(),
             )),
             (_, Some(_)) => errors.push(err(
-                "non-compare-exchange atomic includes an expected value. Fix: use Expr::Atomic.expected only with AtomicOp::CompareExchange."
-                    .to_string(),
+                "V060",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                "non-compare-exchange atomic includes an expected value".to_string(),
+                "use Expr::Atomic.expected only with AtomicOp::CompareExchange.".to_string(),
             )),
             (_, None) => {}
         }
     } else {
-        errors.push(err(format!(
-            "atomic on unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
-        )));
+        errors.push(err(
+            "V061",
+            ValidationPhase::Memory,
+            ValidationLocation::Program,
+            format!("atomic on unknown buffer `{buffer}`"),
+            format!("declare it in Program::buffers."),
+        ));
     }
 }
 
@@ -177,10 +248,7 @@ mod tests {
         // Should have no V009, V013, or V025 errors
         let critical: Vec<_> = errors
             .iter()
-            .filter(|e| {
-                let m = e.message();
-                m.contains("V009") || m.contains("V013") || m.contains("V025")
-            })
+            .filter(|error| matches!(error.code().as_str(), "V009" | "V013" | "V025"))
             .collect();
         assert!(
             critical.is_empty(),
@@ -205,7 +273,7 @@ mod tests {
             &empty_scope(),
             &mut errors,
         );
-        assert!(errors.iter().any(|e| e.message().contains("V009")));
+        assert!(errors.iter().any(|e| e.code().as_str() == "V009"));
     }
 
     #[test]
@@ -224,7 +292,7 @@ mod tests {
             &empty_scope(),
             &mut errors,
         );
-        assert!(errors.iter().any(|e| e.message().contains("V025")));
+        assert!(errors.iter().any(|e| e.code().as_str() == "V025"));
     }
 
     #[test]

@@ -14,6 +14,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `architecture` | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | `benchmark` | [`PERF.md`](PERF.md) |
 | `docs-governance` | [`DOCUMENTATION_GOVERNANCE.md`](DOCUMENTATION_GOVERNANCE.md) |
+| `foundation` | [`../vyre-foundation/src/lib.rs`](../vyre-foundation/src/lib.rs) |
 | `frontend` | [`../vyre-frontend-c/src/lib.rs`](../vyre-frontend-c/src/lib.rs) |
 | `historical` | [`DOCS.toml`](DOCS.toml) |
 | `operation-registry` | [`../vyre-foundation/src/operation.rs`](../vyre-foundation/src/operation.rs) |
@@ -115,7 +116,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `consumer-integration.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `consumer-showcase.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `dialect-cookbook.md` | self | manual |
-| `current` | `user` | `public-facade` | `guide` | `error-codes.md` | self | manual |
+| `current` | `extension` | `foundation` | `reference` | `error-codes.md` | [../vyre-foundation/src/validate/validation_error.rs](../vyre-foundation/src/validate/validation_error.rs) | manual |
 | `current` | `user` | `public-facade` | `guide` | `faq.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `frozen-traits/AlgebraicLaw.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `frozen-traits/EnforceGate.md` | self | manual |

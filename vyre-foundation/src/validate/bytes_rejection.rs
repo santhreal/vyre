@@ -8,6 +8,7 @@
 use crate::ir_inner::model::program::BufferDecl;
 use crate::ir_inner::model::types::{BufferAccess, DataType};
 use crate::validate::{err, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 
 /// Validate that a `Node::Store` targets a writable, declared buffer.
@@ -38,23 +39,43 @@ pub(crate) fn check_store(
             && buf.access != BufferAccess::WriteOnly
             && buf.access != BufferAccess::Workgroup
         {
-            errors.push(err(format!(
-                "store to non-writable buffer `{buffer}`. Fix: declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup."
-            )));
+            errors.push(err(
+    "V063",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+                "store to non-writable buffer `{buffer}`"
+            ),
+    format!(
+                "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup."
+            )
+));
         }
         // L.1.18: V013 was historically enforced only on `Expr::Atomic`,
         // leaving `Node::Store` targeting a `Bytes` buffer to pass
         // validation silently and then fail lower in target-text emission.
         // Extend V013 here so the error surfaces at validate() time.
         if buf.element == DataType::Bytes && !buf.bytes_extraction {
-            errors.push(err(format!(
-                "V013: store to buffer `{buffer}` with element type `bytes` is not supported. Fix: use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64."
-            )));
+            errors.push(err(
+    "V013",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+                "store to buffer `{buffer}` with element type `bytes` is not supported"
+            ),
+    format!(
+                "use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64."
+            )
+));
         }
     } else {
-        errors.push(err(format!(
-            "store to unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
-        )));
+        errors.push(err(
+            "V064",
+            ValidationPhase::Memory,
+            ValidationLocation::Program,
+            format!("store to unknown buffer `{buffer}`"),
+            format!("declare it in Program::buffers."),
+        ));
     }
 }
 
@@ -82,9 +103,13 @@ pub(crate) fn check_load(
 ) {
     match buffers.get(buffer) {
         None => {
-            errors.push(err(format!(
-                "load from unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
-            )));
+            errors.push(err(
+                "V065",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                format!("load from unknown buffer `{buffer}`"),
+                format!("declare it in Program::buffers."),
+            ));
         }
         // L.1.18: V013 coverage extends to `Expr::Load`  -  loading from
         // a `Bytes` buffer gives the caller an opaque multi-byte blob
@@ -92,9 +117,17 @@ pub(crate) fn check_load(
         // Catch it here rather than letting target-text lowering fail with a
         // generic "unexpected Bytes type" diagnostic.
         Some(buf) if buf.element == DataType::Bytes && !buf.bytes_extraction => {
-            errors.push(err(format!(
-                "V013: load from buffer `{buffer}` with element type `bytes` is not supported. Fix: declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op."
-            )));
+            errors.push(err(
+    "V013",
+    ValidationPhase::Memory,
+    ValidationLocation::Program,
+    format!(
+                "load from buffer `{buffer}` with element type `bytes` is not supported"
+            ),
+    format!(
+                "declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op."
+            )
+));
         }
         Some(_) => {}
     }

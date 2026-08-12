@@ -4,6 +4,7 @@ impl core::cmp::Eq for vyre_reference::value::Value
 impl core::cmp::PartialEq for vyre_reference::value::Value
 impl core::convert::From<&[u8]> for vyre_reference::value::Value
 impl core::convert::From<alloc::vec::Vec<u8>> for vyre_reference::value::Value
+impl core::convert::From<vyre_foundation::validate::validation_error::ValidationError> for vyre_reference::ReferenceError
 impl core::default::Default for vyre_reference::subgroup::SubgroupSimulator
 impl core::error::Error for vyre_reference::ReferenceError
 impl core::error::Error for vyre_reference::dual_impls::common::EvalError
@@ -92,7 +93,11 @@ pub fn vyre_primitives::markers::ShiftRight::evaluate(&self, inputs: &[vyre_refe
 pub fn vyre_primitives::markers::Shuffle::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::common::EvalError>
 pub fn vyre_reference::OobReport::total(&self) -> u64
 pub fn vyre_reference::ReferenceError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::ReferenceError::from(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
 pub fn vyre_reference::ReferenceError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::ReferenceError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+pub fn vyre_reference::ReferenceError::validation(source: vyre_foundation::validate::validation_error::ValidationError) -> Self
+pub fn vyre_reference::ReferenceError::validation_source(&self) -> core::option::Option<&vyre_foundation::validate::validation_error::ValidationError>
 pub fn vyre_reference::atomics::apply(op: vyre_spec::atomic_op::AtomicOp, old: u32, expected: core::option::Option<u32>, value: u32) -> core::result::Result<(u32, u32), vyre_reference::ReferenceError>
 pub fn vyre_reference::atomics::atomic_add(old: u32, value: u32) -> (u32, u32)
 pub fn vyre_reference::atomics::atomic_and(old: u32, value: u32) -> (u32, u32)

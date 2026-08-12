@@ -75,7 +75,12 @@ impl ProgramPass for TestPass {
     }
 
     fn transform(&self, program: Program) -> PassResult {
-        if self.changes {
+        if self.changes
+            && !program
+                .entry()
+                .iter()
+                .any(|node| matches!(node, Node::Barrier { .. }))
+        {
             let mut entry = Clone::clone(&program).into_entry_vec();
             entry.push(Node::barrier());
             PassResult {
@@ -84,6 +89,34 @@ impl ProgramPass for TestPass {
             }
         } else {
             PassResult::unchanged(program)
+        }
+    }
+    fn fingerprint(&self, _program: &Program) -> u64 {
+        0
+    }
+}
+
+#[derive(Debug)]
+struct IdenticalRewritePass {
+    metadata: PassMetadata,
+}
+
+impl crate::optimizer::private::Sealed for IdenticalRewritePass {}
+
+impl ProgramPass for IdenticalRewritePass {
+    fn metadata(&self) -> PassMetadata {
+        self.metadata
+    }
+
+    fn analyze(&self, _program: &Program) -> PassAnalysis {
+        PassAnalysis::RUN
+    }
+
+    fn transform(&self, program: Program) -> PassResult {
+        let entry = Clone::clone(&program).into_entry_vec();
+        PassResult {
+            program: program.with_rewritten_entry(entry),
+            changed: true,
         }
     }
 
@@ -110,6 +143,13 @@ impl ProgramPass for BarrierAddingPass {
     }
 
     fn transform(&self, program: Program) -> PassResult {
+        if program
+            .entry()
+            .iter()
+            .any(|node| matches!(node, Node::Barrier { .. }))
+        {
+            return PassResult::unchanged(program);
+        }
         let mut entry = Clone::clone(&program).into_entry_vec();
         entry.push(Node::barrier());
         PassResult {
@@ -144,6 +184,13 @@ impl ProgramPass for LinearBreakingPass {
     }
 
     fn transform(&self, program: Program) -> PassResult {
+        if program
+            .entry()
+            .iter()
+            .any(|node| matches!(node, Node::Store { .. }))
+        {
+            return PassResult::unchanged(program);
+        }
         let mut entry = Clone::clone(&program).into_entry_vec();
         entry.push(Node::store("out", Expr::u32(0), Expr::u32(7)));
         PassResult {

@@ -85,10 +85,16 @@ impl ExecutionPlan {
 /// Errors that prevent building a trustworthy execution plan.
 #[derive(Debug, thiserror::Error)]
 pub enum PlanError {
-    /// Program validation or canonical wire encoding failed.
+    /// Program validation failed with structured issues.
+    #[error("non-canonical program: {issues:?}")]
+    Validation {
+        /// Foundation-owned structured validation issues.
+        issues: Vec<crate::validate::ValidationError>,
+    },
+    /// Canonical wire encoding or static planning failed.
     #[error("non-canonical program: {source}")]
     NonCanonicalProgram {
-        /// Original validation or serialization error.
+        /// Original serialization or planning error.
         source: crate::error::IrError,
     },
     /// An output buffer advertises a byte range outside its full allocation.
@@ -231,25 +237,8 @@ fn validate_program_for_plan(
     if report.errors.is_empty() {
         return Ok(());
     }
-    let message_len = report
-        .errors
-        .iter()
-        .map(|error| error.message().len())
-        .sum::<usize>()
-        + report.errors.len().saturating_sub(1) * 2;
-    let mut messages = String::with_capacity(message_len);
-    for (index, error) in report.errors.iter().enumerate() {
-        if index != 0 {
-            messages.push_str("; ");
-        }
-        messages.push_str(error.message());
-    }
-    Err(PlanError::NonCanonicalProgram {
-        source: crate::error::IrError::WireFormatValidation {
-            message: format!(
-                "canonical execution plan validation failed: {messages}. Fix: repair the Program before planning."
-            ),
-        },
+    Err(PlanError::Validation {
+        issues: report.errors,
     })
 }
 

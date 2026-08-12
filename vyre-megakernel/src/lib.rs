@@ -262,19 +262,14 @@ impl CompileRequest {
                 &node.program,
                 ValidationOptions::universal().with_backend_capabilities(COMPILER_IR_CAPABILITIES),
             );
-            if !report.errors.is_empty() {
-                let message = report
-                    .errors
-                    .iter()
-                    .map(|error| error.message())
-                    .collect::<Vec<_>>()
-                    .join("; ");
-                return Err(failure(
-                    CompilerFailureKind::InvalidProgram,
-                    format!("request.graph.nodes[{}].program", node.id.0),
-                    message,
-                    "supply semantically valid typed IR; target capability support is checked by the selected target compiler",
-                ));
+            if let Some(issue) = report.errors.into_iter().next() {
+                let path = format!("request.graph.nodes[{}].program", node.id.0);
+                let mut diagnostic = issue.diagnostic();
+                if let Some(location) = diagnostic.location.as_mut() {
+                    location.path = Some(path);
+                    location.graph_node = Some(node.id.0);
+                }
+                return Err(CompileError { diagnostic });
             }
         }
         validate_bindings(&self.graph, &self.facts.symbolic_bindings)?;

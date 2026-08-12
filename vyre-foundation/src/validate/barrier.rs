@@ -6,6 +6,7 @@
 //! inside divergent branches, catching a class of bugs that would
 //! otherwise deadlock or produce undefined behavior on the GPU.
 
+use crate::validate::{ValidationLocation, ValidationPhase};
 mod exit_uniformity;
 
 use rustc_hash::FxHashMap;
@@ -42,14 +43,23 @@ pub(crate) fn check_barrier(
 ) {
     if divergent {
         errors.push(err(
-            "V010: barrier may be reached by only part of a workgroup. Fix: move the barrier to uniform control flow."
-                .to_string(),
+            "V010",
+            ValidationPhase::Memory,
+            ValidationLocation::Program,
+            "barrier may be reached by only part of a workgroup".to_string(),
+            "move the barrier to uniform control flow.".to_string(),
         ));
     }
     if !ordering.is_valid_for_barrier() {
-        errors.push(err(format!(
-            "V043: barrier uses memory ordering `{ordering:?}`, but barriers must synchronize memory. Fix: use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."
-        )));
+        errors.push(err(
+            "V043",
+            ValidationPhase::Memory,
+            ValidationLocation::Program,
+            format!(
+                "barrier uses memory ordering `{ordering:?}`, but barriers must synchronize memory"
+            ),
+            format!("use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."),
+        ));
     }
 }
 
@@ -197,13 +207,18 @@ pub(crate) fn check_loop_back_edge(
         return;
     }
     errors.push(err(
-        "V055: an invocation can return from a synchronizing loop body after its last barrier, \
+        "V055",
+        ValidationPhase::Memory,
+        ValidationLocation::Program,
+        "an invocation can return from a synchronizing loop body after its last barrier, \
          so the exit and the next iteration's writes are unordered across the back edge. One \
          invocation can take the back edge and write while a sibling has not yet reached the \
          exit; the sibling then leaves the kernel while the rest keep iterating, freezing the \
          data it owns partway through. Nothing hangs, because a barrier does not count \
          invocations that already returned, so this costs answers and not liveness, and one \
-         workgroup is enough to hit it. Fix: either put an unconditional barrier after the \
+         workgroup is enough to hit it"
+            .to_string(),
+        "either put an unconditional barrier after the \
          early exit as the last loop-body node, or make every return guard workgroup-uniform; \
          a guard that loads writable memory needs an acquiring barrier immediately before it, \
          one uniform index, and no intervening write."

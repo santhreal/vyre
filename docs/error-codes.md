@@ -24,10 +24,15 @@ across versions as long as the code stays stable.
 
 ## Validation codes (`V###`)
 
-Emitted by `validate_program` when an IR invariant fails. Fields in every
-message are prefixed `Fix:` per the frozen contract.
+Validation emits structured fields: code, validation phase, typed location,
+cause, corrective action, and retry class. Human-readable rendering retains
+the code and corrective action, but callers key behavior on the structured
+fields rather than rendered prefixes.
 
-| Code | Invariant | Fix template |
+All validation codes below use diagnostic stage `validate` and retry class
+`never`.
+
+| Code | Invariant | Corrective action |
 |------|-----------|--------------|
 | `V008` | Duplicate local binding (shadowing) | Choose a unique local name, or pass `ValidationOptions::with_shadowing(true)` to allow nested shadowing. |
 | `V009` | Atomic on non-writable buffer | Declare the buffer with `BufferAccess::ReadWrite`. |
@@ -68,10 +73,71 @@ message are prefixed `Fix:` per the frozen contract.
 | `V053` | Value passed for a `buffer<T>` parameter | Pass `Expr::buffer_ref(name)` naming the buffer the op should read. |
 | `V054` | Referenced buffer's element type does not match the signature | Pass a buffer whose element type matches `buffer<T>`, or change the op signature. |
 | `V055` | Synchronizing loop exit is unordered against the back edge | Put an unconditional barrier after the early exit, as the final node in the loop body. |
+| `V056` | Backend does not support one operation used by the program | Choose a backend that supports the operation or register its implementation. |
+| `V057` | atomic value type `…` does not match required `u32` | Ensure the atomic operand is U32. |
+| `V058` | compare-exchange expected type `…` does not match required `u32` | Ensure Expr::Atomic.expected is U32. |
+| `V059` | compare-exchange atomic is missing expected value | Set Expr::Atomic.expected for AtomicOp::CompareExchange. |
+| `V060` | non-compare-exchange atomic includes an expected value | Use Expr::Atomic.expected only with AtomicOp::CompareExchange. |
+| `V061` | atomic on unknown buffer `…` | Declare it in Program::buffers. |
+| `V063` | store to non-writable buffer `…` | Declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup. |
+| `V064` | store to unknown buffer `…` | Declare it in Program::buffers. |
+| `V065` | load from unknown buffer `…` | Declare it in Program::buffers. |
+| `V066` | Reference to an undeclared variable | Add a declaration before this use. |
+| `V067` | buflen of unknown buffer `…` | Declare it in Program::buffers. |
+| `V068` | invocation/workgroup ID axis … out of range | Use 0 (x), 1 (y), or 2 (z). |
+| `V070` | Linear, affine, or relevant buffer use count violates its declared discipline | Add or delete buffer uses to satisfy the discipline, or select the intended `LinearType`. |
+| `V083` | buffer `…` declared shape predicate `…` but has count=… | Change the count to satisfy the predicate, or relax the predicate. |
+| `V084` | 64-bit integer arithmetic used where the shared IR supports only portable 32-bit arithmetic | Express the operation as a U32 pair with explicit carry/borrow, or use a backend-specific op whose schema declares native 64-bit arithmetic. |
+| `V085` | Saturating arithmetic `…` received left=`…`, right=`…`; legal set is only U32 in the current lowering | Cast both operands to U32, or clamp explicitly for I32/F32. |
+| `V086` | AbsDiff has left=`…`, right=`…` and can overflow (i32::MIN - i32::MAX invokes target-text signed-integer UB) | Cast operands to U32 before AbsDiff, or rewrite as an explicit branch. |
+| `V087` | binary operation `…` … operand has type `…`, but numeric arithmetic expects one of `u32`, `i32`, or `f32` | Cast the operand to U32 or I32 before arithmetic, or rewrite to avoid mixing logical and arithmetic operators. |
+| `V088` | binary operation `…` operands have mismatched numeric types: left=`…`, right=`…` (legal set: U32, I32, F32) | Cast one operand so both sides share a type (target-text has no implicit promotion). |
+| `V089` | binary operation `Mod` … operand must be `u32` or `i32`, got `…`. Legal set for Mod is integer-only | Cast both operands to the same integer type before modulo. |
+| `V090` | binary operation `Mod` operands have mismatched integer types: left=`…`, right=`…` | Cast one operand so both sides share the same integer type. |
+| `V091` | binary operation `…` left operand has type `…`; legal integer set is `u32` or `i32` | Cast the left operand to U32 or I32. |
+| `V092` | binary operation `…` right operand has type `…`; legal integer set is `u32` or `i32` | Cast the right operand to U32 or I32. |
+| `V093` | Integer operation operands have mismatched types | Cast both operands to the same integer type. |
+| `V094` | binary operation `…` … operand has type `…`; shift/rotate operands must be `u32` | Cast the operand to U32 before shifting/rotating. |
+| `V095` | binary operation `…` … operand has type `…`; logical And/Or operands must be `u32` or `bool` | Cast the operand to U32 or Bool. |
+| `V096` | binary comparison `…` operands have mismatched types: left=`…`, right=`…`. Comparisons require matching types | Cast both operands to the same type before comparing. |
+| `V097` | Subgroup operation used without backend subgroup capability evidence | Validate with ValidationOptions::with_backend(backend) where `backend.supports_subgroup_ops() == true`, or remove the subgroup-dependent operation before lowering. |
+| `V098` | Negation operand violates the portable total-arithmetic contract | Use `0 - x` for wrapping i32 negation, cast to U32 before Negate, or guard with Select(i32::MIN, 0, -x). |
+| `V099` | unary operation `…` operand has type `…`, but legal set is U32, I32, or F32 | Cast or rewrite the operand to U32/I32/F32. |
+| `V100` | unary operation `LogicalNot` operand has type `…`; legal set is `u32` or `bool` | Cast or rewrite the operand to produce U32 or Bool. |
+| `V101` | unary operation `…` operand has type `…`; legal integer set is `u32`, `i32`, or `u64` | Cast or rewrite the operand to produce U32, I32, or U64. |
+| `V102` | unary operation `…` operand has type `…`; legal set for math ops is `f32` | Cast or rewrite the operand to produce F32. |
+| `V103` | unary operation `…` operand has type `…`; unpack ops require a 32-bit integer (`u32` or `i32`) word | Cast or rewrite the operand to produce U32 or I32. |
+| `V104` | unary operation `…` is not recognized | Use a known UnOp variant from this enum (`Negate`, `LogicalNot`, `BitNot`, `Popcount`, `Clz`, `Ctz`, `ReverseBits`, `Sin`, `Cos`, `Exp`, `Log`, `Log2`, `Exp2`, `Tan`, `Acos`, `Asin`, `Atan`, `Tanh`, `Sinh`, `Cosh`, `Abs`, `Sqrt`, `InverseSqrt`, `Reciprocal`, `Floor`, `Ceil`, `Round`, `Trunc`, `Sign`, `IsNan`, `IsInf`, `IsFinite`, `Unpack4Low`, `Unpack4High`, `Unpack8Low`, `Unpack8High`). |
+| `V105` | Program lacks one top-level Region | Construct runnable programs with Program::wrapped or add one top-level Region. |
+| `V106` | workgroup_size[…] is 0 | All workgroup dimensions must be >= 1. |
+| `V107` | duplicate buffer name `…` | Each buffer must have a unique name. |
+| `V108` | duplicate binding slot … (buffer `…`) | Each buffer must have a unique binding. |
+| `V109` | workgroup buffer `…` has count 0 | Declare a positive element count. |
+| `V110` | output buffer `…` uses unsupported element type `…` | Output buffers must use fixed-width scalar or vector element types, not Array or Tensor. |
+| `V111` | malformed validation frame stream: PopScope without matching PushScope | Rebuild the program through the structured IR builder before validation. |
+| `V112` | unreachable statements after `return` | Remove statements after `return` or reorder them. |
+| `V113` | malformed validation frame stream: PopAlias without matching PushAlias | Rebuild the program through the structured IR builder before validation. |
+| `V114` | malformed validation frame stream: loop variable `…` inserted outside any scope | Rebuild the program through the structured IR builder before validation. |
+| `V115` | region `…` is marked non-composable with itself but appears multiple times in one fused program | Split the parser into separate dispatches, or give each instance distinct scratch storage before fusion. |
+| `V116` | Fused nodes mix non-atomic reads and atomic access without an ordering barrier | Insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion. |
+| `V117` | async stream tag is empty | Use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes. |
+| `V118` | malformed validation frame stream: let binding `…` appeared outside any scope | Rebuild the program through the structured IR builder before validation. |
+| `V119` | assignment to buffer `…` requires read-write storage but declared access is `…` | Use a read-write/output buffer or store into a mutable local binding. |
+| `V120` | Assignment targets an undeclared variable | Add a declaration before this assignment. |
+| `V121` | Store value type does not match the buffer element type | Cast the value to the buffer element type or use a compatible store type. |
+| `V122` | Node::Store buffer `…` index has type `…` but must be `u32` | Cast the index to U32 before storing. |
+| `V123` | Node::If condition has type `…` but must be `u32` or `bool` | Cast or rewrite the condition expression to produce `u32` or `bool`. |
+| `V124` | Node::Loop from-bound has type `…`; legal loop bound type is `u32` | Cast the `from` bound to `u32`. |
+| `V125` | Node::Loop to-bound has type `…`; legal loop bound type is `u32` | Cast the `to` bound to `u32`. |
+| `V126` | indirect dispatch offset … is not 4-byte aligned | Use an offset aligned to a u32 dispatch count tuple. |
+| `V127` | indirect dispatch references unknown buffer `…` | Declare the count buffer before validation. |
+| `V128` | async stream tag is empty | Use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes. |
+| `V129` | malformed barrier visitor dispatch | Rebuild the program through the structured IR builder before validation. |
+| `V130` | backend-allocated output buffer `…` has no static element count or output byte range | Declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output. |
 
-Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, and any codes `>V055`
-are reserved slots. Allocate through this registry before emitting a new
-diagnostic.
+Codes `V024`, `V026`, `V037`-`V040`, `V048`-`V050`, `V062`, `V069`,
+`V071`-`V082`, and codes above `V130` are reserved slots. Allocate through
+this registry before emitting a new diagnostic.
 
 ## General errors (`E-*`)
 

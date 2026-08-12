@@ -236,7 +236,7 @@ fn format_validation_errors(errors: &[vyre_foundation::validate::ValidationError
         if index != 0 {
             out.push_str("; ");
         }
-        out.push_str(error.message());
+        out.push_str(&error.message());
     }
     if errors.len() > 4 {
         out.push_str("; ...");

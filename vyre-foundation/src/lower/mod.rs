@@ -29,9 +29,9 @@ impl LoweringError {
     /// Construct an actionable lowering error.
     #[must_use]
     pub fn new(message: impl Into<String>) -> Self {
-        let message = message.into();
-        debug_assert!(message.contains("Fix:"));
-        Self { message }
+        Self {
+            message: message.into(),
+        }
     }
 
     /// Construct an invalid-program lowering error.

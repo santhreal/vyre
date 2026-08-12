@@ -13,6 +13,7 @@ use crate::ir_inner::model::types::DataType;
 use crate::operation::OperationRegistry;
 use crate::validate::typecheck::expr_type;
 use crate::validate::{err, Binding, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
 
 pub(crate) fn validate_call(
@@ -23,15 +24,27 @@ pub(crate) fn validate_call(
     errors: &mut Vec<ValidationError>,
 ) {
     let Some(operation) = OperationRegistry::global().get(op_id) else {
-        errors.push(err(format!(
-            "V016: call references unknown op `{op_id}`. Fix: submit one canonical OperationRegistration for `{op_id}` or inline/remove this call."
-        )));
+        errors.push(err(
+            "V016",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!("call references unknown op `{op_id}`"),
+            format!(
+            "submit one canonical OperationRegistration for `{op_id}` or inline/remove this call."
+        ),
+        ));
         return;
     };
     let Some(signature) = operation.signature else {
-        errors.push(err(format!(
-            "V016: call references operation `{op_id}` without a callable signature. Fix: attach a Signature to its canonical OperationRegistration or inline the composition."
-        )));
+        errors.push(err(
+            "V016",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!("call references operation `{op_id}` without a callable signature"),
+            format!(
+            "attach a Signature to its canonical OperationRegistration or inline the composition."
+        ),
+        ));
         return;
     };
     validate_call_signature(op_id, signature, args, buffers, scope, errors);
@@ -47,10 +60,16 @@ fn validate_call_signature(
 ) {
     let expected = signature.inputs.len();
     if args.len() != expected {
-        errors.push(err(format!(
-            "V020: call `{op_id}` has {} arguments but signature expects {expected}. Fix: pass exactly {expected} arguments in the order declared by the op signature.",
-            args.len()
-        )));
+        errors.push(err(
+            "V020",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!(
+                "call `{op_id}` has {} arguments but signature expects {expected}",
+                args.len()
+            ),
+            format!("pass exactly {expected} arguments in the order declared by the op signature"),
+        ));
         return;
     }
 
@@ -60,21 +79,33 @@ fn validate_call_signature(
             continue;
         }
         let Some(expected_ty) = data_type_from_signature_spelling(param.ty) else {
-            errors.push(err(format!(
-                "V021: call `{op_id}` signature input `{}` uses unknown type spelling `{}`. Fix: register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer.",
+            errors.push(err(
+    "V021",
+    ValidationPhase::Expression,
+    ValidationLocation::Program,
+    format!(
+                "call `{op_id}` signature input `{}` uses unknown type spelling `{}`",
                 param.name,
                 param.ty
-            )));
+            ),
+    "register a foundation-known scalar/vector type spelling for this parameter or validate it in the dialect layer"
+));
             continue;
         };
         let Some(actual_ty) = expr_type(arg, buffers, scope) else {
             continue;
         };
         if actual_ty != expected_ty {
-            errors.push(err(format!(
-                "V022: call `{op_id}` argument {index} (`{}`) has type `{actual_ty}` but signature expects `{expected_ty}`. Fix: cast or rewrite the argument to match the registered op signature.",
+            errors.push(err(
+    "V022",
+    ValidationPhase::Expression,
+    ValidationLocation::Program,
+    format!(
+                "call `{op_id}` argument {index} (`{}`) has type `{actual_ty}` but signature expects `{expected_ty}`",
                 param.name
-            )));
+            ),
+    "cast or rewrite the argument to match the registered op signature"
+));
         }
     }
 }
@@ -101,28 +132,56 @@ fn validate_buffer_argument(
     errors: &mut Vec<ValidationError>,
 ) {
     let Some(expected) = data_type_from_signature_spelling(element) else {
-        errors.push(err(format!(
-            "V021: call `{op_id}` signature input `{param_name}` uses unknown buffer element spelling `{element}`. Fix: use a foundation-known scalar/vector type spelling inside `buffer<...>`."
-        )));
+        errors.push(err(
+    "V021",
+    ValidationPhase::Expression,
+    ValidationLocation::Program,
+    format!(
+            "call `{op_id}` signature input `{param_name}` uses unknown buffer element spelling `{element}`"
+        ),
+    format!(
+            "use a foundation-known scalar/vector type spelling inside `buffer<...>`."
+        )
+));
         return;
     };
     let Expr::BufferRef { buffer } = arg else {
-        errors.push(err(format!(
-            "V053: call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed. Fix: pass `Expr::BufferRef {{ buffer }}` naming the buffer this op should read."
-        )));
+        errors.push(err(
+    "V053",
+    ValidationPhase::Expression,
+    ValidationLocation::Program,
+    format!(
+            "call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed"
+        ),
+    format!(
+            "pass `Expr::BufferRef {{ buffer }}` naming the buffer this op should read."
+        )
+));
         return;
     };
     let Some(decl) = buffers.get(buffer.as_str()) else {
-        errors.push(err(format!(
-            "V052: call to `{op_id}` passes a reference to unknown buffer `{buffer}`. Fix: declare it in Program::buffers."
-        )));
+        errors.push(err(
+            "V052",
+            ValidationPhase::Expression,
+            ValidationLocation::Program,
+            format!("call to `{op_id}` passes a reference to unknown buffer `{buffer}`"),
+            format!("declare it in Program::buffers."),
+        ));
         return;
     };
     let actual = decl.element();
     if actual != expected {
-        errors.push(err(format!(
-            "V054: call `{op_id}` argument {index} (`{param_name}`) references buffer `{buffer}` with element type `{actual}` but the signature declares `buffer<{expected}>`. Fix: pass a buffer whose element type matches, or change the op signature."
-        )));
+        errors.push(err(
+    "V054",
+    ValidationPhase::Expression,
+    ValidationLocation::Program,
+    format!(
+            "call `{op_id}` argument {index} (`{param_name}`) references buffer `{buffer}` with element type `{actual}` but the signature declares `buffer<{expected}>`"
+        ),
+    format!(
+            "pass a buffer whose element type matches, or change the op signature."
+        )
+));
     }
 }
 

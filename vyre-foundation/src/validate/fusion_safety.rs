@@ -12,6 +12,8 @@ use crate::ir::Ident;
 use crate::ir::Node;
 #[cfg(test)]
 use crate::validate::{err, ValidationError};
+#[cfg(test)]
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
 
@@ -120,8 +122,10 @@ fn report_alias_hazards(
     hazards.dedup();
 
     for buffer in hazards {
-        errors.push(err(format!(
-            "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier. Fix: insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
+        errors.push(err("V116", ValidationPhase::Composition, ValidationLocation::Program, format!(
+            "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier"
+        ), format!(
+            "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
         )));
     }
 }
@@ -317,7 +321,7 @@ mod tests {
         let errors = validate(&program);
         assert!(errors
             .iter()
-            .any(|error| error.message.contains("fusion hazard on buffer `state`")));
+            .any(|error| error.message().contains("fusion hazard on buffer `state`")));
     }
 
     #[test]

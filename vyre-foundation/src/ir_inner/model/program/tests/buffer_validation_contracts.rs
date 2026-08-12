@@ -15,28 +15,27 @@ fn buffers_equal_ignoring_declaration_order_handles_permuted_buffers() {
 }
 
 #[test]
-fn validate_joins_multiple_errors_with_semicolon_separator() {
+fn validate_preserves_multiple_structured_issues() {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [0, 0, 1],
         vec![Node::store("out", Expr::u32(0), Expr::u32(1)), Node::Return],
     );
     match program.validate() {
-        Err(IrError::WireFormatValidation { message }) => {
-            assert!(
-                message.contains("workgroup_size[0] is 0"),
-                "missing axis-0 message: {message}"
+        Err(IrError::Validation { issues }) => {
+            assert_eq!(issues.len(), 2);
+            assert_eq!(issues[0].code().as_str(), "V106");
+            assert_eq!(
+                issues[0].location(),
+                &crate::validate::ValidationLocation::WorkgroupAxis(0)
             );
-            assert!(
-                message.contains("workgroup_size[1] is 0"),
-                "missing axis-1 message: {message}"
-            );
-            assert!(
-                message.contains("; "),
-                "expected '; ' joiner between errors: {message}"
+            assert_eq!(issues[1].code().as_str(), "V106");
+            assert_eq!(
+                issues[1].location(),
+                &crate::validate::ValidationLocation::WorkgroupAxis(1)
             );
         }
-        other => panic!("expected WireFormatValidation error, got {other:?}"),
+        other => panic!("expected structured validation issues, got {other:?}"),
     }
 }
 

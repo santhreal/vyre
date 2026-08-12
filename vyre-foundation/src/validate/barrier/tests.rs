@@ -10,7 +10,7 @@ fn divergent_barrier_emits_v010() {
     let mut errors = Vec::new();
     check_barrier(true, MemoryOrdering::SeqCst, &mut errors);
     assert_eq!(errors.len(), 1);
-    assert!(errors[0].message().contains("V010"));
+    assert!(errors[0].code().as_str() == "V010");
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn uniform_barrier_is_valid() {
 fn relaxed_barrier_is_rejected() {
     let mut errors = Vec::new();
     check_barrier(false, MemoryOrdering::Relaxed, &mut errors);
-    assert!(errors.iter().any(|error| error.message().contains("V043")));
+    assert!(errors.iter().any(|error| error.code().as_str() == "V043"));
 }
 
 fn barrier() -> Node {
@@ -50,7 +50,7 @@ fn exit_after_the_last_barrier_emits_v055() {
         &mut errors,
     );
     assert!(
-        errors.iter().any(|error| error.message().contains("V055")),
+        errors.iter().any(|error| error.code().as_str() == "V055"),
         "a lane-dependent early exit after the last barrier must be refused"
     );
 }
@@ -116,7 +116,7 @@ fn a_nested_exit_after_the_last_barrier_emits_v055() {
         &mut errors,
     );
     assert!(
-        errors.iter().any(|error| error.message().contains("V055")),
+        errors.iter().any(|error| error.code().as_str() == "V055"),
         "a nested lane-dependent exit still leaves the outer loop's barriers"
     );
 }

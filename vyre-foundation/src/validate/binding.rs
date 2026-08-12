@@ -12,6 +12,7 @@ pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAUL
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::types::DataType;
 use crate::validate::{err, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;
 
 /// Scope binding: type, mutability, and workgroup-uniformity.
@@ -66,9 +67,17 @@ pub(crate) fn check_sibling_duplicate(
     if allow_duplicate_siblings {
         return false;
     }
-    errors.push(err(format!(
-        "V032: duplicate sibling let binding `{name}` in the same region. Fix: rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended."
-    )));
+    errors.push(err(
+    "V032",
+    ValidationPhase::Node,
+    ValidationLocation::Program,
+    format!(
+        "duplicate sibling let binding `{name}` in the same region"
+    ),
+    format!(
+        "rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended."
+    )
+));
     true
 }
 
@@ -95,7 +104,7 @@ mod tests {
             check_sibling_duplicate(&Ident::from("x"), &mut region_bindings, false, &mut errors);
         assert!(dup);
         assert_eq!(errors.len(), 1);
-        assert!(errors[0].message().contains("V032"));
+        assert!(errors[0].code().as_str() == "V032");
     }
 
     #[test]

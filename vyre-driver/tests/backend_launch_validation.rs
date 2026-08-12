@@ -66,6 +66,41 @@ fn validate_program_for_backend_rejects_grid_override_past_backend_axis_limit() 
 }
 
 #[test]
+fn backend_error_preserves_structured_validation_source() {
+    let program = Program::wrapped(
+        vec![BufferDecl::output("out", 0, DataType::U32)],
+        [0, 1, 1],
+        Vec::new(),
+    );
+    let caps = vyre_driver::validation::ProgramValidationCaps {
+        backend_id: "grid-limit-test",
+        supports_subgroup_ops: false,
+        supports_f16: false,
+        supports_bf16: false,
+        supports_indirect_dispatch: false,
+        supports_distributed_collectives: false,
+        supports_trap_propagation: false,
+        max_workgroup_size: [256, 256, 64],
+    };
+
+    let error = vyre_driver::validation::validate_program_contract(
+        &program,
+        vyre_foundation::validate::ValidationOptions::default(),
+        vyre_driver::backend::validation::default_supported_ops(),
+        caps,
+    )
+    .expect_err("zero workgroup axis must fail validation");
+    let BackendError::Validation { source } = error else {
+        panic!("foundation validation must retain its structured source");
+    };
+    assert_eq!(source.code().as_str(), "V106");
+    assert!(matches!(
+        source.location(),
+        vyre_foundation::validate::ValidationLocation::WorkgroupAxis(0)
+    ));
+}
+
+#[test]
 fn validate_program_for_backend_accepts_grid_override_at_backend_axis_limit() {
     let backend = GridLimitBackend;
     let program = tiny_program();

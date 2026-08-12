@@ -90,7 +90,7 @@ fn linear_with_atomic_and_store_fails_as_two_uses() {
     let errs = check_linear_types(&program);
     assert_eq!(errs.len(), 1, "atomic + store must count as two uses");
     assert!(
-        errs[0].message.contains("used 2 time(s)"),
+        errs[0].message().contains("used 2 time(s)"),
         "linear-type violation should report the real atomic + store use count"
     );
 }

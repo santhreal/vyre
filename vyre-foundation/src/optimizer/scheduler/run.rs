@@ -71,7 +71,7 @@ fn introduces_forbidden_effects(
 fn linear_type_violations(program: &Program) -> BTreeSet<String> {
     crate::validate::linear_type::check_linear_types(program)
         .into_iter()
-        .map(|error| error.message.into_owned())
+        .map(|error| error.message().into_owned())
         .collect()
 }
 
@@ -82,7 +82,7 @@ fn introduces_linear_type_violations(before: &BTreeSet<String>, after: &BTreeSet
 fn shape_predicate_violations(program: &Program) -> BTreeSet<String> {
     crate::validate::shape_predicate::check_shape_predicates(program)
         .into_iter()
-        .map(|error| error.message.into_owned())
+        .map(|error| error.message().into_owned())
         .collect()
 }
 
@@ -250,6 +250,9 @@ impl PassScheduler {
                     || self.enforce_effect_handlers
                     || self.enforce_linear_types
                     || self.enforce_shape_predicates;
+                let changed_before = changed;
+                let changed_by_before = changed_by;
+                let before = program.clone();
                 program = if enforce_gates {
                     let pre_cost = self
                         .enforce_cost_monotone
@@ -339,6 +342,10 @@ impl PassScheduler {
                     }
                     result.program
                 };
+                if changed != changed_before && program == before {
+                    changed = changed_before;
+                    changed_by = changed_by_before;
+                }
             }
             if let Some(available) = available.as_mut() {
                 available.insert(metadata.name);
@@ -446,6 +453,7 @@ impl PassScheduler {
                     }
                     continue;
                 }
+                let before = program.clone();
                 metric.ran = true;
                 let perf_scope = PerfScope::start("vyre-foundation", metadata.name);
                 let mut landed_changed = false;
@@ -615,6 +623,10 @@ impl PassScheduler {
                         result.program
                     }
                 };
+                if landed_changed && program == before {
+                    landed_changed = false;
+                    metric.decision = PassRunDecision::RanUnchanged;
+                }
                 let after_stats = *program.stats();
                 let after_allocations = if landed_changed {
                     estimate_ir_allocations(&program)

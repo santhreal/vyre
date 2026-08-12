@@ -138,14 +138,17 @@ fn zero_count_output_is_rejected_before_strategy() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
     );
     let err = plan(&program).expect_err("dynamic output must not plan without a concrete size");
-    assert!(
-        matches!(err, PlanError::NonCanonicalProgram { .. }),
-        "invalid Program must surface as PlanError::NonCanonicalProgram"
-    );
-    assert!(
-        err.to_string().contains("canonical execution plan"),
-        "Fix: planning errors must explain canonicality, got {err}"
-    );
+    match err {
+        PlanError::Validation { issues } => {
+            assert_eq!(issues.len(), 1);
+            assert_eq!(issues[0].code().as_str(), "V130");
+            assert_eq!(
+                issues[0].phase(),
+                vyre_foundation::validate::ValidationPhase::Program
+            );
+        }
+        other => panic!("invalid Program must retain structured validation issues, got {other:?}"),
+    }
 }
 
 #[test]
@@ -189,10 +192,15 @@ fn output_byte_range_past_end_is_rejected_with_named_error() {
 fn unwrapped_raw_program_is_rejected_by_plan() {
     let program = Program::from_raw_parts(vec![], [1, 1, 1], vec![Node::Return]);
     let err = plan(&program).expect_err("unwrapped program must not plan");
-    assert!(
-        matches!(err, PlanError::NonCanonicalProgram { .. }),
-        "expected NonCanonicalProgram for unwrapped entry, got {err:?}"
-    );
-    let msg = err.to_string();
-    assert!(msg.contains("Fix:"), "error must be actionable: {msg}");
+    match err {
+        PlanError::Validation { issues } => {
+            assert_eq!(issues.len(), 1);
+            assert_eq!(issues[0].code().as_str(), "V105");
+            assert_eq!(
+                issues[0].corrective_action(),
+                "construct runnable programs with `Program::wrapped(...)` or wrap the body in `Node::Region` before validation, interpretation, or dispatch"
+            );
+        }
+        other => panic!("expected structured validation issues, got {other:?}"),
+    }
 }

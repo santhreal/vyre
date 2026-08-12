@@ -184,23 +184,8 @@ pub(crate) fn run_hashmap_reference(
         program,
         vyre_foundation::validate::ValidationOptions::default(),
     );
-    let validation_errors = validation_report.errors;
-    if !validation_errors.is_empty() {
-        let message_len = validation_errors
-            .iter()
-            .map(|error| error.message().len())
-            .sum::<usize>()
-            + validation_errors.len().saturating_sub(1) * 2;
-        let mut messages = String::with_capacity(message_len);
-        for (index, error) in validation_errors.iter().enumerate() {
-            if index != 0 {
-                messages.push_str("; ");
-            }
-            messages.push_str(error.message());
-        }
-        return Err(ReferenceError::new(format!(
-            "program failed IR validation: {messages}. Fix: repair the Program before invoking the reference interpreter."
-        )));
+    if let Some(source) = validation_report.errors.into_iter().next() {
+        return Err(ReferenceError::validation(source));
     }
     let mut storage = FxHashMap::default();
     let logical_input_count = program

@@ -1,9 +1,8 @@
 //! Failure-oriented tests for actionable error contracts.
 //!
 //! Guarantees:
-//! - Every `BackendError` variant's Display contains "Fix: "
-//! - `BackendError::new` appends a generic Fix when the caller omits one
-//! - `BackendError::new` preserves an existing Fix section
+//! - Every explicitly actionable `BackendError` variant's Display contains "Fix: "
+//! - `BackendError::new` preserves complete owner-authored messages verbatim
 //! - All stable error codes are unique
 
 use std::collections::HashSet;
@@ -54,12 +53,12 @@ fn all_backend_error_variants_contain_fix() {
 }
 
 #[test]
-fn backend_error_new_appends_fix_when_missing() {
+fn backend_error_new_preserves_messages_without_parsing() {
     let err = BackendError::new("something went wrong");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("Fix: include backend-specific recovery guidance"),
-        "Fix: BackendError::new must append a generic Fix when caller omits one; got: {msg}"
+    assert_eq!(
+        err.to_string(),
+        "something went wrong",
+        "BackendError::new must not inspect or rewrite rendered diagnostic prose"
     );
 }
 

@@ -21,6 +21,8 @@
 
 use crate::ir_inner::model::program::{BufferDecl, LinearType, Program};
 use crate::validate::{err, ValidationError};
+use crate::validate::{ValidationLocation, ValidationPhase};
+use std::borrow::Cow;
 
 /// Walk `program` and return a list of validation errors describing
 /// every buffer whose declared `linear_type` is violated.
@@ -49,41 +51,38 @@ pub fn check_linear_types(program: &Program) -> Vec<ValidationError> {
             continue;
         }
         let uses = u32::try_from(facts.buffer_refs_of(buffer.name()).len()).unwrap_or(u32::MAX);
-        if let Some(message) = violation_message(buffer, lt, uses) {
-            errors.push(err(message));
+        if let Some((cause, corrective_action)) = violation_message(buffer, lt, uses) {
+            errors.push(err(
+                "V070",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buffer.name().to_string())),
+                cause,
+                corrective_action,
+            ));
         }
     }
     errors
 }
 
-fn violation_message(buffer: &BufferDecl, lt: LinearType, uses: u32) -> Option<String> {
+fn violation_message(buffer: &BufferDecl, lt: LinearType, uses: u32) -> Option<(String, String)> {
     match lt {
         LinearType::Linear => {
             if uses == 1 {
                 None
             } else {
-                Some(format!(
-                    "buffer `{}` declared `LinearType::Linear` must be used exactly once but was used {uses} time(s). Fix: ensure the program reads or writes this buffer exactly once on every path, or change the discipline to Affine / Relevant / Unrestricted.",
-                    buffer.name()
-                ))
+                Some((format!("buffer `{}` declared `LinearType::Linear` must be used exactly once but was used {uses} time(s)", buffer.name()), "ensure the program reads or writes this buffer exactly once on every path, or change the discipline to Affine / Relevant / Unrestricted".to_string()))
             }
         }
         LinearType::Affine => {
             if uses > 1 {
-                Some(format!(
-                    "buffer `{}` declared `LinearType::Affine` must be used at most once but was used {uses} time(s). Fix: drop the redundant references, or change the discipline to Relevant / Unrestricted to allow re-use.",
-                    buffer.name()
-                ))
+                Some((format!("buffer `{}` declared `LinearType::Affine` must be used at most once but was used {uses} time(s)", buffer.name()), "drop the redundant references, or change the discipline to Relevant / Unrestricted to allow re-use".to_string()))
             } else {
                 None
             }
         }
         LinearType::Relevant => {
             if uses == 0 {
-                Some(format!(
-                    "buffer `{}` declared `LinearType::Relevant` must be used at least once but was unused. Fix: add a read or write of this buffer, or change the discipline to Affine / Unrestricted.",
-                    buffer.name()
-                ))
+                Some((format!("buffer `{}` declared `LinearType::Relevant` must be used at least once but was unused", buffer.name()), "add a read or write of this buffer, or change the discipline to Affine / Unrestricted".to_string()))
             } else {
                 None
             }

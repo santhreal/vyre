@@ -12,6 +12,8 @@ pub use super::depth::{
 };
 use super::expr_rules::validate_output_markers;
 use super::fusion_safety::{collect_expr_accesses, NodeAccesses};
+use crate::validate::{ValidationLocation, ValidationPhase};
+use std::borrow::Cow;
 // Self-composition (duplicate self-exclusive regions) is enforced in
 // `PreorderValidator::run` via `self_comp_counts`  -  do not add a second
 // `duplicate_self_exclusive_regions` walk here.
@@ -63,14 +65,14 @@ pub fn validate(program: &Program) -> Vec<ValidationError> {
 /// emit boundaries must not run full [`validate`] (it would preempt those
 /// messages and trip rules unrelated to silent miscompilation).
 ///
-/// Reuses the full validator so the `Fma` type inference stays single-sourced
-/// with [`validate`]; the `V028` filter is pinned by `fma_f32_violations_*`
-/// tests in this module so a message change cannot silently disable it.
+/// Reuses the full validator so `Fma` type inference stays single-sourced with
+/// [`validate`]. Selection is by stable typed rule identity, never rendered
+/// prose.
 #[must_use]
 pub fn fma_f32_violations(program: &Program) -> Vec<ValidationError> {
     validate(program)
         .into_iter()
-        .filter(|error| error.message().starts_with("V028:"))
+        .filter(|error| error.code().as_str() == "V028")
         .collect()
 }
 
@@ -89,17 +91,28 @@ pub fn validate_with_options(
     let mut report = ValidationReport {
         errors: Vec::with_capacity(program.buffers().len() + program.entry().len()),
         warnings: Vec::new(),
+        trace: Vec::new(),
     };
 
-    if let Some(message) = program.top_level_region_violation() {
-        report.errors.push(err(message));
+    if let Some(message) = program.top_level_region_violation_cause() {
+        report.errors.push(err(
+            "V105",
+            ValidationPhase::Program,
+            ValidationLocation::Program,
+            message,
+            "construct runnable programs with `Program::wrapped(...)` or wrap the body in `Node::Region` before validation, interpretation, or dispatch",
+        ));
     }
 
     for (axis, &size) in program.workgroup_size.iter().enumerate() {
         if size == 0 {
-            report.errors.push(err(format!(
-                "workgroup_size[{axis}] is 0. Fix: all workgroup dimensions must be >= 1."
-            )));
+            report.errors.push(err(
+                "V106",
+                ValidationPhase::Program,
+                ValidationLocation::WorkgroupAxis(axis as u8),
+                format!("workgroup_size[{axis}] is 0"),
+                format!("all workgroup dimensions must be >= 1."),
+            ));
         }
     }
 
@@ -109,24 +122,36 @@ pub fn validate_with_options(
     seen_bindings.reserve(program.buffers().len());
     for buf in program.buffers() {
         if !seen_names.insert(&buf.name) {
-            report.errors.push(err(format!(
-                "duplicate buffer name `{}`. Fix: each buffer must have a unique name.",
-                buf.name
-            )));
+            report.errors.push(err(
+                "V107",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!("duplicate buffer name `{}`", buf.name),
+                "each buffer must have a unique name",
+            ));
         }
         if buf.access != BufferAccess::Workgroup && !seen_bindings.insert(buf.binding) {
-            report.errors.push(err(format!(
-                "duplicate binding slot {} (buffer `{}`). Fix: each buffer must have a unique binding.",
-                buf.binding, buf.name
-            )));
+            report.errors.push(err(
+                "V108",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!(
+                    "duplicate binding slot {} (buffer `{}`)",
+                    buf.binding, buf.name
+                ),
+                "each buffer must have a unique binding",
+            ));
         }
         if buf.access == BufferAccess::Workgroup && buf.count == 0 {
-            report.errors.push(err(format!(
-                "workgroup buffer `{}` has count 0. Fix: declare a positive element count.",
-                buf.name
-            )));
+            report.errors.push(err(
+                "V109",
+                ValidationPhase::Program,
+                ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())),
+                format!("workgroup buffer `{}` has count 0", buf.name),
+                "declare a positive element count",
+            ));
         }
-        validate_output_buffer_element_type(buf, &mut report.errors);
+        validate_output_buffer_contract(buf, &mut report.errors);
     }
     validate_output_markers(program.buffers(), &mut report.errors);
 
@@ -155,10 +180,22 @@ pub fn validate_with_options(
             program,
         ));
 
+    for (ordinal, issue) in report.errors.iter_mut().enumerate() {
+        if matches!(issue.location(), ValidationLocation::Program) {
+            issue.set_location(ValidationLocation::Traversal {
+                ordinal: ordinal as u64,
+            });
+        }
+    }
+
+    report
+        .trace
+        .extend(report.errors.iter().map(ValidationError::trace_event));
+
     report
 }
 
-fn validate_output_buffer_element_type(
+fn validate_output_buffer_contract(
     buf: &crate::ir_inner::model::program::BufferDecl,
     errors: &mut Vec<ValidationError>,
 ) {
@@ -167,11 +204,29 @@ fn validate_output_buffer_element_type(
     }
 
     if matches!(buf.element(), DataType::Array { .. } | DataType::Tensor) {
-        errors.push(err(format!(
-            "output buffer `{}` uses unsupported element type `{}`. Fix: output buffers must use fixed-width scalar or vector element types, not Array or Tensor.",
-            buf.name(),
-            buf.element()
-        )));
+        errors.push(err(
+            "V110",
+            ValidationPhase::Program,
+            ValidationLocation::Buffer(Cow::Owned(buf.name().to_string())),
+            format!(
+                "output buffer `{}` uses unsupported element type `{}`",
+                buf.name(),
+                buf.element()
+            ),
+            "output buffers must use fixed-width scalar or vector element types, not Array or Tensor",
+        ));
+    }
+    if buf.is_backend_allocated_output() && buf.count() == 0 && buf.output_byte_range().is_none() {
+        errors.push(err(
+            "V130",
+            ValidationPhase::Program,
+            ValidationLocation::Buffer(Cow::Owned(buf.name().to_string())),
+            format!(
+                "backend-allocated output buffer `{}` has no static element count or output byte range",
+                buf.name()
+            ),
+            "declare the output with `.with_count(n)`, or use `.with_output_byte_range(0..0)` for a genuinely empty output",
+        ));
     }
 }
 
@@ -240,6 +295,8 @@ struct PreorderValidator<'p, 'o> {
     self_comp_counts: hashbrown::HashMap<String, usize>,
     errors: Vec<ValidationError>,
     warnings: Vec<super::ValidationWarning>,
+    current_node: u32,
+    next_node: u32,
     /// HOT PATH (`PreorderValidator::validate_expr`): reuse one report buffer per expression so we do not allocate fresh error/warning vectors for every `validate_expr` invocation while traversing the IR tree.
     expr_report_scratch: ValidationReport,
 }
@@ -261,6 +318,8 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             pending_alias_extensions: SmallVec::new(),
             self_comp_counts: hashbrown::HashMap::default(),
             errors: Vec::new(),
+            current_node: 0,
+            next_node: 0,
             warnings: Vec::new(),
             expr_report_scratch: ValidationReport::default(),
         }
@@ -286,6 +345,9 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         while let Some(frame) = stack.pop() {
             match frame {
                 Frame::Child(node) => {
+                    self.current_node = self.next_node;
+                    self.next_node = self.next_node.saturating_add(1);
+                    let first_new_error = self.errors.len();
                     if dispatch_node(self, node).is_break() {
                         break;
                     }
@@ -369,6 +431,11 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                         }
                         _ => {}
                     }
+                    for issue in &mut self.errors[first_new_error..] {
+                        if matches!(issue.location(), ValidationLocation::Program) {
+                            issue.set_location(ValidationLocation::Node(self.current_node));
+                        }
+                    }
                 }
                 Frame::PostIf | Frame::PostLoop => {
                     if let Some(accesses) = self.pending_alias_extensions.pop() {
@@ -390,16 +457,18 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                 }
                 Frame::PopScope => {
                     let Some(frame) = self.scope_stack.pop() else {
-                        self.errors.push(err(
-                            "malformed validation frame stream: PopScope without matching PushScope. Fix: rebuild the program through the structured IR builder before validation.".to_string(),
-                        ));
+                        self.errors.push(err("V111", ValidationPhase::Node, ValidationLocation::Program, "malformed validation frame stream: PopScope without matching PushScope".to_string(), "rebuild the program through the structured IR builder before validation.".to_string()));
                         continue;
                     };
                     nodes::restore_scope(&mut self.scope, frame.scope_log);
                     if let Some(pos) = frame.nodes.iter().position(|n| matches!(n, Node::Return)) {
                         if pos != frame.nodes.len().saturating_sub(1) {
                             self.errors.push(err(
-                                "unreachable statements after `return`. Fix: remove statements after `return` or reorder them.".to_string(),
+                                "V112",
+                                ValidationPhase::Node,
+                                ValidationLocation::Program,
+                                "unreachable statements after `return`".to_string(),
+                                "remove statements after `return` or reorder them.".to_string(),
                             ));
                         }
                     }
@@ -413,9 +482,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                 }
                 Frame::PopAlias => {
                     let Some((reads, atomics)) = self.alias_stack.pop() else {
-                        self.errors.push(err(
-                            "malformed validation frame stream: PopAlias without matching PushAlias. Fix: rebuild the program through the structured IR builder before validation.".to_string(),
-                        ));
+                        self.errors.push(err("V113", ValidationPhase::Node, ValidationLocation::Program, "malformed validation frame stream: PopAlias without matching PushAlias".to_string(), "rebuild the program through the structured IR builder before validation.".to_string()));
                         continue;
                     };
                     let _ = std::mem::take(&mut self.alias_reads);
@@ -425,8 +492,10 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                 }
                 Frame::InsertLoopVar { var, uniform } => {
                     let Some(frame) = self.scope_stack.last_mut() else {
-                        self.errors.push(err(format!(
-                            "malformed validation frame stream: loop variable `{var}` inserted outside any scope. Fix: rebuild the program through the structured IR builder before validation."
+                        self.errors.push(err("V114", ValidationPhase::Node, ValidationLocation::Program, format!(
+                            "malformed validation frame stream: loop variable `{var}` inserted outside any scope"
+                        ), format!(
+                            "rebuild the program through the structured IR builder before validation."
                         )));
                         continue;
                     };
@@ -453,8 +522,10 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             .collect();
         duplicates.sort_unstable();
         for generator in duplicates {
-            self.errors.push(err(format!(
-                "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program. Fix: split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
+            self.errors.push(err("V115", ValidationPhase::Composition, ValidationLocation::Program, format!(
+                "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program"
+            ), format!(
+                "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."
             )));
         }
     }
@@ -481,21 +552,56 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
             &mut self.expr_report_scratch,
             depth_level,
         );
+        for issue in &mut self.expr_report_scratch.errors {
+            if matches!(issue.location(), ValidationLocation::Program) {
+                issue.set_location(ValidationLocation::Expression {
+                    node: self.current_node,
+                    depth: u32::try_from(depth_level).unwrap_or(u32::MAX),
+                });
+            }
+        }
         self.errors.append(&mut self.expr_report_scratch.errors);
+        for warning in &mut self.expr_report_scratch.warnings {
+            if warning.location.as_ref().is_some_and(|location| {
+                location.op_id.as_ref() == "program"
+                    && location.operand_idx.is_none()
+                    && location.attr_name.is_none()
+                    && location.graph_node.is_none()
+                    && location.graph_value.is_none()
+                    && location.path.is_none()
+                    && location.source_span.is_none()
+            }) {
+                warning.location = Some(
+                    ValidationLocation::Expression {
+                        node: self.current_node,
+                        depth: u32::try_from(depth_level).unwrap_or(u32::MAX),
+                    }
+                    .diagnostic_location(),
+                );
+            }
+        }
         self.warnings.append(&mut self.expr_report_scratch.warnings);
     }
 
     fn validate_collective_buffer(&mut self, name: &Ident) {
         let Some(buffer) = self.buffers.get(name.as_str()) else {
-            self.errors.push(err(format!(
-                "V046: collective references unknown buffer `{name}`. Fix: declare the collective buffer before validation."
-            )));
+            self.errors.push(err(
+                "V046",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("collective references unknown buffer `{name}`"),
+                format!("declare the collective buffer before validation."),
+            ));
             return;
         };
         if buffer.access == BufferAccess::Workgroup {
-            self.errors.push(err(format!(
-                "V046: collective buffer `{name}` is workgroup-local. Fix: use device/global storage visible to the distributed backend."
-            )));
+            self.errors.push(err(
+                "V046",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("collective buffer `{name}` is workgroup-local"),
+                format!("use device/global storage visible to the distributed backend."),
+            ));
         }
     }
 
@@ -516,8 +622,10 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         hazards.dedup();
 
         for buffer in hazards {
-            self.errors.push(err(format!(
-                "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier. Fix: insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
+            self.errors.push(err("V116", ValidationPhase::Composition, ValidationLocation::Program, format!(
+                "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier"
+            ), format!(
+                "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."
             )));
         }
     }
@@ -539,8 +647,11 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if tag.is_empty() {
             self.errors.push(err(
-                "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
-                    .to_string(),
+                "V117",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                "async stream tag is empty".to_string(),
+                "use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes.".to_string(),
             ));
         }
 
@@ -619,9 +730,15 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         self.validate_expr(value, 0);
 
         let Some(frame) = self.scope_stack.last_mut() else {
-            self.errors.push(err(format!(
-                "malformed validation frame stream: let binding `{name}` appeared outside any scope. Fix: rebuild the program through the structured IR builder before validation."
-            )));
+            self.errors.push(err(
+                "V118",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                "malformed validation frame stream: let binding `{name}` appeared outside any scope"
+            ),
+                format!("rebuild the program through the structured IR builder before validation."),
+            ));
             return ControlFlow::Continue(());
         };
         // Same-region duplicate Lets are always invalid, even when
@@ -672,15 +789,22 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if let Some(binding) = self.scope.get(name.as_str()) {
             if !binding.mutable {
-                self.errors.push(err(format!(
-                    "V011: assignment to loop variable `{name}`. Fix: loop variables are immutable."
-                )));
+                self.errors.push(err(
+                    "V011",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!("assignment to loop variable `{name}`"),
+                    format!("loop variables are immutable."),
+                ));
             }
             if binding.ty_known {
                 if let Some(value_ty) = expr_type(value, &self.buffers, &self.scope) {
                     if value_ty != binding.ty {
-                        self.errors.push(err(format!(
-                            "V045: assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`. Fix: cast the value to `{declared}` or introduce a new binding with the intended type.",
+                        self.errors.push(err("V045", ValidationPhase::Node, ValidationLocation::Program, format!(
+                            "assignment to `{name}` has type `{value_ty}` but the binding was declared as `{declared}`",
+                            declared = binding.ty
+                        ), format!(
+                            "cast the value to `{declared}` or introduce a new binding with the intended type.",
                             declared = binding.ty
                         )));
                     }
@@ -688,24 +812,30 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             }
         } else if let Some(buffer) = self.buffers.get(name.as_str()) {
             if buffer.access != BufferAccess::ReadWrite {
-                self.errors.push(err(format!(
-                    "assignment to buffer `{name}` requires read-write storage but declared access is `{access:?}`. Fix: use a read-write/output buffer or store into a mutable local binding.",
+                self.errors.push(err("V119", ValidationPhase::Node, ValidationLocation::Program, format!(
+                    "assignment to buffer `{name}` requires read-write storage but declared access is `{access:?}`",
                     access = buffer.access
-                )));
+                ), "use a read-write/output buffer or store into a mutable local binding"));
             }
             if let Some(value_ty) = expr_type(value, &self.buffers, &self.scope) {
                 let elem = &buffer.element;
                 let compatible = nodes::store_value_compatible(&value_ty, elem);
                 if !compatible {
-                    self.errors.push(err(format!(
-                        "V045: assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`. Fix: cast the value to `{elem}` or write to a buffer with the intended element type."
+                    self.errors.push(err("V045", ValidationPhase::Node, ValidationLocation::Program, format!(
+                        "assignment to buffer `{name}` has type `{value_ty}` but the buffer element type is `{elem}`"
+                    ), format!(
+                        "cast the value to `{elem}` or write to a buffer with the intended element type."
                     )));
                 }
             }
         } else {
-            self.errors.push(err(format!(
-                "assignment to undeclared variable `{name}`. Fix: add `let {name} = ...;` before this assignment."
-            )));
+            self.errors.push(err(
+                "V120",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("assignment to undeclared variable `{name}`"),
+                format!("add `let {name} = ...;` before this assignment."),
+            ));
         }
         self.validate_expr(value, 0);
 
@@ -740,15 +870,19 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                 let compatible = nodes::store_value_compatible(&val_ty, elem);
                 if !compatible {
                     let legal_targets = nodes::store_value_targets(elem);
-                    self.errors.push(err(format!(
-                        "Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}`. Fix: cast/store using one of {legal_targets}."
+                    self.errors.push(err("V121", ValidationPhase::Node, ValidationLocation::Program, format!(
+                        "Node::Store buffer `{buffer}` value has type `{val_ty}` but element type is `{elem}`"
+                    ), format!(
+                        "cast/store using one of {legal_targets}."
                     )));
                 }
             }
             if let Some(index_ty) = expr_type(index, &self.buffers, &self.scope) {
                 if index_ty != DataType::U32 {
-                    self.errors.push(err(format!(
-                        "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`. Fix: cast the index to U32 before storing."
+                    self.errors.push(err("V122", ValidationPhase::Node, ValidationLocation::Program, format!(
+                        "Node::Store buffer `{buffer}` index has type `{index_ty}` but must be `u32`"
+                    ), format!(
+                        "cast the index to U32 before storing."
                     )));
                 }
             }
@@ -779,9 +913,13 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         self.validate_expr(cond, 0);
         if let Some(cond_ty) = expr_type(cond, &self.buffers, &self.scope) {
             if !matches!(cond_ty, DataType::U32 | DataType::Bool) {
-                self.errors.push(err(format!(
-                    "Node::If condition has type `{cond_ty}` but must be `u32` or `bool`. Fix: cast or rewrite the condition expression to produce `u32` or `bool`."
-                )));
+                self.errors.push(err(
+                    "V123",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!("Node::If condition has type `{cond_ty}` but must be `u32` or `bool`"),
+                    format!("cast or rewrite the condition expression to produce `u32` or `bool`."),
+                ));
             }
         }
 
@@ -807,16 +945,28 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         self.validate_expr(to, 0);
         if let Some(from_ty) = expr_type(from, &self.buffers, &self.scope) {
             if from_ty != DataType::U32 {
-                self.errors.push(err(format!(
-                    "Node::Loop from-bound has type `{from_ty}`; legal loop bound type is `u32`. Fix: cast the `from` bound to `u32`."
-                )));
+                self.errors.push(err(
+                    "V124",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!(
+                    "Node::Loop from-bound has type `{from_ty}`; legal loop bound type is `u32`"
+                ),
+                    format!("cast the `from` bound to `u32`."),
+                ));
             }
         }
         if let Some(to_ty) = expr_type(to, &self.buffers, &self.scope) {
             if to_ty != DataType::U32 {
-                self.errors.push(err(format!(
-                    "Node::Loop to-bound has type `{to_ty}`; legal loop bound type is `u32`. Fix: cast the `to` bound to `u32`."
-                )));
+                self.errors.push(err(
+                    "V125",
+                    ValidationPhase::Node,
+                    ValidationLocation::Program,
+                    format!(
+                        "Node::Loop to-bound has type `{to_ty}`; legal loop bound type is `u32`"
+                    ),
+                    format!("cast the `to` bound to `u32`."),
+                ));
             }
         }
         shadowing::check_local(var, &self.scope, self.options, &mut self.errors);
@@ -852,14 +1002,22 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if count_offset % 4 != 0 {
-            self.errors.push(err(format!(
-                "indirect dispatch offset {count_offset} is not 4-byte aligned. Fix: use an offset aligned to a u32 dispatch count tuple."
-            )));
+            self.errors.push(err(
+                "V126",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("indirect dispatch offset {count_offset} is not 4-byte aligned"),
+                format!("use an offset aligned to a u32 dispatch count tuple."),
+            ));
         }
         if !self.buffers.contains_key(count_buffer.as_str()) {
-            self.errors.push(err(format!(
-                "indirect dispatch references unknown buffer `{count_buffer}`. Fix: declare the count buffer before validation."
-            )));
+            self.errors.push(err(
+                "V127",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!("indirect dispatch references unknown buffer `{count_buffer}`"),
+                format!("declare the count buffer before validation."),
+            ));
         }
 
         let mut accesses = NodeAccesses::default();
@@ -877,8 +1035,11 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if tag.is_empty() {
             self.errors.push(err(
-                "async stream tag is empty. Fix: use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes."
-                    .to_string(),
+                "V128",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                "async stream tag is empty".to_string(),
+                "use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes.".to_string(),
             ));
         }
         ControlFlow::Continue(())
@@ -913,7 +1074,11 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let divergent = self.current_divergent();
         let Node::Barrier { ordering } = node else {
             self.errors.push(err(
-                "malformed barrier visitor dispatch. Fix: rebuild the program through the structured IR builder before validation."
+                "V129",
+                ValidationPhase::Memory,
+                ValidationLocation::Program,
+                "malformed barrier visitor dispatch".to_string(),
+                "rebuild the program through the structured IR builder before validation."
                     .to_string(),
             ));
             return ControlFlow::Continue(());
@@ -928,10 +1093,9 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         let depth = self.current_depth();
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if !self.options.supports_distributed_collectives() {
-            self.errors.push(err(
-                "V046: distributed collective nodes require backend collective support. Fix: validate with BackendCapabilities { supports_distributed_collectives: true, .. } or lower collectives before this backend."
-                    .to_string(),
-            ));
+            self.errors.push(err("V046", ValidationPhase::Node, ValidationLocation::Program, "distributed collective nodes require backend collective support"
+                    .to_string(), "validate with BackendCapabilities { supports_distributed_collectives: true, .. } or lower collectives before this backend."
+                    .to_string()));
         }
 
         let mut accesses = NodeAccesses::default();
@@ -948,13 +1112,19 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                     self.buffers.get(output.as_str()),
                 ) {
                     if input_buf.element != output_buf.element {
-                        self.errors.push(err(format!(
-                            "V046: collective input/output element mismatch: `{}` is `{}`, `{}` is `{}`. Fix: use matching element types before collective lowering.",
+                        self.errors.push(err(
+                            "V046",
+                            ValidationPhase::Node,
+                            ValidationLocation::Program,
+                            format!(
+                            "collective input/output element mismatch: `{}` is `{}`, `{}` is `{}`",
                             input_buf.name(),
                             input_buf.element,
                             output_buf.name(),
                             output_buf.element
-                        )));
+                        ),
+                            "use matching element types before collective lowering",
+                        ));
                     }
                 }
                 accesses.read_buffers.insert(input.clone());
@@ -1002,21 +1172,37 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
         depth::check_limits(&mut self.limits, depth, &mut self.errors);
         if extension.extension_kind().is_empty() {
             self.errors.push(err(
-                "V031: opaque node extension has an empty extension_kind. Fix: return a stable non-empty namespace from NodeExtension::extension_kind.",
+                "V031",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                "opaque node extension has an empty extension_kind",
+                "return a stable non-empty namespace from NodeExtension::extension_kind.",
             ));
         }
         if extension.debug_identity().is_empty() {
-            self.errors.push(err(format!(
-                "V031: opaque node extension `{}` has an empty debug_identity. Fix: return a stable human-readable identity from NodeExtension::debug_identity.",
-                extension.extension_kind()
-            )));
+            self.errors.push(err(
+                "V031",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                    "opaque node extension `{}` has an empty debug_identity",
+                    extension.extension_kind()
+                ),
+                "return a stable human-readable identity from NodeExtension::debug_identity",
+            ));
         }
         if let Err(message) = extension.validate_extension() {
-            self.errors.push(err(format!(
-                "V031: opaque node extension `{}`/`{}` failed validation: {message}",
-                extension.extension_kind(),
-                extension.debug_identity()
-            )));
+            self.errors.push(err(
+                "V031",
+                ValidationPhase::Node,
+                ValidationLocation::Program,
+                format!(
+                    "opaque node extension `{}`/`{}` failed validation: {message}",
+                    extension.extension_kind(),
+                    extension.debug_identity()
+                ),
+                "rewrite the program to satisfy this validation invariant",
+            ));
         }
         ControlFlow::Continue(())
     }

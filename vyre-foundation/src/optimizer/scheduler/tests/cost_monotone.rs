@@ -30,6 +30,26 @@ fn cost_monotone_disabled_by_default_keeps_cost_up_rewrites() {
 }
 
 #[test]
+fn structurally_identical_rewrite_reports_convergence() {
+    let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(IdenticalRewritePass {
+        metadata: PassMetadata::new("identical_rewrite", &[], &[]),
+    })]);
+
+    let input = trivial_program();
+    let output = scheduler
+        .run(input.clone())
+        .expect("structurally identical rewrites must converge");
+    assert_eq!(output, input);
+
+    let report = scheduler
+        .run_with_metrics(input)
+        .expect("metrics must classify structurally identical rewrites as unchanged");
+    assert_eq!(report.passes.len(), 1);
+    assert!(!report.passes[0].changed);
+    assert_eq!(report.passes[0].decision, PassRunDecision::RanUnchanged);
+}
+
+#[test]
 fn cost_monotone_enabled_reverts_cost_up_rewrites() {
     let scheduler = PassScheduler::with_passes(vec![ProgramPassKind::new(TestPass {
         metadata: PassMetadata::new("cost_up_with_gate", &[], &[]),

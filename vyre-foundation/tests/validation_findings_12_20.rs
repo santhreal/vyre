@@ -246,13 +246,21 @@ fn narrowing_cast_emits_warning_without_rejecting_program() {
         "narrowing cast warning must not reject the program: {:?}",
         report.errors
     );
-    assert!(
-        report.warnings.iter().any(|warning| warning
-            .message()
-            .contains("narrowing cast from `u32` to `u8`")),
-        "narrowing cast must emit a warning, got {:?}",
-        report.warnings
+    let warning = report
+        .warnings
+        .iter()
+        .find(|warning| warning.code.as_str() == "V035")
+        .expect("narrowing cast must emit V035");
+    assert_eq!(
+        warning.message,
+        "narrowing cast from `u32` to `u8` may truncate high bits"
     );
+    let location = warning
+        .location
+        .as_ref()
+        .expect("V035 must retain a typed expression location");
+    assert_eq!(location.op_id.as_ref(), "program.expression");
+    assert!(location.graph_node.is_some());
 
     let ok_program = output_program(vec![Node::let_bind(
         "tmp",

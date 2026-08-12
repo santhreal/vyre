@@ -1,6 +1,7 @@
 // Tests for `validate.rs`. Split out per audit item #85 to keep the
 // parent file focused on production code.
 
+use std::borrow::Cow;
 use super::*;
 use crate::ir::{AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::validate::fusion_safety::validate_fusion_alias_hazards;
@@ -19,17 +20,22 @@ fn validate_with_options_legacy(
     let mut report = ValidationReport {
         errors: Vec::with_capacity(program.buffers().len() + program.entry().len()),
         warnings: Vec::new(),
+        trace: Vec::new(),
     };
 
-    if let Some(message) = program.top_level_region_violation() {
-        report.errors.push(err(message));
+    if let Some(message) = program.top_level_region_violation_cause() {
+        report.errors.push(err(
+            "V105",
+            ValidationPhase::Program,
+            ValidationLocation::Program,
+            message,
+            "construct runnable programs with Program::wrapped or add one top-level Region",
+        ));
     }
 
     for (axis, &size) in program.workgroup_size.iter().enumerate() {
         if size == 0 {
-            report.errors.push(err(format!(
-                "workgroup_size[{axis}] is 0. Fix: all workgroup dimensions must be >= 1."
-            )));
+            report.errors.push(err("V106", ValidationPhase::Program, ValidationLocation::WorkgroupAxis(axis as u8), format!("workgroup_size[{axis}] is 0"), format!("all workgroup dimensions must be >= 1.")));
         }
     }
 
@@ -37,24 +43,24 @@ fn validate_with_options_legacy(
     let mut seen_bindings = FxHashSet::default();
     for buf in program.buffers() {
         if !seen_names.insert(&buf.name) {
-            report.errors.push(err(format!(
-                "duplicate buffer name `{}`. Fix: each buffer must have a unique name.",
-                buf.name
-            )));
+            report.errors.push(err("V107", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
+                    "duplicate buffer name `{}`",
+                    buf.name
+                ), "each buffer must have a unique name"));
         }
         if buf.access != BufferAccess::Workgroup && !seen_bindings.insert(buf.binding) {
-            report.errors.push(err(format!(
-                    "duplicate binding slot {} (buffer `{}`). Fix: each buffer must have a unique binding.",
+            report.errors.push(err("V108", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
+                    "duplicate binding slot {} (buffer `{}`)",
                     buf.binding, buf.name
-                )));
+                ), "each buffer must have a unique binding"));
         }
         if buf.access == BufferAccess::Workgroup && buf.count == 0 {
-            report.errors.push(err(format!(
-                "workgroup buffer `{}` has count 0. Fix: declare a positive element count.",
-                buf.name
-            )));
+            report.errors.push(err("V109", ValidationPhase::Program, ValidationLocation::Buffer(Cow::Owned(buf.name.to_string())), format!(
+                    "workgroup buffer `{}` has count 0",
+                    buf.name
+                ), "declare a positive element count"));
         }
-        validate_output_buffer_element_type(buf, &mut report.errors);
+        validate_output_buffer_contract(buf, &mut report.errors);
     }
     validate_output_markers(program.buffers(), &mut report.errors);
 
@@ -269,8 +275,15 @@ proptest! {
         // Deterministic ordering: sort both error sets by message.
         let mut legacy_errors = legacy.errors;
         let mut modern_errors = modern.errors;
-        legacy_errors.sort_by(|a, b| a.message.cmp(&b.message));
-        modern_errors.sort_by(|a, b| a.message.cmp(&b.message));
+        legacy_errors.sort_by(|a, b| a.message().cmp(&b.message()));
+        modern_errors.sort_by(|a, b| a.message().cmp(&b.message()));
+
+        for issue in &mut legacy_errors {
+            issue.set_location(ValidationLocation::Program);
+        }
+        for issue in &mut modern_errors {
+            issue.set_location(ValidationLocation::Program);
+        }
 
         prop_assert_eq!(
             legacy_errors, modern_errors,
@@ -332,7 +345,7 @@ fn call_result_binding_unknown_type_does_not_produce_false_v045() {
     let v045: Vec<_> = report
         .errors
         .iter()
-        .filter(|e| e.message().contains("V045"))
+        .filter(|e| e.code().as_str() == "V045")
         .collect();
     assert!(
         v045.is_empty(),
@@ -341,7 +354,7 @@ fn call_result_binding_unknown_type_does_not_produce_false_v045() {
     );
     // Confirm that V016 IS emitted (the call itself is still rejected).
     assert!(
-        report.errors.iter().any(|e| e.message().contains("V016")),
+        report.errors.iter().any(|e| e.code().as_str() == "V016"),
         "expected V016 for call with no lookup, got: {:?}",
         report.errors
     );
@@ -377,7 +390,7 @@ fn fma_f32_violations_flags_integer_fma_with_actionable_message() {
     );
     for violation in &violations {
         assert!(
-            violation.message().starts_with("V028:"),
+            violation.code().as_str() == "V028",
             "fma_f32_violations must only return V028 errors, got: {}",
             violation.message()
         );
@@ -527,7 +540,7 @@ fn store_signed_remainder_into_i32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V045")
+        !errors.iter().any(|e| e.code().as_str() == "V045"
             || e.message().contains("value has type")),
         "store of a same-width int (rem result, u32-typed) into an i32 buffer must \
          validate (bit-exact reinterpret), got: {errors:?}"
@@ -554,7 +567,7 @@ fn store_signed_div_into_u32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V045")
+        !errors.iter().any(|e| e.code().as_str() == "V045"
             || e.message().contains("value has type")),
         "store of an i32-typed value into a u32 buffer must validate, got: {errors:?}"
     );
@@ -606,7 +619,7 @@ fn assign_signed_remainder_to_i32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V045")),
+        !errors.iter().any(|e| e.code().as_str() == "V045"),
         "assigning a same-width int (rem result) to an i32 buffer must validate, got: {errors:?}"
     );
 }
@@ -632,7 +645,7 @@ fn store_bool_comparison_result_into_u32_buffer_validates() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V045")
+        !errors.iter().any(|e| e.code().as_str() == "V045"
             || e.message().contains("value has type")),
         "storing a bool comparison result into a u32 buffer must validate, got: {errors:?}"
     );

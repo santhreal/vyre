@@ -18,11 +18,11 @@ fn preserves_specific_recovery_guidance_once() {
 }
 
 #[test]
-fn supplies_recovery_guidance_when_caller_has_none() {
+fn preserves_owner_authored_message_without_parsing() {
     let rendered = ReferenceError::new("input buffer is too short").to_string();
 
     assert_eq!(
         rendered,
-        "vyre reference interpreter: input buffer is too short. Fix: validate the Program and input buffer set before invoking the reference backend."
+        "vyre reference interpreter: input buffer is too short"
     );
 }

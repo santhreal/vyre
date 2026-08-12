@@ -89,11 +89,10 @@ pub use validate::fma_f32_violations;
 /// `Program` to a backend.
 pub use validate::validate;
 pub use validate::validate_with_options;
-/// Re-export of the detailed validation error type.
-///
-/// Consumers inspect `ValidationError` to produce human-readable
-/// diagnostics or to decide whether a program can be retried.
-pub use validation_error::ValidationError;
+/// Re-export of the structured validation issue model.
+pub use validation_error::{
+    ValidationCode, ValidationError, ValidationLocation, ValidationPhase, ValidationTraceEvent,
+};
 
 #[cfg(test)]
 mod tests {
@@ -114,7 +113,7 @@ mod tests {
         let errors = validate(&program);
         assert!(errors.iter().any(|error| {
             error
-                .message
+                .message()
                 .contains("output buffer `out` uses unsupported element type `array<4B>`")
         }));
     }
@@ -129,7 +128,7 @@ mod tests {
         let errors = validate(&program);
         assert!(errors.iter().any(|error| {
             error
-                .message
+                .message()
                 .contains("output buffer `out` uses unsupported element type `tensor`")
         }));
     }
@@ -167,7 +166,7 @@ mod tests {
         );
         let errors = validate(&program);
         assert!(errors.iter().any(|error| {
-            error.message.contains("top-level Region") || error.message.contains("Node::Region")
+            error.message().contains("top-level Region") || error.message().contains("Node::Region")
         }));
     }
 
@@ -187,9 +186,9 @@ mod tests {
         );
         let errors = validate(&program);
         assert!(
-            errors
-                .iter()
-                .any(|e| e.message.contains("`ghost` declared `LinearType::Linear`")),
+            errors.iter().any(|e| e
+                .message()
+                .contains("`ghost` declared `LinearType::Linear`")),
             "linear-type checker not wired into validate(): got {errors:?}"
         );
     }
@@ -205,7 +204,7 @@ mod tests {
         );
         let errors = validate(&program);
         assert!(
-            !errors.iter().any(|e| e.message.contains("LinearType::")),
+            !errors.iter().any(|e| e.message().contains("LinearType::")),
             "unrestricted buffer flagged: {errors:?}"
         );
     }
@@ -226,9 +225,10 @@ mod tests {
         );
         let errors = validate(&program);
         assert!(
-            errors.iter().any(
-                |e| e.message.contains("`misaligned`") && e.message.contains("count % 64 == 0")
-            ),
+            errors
+                .iter()
+                .any(|e| e.message().contains("`misaligned`")
+                    && e.message().contains("count % 64 == 0")),
             "shape-predicate checker not wired into validate(): got {errors:?}"
         );
     }
@@ -247,7 +247,7 @@ mod tests {
         );
         let errors = validate(&program);
         assert!(
-            !errors.iter().any(|e| e.message.contains("count % ")),
+            !errors.iter().any(|e| e.message().contains("count % ")),
             "satisfied predicate flagged: {errors:?}"
         );
     }

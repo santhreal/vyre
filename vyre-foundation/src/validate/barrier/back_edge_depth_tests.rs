@@ -27,7 +27,7 @@ fn a_barrier_inside_a_block_still_makes_the_loop_collective() {
     let mut errors = Vec::new();
     check_loop_back_edge(&[Node::Block(vec![barrier()]), exit_guard()], &mut errors);
     assert!(
-        errors.iter().any(|error| error.message().contains("V055")),
+        errors.iter().any(|error| error.code().as_str() == "V055"),
         "a barrier nested in a Block must still trigger the back-edge check"
     );
 }
@@ -63,7 +63,7 @@ fn a_guarding_barrier_inside_an_if_is_not_credited() {
         &mut errors,
     );
     assert!(
-        errors.iter().any(|error| error.message().contains("V055")),
+        errors.iter().any(|error| error.code().as_str() == "V055"),
         "a barrier only reached on one branch does not order the back edge"
     );
 }
@@ -82,7 +82,7 @@ fn a_barrier_only_inside_a_nested_loop_triggers_but_never_guards() {
     let mut errors = Vec::new();
     check_loop_back_edge(&[exit_guard(), nested], &mut errors);
     assert!(
-        errors.iter().any(|error| error.message().contains("V055")),
+        errors.iter().any(|error| error.code().as_str() == "V055"),
         "a nested-loop barrier makes the loop collective but cannot guard the back edge"
     );
 }
