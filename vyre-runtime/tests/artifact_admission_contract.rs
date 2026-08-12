@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use vyre_driver::backend::BackendRegistration;
 use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
-    Device, DeviceIdentity, Submission, VyreBackend,
+    Device, DeviceIdentity, ResidentOwner, Resource, Submission, VyreBackend,
 };
 use vyre_foundation::diagnostics::DiagnosticStage;
 use vyre_foundation::ir::{
@@ -110,6 +110,74 @@ fn resident_queue_artifact() -> Artifact {
     .validate()
     .unwrap();
     compile(&request).unwrap()
+}
+
+fn resident_projection_artifact() -> Artifact {
+    let program = Program::wrapped(
+        vec![
+            BufferDecl::read_write("out_flags", 0, DataType::U32).with_count(16),
+            BufferDecl::read("pattern_bitmap", 1, DataType::U32).with_count(8),
+            BufferDecl::read("rule_bitmap", 2, DataType::U32).with_count(8),
+        ],
+        [1, 1, 1],
+        Vec::new(),
+    );
+    let graph = ProgramGraph::from_program("resident-projection", program)
+        .expect("resident projection graph must be valid");
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
+        1_000_000,
+    )
+    .validate()
+    .expect("resident projection request must validate");
+    compile(&request).expect("resident projection request must compile")
+}
+
+fn resident_projection_payload(neutral: &Artifact) -> TargetPayload {
+    let bindings = [
+        (
+            ArtifactValueId(0),
+            TargetResourceMemory::Global,
+            TargetResourceAccess::ReadWrite,
+        ),
+        (
+            ArtifactValueId(1),
+            TargetResourceMemory::Constant,
+            TargetResourceAccess::ReadOnly,
+        ),
+        (
+            ArtifactValueId(2),
+            TargetResourceMemory::Constant,
+            TargetResourceAccess::ReadOnly,
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    .map(|(slot, (resource, memory, access))| TargetResourceBinding {
+        resource,
+        group: 0,
+        slot: slot as u32,
+        memory,
+        access,
+    })
+    .collect();
+    TargetPayload::new(
+        neutral,
+        format("test.cache-target", 1),
+        profile("test.cache-target", 1),
+        vec![TargetEntryPoint {
+            name: "resident-projection".to_string(),
+            node: ArtifactNodeId(0),
+            workgroup_size: [1, 1, 1],
+            grid_size: [1, 1, 1],
+            dynamic_shared_bytes: 0,
+            resource_bindings: bindings,
+        }],
+        vec![7, 8, 9],
+    )
+    .expect("resident projection payload must be valid")
 }
 
 fn queue_payload(neutral: &Artifact) -> TargetPayload {
@@ -734,6 +802,43 @@ static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
     target_compiler: None,
     materializer: Some(test_materializer_factory),
 };
+
+/// WHY: resident projection follows the authenticated target ABI, including
+/// read-only constant slots, rather than silently dropping non-global memory.
+#[test]
+fn resident_bindings_include_global_and_constant_target_resources() {
+    let neutral = resident_projection_artifact();
+    let payload = resident_projection_payload(&neutral);
+    let session = ArtifactSession::from_bytes(
+        &TEST_REGISTRATION,
+        &envelope_bytes(neutral, [payload]),
+    )
+    .expect("authenticated resident projection must materialize");
+    let owner = ResidentOwner::new().expect("resident owner identity must be available");
+    let resources = [0, 1, 2]
+        .map(|id| Resource::Resident(owner.handle(id)));
+
+    let bindings = session
+        .resident_bindings(&resources)
+        .expect("global and constant target resources must all bind");
+    assert_eq!(bindings.resources().len(), 3);
+    for id in 0..3 {
+        assert_eq!(
+            bindings.resources().get(&ArtifactValueId(id)),
+            Some(&BoundResource::Resident(resources[id as usize].clone()))
+        );
+    }
+
+    let error = session
+        .resident_bindings(&resources[..2])
+        .expect_err("missing a constant target resource must fail closed");
+    assert!(
+        error
+            .to_string()
+            .contains("target entry requires 3 resident resource(s), but the caller supplied 2"),
+        "count failure must report the authenticated target ABI: {error}"
+    );
+}
 
 /// WHY: bootstrap and recovery must authenticate and rematerialize without a compiler facet.
 #[test]

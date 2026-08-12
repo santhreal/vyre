@@ -12,7 +12,7 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
-use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime, TargetResourceMemory};
+use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime};
 
 /// Failure to authenticate an artifact envelope or select its exact required payload.
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -376,11 +376,7 @@ impl ArtifactSession {
             }
             .into());
         }
-        let bindings = entries[0]
-            .resource_bindings
-            .iter()
-            .filter(|binding| binding.memory == TargetResourceMemory::Global)
-            .collect::<Vec<_>>();
+        let bindings = &entries[0].resource_bindings;
         if bindings.len() != resources.len() {
             return Err(BackendError::InvalidProgram {
                 fix: format!(
