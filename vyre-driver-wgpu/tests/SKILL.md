@@ -38,22 +38,7 @@ Every GPU execution path in vyre eventually lives here.
   failure, not stay `true` silently
 - Readback with `Maintain::Wait` on a dropped queue  -  structured
   error
-- Streaming `push_chunk` racing with `finish()`
-
-## Current gaps
-
-- True LRU on the pipeline cache  -  today deterministic-but-
-  arbitrary eviction. Gap test: "after 512 unique pipelines, the 256
-  hottest remain".
-- `BindGroupCache` reuse in `record_and_readback`  -  currently
-  creates fresh bind groups per dispatch. Gap test: "dispatch 100×
-  same pipeline + same buffers → bind_group_created_count == 1".
-- Device-loss recovery  -  `try_recover` currently returns
-  `UnsupportedFeature`. Gap test: "simulated device-lost callback
-  invalidates cached pipelines then recovers".
-- `supports_bf16` / `supports_tensor_cores` / `supports_async_compute`
-  return `false`  -  gap tests document that each requires a
-  lowering path before flipping to `true`.
+- Artifact materialization racing device-loss recovery  -  stale generations fail closed
 
 ## Cross-crate contracts
 

@@ -9,7 +9,7 @@
 //! resident bitmap is byte-identical to the borrowed `scan_presence_by_region`
 //! across repeated scans AND carries the exact planted per-region hit sets
 //! the resident table-residency optimization must not change a single result bit
-//! (Law 10). Skips cleanly with no GPU.
+//! (Law 10). Missing GPU configuration fails loudly.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_resident_presence --release -- --nocapture
@@ -19,18 +19,11 @@ mod presence_corpus;
 use std::time::Instant;
 
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_wgpu as _;
 
 #[test]
 fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident region-presence GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let words = pattern_count.div_ceil(32).max(1) as usize;
@@ -39,17 +32,13 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
 
     // Ground truth: the borrowed per-region presence scan.
     let borrowed_words = matcher
-        .scan_presence_by_region(backend.as_ref(), &haystack, &region_starts)
+        .scan_presence_by_region("wgpu", &haystack, &region_starts)
         .expect("borrowed gpu presence-by-region scan");
 
     // Prepare a resident session sized for this corpus (a couple regions of head
     // room proves the dynamic-region-count path: max_regions > region_count).
     let session = matcher
-        .prepare_resident_presence(
-            backend.as_ref(),
-            haystack.len() + 64,
-            region_count as u32 + 2,
-        )
+        .prepare_resident_presence("wgpu", haystack.len() + 64, region_count as u32 + 2)
         .expect("prepare resident region-presence session");
     assert_eq!(session.max_regions(), region_count as u32 + 2);
     assert_eq!(session.presence_words(), words as u32);
@@ -62,14 +51,7 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
     let mut scratch = Vec::new();
     for iter in 0..4 {
         session
-            .scan_into(
-                backend.as_ref(),
-                &haystack,
-                &region_starts,
-                0,
-                &mut out,
-                &mut scratch,
-            )
+            .scan_into(&haystack, &region_starts, 0, &mut out, &mut scratch)
             .expect("resident region-presence scan");
         assert_eq!(
             out, borrowed_words,
@@ -84,7 +66,7 @@ fn resident_region_presence_matches_borrowed_and_planted_hits_on_gpu() {
     }
 
     session
-        .free(backend.as_ref())
+        .free()
         .expect("free resident region-presence session");
 }
 
@@ -93,24 +75,13 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
     // One resident session sized for the full corpus must also correctly scan a
     // SMALLER batch (fewer regions than max_regions), proving the kernel reads the
     // live region count from buf_len(region_starts), not the compiled cap.
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident sub-batch GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let words = pattern_count.div_ceil(32).max(1) as usize;
     let (haystack, region_starts) = planted_corpus();
 
     let session = matcher
-        .prepare_resident_presence(
-            backend.as_ref(),
-            haystack.len() + 64,
-            region_starts.len() as u32,
-        )
+        .prepare_resident_presence("wgpu", haystack.len() + 64, region_starts.len() as u32)
         .expect("prepare resident region-presence session");
 
     // A two-region sub-batch: just the first file (regions {0} start, terminated by
@@ -120,20 +91,13 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
     let first_file = &haystack[..first_file_end];
 
     let borrowed = matcher
-        .scan_presence_by_region(backend.as_ref(), first_file, &single_region_start)
+        .scan_presence_by_region("wgpu", first_file, &single_region_start)
         .expect("borrowed single-region scan");
 
     let mut out = Vec::new();
     let mut scratch = Vec::new();
     session
-        .scan_into(
-            backend.as_ref(),
-            first_file,
-            &single_region_start,
-            0,
-            &mut out,
-            &mut scratch,
-        )
+        .scan_into(first_file, &single_region_start, 0, &mut out, &mut scratch)
         .expect("resident single-region scan under the cap");
 
     assert_eq!(
@@ -150,7 +114,7 @@ fn resident_region_presence_serves_smaller_batches_under_the_cap_on_gpu() {
         "the first planted file carries exactly {{key,token,secret,AKIA,api}}"
     );
 
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }
 
 /// A coalesced batch: `regions` small files (each carrying a couple of the planted
@@ -186,13 +150,6 @@ fn synth_batch(detectors: &[Vec<u8>], regions: usize, batch_seed: usize) -> (Vec
 #[test]
 #[ignore = "perf measurement; needs a GPU and runs a timed multi-batch loop"]
 fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident throughput test");
-            return;
-        }
-    };
     // A large detector set => a large DFA transition table: exactly the multi-MiB
     // per-scan re-upload the resident path eliminates.
     let detectors: Vec<Vec<u8>> = (0..400)
@@ -212,7 +169,7 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
     let max_regions = corpus.iter().map(|(_, rs)| rs.len()).max().unwrap() as u32;
 
     let session = matcher
-        .prepare_resident_presence(backend.as_ref(), cap_bytes, max_regions)
+        .prepare_resident_presence("wgpu", cap_bytes, max_regions)
         .expect("prepare resident throughput session");
 
     // Correctness gate (hard): every batch's resident bitmap equals the borrowed one.
@@ -220,10 +177,10 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
     let mut scratch = Vec::new();
     for (h, rs) in &corpus {
         let borrowed = matcher
-            .scan_presence_by_region(backend.as_ref(), h, rs)
+            .scan_presence_by_region("wgpu", h, rs)
             .expect("borrowed scan");
         session
-            .scan_into(backend.as_ref(), h, rs, 0, &mut out, &mut scratch)
+            .scan_into(h, rs, 0, &mut out, &mut scratch)
             .expect("resident scan");
         assert_eq!(
             out, borrowed,
@@ -233,8 +190,8 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
 
     // Warm up both paths (compile caches, device queues) before timing.
     for (h, rs) in &corpus {
-        let _ = matcher.scan_presence_by_region(backend.as_ref(), h, rs);
-        let _ = session.scan_into(backend.as_ref(), h, rs, 0, &mut out, &mut scratch);
+        let _ = matcher.scan_presence_by_region("wgpu", h, rs);
+        let _ = session.scan_into(h, rs, 0, &mut out, &mut scratch);
     }
 
     // Timed: borrowed re-uploads tables + rebuilds the program every batch.
@@ -242,7 +199,7 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
     for _ in 0..ITERS {
         for (h, rs) in &corpus {
             matcher
-                .scan_presence_by_region(backend.as_ref(), h, rs)
+                .scan_presence_by_region("wgpu", h, rs)
                 .expect("timed borrowed scan");
         }
     }
@@ -253,7 +210,7 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
     for _ in 0..ITERS {
         for (h, rs) in &corpus {
             session
-                .scan_into(backend.as_ref(), h, rs, 0, &mut out, &mut scratch)
+                .scan_into(h, rs, 0, &mut out, &mut scratch)
                 .expect("timed resident scan");
         }
     }
@@ -272,5 +229,5 @@ fn resident_presence_throughput_beats_borrowed_across_a_corpus_gpu() {
         "resident table-residency must beat re-uploading the DFA + rebuilding the program every batch \
          (borrowed {borrowed_time:?}, resident {resident_time:?})"
     );
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }

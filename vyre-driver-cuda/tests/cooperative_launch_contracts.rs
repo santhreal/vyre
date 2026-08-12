@@ -188,29 +188,6 @@ fn cooperative_dispatch_rejects_non_resident_grid_before_driver_launch() {
 }
 
 #[test]
-fn cooperative_compiled_pipeline_does_not_use_regular_cuda_graph_replay() {
-    let compiled_dispatch_source = include_str!("../src/pipeline/compiled_dispatch.rs");
-    let graph_source = include_str!("../src/backend/cuda_graph.rs");
-
-    assert!(
-        compiled_dispatch_source.contains("|| self.prepared.cooperative")
-            && compiled_dispatch_source.contains("&& !self.prepared.cooperative"),
-        "Fix: cooperative CUDA compiled pipelines must bypass regular CUDA graph replay until cooperative graph capture explicitly records the cooperative launch ABI."
-    );
-    assert!(
-        graph_source.contains("super::launch::launch_cuda_function(")
-            && graph_source.contains(
-                "false,\n                self.ptx_target_sm(),\n                \"cuLaunchKernel (capture)\","
-            )
-            && graph_source.contains(
-                "false,\n                self.ptx_target_sm(),\n                \"cuLaunchKernel (resident input capture)\","
-            )
-            && !graph_source.contains(concat!("cuLaunchCooperativeKernel", "(")),
-        "Fix: this contract assumes CUDA graph capture still records regular non-cooperative launches through launch_cuda_function(..., cooperative=false); update the replay gate only when cooperative graph capture is implemented explicitly."
-    );
-}
-
-#[test]
 fn cooperative_cuda_graph_recording_is_rejected_explicitly() {
     let backend = CudaBackend::acquire()
         .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");

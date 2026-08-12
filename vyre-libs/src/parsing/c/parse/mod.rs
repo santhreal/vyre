@@ -15,7 +15,11 @@ pub mod structure_statement;
 pub mod vast;
 mod vast_kinds;
 
-pub(crate) fn token_range_expr(token: &vyre_foundation::ir::Expr, lo: u32, hi: u32) -> vyre_foundation::ir::Expr {
+pub(crate) fn token_range_expr(
+    token: &vyre_foundation::ir::Expr,
+    lo: u32,
+    hi: u32,
+) -> vyre_foundation::ir::Expr {
     use vyre_foundation::ir::Expr;
     if lo == hi {
         Expr::eq(token.clone(), Expr::u32(lo))

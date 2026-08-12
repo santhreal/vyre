@@ -10,26 +10,26 @@ operation counts. This guide explains how the pieces fit together.
 
 ## System shape
 
-A user builds a typed `Program`. Vyre validates and optimizes that program,
-selects an eligible backend, lowers it through that backend's concrete driver,
-and dispatches it. The reference interpreter is an oracle. It is not a silent
-fallback for a requested GPU backend.
+A frontend builds one or more typed `Program` values and adapts them into a
+validated `ProgramGraph`. The whole-program compiler selects a bounded legal
+schedule and produces an immutable `Artifact`. A registered target compiler
+attaches an authenticated `TargetPayload`; the matching driver materializer
+admits that payload and creates an `ArtifactInstance`. Typed bindings produce a
+`Submission`, then completion and readback. The reference interpreter is an
+oracle, not a silent fallback for a requested target.
 
 ```mermaid
 flowchart LR
-    User[User or frontend] --> Program[Typed Program]
-    Program --> Validate[Foundation validation]
-    Validate --> Optimize[IR-pure optimizer]
-    Optimize --> Driver[Backend-neutral driver contracts]
-    Driver --> CUDA[CUDA driver]
-    Driver --> WGPU[WGPU driver]
-    Driver --> SPIRV[SPIR-V driver]
-    Driver --> Metal[Metal driver on Apple targets]
-    Optimize --> Reference[Reference oracle]
-    CUDA --> Runtime[Runtime scheduling and dispatch]
-    WGPU --> Runtime
-    SPIRV --> Runtime
-    Metal --> Runtime
+    Frontend[Frontend Program values] --> Graph[Validated ProgramGraph]
+    Graph --> Compiler[Whole-program compiler]
+    Compiler --> Artifact[Immutable Artifact]
+    Artifact --> TargetCompiler[Registered target compiler]
+    TargetCompiler --> Payload[Authenticated TargetPayload]
+    Payload --> Materializer[Driver admission and materialization]
+    Materializer --> Instance[ArtifactInstance]
+    Instance --> Submission[Typed Submission]
+    Submission --> Completion[Completion and readback]
+    Graph --> Reference[Reference oracle]
 ```
 
 The current release evidence selects CUDA as the preferred backend on NVIDIA

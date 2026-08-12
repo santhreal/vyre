@@ -1,5 +1,7 @@
 # vyre observability
 
+Applies to Vyre 0.7.2.
+
 Operators running vyre in production (inference servers, multi-
 tenant GPU platforms, edge AI) need the same visibility every
 well-engineered runtime provides. This document specifies the

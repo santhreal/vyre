@@ -1,11 +1,13 @@
+> **Historical snapshot only.** Paths and owners may be stale. Current authority: `docs/ARCHITECTURE.md`, `docs/megakernel-wiring.md`, `docs/CRATE_OWNERSHIP.toml`.
+
 # Heuristic to math substrate tracker
 
 Rows are derived from `git log --oneline | head -30` at sweep time, filtered to changes that replace hand-tuned behavior with calls into `vyre-foundation::pass_substrate::*` or `vyre_driver::self_substrate::*` / `vyre_primitives::*`. **Status `shipped`** means a non-test production callsite in `libs/performance/matching/vyre/` invokes the replacement (verified with `grep` below each row). Other rows are `documented only` if the commit message describes a heuristic removal but no production callsite matched the sweep grep.
 
 | Heuristic | Replaced-by | File:Line | Commit | Status |
 |---|---|---|---|---|
-| Cost-ordered greedy megakernel fusion subset (ignored exchange-graph structure beyond sort order); earlier megakernel wire without full substrate | `schedule_via_homotopy` then `max_fusion_subset` (homotopy seed + matroid intersection); runtime dispatches `select_fused_subset` | `vyre-runtime/src/megakernel/planner.rs` (`select_fused_subset`; doc comment lines 38–40); `vyre-driver-wgpu/src/megakernel.rs` calls `select_fused_subset` | `054fe43959`, `717e7bd9dc`, `36c683d48d` | shipped (`grep -n 'schedule_via_homotopy\\|max_fusion_subset' …/vyre-runtime/src/megakernel/planner.rs`; `grep -n select_fused_subset …/vyre-driver-wgpu/src/megakernel.rs`) |
-| `exchange_adj` from same-op pairs only | Adds sheaf diffusion stalk drift: `diffuse_to_equilibrium`, `flag_fusion_incompatible` feeding `exchange_adj` before `select_fused_subset` | `vyre-driver-wgpu/src/megakernel.rs` lines 106–115 (calls into `vyre_driver::self_substrate::sheaf_heterophilic_dispatch::*`) | `a5ea175129` | shipped (`grep -n 'sheaf_heterophilic_dispatch' libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel.rs`) |
+| Cost-ordered greedy megakernel fusion subset (ignored exchange-graph structure beyond sort order); earlier megakernel wire without full substrate | `schedule_via_homotopy` then `max_fusion_subset` (homotopy seed + matroid intersection); runtime dispatches `select_fused_subset` | `vyre-runtime/src/megakernel/planner.rs` (`select_fused_subset`; doc comment lines 38–40); historical wgpu wrapper once called `select_fused_subset` before the planner moved fully under runtime | `054fe43959`, `717e7bd9dc`, `36c683d48d` | shipped (`grep -n 'schedule_via_homotopy\\|max_fusion_subset' …/vyre-runtime/src/megakernel/planner.rs`; `grep -n select_fused_subset …/vyre-runtime/src/megakernel/`) |
+| `exchange_adj` from same-op pairs only | Adds sheaf diffusion stalk drift: `diffuse_to_equilibrium`, `flag_fusion_incompatible` feeding `exchange_adj` before `select_fused_subset` | Runtime planner path under `vyre-runtime/src/megakernel/` (calls into `vyre_driver::self_substrate::sheaf_heterophilic_dispatch::*`; historical wgpu wrapper removed) | `a5ea175129` | shipped (`grep -n 'sheaf_heterophilic_dispatch' libs/performance/matching/vyre/vyre-runtime/src/megakernel`) |
 | Discrete-only matroid augmenting steps | Jacobi-smoothed flow weights inside augmenting loop: `matroid_solve_step` | `vyre-driver/src/self_substrate/matroid_megakernel_scheduler.rs` line 129 (`matroid_solve_step`); primitive entry is `vyre_primitives::math::multigrid::jacobi_smooth_step_cpu` inside `multigrid_matroid_solver` | `a5ea175129`, `36c683d48d` | shipped (`grep -n 'matroid_solve_step' libs/performance/matching/vyre/vyre-driver/src/self_substrate/matroid_megakernel_scheduler.rs` excludes tests by reading context; production path is the main `max_fusion_subset` loop) |
 | Hand-rolled transitive dependent enumeration for pass invalidation | `pass_descendants` | `vyre-foundation/src/optimizer/scheduler.rs` line 238 `crate::pass_substrate::adjustment_set_pass_dependency::pass_descendants` | `3ab2d34eae` | shipped (`grep -n pass_descendants libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler.rs`) |
 | Ad-hoc reachability for invalidation | `reachability_closure` | `vyre-foundation/src/optimizer/scheduler.rs` lines 272, 290 | `c07c0e2573` | shipped (`grep -n reachability_closure libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler.rs`) |
@@ -19,8 +21,8 @@ Rows are derived from `git log --oneline | head -30` at sweep time, filtered to 
 
 ```bash
 grep -n 'schedule_via_homotopy\|max_fusion_subset' libs/performance/matching/vyre/vyre-runtime/src/megakernel/planner.rs
-grep -n 'select_fused_subset' libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel.rs
-grep -n 'sheaf_heterophilic_dispatch' libs/performance/matching/vyre/vyre-driver-wgpu/src/megakernel.rs
+grep -n 'select_fused_subset' libs/performance/matching/vyre/vyre-runtime/src/megakernel
+grep -n 'sheaf_heterophilic_dispatch' libs/performance/matching/vyre/vyre-runtime/src/megakernel
 grep -n 'pass_descendants\|reachability_closure\|passes_commute_on' libs/performance/matching/vyre/vyre-foundation/src/optimizer/scheduler.rs
 grep -n 'submodular_cache_eviction' libs/performance/matching/vyre/vyre-driver-wgpu/src/runtime/cache/pipeline.rs
 grep -n 'matroid_solve_step' libs/performance/matching/vyre/vyre-driver/src/self_substrate/matroid_megakernel_scheduler.rs

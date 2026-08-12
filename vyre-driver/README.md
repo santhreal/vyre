@@ -1,152 +1,151 @@
 # vyre-driver
 
-Substrate-agnostic backend machinery for the vyre GPU compiler.
+Backend-neutral artifact materialization, typed binding, submission, completion,
+capability, and lower-level dispatch contracts for Vyre.
 
-`vyre-driver` is the second layer in vyre's four-layer model. It sits
-between `vyre-foundation` (the IR + validator) and concrete backend
-crates. It
-owns the frozen contract every backend must implement, the registry
-that routes a `Program` to the right backend, the pipeline-cache key
-machinery, and the capability surface consumer tools use to decide
-whether a backend can execute a given program.
+Production execution enters this crate after whole-program compilation:
 
 ```text
-vyre-foundation (IR + validator)
-   ↓
-vyre-driver        ← you are here
-   ↓
-concrete driver crates
+Artifact + authenticated TargetPayload
+  -> registered ArtifactMaterializer
+  -> ArtifactInstance
+  -> BindingSet
+  -> Submission
+  -> Completion
 ```
+
+`vyre-megakernel` owns artifact identity and pure target compilation. Concrete
+driver crates own target formats, device acquisition, materialization, native
+modules, and submission mechanics.
 
 ## Invariants
 
-1. **Backend trait is frozen.** `VyreBackend` and `CompiledPipeline`
-   signatures do not change within a major version. New capability
-   flows through `BackendCapability` registration, never through trait
-   mutation.
-2. **Dispatch is deterministic per `(program, inputs, config)`.** Two
-   calls with the same triple produce byte-identical outputs on every
-   registered backend. Divergence is a backend bug, caught by the
-   shadow pipeline in `shadow.rs`.
-3. **Registration is side-effect-free at import.** Registering a
-   backend inserts a `BackendRegistration` into the `inventory`-backed
-   registry but does not initialise devices, allocate memory, or open
-   adapters. Initialisation is deferred to the caller's first
-   `dispatch` / `compile_native`.
-4. **Precedence is stable.** `registered_backends_by_precedence()`
-   returns backends in ascending `BackendPrecedence` order and this
-   order is part of the public API; consumer tools rely on it to pick
-   a default backend without inspecting internal state.
-5. **Pipeline-cache keys hash the complete Program.** Fingerprints use
-   blake3 over the canonical wire form, so two programs with identical
-   IR share a cached pipeline regardless of how they were constructed.
-6. **Errors carry a `Fix:` section.** Every `BackendError` variant's
-   `Display` implementation ends in `Fix: <remediation>` so users do
-   not need to guess at recovery.
+1. `ArtifactMaterializer` admits immutable authenticated target bytes for one
+   device generation.
+2. `ArtifactInstance` accepts only bindings carrying its artifact digest.
+3. `BindingSet` separates immutable artifact identity from runtime invocation
+   geometry and resident resource selection.
+4. Device loss invalidates native modules and resident handles from that
+   generation. Recovery rematerializes target bytes without re-lowering.
+5. Backend operation support derives from the foundation semantic operation
+   registry.
+6. Direct `Program` dispatch is a lower-level oracle, capability, and driver
+   testing surface. Production callers use artifacts.
 
 ## Boundaries
 
-Concrete-driver isolation is part of the driver contract:
+`vyre-driver` owns:
 
-- Concrete backend crates own their own runtime objects, codegen objects,
-  feature names, tests, target-specific terminology, and concrete API/type
-  names such as adapter objects or launch objects.
-- Shared crates and tools must not import concrete backend crates or spell
-  concrete backend APIs. They depend on `vyre-driver` traits, registrations,
-  capabilities, shared binding layouts, validation helpers, tuners, and
-  opaque backend ids.
-- If two concrete drivers need the same decision logic, move that logic here
-  as a backend-neutral module. The concrete drivers keep only the target
-  mechanics that cannot be shared.
+- `BackendRegistration` and registered compiler/materializer facets;
+- `ArtifactMaterializer`, `ArtifactInstance`, `BindingSet`, `Submission`, and
+  `Completion`;
+- backend-neutral device identity, capability, resident-resource, validation,
+  scheduling, and diagnostic contracts;
+- `VyreBackend`, `DispatchConfig`, and direct dispatch for intentional
+  lower-level consumers.
 
-`vyre-driver` does:
+Concrete driver crates own runtime objects, target code generation, target
+formats, device probes, native executable modules, and target-specific
+terminology.
 
-- Define `VyreBackend`, `CompiledPipeline`, `PendingDispatch`,
-  `DispatchConfig`, `BackendCapability`, and the sealed `Backend`
-  marker trait.
-- Host `backend::registry` (inventory-backed discovery), `pipeline`
-  (compile/dispatch indirection), `shadow` (reference-diff
-  instrumentation), `migration` (deprecation + semver registries),
-  `binding` (neutral ABI plans), `fusion` (cross-dispatch decisions),
-  `specialization` (neutral override values), `subgroup` (operation
-  taxonomy), `tuner` (candidate/cache framework), and `validation`
-  (program-level preconditions plus shared validation caches).
-- Expose `core_supported_ops()` so backend crates and consumer tools
-  can ask "does this backend execute this Program?" without importing
-  any concrete backend.
+The public `vyre` facade does not re-export backend implementation traits,
+dispatch configuration, compiled-pipeline handles, or the backend registry.
+Import those contracts from `vyre-driver` only when using the lower-level
+driver surface intentionally.
 
-`vyre-driver` does NOT:
-
-- Touch a GPU, open an adapter, or allocate device memory. Those are
-  backend-crate responsibilities.
-- Own the IR (`vyre-foundation`), the evaluator (`vyre-reference`),
-  or intrinsics (`vyre-intrinsics`).
-- Declare workload-specific primitives. Those live in `vyre-primitives`
-  / `vyre-libs` and compose over `Program`.
-
-## Three worked examples
-
-### 1. Pick the best-available backend and dispatch
+## Registered artifact execution
 
 ```rust
-use vyre_driver::backend::acquire_preferred_dispatch_backend;
-use vyre_foundation::ir::Program;
+use vyre_driver::backend::backend_registration;
+use vyre_driver::{BindingSet, BoundResource};
 
-fn run(program: &Program, inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
-    let backend = acquire_preferred_dispatch_backend()?;
-    backend.dispatch(program, inputs, &Default::default())
-}
+let registration = backend_registration(target_id)?;
+let compiler = registration.target_compiler()?;
+let payload = compiler.compile(&artifact)?;
+let materializer = registration.materializer()?;
+let instance = materializer.materialize(&artifact, &payload)?;
+
+let mut bindings = BindingSet::new(artifact.digest());
+bindings.insert(input_value, BoundResource::Host(input_bytes));
+let completion = instance.submit(bindings)?.wait()?;
 ```
 
-### 2. Gate a feature on backend capability
-
-```rust
-use vyre_driver::backend::{registered_backends, core_supported_ops};
-use vyre_foundation::ir::Program;
-
-fn can_run(program: &Program) -> bool {
-    let ops = core_supported_ops();
-    registered_backends()
-        .iter()
-        .any(|reg| program.ops().all(|op| ops.contains(&op)))
-}
-```
-
-### 3. Instrument with the shadow pipeline
-
-```rust
-use vyre_driver::shadow::ShadowedPipeline;
-use vyre_driver::pipeline::compile;
-
-fn compile_with_shadow(
-    primary: &dyn vyre_driver::VyreBackend,
-    reference: &dyn vyre_driver::VyreBackend,
-    program: &vyre_foundation::ir::Program,
-) -> Result<ShadowedPipeline, vyre_driver::BackendError> {
-    let main = compile(primary, program)?;
-    let refp = compile(reference, program)?;
-    Ok(ShadowedPipeline::new(main, refp))
-}
-```
+Use `vyre-runtime::ArtifactSession` when runtime compilation, target attachment,
+admission, recovery, or persistence orchestration is required.
 
 ## Extension guide: adding a new backend
 
-1. Create a concrete driver crate. Depend on `vyre-foundation`,
-   `vyre-driver`, and any backend-neutral shared crate needed by the
-   contract. Do not make shared crates depend back on the concrete driver.
-2. Implement `VyreBackend` for your backend struct. Include a
-   `BackendCapability` describing the ops, memory model, subgroup
-   size, and max workgroup extent your hardware supports.
-3. Implement `CompiledPipeline` for your cached pipeline form. It
-   MUST be bit-identical to the trait's `dispatch` path.
-4. Register with `inventory::submit!`: the registry picks it up at
-   link time. No `lazy_static`, no initializer function.
-5. Add your backend to the conformance matrix under
-   `conform/vyre-conform-runner` so parity against the reference
-   interpreter is enforced on every CI run.
-6. Expose a `BackendPrecedence` value so callers that want "the best
-   available backend" pick yours when appropriate.
+1. Create one concrete driver crate. Shared crates must not depend on it.
+2. Implement a pure `TargetCompiler` that consumes compiler-selected artifact
+   modules and emits immutable target bytes.
+3. Implement `ArtifactMaterializer` to authenticate the payload, acquire native
+   handles for one device generation, and return an `ArtifactInstance`.
+4. Register the backend factory, operation support, compiler facet, and
+   materializer facet in one `BackendRegistration`.
+5. Register target operation facets through the foundation semantic operation
+   registry.
+6. Prove compile, materialize, typed submission, readback, device-loss
+   rematerialization, and reference parity through the conformance engine.
 
-See `capability.rs`, `registry.rs`, and `shadow.rs` for the exact
-contracts; see `conform/vyre-conform-runner/tests/parity_matrix.rs`
-for a worked wiring that brings a third-party backend online.
+See `src/backend/artifact_lifecycle.rs`, `src/backend/registry/`, and
+`vyre-megakernel::target` for the contracts. See [`docs/targets.md`](../docs/targets.md)
+for the production lifecycle and extension checklist.
+
+<!-- BEGIN GENERATED CRATE CONTRACT -->
+## Crate contract
+
+This section is generated by `python3 scripts/crate_readmes.py --write` from
+the crate manifest, release train, ownership registry, and crate-guide metadata.
+
+### Purpose
+
+Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts.
+
+### Boundaries
+
+The `backend-contract` owner maintains this `backend-neutral` crate at `vyre-driver`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec`.
+Any other normal or build dependency requires an ownership-registry change.
+
+### Minimal real example
+
+Run the checked-in behavior from `vyre-driver/examples/vyre_driver_release_surface.rs`:
+
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-driver --example vyre_driver_release_surface
+```
+
+### Features
+
+- Manifest features: `default`, `self-substrate-adapters`
+- Default feature members: None
+
+### Errors and unsupported behavior
+
+Backend acquisition, capability, artifact, dispatch, and lifecycle failures retain actionable context. Shared contracts never substitute a concrete backend silently.
+
+### Testing
+
+Use [`docs/testing/vyre-driver.md`](../docs/testing/vyre-driver.md) for exact commands, Cargo targets, hardware
+requirements, evidence outputs, expected skips, and failure semantics.
+
+### Release status
+
+`vyre-driver@0.7.2` is a publishable crate on the current Vyre release train. Publication still requires the release evidence and user-approval gates.
+
+### Ownership
+
+`docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
+and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
+`docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
+<!-- END GENERATED CRATE CONTRACT -->

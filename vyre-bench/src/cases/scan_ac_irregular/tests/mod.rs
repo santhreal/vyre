@@ -1,5 +1,5 @@
 use super::*;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 mod count_prefilter_generated;
 
@@ -227,8 +227,8 @@ fn bounded_count_program_reference_eval_matches_cpu_cardinality() {
 
 #[test]
 fn decoded_outputs_canonicalize_atomic_order_variation() {
-    let first = Match::new(0, 3, 7);
-    let second = Match::new(1, 11, 15);
+    let first = ByteRange::new(0, 3, 7);
+    let second = ByteRange::new(1, 11, 15);
     let actual = vec![pack_u32_slice(&[2]), encode_match_triples(&[second, first])];
 
     let decoded = decode_scan_outputs(&actual, "actual").unwrap();
@@ -237,7 +237,7 @@ fn decoded_outputs_canonicalize_atomic_order_variation() {
 
 #[test]
 fn compact_match_readback_still_rejects_over_count_outputs() {
-    let only_match = Match::new(0, 3, 7);
+    let only_match = ByteRange::new(0, 3, 7);
     let actual = vec![pack_u32_slice(&[2]), encode_match_triples(&[only_match])];
 
     let error = decode_scan_outputs(&actual, "compact actual")

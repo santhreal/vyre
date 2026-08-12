@@ -13,8 +13,8 @@ shipping superficial patches.
 Start with [`START_HERE.md`](START_HERE.md). Use
 [`LEGACY_DOCS.md`](LEGACY_DOCS.md) when you find an older plan or audit. The
 only executable queue is the maintainer's local root `BACKLOG.md`. This
-directory owns the public patch contract below, lane reservations in
-[`CLAIMS.toml`](CLAIMS.toml), and the generated control artifacts.
+directory owns the public patch contract, ownership map, coverage matrix, and
+benchmark targets.
 
 ## Precedence
 
@@ -77,7 +77,7 @@ the main integrator explicitly expands scope.
 
 Required lanes:
 
-- `coordination`: canonical backlog, claims, lane boundaries, and enforcement scripts.
+- `coordination`: canonical backlog, lane boundaries, and enforcement scripts.
 - `foundation_optimizer`: IR rewrites, fact graph, canonicalization, pass timing.
 - `foundation_wire`: canonical bytes, fingerprints, serialization allocation behavior.
 - `driver_shared`: backend-neutral launch, binding, validation, cache, residency.
@@ -124,12 +124,11 @@ Op-specific files belong by tier:
 
 ## Deduplication audit workflow
 
-Run all three audits before introducing an operation or extracting a reusable
-primitive:
+Run both semantic audits before introducing an operation or extracting a
+reusable primitive:
 
 ```bash
 ./cargo_full run --bin xtask -- whats-similar --all
-./cargo_full run --bin xtask -- source-similar --check
 ./cargo_full run --bin xtask -- lego-audit --with-repo
 ```
 
@@ -138,16 +137,6 @@ through one canonical builder belong to one implementation family, including
 the atomic reduction family. Similar members of that family are evidence of
 centralization, not duplicate implementations.
 
-`source-similar` parses Rust with `syn` and compares top-level functions and
-methods instead of whole files. It normalizes local binding names and literals
-while retaining called functions, types, constants, and other semantic
-identifiers. This catches renamed copies without grouping unrelated parser
-generators that happen to share control-flow scaffolding.
-
-The strict gate scans shipped source by default. Pass `--include-tests` when
-auditing integration-test helpers and independent parity oracles. Test-only
-duplicates remain visible without forcing backend test crates into production
-dependency relationships.
 
 `lego-audit` treats registered child regions as composition evidence. A Tier 3
 operation with at least 20 nodes must place at least 25% of those nodes under a

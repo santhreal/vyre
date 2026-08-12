@@ -17,20 +17,13 @@ struct ReleaseTrainData {
 #[derive(Debug, Deserialize)]
 struct Versions {
     vyre: String,
-    weir: String,
-    vyrec: String,
-    vyrec_train: String,
     vyre_frontend_c: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Tags {
     vyre_rc: String,
-    weir_rc: String,
-    combined_release_train_rc: String,
     vyre: String,
-    weir: String,
-    combined_release_train: String,
     policy: String,
 }
 
@@ -46,29 +39,6 @@ pub(crate) fn vyre_version() -> &'static str {
     data().versions.vyre.as_str()
 }
 
-pub(crate) fn weir_version() -> &'static str {
-    data().versions.weir.as_str()
-}
-
-/// The crates.io package name of the dataflow-analysis product in the release train.
-///
-/// The product, its repository, and its release tags are all named `weir`, but the
-/// publishable package is `weirflow`: `weir` is only the lib target name, and the bare
-/// `weir` name on crates.io belongs to an unrelated crate. Two xtask modules previously
-/// hardcoded `"weir"` as the package name, which made `package-readiness` report a
-/// permanent blocker that no version bump could clear. This is the single owner.
-pub(crate) const fn weir_package_name() -> &'static str {
-    "weirflow"
-}
-
-pub(crate) fn vyrec_version() -> &'static str {
-    data().versions.vyrec.as_str()
-}
-
-pub(crate) fn vyrec_train_version() -> &'static str {
-    data().versions.vyrec_train.as_str()
-}
-
 pub(crate) fn vyre_frontend_c_version() -> &'static str {
     data().versions.vyre_frontend_c.as_str()
 }
@@ -77,60 +47,20 @@ pub(crate) fn vyre_rc_tag() -> &'static str {
     data().tags.vyre_rc.as_str()
 }
 
-pub(crate) fn weir_rc_tag() -> &'static str {
-    data().tags.weir_rc.as_str()
-}
-
-pub(crate) fn combined_release_train_rc_tag() -> &'static str {
-    data().tags.combined_release_train_rc.as_str()
-}
-
 pub(crate) fn vyre_tag() -> &'static str {
     data().tags.vyre.as_str()
 }
 
-pub(crate) fn weir_tag() -> &'static str {
-    data().tags.weir.as_str()
+pub(crate) fn tag_story_fields() -> [(&'static str, &'static str); 2] {
+    [("vyre_rc_tag", vyre_rc_tag()), ("vyre_tag", vyre_tag())]
 }
 
-pub(crate) fn combined_release_train_tag() -> &'static str {
-    data().tags.combined_release_train.as_str()
+pub(crate) fn tag_creation_order() -> [&'static str; 2] {
+    [vyre_rc_tag(), vyre_tag()]
 }
 
-pub(crate) fn tag_story_fields() -> [(&'static str, &'static str); 6] {
-    [
-        ("vyre_rc_tag", vyre_rc_tag()),
-        ("weir_rc_tag", weir_rc_tag()),
-        (
-            "combined_release_train_rc_tag",
-            combined_release_train_rc_tag(),
-        ),
-        ("vyre_tag", vyre_tag()),
-        ("weir_tag", weir_tag()),
-        ("combined_release_train_tag", combined_release_train_tag()),
-    ]
-}
-
-pub(crate) fn tag_creation_order() -> [&'static str; 6] {
-    [
-        vyre_rc_tag(),
-        weir_rc_tag(),
-        combined_release_train_rc_tag(),
-        vyre_tag(),
-        weir_tag(),
-        combined_release_train_tag(),
-    ]
-}
-
-pub(crate) fn rc_to_final_tags() -> [(&'static str, &'static str); 3] {
-    [
-        (vyre_rc_tag(), vyre_tag()),
-        (weir_rc_tag(), weir_tag()),
-        (
-            combined_release_train_rc_tag(),
-            combined_release_train_tag(),
-        ),
-    ]
+pub(crate) fn rc_to_final_tags() -> [(&'static str, &'static str); 1] {
+    [(vyre_rc_tag(), vyre_tag())]
 }
 
 pub(crate) fn tag_policy() -> &'static str {
@@ -161,13 +91,11 @@ pub(crate) fn package_verify_passed() -> Vec<&'static str> {
         .collect()
 }
 
-pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'static str); 6] {
+pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'static str); 4] {
     [
         ("vyre", vyre_version(), "vyre"),
         ("vyre-driver-cuda", vyre_version(), "vyre"),
         ("vyre-driver-wgpu", vyre_version(), "vyre"),
-        (weir_package_name(), weir_version(), "weir"),
-        ("vyrec", vyrec_version(), "vyre"),
         ("vyre-frontend-c", vyre_frontend_c_version(), "vyre"),
     ]
 }
@@ -175,7 +103,6 @@ pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'sta
 pub(crate) fn release_group_version(group: &str) -> Option<&'static str> {
     match group {
         "vyre" => Some(vyre_version()),
-        "weir" => Some(weir_version()),
         _ => None,
     }
 }
@@ -183,7 +110,7 @@ pub(crate) fn release_group_version(group: &str) -> Option<&'static str> {
 mod tests {
     use std::{path::Path, process::Command};
 
-    /// The shell launch path must load the same six RC and final tags, in the same order, as the Rust release contract.
+    /// The shell launch path must load the same RC and final tags as the Rust release contract.
     #[test]
     fn shell_release_loader_matches_canonical_tag_creation_order() {
         let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))

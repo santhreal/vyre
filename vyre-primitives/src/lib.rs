@@ -175,17 +175,6 @@ pub(crate) mod fixed_u32_matmul;
 #[cfg(any(feature = "label", feature = "predicate"))]
 pub(crate) mod nodeset_filter;
 
-/// Domain-neutral byte-range primitive.
-///
-/// CRITIQUE_VISION_ALIGNMENT_2026-04-23 V1: the foundation tier ships a
-/// matching-flavoured `Match { pattern_id, start, end }` today. This
-/// module introduces `ByteRange { tag, start, end }` as the neutral
-/// name so new dialects do not have to adopt matching vocabulary. The
-/// bridge from foundation's legacy `Match` type is implemented in
-/// [`range`], so new dialects can adopt the neutral type without
-/// waiting on a foundation API break.
-pub mod range;
-
 /// Tier-2.5 primitive registry. See [`harness::OpEntry`]. Gated
 /// behind the `inventory-registry` feature so default builds stay
 /// dep-free; the conform harness + xtask enable the feature.

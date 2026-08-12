@@ -26,7 +26,7 @@ use std::sync::OnceLock;
 
 use c_grammar_gen::lex_c11_max_munch_kinds;
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::lexer::c11_lexer;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -317,10 +317,10 @@ fn run_gpu_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
 // 1. Directive preservation
 // ---------------------------------------------------------------------------
 
-mod c_preprocess_macro_deep_contracts_part1 {
+mod c_preprocess_macro_deep_contracts_host_lexer_preserves_complex_directive_block_as_preproc_rows {
 
-    include!("__split/c_preprocess_macro_deep_contracts_part1.rs");
+    include!("contract_cases/c_preprocess_macro_deep_contracts__host_lexer_preserves_complex_directive_block_as_preproc_rows.rs");
 }
-mod c_preprocess_macro_deep_contracts_part2 {
-    include!("__split/c_preprocess_macro_deep_contracts_part2.rs");
+mod c_preprocess_macro_deep_contracts_macro_call_with_trailing_comma_survives_as_call_in_vast {
+    include!("contract_cases/c_preprocess_macro_deep_contracts__macro_call_with_trailing_comma_survives_as_call_in_vast.rs");
 }

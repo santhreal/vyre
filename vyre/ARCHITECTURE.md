@@ -1,38 +1,34 @@
-# vyre  -  architecture
+# vyre architecture
 
-The meta-shim crate. Re-exports the public-facing names of every
-internal vyre crate so consumers write `vyre::ir::Program` instead
-of `vyre_foundation::ir::Program`.
+The public facade exposes the canonical compiler and artifact workflow. It
+keeps frontend IR and product entry points convenient without re-owning driver
+implementation contracts.
 
 ## Module
 
-`src/lib.rs` is the only file. It is intentionally thin: every
-public type lands here as a single `pub use` so the consumer-
-facing import surface stays one path deep regardless of how the
-internal crates are sliced.
+`src/lib.rs` is the only file. Each facade export has one authoritative owner
+in the workspace.
 
 ## Public surface
 
-The full re-export catalogue lives in the lib.rs, but the
-canonical entry points consumers reach for are:
+- **`vyre::ir`** exposes frontend IR such as `Program`, `Node`, `Expr`,
+  `BufferDecl`, and `DataType` from `vyre-foundation`.
+- **`vyre::compiler`** exposes whole-program compilation, immutable artifacts,
+  target payloads, and target compiler facets from `vyre-megakernel`.
+- **`vyre::runtime`** exposes artifact compilation, materialization, typed
+  submission, completion, and recovery from `vyre-runtime`.
+- **`vyre::scan`** exposes the scan product from `vyre-scan`.
 
-- **`vyre::ir`**  -  `Program`, `Node`, `Expr`, `BufferDecl`,
-  `Ident`, `BinOp`, `UnOp`, `AtomicOp`, `BufferAccess`,
-  `DataType`. From `vyre_foundation::ir`.
-- **`vyre::backend`**  -  `VyreBackend`, `BackendError`,
-  `DispatchConfig`. From `vyre_driver::backend`.
-- **`vyre::execution_plan`**  -  `fuse_programs`, `fuse_programs_vec`,
-  `FusionError`. From `vyre_foundation::execution_plan`.
-- **`vyre::lower`**  -  `inline_calls`, `optimize`. From the
-  foundation transform stack.
-- **`vyre::backend::private`**  -  sealed-trait gate; consumers
-  implement `VyreBackend` only by going through this private
-  marker.
+Backend implementation contracts remain under `vyre-driver`. Concrete driver
+crates implement `VyreBackend`, `TargetCompiler`, and materializer facets.
+Callers that intentionally use lower-level backend dispatch import
+`DispatchConfig`, `BackendError`, and backend registry APIs from
+`vyre-driver`; the facade does not duplicate those paths.
 
 ## Integration points
 
-- Every public crate name is documented in
-  `docs/CRATE_GRAPH.md`.
-- The shim's stability contract: any name re-exported here MUST
-  stay accessible at the same path until the next major release;
-  it is the public ABI.
+- `docs/CRATE_OWNERSHIP.toml` defines crate ownership.
+- `docs/ARCHITECTURE.md` defines the canonical compiler lifecycle.
+- Public facade workflows terminate in `ArtifactInstance` and typed
+  `Submission`; the facade does not compile raw `Program` values through
+  backend-specific routes.

@@ -1,4 +1,4 @@
-//! Crate feature release evidence for Vyre and Weir.
+//! Crate feature release evidence for Vyre.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -30,8 +30,6 @@ struct PackageFeatures {
 const MAX_MANIFEST_BYTES: u64 = 1_048_576;
 const REQUIRED_RELEASE_PACKAGES: &[&str] = &[
     "vyre",
-    crate::release_train::weir_package_name(),
-    "vyrec",
     "vyre-driver-cuda",
     "vyre-driver-wgpu",
     "vyre-frontend-c",
@@ -49,18 +47,7 @@ pub(crate) fn run(args: &[String]) {
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
-    let roots = [
-        vyre_root,
-        santh_root.join("libs/dataflow/weir"),
-        santh_root.join("tools/vyrec"),
-    ];
+    let roots = [vyre_root];
     let mut packages = Vec::new();
     let mut blockers = Vec::new();
     for root in &roots {
@@ -132,15 +119,6 @@ pub(crate) fn run(args: &[String]) {
             blockers.push(
                 "vyre-driver-wgpu is missing explicit `wgpu` fallback release feature".to_string(),
             );
-        }
-        if package.name == crate::release_train::weir_package_name() {
-            for required in ["default", "serde"] {
-                if !package.features.iter().any(|feature| feature == required) {
-                    blockers.push(format!(
-                        "weir standalone crate is missing release feature `{required}`"
-                    ));
-                }
-            }
         }
     }
     let matrix = FeatureMatrix {
@@ -365,7 +343,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
     crate::output_arg::parse_output_arg(
         args,
         "feature-matrix",
-        "Writes Vyre/Weir crate feature evidence.",
+        "Writes Vyre crate feature evidence.",
         default_output,
     )
 }
@@ -375,16 +353,4 @@ fn default_output() -> PathBuf {
         .parent()
         .map(|path| path.join("release/evidence/metadata/feature-matrix.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/metadata/feature-matrix.json"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::REQUIRED_RELEASE_PACKAGES;
-
-    /// Feature evidence follows the publishable Weir package name owned by release-train data.
-    #[test]
-    fn required_packages_use_publishable_weir_identity() {
-        assert!(REQUIRED_RELEASE_PACKAGES.contains(&crate::release_train::weir_package_name()));
-        assert!(!REQUIRED_RELEASE_PACKAGES.contains(&"weir"));
-    }
 }

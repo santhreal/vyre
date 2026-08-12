@@ -304,10 +304,10 @@ fn fixture_non_attribute_identifiers() -> Fixture {
 // Tests  -  extended GNU asm forms
 // ---------------------------------------------------------------------------
 
-mod c_ast_gnu_asm_attribute_deep_contracts_part1 {
+mod c_ast_gnu_asm_attribute_deep_contracts_asm_goto_with_outputs_inputs_clobbers_labels_gpu_cpu_parity {
 
-    include!("__split/c_ast_gnu_asm_attribute_deep_contracts_part1.rs");
+    include!("contract_cases/c_ast_gnu_asm_attribute_deep_contracts__asm_goto_with_outputs_inputs_clobbers_labels_gpu_cpu_parity.rs");
 }
-mod c_ast_gnu_asm_attribute_deep_contracts_part2 {
-    include!("__split/c_ast_gnu_asm_attribute_deep_contracts_part2.rs");
+mod c_ast_gnu_asm_attribute_deep_contracts_non_attribute_identifiers_must_not_leak_attribute_kinds_gpu_cpu_parity {
+    include!("contract_cases/c_ast_gnu_asm_attribute_deep_contracts__non_attribute_identifiers_must_not_leak_attribute_kinds_gpu_cpu_parity.rs");
 }

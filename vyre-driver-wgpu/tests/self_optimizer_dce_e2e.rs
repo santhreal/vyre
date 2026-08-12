@@ -14,7 +14,7 @@ mod common;
 use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::fingerprint_program;
 use vyre_foundation::optimizer::passes::fusion_cse::dce::engine::dce as cpu_dce_oracle;

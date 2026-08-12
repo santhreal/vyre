@@ -1,23 +1,8 @@
-//! Regression tests for OOB-guard `Expr::select` wrapping in
-//! `c11_build_vast_nodes`.
+//! Adversarial OOB-guard contracts for `c11_build_vast_nodes`.
 //!
-//! These tests target the four load sites in the VAST builder that were
-//! wrapped in `Expr::select` bounds guards to prevent CUDA
-//! ILLEGAL_ADDRESS crashes. The guards prevent materialization of OOB
-//! loads when:
-//!   - `stack_depth == 0` (top_slot underflow via `sub(stack_depth, 1)`)
-//!   - `parent_idx == SENTINEL` (OOB load via parent_row)
-//!   - `top_idx == SENTINEL` (OOB load via tok_types[SENTINEL])
-//!
-//! Three test tiers:
-//! 1. **IR structural**  -  source-level proof that `Expr::select` guards
-//!    surround each dangerous load.
-//! 2. **Reference oracle oracle**  -  adversarial token streams exercising
-//!    every OOB code path through the scalar Reference oracle, proving
-//!    correctness of the output under OOB-inducing inputs.
-//! 3. **IR structural + semantic**  -  verify the generated IR Program
-//!    contains select-guarded loads via inspection of buffer/binding
-//!    layout, and that the CPU oracle matches known-good outputs.
+//! The reference oracle preserves deterministic tree structure for unmatched
+//! delimiters, sentinel parents, empty input, and deep malformed streams
+//! without materializing out-of-bounds loads.
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
@@ -31,116 +16,6 @@ fn word_at(bytes: &[u8], word: usize) -> u32 {
     let offset = word * 4;
     u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap())
 }
-
-// =========================================================================
-// Tier 1: IR structural tests  -  Expr::select guards exist in source
-// =========================================================================
-
-#[test]
-fn ir_source_contains_select_guard_around_top_slot_parent_load() {
-    // The parent_idx load from top_slot must be wrapped in Expr::select
-    // with the stack_depth > 0 guard, not a bare Expr::load.
-    let source = include_str!("../src/parsing/c/parse/vast/build/structural_builder.rs");
-    let fn_start = source
-        .find("pub fn c11_build_vast_nodes")
-        .expect("function must exist");
-    let fn_body = &source[fn_start..];
-
-    let parent_block = fn_body
-        .find("let_bind(\n            \"parent_idx\"")
-        .expect("parent_idx assignment must use Expr::select guard around top_slot load");
-
-    let guard_region = &fn_body[parent_block..parent_block + 300];
-    assert!(
-        guard_region.contains("Expr::select("),
-        "parent_idx assignment must use Expr::select guard around top_slot load"
-    );
-    assert!(
-        guard_region.contains("Expr::gt(Expr::var(\"stack_depth\"), Expr::u32(0))"),
-        "parent_idx select guard must check stack_depth > 0"
-    );
-    assert!(
-        guard_region.contains("Expr::load(\"__vast_stack\", top_slot"),
-        "parent_idx select guard must contain the load"
-    );
-    assert!(
-        guard_region.contains("Expr::u32(SENTINEL)"),
-        "parent_idx select fallback must be SENTINEL"
-    );
-}
-
-#[test]
-fn ir_source_contains_select_guard_around_parent_row_load() {
-    let source = include_str!("../src/parsing/c/parse/vast/build/structural_builder.rs");
-    let fn_start = source
-        .find("pub fn c11_build_vast_nodes")
-        .expect("function must exist");
-    let fn_body = &source[fn_start..];
-
-    // The previous_sibling load from parent_row must have a guarded address
-    let prev_sib = fn_body
-        .find("let_bind(\n            \"previous_sibling\"")
-        .expect("previous_sibling let_bind must exist");
-    let prev_region = &fn_body[prev_sib..prev_sib + 600];
-
-    // The inner Expr::select guards the load address, clamping to 0 when OOB.
-    // Check that the load's index argument contains a nested select with the
-    // parent_idx < num_tokens condition.
-    assert!(
-        prev_region.contains("Expr::load(")
-            && prev_region.contains("Expr::select(")
-            && prev_region.contains("Expr::lt(Expr::var(\"parent_idx\"), num_tokens"),
-        "previous_sibling load address must be guarded by parent_idx < num_tokens select"
-    );
-}
-
-#[test]
-fn ir_source_contains_select_guard_around_top_slot_top_idx_load() {
-    let source = include_str!("../src/parsing/c/parse/vast/build/structural_builder.rs");
-    let fn_start = source
-        .find("pub fn c11_build_vast_nodes")
-        .expect("function must exist");
-    let fn_body = &source[fn_start..];
-
-    let top_idx_assign = fn_body
-        .find("let_bind(\n            \"top_idx\"")
-        .expect("top_idx assignment must use Expr::select guard");
-
-    let guard_region = &fn_body[top_idx_assign..top_idx_assign + 300];
-    assert!(
-        guard_region.contains("Expr::select("),
-        "top_idx assignment must use Expr::select guard"
-    );
-    assert!(
-        guard_region.contains("Expr::gt(Expr::var(\"stack_depth\"), Expr::u32(0))"),
-        "top_idx select guard must check stack_depth > 0"
-    );
-}
-
-#[test]
-fn ir_source_contains_select_guard_around_top_kind_tok_types_load() {
-    let source = include_str!("../src/parsing/c/parse/vast/build/structural_builder.rs");
-    let fn_start = source
-        .find("pub fn c11_build_vast_nodes")
-        .expect("function must exist");
-    let fn_body = &source[fn_start..];
-
-    let top_kind = fn_body
-        .find("\"top_kind\"")
-        .expect("top_kind binding must exist");
-    let top_kind_region = &fn_body[top_kind..top_kind + 500];
-
-    assert!(
-        top_kind_region.contains(
-            "Expr::select(\n                        Expr::lt(Expr::var(\"top_idx\"), num_tokens"
-        ),
-        "top_kind load index must be guarded by top_idx < num_tokens select"
-    );
-}
-
-// =========================================================================
-// Tier 2: Reference oracle oracle  -  adversarial OOB-inducing inputs
-// =========================================================================
 
 /// Leading close delimiter at index 0: stack is empty, stack_depth=0,
 /// parent_idx=SENTINEL. Exercises all four guarded loads.

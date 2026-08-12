@@ -265,10 +265,10 @@ fn fixture_compound_literal_in_call() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 // CPU reference tests  -  shape & kind correctness
 // ---------------------------------------------------------------------------
 
-mod c_ast_initializer_designator_e2e_part1 {
+mod c_ast_initializer_designator_e2e_cpu_reference_array_initializer_list_materialises_initializer_list {
 
-    include!("__split/c_ast_initializer_designator_e2e_part1.rs");
+    include!("contract_cases/c_ast_initializer_designator_e2e__cpu_reference_array_initializer_list_materialises_initializer_list.rs");
 }
-mod c_ast_initializer_designator_e2e_part2 {
-    include!("__split/c_ast_initializer_designator_e2e_part2.rs");
+mod c_ast_initializer_designator_e2e_gpu_parity_pg_lower_nested_designator_mixed {
+    include!("contract_cases/c_ast_initializer_designator_e2e__gpu_parity_pg_lower_nested_designator_mixed.rs");
 }

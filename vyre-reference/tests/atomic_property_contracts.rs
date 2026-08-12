@@ -1,7 +1,7 @@
 //! Generated property coverage for sequential atomic oracle semantics.
 
 use proptest::prelude::*;
-use vyre::ir::AtomicOp;
+use vyre_foundation::ir::AtomicOp;
 use vyre_reference::atomics;
 
 proptest! {

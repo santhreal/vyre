@@ -4,7 +4,7 @@ use crate::region::wrap_anonymous;
 use crate::scan::builders::{append_match, append_match_subgroup};
 
 use super::bounded_walk_prologue_nodes;
-use crate::scan::dfa::CompiledDfa;
+use vyre_primitives::matching::CompiledDfa;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::ClassicAcAutomaton;
@@ -41,8 +41,8 @@ pub(crate) use regex_exact::regex_exact_ranges_program_ext;
 /// Build a Program that scans `haystack` for any AC match and emits
 /// `(pattern_id, start, end)` triples through the canonical
 /// [`append_match`] hit buffer. Pairs with
-/// [`pack_haystack_u32`](crate::scan::dispatch_io::pack_haystack_u32):
-/// each invocation `i` corresponds to byte position `i` of the
+/// `vyre_scan::dispatch_io::pack_haystack_u32`: each invocation `i`
+/// corresponds to byte position `i` of the
 /// **unpacked** haystack, but loads from the packed u32 buffer via
 /// [`load_packed_byte_expr`](crate::scan::builders::load_packed_byte_expr).
 ///
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn classic_ac_bounded_ranges_scan_panics_on_oob_pid() {
-        use crate::scan::dfa::CompiledDfa;
+        use vyre_primitives::matching::CompiledDfa;
 
         // Craft a ClassicAcAutomaton whose output_records contains pid=5
         // but we only supply pattern_lengths of length 3.

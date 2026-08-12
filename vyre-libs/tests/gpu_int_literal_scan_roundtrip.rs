@@ -10,8 +10,8 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::gpu_int_literal_scan;
 use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre_libs::parsing::c::preprocess::gpu_int_literal_scan::gpu_int_literal_scan;
 use vyre_reference::value::Value;
 
 fn unpack_u32(bytes: &[u8]) -> u32 {
@@ -24,7 +24,7 @@ fn run_scanner(source: &[u8], start: u32) -> (u32, u32) {
     let mut src = source.to_vec();
     // `source` is declared as packed U32 words; pad to multiple of 4.
     src.resize((source.len().div_ceil(4) * 4).max(4), 0);
-    let prog = gpu_int_literal_scan(source.len() as u32);
+    let prog = gpu_int_literal_scan();
     let outputs = vyre_reference::reference_eval(
         &prog,
         &[

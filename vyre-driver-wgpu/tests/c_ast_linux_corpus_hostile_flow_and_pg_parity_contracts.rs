@@ -311,10 +311,10 @@ fn fixture_goto_inside_stmt_expr() -> Fixture {
 // Tests  -  dense switch with fallthrough
 // ---------------------------------------------------------------------------
 
-mod c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_part1 {
+mod c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_dense_switch_with_fallthrough_classifies_all_stmt_kinds {
 
-    include!("__split/c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_part1.rs");
+    include!("contract_cases/c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts__dense_switch_with_fallthrough_classifies_all_stmt_kinds.rs");
 }
-mod c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_part2 {
-    include!("__split/c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_part2.rs");
+mod c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts_hostile_mixed_flow_full_parity_and_pg_lower {
+    include!("contract_cases/c_ast_linux_corpus_hostile_flow_and_pg_parity_contracts__hostile_mixed_flow_full_parity_and_pg_lower.rs");
 }

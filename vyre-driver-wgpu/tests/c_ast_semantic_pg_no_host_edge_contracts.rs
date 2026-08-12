@@ -246,10 +246,10 @@ fn fixture_scope_nesting() -> Fixture {
 // Typedef / tag / enum / function-pointer role contracts
 // ---------------------------------------------------------------------------
 
-mod c_ast_semantic_pg_no_host_edge_contracts_part1 {
+mod c_ast_semantic_pg_no_host_edge_contracts_gpu_typedef_node_has_declaration_category_and_typedef_role {
 
-    include!("__split/c_ast_semantic_pg_no_host_edge_contracts_part1.rs");
+    include!("contract_cases/c_ast_semantic_pg_no_host_edge_contracts__gpu_typedef_node_has_declaration_category_and_typedef_role.rs");
 }
-mod c_ast_semantic_pg_no_host_edge_contracts_part2 {
-    include!("__split/c_ast_semantic_pg_no_host_edge_contracts_part2.rs");
+mod c_ast_semantic_pg_no_host_edge_contracts_gpu_semantic_lowering_completes_for_scope_nesting {
+    include!("contract_cases/c_ast_semantic_pg_no_host_edge_contracts__gpu_semantic_lowering_completes_for_scope_nesting.rs");
 }

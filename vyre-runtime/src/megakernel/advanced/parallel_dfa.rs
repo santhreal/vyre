@@ -214,6 +214,7 @@ fn table_index(lane_var: &str, state_count_var: &str, state: Expr) -> Expr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vyre_foundation::MemoryOrdering;
 
     #[test]
     fn parallel_dfa_fragment_has_prefix_barriers_and_output() {
@@ -224,7 +225,7 @@ mod tests {
                 .filter(|node| matches!(
                     node,
                     Node::Barrier {
-                        ordering: vyre::memory_model::MemoryOrdering::SeqCst
+                        ordering: MemoryOrdering::SeqCst
                     }
                 ))
                 .count()

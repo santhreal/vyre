@@ -8,9 +8,9 @@
 #![forbid(unsafe_code)]
 
 use proptest::prelude::*;
-use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 use vyre_frontend_rust::lex::lexer::core::lex;
 use vyre_frontend_rust::parse::parse;
+use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 use vyre_frontend_rust::sema::resolve;
 
 /// Drive the pipeline under every config; it must return (never panic).

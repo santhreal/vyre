@@ -37,6 +37,7 @@ pub(crate) fn reserve_graph_capacity<T>(
     Ok(())
 }
 
+#[cfg(feature = "math")]
 macro_rules! define_reserve_graph_capacity {
     ($name:ident, $item:ty, $owner:literal) => {
         #[cfg(any(test, feature = "cpu-parity"))]
@@ -45,6 +46,7 @@ macro_rules! define_reserve_graph_capacity {
         }
     };
 }
+#[cfg(feature = "math")]
 pub(crate) use define_reserve_graph_capacity;
 
 /// Reserve graph scratch and map the shared diagnostic into a domain-specific

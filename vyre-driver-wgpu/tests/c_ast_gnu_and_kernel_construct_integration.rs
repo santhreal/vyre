@@ -107,5 +107,5 @@ fn fixture_asm_extended_io_clobbers() -> Fixture {
 
 // Flat include  -  parts share fixture defs, per-part `mod {}` wrappers
 // hid them from each other.
-include!("__split/c_ast_gnu_and_kernel_construct_integration_part1.rs");
-include!("__split/c_ast_gnu_and_kernel_construct_integration_part2.rs");
+include!("contract_cases/c_ast_gnu_and_kernel_construct_integration__asm_goto_classifies_template_and_labels.rs");
+include!("contract_cases/c_ast_gnu_and_kernel_construct_integration__atomic_qualifier_does_not_misclassify.rs");

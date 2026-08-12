@@ -67,7 +67,8 @@ fn try_read_observable_accepts_boundary_when_buffer_has_one_extra_word() {
 
 #[test]
 fn try_read_debug_log_rejects_zero_byte_buffer() {
-    let err = ResidentWorkQueue::try_read_debug_log(&[]).expect_err("zero-byte debug-log must reject");
+    let err =
+        ResidentWorkQueue::try_read_debug_log(&[]).expect_err("zero-byte debug-log must reject");
     let msg = err.to_string();
     assert!(msg.contains("Fix:"), "error must be actionable: {msg}");
 }
@@ -93,8 +94,8 @@ fn read_metrics_on_empty_buffer_returns_empty() {
 #[test]
 fn try_read_metrics_rejects_buffer_ending_exactly_at_metrics_base() {
     let buf = vec![0u8; (control::METRICS_BASE as usize) * 4];
-    let err =
-        ResidentWorkQueue::try_read_metrics(&buf).expect_err("buffer ending at metrics base must reject");
+    let err = ResidentWorkQueue::try_read_metrics(&buf)
+        .expect_err("buffer ending at metrics base must reject");
     let msg = err.to_string();
     assert!(msg.contains("Fix:"), "error must be actionable: {msg}");
 }

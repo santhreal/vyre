@@ -9,7 +9,7 @@ mod hash_parsing_fnv;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::hash::crc32::{
     crc32, crc32_chunk_program, crc32_combine_chunks, crc32_map_reduce_plan, crc32_pack_chunks_u32,

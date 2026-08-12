@@ -13,7 +13,7 @@
 
 Each row = one Jules / Codex Spark ticket = one self-contained
 primitive file. Workspace is
-`/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre`.
+`${SANTH_ROOT}/libs/performance/matching/vyre`.
 Per-ticket payload follows the template at the bottom.
 
 ## Tier-1: pure substrate (vyre-primitives)

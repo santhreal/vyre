@@ -16,10 +16,10 @@ fn output_program(nodes: Vec<Node>) -> Program {
     )
 }
 
-mod validation_contract_gaps_part1 {
+mod validation_contract_gaps_workgroup_size_zero_is_rejected {
 
-    include!("__split/validation_contract_gaps_part1.rs");
+    include!("contract_cases/validation_contract_gaps__workgroup_size_zero_is_rejected.rs");
 }
-mod validation_contract_gaps_part2 {
-    include!("__split/validation_contract_gaps_part2.rs");
+mod validation_contract_gaps_unop_logical_not_on_f32_is_rejected {
+    include!("contract_cases/validation_contract_gaps__unop_logical_not_on_f32_is_rejected.rs");
 }

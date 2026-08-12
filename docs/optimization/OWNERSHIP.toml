@@ -202,7 +202,7 @@ required_commands = [
 ]
 
 [lane.graph_flow_compiler]
-purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, compressed domains, and Weir handoff boundaries."
+purpose = "Graph/dataflow compiler seam: frontier policies, CSR contracts, semiring formulations, relation facts, and compressed domains."
 layer = "Graph/flow compiler seam"
 write = [
   "vyre-primitives/src/graph/**",
@@ -211,9 +211,6 @@ write = [
   "vyre-self-substrate/src/graph/**",
   "vyre-libs/src/dataflow/**",
   "vyre-libs/src/security/**",
-  "../../../dataflow/weir/src/**",
-  "../../../dataflow/weir/tests/**",
-  "../../../dataflow/weir/benches/**",
 ]
 avoid = [
   "vyre-driver-cuda/src/**",
@@ -223,7 +220,6 @@ avoid = [
 required_commands = [
   "cargo_full test -p vyre-primitives graph",
   "cargo_full test -p vyre-self-substrate dataflow",
-  "cargo_full run -p xtask --bin xtask -- weir-matrix",
 ]
 
 [lane.parser_frontend]
@@ -253,7 +249,7 @@ required_commands = [
 purpose = "Literal, regex, automata, decode-scan, and static scan primitives with shared result compaction."
 layer = "Scan/static analysis"
 write = [
-  "vyre-core/src/scan/**",
+  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "vyre-libs/src/decode/**",
   "vyre-primitives/src/matching/**",
@@ -261,6 +257,7 @@ write = [
   "vyre-libs/tests/*regex*",
 ]
 required_commands = [
+  "cargo_full test -p vyre-scan",
   "cargo_full test -p vyre-libs scan",
   "cargo_full test -p vyre-primitives matching",
 ]
@@ -269,7 +266,7 @@ required_commands = [
 purpose = "Scan/automata seam: literal, regex, DFA/NFA/PFAC-style planners, resident automata databases, streaming scan state, and scan-to-flow finding relations."
 layer = "Scan/automata seam"
 write = [
-  "vyre-core/src/scan/**",
+  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "vyre-primitives/src/matching/**",
   "vyre-primitives/src/text/**",
@@ -282,6 +279,7 @@ avoid = [
   "vyre-runtime/src/megakernel/**",
 ]
 required_commands = [
+  "cargo_full test -p vyre-scan",
   "cargo_full test -p vyre-libs scan",
   "cargo_full test -p vyre-primitives matching",
 ]
@@ -313,7 +311,7 @@ write = [
   "vyre-driver-wgpu/src/**",
   "vyre-runtime/src/**",
   "vyre-libs/src/security/**",
-  "vyre-core/src/scan/**",
+  "vyre-scan/src/**",
   "vyre-libs/src/scan/**",
   "scripts/**",
   "release/evidence/**",
@@ -327,22 +325,6 @@ required_commands = [
   "cargo_full run -p xtask --bin xtask -- hygiene-matrix",
 ]
 
-[lane.flow_weir]
-purpose = "Weir/Vyre flow boundary, IFDS, reaching, slicing, witness extraction, resident fixed-point execution, and cross-language dataflow integration."
-layer = "Flow/dataflow"
-write = [
-  "../../../dataflow/weir/src/**",
-  "../../../dataflow/weir/tests/**",
-  "../../../dataflow/weir/benches/**",
-  "vyre-libs/src/security/**",
-  "vyre-libs/src/dataflow/**",
-  "vyre-self-substrate/src/analysis/**",
-  "release/evidence/weir/**",
-]
-required_commands = [
-  "cargo_full test --manifest-path ../../../dataflow/weir/Cargo.toml --features cpu-parity",
-  "cargo_full run -p xtask --bin xtask -- weir-matrix",
-]
 
 [lane.nn_math]
 purpose = "Attention, tiled matmul, tensor-core policy, quantized linear paths, and research primitive promotion gates."
@@ -386,7 +368,6 @@ purpose = "Cross-cutting evidence matrices, docs claims, conformance schemas, hy
 layer = "Testing/evidence"
 write = [
   "xtask/src/artifact_paths.rs",
-  "xtask/src/command_matrix.rs",
   "xtask/src/hot_path_scan.rs",
   "xtask/src/launch_contract.rs",
   "release/repo-boundary.toml",
@@ -397,7 +378,6 @@ write = [
   "docs/optimization/RESEARCH_SOURCE_LEDGER.toml",
   "xtask/src/release_evidence/expected_artifacts.rs",
   "xtask/src/release_train.rs",
-  "xtask/src/source_similar.rs",
   "xtask/src/toml_config.rs",
   "xtask/src/**",
   "release/release-train.toml",
@@ -473,7 +453,7 @@ write = [
   "vyre-debug/src/**",
   "vyre-aot/src/**",
   "vyre-bench/src/**",
-  "vyre-core/src/lib.rs",
+  "vyre/src/lib.rs",
   "vyre-lints/src/**",
 ]
 avoid = [
@@ -482,7 +462,7 @@ avoid = [
   "release/evidence/final/**",
 ]
 required_commands = [
-  "cargo_full check -p vyre-core -p vyre-debug -p vyre-aot -p vyre-bench -p vyre-lints",
+  "cargo_full check -p vyre -p vyre-debug -p vyre-aot -p vyre-bench -p vyre-lints",
 ]
 
 [lane.op_matrix]

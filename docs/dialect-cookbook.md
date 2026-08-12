@@ -1,5 +1,9 @@
 # dialect cookbook
 
+**Status: Superseded.** Use [`docs/ops-catalog.md`](ops-catalog.md),
+[`docs/library-tiers.md`](library-tiers.md), and the generated operation schema
+for current extension guidance.
+
 Recipes for extending vyre: add an op, add a whole dialect, add a
 backend, wire a Cat C intrinsic. Every recipe is copy-paste
 friendly; no magic incantations.
@@ -182,42 +186,46 @@ bar your crate should clear. Keep registrations terse.
 Scope: you're adding a new execution target (e.g. PTX via CUDA,
 Metal on Apple, an FPGA backend).
 
-### 1. Implement the Backend / Executable / Compilable traits
+### 1. Implement the target facets
 
-```rust
-pub struct MyBackend { /* device handles, etc. */ }
+The concrete driver crate implements `vyre_driver::VyreBackend` for device
+acquisition and lower-level dispatch. Production compilation and execution use
+two separate facets:
 
-impl vyre::VyreBackend for MyBackend { /* id, version, dispatch */ }
-impl vyre::Executable   for MyBackend { /* execute */ }
-impl vyre::Compilable   for MyBackend { type Compiled = MyIR; /* compile */ }
-```
+- `vyre_megakernel::TargetCompiler` consumes an immutable `Artifact` and emits
+  authenticated `TargetPayload` bytes without acquiring a device.
+- `vyre_driver::ArtifactMaterializer` admits those bytes on a device and creates
+  the executable module used by an `ArtifactInstance`.
 
-### 2. Register via inventory
+The compiler must consume the selected programs carried by the artifact. It
+must not accept a caller-owned `Program` or run another optimization route.
+
+### 2. Register the backend and both facets
 
 ```rust
 inventory::submit! {
-    vyre::dialect::BackendRegistration {
-        op: "*",                    // wildcard = backend-level registration
-        target: "my-backend",
+    vyre_driver::BackendRegistration {
+        id: "my-backend",
+        factory: acquire_backend,
+        supported_ops,
+        target_compiler: Some(target_compiler_factory),
+        materializer: Some(materializer_factory),
     }
 }
 ```
 
-Per-op registrations can narrow support by submitting
-`(op, "my-backend")` pairs.
+`target_compiler_factory` returns `Box<dyn
+vyre_megakernel::TargetCompiler>`. `materializer_factory` returns `Box<dyn
+vyre_driver::ArtifactMaterializer>`. Keep target formats, emitted module schemas,
+device admission, and executable-module construction inside the concrete
+driver crate.
 
-### 3. Write a naga::Module consumer that targets your IR
+### 3. Prove the artifact lifecycle
 
-If your backend's shader language is already naga-supported
-(WGSL, SPIR-V), reuse the stdlib `naga_wgsl` / `naga_spv` builders
-in `LoweringTable`. Your backend's `execute` function walks the
-registry, calls `get_lowering(op, Target::Wgsl)` (or `::Spirv`),
-validates the naga::Module, and emits target-specific code.
-
-If your target needs a different IR (PTX, Metal IR), add a new
-`Target::Ptx` / `Target::MetalIr` variant (already stubbed in
-`dialect/registry.rs`) and have the ops ship `ptx` / `metal`
-builders in their `LoweringTable`.
+Compile a `ProgramGraph` through `vyre_megakernel::Compiler`, attach the
+registered target payload, materialize it, submit typed bindings, wait for
+completion, and verify readback. Capability tests must also prove that the
+registered operation set matches the lowering and materialization paths.
 
 ---
 
@@ -264,7 +272,7 @@ cargo_full test -p vyre --test wire_format_rev3
 cargo_full test -p vyre --test diagnostics
 
 # if you touched a hot path, the perf contract
-bash scripts/check_benchmarks.sh
+bash scripts/check_bench_budgets.sh
 ```
 
 ---

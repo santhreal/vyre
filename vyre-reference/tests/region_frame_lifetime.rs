@@ -15,7 +15,7 @@
 //!  3. Program held behind a Cell-bounded reference so the interp
 //!     couldn't have moved/reallocated it mid-execution.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Vec<Vec<u8>> {

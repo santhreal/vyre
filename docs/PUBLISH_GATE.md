@@ -1,5 +1,8 @@
 # vyre-libs publish gate
 
+**Status: Superseded.** Use [`docs/RELEASE.md`](RELEASE.md) and the generated
+release evidence for the active publication procedure.
+
 Pre-conditions every vyre-* crate must meet before being published
 to crates.io. CI runs `scripts/check_publish_gate.sh <crate>` per
 crate; nonzero exit blocks publish.
@@ -61,12 +64,11 @@ artifacts.
 | `vyre-libs` | vyre | crates.io | metadata matrix + op/conformance matrix |
 | `vyre-driver-wgpu` | vyre | crates.io | metadata matrix + WGPU conformance suite |
 | `vyre-driver-cuda` | vyre | crates.io | metadata matrix + CUDA release suite |
-| `weirflow` | weir | crates.io | metadata matrix + dataflow integration evidence |
-| `vyre-frontend-c` | vyre | non-publishable release surface | metadata matrix + parser coherence evidence |
+| `vyre-frontend-c` | vyre | non-publishable release surface | metadata matrix + source-lowering conformance |
 
-Each crate carries its release group's version from `release/release-train.toml`.
-This table records which group a crate belongs to, never a version number: a pasted
-version here goes stale as soon as the train moves and then disagrees with the manifests.
+Each crate carries the Vyre release version from `release/release-train.toml`.
+This table records release membership, never a version number: a pasted version
+goes stale as soon as the train moves and then disagrees with the manifests.
 
 ## How to publish a crate
 

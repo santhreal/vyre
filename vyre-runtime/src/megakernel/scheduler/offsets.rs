@@ -4,43 +4,7 @@ use crate::PipelineError;
 const PRIORITY_LEVELS_USIZE: usize = 5;
 const PRIORITY_OFFSETS_WITH_SENTINEL: usize = PRIORITY_LEVELS_USIZE + 1;
 
-/// Encode default priority partition offsets for uniform distribution.
-///
-/// Each priority level gets `total_slots / PRIORITY_LEVELS` slots.
-/// Any remainder goes to the NORMAL partition.
-#[must_use]
-pub fn default_priority_offsets(total_slots: u32) -> Vec<u32> {
-    default_priority_offsets_array(total_slots).to_vec()
-}
-
-/// Encode default priority partition offsets with fallible host staging.
-///
-/// # Errors
-///
-/// Returns [`PipelineError::Backend`] when the host cannot reserve the small
-/// compatibility vector used by legacy callers.
-pub fn try_default_priority_offsets(total_slots: u32) -> Result<Vec<u32>, PipelineError> {
-    let mut offsets = Vec::new();
-    vyre_foundation::allocation::try_reserve_vec_to_capacity(
-        &mut offsets,
-        PRIORITY_OFFSETS_WITH_SENTINEL,
-    )
-    .map_err(|source| {
-            PipelineError::Backend(format!(
-                "priority offset vector reservation failed for {PRIORITY_OFFSETS_WITH_SENTINEL} words: {source}. Fix: use default_priority_offsets_array in hot paths or reduce host memory pressure."
-            ))
-        })?;
-    for value in default_priority_offsets_array(total_slots) {
-        offsets.push(value);
-    }
-    Ok(offsets)
-}
-
-/// Encode default priority partition offsets into a fixed array.
-///
-/// Hot callers that immediately write offsets into a control buffer can use
-/// this path to avoid allocating the compatibility `Vec` returned by
-/// [`default_priority_offsets`].
+/// Encode default priority partition offsets into a fixed array without allocation.
 #[must_use]
 pub fn default_priority_offsets_array(total_slots: u32) -> [u32; PRIORITY_OFFSETS_WITH_SENTINEL] {
     let mut offsets = [0u32; PRIORITY_OFFSETS_WITH_SENTINEL];

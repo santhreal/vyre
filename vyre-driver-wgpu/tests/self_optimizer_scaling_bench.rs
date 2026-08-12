@@ -19,7 +19,7 @@
 use std::time::Instant;
 
 use vyre::ir::{Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::const_fold_via_encoded::gpu_const_fold;

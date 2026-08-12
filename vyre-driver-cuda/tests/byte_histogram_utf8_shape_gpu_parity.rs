@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::text::byte_histogram::{
     byte_histogram_256, byte_histogram_256_u8, reference_byte_histogram,
 };

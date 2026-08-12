@@ -1,5 +1,8 @@
 # Gate Closure Mechanics
 
+**Status: Superseded.** Use [`docs/RELEASE.md`](RELEASE.md) and the generated
+release evidence for the executable release procedure.
+
 Defines release gate closure mechanics and the yank path if a claimed
 release version cannot close its evidence gates.
 
@@ -14,7 +17,7 @@ all close before tagging:
 | **G1  -  Zero-stub** | `cargo_full run --bin xtask -- gate1` | `clippy::todo/unimplemented/panic/expect/unwrap` deny passes across every `src/` tree. |
 | **G2  -  Conformance** | `vyre-conform-runner prove` | Certification artifact signed by OsRng-seeded Ed25519 (CONFORM C2) covers every registered op, with the hash-chain plus signature both verifying. |
 | **G3  -  Region chain** | `cargo_full test -p vyre-libs --test region_chain_invariant` | Every Tier-3 op's Region chain terminates at registered generators (VISION V7). |
-| **G4  -  ≥1000× competition** | `cargo_full bench -p consumer --features gpu --bench vs_competition` | Every matrix cell meets its threshold in `libs/tools/consumer/benches/thresholds.toml` (consumer BENCHMARK.md). |
+| **G4  -  benchmark evidence** | `cargo run --release -p xtask --bin xtask -- release-benchmarks --backend cuda` | Every required workload has current evidence against the targets in `docs/optimization/BENCH_TARGETS.toml`. |
 | **G5  -  LAW 7 organisation** | `cargo_full run --bin xtask -- lego-audit` + file-length gate | No file >500 LOC without a split-tracking entry, no cross-dialect reachthrough (VISION V5 guard), every dialect has a README. |
 
 ## Closure order

@@ -88,12 +88,10 @@ pub fn nfa_step(
     num_states: u32,
 ) -> Program {
     if num_states as usize > MAX_STATES_PER_SUBGROUP {
-        return crate::invalid_output_program(
-            OP_ID,
-            out_buf,
-            DataType::U32,
-            format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."),
-        );
+        return crate::invalid_output_program(OP_ID,
+        out_buf,
+        DataType::U32,
+        format!("Fix: num_states {num_states} exceeds MAX_STATES_PER_SUBGROUP={MAX_STATES_PER_SUBGROUP}; caller must tile at the composition layer."),);
     }
 
     let lane = Expr::InvocationId { axis: 0 };

@@ -28,11 +28,6 @@ whole point.
   descriptor
 - Malformed string / non-UTF-8 in `&'static str` positions of op ids
 
-## Current gaps
-
-- (fill after reading `vyre-spec/Cargo.toml` + README)  -  promising
-  features not yet implemented, paths into `gap.rs`
-
 ## Cross-crate contracts
 
 - `DataType`, `BinOp`, `UnOp`, `AtomicOp`, `RuleCondition`  - 

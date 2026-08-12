@@ -11,8 +11,8 @@
 //! prefilter masks would silently revert to case-sensitive and under-fire on
 //! uppercase input: Law 10).
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{ByteRange, GpuLiteralSet};
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
 struct Lcg(u64);
 impl Lcg {
@@ -32,11 +32,8 @@ impl Lcg {
     }
 }
 
-fn sorted_triples(matches: &[LiteralMatch]) -> Vec<(u32, u32, u32)> {
-    let mut v: Vec<(u32, u32, u32)> = matches
-        .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
-        .collect();
+fn sorted_triples(matches: &[ByteRange]) -> Vec<(u32, u32, u32)> {
+    let mut v: Vec<(u32, u32, u32)> = matches.iter().map(|m| (m.tag, m.start, m.end)).collect();
     v.sort_unstable();
     v
 }
@@ -72,8 +69,8 @@ fn lowered(bytes: &[u8]) -> Vec<u8> {
 
 /// The invariant, on a given backend: case-insensitive scan of the raw haystack
 /// equals the host-folded case-sensitive scan.
-fn assert_ci_equals_host_fold<B: vyre::VyreBackend + ?Sized>(
-    backend: &B,
+fn assert_ci_equals_host_fold(
+    backend_id: &str,
     patterns: &[Vec<u8>],
     haystack: &[u8],
     label: &str,
@@ -81,14 +78,14 @@ fn assert_ci_equals_host_fold<B: vyre::VyreBackend + ?Sized>(
     let refs: Vec<&[u8]> = patterns.iter().map(Vec::as_slice).collect();
     let ci = GpuLiteralSet::compile_case_insensitive(&refs);
     let ci_hits = ci
-        .scan_all(backend, haystack)
+        .scan_all(backend_id, haystack)
         .unwrap_or_else(|e| panic!("[{label}] ci scan_all failed: {e}"));
 
     let lowered_pats: Vec<Vec<u8>> = patterns.iter().map(|p| lowered(p)).collect();
     let lowered_refs: Vec<&[u8]> = lowered_pats.iter().map(Vec::as_slice).collect();
     let reference = GpuLiteralSet::compile(&lowered_refs);
     let ref_hits = reference
-        .scan_all(backend, &lowered(haystack))
+        .scan_all(backend_id, &lowered(haystack))
         .unwrap_or_else(|e| panic!("[{label}] host-folded reference scan_all failed: {e}"));
 
     assert_eq!(
@@ -106,7 +103,6 @@ fn assert_ci_equals_host_fold<B: vyre::VyreBackend + ?Sized>(
 
 #[test]
 fn ci_equals_host_fold_reference_high_volume_cpu() {
-    let backend = CpuRefBackend;
     let cases: usize = std::env::var("VYRE_CI_CASES")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -115,17 +111,23 @@ fn ci_equals_host_fold_reference_high_volume_cpu() {
     for case in 0..cases {
         let patterns = random_patterns(&mut rng);
         let haystack = random_haystack(&mut rng);
-        assert_ci_equals_host_fold(&backend, &patterns, &haystack, &format!("cpu case {case}"));
+        assert_ci_equals_host_fold(
+            CPU_REF_BACKEND_ID,
+            &patterns,
+            &haystack,
+            &format!("cpu case {case}"),
+        );
     }
 }
 
 #[test]
 fn ci_matches_every_case_variant_and_leaves_non_letters_exact() {
-    let backend = CpuRefBackend;
     let matcher = GpuLiteralSet::compile_case_insensitive(&[b"Key9".as_slice()]);
     // Every case variant of the letters matches; the digit '9' stays exact.
     for variant in [b"key9", b"KEY9", b"kEy9", b"KeY9"] {
-        let hits = matcher.scan_all(&backend, variant).expect("ci scan_all");
+        let hits = matcher
+            .scan_all(CPU_REF_BACKEND_ID, variant)
+            .expect("ci scan_all");
         assert_eq!(
             hits.len(),
             1,
@@ -134,7 +136,9 @@ fn ci_matches_every_case_variant_and_leaves_non_letters_exact() {
         );
     }
     // A different digit must NOT match (non-letters are not folded).
-    let miss = matcher.scan_all(&backend, b"key8").expect("ci scan_all");
+    let miss = matcher
+        .scan_all(CPU_REF_BACKEND_ID, b"key8")
+        .expect("ci scan_all");
     assert!(
         miss.is_empty(),
         "digit mismatch must not match under ASCII case folding"
@@ -143,7 +147,6 @@ fn ci_matches_every_case_variant_and_leaves_non_letters_exact() {
 
 #[test]
 fn case_insensitive_survives_wire_round_trip() {
-    let backend = CpuRefBackend;
     let matcher = GpuLiteralSet::compile_case_insensitive(&[b"TOKEN".as_slice(), b"AKIA"]);
     let blob = matcher.to_bytes().expect("serialize ci matcher");
     let restored = GpuLiteralSet::from_bytes(&blob).expect("deserialize ci matcher");
@@ -153,9 +156,11 @@ fn case_insensitive_survives_wire_round_trip() {
     // different case than the patterns is the discriminator.
     let haystack = b"__token__akia__ToKeN__";
     let restored_hits = restored
-        .scan_all(&backend, haystack)
+        .scan_all(CPU_REF_BACKEND_ID, haystack)
         .expect("restored scan");
-    let fresh_hits = matcher.scan_all(&backend, haystack).expect("fresh scan");
+    let fresh_hits = matcher
+        .scan_all(CPU_REF_BACKEND_ID, haystack)
+        .expect("fresh scan");
     assert_eq!(
         sorted_triples(&restored_hits),
         sorted_triples(&fresh_hits),
@@ -169,14 +174,7 @@ fn case_insensitive_survives_wire_round_trip() {
 
 #[test]
 fn ci_equals_host_fold_reference_on_gpu() {
-    use vyre_driver_wgpu::WgpuBackend;
-    let backend = match WgpuBackend::shared() {
-        Ok(backend) => backend,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping GPU case-insensitive gate");
-            return;
-        }
-    };
+    use vyre_driver_wgpu as _;
     let cases: usize = std::env::var("VYRE_CI_GPU_CASES")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -185,11 +183,6 @@ fn ci_equals_host_fold_reference_on_gpu() {
     for case in 0..cases {
         let patterns = random_patterns(&mut rng);
         let haystack = random_haystack(&mut rng);
-        assert_ci_equals_host_fold(
-            backend.as_ref(),
-            &patterns,
-            &haystack,
-            &format!("gpu case {case}"),
-        );
+        assert_ci_equals_host_fold("wgpu", &patterns, &haystack, &format!("gpu case {case}"));
     }
 }

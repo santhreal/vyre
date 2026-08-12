@@ -1,5 +1,8 @@
 # LAW 7 Organization Sweep
 
+**Status: Archived.** This is a point-in-time organization sweep. Current
+organization checks run through `scripts/quality_gate.sh`.
+
 Closes #26 A.2 LAW 7 organization sweep across vyre.
 
 LAW 7 (UNIX / SQLite standard): every file one function, every

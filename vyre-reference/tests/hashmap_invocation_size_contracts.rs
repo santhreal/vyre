@@ -1,6 +1,6 @@
 //! Hashmap reference interpreter invocation-count contracts.
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 #[test]

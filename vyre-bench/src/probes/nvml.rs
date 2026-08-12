@@ -119,15 +119,24 @@ fn counter_value(counters: &[GpuCounter], name: &str) -> Option<u64> {
 }
 
 fn thermal_or_clock_unstable(counters: &[GpuCounter]) -> bool {
-    let throttled = counter_value(counters, "clock_throttle_reasons_active").unwrap_or(0) != 0;
+    const GPU_IDLE_THROTTLE_REASON: u64 = 1;
+    const ACTIVE_UTILIZATION_PCT: u64 = 80;
+
+    let throttle_reasons = counter_value(counters, "clock_throttle_reasons_active").unwrap_or(0);
+    let throttled = throttle_reasons & !GPU_IDLE_THROTTLE_REASON != 0;
     let hot = counter_value(counters, "temperature_c").is_some_and(|temp| temp >= 85);
-    let mem_clock_low = match (
-        counter_value(counters, "clock_mem_current_mhz"),
-        counter_value(counters, "clock_mem_max_mhz"),
-    ) {
-        (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * 90,
-        _ => false,
-    };
+    let under_active_load = counter_value(counters, "utilization_gpu_pct")
+        .into_iter()
+        .chain(counter_value(counters, "utilization_mem_pct"))
+        .any(|utilization| utilization >= ACTIVE_UTILIZATION_PCT);
+    let mem_clock_low = under_active_load
+        && match (
+            counter_value(counters, "clock_mem_current_mhz"),
+            counter_value(counters, "clock_mem_max_mhz"),
+        ) {
+            (Some(current), Some(max)) if max > 0 => current.saturating_mul(100) < max * 90,
+            _ => false,
+        };
     throttled || hot || mem_clock_low
 }
 
@@ -177,6 +186,9 @@ pub fn query_peak_memory_bandwidth(adapter_name: &str) -> anyhow::Result<f64> {
 mod tests {
     use super::*;
 
+    /// A malformed telemetry row must fail instead of producing partial evidence.
+    ///
+    /// Missing fields shift every later counter and can invert thermal stability.
     #[test]
     fn nvml_telemetry_row_requires_exact_schema_width() {
         let error = parse_nvml_telemetry_row("RTX 5090, 14001")
@@ -187,6 +199,9 @@ mod tests {
         );
     }
 
+    /// A complete telemetry row must retain every counter used by benchmark gates.
+    ///
+    /// This locks the exact query schema to the parsed evidence fields.
     #[test]
     fn nvml_telemetry_row_parses_required_gpu_counters() {
         let counters = parse_nvml_telemetry_row(
@@ -215,5 +230,47 @@ mod tests {
                 .map(|counter| counter.value),
             Some(1_792_000)
         );
+    }
+
+    /// Idle power management must not invalidate an otherwise cold benchmark run.
+    ///
+    /// NVIDIA reports the GPU-idle throttle bit and low memory clocks immediately
+    /// after short kernels. Treating that normal post-run state as thermal instability
+    /// made every microbenchmark fail despite exact, low-temperature samples.
+    #[test]
+    fn idle_low_clock_telemetry_is_stable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 405, 2500, 300, P8, 0x1, 30.0, 600.0, 38, 32768, 1024, 31744, 4, 8",
+        )
+        .expect("Fix: valid idle telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(0));
+    }
+
+    /// A depressed memory clock during sustained utilization must remain a blocker.
+    ///
+    /// This negative twin prevents the idle fix from hiding a genuinely underclocked
+    /// benchmark while the device is doing measurable work.
+    #[test]
+    fn low_memory_clock_under_active_load_is_unstable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 405, 2500, 2400, P0, 0x0, 420.0, 600.0, 72, 32768, 8192, 24576, 97, 88",
+        )
+        .expect("Fix: valid loaded telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
+    }
+
+    /// Thermal limits must invalidate evidence even when utilization has already fallen.
+    ///
+    /// The temperature threshold is independent of the post-run utilization snapshot.
+    #[test]
+    fn hot_idle_telemetry_is_unstable() {
+        let counters = parse_nvml_telemetry_row(
+            "NVIDIA GeForce RTX 5090, 14001, 405, 2500, 300, P8, 0x1, 80.0, 600.0, 86, 32768, 1024, 31744, 4, 8",
+        )
+        .expect("Fix: valid hot telemetry must parse");
+
+        assert_eq!(counter_value(&counters, "thermal_unstable"), Some(1));
     }
 }

@@ -5,7 +5,7 @@ use std::sync::{mpsc, Mutex, OnceLock};
 use std::time::Duration;
 
 use vyre::ir::{Expr, Program};
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::{
     TOK_ASSIGN, TOK_COLON, TOK_COMMA, TOK_IDENTIFIER, TOK_LBRACE, TOK_LBRACKET, TOK_LPAREN,

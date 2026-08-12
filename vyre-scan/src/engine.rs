@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::hash::fnv1a::{fnv1a64_initial_state, fnv1a64_update_byte};
 
 static CACHE_TMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -39,7 +39,7 @@ const MAX_MATCH_ENGINE_CACHE_BYTES: u64 = 64 * 1024 * 1024;
 #[derive(Debug, Clone, Default)]
 pub struct ScanResult {
     /// Sorted matches produced by the engine.
-    pub matches: Vec<Match>,
+    pub matches: Vec<ByteRange>,
     /// True when the engine hit the per-dispatch `max_matches` cap
     /// AND the underlying scan reported overflow. Consumers should
     /// treat truncated results as incomplete and re-scan with a
@@ -60,7 +60,7 @@ impl ScanResult {
     /// cache hit). For engines that produce richer diagnostics,
     /// construct the struct directly.
     #[must_use]
-    pub fn from_matches(matches: Vec<Match>) -> Self {
+    pub fn from_matches(matches: Vec<ByteRange>) -> Self {
         Self {
             matches,
             ..Self::default()
@@ -90,7 +90,7 @@ pub trait MatchScan {
         backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError>;
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError>;
 
     /// Reference oracle scan. Used by the cross-layer parity tests in
     /// `vyre-conform`; engines that lack a meaningful CPU stepper
@@ -102,7 +102,7 @@ pub trait MatchScan {
     /// vec, an empty result is a silent recall lie (Law 10). Such engines
     /// override [`Self::try_reference_scan`] so `dyn MatchScan` consumers can
     /// recover the error instead of unwinding.
-    fn reference_scan(&self, haystack: &[u8]) -> Vec<Match>;
+    fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange>;
 
     /// Fallible reference oracle scan. Surfaces a CPU-stepper failure (a
     /// haystack longer than the `u32` match ABI the GPU path uses) as an error
@@ -115,7 +115,10 @@ pub trait MatchScan {
     /// # Errors
     /// Engine-specific [`vyre_driver::BackendError`] when the CPU oracle cannot honor
     /// the same `u32` match ABI the GPU path uses for this haystack.
-    fn try_reference_scan(&self, haystack: &[u8]) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    fn try_reference_scan(
+        &self,
+        haystack: &[u8],
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         Ok(self.reference_scan(haystack))
     }
 
@@ -299,7 +302,7 @@ impl MatchScan for GpuLiteralSet {
         backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let session = self.prepare_resident_scan(backend_id, haystack.len(), max_matches)?;
         let mut matches = Vec::new();
         let mut scratch = Vec::new();
@@ -310,7 +313,7 @@ impl MatchScan for GpuLiteralSet {
         Ok(matches)
     }
 
-    fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
+    fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange> {
         GpuLiteralSet::reference_scan(self, haystack)
     }
 
@@ -355,11 +358,11 @@ mod direct_gpu_impls {
             backend_id: &str,
             haystack: &[u8],
             max_matches: u32,
-        ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+        ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
             DirectGpuScanner::scan(self, backend_id, haystack, max_matches)
         }
 
-        fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
+        fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange> {
             DirectGpuScanner::reference_scan(self, haystack)
         }
 

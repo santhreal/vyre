@@ -5,7 +5,7 @@
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{

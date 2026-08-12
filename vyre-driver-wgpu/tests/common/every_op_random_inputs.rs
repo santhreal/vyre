@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
 /// Deterministic per-op seed derived from the stable op id.

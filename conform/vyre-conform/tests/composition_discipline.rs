@@ -14,7 +14,7 @@
 //! grows organically, and every new composition automatically benefits
 //! every pipeline that calls it.
 //!
-//! Implementation lives in two `include!`-d chunks under `__split/`.
+//! Implementation lives in two `include!`-d chunks under `contract_cases/`.
 
-include!("__split/composition_discipline_chunk1.rs");
-include!("__split/composition_discipline_chunk2.rs");
+include!("contract_cases/composition_discipline__measure_program.rs");
+include!("contract_cases/composition_discipline__every_op_is_under_complexity_budget.rs");

@@ -1,5 +1,7 @@
 # RFC 0001  -  Region inline pass
 
+Status: **Accepted in Vyre 0.7.2.**
+
 ## Summary
 
 Add an opt-in optimizer pass that unrolls `Node::Region` bodies into

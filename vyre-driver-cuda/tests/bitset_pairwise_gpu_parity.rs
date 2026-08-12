@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::bitset::and::{bitset_and, cpu_ref as and_cpu};
 use vyre_primitives::bitset::and_not::{bitset_and_not, cpu_ref as and_not_cpu};

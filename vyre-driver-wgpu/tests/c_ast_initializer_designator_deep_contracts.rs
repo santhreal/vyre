@@ -293,10 +293,10 @@ fn fixture_string_char_array_nested() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 // CPU reference contracts
 // ---------------------------------------------------------------------------
 
-mod c_ast_initializer_designator_deep_contracts_part1 {
+mod c_ast_initializer_designator_deep_contracts_cpu_nested_field_array_designator_materialises_all_kinds {
 
-    include!("__split/c_ast_initializer_designator_deep_contracts_part1.rs");
+    include!("contract_cases/c_ast_initializer_designator_deep_contracts__cpu_nested_field_array_designator_materialises_all_kinds.rs");
 }
-mod c_ast_initializer_designator_deep_contracts_part2 {
-    include!("__split/c_ast_initializer_designator_deep_contracts_part2.rs");
+mod c_ast_initializer_designator_deep_contracts_gpu_parity_range_designator_array {
+    include!("contract_cases/c_ast_initializer_designator_deep_contracts__gpu_parity_range_designator_array.rs");
 }

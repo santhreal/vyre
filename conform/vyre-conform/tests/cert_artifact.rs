@@ -1,13 +1,9 @@
-//! Parity-cert artifact (TEST-034).
+//! Canonical conformance certificate artifact contract.
 //!
-//! See `contracts/release.md`. A reviewer must be able to run ONE
-//! command and produce a signed JSON certificate that proves every op
-//! passes every registered backend's byte-identity dispatch against the
-//! CPU reference. `prove --out` is the load-bearing gate: it MUST
-//! refuse to emit a certificate when any (backend, op) pair diverges
-//! from `vyre-reference` byte-for-byte. Acquisition success is not
-//! parity  -  TEST-034 was filed because the earlier implementation
-//! stopped at `backend.factory()` and never dispatched anything.
+//! The `prove --out` command must refuse to emit a certificate when any
+//! selected production target diverges from the independent reference engine.
+//! Successful acquisition alone is not conformance; every selected witness is
+//! compiled, materialized, submitted, read back, and compared before signing.
 
 use std::process::Command;
 
@@ -116,7 +112,5 @@ mod merge_contracts;
 mod prove_failure_contracts;
 #[path = "cert_artifact/release_script_contracts.rs"]
 mod release_script_contracts;
-#[path = "cert_artifact/runtime_efficiency_contracts.rs"]
-mod runtime_efficiency_contracts;
 #[path = "cert_artifact/shard_plan_contracts.rs"]
 mod shard_plan_contracts;

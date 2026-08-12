@@ -16,7 +16,7 @@ use std::borrow::Cow;
 use std::collections::TryReserveError;
 use vyre_driver::{DispatchConfig, Resource, Submission};
 use vyre_foundation::ir::Program;
-pub use vyre_foundation::match_result::Match;
+pub use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::DfaWireError;
 use vyre_primitives::matching::{dfa_compile, dfa_compile_case_insensitive, CompiledDfa};
 
@@ -50,9 +50,6 @@ pub const LITERAL_SET_COUNT_RESET_RESOURCE_INDICES: [usize; 1] = [LITERAL_SET_CO
 
 /// Resident-resource binding order for a prepared literal-set count scan.
 pub const LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES: [usize; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
-
-/// Back-compatible literal match type.
-pub type LiteralMatch = Match;
 
 /// Errors returned by [`GpuLiteralSet::try_compile`].
 #[derive(Debug)]
@@ -219,7 +216,7 @@ impl LiteralSetPreparedScan {
     pub fn decode_outputs_into(
         &self,
         outputs: &[Vec<u8>],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), vyre_driver::BackendError> {
         decode_literal_set_outputs_into(outputs, self.max_matches, matches)
     }
@@ -500,7 +497,7 @@ pub struct ResidentLiteralScan {
     matches_buf: Resource,
     /// Padded byte capacity of the resident haystack buffer.
     haystack_capacity: usize,
-    /// Match cap this session's `matches` buffer was sized for.
+    /// ByteRange cap this session's `matches` buffer was sized for.
     max_matches: u32,
     workgroup_x: u32,
 }
@@ -623,7 +620,7 @@ impl ResidentLiteralScan {
     pub fn scan_into(
         &self,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), vyre_driver::BackendError> {
         self.scan_into_timed(haystack, matches, scratch)
@@ -640,7 +637,7 @@ impl ResidentLiteralScan {
     pub fn scan_into_timed(
         &self,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         use crate::dispatch_io;
@@ -802,7 +799,7 @@ pub struct ResidentFusedRegionScan {
     max_regions: u32,
     /// Presence bitmap `u32` words per region.
     presence_words: u32,
-    /// Match cap this session's `matches` buffer was sized for.
+    /// ByteRange cap this session's `matches` buffer was sized for.
     max_matches: u32,
     /// Program workgroup X extent, for the per-scan byte-scan dispatch geometry.
     workgroup_x: u32,
@@ -872,7 +869,7 @@ impl PendingResidentFusedRegion {
     pub fn await_into(
         self,
         out: &mut Vec<u32>,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), vyre_driver::BackendError> {
         self.await_into_timed(out, matches).map(|_| ())
     }
@@ -885,7 +882,7 @@ impl PendingResidentFusedRegion {
     pub fn await_into_timed(
         self,
         out: &mut Vec<u32>,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<ResidentFusedTiming, vyre_driver::BackendError> {
         out.clear();
         matches.clear();
@@ -1253,7 +1250,7 @@ impl ResidentFusedRegionScan {
         region_starts: &[u32],
         region_base: u32,
         out: &mut Vec<u32>,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), vyre_driver::BackendError> {
         self.scan_into_timed(haystack, region_starts, region_base, out, matches, scratch)
@@ -1338,7 +1335,7 @@ impl ResidentFusedRegionScan {
         region_starts: &[u32],
         region_base: u32,
         out: &mut Vec<u32>,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         let _in_flight = self.begin_dispatch()?;
@@ -1582,7 +1579,7 @@ fn decode_resident_fused_outputs(
     region_count: u32,
     max_matches: u32,
     out: &mut Vec<u32>,
-    matches: &mut Vec<Match>,
+    matches: &mut Vec<ByteRange>,
 ) -> Result<(), vyre_driver::BackendError> {
     use crate::dispatch_io;
 
@@ -1731,7 +1728,7 @@ impl PendingMatches {
     /// # Errors
     /// Returns [`vyre_driver::BackendError`] on dispatch/readback failure or match-count
     /// overflow.
-    pub fn await_into(self, matches: &mut Vec<Match>) -> Result<(), vyre_driver::BackendError> {
+    pub fn await_into(self, matches: &mut Vec<ByteRange>) -> Result<(), vyre_driver::BackendError> {
         matches.clear();
         let outputs = self.pending.await_result()?;
         self.prepared.decode_outputs_into(&outputs, matches)
@@ -1741,7 +1738,7 @@ impl PendingMatches {
     ///
     /// # Errors
     /// See [`Self::await_into`].
-    pub fn await_matches(self) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    pub fn await_matches(self) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.await_into(&mut matches)?;
         Ok(matches)
@@ -1786,7 +1783,7 @@ impl PendingFusedRegion {
     /// overflow.
     pub fn await_into(
         self,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         use crate::dispatch_io;
         matches.clear();
@@ -1955,7 +1952,7 @@ impl GpuLiteralSet {
 
     /// Reference oracle implementation for parity testing.
     #[must_use]
-    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
+    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange> {
         let mut state = 0u32;
         let mut results = Vec::new();
         for (pos, &byte) in haystack.iter().enumerate() {
@@ -1964,7 +1961,7 @@ impl GpuLiteralSet {
             let end = self.dfa.output_offsets[state as usize + 1] as usize;
             for &pattern_id in &self.dfa.output_records[begin..end] {
                 let len = self.pattern_lengths[pattern_id as usize];
-                results.push(Match::new(
+                results.push(ByteRange::new(
                     pattern_id,
                     (pos as u32 + 1).saturating_sub(len),
                     pos as u32 + 1,
@@ -1984,7 +1981,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_into(backend, haystack, max_matches, &mut matches)?;
         Ok(matches)
@@ -2003,7 +2000,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_into_with_scratch(backend, haystack, max_matches, matches, &mut scratch)
@@ -2033,7 +2030,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
         matches.clear();
         let prepared = self.prepare_scan_dispatch(haystack, max_matches)?;
@@ -2123,7 +2120,7 @@ impl GpuLiteralSet {
         &self,
         backend: &str,
         haystack: &[u8],
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let mut matches = Vec::new();
         self.scan_all_into(backend, haystack, &mut matches)?;
         Ok(matches)
@@ -2137,7 +2134,7 @@ impl GpuLiteralSet {
         &self,
         backend: &str,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_all_into_with_scratch(backend, haystack, matches, &mut scratch)
@@ -2155,7 +2152,7 @@ impl GpuLiteralSet {
         &self,
         backend: &str,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut ScanDispatchScratch,
     ) -> Result<(), vyre_driver::BackendError> {
         use crate::dispatch_io;
@@ -2230,7 +2227,7 @@ impl GpuLiteralSet {
         &self,
         backend: &str,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<ScanAllTimed, vyre_driver::BackendError> {
         use crate::dispatch_io;
 
@@ -2304,7 +2301,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut ScanDispatchScratch,
     ) -> Result<(), vyre_driver::BackendError> {
         let dispatch_program = self.program_for_match_capacity(max_matches)?;
@@ -2419,7 +2416,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut LiteralSetScanScratch,
     ) -> Result<(), vyre_driver::BackendError> {
         let cached_program = &mut scratch.cached_program;
@@ -3155,7 +3152,7 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         let mut scratch = ScanDispatchScratch::default();
         self.scan_presence_and_positions_by_region_with_scratch(
@@ -3210,7 +3207,7 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut ScanDispatchScratch,
     ) -> Result<Vec<u32>, vyre_driver::BackendError> {
         use crate::dispatch_io;
@@ -3401,7 +3398,7 @@ impl GpuLiteralSet {
         region_starts: &[u32],
         region_base: u32,
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(Vec<u32>, vyre_driver::TimedDispatchResult), vyre_driver::BackendError> {
         use crate::dispatch_io;
 
@@ -3501,7 +3498,7 @@ impl GpuLiteralSet {
         backend: &str,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut ScanDispatchScratch,
         dispatch_program: &Program,
         prefilter_tables: &LiteralSetPrefilterTables,
@@ -4450,7 +4447,7 @@ pub(crate) fn decode_presence_words(presence_bytes: &[u8], total_words: usize) -
 fn decode_literal_set_outputs_into(
     outputs: &[Vec<u8>],
     max_matches: u32,
-    matches: &mut Vec<Match>,
+    matches: &mut Vec<ByteRange>,
 ) -> Result<(), vyre_driver::BackendError> {
     matches.clear();
     let count_bytes = crate::dispatch_io::try_output_bytes(outputs, 0, "literal_set match count")?;
@@ -4616,14 +4613,14 @@ mod compile_tests {
             .collect()
     }
 
-    fn decode_reference_matches(outputs: &[vyre_reference::value::Value]) -> Vec<Match> {
+    fn decode_reference_matches(outputs: &[vyre_reference::value::Value]) -> Vec<ByteRange> {
         let count = decode_u32_words(&outputs[0].to_bytes())[0] as usize;
         decode_u32_words(&outputs[1].to_bytes())
             .into_iter()
             .take(count.saturating_mul(3))
             .collect::<Vec<_>>()
             .chunks_exact(3)
-            .map(|chunk| Match::new(chunk[0], chunk[1], chunk[2]))
+            .map(|chunk| ByteRange::new(chunk[0], chunk[1], chunk[2]))
             .collect()
     }
 
@@ -4639,7 +4636,7 @@ mod compile_tests {
             triples.extend_from_slice(&match_triple_bytes(0, i, i + 1));
         }
         let outputs = vec![match_count_bytes(7), triples];
-        let mut matches = vec![Match::new(5, 5, 5)];
+        let mut matches = vec![ByteRange::new(5, 5, 5)];
         let err = decode_literal_set_outputs_into(&outputs, 3, &mut matches)
             .expect_err("count 7 over cap 3 must fail closed, not truncate");
         let msg = err.to_string();
@@ -4665,7 +4662,10 @@ mod compile_tests {
         let mut matches = Vec::new();
         decode_literal_set_outputs_into(&outputs, 4, &mut matches)
             .expect("count 2 within cap 4 must decode");
-        assert_eq!(matches, vec![Match::new(2, 0, 2), Match::new(5, 3, 6)]);
+        assert_eq!(
+            matches,
+            vec![ByteRange::new(2, 0, 2), ByteRange::new(5, 3, 6)]
+        );
     }
 
     #[test]
@@ -4833,7 +4833,7 @@ mod compile_tests {
 
         assert_eq!(
             matches,
-            vec![Match::new(0, 0, 1), Match::new(1, 1, 3)],
+            vec![ByteRange::new(0, 0, 1), ByteRange::new(1, 1, 3)],
             "Fix: prepared dispatch decode must match public GpuLiteralSet scan semantics."
         );
     }
@@ -4920,7 +4920,7 @@ mod compile_tests {
         let plan = engine
             .prepare_scan_dispatch(b"a", 1)
             .expect("prepared scan");
-        let mut matches = vec![Match::new(99, 1, 2)];
+        let mut matches = vec![ByteRange::new(99, 1, 2)];
         let err = plan
             .decode_outputs_into(&[vec![1, 2, 3], Vec::new()], &mut matches)
             .expect_err("short literal match-count readback must fail");
@@ -4960,7 +4960,7 @@ mod compile_tests {
         let plan = engine
             .prepare_scan_dispatch(b"a", 2)
             .expect("prepared scan");
-        let mut matches = vec![Match::new(99, 1, 2)];
+        let mut matches = vec![ByteRange::new(99, 1, 2)];
         let err = plan
             .decode_outputs_into(
                 &[match_count_bytes(2), match_triple_bytes(0, 0, 1)],
@@ -5228,12 +5228,12 @@ mod compile_tests {
         // [2] = matches (13).
         let presence = decode_u32_words(&outputs[0].to_bytes());
         let count = decode_u32_words(&outputs[1].to_bytes())[0] as usize;
-        let mut actual_matches: Vec<Match> = decode_u32_words(&outputs[2].to_bytes())
+        let mut actual_matches: Vec<ByteRange> = decode_u32_words(&outputs[2].to_bytes())
             .into_iter()
             .take(count.saturating_mul(3))
             .collect::<Vec<_>>()
             .chunks_exact(3)
-            .map(|chunk| Match::new(chunk[0], chunk[1], chunk[2]))
+            .map(|chunk| ByteRange::new(chunk[0], chunk[1], chunk[2]))
             .collect();
 
         // (1) Positions: the fused triples must equal the linear AC oracle exactly.
@@ -5262,8 +5262,8 @@ mod compile_tests {
                 .iter()
                 .rposition(|&start| start <= pos)
                 .expect("every match position lands in a region (region_starts[0]==0)");
-            expected_presence[region * presence_words + (m.pattern_id >> 5) as usize] |=
-                1u32 << (m.pattern_id & 31);
+            expected_presence[region * presence_words + (m.tag >> 5) as usize] |=
+                1u32 << (m.tag & 31);
         }
         assert_eq!(
             presence, expected_presence,
@@ -5344,7 +5344,7 @@ mod compile_tests {
         let plan = engine
             .prepare_scan_dispatch(b"a", 0)
             .expect("prepared scan");
-        let mut matches = vec![Match::new(99, 1, 2)];
+        let mut matches = vec![ByteRange::new(99, 1, 2)];
         let err = plan
             .decode_outputs_into(&[match_count_bytes(1), Vec::new()], &mut matches)
             .expect_err("zero cap with a counted match must error, not silently drop it");
@@ -5363,7 +5363,7 @@ mod compile_tests {
         let plan = engine
             .prepare_scan_dispatch(b"zzz", 0)
             .expect("prepared scan");
-        let mut matches = vec![Match::new(99, 1, 2)];
+        let mut matches = vec![ByteRange::new(99, 1, 2)];
         plan.decode_outputs_into(&[match_count_bytes(0), Vec::new()], &mut matches)
             .expect("zero cap with zero matches must succeed with an empty result");
         assert!(matches.is_empty());

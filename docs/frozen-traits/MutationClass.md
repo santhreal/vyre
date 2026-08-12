@@ -1,3 +1,8 @@
+# MutationClass historical reference
+
+**Status: Superseded.** Use `MutationClass.txt` and
+`vyre-driver/src/registry/mutation.rs` for the frozen contract.
+
 pub enum MutationClass {
 /// Renames and alias collapse only. Byte-exact output required.
 Cosmetic,

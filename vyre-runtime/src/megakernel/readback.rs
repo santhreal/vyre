@@ -34,7 +34,7 @@ pub struct ResidentReadbackCounters {
 }
 
 impl ResidentQueueReadback {
-    /// Decode the backend output vector produced by [`super::Megakernel`].
+    /// Decode the backend output vector produced by a persistent artifact submission.
     ///
     /// # Errors
     ///

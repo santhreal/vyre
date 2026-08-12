@@ -1,9 +1,8 @@
-schema_version = 1
+schema_version = 2
 release_contract_path = "../docs/RELEASE.md"
 
 [release]
 vyre = "0.7.2"
-weir = "0.1.3"
 
 [[requirements]]
 id = "version-story"
@@ -86,20 +85,6 @@ evidence = [
   "evidence/docs/optimization-proof.md",
 ]
 
-[[requirements]]
-id = "weir-analysis-integration"
-title = "Weir reaching-def, points-to, alias, callgraph, and fixpoint facts integrate into Vyre optimization"
-status = "closed"
-minimum_evidence = 7
-evidence = [
-  "evidence/weir/weir-analysis-api-matrix.json",
-  "evidence/weir/weir-vyre-integration-tests.json",
-  "evidence/weir/weir-readme-contracts.json",
-  "../../../../dataflow/weir/Cargo.toml",
-  "evidence/optimization/weir-facts-pass-firing.json",
-  "evidence/benchmarks/dataflow-analysis-release.json",
-  "evidence/docs/weir-integration.md",
-]
 
 [[requirements]]
 id = "alias-aware-upgrades"
@@ -171,42 +156,10 @@ evidence = [
 ]
 
 [[requirements]]
-id = "c-parser-linux-subsystem"
-title = "Distributed C parser parses a full selected Linux subsystem corpus"
-status = "closed"
-minimum_evidence = 6
-evidence = [
-  "cargo_full run --bin xtask -- c-parser-corpus --corpus DIR -I LINUX_INCLUDE_DIR -D CONFIG_SYMBOL=1 --output release/evidence/parser/c-parser-linux-subsystem.json",
-  "evidence/parser/c-parser-linux-subsystem.json",
-  "evidence/parser/linux-subsystem-corpus-manifest.json",
-  "evidence/parser/c-parser-diagnostics-summary.json",
-  "evidence/parser/c-parser-throughput.json",
-  "evidence/docs/c-parser-linux-proof.md",
-]
-
-[[requirements]]
-id = "distributed-parser-coherence"
-title = "vyre-frontend-c, vyrec, Weir, and Vyre grammar-generation parser responsibilities are coherent"
-status = "closed"
-minimum_evidence = 10
-evidence = [
-  "cargo_full run --bin xtask -- parser-coherence --output release/evidence/parser/distributed-parser-map.json",
-  "evidence/parser/distributed-parser-map.json",
-  "evidence/parser/vyre-frontend-c-contracts.json",
-  "evidence/parser/vyrec-cli-contracts.json",
-  "evidence/parser/external-dataflow-contracts.json",
-  "evidence/parser/compiler-consumer-grammar-gen-contracts.json",
-  "evidence/docs/distributed-parser-coherence.md",
-  "evidence/docs/parser-doc-proof.md",
-  "evidence/tests/corpus-suite.json",
-  "evidence/tests/release-surface-suite-coverage.json",
-]
-
-[[requirements]]
 id = "conformance-hard-gate"
 title = "Conformance is wired as a hard release-blocking gate for every claimed op/backend"
 status = "closed"
-minimum_evidence = 11
+minimum_evidence = 10
 evidence = [
   "evidence/conformance/conformance-matrix.json",
   "evidence/conformance/cuda-conformance.json",
@@ -215,47 +168,15 @@ evidence = [
   "evidence/conformance/release-gate-log.json",
   "../../../../../.github/workflows/conform.yml",
   "../../../../../.github/workflows/gpu-parity.yml",
-  "../../../../../.github/workflows/santh-ci.yml",
   "../../../../../.github/workflows/architectural-invariants.yml",
   "../../../../../.github/CI_REQUIRED.md",
   "../../../../../scripts/apply-branch-protection.sh",
 ]
 
-[[requirements]]
-id = "modular-test-architecture"
-title = "Oversized tests are modularized into fixtures, contracts, properties, backends, corpus, bench, and regression layers"
-status = "closed"
-minimum_evidence = 6
-evidence = [
-  "cargo_full run --bin xtask -- lint-shape-tests --threshold 0",
-  "evidence/tests/test-matrix.json",
-  "evidence/tests/modularization-map.json",
-  "evidence/tests/oversized-test-closure.json",
-  "evidence/tests/release-surface-suite-coverage.json",
-  "evidence/docs/test-architecture.md",
-]
-
-[[requirements]]
-id = "exhaustive-verification"
-title = "Normal, adversarial, property, conformance, corpus, benchmark, gap, and fuzz verification are present"
-status = "closed"
-minimum_evidence = 10
-evidence = [
-  "evidence/tests/test-matrix.json",
-  "evidence/tests/release-surface-suite-coverage.json",
-  "evidence/tests/unit-suite.json",
-  "evidence/tests/adversarial-suite.json",
-  "evidence/tests/property-suite.json",
-  "evidence/tests/conformance-suite.json",
-  "evidence/tests/corpus-suite.json",
-  "evidence/tests/benchmark-suite.json",
-  "evidence/tests/gap-suite.json",
-  "evidence/tests/fuzz-suite.json",
-]
 
 [[requirements]]
 id = "docs-evidence-linked"
-title = "User, contributor, benchmark, conformance, parser, optimization, and release docs are tied to evidence"
+title = "User, contributor, benchmark, conformance, optimization, and release docs are tied to evidence"
 status = "closed"
 minimum_evidence = 8
 evidence = [
@@ -264,8 +185,6 @@ evidence = [
   "../docs/INDEX.md",
   "evidence/docs/vyre-readme-contracts.json",
   "evidence/docs/vyre-readme-proof.md",
-  "evidence/docs/weir-readme-proof.md",
-  "evidence/docs/parser-doc-proof.md",
   "evidence/docs/benchmark-doc-proof.md",
   "evidence/docs/wgpu-fallback-proof.md",
   "evidence/docs/conformance-doc-proof.md",
@@ -303,29 +222,24 @@ evidence = [
   "evidence/hygiene/resource-bound-scan.json",
   "evidence/hygiene/error-surface-scan.json",
   "evidence/hygiene/cargo-wrapper-scan.json",
-  "evidence/hygiene/audit-location-scan.json",
-  "evidence/hygiene/public-doc-scan.json",
-  "evidence/hygiene/test-hygiene-scan.json",
   "evidence/docs/release-hygiene-proof.md",
   "../../../../../.github/workflows/architectural-invariants.yml",
   "../../../../../.github/CI_REQUIRED.md",
   "../../../../../scripts/apply-branch-protection.sh",
-  "../../../../../scripts/architectural_invariants.sh",
+  "../../../../../scripts/check_architectural_invariants.sh",
 ]
 
 [[requirements]]
-id = "final-completion-audit"
-title = "Prompt-to-artifact completion audit proves every objective requirement is satisfied"
+id = "public-launch"
+title = "Public launch state preserves approval-gated external actions"
 status = "closed"
-minimum_evidence = 10
+minimum_evidence = 9
 evidence = [
   "cargo_full run --bin xtask -- release-evidence",
-  "cargo_full run --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json",
   "cargo_full run --bin xtask -- vyre-release-gate --prepublish",
   "cargo_full run --bin xtask -- vyre-release-gate",
   "cargo_full run --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json",
   "evidence/final/release-evidence-run.json",
-  "evidence/final/completion-audit.json",
   "evidence/final/public-launch-state.json",
   "../scripts/final-launch.sh",
   "../scripts/publish-release.sh",

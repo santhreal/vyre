@@ -260,7 +260,7 @@ mod tests {
     fn public_artifact_boundary_rejects_plural_private_and_credentials() {
         let blockers = public_artifact_boundary_blockers(
             "release/evidence/final/public-launch-state.json",
-            br#"{"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/media/mukund-thiru/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
+            br#"{"repositories_public":["santhreal/vyre"],"public_repository":"santhreal/Santh","path":"/mnt/shared/SanthData/Santh/private.json","command":"gh repo edit Santh --visibility public","env":"VYRE_RELEASE_REPOS=santhreal/vyre","provenance":"token=abc"}"#,
         );
         assert!(blockers
             .iter()
@@ -282,22 +282,21 @@ mod tests {
             .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
     }
 
-    /// Public evidence may cite every repository that owns a package in the
-    /// release train, while launch-state ownership remains singular.
+    /// Vyre release evidence may cite only the Vyre public repository.
     #[test]
-    fn public_artifact_boundary_accepts_release_package_repositories() {
-        for repository in ["santhreal/weir", "santhreal/weirflow"] {
-            let artifact = format!(r#"{{"repository":"https://github.com/{repository}"}}"#);
-            let blockers = public_artifact_boundary_blockers(
-                "release/evidence/metadata/metadata-matrix.json",
-                artifact.as_bytes(),
-            );
+    fn public_artifact_boundary_accepts_only_vyre_repository() {
+        let accepted = public_artifact_boundary_blockers(
+            "release/evidence/metadata/metadata-matrix.json",
+            br#"{"repository":"https://github.com/santhreal/vyre"}"#,
+        );
+        assert_eq!(accepted, Vec::<String>::new());
 
-            assert_eq!(
-                blockers,
-                Vec::<String>::new(),
-                "Fix: release package repository `{repository}` must remain inside the public evidence boundary."
-            );
-        }
+        let rejected = public_artifact_boundary_blockers(
+            "release/evidence/metadata/metadata-matrix.json",
+            br#"{"repository":"https://github.com/santhreal/other-product"}"#,
+        );
+        assert!(rejected
+            .iter()
+            .any(|blocker| blocker.contains("outside the release train")));
     }
 }

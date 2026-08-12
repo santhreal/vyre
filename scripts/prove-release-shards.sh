@@ -30,7 +30,7 @@ if [[ "$SHARD_WORKERS" -gt "$SHARDS" ]]; then
     SHARD_WORKERS="$SHARDS"
 fi
 
-build_args=(build -p vyre-conform-runner --bin vyre-conform-runner)
+build_args=(build -p vyre-conform --bin vyre-conform)
 if [[ "${VYRE_RELEASE_NO_DEFAULT_FEATURES:-}" == "1" ]]; then
     build_args+=(--no-default-features)
 fi
@@ -62,9 +62,9 @@ target_root="${target_root:-$ROOT_DIR/target}"
 if [[ "$target_root" != /* ]]; then
     target_root="$ROOT_DIR/$target_root"
 fi
-RUNNER_BIN="${VYRE_CONFORM_RUNNER_BIN:-$target_root/$profile_dir/vyre-conform-runner}"
+RUNNER_BIN="${VYRE_CONFORM_RUNNER_BIN:-$target_root/$profile_dir/vyre-conform}"
 if [[ ! -x "$RUNNER_BIN" ]]; then
-    printf 'Fix: vyre-conform-runner binary is missing after build: %s\n' "$RUNNER_BIN" >&2
+    printf 'Fix: vyre-conform binary is missing after build: %s\n' "$RUNNER_BIN" >&2
     exit 1
 fi
 

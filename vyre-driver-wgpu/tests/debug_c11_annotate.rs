@@ -15,7 +15,7 @@ fn debug_c11_annotate_typedef_names_emit_literal() {
         "annotated_vast",
     );
 
-    let lowered = vyre_lower::pre_emit::lower_verified(&program).unwrap();
+    let lowered = vyre_lower::lower_verified(&program).unwrap();
     let module = vyre_emit_naga::emit(&lowered.descriptor).unwrap();
 
     let mut validator = naga::valid::Validator::new(
@@ -45,7 +45,7 @@ fn debug_c11_annotate_typedef_names_emit_dynamic() {
         "annotated_vast",
     );
 
-    let lowered = vyre_lower::pre_emit::lower_verified(&program).unwrap();
+    let lowered = vyre_lower::lower_verified(&program).unwrap();
     let module = vyre_emit_naga::emit(&lowered.descriptor).unwrap();
 
     let mut validator = naga::valid::Validator::new(

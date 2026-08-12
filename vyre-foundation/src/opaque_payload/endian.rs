@@ -101,7 +101,7 @@ impl_le_codec!(f64, push_f64, read_f64, 8);
 /// # Example
 ///
 /// ```
-/// use vyre_foundation::opaque_payload::LeBytesWriter;
+/// use vyre_foundation::opaque_payload::endian::LeBytesWriter;
 /// let mut w = LeBytesWriter::new();
 /// w.push_u32(42);
 /// w.push_f32(1.0);

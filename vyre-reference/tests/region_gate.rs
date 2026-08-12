@@ -1,6 +1,6 @@
 //! Reference interpreter region-gate regression tests.
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 fn raw_program() -> Program {
     Program::from_raw_parts(

@@ -1,5 +1,8 @@
 # Substrate RFCs  -  IR enrichments and lowering passes
 
+**Status: Archived.** These research proposals are not shipped contracts. Use
+[`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for current boundaries.
+
 This doc captures the **substrate-level** items from the math-frontier
 roadmap that are NOT Tier-2.5 primitives and shouldn't ship as ops.
 Each RFC documents the design, dependencies, and breaking-change

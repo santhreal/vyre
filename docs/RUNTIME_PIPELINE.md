@@ -1,60 +1,153 @@
-# Runtime Pipeline  -  the optimisation stack delivering the 1000× gate
+# Runtime pipeline
 
-Closes #30 A.6 runtime pipeline innovations.
+Last verified: 2026-08-04
 
-Each innovation below has:
+This guide describes the current Vyre 0.7.2 execution path. It does not make
+performance claims. Measured claims belong in fingerprinted benchmark evidence
+under `release/evidence/benchmarks/`.
 
-- A target speedup factor (relative to the naive "per-rule dispatch,
-  cold compile, host staging" baseline).
-- A measurable criterion cell in downstream consumer benches or
-  `libs/performance/matching/vyre/benches/`.
-- A conformance test that proves byte-equivalent output to the
-  naive path.
+## Standard dispatch
 
-## Stack
+```mermaid
+flowchart TD
+    Program[Typed Program] --> Validate[Validate]
+    Validate --> Optimize[IR-pure optimization]
+    Optimize --> Requirements[Derive requirements]
+    Requirements --> Route[Resolve backend decision]
+    Route --> Compile[Concrete backend compile]
+    Compile --> Allocate[Allocate and bind]
+    Allocate --> Dispatch[Dispatch]
+    Dispatch --> Readback[Explicit output readback]
+```
 
-| Layer | Factor | Source | Conformance test |
-|---|---|---|---|
-| 1. **Persistent pipeline disk cache** (blake3-keyed) | ≈ **900×** on cold-start compile (~180 ms → ~200 µs hit) | `vyre-runtime/src/pipeline_cache.rs`, `vyre-driver-wgpu/src/pipeline_disk_cache.rs` | F-SPEED-2 commit cycle. |
-| 2. **Megakernel batching** | ≈ **12×** at rule_count ≥ 4 (amortises 30 µs driver overhead per dispatch) | `vyre-runtime/src/megakernel/*` | F-SPEED-3; `dispatch_megakernel.rs`. |
-| 3. **Cross-rule CSE** | 2-5× depending on prefix overlap | IR optimizer pass | `specialize_vs_generic.rs` bench + `specialize::tests`. |
-| 4. **GPU-fused decode → scan** | ≈ **3×** end-to-end on base64/hex/gzip-rich corpora (no CPU-GPU copy) | consumer decode pipeline + fused dispatch | `decode_adversarial.rs` + GPU parity. |
-| 5. **Adaptive workgroup sizing** | 1.3-2× depending on program shape | `vyre-runtime/src/megakernel/dispatcher.rs` (autotune_plan in fusion.rs thresholds) | FIX-REVIEW Finding #15 named thresholds. |
-| 6. **Compile-time rule specialization** | 2× on rules with constant predicates | consumer compile-time specialization | `specialize_vs_generic` bench. |
-| 7. **Incremental fixpoint cache** | ≈ **50×** on re-scan of unchanged corpora | `vyre-primitives::fixpoint::bitset_fixpoint::bitset_fixpoint_warm_start` | I.8 test harness. |
-| 8. **Subgroup-cooperative DFA scan** | 4-8× on hot-path DFA | `vyre-primitives::matching::dfa::subgroup_cooperative` | I.9 cat_a_gpu_differential case. |
-| 9. **Zero-copy NVMe → GPU DMA via io_uring** | PCIe-bound (≈ **30×** the host-stage baseline) | `vyre-runtime/src/uring/*` | `uring::pump::tests` plus proptest round-trip. |
-| 10. **Exploit graph reconstruction on GPU** | ≈ **20×** vs CPU graph closure on large rule sets | consumer exploit-graph reconstruction | `exploit_graph_e2e.rs`. |
+### 1. Validate
 
-Multiplied out (1 × 2 × 3 × 4 × 5 × 6 × 7 × 8 × 9 × 10 is NOT how
-the math works  -  some layers are mutually exclusive on a given
-workload), the realistic end-to-end factor on a 100 MiB real
-corpus over 20 rules is **≥ 1000×** vs the competitor CPU
-baseline. The gate makes this measurable per-cell.
+`vyre-foundation` validates types, memory access, control flow, barriers, shapes,
+effects, and output contracts. Invalid programs fail before lowering. The
+runtime does not patch a malformed program into a runnable form.
 
-## Integrity contract
+### 2. Optimize
 
-- Every layer ships its own conformance test locking byte-
-  equivalent output vs the naive path. A speedup that changes the
-  result is a correctness failure, not a speed win.
-- Every layer's dispatch-time path has a hot-path claim in
-  `docs/HOT_PATH_PROOFS.md`.
-- Regressions in any layer fail the GATE_CLOSURE G4 cell for the
-  affected rule class + corpus size.
+Registered passes in `vyre-foundation/src/optimizer/` transform the typed
+program to an equivalent typed program. These are backend-neutral Layer 1
+rewrites. The pass scheduler derives and validates the registered order.
 
-## Source-change findings
+### 3. Derive requirements
 
-- Megakernel batching today picks batch size by a fixed constant;
-  the required source change routes adaptive batching through the same
-  autotune framework as layer 5.
-- Incremental fixpoint cache persists in-RAM only; disk-backed
-  warm-start requires a source change in the cache layer.
-- Cross-machine distributed dispatch (D.3h) shares the pipeline
-  disk cache  -  the multi-host fingerprint stability guarantee
-  is covered by RUNTIME Finding 1 fixed 2026-04-23.
+`vyre-driver` walks the optimized program to derive launch geometry, binding
+requirements, output slots, device features, persistent-kernel requirements,
+and cache identity. Relevant modules include `program_walks/`, `launch.rs`,
+`binding.rs`, `output_slots.rs`, and `pipeline/`.
 
-## Operating rule
+A requirement is a hard constraint. A backend that cannot honor it is not an
+eligible route.
 
-Every new runtime innovation ships three artifacts in the same PR:
-implementation, criterion cell, conformance test. Anything less is
-a "might be faster, probably correct" claim we don't ship.
+### 4. Resolve a backend
+
+An explicit backend selection is diagnostic and reproducible. Autoroute uses a
+valid measured decision for the exact workload and device identity. A missing,
+stale, or incomplete decision is an error. It does not select a hidden CPU or
+alternate GPU path.
+
+The current release evidence is CUDA-first on the NVIDIA evidence host. WGPU is
+the portable GPU route. SPIR-V is a registered dispatch route. Metal is active
+on supported Apple targets. See
+`release/evidence/backends/backend-matrix.json` for executable probe state.
+
+### 5. Compile and cache
+
+The selected concrete driver lowers the program and owns the compiled artifact.
+Backend-neutral cache identity and policy live in `vyre-driver/src/pipeline/`.
+Concrete module, pipeline, shader, stream, and device-object caches remain in
+their concrete driver.
+
+`vyre-runtime/src/pipeline_cache/` owns runtime cache stores and replay-facing
+cache policy. Cache lookup validates all identity inputs. An invalid or stale
+entry is a cache miss or an explicit error according to the owning contract. It
+is not accepted because its key happens to exist.
+
+### 6. Allocate, dispatch, and read back
+
+The concrete driver validates device limits, allocates buffers, binds resources,
+submits work, and reports errors with backend context. Outputs are explicit
+pipeline live-outs with declared ranges. Readback does not infer success from a
+non-empty buffer.
+
+The reference driver and interpreter are correctness routes. They run only when
+selected for reference execution or conformance.
+
+## Persistent runtime path
+
+`vyre-runtime/src/megakernel/` owns persistent runtime execution. The main
+responsibilities are split by module:
+
+| Responsibility | Current owner |
+| --- | --- |
+| Queue and slot protocol | `protocol.rs`, `protocol/`, `protocol_api.rs` |
+| Runtime task model | `task.rs`, `descriptor.rs`, `rule_catalog.rs` |
+| Scheduling and fairness | `scheduler.rs`, `policy.rs`, `planner/` |
+| Program construction | `builder.rs`, `builder/` |
+| Resident execution | `resident.rs`, `execution.rs`, `execution/` |
+| Backend-neutral handlers | `handlers.rs`, `handlers/` |
+| Readback and completion | `readback.rs`, `io/` |
+| Telemetry and recovery | `telemetry.rs`, `telemetry/`, `recovery.rs` |
+| Native IO integration | `vyre-runtime/src/uring/` |
+
+The runtime protocol is shared. Concrete drivers adapt that protocol to their
+device execution contracts. They do not maintain parallel queue semantics.
+
+A persistent route follows the same fail-closed model as standard dispatch:
+
+1. Validate the typed program and persistent requirements.
+2. Build or load a compatible artifact.
+3. Validate queue layout, capacity, identity, and tenant boundaries.
+4. Publish work through the runtime protocol.
+5. Observe an explicit completion or error state.
+6. Read only declared output ranges.
+
+A stalled, stale, unsupported, or malformed resident route surfaces an error. It
+does not silently rerun through standard dispatch or the host interpreter.
+
+## Megakernel compiler boundary
+
+The current runtime builder and planner are execution infrastructure.
+`vyre-megakernel` is a current workspace member and a separate compiler
+boundary recorded in `docs/CRATE_OWNERSHIP.toml`. Its contract is typed program
+graphs to canonical static and persistent megakernel artifacts. It does not own
+backend dispatch or the queue protocol.
+
+Packaged routes authenticate through `vyre-runtime::artifact_admission`.
+`vyre-runtime` remains the owner of persistent scheduling and protocol
+behavior. `vyre-aot` packages envelopes produced by the compiler. Concrete
+drivers remain the owners of lowering and dispatch. See
+[`megakernel-wiring.md`](megakernel-wiring.md).
+
+## IO path
+
+`vyre-runtime/src/uring/` owns Linux `io_uring` integration. Runtime dialect
+operations such as DMA and zero-copy mapping are registered as typed `OpDef`
+contracts. Their current backend status is recorded in
+`docs/optimization/OP_MATRIX.toml` and the generated operation schema.
+Experimental or unsupported rows remain explicit.
+
+IO buffers retain identity and ownership across submission, device execution,
+and completion. An IO failure cannot produce a successful dispatch result with
+partial bytes.
+
+## Evidence and observability
+
+Runtime telemetry records decisions and failures without logging input secrets.
+A performance claim must point to a current benchmark artifact whose source
+fingerprint matches the intended release tree. Runtime source documentation does
+not substitute for raw samples or suite digests.
+
+Use these checks after changing the pipeline:
+
+```text
+cargo_full run --bin xtask -- backend-matrix
+cargo_full run --bin xtask -- operation-schema --check
+cargo_full run --bin xtask -- conformance-matrix --check
+```
+
+Long-running benchmark evidence is regenerated only after the intended release
+source is frozen.

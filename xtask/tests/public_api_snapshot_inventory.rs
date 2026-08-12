@@ -33,6 +33,8 @@ fn run_snapshot_refresh(root: &Path, package: &str) -> Result<(), String> {
         fs::copy(&source, scripts.join(file_name))
             .map_err(|error| format!("could not copy {}: {error}", source.display()))?;
     }
+    fs::copy(workspace_root().join("cargo_full"), root.join("cargo_full"))
+        .map_err(|error| format!("could not copy bounded cargo wrapper: {error}"))?;
 
     let output = Command::new("bash")
         .arg(scripts.join("check_public_api_snapshot.sh"))
@@ -169,7 +171,7 @@ fn inventory_includes_cuda_and_excludes_private_tooling() {
         "vyre-driver-cuda".to_string(),
         "vyre-driver-cuda".to_string()
     )));
-    for private in ["xtask", "vyre-bench", "conform/vyre-conform-enforce"] {
+    for private in ["xtask", "vyre-bench", "conform/vyre-conform"] {
         assert!(
             inventory.iter().all(|(member, _)| member != private),
             "private workspace member {private} must not receive a public API snapshot"

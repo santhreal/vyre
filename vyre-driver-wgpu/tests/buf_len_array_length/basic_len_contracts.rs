@@ -114,8 +114,7 @@ fn buf_len_returns_one_element_for_four_byte_input() {
     assert_eq!(
         observed, 1,
         "Q3: arrayLength on a 4-byte (1×u32) read-only storage buffer must return 1, got {observed}. \
-         If this is 0, the wgpu/Vulkan path is computing the binding range wrong for small storage buffers  -  \
-         see docs/optimization/ROADMAP.md Q3."
+        If this is 0, the wgpu/Vulkan path is computing the binding range wrong for small storage buffers."
     );
 }
 

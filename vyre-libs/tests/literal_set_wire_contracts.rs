@@ -6,13 +6,13 @@
     feature = "matching-dfa",
     feature = "matching-nfa"
 ))]
-use vyre_foundation::serial::envelope::EnvelopeError;
+use vyre::scan::{GpuLiteralSet, LiteralSetWireError};
 #[cfg(any(
     feature = "matching-substring",
     feature = "matching-dfa",
     feature = "matching-nfa"
 ))]
-use vyre::scan::{GpuLiteralSet, LiteralSetWireError};
+use vyre_foundation::serial::envelope::EnvelopeError;
 
 #[cfg(any(
     feature = "matching-substring",

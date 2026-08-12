@@ -223,14 +223,17 @@ impl ProgramGraph {
 
     /// Lift one frontend program into the canonical graph boundary.
     ///
-    /// Every declared buffer becomes one typed external graph value. The
-    /// compiler then owns ABI projection and scheduling for the single node.
+    /// Every host-visible buffer becomes one typed external graph value. Workgroup-local
+    /// scratch remains internal to the node because callers cannot bind or retain it.
     pub fn from_program(
         node_name: impl Into<String>,
         program: Program,
     ) -> Result<Self, ProgramGraphError> {
         let mut graph = Self::new();
         for buffer in program.buffers() {
+            if buffer.access() == BufferAccess::Workgroup {
+                continue;
+            }
             graph.add_external_value(
                 buffer.name(),
                 ValueContract {

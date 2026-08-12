@@ -1,5 +1,7 @@
 # Frozen trait snapshots
 
+Snapshot policy applies to Vyre 0.7.2.
+
 This directory is coupled to `scripts/check_trait_freeze.sh`.
 
 - `*.txt` files are byte-stable snapshots consumed by CI.

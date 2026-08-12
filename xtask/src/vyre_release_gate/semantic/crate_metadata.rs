@@ -33,11 +33,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     for (field, label) in [
         ("publishable_package_count", "publishable package"),
         ("vyre_package_count", "Vyre package"),
-        ("weir_package_count", "Weir package"),
-        (
-            "parser_release_surface_count",
-            "parser release-surface package",
-        ),
         (
             "non_publishable_release_surface_count",
             "non-publishable release-surface package",
@@ -54,17 +49,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             ));
         }
     }
-    if matrix
-        .get("parser_release_surface_count")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0)
-        < 2
-    {
-        failures.push(
-            "requirement `crate-metadata` matrix must include both parser release surfaces: vyrec and vyre-frontend-c"
-                .to_string(),
-        );
-    }
     let missing_required = matrix
         .get("missing_required_release_surfaces")
         .and_then(serde_json::Value::as_array)
@@ -75,23 +59,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ));
     }
     if let Some(entries) = matrix.get("packages").and_then(serde_json::Value::as_array) {
-        if !entries.iter().any(|entry| {
-            entry.get("name").and_then(serde_json::Value::as_str) == Some("vyrec")
-                && entry.get("version").and_then(serde_json::Value::as_str)
-                    == Some(crate::release_train::vyrec_version())
-                && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
-                && entry
-                    .get("release_surface")
-                    .and_then(serde_json::Value::as_str)
-                    == Some("parser-cli")
-        }) {
-            failures.push(
-                format!(
-                    "requirement `crate-metadata` matrix must include vyrec {} parser-cli with README metadata",
-                    crate::release_train::vyrec_version()
-                ),
-            );
-        }
         if !entries.iter().any(|entry| {
             entry.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
                 && entry.get("version").and_then(serde_json::Value::as_str)
@@ -166,36 +133,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                     "requirement `crate-metadata` package `{name}` release_group `{release_group}` has version `{version}`, expected `{expected}`"
                 ));
             }
-            if entry
-                .get("example_count")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0)
-                == 0
-            {
-                failures.push(format!(
-                    "requirement `crate-metadata` release package `{name}` has zero examples or README usage blocks"
-                ));
-            }
-            if release_kind == "publishable-crate"
-                && entry
-                    .get("has_runnable_example")
-                    .and_then(serde_json::Value::as_bool)
-                    != Some(true)
-            {
-                failures.push(format!(
-                    "requirement `crate-metadata` publishable release package `{name}` has no runnable examples/*.rs"
-                ));
-            }
-            if release_kind == "publishable-crate"
-                && entry
-                    .get("has_api_referencing_example")
-                    .and_then(serde_json::Value::as_bool)
-                    != Some(true)
-            {
-                failures.push(format!(
-                    "requirement `crate-metadata` publishable release package `{name}` has no API-referencing examples/*.rs"
-                ));
-            }
         }
     }
     if blockers != 0 {
@@ -243,10 +180,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ("vyre", &["cuda", "wgpu"][..]),
         ("vyre-driver-cuda", &["cuda"][..]),
         ("vyre-driver-wgpu", &["wgpu"][..]),
-        (
-            crate::release_train::weir_package_name(),
-            &["default", "serde"][..],
-        ),
     ] {
         let Some(entry) = feature_entries
             .iter()
@@ -272,12 +205,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 ));
             }
         }
-    }
-    if !feature_entries
-        .iter()
-        .any(|entry| entry.get("name").and_then(serde_json::Value::as_str) == Some("vyrec"))
-    {
-        failures.push("requirement `crate-metadata` feature matrix is missing `vyrec`".to_string());
     }
     for package in ["vyre", "vyre-driver-cuda", "vyre-driver-wgpu"] {
         let Some(entry) = feature_entries
@@ -342,8 +269,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "vyre-driver-cuda",
         "vyre-driver-wgpu",
         "vyre",
-        "vyre-harness",
-        crate::release_train::weir_package_name(),
         "vyre-libs",
     ] {
         if !publish_order

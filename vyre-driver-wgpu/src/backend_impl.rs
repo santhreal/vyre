@@ -676,33 +676,9 @@ impl WgpuBackend {
         self.dispatch_borrowed_batch(&borrowed_jobs)
     }
 
-    /// Compile a program into a host-ingress wgpu stream.
-    #[allow(deprecated)]
-    pub fn compile_streaming(
-        &self,
-        program: &vyre_foundation::ir::Program,
-        config: vyre_driver::DispatchConfig,
-    ) -> Result<crate::engine::streaming::HostIngressStream, vyre_driver::BackendError> {
-        self.enforce_config_caps(&config)?;
-        let pipeline = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            &config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            self.dispatch_arena_snapshot(),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
-        Ok(crate::engine::streaming::HostIngressStream::new(
-            (*pipeline).clone(),
-            config,
-        ))
-    }
-
-    /// Compile a program into a persistent pipeline.
-    pub fn compile_persistent(
+    /// Compile a lower-level pipeline for concrete-driver oracle and cache tests.
+    #[doc(hidden)]
+    pub fn compile_pipeline_for_oracle(
         &self,
         program: &vyre_foundation::ir::Program,
         config: &vyre_driver::DispatchConfig,
@@ -899,28 +875,6 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         )?))
     }
 
-    fn compile_native(
-        &self,
-        program: &Program,
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Option<std::sync::Arc<dyn vyre_driver::CompiledPipeline>>, vyre_driver::BackendError>
-    {
-        self.enforce_config_caps(config)?;
-        self.validate_with_cache(program)?;
-        let cached = crate::pipeline::WgpuPipeline::compile_with_device_queue(
-            program,
-            config,
-            self.adapter_info.clone(),
-            self.enabled_features,
-            self.current_device_queue(),
-            self.dispatch_arena_snapshot(),
-            self.current_persistent_pool(),
-            self.pipeline_cache.clone(),
-            self.bind_group_layout_cache.clone(),
-        )?;
-        Ok(Some(cached))
-    }
-
     fn allocate_device_buffer(
         &self,
         byte_len: usize,
@@ -1114,14 +1068,10 @@ impl vyre_driver::VyreBackend for WgpuBackend {
             ));
         }
 
-        let pipeline = self
-            .compile_native(program, config)?
-            .ok_or_else(|| {
-                vyre_driver::BackendError::new(
-                    "Fix: WgpuBackend::compile_native unexpectedly returned None for dispatch_with_device_buffers.",
-                )
-            })?;
-        let _outputs = pipeline.dispatch_persistent_handles(&resources, config)?;
+        let pipeline = self.compile_resident_pipeline_cached(program, config)?;
+        let _outputs = vyre_driver::CompiledPipeline::dispatch_persistent_handles(
+            &*pipeline, &resources, config,
+        )?;
         Ok(())
     }
 

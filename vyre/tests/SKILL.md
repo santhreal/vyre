@@ -1,59 +1,53 @@
-# tests/SKILL.md  -  vyre (meta-shim)
+# tests/SKILL.md: vyre facade
 
 Read `../../.internals/skills/testing/SKILL.md` first for the category contract.
 
 ## Purpose
 
-`vyre` (package name for `vyre-core`) is the **meta-shim**.
-Consumers import `vyre::Program`, `vyre::VyreBackend`, `vyre::ir::*`
- -  everything. The shim re-exports from `vyre-foundation`,
-`vyre-driver`, and `vyre-ops` so downstream code has one stable
-crate to depend on.
+The `vyre` package is the stable public facade for semantic IR, whole-program
+compilation, authenticated artifact sessions, typed submission, and scan
+workflows.
 
 ## Critical invariants
 
-- **Every public item the shim exports has a documented stable
-  path.** `vyre::Program` is stable; `vyre::ir::model::program::Program`
-  is an internal-structure leak.
-- **No runtime behavior.** The shim adds zero code on the hot path;
-  every call forwards to an upstream crate.
-- **Four public facets.** `vyre::prelude`, `vyre::ir`, `vyre::runtime`,
-  `vyre::ops`  -  any consumer import that reaches outside these is
-  a boundary violation and the test must catch it.
-- **Doctest coverage of the README quick-start.**
+- Production compilation starts from a validated `ProgramGraph` and produces an
+  immutable compiler `Artifact`.
+- Production execution materializes an authenticated `TargetPayload` into an
+  `ArtifactInstance` before typed submission.
+- The facade does not select concrete backends or lower directly to target code.
+- Raw `Program` execution remains limited to explicit reference and conformance
+  paths.
+- Every public item has one documented stable path.
 
 ## Adversarial surface
 
-Minimal  -  the shim has no decode surface. Tests focus on API
-surface stability.
+Tests cover malformed graphs, incompatible payloads, invalid bindings, stale
+materializer generations, and unavailable registered targets through the public
+facade.
 
 ## Cross-crate contracts
 
-This crate is the integration point. Every cross-crate test here
-exercises the shim's ability to compose surface from
-vyre-foundation + vyre-driver + vyre-ops.
+This crate proves that the canonical owners compose through one public route:
 
-- `vyre::Program` === `vyre_foundation::ir::Program`
-- `vyre::VyreBackend` === `vyre_driver::VyreBackend`
-- `vyre::ir::*` flattened from `vyre_foundation::ir::*`
-- `vyre::ops::*` flattened from `vyre_ops::*`
+- `vyre::ir` comes from `vyre-foundation`.
+- `vyre::compiler` comes from `vyre-megakernel`.
+- `vyre::ArtifactSession` comes from `vyre-runtime`.
+- `vyre::scan` comes from `vyre-scan`.
+- Concrete target compilation and materialization stay in concrete drivers.
 
-## Bench targets
+## Bench and fuzz targets
 
-Re-export cost is zero. No runtime benches needed.
-
-## Fuzz targets
-
-None directly  -  fuzz targets live in the upstream crates.
+Performance and codec fuzzing remain with the owning compiler, runtime, driver,
+and product crates.
 
 ## What NOT to test here
 
-- Every upstream crate's own invariants  -  test them there
-- Concrete backend semantics  -  the owning concrete driver crate's tests
+- Owner-local implementation details.
+- Source text or private module layout.
+- Concrete backend semantics outside an end-to-end facade workflow.
 
 ## Running
 
 ```bash
 ./cargo_full test -p vyre
-./cargo_full test -p vyre --test integration    # primary test surface for the shim
 ```

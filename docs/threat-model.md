@@ -1,5 +1,7 @@
 # vyre threat model
 
+Applies to Vyre 0.7.2.
+
 Vyre is GPU compute infrastructure. Consumers include inference
 servers, edge AI platforms, multi-tenant GPU services, and CI
 pipelines that execute untrusted ML models. This document specifies

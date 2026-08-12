@@ -57,12 +57,10 @@ pub fn amg_v_cycle(
         );
     }
     if n_coarse >= n_fine {
-        return crate::invalid_output_program(
-            OP_ID,
-            x,
-            DataType::U32,
-            format!("Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."),
-        );
+        return crate::invalid_output_program(OP_ID,
+        x,
+        DataType::U32,
+        format!("Fix: amg_v_cycle requires n_coarse < n_fine, got n_coarse={n_coarse}, n_fine={n_fine}."),);
     }
     let Some(fine_cells) = n_fine.checked_mul(n_fine) else {
         return crate::invalid_output_program(
@@ -73,14 +71,12 @@ pub fn amg_v_cycle(
         );
     };
     let Some(transfer_cells) = n_fine.checked_mul(n_coarse) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            x,
-            DataType::U32,
-            format!(
-                "Fix: amg_v_cycle transfer matrix cells overflow u32: n_fine={n_fine}, n_coarse={n_coarse}."
-            ),
-        );
+        return crate::invalid_output_program(OP_ID,
+        x,
+        DataType::U32,
+        format!(
+            "Fix: amg_v_cycle transfer matrix cells overflow u32: n_fine={n_fine}, n_coarse={n_coarse}."
+        ),);
     };
     let Some(coarse_cells) = n_coarse.checked_mul(n_coarse) else {
         return crate::invalid_output_program(

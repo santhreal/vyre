@@ -53,14 +53,12 @@ pub fn csr_queue_delta_enqueue(
     allow_mask: u32,
 ) -> Program {
     if node_count == 0 || active_queue_capacity == 0 || next_queue_capacity == 0 {
-        return crate::invalid_output_program(
-            CSR_QUEUE_DELTA_ENQUEUE_OP_ID,
-            next_len,
-            DataType::U32,
-            format!(
-                "Fix: csr_queue_delta_enqueue requires node_count > 0 and non-zero queue capacities, got node_count={node_count} active_queue_capacity={active_queue_capacity} next_queue_capacity={next_queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(CSR_QUEUE_DELTA_ENQUEUE_OP_ID,
+        next_len,
+        DataType::U32,
+        format!(
+            "Fix: csr_queue_delta_enqueue requires node_count > 0 and non-zero queue capacities, got node_count={node_count} active_queue_capacity={active_queue_capacity} next_queue_capacity={next_queue_capacity}."
+        ),);
     }
 
     let lane = Expr::InvocationId { axis: 0 };

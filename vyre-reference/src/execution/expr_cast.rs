@@ -47,6 +47,8 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
                 | DataType::I32
                 | DataType::Bool
                 | DataType::F32
+                | DataType::F16
+                | DataType::BF16
                 | DataType::Vec2U32
                 | DataType::Vec4U32
                 | DataType::Bytes
@@ -93,6 +95,22 @@ pub(crate) fn cast_value(target: &DataType, value: &Value) -> Result<Value, crat
                 .map(Value::U64)
                 .ok_or_else(|| invalid_cast(target, value)),
         },
+        DataType::F16 => value
+            .try_as_f32()
+            .map(|value| {
+                Value::Float(f64::from(crate::float16::f16_to_f32(
+                    crate::float16::f32_to_f16(value),
+                )))
+            })
+            .ok_or_else(|| invalid_cast(target, value)),
+        DataType::BF16 => value
+            .try_as_f32()
+            .map(|value| {
+                Value::Float(f64::from(crate::float16::bf16_to_f32(
+                    crate::float16::f32_to_bf16(value),
+                )))
+            })
+            .ok_or_else(|| invalid_cast(target, value)),
         DataType::F32 => match value {
             // Integer → float is a value conversion, not a bit-cast,
             // matching backend `f32(u32_value)` semantics. Without this

@@ -1,7 +1,7 @@
 //! Adapter-caps probe (C-B10).
 //!
 //! Extracts a [`vyre_foundation::optimizer::AdapterCaps`] from a live
-//! `wgpu::Adapter`. Passes registered in the vyre-core
+//! `wgpu::Adapter`. Passes registered with the foundation-owned
 //! `PassManager` read these caps to adapt: subgroup intrinsics fire
 //! only when `supports_subgroup_ops == true`; the fusion pass
 //! (C-B8) checks `max_shared_memory_bytes` before collapsing

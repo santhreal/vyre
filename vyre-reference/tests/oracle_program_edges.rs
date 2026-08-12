@@ -4,7 +4,7 @@
 //! output buffers. These tests pin edge-case values after they pass through
 //! `Program::wrapped`, statement execution, typed stores, and output readback.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_reference::reference_eval;
 use vyre_reference::value::Value;
 

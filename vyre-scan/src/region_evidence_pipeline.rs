@@ -312,15 +312,9 @@ impl RegionEvidencePipeline {
         let match_bytes = dispatch_io::try_output_bytes(&outputs, 1, "extract matches")?;
         let mut positions: Vec<_> = unpack_match_triples(match_bytes, count)
             .into_iter()
-            .filter(|m| {
-                self.position_mask
-                    .get(m.pattern_id as usize)
-                    .copied()
-                    .unwrap_or(0)
-                    != 0
-            })
+            .filter(|m| self.position_mask.get(m.tag as usize).copied().unwrap_or(0) != 0)
             .collect();
-        positions.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        positions.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         positions.dedup();
 
         Ok(FusedRegionEvidence {
@@ -425,7 +419,7 @@ impl RegionEvidencePipeline {
             dispatch_io::try_output_bytes(&outputs, 2, "fused matches")?,
             count,
         );
-        positions.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        positions.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         positions.dedup();
         let admission = decode_words(
             dispatch_io::try_output_bytes(&outputs, 3, "fused admission")?,

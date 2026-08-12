@@ -1,9 +1,7 @@
 //! Cat-A `clamp_u32`  -  element-wise `x.clamp(lo, hi)`.
 //!
-//! Migration target per `docs/migration-vyre-ops-to-intrinsics.md`:
-//! pure composition of `Expr::min` and `Expr::max` (both are existing
-//! `BinOp` primitives with no dedicated target builder arm required at the op
-//! level). Library, not intrinsic.
+//! This is a pure composition of `Expr::min` and `Expr::max`; both are
+//! existing `BinOp` primitives and require no dedicated target lowering.
 //!
 //! Signature takes three buffers + one output  -  the binary helper
 //! doesn't fit, so the Program is constructed inline (still wrapped in

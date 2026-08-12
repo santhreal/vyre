@@ -4,7 +4,6 @@
 //! - `dispatch()` and `dispatch_async()` never silently fall back to CPU execution
 //! - WGPU may serve as a portable GPU fallback, but dispatch must reject CPU demotion
 //! - Execution latency is consistent with a GPU round-trip, not instant CPU results
-//! - `compile_native()` returns a real GPU pipeline, not a CPU stand-in
 //! - `WgpuBackend::acquire()` fails when only CPU adapters are available
 
 mod common;
@@ -12,7 +11,7 @@ use common::acquire_live_backend as live_backend;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 
 // ------------------------------------------------------------------
@@ -100,14 +99,9 @@ fn dispatch_async_never_returns_synchronous_cpu_result() {
         ],
     );
 
-    let config = DispatchConfig::default();
-    backend
-        .compile_native(&program, &config)
-        .expect("Fix: async non-blocking test must prewarm pipeline compilation");
-
     let start = Instant::now();
     let pending = backend
-        .dispatch_async(&program, &[], &config)
+        .dispatch_async(&program, &[], &DispatchConfig::default())
         .expect("Fix: dispatch_async must return a handle");
     let handle_return_time = start.elapsed();
 
@@ -122,42 +116,4 @@ fn dispatch_async_never_returns_synchronous_cpu_result() {
         .await_result()
         .expect("Fix: await_result must resolve");
     assert_eq!(outputs[0].len(), 1024 * 4);
-}
-
-// ------------------------------------------------------------------
-// 3. compile_native returns a real GPU pipeline
-// ------------------------------------------------------------------
-
-#[test]
-fn compile_native_returns_real_gpu_pipeline() {
-    let backend = live_backend();
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(4)],
-        [1, 1, 1],
-        vec![
-            Node::store("out", Expr::u32(0), Expr::u32(123)),
-            Node::return_(),
-        ],
-    );
-
-    let pipeline = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .expect("Fix: compile_native must succeed")
-        .expect("Fix: compile_native must return Some(pipeline) for wgpu, not None");
-
-    // Dispatch through the compiled pipeline.
-    let outputs = pipeline
-        .dispatch(&[], &DispatchConfig::default())
-        .expect("Fix: compiled pipeline must dispatch successfully");
-
-    assert_eq!(
-        outputs.len(),
-        1,
-        "Fix: compiled pipeline must produce exactly one output buffer"
-    );
-    assert_eq!(
-        &outputs[0][0..4],
-        &123u32.to_le_bytes(),
-        "Fix: compiled pipeline must return the correct GPU-computed result"
-    );
 }

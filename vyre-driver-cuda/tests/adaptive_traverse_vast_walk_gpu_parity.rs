@@ -16,7 +16,7 @@ mod resident_sparse_queue_contracts;
 mod vast_walk_contracts;
 
 use common::{bytes_u32, live_dispatcher, pack_nodes, u32_bytes};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::vast::{walk_preorder_indices, VastNode, NODE_STRIDE_U32, SENTINEL};
 use vyre_primitives::graph::adaptive_traverse::{

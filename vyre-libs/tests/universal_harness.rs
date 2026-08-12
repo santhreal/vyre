@@ -6,7 +6,7 @@
 #![allow(deprecated)]
 use blake3::Hash;
 use vyre::ir::Program;
-use vyre::{
+use vyre_driver::{
     backend::{backend_dispatches, registered_backends},
     BackendRegistration, DispatchConfig,
 };
@@ -34,7 +34,6 @@ fn universal_cat_a_harness() {
             "[harness] {}: wire round-trip must be stable",
             entry.id
         );
-
 
         let fingerprint = blake3::hash(&wire);
         println!(
@@ -282,5 +281,7 @@ fn output_buffer_indices(program: &Program) -> Vec<usize> {
 }
 
 fn build_program(entry: &OpEntry) -> Program {
-    entry.program().expect("Fix: registered library operation must provide a neutral builder")
+    entry
+        .program()
+        .expect("Fix: registered library operation must provide a neutral builder")
 }

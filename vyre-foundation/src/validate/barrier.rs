@@ -6,8 +6,15 @@
 //! inside divergent branches, catching a class of bugs that would
 //! otherwise deadlock or produce undefined behavior on the GPU.
 
+mod exit_uniformity;
+
+use rustc_hash::FxHashMap;
+
+use self::exit_uniformity::exits_after_last_barrier_are_uniform;
+use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::memory_model::MemoryOrdering;
+use crate::validate::binding::Binding;
 use crate::validate::{err, ValidationError};
 
 /// Ensure a barrier is not placed inside divergent control flow.
@@ -118,37 +125,32 @@ pub(crate) fn check_barrier(
 /// the original was 4 wrong results in 30 runs with the barrier removed against
 /// 0 in 60 with it restored).
 ///
-/// The repair cost is not uniform, and it is worth knowing before you treat one
-/// of these barriers as redundant. In `persistent_fixpoint` it was free, because
-/// an existing consecutive barrier could be relocated into the slot. The other
-/// three each pay one genuine extra barrier per iteration. They are load
-/// bearing: removing one as an optimization reintroduces a silent wrong answer,
-/// which is why each is commented at its call site.
+/// The repair cost depends on the exit proof. `persistent_fixpoint` reused a
+/// consecutive barrier. The lineage programs retain a genuine trailing barrier
+/// because their exit paths are not proven collective. The DCE fixpoint no
+/// longer pays that barrier: its exit reads one scalar address immediately
+/// after an acquiring barrier, with no intervening write.
 ///
-/// The reach of that over-strictness is worth knowing exactly, because it is
-/// wider than "lane-dependent exits". An UNCONDITIONAL return placed after the
-/// body's last barrier is refused too, even though every invocation reaches it
-/// together and none can be stranded mid iteration. The rule asks whether an
-/// invocation can return after the last barrier, never whether the invocations
-/// agree about it. That is intended today and is pinned by a test rather than
-/// left to be rediscovered: see
-/// `vyre-self-substrate/tests/dce_program_back_edge_contract.rs`.
+/// V055 derives this carve-out conservatively. It accepts an unconditional
+/// return or a return guarded only by uniform expressions and barrier-settled
+/// loads at uniform indices. A store, atomic, asynchronous write, collective,
+/// opaque node, divergent index, lane-dependent guard, or release-only barrier
+/// invalidates the proof. The ordinary uniformity analyzer still rejects loads;
+/// only this back-edge analysis credits the explicit synchronization.
 ///
-/// A uniformity carve-out would be more precise, and the motivating case is
-/// `vyre-self-substrate/src/optimizer/dce_program.rs`: its loop exit reads a
-/// value the preceding barrier settles, so the exit is workgroup-uniform and
-/// provably safe, yet it still has to carry a trailing barrier to satisfy this
-/// rule. Deriving uniformity is a real analysis and is deferred, tracked as
-/// `FINDING-V055-refuses-provably-uniform-loop-exits`. Whoever takes it should
-/// know the bar: derive uniformity rather than assert it, keep refusing the
-/// lane-dependent case, and prove the carve-out subsumes the workaround by
-/// REMOVING that call-site barrier and finding its tests still green.
+/// This distinction is load-bearing. A collective return means every lane exits
+/// or every lane takes the back edge, so no sibling can be stranded. Any
+/// uncertainty remains V055 and requires a trailing unconditional barrier.
 ///
 /// # Errors
 ///
 /// Appends a `ValidationError` with code `V055` when `body` contains a barrier
-/// and an invocation can return after the last one.
-pub(crate) fn check_loop_back_edge(body: &[Node], errors: &mut Vec<ValidationError>) {
+/// and a potentially lane-dependent invocation can return after the last one.
+pub(crate) fn check_loop_back_edge(
+    body: &[Node],
+    scope: &FxHashMap<Ident, Binding>,
+    errors: &mut Vec<ValidationError>,
+) {
     // `Block` and `Region` execute unconditionally and in order, so they are
     // spliced into the enclosing sequence before any positional reasoning. This
     // is not cosmetic: wrapping a phase in a `Block` is established practice in
@@ -186,6 +188,14 @@ pub(crate) fn check_loop_back_edge(body: &[Node], errors: &mut Vec<ValidationErr
     {
         return;
     }
+    // A barrier-settled exit does not need another barrier when its complete
+    // control path is proven workgroup-uniform. Every lane then returns together
+    // or every lane takes the back edge. The proof is deliberately local to the
+    // last unconditional barrier: any intervening write invalidates uniform
+    // loads from that buffer, and any lane-dependent guard keeps V055 active.
+    if exits_after_last_barrier_are_uniform(&steps[..=last_exit], scope) {
+        return;
+    }
     errors.push(err(
         "V055: an invocation can return from a synchronizing loop body after its last barrier, \
          so the exit and the next iteration's writes are unordered across the back edge. One \
@@ -193,8 +203,10 @@ pub(crate) fn check_loop_back_edge(body: &[Node], errors: &mut Vec<ValidationErr
          exit; the sibling then leaves the kernel while the rest keep iterating, freezing the \
          data it owns partway through. Nothing hangs, because a barrier does not count \
          invocations that already returned, so this costs answers and not liveness, and one \
-         workgroup is enough to hit it. Fix: put a barrier after the early exit, as the last \
-         node of the loop body, so the exit is ordered against the back edge."
+         workgroup is enough to hit it. Fix: either put an unconditional barrier after the \
+         early exit as the last loop-body node, or make every return guard workgroup-uniform; \
+         a guard that loads writable memory needs an acquiring barrier immediately before it, \
+         one uniform index, and no intervening write."
             .to_string(),
     ));
 }
@@ -258,232 +270,6 @@ fn can_return(node: &Node) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ir_inner::model::expr::Expr;
-
-    #[test]
-    fn divergent_barrier_emits_v010() {
-        let mut errors = Vec::new();
-        check_barrier(true, MemoryOrdering::SeqCst, &mut errors);
-        assert_eq!(errors.len(), 1);
-        assert!(errors[0].message().contains("V010"));
-    }
-
-    #[test]
-    fn uniform_barrier_is_valid() {
-        let mut errors = Vec::new();
-        check_barrier(false, MemoryOrdering::SeqCst, &mut errors);
-        assert!(errors.is_empty());
-    }
-
-    #[test]
-    fn relaxed_barrier_is_rejected() {
-        let mut errors = Vec::new();
-        check_barrier(false, MemoryOrdering::Relaxed, &mut errors);
-        assert!(errors.iter().any(|error| error.message().contains("V043")));
-    }
-
-    fn barrier() -> Node {
-        Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        }
-    }
-
-    /// The exact pre-fix shape of `fixpoint::persistent_fixpoint`: a
-    /// synchronizing loop whose last node is an early exit.
-    #[test]
-    fn exit_after_the_last_barrier_emits_v055() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[
-                barrier(),
-                Node::If {
-                    cond: Expr::bool(true),
-                    then: vec![Node::Return],
-                    otherwise: Vec::new(),
-                },
-            ],
-            &mut errors,
-        );
-        assert!(
-            errors.iter().any(|error| error.message().contains("V055")),
-            "an early exit after the loop's last barrier must be refused"
-        );
-    }
-
-    /// The post-fix shape: a barrier after the exit orders it against the back
-    /// edge, which is the entire fix.
-    #[test]
-    fn a_barrier_after_the_exit_is_accepted() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[
-                barrier(),
-                Node::If {
-                    cond: Expr::bool(true),
-                    then: vec![Node::Return],
-                    otherwise: Vec::new(),
-                },
-                barrier(),
-            ],
-            &mut errors,
-        );
-        assert!(
-            errors.is_empty(),
-            "a barrier on the back edge discharges the obligation: {errors:?}"
-        );
-    }
-
-    /// The rule MUST NOT fire on a loop that never synchronizes. Such a loop has
-    /// no cross-invocation communication to order, its invocations legitimately
-    /// leave on different iterations, and a barrier they do not all reach would
-    /// itself be illegal. A false positive here would be unfixable.
-    #[test]
-    fn an_exit_in_a_loop_with_no_barrier_is_accepted() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[Node::If {
-                cond: Expr::bool(true),
-                then: vec![Node::Return],
-                otherwise: Vec::new(),
-            }],
-            &mut errors,
-        );
-        assert!(
-            errors.is_empty(),
-            "a loop with no barrier has no collective contract to break: {errors:?}"
-        );
-    }
-
-    /// A `Return` exits the invocation, not the enclosing loop, so one nested
-    /// inside an inner loop still ends participation in the outer loop's
-    /// barriers and must be caught.
-    #[test]
-    fn a_nested_exit_after_the_last_barrier_emits_v055() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[
-                barrier(),
-                Node::Loop {
-                    var: "inner".into(),
-                    from: Expr::u32(0),
-                    to: Expr::u32(4),
-                    body: vec![Node::If {
-                        cond: Expr::bool(true),
-                        then: vec![Node::Return],
-                        otherwise: Vec::new(),
-                    }],
-                },
-            ],
-            &mut errors,
-        );
-        assert!(
-            errors.iter().any(|error| error.message().contains("V055")),
-            "a nested early exit still leaves the outer loop's barriers"
-        );
-    }
-}
-
+mod back_edge_depth_tests;
 #[cfg(test)]
-mod back_edge_depth_tests {
-    use super::*;
-    use crate::ir_inner::model::expr::Expr;
-
-    fn barrier() -> Node {
-        Node::Barrier {
-            ordering: MemoryOrdering::SeqCst,
-        }
-    }
-
-    fn exit_guard() -> Node {
-        Node::If {
-            cond: Expr::bool(true),
-            then: vec![Node::Return],
-            otherwise: Vec::new(),
-        }
-    }
-
-    /// Locks out a MISSED defect: a loop whose barrier sits inside a `Node::Block`
-    /// must still be recognized as collective.
-    ///
-    /// Wrapping a phase in a `Block` is established practice in this tree.
-    /// `fixpoint::persistent_fixpoint_grid` blocks each wave's transfer body so
-    /// its `let` bindings do not become duplicate siblings under V032. When the
-    /// trigger only looked at top-level nodes, the day someone wrapped a phase
-    /// containing the barrier this rule went silent on exactly the loop shape it
-    /// was written for, and accepted an unguarded exit without a word.
-    #[test]
-    fn a_barrier_inside_a_block_still_makes_the_loop_collective() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(&[Node::Block(vec![barrier()]), exit_guard()], &mut errors);
-        assert!(
-            errors.iter().any(|error| error.message().contains("V055")),
-            "a barrier nested in a Block must still trigger the back-edge check"
-        );
-    }
-
-    /// Locks out a FALSE POSITIVE: a correctly placed guarding barrier that
-    /// happens to sit inside a `Block` after the exit does order the back edge,
-    /// because a `Block` executes unconditionally and in order.
-    ///
-    /// A false refusal on a program that is already correct is what gets a rule
-    /// deleted instead of fixed.
-    #[test]
-    fn a_guarding_barrier_inside_a_block_is_credited() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[barrier(), exit_guard(), Node::Block(vec![barrier()])],
-            &mut errors,
-        );
-        assert!(
-            errors.is_empty(),
-            "a Block executes unconditionally, so a barrier inside one orders the back edge: \
-             {errors:?}"
-        );
-    }
-
-    /// Locks out crediting a CONDITIONAL barrier as ordering. A barrier inside an
-    /// `If` after the exit orders nothing for an invocation that skips the
-    /// branch, so the race survives. Accepting this would be strictly worse than
-    /// a shallow check, because it looks thorough while being wrong.
-    #[test]
-    fn a_guarding_barrier_inside_an_if_is_not_credited() {
-        let mut errors = Vec::new();
-        check_loop_back_edge(
-            &[
-                barrier(),
-                exit_guard(),
-                Node::If {
-                    cond: Expr::bool(true),
-                    then: vec![barrier()],
-                    otherwise: Vec::new(),
-                },
-            ],
-            &mut errors,
-        );
-        assert!(
-            errors.iter().any(|error| error.message().contains("V055")),
-            "a barrier only reached on one branch does not order the back edge"
-        );
-    }
-
-    /// A barrier inside a nested `Loop` triggers collectiveness but must NOT be
-    /// credited as a guard: a nested loop with a zero trip count never executes
-    /// its body, so the barrier may not run at all.
-    #[test]
-    fn a_barrier_only_inside_a_nested_loop_triggers_but_never_guards() {
-        let nested = Node::Loop {
-            var: "inner".into(),
-            from: Expr::u32(0),
-            to: Expr::u32(0),
-            body: vec![barrier()],
-        };
-        let mut errors = Vec::new();
-        check_loop_back_edge(&[exit_guard(), nested], &mut errors);
-        assert!(
-            errors.iter().any(|error| error.message().contains("V055")),
-            "a nested-loop barrier makes the loop collective but cannot guard the back edge"
-        );
-    }
-}
+mod tests;

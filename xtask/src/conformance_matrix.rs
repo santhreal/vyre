@@ -62,6 +62,7 @@ struct ConformanceMatrix {
     op_matrix_blocked_release_rows: Vec<String>,
     op_matrix_errors: Vec<String>,
     duplicate_op_ids: Vec<String>,
+    fixture_required_count: usize,
     fixture_input_count: usize,
     expected_output_count: usize,
     dispatch_backends: Vec<String>,
@@ -82,6 +83,7 @@ struct ConformanceMatrix {
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 struct ConformanceEntry {
     id: String,
+    requires_fixture: bool,
     has_test_inputs: bool,
     has_expected_output: bool,
     tolerance_ulp: u32,
@@ -171,12 +173,13 @@ pub(crate) fn run(args: &[String]) {
     let mut entries = Vec::new();
     let mut ids = BTreeSet::new();
     let mut duplicate_op_ids = BTreeSet::new();
-    for entry in vyre_harness::all_entries() {
+    for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
         if !ids.insert(entry.id) {
             duplicate_op_ids.insert(entry.id.to_string());
         }
         entries.push(ConformanceEntry {
             id: entry.id.to_string(),
+            requires_fixture: entry.program().is_some(),
             has_test_inputs: entry.test_inputs.is_some(),
             has_expected_output: entry.expected_output.is_some(),
             tolerance_ulp: entry.tolerance(),
@@ -188,33 +191,33 @@ pub(crate) fn run(args: &[String]) {
         .filter(|backend| backend_dispatches(backend.id))
         .map(|backend| backend.id.to_string())
         .collect();
-    let fixture_input_count = entries.iter().filter(|entry| entry.has_test_inputs).count();
+    let fixture_required_count = entries
+        .iter()
+        .filter(|entry| entry.requires_fixture)
+        .count();
+    let fixture_input_count = entries
+        .iter()
+        .filter(|entry| entry.requires_fixture && entry.has_test_inputs)
+        .count();
     let expected_output_count = entries
         .iter()
-        .filter(|entry| entry.has_expected_output)
+        .filter(|entry| entry.requires_fixture && entry.has_expected_output)
         .count();
     let vyre_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
     let ci_gates = inspect_ci_conformance_gates(&vyre_root);
-    let (required_ci_statuses, mut ci_status_scan_errors) = parse_required_ci_statuses(&santh_root);
+    let (required_ci_statuses, mut ci_status_scan_errors) = parse_required_ci_statuses(&vyre_root);
     let mut missing_required_ci_statuses = Vec::new();
     for status in &required_ci_statuses {
-        if !ci_status_defined(&santh_root, status, &mut ci_status_scan_errors) {
+        if !ci_status_defined(&vyre_root, status, &mut ci_status_scan_errors) {
             missing_required_ci_statuses.push(status.clone());
         }
     }
-    let path_filtered_required_workflows = inspect_path_filtered_required_workflows(&santh_root);
-    let missing_required_workflow_triggers = inspect_required_workflow_triggers(&santh_root);
-    let missing_fail_closed_fanins = inspect_fail_closed_fanins(&santh_root);
+    let path_filtered_required_workflows = inspect_path_filtered_required_workflows(&vyre_root);
+    let missing_required_workflow_triggers = inspect_required_workflow_triggers(&vyre_root);
+    let missing_fail_closed_fanins = inspect_fail_closed_fanins(&vyre_root);
     let mut blockers = Vec::new();
     let catalog = read_conformance_required_op_matrix(&vyre_root);
     let (scan_conformance_rows, scan_conformance_findings) =
@@ -329,16 +332,14 @@ pub(crate) fn run(args: &[String]) {
             blockers.push(format!("required dispatch backend `{required}` is missing"));
         }
     }
-    if fixture_input_count != entries.len() {
+    if fixture_input_count != fixture_required_count {
         blockers.push(format!(
-            "only {fixture_input_count}/{} op entries have fixture inputs",
-            entries.len()
+            "only {fixture_input_count}/{fixture_required_count} executable op entries have fixture inputs"
         ));
     }
-    if expected_output_count != entries.len() {
+    if expected_output_count != fixture_required_count {
         blockers.push(format!(
-            "only {expected_output_count}/{} op entries have expected outputs",
-            entries.len()
+            "only {expected_output_count}/{fixture_required_count} executable op entries have expected outputs"
         ));
     }
     if ci_blocking_gate_count < 3 {
@@ -413,6 +414,7 @@ pub(crate) fn run(args: &[String]) {
         op_matrix_blocked_release_rows: catalog.blocked_release_rows,
         op_matrix_errors: catalog.errors,
         duplicate_op_ids: duplicate_op_ids.into_iter().collect(),
+        fixture_required_count,
         fixture_input_count,
         expected_output_count,
         dispatch_backends,
@@ -897,68 +899,41 @@ fn is_even_hex(value: &str) -> bool {
 }
 
 fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .unwrap_or(vyre_root);
     vec![
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/conform.yml",
-            "conformance matrix release blocker",
-            "cargo_full run --bin xtask -- conformance-matrix",
-            "release/evidence/conformance/conformance-matrix.json",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/gpu-parity.yml",
-            "gpu-release-gate",
-            "cargo_full run --release --bin xtask -- release-conformance --backend all",
-            "release/evidence/conformance",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/conform.yml",
-            "conform-release-gate",
-            "cargo_full run --bin xtask -- conformance-matrix",
-            "vyre-conformance-release-gate",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/santh-ci.yml",
-            "Vyre structural release evidence",
-            "cargo_full run --bin xtask -- release-evidence",
-            "release/evidence/**/*.json",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            ".github/workflows/architectural-invariants.yml",
-            "architectural-invariants",
-            "scripts/architectural_invariants.sh",
-            "lego-audit",
-        ),
-        inspect_ci_gate(
-            santh_root,
-            "scripts/apply-branch-protection.sh",
-            "required_status_checks",
-            ".github/CI_REQUIRED.md",
-            "gh api",
-        ),
-        inspect_ci_gate(
-            vyre_root,
-            ".github/workflows/conform.yml",
-            "conformance matrix release blocker",
-            "cargo_full run --bin xtask -- conformance-matrix",
-            "release/evidence/conformance/conformance-matrix.json",
-        ),
         inspect_ci_gate(
             vyre_root,
             ".github/workflows/gpu-parity.yml",
             "GPU release gate",
             "cargo_full run --release --bin xtask -- release-conformance --backend all",
             "vyre-release-benchmark-evidence",
+        ),
+        inspect_ci_gate(
+            vyre_root,
+            ".github/workflows/conform.yml",
+            "Conform release gate",
+            "cargo_full run --bin xtask -- conformance-matrix",
+            "conformance-matrix.json",
+        ),
+        inspect_ci_gate(
+            vyre_root,
+            ".github/workflows/ci.yml",
+            "CI release gate",
+            "cargo_full run --bin xtask -- release-evidence",
+            "release/evidence/**/*.json",
+        ),
+        inspect_ci_gate(
+            vyre_root,
+            ".github/workflows/architectural-invariants.yml",
+            "Architecture release gate",
+            "cargo_full run -p xtask -- op-matrix --check",
+            "scripts/architecture_docs.py . --check",
+        ),
+        inspect_ci_gate(
+            vyre_root,
+            "scripts/apply-branch-protection.sh",
+            "required_status_checks",
+            ".github/CI_REQUIRED.md",
+            "gh \"${args[@]}\"",
         ),
     ]
 }
@@ -985,8 +960,8 @@ fn inspect_ci_gate(
     }
 }
 
-fn parse_required_ci_statuses(santh_root: &Path) -> (Vec<String>, Vec<String>) {
-    let path = santh_root.join(".github/CI_REQUIRED.md");
+fn parse_required_ci_statuses(vyre_root: &Path) -> (Vec<String>, Vec<String>) {
+    let path = vyre_root.join(".github/CI_REQUIRED.md");
     let text = match read_text_bounded(&path) {
         Ok(text) => text,
         Err(error) => {
@@ -1022,8 +997,8 @@ fn parse_required_ci_statuses(santh_root: &Path) -> (Vec<String>, Vec<String>) {
     (statuses.into_iter().collect(), Vec::new())
 }
 
-fn ci_status_defined(santh_root: &Path, status: &str, scan_errors: &mut Vec<String>) -> bool {
-    let workflow_root = santh_root.join(".github/workflows");
+fn ci_status_defined(vyre_root: &Path, status: &str, scan_errors: &mut Vec<String>) -> bool {
+    let workflow_root = vyre_root.join(".github/workflows");
     if !workflow_root.is_dir() {
         scan_errors.push(format!(
             "workflow root `{}` is not a directory while searching status `{status}`",
@@ -1075,10 +1050,10 @@ fn ci_status_defined(santh_root: &Path, status: &str, scan_errors: &mut Vec<Stri
     false
 }
 
-fn inspect_path_filtered_required_workflows(santh_root: &Path) -> Vec<String> {
+fn inspect_path_filtered_required_workflows(vyre_root: &Path) -> Vec<String> {
     let mut findings = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
-        let path = santh_root.join(workflow);
+        let path = vyre_root.join(workflow);
         let Ok(text) = read_text_bounded(&path) else {
             continue;
         };
@@ -1095,10 +1070,10 @@ fn inspect_path_filtered_required_workflows(santh_root: &Path) -> Vec<String> {
     findings
 }
 
-fn inspect_required_workflow_triggers(santh_root: &Path) -> Vec<String> {
+fn inspect_required_workflow_triggers(vyre_root: &Path) -> Vec<String> {
     let mut missing = Vec::new();
     for workflow in REQUIRED_WORKFLOWS {
-        let path = santh_root.join(workflow);
+        let path = vyre_root.join(workflow);
         let Ok(text) = read_text_bounded(&path) else {
             missing.push(format!("{}:unreadable", path.display()));
             continue;
@@ -1134,14 +1109,14 @@ fn inspect_required_workflow_triggers(santh_root: &Path) -> Vec<String> {
     missing
 }
 
-fn inspect_fail_closed_fanins(santh_root: &Path) -> Vec<String> {
+fn inspect_fail_closed_fanins(vyre_root: &Path) -> Vec<String> {
     let mut missing = Vec::new();
     for (workflow, job_name) in [
-        (".github/workflows/santh-ci.yml", "crate-checks"),
+        (".github/workflows/ci.yml", "CI release gate"),
         (".github/workflows/conform.yml", "Conform release gate"),
         (".github/workflows/gpu-parity.yml", "GPU release gate"),
     ] {
-        let path = santh_root.join(workflow);
+        let path = vyre_root.join(workflow);
         let Ok(text) = read_text_bounded(&path) else {
             missing.push(format!("{}:{job_name}", path.display()));
             continue;
@@ -1161,21 +1136,11 @@ fn inspect_fail_closed_fanins(santh_root: &Path) -> Vec<String> {
 }
 
 const REQUIRED_WORKFLOWS: &[&str] = &[
-    ".github/workflows/santh-ci.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/bench.yml",
+    ".github/workflows/architectural-invariants.yml",
     ".github/workflows/conform.yml",
     ".github/workflows/gpu-parity.yml",
-    ".github/workflows/bench-regression.yml",
-    ".github/workflows/architectural-invariants.yml",
-    ".github/workflows/vyre-matrix.yml",
-    ".github/workflows/vyre-core.yml",
-    ".github/workflows/vyre-rewrite-proofs.yml",
-    ".github/workflows/vyre-lego-audit.yml",
-    "libs/performance/matching/vyre/.github/workflows/conform.yml",
-    "libs/performance/matching/vyre/.github/workflows/gpu-parity.yml",
-    "libs/performance/matching/vyre/.github/workflows/ci.yml",
-    "libs/performance/matching/vyre/.github/workflows/bench.yml",
-    "libs/performance/matching/vyre/.github/workflows/fuzz.yml",
-    "libs/performance/matching/vyre/.github/workflows/architectural-invariants.yml",
 ];
 
 fn workflow_job_section<'a>(workflow: &'a str, job_name: &str) -> Option<&'a str> {
@@ -1394,9 +1359,10 @@ mod tests {
     }
 
     #[test]
-    fn release_backend_case_rows_report_all_case_classes_for_supported_weir_flow_row() {
+    fn release_backend_case_rows_report_all_case_classes_for_external_flow_row() {
         let entry = ConformanceEntry {
-            id: "weir.flow.alias_ifds".to_string(),
+            id: "external.flow.alias_ifds".to_string(),
+            requires_fixture: true,
             has_test_inputs: true,
             has_expected_output: true,
             tolerance_ulp: 0,
@@ -1405,7 +1371,7 @@ mod tests {
             op_id: entry.id.clone(),
             backend: "cuda".to_string(),
             status: "supported".to_string(),
-            test_paths: vec!["tests/weir_flow_boundary_adversarial.rs".to_string()],
+            test_paths: vec!["tests/external_flow_boundary_adversarial.rs".to_string()],
             test_case_classes: BTreeSet::from(["negative", "boundary", "adversarial"]),
         };
         let entries = BTreeMap::from([(entry.id.as_str(), &entry)]);
@@ -1452,6 +1418,7 @@ mod tests {
     fn release_backend_case_rows_block_supported_rows_missing_byte_output() {
         let entry = ConformanceEntry {
             id: "vyre-libs::scan::prefix_sum_u32".to_string(),
+            requires_fixture: true,
             has_test_inputs: true,
             has_expected_output: false,
             tolerance_ulp: 0,

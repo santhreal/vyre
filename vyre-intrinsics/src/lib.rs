@@ -13,8 +13,7 @@
 //! existing `Expr`/`Node` variants, it belongs in `vyre-libs` or a
 //! user package, NOT here.
 //!
-//! See `docs/migration-vyre-ops-to-intrinsics.md` for the
-//! classification rule that drove the split.
+//! The semantic operation registry classifies these entries as intrinsic.
 //!
 //! ## Current surface (9 intrinsics)
 //!
@@ -37,7 +36,6 @@ pub mod region;
 /// neutral builders, and deterministic fixtures.
 #[doc(hidden)]
 pub mod harness;
-
 
 /// Category C hardware intrinsics  -  subgroup collectives, barriers, bit intrinsics, FMA, inverseSqrt.
 #[cfg(feature = "hardware")]

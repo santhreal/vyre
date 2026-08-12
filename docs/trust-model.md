@@ -1,5 +1,7 @@
 # Trust Model
 
+Applies to Vyre 0.7.2.
+
 vyre is built on a strict trust model: the value of the conformance system comes from the fact that no one party can game the verdict. This document describes who is trusted with what.
 
 See also: [CONTRIBUTING.md](../CONTRIBUTING.md), [semver-policy.md](semver-policy.md), [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -73,7 +75,9 @@ Mitigation: `check_category_a_zero_overhead` disassembles the lowered WGSL and v
 
 A contributor or compromised dependency introduces `typetag`, `inventory`, `downcast`, `async_trait`, or another forbidden pattern that breaks the closed-enum or static-dispatch invariants.
 
-Mitigation: the CI tripwire scan fails the PR before merge. See `enforce/category/b_tripwire/text_scan.rs` for the exact pattern list. The scan is part of the required check suite and cannot be bypassed without maintainer override.
+Mitigation: required repository gates and backend tests reject prohibited host
+execution paths before release. `.github/CI_REQUIRED.md` names the stable
+fail-closed status checks enforced by branch protection.
 
 ### Attack: edit a published op's semantics after release
 

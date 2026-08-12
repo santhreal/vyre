@@ -1,3 +1,5 @@
 //! Test: opaque payload endian.
-include!("__split/opaque_payload_endian_chunk1.rs");
-include!("__split/opaque_payload_endian_chunk2.rs");
+include!(
+    "contract_cases/opaque_payload_endian__u16_little_endian_bytes_match_canonical_pattern.rs"
+);
+include!("contract_cases/opaque_payload_endian__canonical_f32_zero_nonzero_with_sign_bit_set_passes_through.rs");

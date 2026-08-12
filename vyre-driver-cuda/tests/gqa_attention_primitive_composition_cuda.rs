@@ -3,7 +3,7 @@
 mod common;
 
 use common::with_live_backend;
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_libs::nn::attention::gqa_attention;
 
 fn f32_bytes(values: &[f32]) -> Vec<u8> {

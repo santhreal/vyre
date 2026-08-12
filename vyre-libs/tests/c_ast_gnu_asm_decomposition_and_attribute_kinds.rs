@@ -2,5 +2,5 @@
 //! GNU attribute-specific AST kinds.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("__split/c_ast_gnu_asm_decomposition_and_attribute_kinds_chunk1.rs");
-include!("__split/c_ast_gnu_asm_decomposition_and_attribute_kinds_chunk2.rs");
+include!("contract_cases/c_ast_gnu_asm_decomposition_and_attribute_kinds__new.rs");
+include!("contract_cases/c_ast_gnu_asm_decomposition_and_attribute_kinds__cpu_reference_classifies_attribute_naked.rs");

@@ -10,7 +10,7 @@
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::keyword::reference_c_keyword_types;
 use vyre_libs::parsing::c::lex::tokens::*;
@@ -226,10 +226,10 @@ fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
 // 1. GPU acquisition loud-failure contract
 // ---------------------------------------------------------------------------
 
-mod c_parser_pipeline_vast_pg_parity_contracts_part1 {
+mod c_parser_pipeline_vast_pg_parity_contracts_gpu_backend_acquisition_does_not_return_err {
 
-    include!("__split/c_parser_pipeline_vast_pg_parity_contracts_part1.rs");
+    include!("contract_cases/c_parser_pipeline_vast_pg_parity_contracts__gpu_backend_acquisition_does_not_return_err.rs");
 }
-mod c_parser_pipeline_vast_pg_parity_contracts_part2 {
-    include!("__split/c_parser_pipeline_vast_pg_parity_contracts_part2.rs");
+mod c_parser_pipeline_vast_pg_parity_contracts_gpu_expr_shape_parity_on_ternary {
+    include!("contract_cases/c_parser_pipeline_vast_pg_parity_contracts__gpu_expr_shape_parity_on_ternary.rs");
 }

@@ -27,6 +27,18 @@ cpu_baseline = "wide/rayon-class SIMD CPU vector baseline"
 gpu_competitor = "none_recorded"
 notes = "Use active backend time when available; wall_ns remains recorded separately."
 
+
+[[target]]
+id = "foundation.reduce.sum.crossover"
+primitive = "u32 scalar sum with measured atomic/tree crossover"
+suite = "smoke"
+backend_focus = "cuda"
+metric = "dispatch_ns_p50"
+timing_quality = "device_timestamps"
+min_speedup_over_cpu_sota = 1.1
+cpu_baseline = "Rayon parallel u32 wrapping sum"
+gpu_competitor = "same-device atomic scalar and workgroup-memory tree routes"
+notes = "Measures both routes at 32 and 1,048,576 elements, verifies both outputs exactly, selects the faster route independently for each size, and records global contention updates plus tree barrier rounds."
 [[target]]
 id = "integer_arithmetic_micro"
 primitive = "integer strength-reduced arithmetic"
@@ -104,6 +116,19 @@ min_speedup_over_cpu_sota = 1.0
 cpu_baseline = "aho-corasick crate overlapping multi-pattern CPU cardinality"
 gpu_competitor = "none_recorded"
 notes = "Tracks resident count-only irregular literal scan with byte, suffix2, and hashed suffix3 replay filters plus four-byte cardinality readback."
+
+[[target]]
+id = "libs.scan.paged_corpus.multi_gpu"
+primitive = "weighted paged-corpus literal scan across distinct physical adapters"
+suite = "hardware-evidence"
+backend_focus = "wgpu"
+metric = "end_to_end_wall_ns_p50"
+timing_quality = "paired_host_wall_and_per_device_timestamps"
+baseline_class = "gpu_sota"
+min_speedup_over_fastest_single_gpu = 1.0
+gpu_baseline = "fastest same-host single physical adapter over the identical corpus"
+gpu_competitor = "throughput-weighted concurrent scan over every same-host physical adapter"
+notes = "Requires exact result parity, nonzero work on every device, raw paired samples, one-sided sign-test p<0.05, topology, transfer/host overhead, and per-shard byte balance."
 
 [[target]]
 id = "release.workload.offset_count_aggregation"

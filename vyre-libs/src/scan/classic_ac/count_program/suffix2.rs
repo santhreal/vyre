@@ -1,7 +1,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::dfa::CompiledDfa;
+use vyre_primitives::matching::CompiledDfa;
 
 use super::count_scan_nodes;
 

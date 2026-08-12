@@ -120,16 +120,14 @@ mod tests {
     }
 
     #[test]
-    fn taint_flow_delegation_produces_byte_identical_ir_to_flows_to() {
+    fn taint_flow_delegation_preserves_distinct_ir_identity() {
         let p_flows =
             crate::security::flows_to::flows_to(ProgramGraphShape::new(4, 3), "fin", "fout");
         let p_taint = taint_flow(ProgramGraphShape::new(4, 3), "fin", "fout");
-        let bytes_flows = p_flows.to_bytes();
-        let bytes_taint = p_taint.to_bytes();
         assert_ne!(
-            bytes_flows, bytes_taint,
-            "taint_flow delegates to flows_to yielding byte-identical IR; \
-             two distinct OP_IDs must have distinct bodies or be collapsed into one op"
+            p_flows.fingerprint(),
+            p_taint.fingerprint(),
+            "distinct operation identities must produce distinct canonical IR fingerprints"
         );
     }
 

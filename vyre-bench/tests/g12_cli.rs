@@ -26,7 +26,10 @@ fn list_emits_registered_case_metadata_as_json() {
     assert!(
         cases.iter().all(|case| {
             case.get("id").and_then(serde_json::Value::as_str).is_some()
-                && case.get("name").and_then(serde_json::Value::as_str).is_some()
+                && case
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some()
         }),
         "every listed case must carry its registry identity"
     );

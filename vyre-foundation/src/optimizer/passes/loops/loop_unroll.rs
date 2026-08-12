@@ -268,7 +268,7 @@ fn expr_unroll_cost(expr: &Expr) -> u32 {
 mod tests {
     use super::*;
     use crate::ir::{BufferDecl, DataType};
-    use crate::optimizer::passes::const_fold::ConstFold;
+    use crate::optimizer::passes::algebraic::const_fold::ConstFold;
     use crate::optimizer::{PassScheduler, ProgramPassKind};
 
     #[test]

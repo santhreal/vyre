@@ -7,8 +7,8 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::gpu_char_constant_scan;
 use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre_libs::parsing::c::preprocess::gpu_char_constant_scan::gpu_char_constant_scan;
 use vyre_reference::value::Value;
 
 fn unpack_u32(bytes: &[u8]) -> u32 {

@@ -6,7 +6,7 @@
 //! (verified by grep against the workspace) at least one criterion
 //! benchmark file exists under `vyre-foundation/benches/`,
 //! `vyre-driver-wgpu/benches/`, `vyre-runtime/benches/`, or
-//! `vyre-harness/benches/` references the module.
+//! `vyre-libs/benches/` references the module.
 //!
 //! Catches the "shipped wire but no perf coverage" failure mode  - 
 //! prevents wires from regressing silently.
@@ -25,7 +25,6 @@ const BENCH_DIRS: &[&str] = &[
     "vyre-foundation/benches",
     "vyre-driver-wgpu/benches",
     "vyre-runtime/benches",
-    "vyre-harness/benches",
     "vyre-libs/benches",
 ];
 

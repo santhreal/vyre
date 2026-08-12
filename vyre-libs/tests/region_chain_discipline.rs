@@ -20,7 +20,9 @@ fn every_cat_a_program_entry_is_a_single_generator_region() {
     let mut violations: Vec<String> = Vec::new();
 
     for entry in all_entries() {
-        let program = entry.program().expect("Fix: registered library operation must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered library operation must provide a neutral builder");
         let body = program.entry();
 
         if body.len() != 1 {

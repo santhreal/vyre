@@ -1,0 +1,372 @@
+schema_version = 1
+last_verified = "2026-08-04"
+
+[profile.facade]
+error_behavior = "Facade artifact workflows preserve structured compiler, admission, submission, and completion errors. Unavailable targets fail closed without backend fallback."
+
+[profile.foundation]
+error_behavior = "Malformed programs, incompatible schemas, and invalid transformations fail closed through validation or parsing errors before execution."
+
+[profile.backend-neutral]
+error_behavior = "Backend acquisition, capability, artifact, dispatch, and lifecycle failures retain actionable context. Shared contracts never substitute a concrete backend silently."
+
+[profile.concrete-backend]
+error_behavior = "Device acquisition, lowering, allocation, and dispatch failures are explicit backend errors. A requested device path never falls back to another backend."
+
+[profile.semantics]
+error_behavior = "Unsupported operations, malformed bindings, and invalid memory access return reference-execution errors rather than partial output."
+
+[profile.primitives]
+error_behavior = "Invalid dimensions, overflow, unsupported contracts, and malformed program inputs are rejected while the program is built or validated."
+
+[profile.scheduler]
+error_behavior = "Invalid scheduler state, graph shape, and capacity arithmetic fail before a partial schedule or artifact is accepted."
+
+[profile.conformance]
+error_behavior = "Malformed cases, missing selected backends, semantic mismatches, and incomplete certificates return a failing result with the affected case or backend."
+
+[profile.runtime]
+error_behavior = "Invalid plans, stale artifacts, unavailable selected backends, IO failures, and illegal state transitions are operator-visible errors."
+
+[profile.libraries]
+error_behavior = "Invalid shapes, unsupported compositions, arithmetic overflow, and malformed evidence are rejected by the builder or validator before dispatch."
+
+[profile.intrinsics]
+error_behavior = "An unsupported intrinsic, invalid operand contract, or missing selected lowering path is an explicit error. Intrinsics do not acquire a host substitute."
+
+[profile.packaging]
+error_behavior = "Invalid plans, incompatible metadata, unsupported targets, and serialization failures prevent an artifact from being emitted or accepted."
+
+[profile.frontend]
+error_behavior = "Invalid source, unsupported language constructs, and lowering failures carry source context and do not produce a successful partial program."
+
+[profile.lowering]
+error_behavior = "Invalid IR, unsupported target operations, and failed lowering invariants stop emission with contextual diagnostics."
+
+[profile.emitter]
+error_behavior = "Unsupported operations, invalid layouts, and target encoding failures return an emitter error instead of incomplete target text or binary."
+
+[profile.tooling]
+error_behavior = "Invalid arguments, stale evidence, violated repository contracts, and failed commands return a nonzero status with a concrete correction."
+
+[profile.test-tooling]
+error_behavior = "Fixture construction, execution, comparison, and certificate failures propagate to the calling test with exact mismatch context."
+
+[profile.compiler-boundary]
+error_behavior = "Invalid program shape, unsupported whole-graph lowering, and artifact construction failures stop before a partial Artifact is emitted."
+
+[landing]
+default_published_status = "active"
+default_internal_status = "repository-internal"
+
+[package.vyre-megakernel]
+path = 'vyre-megakernel'
+owner = 'megakernel-compiler'
+layer = 'compiler-boundary'
+owned = 'Compile validated typed Program graphs into canonical static and persistent megakernel artifacts without owning admission, execution, or lifecycle policy.'
+non_owned = 'Admission, execution, lifecycle policy, concrete backends, runtime protocol.'
+allowed_dependencies = ['vyre-foundation']
+profile = 'compiler-boundary'
+
+[package.vyre]
+path = 'vyre'
+owner = 'public-facade'
+layer = 'facade'
+owned = 'Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points.'
+non_owned = 'Backend implementation traits and configuration, concrete target lowering, optimizer internals, and conformance machinery.'
+allowed_dependencies = ['vyre-driver', 'vyre-driver-cuda', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-runtime', 'vyre-scan', 'vyre-spec']
+profile = 'facade'
+
+[package.vyre-foundation]
+path = 'vyre-foundation'
+owner = 'foundation-ir'
+layer = 'foundation'
+owned = 'Own the typed IR, validation, optimizer, serialization, and foundational program contracts.'
+non_owned = 'Concrete backends, runtime protocol, product compositions, CLI/tooling.'
+allowed_dependencies = ['vyre-macros', 'vyre-spec']
+profile = 'foundation'
+
+[package.vyre-driver]
+path = 'vyre-driver'
+owner = 'backend-contract'
+layer = 'backend-neutral'
+owned = 'Define backend-neutral device, capability, dispatch, evidence, and artifact contracts.'
+non_owned = 'Concrete device APIs, shader dialects, product libraries, frontend parsers.'
+allowed_dependencies = ['vyre-foundation', 'vyre-intrinsics', 'vyre-macros', 'vyre-self-substrate', 'vyre-spec']
+profile = 'backend-neutral'
+
+
+[package.vyre-driver-metal]
+landing_status = 'active on Apple targets'
+release_status = 'This crate is active on supported Apple targets in the {vyre_version} train. Non-Apple targets retain an explicit unsupported acquisition result.'
+path = 'vyre-driver-metal'
+owner = 'metal-driver'
+layer = 'concrete-backend'
+owned = 'Own native Apple device acquisition, lowering integration, dispatch, and backend evidence.'
+non_owned = 'Backend-neutral contracts ownership, IR semantic rewrites, other backends device code.'
+allowed_dependencies = ['vyre-driver', 'vyre-emit-metal', 'vyre-foundation', 'vyre-lower']
+profile = 'concrete-backend'
+
+[package.vyre-driver-wgpu]
+landing_status = 'active, portable path'
+path = 'vyre-driver-wgpu'
+owner = 'portable-driver'
+layer = 'concrete-backend'
+owned = 'Own portable GPU acquisition, lowering, dispatch, graph execution, and backend evidence.'
+non_owned = 'Backend-neutral contracts ownership, IR semantic rewrites, other backends device code.'
+allowed_dependencies = ['vyre-driver', 'vyre-emit-naga', 'vyre-foundation', 'vyre-lower', 'vyre-self-substrate', 'vyre-spec']
+profile = 'concrete-backend'
+
+[package.vyre-driver-spirv]
+path = 'vyre-driver-spirv'
+owner = 'spirv-driver'
+layer = 'concrete-backend'
+owned = 'Own SPIR-V backend lowering, dispatch integration, and backend evidence.'
+non_owned = 'Backend-neutral contracts ownership, IR semantic rewrites, other backends device code.'
+allowed_dependencies = ['vyre-driver', 'vyre-emit-naga', 'vyre-foundation', 'vyre-lower', 'vyre-spec']
+profile = 'concrete-backend'
+
+[package.vyre-driver-cuda]
+landing_status = 'active, release path'
+path = 'vyre-driver-cuda'
+owner = 'cuda-driver'
+layer = 'concrete-backend'
+owned = 'Own native NVIDIA device acquisition, lowering, dispatch, graphs, and release-path evidence.'
+non_owned = 'Backend-neutral contracts ownership, IR semantic rewrites, other backends device code.'
+allowed_dependencies = ['vyre-driver', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-lower', 'vyre-self-substrate', 'vyre-spec']
+profile = 'concrete-backend'
+
+[package.vyre-driver-reference]
+path = 'vyre-driver-reference'
+owner = 'reference-driver'
+layer = 'concrete-backend'
+owned = 'Adapt the reference interpreter to the backend contract for deterministic conformance execution.'
+non_owned = 'Backend-neutral contracts ownership, IR semantic rewrites, other backends device code.'
+allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-reference']
+profile = 'concrete-backend'
+
+[package.vyre-reference]
+path = 'vyre-reference'
+owner = 'reference-semantics'
+layer = 'semantics'
+owned = 'Execute programs with the canonical host oracle and produce semantic witnesses.'
+non_owned = 'Device dispatch, artifact packaging, product compositions.'
+allowed_dependencies = ['vyre-foundation', 'vyre-primitives', 'vyre-spec']
+profile = 'semantics'
+
+[package.vyre-spec]
+landing_status = 'active, frozen surface'
+path = 'vyre-spec'
+owner = 'specification'
+layer = 'foundation'
+owned = 'Own stable schemas, operation definitions, and compatibility contracts without runtime dependencies.'
+non_owned = 'Concrete backends, runtime protocol, product compositions, CLI/tooling.'
+allowed_dependencies = []
+profile = 'foundation'
+
+[package.vyre-macros]
+path = 'vyre-macros'
+owner = 'registration-macros'
+layer = 'foundation'
+owned = 'Provide compile-time registration and declaration macros without depending on runtime crates.'
+non_owned = 'Concrete backends, runtime protocol, product compositions, CLI/tooling.'
+allowed_dependencies = []
+profile = 'foundation'
+
+[package.vyre-primitives]
+path = 'vyre-primitives'
+owner = 'primitive-library'
+layer = 'primitives'
+owned = 'Own reusable Tier 2.5 program builders shared by higher-level libraries and runtimes.'
+non_owned = 'Concrete backends, runtime lifecycle, product-only glue.'
+allowed_dependencies = ['vyre-foundation', 'vyre-spec']
+profile = 'primitives'
+
+[package.vyre-test-support]
+path = 'vyre-test-support'
+owner = 'test-support'
+layer = 'test-tooling'
+owned = 'Provide shared deterministic fixtures and assertions for workspace tests.'
+non_owned = 'Production public APIs.'
+allowed_dependencies = []
+profile = 'test-tooling'
+
+[package.vyre-self-substrate]
+path = 'vyre-self-substrate'
+owner = 'self-substrate'
+layer = 'scheduler'
+owned = 'Use Vyre primitives to implement scheduler, graph, coverage, and optimization support.'
+non_owned = 'Device drivers, artifact envelope schema authorship, frontends.'
+allowed_dependencies = ['vyre-foundation', 'vyre-primitives']
+profile = 'scheduler'
+
+[package.vyre-conform-spec]
+path = 'conform/vyre-conform-spec'
+owner = 'conformance'
+layer = 'conformance'
+owned = 'Define conformance case, result, and certificate schemas against the public facade.'
+non_owned = 'Production dispatch paths, product features.'
+allowed_dependencies = ['vyre-spec']
+profile = 'conformance'
+
+[package.vyre-conform]
+path = 'conform/vyre-conform'
+owner = 'conformance'
+layer = 'conformance'
+owned = 'Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI.'
+non_owned = 'Semantic operation implementations, reference evaluator internals, concrete target compilers and materializers.'
+allowed_dependencies = ['vyre', 'vyre-conform-spec', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+profile = 'conformance'
+
+
+[package.xtask]
+release_status = 'This crate is internal repository and release tooling for the {vyre_version} train and is not published to crates.io.'
+path = 'xtask'
+owner = 'release-tooling'
+layer = 'tooling'
+owned = 'Generate evidence and enforce repository, release, documentation, and architecture contracts.'
+non_owned = 'Production library semantics, device drivers as libraries.'
+allowed_dependencies = ['vyre', 'vyre-bench', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-metal', 'vyre-foundation', 'vyre-frontend-c', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-spec']
+profile = 'tooling'
+
+[package.vyre-runtime]
+landing_status = 'active, experimental'
+release_status = 'This crate is an active experimental runtime surface in the {vyre_version} workspace. Its public contracts follow the Vyre release train.'
+path = 'vyre-runtime'
+owner = 'runtime'
+layer = 'runtime'
+owned = 'Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate.'
+non_owned = 'Artifact schema authorship (vyre-megakernel), concrete shader emission, language frontends.'
+allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-self-substrate']
+profile = 'runtime'
+
+[package.vyre-libs]
+path = 'vyre-libs'
+owner = 'product-libraries'
+layer = 'libraries'
+owned = 'Own product-facing Tier 3 program compositions built from neutral primitives and contracts.'
+non_owned = 'Concrete backends, runtime protocol, foundation IR node authorship.'
+allowed_dependencies = ['vyre-foundation', 'vyre-primitives', 'vyre-spec']
+profile = 'libraries'
+
+[package.vyre-intrinsics]
+path = 'vyre-intrinsics'
+owner = 'hardware-intrinsics'
+layer = 'intrinsics'
+owned = 'Own registered hardware-mapped intrinsic contracts and their neutral program builders.'
+non_owned = 'Device acquisition, product compositions, runtime queues.'
+allowed_dependencies = ['vyre-foundation', 'vyre-primitives']
+profile = 'intrinsics'
+
+[package.vyre-aot]
+path = 'vyre-aot'
+owner = 'aot-artifacts'
+layer = 'packaging'
+owned = 'Plan and package ahead-of-time artifacts without owning live backend execution.'
+non_owned = 'Live device execution, runtime protocol mutation.'
+allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-primitives', 'vyre-spec']
+profile = 'packaging'
+
+[package.vyre-frontend-c]
+landing_status = 'beta'
+release_status = 'This crate is a beta C frontend surface in the {vyre_version} workspace. It is not published as a standalone crate in this release.'
+path = 'vyre-frontend-c'
+owner = 'c-frontend'
+layer = 'frontend'
+owned = 'Parse C input and lower supported language constructs into typed Vyre programs.'
+non_owned = 'Backend selection, runtime admission, product library ownership.'
+allowed_dependencies = ['vyre-foundation']
+profile = 'frontend'
+
+[package.vyre-frontend-rust]
+landing_status = 'beta'
+release_status = 'This crate is a beta Rust frontend surface in the {vyre_version} workspace. It is not published as a standalone crate in this release.'
+path = 'vyre-frontend-rust'
+owner = 'rust-frontend'
+layer = 'frontend'
+owned = 'Lower the supported Rust frontend subset into typed Vyre programs and execute it through selected backends.'
+non_owned = 'Backend selection, runtime admission, product library ownership.'
+allowed_dependencies = ['vyre-foundation']
+profile = 'frontend'
+
+[package.vyre-bench]
+release_status = 'This crate is internal benchmark tooling for the {vyre_version} train and is not published to crates.io.'
+path = 'vyre-bench'
+owner = 'benchmarks'
+layer = 'tooling'
+owned = 'Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.'
+non_owned = 'Production library semantics, device drivers as libraries.'
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-c', 'vyre-frontend-rust', 'vyre-intrinsics', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+profile = 'tooling'
+
+[package.vyre-lints]
+path = 'vyre-lints'
+owner = 'lint-policy'
+layer = 'tooling'
+owned = 'Enforce source-level project policies without depending on runtime crates.'
+non_owned = 'Production library semantics, device drivers as libraries.'
+allowed_dependencies = []
+profile = 'tooling'
+
+[package.vyre-lower]
+path = 'vyre-lower'
+owner = 'lowering'
+layer = 'lowering'
+owned = 'Own backend-neutral lowering helpers and pre-emission transforms.'
+non_owned = 'Device APIs, runtime queues, product ops.'
+allowed_dependencies = ['vyre-foundation']
+profile = 'lowering'
+
+[package.vyre-emit-naga]
+path = 'vyre-emit-naga'
+owner = 'primary-text-emitter'
+layer = 'emitter'
+owned = 'Lower neutral programs into the primary text emitter representation and related binary targets.'
+non_owned = 'Device acquisition, runtime lifecycle, IR validation ownership.'
+allowed_dependencies = ['vyre-foundation', 'vyre-lower']
+profile = 'emitter'
+
+[package.vyre-emit-ptx]
+path = 'vyre-emit-ptx'
+owner = 'primary-binary-emitter'
+layer = 'emitter'
+owned = 'Lower neutral programs into the primary binary backend text artifact.'
+non_owned = 'Device acquisition, runtime lifecycle, IR validation ownership.'
+allowed_dependencies = ['vyre-foundation', 'vyre-lower']
+profile = 'emitter'
+
+[package.vyre-emit-spirv]
+path = 'vyre-emit-spirv'
+owner = 'spirv-emitter'
+layer = 'emitter'
+owned = 'Lower neutral programs into SPIR-V artifacts through the shared emitter path.'
+non_owned = 'Device acquisition, runtime lifecycle, IR validation ownership.'
+allowed_dependencies = ['vyre-emit-naga', 'vyre-lower']
+profile = 'emitter'
+
+[package.vyre-emit-metal]
+path = 'vyre-emit-metal'
+owner = 'metal-emitter'
+layer = 'emitter'
+owned = 'Lower neutral programs into native Apple shader source through the shared emitter path.'
+non_owned = 'Device acquisition, runtime lifecycle, IR validation ownership.'
+allowed_dependencies = ['vyre-emit-naga', 'vyre-foundation', 'vyre-lower']
+profile = 'emitter'
+
+[package.vyre-debug]
+path = 'vyre-debug'
+owner = 'debugging'
+layer = 'tooling'
+owned = 'Inspect, explain, and diagnose typed programs, lowering, and product-library composition.'
+non_owned = 'Production library semantics, device drivers as libraries.'
+allowed_dependencies = ['vyre', 'vyre-emit-naga', 'vyre-foundation', 'vyre-libs', 'vyre-lower', 'vyre-primitives']
+profile = 'tooling'
+
+[package.vyre-grammar-gen]
+path = 'vyre-grammar-gen'
+owner = 'grammar-generation'
+layer = 'tooling'
+owned = 'Generate host-side grammar tables consumed by frontend and parsing crates.'
+non_owned = 'Production library semantics, device drivers as libraries.'
+allowed_dependencies = []
+profile = 'tooling'

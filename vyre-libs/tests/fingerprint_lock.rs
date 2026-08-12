@@ -108,7 +108,7 @@ fn fp_broadcast() {
 #[cfg(feature = "nn-activation")]
 #[test]
 fn fp_relu() {
-    use vyre_libs::nn::relu;
+    use vyre_libs::nn::activation::relu;
     let p = relu("in", "out", 4);
     let p2 = relu("in", "out", 4);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -117,7 +117,7 @@ fn fp_relu() {
 #[cfg(feature = "nn-linear")]
 #[test]
 fn fp_linear() {
-    use vyre_libs::nn::linear;
+    use vyre_libs::nn::linear::linear;
     let p = linear("x", "w", "b", "y", 4, 4).unwrap();
     let p2 = linear("x", "w", "b", "y", 4, 4).unwrap();
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -126,7 +126,7 @@ fn fp_linear() {
 #[cfg(feature = "nn-norm")]
 #[test]
 fn fp_layer_norm() {
-    use vyre_libs::nn::layer_norm;
+    use vyre_libs::nn::norm::layer_norm;
     let p = layer_norm("in", "out", 64, 1e-5);
     let p2 = layer_norm("in", "out", 64, 1e-5);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -135,7 +135,7 @@ fn fp_layer_norm() {
 #[cfg(feature = "nn-attention")]
 #[test]
 fn fp_softmax() {
-    use vyre_libs::nn::softmax;
+    use vyre_libs::nn::attention::softmax;
     let p = softmax("in", "out", 64);
     let p2 = softmax("in", "out", 64);
     assert_eq!(fingerprint(&p), fingerprint(&p2));
@@ -144,7 +144,7 @@ fn fp_softmax() {
 #[cfg(feature = "nn-attention")]
 #[test]
 fn fp_attention() {
-    use vyre_libs::nn::attention;
+    use vyre_libs::nn::attention::attention;
     let p = attention("q", "k", "v", "out", 8, 4);
     let p2 = attention("q", "k", "v", "out", 8, 4);
     assert_eq!(fingerprint(&p), fingerprint(&p2));

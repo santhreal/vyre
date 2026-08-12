@@ -123,7 +123,7 @@ mod tests {
     #[cfg(feature = "nn-attention")]
     #[test]
     fn descriptor_summarizes_softmax() {
-        use crate::nn::softmax;
+        use crate::nn::attention::softmax;
         let program = softmax("in", "out", 64);
         let desc = ProgramDescriptor::from_program(&program);
         // Tiled softmax uses workgroup scratch buffers: input, softmax_scratch,

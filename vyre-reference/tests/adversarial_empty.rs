@@ -1,6 +1,6 @@
 //! Adversarial empty and malformed-boundary coverage for the reference interpreter.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 #[test]

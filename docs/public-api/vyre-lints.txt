@@ -1,0 +1,52 @@
+impl vyre_lints::allowlist::Allowlist
+impl vyre_lints::drift::AgeResolver for vyre_lints::drift::GitBlameResolver
+impl vyre_lints::drift::GitBlameResolver
+pub const vyre_lints::drift::DEFAULT_AGE_BUDGET_DAYS: i64
+pub enum vyre_lints::ViolationKind
+pub fn vyre_lints::allowlist::Allowlist::contains(&self, workspace_relative_path: &str) -> bool
+pub fn vyre_lints::allowlist::Allowlist::empty() -> Self
+pub fn vyre_lints::allowlist::Allowlist::is_empty(&self) -> bool
+pub fn vyre_lints::allowlist::Allowlist::len(&self) -> usize
+pub fn vyre_lints::allowlist::load(path: &std::path::Path) -> anyhow::Result<vyre_lints::allowlist::Allowlist>
+pub fn vyre_lints::consumer_coupling::scan_tree(root: &std::path::Path) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::drift::AgeResolver::age(&self, allowlist_path: &std::path::Path, exempt_path: &str) -> core::option::Option<(i64, alloc::string::String)>
+pub fn vyre_lints::drift::GitBlameResolver::age(&self, allowlist_path: &std::path::Path, exempt_path: &str) -> core::option::Option<(i64, alloc::string::String)>
+pub fn vyre_lints::drift::GitBlameResolver::with_today(today_iso: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_lints::drift::format_finding(f: &vyre_lints::drift::DriftFinding, budget_days: i64) -> alloc::string::String
+pub fn vyre_lints::drift::run<R: vyre_lints::drift::AgeResolver>(allowlist_path: &std::path::Path, budget_days: i64, resolver: &R) -> anyhow::Result<alloc::vec::Vec<vyre_lints::drift::DriftFinding>>
+pub fn vyre_lints::gpu_skip_guards::scan_tree(root: &std::path::Path) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::module_forks::scan_roots(roots: &[&std::path::Path]) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::production_cpu_fallbacks::scan_tree(root: &std::path::Path) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::raw_ir_in_libs::scan_tree(root: &std::path::Path, allow: &vyre_lints::allowlist::Allowlist) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::run_consumer_coupling(roots: &[&std::path::Path]) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::run_gpu_skip_guards(roots: &[&std::path::Path]) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::run_module_forks(roots: &[&std::path::Path]) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::run_production_cpu_fallbacks(roots: &[&std::path::Path]) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub fn vyre_lints::run_raw_ir_in_libs(roots: &[&std::path::Path], allowlist_path: core::option::Option<&std::path::Path>) -> anyhow::Result<alloc::vec::Vec<vyre_lints::Violation>>
+pub mod vyre_lints
+pub mod vyre_lints::allowlist
+pub mod vyre_lints::consumer_coupling
+pub mod vyre_lints::drift
+pub mod vyre_lints::gpu_skip_guards
+pub mod vyre_lints::module_forks
+pub mod vyre_lints::production_cpu_fallbacks
+pub mod vyre_lints::raw_ir_in_libs
+pub struct vyre_lints::Violation
+pub struct vyre_lints::allowlist::Allowlist
+pub struct vyre_lints::drift::DriftFinding
+pub struct vyre_lints::drift::GitBlameResolver
+pub trait vyre_lints::drift::AgeResolver
+pub vyre_lints::Violation::column: u32
+pub vyre_lints::Violation::file: alloc::string::String
+pub vyre_lints::Violation::kind: vyre_lints::ViolationKind
+pub vyre_lints::Violation::line: u32
+pub vyre_lints::Violation::message: alloc::string::String
+pub vyre_lints::ViolationKind::ConsumerCoupling
+pub vyre_lints::ViolationKind::GpuSkipGuard
+pub vyre_lints::ViolationKind::ModuleFork
+pub vyre_lints::ViolationKind::ProductionCpuFallback
+pub vyre_lints::ViolationKind::RawExprConstruction
+pub vyre_lints::ViolationKind::RawNodeConstruction
+pub vyre_lints::drift::DriftFinding::added: alloc::string::String
+pub vyre_lints::drift::DriftFinding::age_days: i64
+pub vyre_lints::drift::DriftFinding::exempt_path: alloc::string::String

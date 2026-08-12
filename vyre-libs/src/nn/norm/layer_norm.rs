@@ -8,7 +8,7 @@
 //!
 //! - [`LayerNorm`]  -  typed builder with [`TensorRef`]-accepting
 //!   inputs and contract checks at [`LayerNorm::build`] time.
-//! - [`layer_norm`]  -  back-compat free function.
+//! - [`layer_norm`]  -  name-based convenience constructor.
 //!
 //! Both paths emit byte-identical IR.
 
@@ -357,8 +357,7 @@ fn layer_norm_reference_program(input: &str, output: &str, n: u32, eps: f32) -> 
 }
 
 /// Build a Program that layer-normalizes `input` into `output` across
-/// `n` F32 elements. Back-compat wrapper around [`LayerNorm`]; invalid
-/// inputs lower to a trap.
+/// `n` F32 elements through [`LayerNorm`]. Invalid inputs lower to a trap.
 #[must_use]
 pub fn layer_norm(input: &str, output: &str, n: u32, eps: f32) -> Program {
     LayerNorm::new(

@@ -1,5 +1,9 @@
 # vyre  -  Stability Policy
 
+**Status: Superseded.** This file proposed a future 1.0 contract. Use
+[`docs/semver-policy.md`](semver-policy.md) for the Vyre 0.7.2 compatibility
+policy.
+
 This document is the binding contract between the vyre project and its users, contributors, and downstream dependents. It applies from the 1.0 release onward.
 
 ---

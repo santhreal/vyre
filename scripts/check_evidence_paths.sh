@@ -5,11 +5,9 @@
 # artifact's own internal consistency.
 #
 # WHY THIS EXISTS. Before this gate, nothing validated that the paths named
-# inside release evidence still existed. Exactly two consumers read the findings
-# array workspace-wide, release_completion_audit/semantics/optimization_hygiene.rs and
-# vyre_release_gate/semantic/release_hygiene.rs, and BOTH only compare
-# findings.len() against the summed finding_summary counts. Nothing read
-# findings[].path and nothing stat'd it. release_evidence/artifact_status.rs
+# inside release evidence still existed. The release hygiene consumer only
+# compares findings.len() against the summed finding_summary counts. Nothing
+# reads findings[].path or stats it. release_evidence/artifact_status.rs
 # does stat files, but only the artifact files themselves from a hardcoded
 # expected list, never paths parsed out of their contents.
 #
@@ -28,12 +26,11 @@
 # SCOPE: every object array carrying a `path` field, in every JSON under
 # release/evidence. Deliberately NOT just `findings`. When this gate was written
 # the tree carried 185 stale citations across 16 artifacts, and only 8 of those
-# were in a findings array. The largest single block, 124 of them, was a stale
-# path PREFIX: the dataflow component was renamed from dataflow-consumer to
-# weir, and two artifacts kept citing libs/dataflow/dataflow-consumer/src.
-# Those analyses do exist, at libs/dataflow/weir/src, so the evidence was
-# right about the capability and wrong about where it lives, which is the
-# failure mode a path oracle catches and a self-consistency check cannot.
+# were in a findings array. The largest single block was a stale path prefix:
+# a renamed analysis component left two artifacts pointing at its previous
+# source directory. The evidence described a real capability at the wrong path,
+# which is the failure mode a path oracle catches and a self-consistency check
+# cannot.
 # Gating findings alone would have covered 4 percent of the defect.
 #
 # PATH RESOLUTION, three conventions in use, all of them live:
@@ -176,7 +173,7 @@ if (( ${#missing_report[@]} > 0 )); then
   printf 'evidence path contract: %d citation(s) name a path that is not on disk.\n' \
     "${#missing_report[@]}" >&2
   printf '%s\n' "${missing_report[@]}" >&2
-  printf 'Fix: regenerate the artifact from the current tree (for the hygiene pair, `cargo_full run -p xtask --bin xtask -- hygiene-matrix --output release/evidence/hygiene/hygiene-matrix.json`; for the suite trio, `cargo_full run -p xtask --bin xtask -- test-matrix`), or delete the citation if the evidence is genuinely obsolete. Do not hand-edit generated artifacts.\n' >&2
+  printf 'Fix: regenerate the artifact from the current tree with its owning release-evidence command, or delete the citation if the evidence is genuinely obsolete. Do not hand-edit generated artifacts.\n' >&2
 fi
 
 if (( ${#local_only_report[@]} > 0 )); then

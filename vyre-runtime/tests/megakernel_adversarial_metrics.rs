@@ -1,7 +1,9 @@
 //! Adversarial metrics-decode sanity: hostile control buffers, truncation
 //! boundaries, misalignment, and region-non-alias contracts.
 
-use vyre_runtime::resident_work_queue::{protocol::control, ControlSnapshot, ResidentWorkQueue, RingTelemetry};
+use vyre_runtime::resident_work_queue::{
+    protocol::control, ControlSnapshot, ResidentWorkQueue, RingTelemetry,
+};
 use vyre_runtime::PipelineError;
 
 fn write_word(bytes: &mut [u8], word_idx: usize, value: u32) {
@@ -26,8 +28,8 @@ fn try_read_metrics_rejects_buffer_one_word_short_of_full_window() {
 fn try_read_metrics_rejects_misaligned_buffer() {
     let mut buf = vec![0u8; ((control::METRICS_BASE + control::METRICS_SLOTS) as usize) * 4];
     buf.push(0xAA);
-    let err =
-        ResidentWorkQueue::try_read_metrics(&buf).expect_err("misaligned metrics buffer must reject");
+    let err = ResidentWorkQueue::try_read_metrics(&buf)
+        .expect_err("misaligned metrics buffer must reject");
     assert!(err.to_string().contains("Fix:"));
 }
 

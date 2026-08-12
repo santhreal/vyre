@@ -45,6 +45,10 @@ pub(crate) fn cast_is_valid(source: &DataType, target: &DataType) -> bool {
             | (&DataType::F32, &DataType::U32)
             | (&DataType::F32, &DataType::I32)
             | (&DataType::F32, &DataType::Bool)
+            | (&DataType::F32, &DataType::F16)
+            | (&DataType::F32, &DataType::BF16)
+            | (&DataType::F16, &DataType::F32)
+            | (&DataType::BF16, &DataType::F32)
     )
 }
 
@@ -106,6 +110,8 @@ pub(crate) fn cast_target_set(source: &DataType) -> String {
         DataType::Bytes,
         DataType::Vec2U32,
         DataType::Vec4U32,
+        DataType::F16,
+        DataType::BF16,
         DataType::F32,
     ];
 

@@ -168,41 +168,6 @@ fn cuda_direct_dispatch_reports_bucketed_transient_allocation_pressure() {
 }
 
 #[test]
-fn cuda_compile_native_reports_static_param_allocation_pressure() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    backend.reset_telemetry();
-
-    let _pipeline = backend
-        .compile_native(&add_one_program(8), &DispatchConfig::default())
-        .expect("Fix: CUDA native pipeline compilation must succeed before telemetry is trusted.");
-
-    let snapshot = backend.telemetry_snapshot();
-    assert!(
-        snapshot.param_upload_bytes > 0,
-        "Fix: compile_native uploads static launch parameters and must expose those H2D bytes."
-    );
-    let live_transient_bytes = backend
-        .allocated_transient_allocation_bytes()
-        .expect("Fix: CUDA live transient allocation accounting must be readable.");
-    assert!(
-        snapshot.transient_allocation_bytes_requested
-            >= cuda_pool_bucket(snapshot.param_upload_bytes as usize),
-        "Fix: compile_native static parameter allocation must be visible as bucketed CUDA \
-         transient allocation pressure. param_bytes={} transient_bytes={}",
-        snapshot.param_upload_bytes,
-        snapshot.transient_allocation_bytes_requested
-    );
-    assert!(
-        live_transient_bytes >= cuda_pool_bucket(snapshot.param_upload_bytes as usize) as usize,
-        "Fix: live transient allocation accounting must include compiled-pipeline static \
-         parameter buffers. param_bytes={} live_transient_bytes={}",
-        snapshot.param_upload_bytes,
-        live_transient_bytes
-    );
-}
-
-#[test]
 fn cuda_graph_replay_updates_graph_telemetry_after_reset() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");

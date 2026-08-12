@@ -2,16 +2,17 @@
 # Aggregates local Criterion reports into target/criterion/index.html.
 
 set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 OUTPUT_DIR="target/criterion"
 OUTPUT_FILE="$OUTPUT_DIR/index.html"
 mkdir -p "$OUTPUT_DIR"
 
 declare -A CODEBASES
-CODEBASES["sofar"]="/home/mukund-thiru/sofar/target/criterion"
-CODEBASES["spill"]="/home/mukund-thiru/spill/target/criterion"
-CODEBASES["star-randsrv"]="/home/mukund-thiru/star-randsrv/target/criterion"
-CODEBASES["vyre"]="/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/target/criterion"
+CODEBASES["sofar"]="/home/${USER}/sofar/target/criterion"
+CODEBASES["spill"]="/home/${USER}/spill/target/criterion"
+CODEBASES["star-randsrv"]="/home/${USER}/star-randsrv/target/criterion"
+CODEBASES["vyre"]="$ROOT/target/criterion"
 
 write_line() {
     printf '%s\n' "$1" > "$OUTPUT_FILE"

@@ -1,6 +1,6 @@
 //! Generated coverage for fixed-width vector cast byte semantics.
 
-use vyre::ir::{DataType, Expr, Program};
+use vyre_foundation::ir::{DataType, Expr, Program};
 use vyre_reference::{
     execution::expr as eval_expr,
     value::Value,

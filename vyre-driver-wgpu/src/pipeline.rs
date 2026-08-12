@@ -1,12 +1,7 @@
 //! Native pipeline-mode implementation for the wgpu backend.
 //!
-//! P-6 from `docs/audits/ROADMAP_PERFORMANCE.md`. Pre-compiles WGSL,
-//! compute pipeline, and bind-group layout once so subsequent dispatch
-//! calls only pay buffer-allocation + execution + readback cost.
-//!
-//! Per the roadmap, this removes ~90% of per-call overhead  -  the WGSL
-//! lowering and pipeline compilation costs dominate over the actual GPU
-//! work for short programs run repeatedly.
+//! Compiled pipelines and bind-group layouts are reused so repeated
+//! submissions pay only resource preparation, execution, and readback costs.
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -23,7 +18,7 @@ pub use vyre_driver::program_walks::{output_layout_from_program, IndirectDispatc
 use vyre_driver::tuner::Mode;
 use vyre_driver::validation::LaunchGeometryLimits;
 use vyre_driver::BackendLayoutFingerprint;
-use vyre_driver::{BackendError, CompiledPipeline, DispatchConfig, OutputBuffers};
+use vyre_driver::{BackendError, DispatchConfig, OutputBuffers};
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
@@ -191,19 +186,17 @@ pub(crate) fn wgpu_launch_limits(device: &wgpu::Device) -> LaunchGeometryLimits 
     }
 }
 
-/// In-memory pipeline cache (P-27 from `docs/audits/ROADMAP_PERFORMANCE.md`).
+/// In-memory cache keyed by canonical program and adapter identity.
 ///
 /// Keyed by a full program fingerprint (serialized IR + adapter fingerprint),
 /// returned as `Arc` so multiple callers share one ComputePipeline.
 /// `WgpuPipeline` is a thin wrapper around an `Arc<CachedPipeline>` plus
 /// per-instance values (id, output_size).
 
-/// Cached state for a vyre program on the wgpu backend.
+/// Materialized WGPU executable state.
 ///
-/// Built by `WgpuBackend::compile_native`.
-/// Holds the compiled compute pipeline and the bind-group layout (both
-/// derived from the WGSL lowering) plus the geometry needed to size each
-/// dispatch's input/output buffers.
+/// Holds the authenticated compute pipeline, bind-group layout, and dispatch
+/// geometry used by artifact instances and lower-level driver diagnostics.
 #[derive(Clone)]
 pub struct WgpuPipeline {
     pub(crate) id: String,
@@ -273,60 +266,6 @@ impl WgpuPipeline {
             persistent_pool,
             staging_pool: cached.staging_pool.clone(),
         }
-    }
-
-    /// Pre-compile `program` into a reusable pipeline.
-    ///
-    /// First-call: performs WGSL lowering, ComputePipeline creation, and
-    /// BindGroupLayout caching, then INSERTS the result in `PIPELINE_CACHE`
-    /// keyed by the serialized IR + adapter fingerprint.
-    ///
-    /// Subsequent calls with the same Program on the same adapter skip
-    /// the ComputePipeline / BindGroupLayout creation entirely  -  the cache
-    /// returns the same `Arc<wgpu::ComputePipeline>` and the new
-    /// `WgpuPipeline` instance just carries fresh metadata (output sizing).
-    /// Per-Program metadata varies even when the WGSL doesn't, so it stays
-    /// per-instance.
-    pub fn compile(program: &Program) -> Result<Arc<Self>, BackendError> {
-        Self::compile_with_config(program, &DispatchConfig::default())
-    }
-
-    /// Pre-compile `program` into a reusable pipeline using dispatch policy.
-    ///
-    /// # Errors
-    ///
-    /// Returns a backend error when lowering, cache access, or pipeline
-    /// creation fails.
-    pub fn compile_with_config(
-        program: &Program,
-        config: &DispatchConfig,
-    ) -> Result<Arc<Self>, BackendError> {
-        let ((device, queue), adapter_info, enabled_features) =
-            runtime::init_device().map_err(|error| BackendError::new(error.to_string()))?;
-        // Build a fresh pool tied to this call's device+queue. The
-        // pool lives as long as the returned pipeline; consumers
-        // that want cross-pipeline pool sharing go through
-        // `WgpuBackend::acquire` instead (which owns one pool per
-        // adapter).
-        let pool = crate::buffer::BufferPool::new(device.clone(), queue.clone(), config);
-        let (pipeline_cache_entries, pipeline_cache_bytes) =
-            vyre_driver::pipeline::pipeline_cache_limits_from_env();
-        Self::compile_with_device_queue(
-            program,
-            config,
-            adapter_info,
-            enabled_features,
-            Arc::new((device.clone(), queue.clone())),
-            Arc::new(DispatchArena::new(device.clone(), queue.clone(), config)),
-            pool,
-            Arc::new(runtime::cache::pipeline::LruPipelineCache::with_limits(
-                pipeline_cache_entries,
-                pipeline_cache_bytes,
-            )),
-            Arc::new(BindGroupLayoutCache::with_hasher(BuildHasherDefault::<
-                rustc_hash::FxHasher,
-            >::default())),
-        )
     }
 
     /// Materialize authenticated WGSL using backend-owned device resources.
@@ -678,27 +617,6 @@ impl WgpuPipeline {
             device_queue,
             persistent_pool,
         )))
-    }
-
-    /// Dispatch one chunk through this compiled pipeline.
-    ///
-    /// This is the synchronous primitive used by the host-ingress compatibility
-    /// stream; callers that still receive chunks through CPU memory should use
-    /// [`crate::engine::streaming::HostIngressStream`]. Canonical VYRE
-    /// streaming is the device-resident megakernel queue in `vyre-runtime`.
-    ///
-    /// # Errors
-    ///
-    /// Returns a backend error if GPU dispatch or readback fails.
-    pub fn push_chunk(
-        &self,
-        bytes: &[u8],
-        config: &DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, BackendError> {
-        // Route through dispatch_borrowed to avoid the owned-Vec copy
-        // on the hot streaming path. Callers pass `&[u8]` per chunk;
-        // dispatch() would allocate a `Vec<Vec<u8>>` just to wrap it.
-        <Self as CompiledPipeline>::dispatch_borrowed(self, &[bytes], config)
     }
 
     pub(crate) fn output_binding(

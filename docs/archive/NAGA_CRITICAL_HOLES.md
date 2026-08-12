@@ -1,8 +1,8 @@
 # F-NAGA  -  Critical Naga Lowering Holes (tracking doc)
 
 Tracks #171 F-NAGA. Supersedes ad-hoc notes across the audit train.
-Companion to `docs/NAGA_LOWERING_STATUS.md` (shipped/open list)
-and `docs/NAGA_LOWERING_AUDIT.md` (Loop/If/Region coverage).
+The historical shipped/open ledger was imported into the private root
+`BACKLOG.md`; `NAGA_LOWERING_AUDIT.md` preserves Loop, If, and Region coverage.
 
 ## Critical holes (shipped fixes or explicit rejections)
 

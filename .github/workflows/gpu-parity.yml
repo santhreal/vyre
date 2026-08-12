@@ -38,6 +38,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Run documented vyre-wgpu command on a real GPU
+        run: ./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
       - name: capability + async dispatch contracts
         run: ./cargo_full test -p vyre-driver-wgpu --test capability_contract --test async_dispatch_contract -- --nocapture
       - name: cast parity on real GPU (float saturation + integer narrowing)
@@ -102,7 +104,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run composition parity
-        run: ./cargo_full test -p vyre-libs --release --features vyre_wgpu --test op_pairwise pairwise_composition_parity -- --nocapture
+        run: ./cargo_full test -p vyre-driver-wgpu --release --test op_pairwise pairwise_composition_parity -- --nocapture
 
   determinism-stress-gpu:
     name: Determinism stress on real GPU
@@ -126,7 +128,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run GPU mandatory tests
-        run: ./cargo_full test -p vyre-conform-runner --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
+        run: ./cargo_full test -p vyre-conform --release --features gpu --test parity_matrix --test ulp_audit -- --nocapture
 
   cuda-conformance-all-ops:
     name: CUDA conformance all ops
@@ -138,7 +140,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against CUDA for every registered op
-        run: ./cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
+        run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
 
   wgpu-conformance-all-ops:
     name: WGPU conformance all ops
@@ -150,7 +152,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run vyre-conform against WGPU for every registered op
-        run: ./cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
+        run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
 
   release-conformance-artifacts:
     name: Release conformance artifacts
@@ -170,17 +172,6 @@ jobs:
           name: vyre-release-conformance-evidence
           path: ./release/evidence/conformance/*.json
 
-  weir-cuda-parity:
-    name: Weir CUDA parity
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu-5090]
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run Weir CUDA parity inventory gate
-        run: ./cargo_full test -p weir every_weir_inventory_op_parity_holds -- --nocapture
 
   cuda-release-bench-evidence:
     name: CUDA release benchmark evidence
@@ -214,17 +205,33 @@ jobs:
     name: GPU release gate
     needs:
       - driver-contracts
+      - cuda-driver-contracts
       - composition-parity-gpu
       - determinism-stress-gpu
       - mandatory-gpu-enforcer
       - cuda-conformance-all-ops
       - wgpu-conformance-all-ops
       - release-conformance-artifacts
-      - weir-cuda-parity
       - cuda-release-bench-evidence
+    if: ${{ always() }}
     runs-on: [self-hosted, gpu-5090]
     timeout-minutes: 5
     steps:
+      - name: Verify required GPU jobs
+        shell: bash
+        run: |
+          if [ "${{ needs.driver-contracts.result }}" != "success" ] \
+            || [ "${{ needs.cuda-driver-contracts.result }}" != "success" ] \
+            || [ "${{ needs.composition-parity-gpu.result }}" != "success" ] \
+            || [ "${{ needs.determinism-stress-gpu.result }}" != "success" ] \
+            || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
+            || [ "${{ needs.cuda-conformance-all-ops.result }}" != "success" ] \
+            || [ "${{ needs.wgpu-conformance-all-ops.result }}" != "success" ] \
+            || [ "${{ needs.release-conformance-artifacts.result }}" != "success" ] \
+            || [ "${{ needs.cuda-release-bench-evidence.result }}" != "success" ]; then
+            echo "::error::A required GPU job failed or did not run."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
@@ -322,4 +329,4 @@ jobs:
           if proof.get("min_wall_samples", 0) < 30 or proof.get("min_baseline_wall_samples", 0) < 30:
               raise SystemExit("cpu-only-100x-proof.json: wall and baseline samples must both be at least 30")
           '
-          echo "GPU release gate passed: CUDA/WGPU all-op conformance, Weir CUDA parity, backend contracts, determinism stress, and CUDA release benchmark evidence artifacts all exist."
+          echo "GPU release gate passed: CUDA/WGPU all-op conformance, backend contracts, determinism stress, and CUDA release benchmark evidence artifacts all exist."

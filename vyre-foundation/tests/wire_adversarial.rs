@@ -1,3 +1,3 @@
 //! Test: wire adversarial.
-include!("__split/wire_adversarial_chunk1.rs");
-include!("__split/wire_adversarial_chunk2.rs");
+include!("contract_cases/wire_adversarial__minimal_program.rs");
+include!("contract_cases/wire_adversarial__opaque_malformed_payload_decoder_survives.rs");

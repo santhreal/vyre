@@ -77,8 +77,8 @@ verdict on backend correctness.
 
 ## The book
 
-Documentation and tutorials live in `core/docs/`. Read them locally or build the
-mdbook when a rendered site is available.
+Documentation and tutorials live in [`docs/`](../docs/). Build the mdBook for
+the complete rendered guide.
 
 ## License
 
@@ -92,20 +92,20 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Expose the public Vyre API and feature-gated backend selection surface.
+Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
 
 ### Boundaries
 
-The `public-facade` owner maintains this `facade` crate at `vyre-core`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`.
+The `public-facade` owner maintains this `facade` crate at `vyre`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `vyre-core/examples/vyre_core_release_surface.rs`:
+Run the checked-in behavior from `vyre/examples/vyre_release_surface.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre --example vyre_core_release_surface
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre --example vyre_release_surface
 ```
 
 ### Features
@@ -115,11 +115,11 @@ CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre --example vyre_core_release_surface
 
 ### Errors and unsupported behavior
 
-Facade calls preserve the selected backend's structured errors. A requested backend that is unavailable or unsupported is reported instead of replaced silently.
+Facade artifact workflows preserve structured compiler, admission, submission, and completion errors. Unavailable targets fail closed without backend fallback.
 
 ### Testing
 
-Use [`docs/testing/vyre-core.md`](../docs/testing/vyre-core.md) for exact commands, Cargo targets, hardware
+Use [`docs/testing/vyre.md`](../docs/testing/vyre.md) for exact commands, Cargo targets, hardware
 requirements, evidence outputs, expected skips, and failure semantics.
 
 ### Release status
@@ -131,4 +131,14 @@ requirements, evidence outputs, expected skips, and failure semantics.
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

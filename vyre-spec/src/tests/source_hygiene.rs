@@ -82,11 +82,8 @@ const SOURCE_FILES: &[(&str, &str)] = &[
 
 const CARGO_TOML: &str = include_str!("../../Cargo.toml");
 
-// A raw per-file line-count cap is a guideline (surfaced by the large-file
-// advisory in `xtask lego-audit` and `scripts/laws/check_file_sizes.sh`), not
-// a law, so no test asserts `lines < 500` here. The hygiene contracts below
-// assert real properties, explicit re-exports, module docs, that hold
-// regardless of file size.
+// Raw per-file line-count caps are review signals, not architecture laws. The
+// contracts below assert explicit re-exports and module documentation instead.
 
 #[test]
 fn public_re_exports_are_explicit() {

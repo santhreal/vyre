@@ -281,7 +281,7 @@ fn run_gpu_typedef_annotation(fix: &Fixture, raw_vast: &[u8]) -> Vec<u8> {
     run_gpu_scoped_typedef_annotation(fix.source.as_bytes(), raw_vast)
 }
 
-mod c_ast_kernel_style_corpus_part1 {
+mod c_ast_kernel_style_corpus_kernel_style_fixture_lexes_and_promotes_expected_tokens {
 
-    include!("__split/c_ast_kernel_style_corpus_part1.rs");
+    include!("contract_cases/c_ast_kernel_style_corpus__kernel_style_fixture_lexes_and_promotes_expected_tokens.rs");
 }

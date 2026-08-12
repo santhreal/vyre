@@ -21,14 +21,6 @@
 pub mod canonicalize;
 pub mod endian;
 
-// Re-exports for backward compatibility during the migration window.
-pub use canonicalize::{canonical_f32_zero, canonical_f64_zero, canonical_regex_flags};
-pub use endian::{
-    push_f32, push_f64, push_i16, push_i32, push_i64, push_u16, push_u32, push_u64, read_f32,
-    read_f64, read_i16, read_i32, read_i64, read_u16, read_u32, read_u64, LeBytesWriter,
-    OpaquePayloadTruncated,
-};
-
 #[cfg(test)]
 mod tests {
     use super::canonicalize::{canonical_f32_zero, canonical_f64_zero, canonical_regex_flags};

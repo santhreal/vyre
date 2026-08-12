@@ -34,9 +34,9 @@
 //! # Composition
 //!
 //! Each step of the recurrence is a Laplacian-times-vector product;
-//! that's a special case of [`crate::math::semiring_gemm`] over the
+//! that's a special case of `crate::math::semiring_gemm` over the
 //! `Real` semiring with shape `n × n · n × 1`. This primitive could
-//! literally be implemented as `K` calls to semiring_gemm  -  and that's
+//! literally be implemented as `K` calls to `semiring_gemm`  -  and that's
 //! a pipeline-level composition when callers want per-step reuse. This
 //! single-dispatch version inlines the matvec body to keep launch
 //! overhead at one dispatch.

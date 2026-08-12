@@ -23,14 +23,12 @@ pub fn build_ifds_csr_program(
     max_col_count: u32,
 ) -> Program {
     if num_procs == 0 || blocks_per_proc == 0 || facts_per_proc == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            "row_ptr",
-            DataType::U32,
-            format!(
-                "Fix: exploded IFDS dimensions must be nonzero, got procs={num_procs}, blocks={blocks_per_proc}, facts={facts_per_proc}."
-            ),
-        );
+        return crate::invalid_output_program(OP_ID,
+        "row_ptr",
+        DataType::U32,
+        format!(
+            "Fix: exploded IFDS dimensions must be nonzero, got procs={num_procs}, blocks={blocks_per_proc}, facts={facts_per_proc}."
+        ),);
     }
     let Some(slots_per_proc) = blocks_per_proc.checked_mul(facts_per_proc) else {
         return crate::invalid_output_program(
@@ -49,14 +47,12 @@ pub fn build_ifds_csr_program(
         );
     };
     let Some(row_ptr_count) = total_nodes.checked_add(1) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            "row_ptr",
-            DataType::U32,
-            format!(
-                "Fix: exploded IFDS total_nodes={total_nodes} overflows row_ptr count. Shard the IFDS graph before GPU dispatch."
-            ),
-        );
+        return crate::invalid_output_program(OP_ID,
+        "row_ptr",
+        DataType::U32,
+        format!(
+            "Fix: exploded IFDS total_nodes={total_nodes} overflows row_ptr count. Shard the IFDS graph before GPU dispatch."
+        ),);
     };
 
     let idx_expr = |p: Expr, b: Expr, f: Expr| {

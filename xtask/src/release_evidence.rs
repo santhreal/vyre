@@ -13,10 +13,7 @@ mod artifact_status;
 mod evidence_index;
 mod expected_artifacts;
 
-use crate::artifact_paths::{
-    LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT,
-    SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
-};
+use crate::artifact_paths::{LEGO_AUDIT_DUPLICATES_ARTIFACT, REGISTERED_OP_DUPLICATES_ARTIFACT};
 use artifact_status::{
     artifact_blocker_suffix, generator_command, inspect_expected_artifacts,
     inspect_expected_artifacts_with_mode, release_artifact_status_has_failure,
@@ -41,17 +38,11 @@ const COMMANDS: &[EvidenceCommand] = &[
     EvidenceCommand::required(&["release-workload-matrix", "--enforce"]),
     EvidenceCommand::external_required(&["release-benchmarks", "--backend", "cuda"]),
     EvidenceCommand::required(&["hygiene-matrix"]),
-    EvidenceCommand::required(&["test-matrix"]),
     EvidenceCommand::required(&["metadata-matrix"]),
     EvidenceCommand::required(&["feature-matrix"]),
+    EvidenceCommand::required(&["package-readiness"]),
     EvidenceCommand::required(&["optimization-corpus"]),
     EvidenceCommand::required(&["optimization-matrix"]),
-    EvidenceCommand::required(&["parser-coherence"]),
-    EvidenceCommand::required(&[
-        "source-similar",
-        "--duplicate-report-json",
-        SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
-    ]),
     EvidenceCommand::required(&[
         "whats-similar",
         "--all",
@@ -421,7 +412,6 @@ mod tests {
             .any(|blocker| blocker.contains("VYRE_RELEASE_REPOS")));
     }
 
-
     #[test]
     fn duplicate_family_reports_are_release_indexed() {
         let tmp = tempfile::tempdir().unwrap();
@@ -446,10 +436,6 @@ mod tests {
             expected_artifacts(&["whats-similar"]),
         );
 
-        assert_eq!(
-            expected_artifacts(&["source-similar"]),
-            &["release/evidence/dedup/source-similar-duplicates.json"]
-        );
         assert_eq!(
             expected_artifacts(&["lego-audit"]),
             &["release/evidence/dedup/lego-audit-duplicates.json"]

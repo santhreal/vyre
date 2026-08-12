@@ -52,9 +52,9 @@ fn meta_crate_directory_naming_is_stable() {
     let root_toml = workspace_root.join("Cargo.toml");
     let root_content = std::fs::read_to_string(&root_toml).unwrap();
     assert!(
-        root_content.lines().any(
-            |line| line.trim().starts_with("vyre = {") && line.contains("path = \"vyre\"")
-        ),
+        root_content
+            .lines()
+            .any(|line| line.trim().starts_with("vyre = {") && line.contains("path = \"vyre\"")),
         "workspace dependency routing must route 'vyre' to 'vyre' directory"
     );
 }

@@ -8,7 +8,7 @@
 # Adding a path here forces the audit to keep running; removing one is
 # an opt-out and must be justified in the commit message.
 #
-# Source-of-truth: ROADMAP.md S11.
+# Source-of-truth: BACKLOG.md S11.
 
 schema = 1
 

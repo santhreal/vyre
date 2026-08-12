@@ -25,7 +25,7 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// Batch A and batch B use DIFFERENT sizes so their content (and match sets)
 /// differ, a cross-handle buffer mixup in the pipeline would then be
@@ -61,10 +61,10 @@ struct OverlapMeasurement {
     /// iteration, when the backend exposes a device timer (`None` on a backend
     /// without one (a loud absence, never a fabricated zero)).
     sequential_device_ns: Option<u64>,
-    matches_a_sequential: Vec<Match>,
-    matches_b_sequential: Vec<Match>,
-    matches_a_async: Vec<Match>,
-    matches_b_async: Vec<Match>,
+    matches_a_sequential: Vec<ByteRange>,
+    matches_b_sequential: Vec<ByteRange>,
+    matches_a_async: Vec<ByteRange>,
+    matches_b_async: Vec<ByteRange>,
 }
 
 /// Run the two-batch pipeline both sequentially and overlapped through one
@@ -75,7 +75,7 @@ fn run_two_batch_overlap(
     batch_a: &[u8],
     batch_b: &[u8],
     max_matches: u32,
-) -> Result<OverlapMeasurement, vyre::BackendError> {
+) -> Result<OverlapMeasurement, vyre_driver::BackendError> {
     let mut a_seq = Vec::new();
     let mut b_seq = Vec::new();
     let mut a_async = Vec::new();
@@ -133,7 +133,7 @@ fn clamp_ns(duration: std::time::Duration) -> u64 {
 /// wall (returns 0, an obviously-degenerate value the report surfaces).
 use super::scaled_ratio_x1000 as overlap_factor_x1000;
 
-fn encode_batch_outputs(matches: &[Match]) -> [Vec<u8>; 2] {
+fn encode_batch_outputs(matches: &[ByteRange]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
     [count.to_le_bytes().to_vec(), encode_match_triples(matches)]
 }
@@ -378,7 +378,7 @@ mod tests {
 
     #[test]
     fn encode_batch_outputs_carries_count_then_triples() {
-        let matches = [Match::new(0, 1, 4), Match::new(1, 8, 12)];
+        let matches = [ByteRange::new(0, 1, 4), ByteRange::new(1, 8, 12)];
         let [count, triples] = encode_batch_outputs(&matches);
         assert_eq!(count, 2u32.to_le_bytes().to_vec());
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);

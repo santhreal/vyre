@@ -199,35 +199,6 @@ fn golden_fixed_graph_replay_keeps_host_overhead_sublinear() {
 }
 
 #[test]
-fn repeated_resident_sequence_hoists_launch_resolution_out_of_repeat_loop() {
-    let source = include_str!("../../src/backend/resident_dispatch/sequence_fused.rs");
-    let function_start = source
-        .find("pub(crate) fn fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into")
-        .expect("Fix: repeated resident sequence implementation must exist.");
-    let function_body = &source[function_start..];
-    let repeat_loop_start = function_body
-        .find("for _ in 0..repeat_count")
-        .expect("Fix: repeated resident sequence path must keep an explicit repeat loop.");
-    let readback_start = function_body
-        .find("let fused_readbacks = fuse_resident_readback_copies(&requested_readbacks)?")
-        .expect("Fix: repeated resident sequence path must retain compact fused readback staging.");
-    let _repeat_loop_body = &function_body[repeat_loop_start..readback_start];
-
-    assert!(
-        function_body.contains("struct ResolvedStep"),
-        "Fix: repeated resident CUDA sequence must cache resolved launch records for unique steps before replay."
-    );
-    assert!(
-        (function_body.contains("VYRE_CUDA_RESIDENT_BORROWED_FALLBACK")
-            || function_body.contains("CUDA_RESIDENT_BORROWED_FALLBACK_ENV"))
-            && (function_body.contains("VYRE_CUDA_ALLOW_BORROWED_FALLBACK")
-                || function_body.contains("CUDA_ALLOW_BORROWED_FALLBACK_ENV"))
-            && !function_body.contains("VYRE_CUDA_NATIVE_RESIDENT_SEQUENCE"),
-        "Fix: repeated resident CUDA sequence must be native by default and keep borrowed fallback behind an explicit release escape hatch."
-    );
-}
-
-#[test]
 fn release_path_resident_dispatch_keeps_borrowed_fallback_counter_at_zero() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");

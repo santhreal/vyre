@@ -1,5 +1,8 @@
 # Math primitives  -  placement map
 
+**Status: Superseded.** Use [`docs/library-tiers.md`](library-tiers.md) and
+[`docs/OWNERSHIP.md`](OWNERSHIP.md) for current placement rules.
+
 Authoritative map of where every math-based primitive belongs in the
 vyre tree. Cross-links `lego-block-rule.md`, `primitives-tier.md`, and
 `MATH_FRONTIER.md`. Every new file should consult this doc before
@@ -66,7 +69,7 @@ These improve every workload, not one.
 | #19 | `vyre-foundation/src/transform/polyhedral.rs` | Polyhedral fusion across Region boundaries. Uses #1 + #5 + #17 on the fusion adjacency. |
 | #20 | `vyre-foundation/src/transform/lower_handlers.rs` | Algebraic-effect handler-shape recognition + lowering. Requires a source patch that introduces the IR construct and its migration gate together. |
 | #21 | `vyre-foundation/src/ir/buffer_decl.rs` enrichment + `xtask/src/linearity_check.rs` | Linear-logic typed BufferAccess (`Owned` / `Shared` / `Unique` / `Aliased`). Default `Aliased` preserves backward-compat. |
-| #22 | `vyre-runtime/src/megakernel/planner.rs` | ILP-relaxed scheduler. Uses #9 homotopy + #45 submodular + #46 matroid intersection. |
+| #22 | `vyre-runtime/src/megakernel/planner/` | ILP-relaxed scheduler. Uses #9 homotopy + #45 submodular + #46 matroid intersection. |
 | #23 | `vyre-foundation/src/transform/spectral_schedule.rs` | Spectral clustering of dispatch graph. Uses #5 chebyshev + #17 spectral_shape. |
 | #26 | `vyre-foundation/src/transform/dataflow_fixpoint.rs` | Region-graph dataflow fixpoint via #1. Replaces hand-rolled IR analyses with semiring-matmul iterations. |
 | #27 | `vyre-driver/src/autotuner/differentiable.rs` | Differentiable autotuner via #7. Smoothed argmax over the tuning grid; gradient via cost-model autodiff. |

@@ -70,7 +70,7 @@ struct OpInfo {
 
 fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
-    for entry in vyre_harness::all_entries() {
+    for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
         ops.push(OpInfo {
             id: entry.id.to_string(),
             program: entry

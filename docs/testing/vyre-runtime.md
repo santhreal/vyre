@@ -56,12 +56,12 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features
 | `test` | `megakernel_protocol_layout_contracts` | `vyre-runtime/tests/megakernel_protocol_layout_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_protocol_layout_contracts` |
 | `test` | `megakernel_protocol_strict_contracts` | `vyre-runtime/tests/megakernel_protocol_strict_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_protocol_strict_contracts` |
 | `test` | `megakernel_rule_catalog_scratch` | `vyre-runtime/tests/megakernel_rule_catalog_scratch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_rule_catalog_scratch` |
-| `test` | `megakernel_runtime_organization` | `vyre-runtime/tests/megakernel_runtime_organization.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_runtime_organization` |
 | `test` | `megakernel_scheduler_fairness` | `vyre-runtime/tests/megakernel_scheduler_fairness.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_scheduler_fairness` |
 | `test` | `megakernel_sketch_telemetry` | `vyre-runtime/tests/megakernel_sketch_telemetry.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test megakernel_sketch_telemetry` |
 | `test` | `model_residency` | `vyre-runtime/tests/model_residency.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test model_residency` |
 | `test` | `multi_tenant_scheduler` | `vyre-runtime/tests/multi_tenant_scheduler.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test multi_tenant_scheduler` |
 | `test` | `pipeline_fingerprint_surface` | `vyre-runtime/tests/pipeline_fingerprint_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test pipeline_fingerprint_surface` |
+| `test` | `resident_queue_contracts` | `vyre-runtime/tests/resident_queue_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test resident_queue_contracts` |
 | `test` | `routing_policy` | `vyre-runtime/tests/routing_policy.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test routing_policy` |
 | `test` | `safetensors_ingestion` | `vyre-runtime/tests/safetensors_ingestion.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test safetensors_ingestion` |
 | `test` | `scheduler_model_proptest` | `vyre-runtime/tests/scheduler_model_proptest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test scheduler_model_proptest` |
@@ -69,7 +69,6 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --all-features
 | `test` | `sweep_ring_buffer_oracle_matrix` | `vyre-runtime/tests/sweep_ring_buffer_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test sweep_ring_buffer_oracle_matrix` |
 | `test` | `sweep_tenant_policy_oracle_matrix` | `vyre-runtime/tests/sweep_tenant_policy_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test sweep_tenant_policy_oracle_matrix` |
 | `test` | `uring_ingest_telemetry_invariants` | `vyre-runtime/tests/uring_ingest_telemetry_invariants.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test uring_ingest_telemetry_invariants` |
-| `test` | `uring_io_loop_contracts` | `vyre-runtime/tests/uring_io_loop_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test uring_io_loop_contracts` |
 | `test` | `uring_smoke` | `vyre-runtime/tests/uring_smoke.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-runtime --test uring_smoke` |
 
 ## Test classes

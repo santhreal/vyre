@@ -5,7 +5,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::graph::csr_backward_or_changed::{
     csr_backward_or_changed_parallel, csr_backward_or_changed_parallel_grid,
 };

@@ -25,7 +25,7 @@ found_crates="$(
         -not -path './target/*' -not -path './.git/*' \
         -not -path './node_modules/*' -not -path './.cargo/*' \
         | grep -v '^\./Cargo\.toml$' \
-        | grep -vE 'target-codex/package|vyre-bench/competitors|vyre-conform|vyre-ops|vyre-std' \
+        | grep -vE 'target-codex/package|vyre-bench/competitors' \
         | sed 's|^\./||; s|/Cargo\.toml$||' | sort -u
 )"
 

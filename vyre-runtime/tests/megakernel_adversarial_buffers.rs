@@ -35,17 +35,22 @@ fn publish_slot_rejects_ring_one_byte_over_slot_multiple() {
 #[test]
 fn batch_publish_rejects_truncated_ring_length() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) / 2];
-    let err = ResidentWorkQueue::batch_publish(&mut ring, 0, 0, &[(protocol::opcode::NOP, vec![])], 0)
-        .expect_err("batch publish on truncated ring must reject");
+    let err =
+        ResidentWorkQueue::batch_publish(&mut ring, 0, 0, &[(protocol::opcode::NOP, vec![])], 0)
+            .expect_err("batch publish on truncated ring must reject");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
 #[test]
 fn publish_packed_slot_rejects_ring_with_non_slot_multiple_length() {
     let mut ring = vec![0u8; (SLOT_WORDS as usize * 4) + 3];
-    let err =
-        ResidentWorkQueue::publish_packed_slot(&mut ring, 0, 0, &[(protocol::opcode::NOP as u8, vec![])])
-            .expect_err("packed slot on non-slot-multiple ring must reject");
+    let err = ResidentWorkQueue::publish_packed_slot(
+        &mut ring,
+        0,
+        0,
+        &[(protocol::opcode::NOP as u8, vec![])],
+    )
+    .expect_err("packed slot on non-slot-multiple ring must reject");
     assert!(matches!(err, PipelineError::QueueFull { .. }));
 }
 
@@ -149,9 +154,10 @@ fn publish_slot_rejects_on_hostile_inflight_status_garbage() {
         slot::FAULT,
     ] {
         write_word(&mut ring, protocol::STATUS_WORD as usize, hostile_status);
-        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[]).expect_err(
-            &format!("hostile status {hostile_status} must block re-publish"),
-        );
+        let err = ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[])
+            .expect_err(&format!(
+                "hostile status {hostile_status} must block re-publish"
+            ));
         assert!(err.to_string().contains("not publishable"));
     }
 }
@@ -159,7 +165,8 @@ fn publish_slot_rejects_on_hostile_inflight_status_garbage() {
 #[test]
 fn publish_slot_recycles_done_slot_and_clears_stale_opcode() {
     let mut ring = ResidentWorkQueue::encode_empty_ring(1).unwrap();
-    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::STORE_U32, &[1, 2, 3]).unwrap();
+    ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::STORE_U32, &[1, 2, 3])
+        .unwrap();
     write_word(&mut ring, protocol::STATUS_WORD as usize, slot::DONE);
     ResidentWorkQueue::publish_slot(&mut ring, 0, 0, protocol::opcode::NOP, &[9]).unwrap();
     let words: Vec<u32> = ring

@@ -316,11 +316,10 @@ fn build_persistent_bfs_program_internal(
         // nothing caught it. That cost is a property of the WALK, so it returns if
         // the gate is removed, whatever `Return` lowers to.
         //
-        // Second, a live exit needs ordering. An invocation that returns after the
-        // body's last barrier leaves while its siblings take the back edge and write,
-        // so the exit and the next iteration's writes are unordered (V055). The
-        // unconditional barrier appended as the LAST node of this body is what orders
-        // them; see the comment on that push.
+        // Second, a live exit needs a collective proof. The barrier immediately
+        // before the exit settles `changed[0]`; every lane then evaluates the
+        // same address and returns together or takes the back edge together.
+        // V055 derives that uniformity and rejects the lane-dependent twin.
         //
         // The read is deliberately racy and MUST stay benign. `converged` is written
         // by lane 0 with no fence before this read, so a lane may see a stale 0 and
@@ -372,21 +371,6 @@ fn build_persistent_bfs_program_internal(
             Node::Return,
         ],
     ));
-    // Order the early exit against the back edge. Without this the body's last
-    // synchronizing node is the barrier above, the `Return` sits after it, and one
-    // invocation can take the back edge and write while a sibling has not yet
-    // reached the exit; the sibling then leaves and freezes the data it owns
-    // partway through. Nothing hangs, because a barrier does not count invocations
-    // that already returned, so this costs ANSWERS and not liveness, and one
-    // workgroup is enough to hit it. That is what V055 refuses.
-    //
-    // Safe here, and the reason is uniformity: the exit condition reads
-    // `changed[0]`, which the barrier above settles, so every lane sees the same
-    // value and they leave together or none of them leaves. This barrier is
-    // therefore reached by all lanes or by none, never by a subset, so it cannot
-    // deadlock. It must stay at body level and unconditional for exactly the reason
-    // the `converged` gate must not contain one.
-    iter_body.push(Node::barrier());
 
     let entry: Vec<Node> = vec![
         // Seed frontier_out <- frontier_in.

@@ -1,6 +1,6 @@
 use super::*;
 use crate::ir::{BufferDecl, DataType, Expr, Node};
-use crate::optimizer::passes::const_fold::ConstFold;
+use crate::optimizer::passes::algebraic::const_fold::ConstFold;
 use crate::optimizer::{PassScheduler, ProgramPassKind};
 
 #[test]

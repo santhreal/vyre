@@ -4,8 +4,6 @@
 mod canonical_rewrite_contracts;
 #[path = "egraph_device_image_upload/fixed_point_contracts.rs"]
 mod fixed_point_contracts;
-#[path = "egraph_device_image_upload/source_snapshot_contracts.rs"]
-mod source_snapshot_contracts;
 #[path = "egraph_device_image_upload/structural_equivalence_contracts.rs"]
 mod structural_equivalence_contracts;
 #[path = "egraph_device_image_upload/union_compaction_contracts.rs"]

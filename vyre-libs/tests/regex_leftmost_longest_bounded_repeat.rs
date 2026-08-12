@@ -20,8 +20,8 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre_foundation::match_result::Match;
 use vyre::scan::{build_regex_dfa_pipeline, AnchoredWindowValidator};
+use vyre_foundation::match_result::ByteRange;
 
 /// Build the anchored DFA for one pattern and return its validator-ready DFA.
 fn dfa_for(pattern: &str) -> vyre::scan::regex_dfa::RegexDfaPipeline {
@@ -30,11 +30,8 @@ fn dfa_for(pattern: &str) -> vyre::scan::regex_dfa::RegexDfaPipeline {
 }
 
 /// `(pattern_id, start, end)` triples of a match slice, in canonical order.
-fn triples(matches: &[Match]) -> Vec<(u32, u32, u32)> {
-    let mut v: Vec<(u32, u32, u32)> = matches
-        .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
-        .collect();
+fn triples(matches: &[ByteRange]) -> Vec<(u32, u32, u32)> {
+    let mut v: Vec<(u32, u32, u32)> = matches.iter().map(|m| (m.tag, m.start, m.end)).collect();
     v.sort_unstable();
     v
 }

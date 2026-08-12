@@ -28,7 +28,7 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// A consumer-shaped mixed corpus, large enough that the GPU's staging (upload +
 /// readback) is a real fraction of wall time, so the comparison is honestly
@@ -57,8 +57,8 @@ struct VsCpuMeasurement {
     vyre_wall_ns: u64,
     vyre_device_ns: Option<u64>,
     aho_wall_ns: u64,
-    vyre_matches: Vec<Match>,
-    aho_matches: Vec<Match>,
+    vyre_matches: Vec<ByteRange>,
+    aho_matches: Vec<ByteRange>,
 }
 
 /// Build the CPU baseline automaton with the SAME all-overlapping semantics vyre's
@@ -78,13 +78,13 @@ fn build_aho_corasick() -> Result<AhoCorasick, BenchError> {
 }
 
 /// Collect ALL overlapping matches from the CPU automaton, mapped into vyre's
-/// `Match` triples and sorted into the canonical `(pattern_id, start, end)` order
+/// `ByteRange` triples and sorted into the canonical `(pattern_id, start, end)` order
 /// vyre's decode also produces, so the two match vectors compare by plain
 /// equality.
-fn aho_corasick_matches(aho: &AhoCorasick, haystack: &[u8]) -> Vec<Match> {
-    let mut matches: Vec<Match> = aho
+fn aho_corasick_matches(aho: &AhoCorasick, haystack: &[u8]) -> Vec<ByteRange> {
+    let mut matches: Vec<ByteRange> = aho
         .find_overlapping_iter(haystack)
-        .map(|hit| Match::new(hit.pattern().as_u32(), hit.start() as u32, hit.end() as u32))
+        .map(|hit| ByteRange::new(hit.pattern().as_u32(), hit.start() as u32, hit.end() as u32))
         .collect();
     matches.sort_unstable();
     matches
@@ -99,7 +99,7 @@ fn run_vs_cpu(
     corpus: &[u8],
     max_matches: u32,
     iters: usize,
-) -> Result<VsCpuMeasurement, vyre::BackendError> {
+) -> Result<VsCpuMeasurement, vyre_driver::BackendError> {
     // vyre: resident tables (uploaded once), then a timed re-dispatch loop.
     let session = engine.prepare_resident_scan(backend_id, corpus.len() + 64, max_matches)?;
     let mut vyre_matches = Vec::new();
@@ -141,7 +141,7 @@ fn clamp_ns(duration: std::time::Duration) -> u64 {
 /// zero vyre wall (returns 0, an obviously-degenerate value the report surfaces).
 use super::scaled_ratio_x1000 as speedup_x1000;
 
-fn encode_matches(matches: &[Match]) -> [Vec<u8>; 2] {
+fn encode_matches(matches: &[ByteRange]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
     [count.to_le_bytes().to_vec(), encode_match_triples(matches)]
 }
@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn encode_matches_carries_count_then_triples() {
-        let matches = [Match::new(0, 1, 4), Match::new(1, 8, 12)];
+        let matches = [ByteRange::new(0, 1, 4), ByteRange::new(1, 8, 12)];
         let [count, triples] = encode_matches(&matches);
         assert_eq!(count, 2u32.to_le_bytes().to_vec());
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);

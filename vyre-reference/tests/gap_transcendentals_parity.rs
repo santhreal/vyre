@@ -6,7 +6,7 @@
 //! `vyre-driver-wgpu/tests/gap_transcendentals_parity.rs`.
 
 use proptest::prelude::*;
-use vyre::ir::{Expr, UnOp};
+use vyre_foundation::ir::{Expr, UnOp};
 use vyre_reference::{
     execution::expr as eval_expr,
     ieee754::{canonical_cos, canonical_exp, canonical_log, canonical_sin, canonical_sqrt},
@@ -14,11 +14,11 @@ use vyre_reference::{
     workgroup::{Invocation, InvocationIds, Memory},
 };
 
-fn empty_program() -> vyre::ir::Program {
-    vyre::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
+fn empty_program() -> vyre_foundation::ir::Program {
+    vyre_foundation::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
 }
 
-fn zero_invocation(program: &vyre::ir::Program) -> Invocation<'_> {
+fn zero_invocation(program: &vyre_foundation::ir::Program) -> Invocation<'_> {
     Invocation::new(InvocationIds::ZERO, program.entry())
 }
 

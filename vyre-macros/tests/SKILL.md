@@ -28,13 +28,6 @@ compile-time, so most tests are compile-time checks.
 - Reserved keywords as variant names  -  caught
 - Malformed braces / commas / colons  -  caught
 
-## Current gaps
-
-- `trybuild` coverage for every `compile_error!` path  -  gap test
-  per malformed-input class
-- Snapshot tests for macro output so any change to emitted tokens
-  is a reviewable diff
-
 ## Cross-crate contracts
 
 - Consumed by `vyre-foundation` for `Node` / `Expr` registration

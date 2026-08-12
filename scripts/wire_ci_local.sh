@@ -3,7 +3,7 @@
 # Run as a pre-commit / pre-push hook:
 #
 #   ln -sf "$(realpath scripts/wire_ci_local.sh)" \
-#       /media/mukund-thiru/SanthData/Santh/.git/hooks/pre-push
+#       "$(git rev-parse --show-toplevel)/.git/hooks/pre-push"
 #
 # Exits non-zero on the first failed step so the hook blocks the push.
 # Time budget mirrors the CI workflow target: under 10 min wall.

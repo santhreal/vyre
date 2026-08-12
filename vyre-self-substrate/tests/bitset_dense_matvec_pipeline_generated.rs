@@ -80,24 +80,6 @@ fn dense_matvec_pipeline_program_overwrites_dirty_output() {
     );
 }
 
-#[test]
-fn dense_matvec_pipeline_source_keeps_primitive_wiring() {
-    let source = include_str!("../src/data/bitset_transform_pipeline.rs");
-    for required in [
-        "dense_boolean_matvec_lut",
-        "four_russians_dense_matvec_program",
-        "reference_dense_boolean_matvec",
-        "four_russians_dense_matvec_byte_lut",
-        "dense_matvec_byte_lut",
-        "DENSE_MATVEC_OP_ID",
-    ] {
-        assert!(
-            source.contains(required),
-            "Fix: self-substrate bitset pipeline must keep dense Four-Russians wiring marker `{required}`."
-        );
-    }
-}
-
 fn generated_columns(tile_count: u32, dst_words: u32, seed: u32) -> Vec<u32> {
     let len = tile_count as usize * BYTE_TILE_WIDTH as usize * dst_words as usize;
     (0..len)

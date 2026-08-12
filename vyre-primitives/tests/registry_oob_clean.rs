@@ -54,7 +54,9 @@ fn every_registered_primitive_is_oob_clean_on_its_fixtures() {
             continue;
         };
         fixtured_ops += 1;
-        let program = entry.program().expect("Fix: registered primitive must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered primitive must provide a neutral builder");
         for (case_idx, case) in inputs_fn().into_iter().enumerate() {
             let values: Vec<Value> = case.into_iter().map(Value::from).collect();
             // A malformed fixture (wrong buffer count / under-length input) makes
@@ -143,7 +145,9 @@ fn every_registered_primitive_program_is_ir_valid() {
     let mut total = 0usize;
     for entry in vyre_primitives::harness::all_entries() {
         total += 1;
-        let program = entry.program().expect("Fix: registered primitive must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered primitive must provide a neutral builder");
         // Prefer the op's own (valid) fixture so a correct program eval-succeeds; fall back
         // to empty inputs for unfixtured ops (validation still runs first either way).
         let values: Vec<Value> = match entry.test_inputs {
@@ -191,7 +195,9 @@ fn every_registered_primitive_is_oob_clean_under_grid_overfire() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };
-        let program = entry.program().expect("Fix: registered primitive must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered primitive must provide a neutral builder");
         let overfire_grid = overfire_grid(&program);
         for (case_idx, case) in inputs_fn().into_iter().enumerate() {
             let values: Vec<Value> = case.into_iter().map(Value::from).collect();
@@ -249,7 +255,9 @@ fn every_registered_primitive_output_is_invariant_under_grid_overfire() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };
-        let program = entry.program().expect("Fix: registered primitive must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered primitive must provide a neutral builder");
         let overfire_grid = overfire_grid(&program);
         for (case_idx, case) in inputs_fn().into_iter().enumerate() {
             let values: Vec<Value> = case.into_iter().map(Value::from).collect();
@@ -325,7 +333,9 @@ fn every_registered_primitive_is_race_free_under_lane_reversal() {
         let Some(inputs_fn) = entry.test_inputs else {
             continue;
         };
-        let program = entry.program().expect("Fix: registered primitive must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered primitive must provide a neutral builder");
         for (case_idx, case) in inputs_fn().into_iter().enumerate() {
             let values: Vec<Value> = case.into_iter().map(Value::from).collect();
             let Ok(forward) = vyre_reference::reference_eval(&program, &values) else {

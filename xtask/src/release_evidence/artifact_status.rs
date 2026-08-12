@@ -272,9 +272,8 @@ fn owner_lane_for_command(command_args: &[&str]) -> &'static str {
         "backend-matrix" | "conformance-matrix" => "driver_shared",
         "release-workload-matrix" | "release-benchmarks" => "bench_harness",
         "optimization-corpus" | "optimization-matrix" => "foundation_optimizer",
-        "parser-coherence" => "parser_frontend",
-        "source-similar" | "whats-similar" | "lego-audit" => "testing_evidence",
-        "docs-check" | "hygiene-matrix" | "test-matrix" | "release-evidence" => "testing_evidence",
+        "whats-similar" | "lego-audit" => "testing_evidence",
+        "docs-check" | "hygiene-matrix" | "release-evidence" => "testing_evidence",
         "version-matrix" | "metadata-matrix" | "feature-matrix" => "coordination",
         _ => "coordination",
     }

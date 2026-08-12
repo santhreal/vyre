@@ -17,15 +17,15 @@
 //! not asserted (see the long comment at the perf section). The real GPU-8MiB lever
 //! is segmentation / dispatch-overhead, not fusion.
 //!
-//! Skips cleanly when no GPU is available.
+//! Missing GPU configuration fails the dispatch loudly.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_and_positions_gpu --release -- --nocapture
 
 use std::collections::BTreeSet;
 
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_wgpu as _;
 
 const LITERALS: &[&[u8]] = &[
     b"key",
@@ -55,13 +55,6 @@ fn presence_bit(row: &[u32], pattern_id: u32) -> bool {
 
 #[test]
 fn fused_scan_method_matches_separate_scans_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping fused GPU scan test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let presence_words = pattern_count.div_ceil(32).max(1) as usize;
@@ -84,7 +77,7 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     let mut fused_matches = Vec::new();
     let fused_presence = matcher
         .scan_presence_and_positions_by_region(
-            backend.as_ref(),
+            "wgpu",
             &haystack,
             &region_starts,
             0,
@@ -95,12 +88,12 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
 
     // ---- Separate scan 1: presence-by-region ----
     let sep_presence = matcher
-        .scan_presence_by_region(backend.as_ref(), &haystack, &region_starts)
+        .scan_presence_by_region("wgpu", &haystack, &region_starts)
         .expect("gpu presence-by-region scan");
 
     // ---- Separate scan 2: global match triples ----
     let sep_matches = matcher
-        .scan(backend.as_ref(), &haystack, max_matches)
+        .scan("wgpu", &haystack, max_matches)
         .expect("gpu triple scan");
 
     // (1) Fused presence bitmap == separate presence-by-region, word-for-word.
@@ -110,8 +103,8 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
     );
 
     // (2) Fused triple set == separate scan's == CPU reference oracle's.
-    let to_set = |ms: &[vyre_foundation::match_result::Match]| -> BTreeSet<(u32, u32, u32)> {
-        ms.iter().map(|m| (m.pattern_id, m.start, m.end)).collect()
+    let to_set = |ms: &[vyre_foundation::match_result::ByteRange]| -> BTreeSet<(u32, u32, u32)> {
+        ms.iter().map(|m| (m.tag, m.start, m.end)).collect()
     };
     let fused_set = to_set(&fused_matches);
     let sep_set = to_set(&sep_matches);
@@ -180,20 +173,20 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
 
     // Warm up shader compile / first-dispatch init for all three paths.
     let _ = matcher.scan_presence_and_positions_by_region(
-        backend.as_ref(),
+        "wgpu",
         &big[..4096],
         &[0],
         0,
         64,
         &mut scratch_matches,
     );
-    let _ = matcher.scan_presence_by_region(backend.as_ref(), &big[..4096], &[0]);
-    let _ = matcher.scan(backend.as_ref(), &big[..4096], 64);
+    let _ = matcher.scan_presence_by_region("wgpu", &big[..4096], &[0]);
+    let _ = matcher.scan("wgpu", &big[..4096], 64);
 
     let t = std::time::Instant::now();
     let _ = matcher
         .scan_presence_and_positions_by_region(
-            backend.as_ref(),
+            "wgpu",
             &big,
             &big_starts,
             0,
@@ -205,13 +198,13 @@ fn fused_scan_method_matches_separate_scans_on_gpu() {
 
     let t = std::time::Instant::now();
     let _ = matcher
-        .scan_presence_by_region(backend.as_ref(), &big, &big_starts)
+        .scan_presence_by_region("wgpu", &big, &big_starts)
         .expect("presence big scan");
     let presence_ms = t.elapsed().as_secs_f64() * 1000.0;
 
     let t = std::time::Instant::now();
     let _ = matcher
-        .scan(backend.as_ref(), &big, big_max)
+        .scan("wgpu", &big, big_max)
         .expect("triple big scan");
     let positions_ms = t.elapsed().as_secs_f64() * 1000.0;
 

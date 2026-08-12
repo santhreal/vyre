@@ -45,7 +45,6 @@ vyre-primitives = { workspace = true }
 vyre-reference = { workspace = true }
 vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
-vyre-harness = { workspace = true }
 
 [dev-dependencies]
 toml = { workspace = true }

@@ -39,6 +39,29 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
 
     match (prefix, name) {
         ("", "flop_count") => Some("flop_count"),
+        ("", "reduction_small_count") => Some("reduction_small_count"),
+        ("", "reduction_large_count") => Some("reduction_large_count"),
+        ("", "reduction_timing_source_device") => Some("reduction_timing_source_device"),
+        ("", "reduction_small_atomic_ns") => Some("reduction_small_atomic_ns"),
+        ("", "reduction_small_tree_ns") => Some("reduction_small_tree_ns"),
+        ("", "reduction_small_selected_route") => Some("reduction_small_selected_route"),
+        ("", "reduction_large_atomic_ns") => Some("reduction_large_atomic_ns"),
+        ("", "reduction_large_tree_ns") => Some("reduction_large_tree_ns"),
+        ("", "reduction_large_selected_route") => Some("reduction_large_selected_route"),
+        ("", "reduction_small_atomic_contended_updates") => {
+            Some("reduction_small_atomic_contended_updates")
+        }
+        ("", "reduction_large_atomic_contended_updates") => {
+            Some("reduction_large_atomic_contended_updates")
+        }
+        ("", "reduction_small_tree_contended_updates") => {
+            Some("reduction_small_tree_contended_updates")
+        }
+        ("", "reduction_large_tree_contended_updates") => {
+            Some("reduction_large_tree_contended_updates")
+        }
+        ("", "reduction_small_tree_barrier_rounds") => Some("reduction_small_tree_barrier_rounds"),
+        ("", "reduction_large_tree_barrier_rounds") => Some("reduction_large_tree_barrier_rounds"),
         ("", "clock_mem_max_mhz") => Some("clock_mem_max_mhz"),
         ("", "clock_mem_current_mhz") => Some("clock_mem_current_mhz"),
         ("", "clock_graphics_max_mhz") => Some("clock_graphics_max_mhz"),
@@ -121,8 +144,8 @@ pub(super) fn custom_metric_key(prefix: &'static str, name: &str) -> Option<&'st
         }
         ("", "dataflow_nodes") => Some("dataflow_nodes"),
         ("", "dataflow_bitset_words") => Some("dataflow_bitset_words"),
-        ("", "weir_nodes") => Some("weir_nodes"),
-        ("", "weir_bitset_words") => Some("weir_bitset_words"),
+        ("", "flow_nodes") => Some("flow_nodes"),
+        ("", "flow_bitset_words") => Some("flow_bitset_words"),
         ("", "dataflow_graph_nodes") => Some("dataflow_graph_nodes"),
         ("", "dataflow_graph_edges") => Some("dataflow_graph_edges"),
         ("", "dataflow_ifds_step") => Some("dataflow_ifds_step"),
@@ -632,8 +655,8 @@ mod tests {
     }
 
     #[test]
-    fn custom_metric_key_keeps_weir_release_shape_metrics_visible() {
-        for name in ["weir_nodes", "weir_bitset_words"] {
+    fn custom_metric_key_keeps_flow_release_shape_metrics_visible() {
+        for name in ["flow_nodes", "flow_bitset_words"] {
             assert_eq!(custom_metric_key("", name), Some(name));
         }
     }

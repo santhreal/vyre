@@ -30,13 +30,6 @@ backend, and (d) matches the CPU reference output byte-for-byte.
 - Empty needle in `substring_search`  -  every position can match; output
   length = `haystack_len` (guarded; see `substring_search` source).
 
-## Gap list (open improvements  -  see `findings.toml` for P0)
-
-- `relu` is u32-oriented; i32/f32 element variants are gaps.
-- FNV-1a in `hash::fnv1a32` is serial; parallel tree-reduce is a perf gap.
-- Workgroup-level softmax / norm / attention scaling  -  see
-  `FINDING-PRIM-1` in `findings.toml` (workgroup scan primitive).
-
 ## Cross-crate contracts
 
 - Consumes `vyre::ir::*` (Program, Node, Expr, BufferDecl, DataType)
@@ -81,8 +74,8 @@ options avoid.
 | `aho_corasick`                | many literals (no regex)     | `matching-dfa`      | Many literals, simple shared-prefix DFA, classic AC walk.   |
 | `cooperative_dfa_scan`        | many literals (subgroup-coop)| `matching-dfa`      | GPU dispatch where each subgroup advances one byte stream.  |
 | `GpuLiteralSet`               | many literals + GPU + cache  | always-on           | The default secret-scanning path: precompiled DFA, wire-format cache.|
-| `RulePipeline` / `mega_scan`  | regex (NFA, ≤1024 states)    | `matching-nfa`      | When literals don't suffice; supports anchors, classes.     |
-| `compile_regex_set`           | regex set → `RulePipeline`   | `matching-regex`    | Caller has regex source strings rather than a literal set.  |
+| `ScanProgram`                   | literal NFA composition      | `matching-nfa`      | Build a neutral NFA program and its immutable tables.        |
+| `compile_regex_set`             | regex set → typed scan plan  | `matching-regex`    | Compile regex source strings into a bounded NFA plan.        |
 
 ### Dispatch helpers
 
@@ -93,7 +86,7 @@ options avoid.
 | `haystack_len_u32`              | `Result<u32, _>`         | Plain `u32` cap check (max IR limit).                       |
 | `scan_guard`                    | `Result<u32, _>`         | Both the `u32` cap **and** a configurable byte ceiling.     |
 | `byte_scan_dispatch_config`     | `DispatchConfig`         | One workgroup per `workgroup_size[0]` haystack bytes.       |
-| `candidate_start_dispatch_config` | `DispatchConfig`       | One workgroup per candidate start offset (NFA pipelines).   |
+| `candidate_start_dispatch_config` | `DispatchConfig`       | One workgroup per candidate start offset (NFA scans).       |
 | `unpack_match_triples`          | `Vec<Match>`             | Decode the `(pid, start, end)` triple buffer back to typed. |
 
 ### Cache + persistence

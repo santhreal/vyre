@@ -1,7 +1,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::dfa::CompiledDfa;
+use vyre_primitives::matching::CompiledDfa;
 
 use super::super::super::count_program::{
     count_suffix2_prefilter_body, suffix3_prefilter_match_nodes, CLASSIC_AC_SUFFIX2_MASK_WORDS,

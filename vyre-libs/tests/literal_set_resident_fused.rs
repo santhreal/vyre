@@ -10,7 +10,7 @@
 //! presence bitmap AND the `(pattern_id, start, end)` triples, are byte-identical
 //! to the borrowed `scan_presence_and_positions_by_region` across repeated scans.
 //! The resident table-residency optimization must not change a single result bit
-//! (Law 10). Skips cleanly with no GPU.
+//! (Law 10). Missing GPU configuration fails loudly.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_resident_fused --release -- --nocapture
@@ -19,18 +19,11 @@ mod presence_corpus;
 
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
 use vyre::scan::GpuLiteralSet;
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::match_result::Match;
+use vyre_driver_wgpu as _;
+use vyre_foundation::match_result::ByteRange;
 
 #[test]
 fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident fused GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let words = pattern_count.div_ceil(32).max(1) as usize;
@@ -40,10 +33,10 @@ fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
 
     // Ground truth: the borrowed fused scan produces BOTH the presence bitmap and
     // the positioned matches in one dispatch.
-    let mut borrowed_matches: Vec<Match> = Vec::new();
+    let mut borrowed_matches: Vec<ByteRange> = Vec::new();
     let borrowed_presence = matcher
         .scan_presence_and_positions_by_region(
-            backend.as_ref(),
+            "wgpu",
             &haystack,
             &region_starts,
             0,
@@ -78,7 +71,7 @@ fn resident_fused_presence_and_positions_match_borrowed_on_gpu() {
     // (uploaded once at prepare), and every scan must reproduce BOTH borrowed
     // outputs bit-for-bit.
     let mut out: Vec<u32> = Vec::new();
-    let mut matches: Vec<Match> = Vec::new();
+    let mut matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     for iter in 0..4 {
         session
@@ -115,13 +108,6 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
     // One resident session sized for the full corpus must also correctly scan a
     // SMALLER batch (fewer regions than max_regions) for BOTH outputs, proving the
     // kernel reads the live region count from buf_len(region_starts), not the cap.
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident fused sub-batch GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let words = (LITERALS.len() as u32).div_ceil(32).max(1) as usize;
     let (haystack, region_starts) = planted_corpus();
@@ -141,10 +127,10 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
     let first_file_end = region_starts[1] as usize;
     let first_file = &haystack[..first_file_end];
 
-    let mut borrowed_matches: Vec<Match> = Vec::new();
+    let mut borrowed_matches: Vec<ByteRange> = Vec::new();
     let borrowed_presence = matcher
         .scan_presence_and_positions_by_region(
-            backend.as_ref(),
+            "wgpu",
             first_file,
             &single_region_start,
             0,
@@ -154,7 +140,7 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
         .expect("borrowed single-region fused scan");
 
     let mut out: Vec<u32> = Vec::new();
-    let mut matches: Vec<Match> = Vec::new();
+    let mut matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     session
         .scan_into(
@@ -186,13 +172,6 @@ fn resident_fused_serves_smaller_batches_under_the_cap_on_gpu() {
 
 #[test]
 fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_triples() {
-    let backend = match WgpuBackend::shared() {
-        Ok(backend) => backend,
-        Err(error) => {
-            eprintln!("no wgpu backend ({error}); skipping positioned-boundary GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(&[b"a".as_slice(), b"aa".as_slice(), b"z".as_slice()]);
     let haystack = vec![b'a'; 1 << 16];
     let session = matcher
@@ -215,6 +194,6 @@ fn resident_fused_position_boundary_keeps_full_presence_without_dense_leading_tr
 
     assert_eq!(presence, vec![0b011]);
     assert_eq!(matches.len(), haystack.len() - 1);
-    assert!(matches.iter().all(|matched| matched.pattern_id == 1));
+    assert!(matches.iter().all(|matched| matched.tag == 1));
     session.free().expect("free session");
 }

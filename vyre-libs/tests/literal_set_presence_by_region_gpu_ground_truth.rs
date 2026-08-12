@@ -13,7 +13,7 @@
 //! backend and compares the per-region bitmap against the SAME independent
 //! plain-Rust DFA oracle the reference twin uses (`presence_oracle`). Any
 //! divergence is an on-device under-fire (oracle set, GPU clear) or over-fire at
-//! the source. Skips cleanly when no GPU is available.
+//! the source. Missing GPU configuration fails the dispatch loudly.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_by_region_gpu_ground_truth \
@@ -25,69 +25,37 @@ use presence_oracle::{
     assert_presence_matches, edge_cases, gpu_only_large_scale_cases, random_haystack,
     random_literals, random_region_starts, scale_cases, Lcg,
 };
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_wgpu as _;
 
 /// Dispatch the real GPU region-presence scan and assert it matches the oracle.
-fn check_gpu(
-    backend: &WgpuBackend,
-    literals: &[Vec<u8>],
-    haystack: &[u8],
-    region_starts: &[u32],
-    label: &str,
-) {
+fn check_gpu(literals: &[Vec<u8>], haystack: &[u8], region_starts: &[u32], label: &str) {
     let pattern_refs: Vec<&[u8]> = literals.iter().map(Vec::as_slice).collect();
     let matcher = GpuLiteralSet::compile(&pattern_refs);
     let produced = matcher
-        .scan_presence_by_region(backend, haystack, region_starts)
+        .scan_presence_by_region("wgpu", haystack, region_starts)
         .unwrap_or_else(|e| panic!("[{label}] scan_presence_by_region dispatch failed: {e}"));
     assert_presence_matches(literals, haystack, region_starts, &produced, label);
 }
 
 #[test]
 fn gpu_region_presence_matches_independent_dfa_oracle() {
-    let backend = match WgpuBackend::shared() {
-        Ok(backend) => backend,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping GPU region-presence ground-truth gate");
-            return;
-        }
-    };
-
     // Every W1-1 edge class, on device.
     for (label, literals, haystack, region_starts) in edge_cases() {
-        check_gpu(
-            backend.as_ref(),
-            &literals,
-            &haystack,
-            &region_starts,
-            &label,
-        );
+        check_gpu(&literals, &haystack, &region_starts, &label);
     }
 
     // Consumer-scale shape: multi-word presence rows, many small regions, full
     // byte-range patterns (the on-device shape closest to a production batch).
     for (label, literals, haystack, region_starts) in scale_cases() {
-        check_gpu(
-            backend.as_ref(),
-            &literals,
-            &haystack,
-            &region_starts,
-            &label,
-        );
+        check_gpu(&literals, &haystack, &region_starts, &label);
     }
 
     // GPU-ONLY full-magnitude class: ~6,000 patterns / ~1,000 regions, beyond the
     // CPU reference interpreter's tractable range, but a single AC-walk oracle on
     // device. This is the "full literal-set size on the GPU gate" W6-1 names.
     for (label, literals, haystack, region_starts) in gpu_only_large_scale_cases() {
-        check_gpu(
-            backend.as_ref(),
-            &literals,
-            &haystack,
-            &region_starts,
-            &label,
-        );
+        check_gpu(&literals, &haystack, &region_starts, &label);
     }
 
     // Randomized volume: the GPU dispatch is ~ms/case, so default to a modest
@@ -102,7 +70,6 @@ fn gpu_region_presence_matches_independent_dfa_oracle() {
         let haystack = random_haystack(&mut rng);
         let region_starts = random_region_starts(&mut rng, haystack.len());
         check_gpu(
-            backend.as_ref(),
             &literals,
             &haystack,
             &region_starts,

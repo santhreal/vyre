@@ -8,7 +8,7 @@ const REQUIRED_SUBCOMMANDS: &[&str] = &[
     "list-ops",
     "catalog",
     "conformance-matrix",
-    "lint-shape-tests",
+    "release-evidence",
 ];
 
 #[test]

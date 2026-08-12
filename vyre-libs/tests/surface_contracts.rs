@@ -42,7 +42,7 @@ fn split_buffers(program: &vyre::ir::Program) -> (Vec<String>, Vec<String>) {
 
 #[test]
 fn contract_nn_softmax_exists() {
-    use vyre_libs::nn::softmax;
+    use vyre_libs::nn::attention::softmax;
     let p = softmax("x", "y", 64);
     let (bindings, scratch) = split_buffers(&p);
     assert_eq!(bindings, vec!["x", "y"]);
@@ -51,7 +51,7 @@ fn contract_nn_softmax_exists() {
 
 #[test]
 fn contract_nn_layer_norm_exists() {
-    use vyre_libs::nn::layer_norm;
+    use vyre_libs::nn::norm::layer_norm;
     let p = layer_norm("x", "out", 64, 1e-5);
     // Two caller bindings, unchanged. The three scratch tiles are the
     // workgroup reduction that computes mean and variance in one pass.
@@ -66,7 +66,7 @@ fn contract_nn_layer_norm_exists() {
 
 #[test]
 fn contract_nn_attention_exists() {
-    use vyre_libs::nn::attention;
+    use vyre_libs::nn::attention::attention;
     // s = 64 is above the direct-unroll threshold, so this builds the tiled
     // kernel. See `contract_nn_attention_small_shapes_unroll_directly` for the
     // other side of that branch.
@@ -85,7 +85,7 @@ fn contract_nn_attention_exists() {
 /// workgroup size against a shape that never reaches the tiled kernel.
 #[test]
 fn contract_nn_attention_small_shapes_unroll_directly() {
-    use vyre_libs::nn::attention;
+    use vyre_libs::nn::attention::attention;
     let p = attention("q", "k", "v", "out", 8, 4);
     let (bindings, scratch) = split_buffers(&p);
     assert_eq!(bindings, vec!["q", "k", "v", "out"]);

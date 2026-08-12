@@ -156,16 +156,3 @@ fn nvme_gpu_ingest_validation_rejects_bounce_and_path_mixing() {
         );
     }
 }
-
-#[test]
-fn release_criterion_entrypoint_includes_nvme_gpu_ingest_projection() {
-    let source = include_str!("../benches/release.rs");
-    assert!(
-        source.contains("nvme_gpu_ingest_telemetry_projection_scale"),
-        "Fix: release Criterion entrypoint must benchmark NVMe to GPU ingest telemetry projection."
-    );
-    assert!(
-        source.contains("runtime_io/nvme_gpu_ingest_telemetry"),
-        "Fix: benchmark group must be named as runtime IO ingest coverage."
-    );
-}

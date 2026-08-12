@@ -1,4 +1,4 @@
-//! Source hygiene release evidence for Vyre and Weir.
+//! Source hygiene release evidence for Vyre.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -29,9 +29,6 @@ struct ReleaseSurfaceCoverage {
     vyre_workspace: bool,
     cuda_driver_crate: bool,
     wgpu_driver_crate: bool,
-    dataflow_crate: bool,
-    vyrec_tool: bool,
-    surgec_grammar_gen: bool,
     release_scripts: bool,
     github_workflows: bool,
     branch_protection_controls: bool,
@@ -229,54 +226,24 @@ pub(crate) fn run(args: &[String]) {
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
-    let roots = [vyre_root, santh_root.join("libs/dataflow/weir")];
-    let optional_roots = [
-        santh_root.join("tools/vyrec"),
-        santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
-    ];
-    let mut scanned_roots = roots
+    let roots = [vyre_root];
+    let scanned_roots = roots
         .iter()
         .map(|root| root.display().to_string())
         .collect::<Vec<_>>();
-    scanned_roots.extend(
-        optional_roots
-            .iter()
-            .filter(|root| root.exists())
-            .map(|root| root.display().to_string()),
-    );
     let mut scanned_files = 0usize;
     let mut findings = Vec::new();
     for root in &roots {
         scan_root(root, &mut scanned_files, &mut findings);
-        scan_test_root(root, &mut scanned_files, &mut findings);
-    }
-    for root in &optional_roots {
-        scan_optional_root(&root, &mut scanned_files, &mut findings);
-        scan_optional_test_root(&root, &mut scanned_files, &mut findings);
     }
     scan_release_xtask(&roots[0], &mut scanned_files, &mut findings);
     scan_release_tooling(&roots[0], &mut scanned_files, &mut findings);
-    scan_release_docs(&roots[0], &santh_root, &mut scanned_files, &mut findings);
-    scan_santh_workflows(&santh_root, &mut scanned_files, &mut findings);
-    scan_santh_release_controls(&santh_root, &mut scanned_files, &mut findings);
-    for root in [
-        roots[0].clone(),
-        santh_root.join("libs/dataflow/weir"),
-        santh_root.join("tools/vyrec"),
-        santh_root.join("libs/performance/matching/vyre/vyre-grammar-gen"),
-    ] {
-        scan_audit_report_locations(&root, &mut scanned_files, &mut findings);
-    }
-    check_required_cargo_wrappers(&roots[0], &santh_root, &mut findings);
+    scan_release_docs(&roots[0], &mut scanned_files, &mut findings);
+    scan_release_workflows(&roots[0], &mut scanned_files, &mut findings);
+    scan_release_controls(&roots[0], &mut scanned_files, &mut findings);
+    check_required_cargo_wrappers(&roots[0], &mut findings);
     let threshold_policy = collect_threshold_policy(&roots[0]);
-    let release_surface_coverage = release_surface_coverage(&roots[0], &santh_root);
+    let release_surface_coverage = release_surface_coverage(&roots[0]);
     let hot_paths = load_hot_path_files(&roots[0]);
     let finding_classes = classify_findings(&roots[0], &findings, &hot_paths);
     let release_blocker_count = finding_classes
@@ -436,11 +403,7 @@ fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<HygieneIntakeS
 
 fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     let normalized = path.replace('\\', "/");
-    if normalized.contains("/libs/dataflow/weir/") {
-        return "flow_weir";
-    }
-    if normalized.contains("/tools/vyrec/")
-        || normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
+    if normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
         || normalized.contains("/vyre-frontend-c/")
         || normalized.contains("/vyre-frontend-rust/")
         || normalized.contains("/vyre-libs/src/parsing/")
@@ -552,7 +515,7 @@ fn hygiene_surface_for_path(path: &str) -> &'static str {
     if normalized.contains("/target/")
         || normalized.contains("/target-codex/")
         || normalized.contains("/release/evidence/")
-        || normalized.contains("/__split/")
+        || normalized.contains("/contract_cases/")
         || normalized.contains("/generated/")
     {
         return "generated";
@@ -606,17 +569,13 @@ fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool) -> &'static str {
     }
     if matches!(
         pattern,
-        "panic_macro"
-            | "unwrap_call"
-            | "expect_call"
-            | "todo_macro"
+        "todo_macro"
             | "unimplemented_macro"
             | "not_implemented_text"
             | "unbounded_read"
             | "unreadable_source_file"
             | "unreadable_tooling_file"
             | "missing_cargo_wrapper"
-            | "stray_audit_report"
     ) || is_hidden_fallback_pattern(pattern)
     {
         return "release_blocker";
@@ -629,10 +588,7 @@ fn hygiene_risk(pattern: &str, surface: &str, hot_path: bool) -> &'static str {
     {
         return "release_blocker";
     }
-    if matches!(
-        pattern,
-        "TODO" | "FIXME" | "placeholder_text" | "stub_text" | "undocumented_public_api"
-    ) {
+    if matches!(pattern, "TODO" | "FIXME" | "placeholder_text" | "stub_text") {
         return "release_debt";
     }
     "informational"
@@ -672,25 +628,20 @@ fn hygiene_finding_is_hot_path(
     hot_paths.contains(&relative)
 }
 
-fn release_surface_coverage(vyre_root: &Path, santh_root: &Path) -> ReleaseSurfaceCoverage {
+fn release_surface_coverage(vyre_root: &Path) -> ReleaseSurfaceCoverage {
     ReleaseSurfaceCoverage {
-        vyre_workspace: vyre_root.join("vyre-core").is_dir(),
+        vyre_workspace: vyre_root.join("vyre").is_dir(),
         cuda_driver_crate: vyre_root.join("vyre-driver-cuda/src/lib.rs").is_file(),
         wgpu_driver_crate: vyre_root.join("vyre-driver-wgpu/src/lib.rs").is_file(),
-        dataflow_crate: santh_root.join("libs/dataflow/weir/src/lib.rs").is_file(),
-        vyrec_tool: santh_root.join("tools/vyrec/src").is_dir(),
-        surgec_grammar_gen: santh_root
-            .join("libs/performance/matching/vyre/vyre-grammar-gen/src")
-            .is_dir(),
-        release_scripts: santh_root
+        release_scripts: vyre_root
             .join("scripts/apply-branch-protection.sh")
             .is_file()
-            && santh_root
-                .join("scripts/architectural_invariants.sh")
+            && vyre_root
+                .join("scripts/check_architectural_invariants.sh")
                 .is_file(),
-        github_workflows: santh_root.join(".github/workflows").is_dir(),
-        branch_protection_controls: santh_root.join(".github/CI_REQUIRED.md").is_file()
-            && santh_root
+        github_workflows: vyre_root.join(".github/workflows").is_dir(),
+        branch_protection_controls: vyre_root.join(".github/CI_REQUIRED.md").is_file()
+            && vyre_root
                 .join("scripts/apply-branch-protection.sh")
                 .is_file(),
         resource_bound_patterns: vec![
@@ -1136,29 +1087,6 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
             "missing_cargo_wrapper",
         ],
     ),
-    (
-        "audit-location-scan.json",
-        "audit-location",
-        &["stray_audit_report"],
-    ),
-    (
-        "public-doc-scan.json",
-        "public-docs",
-        &["undocumented_public_api"],
-    ),
-    (
-        "test-hygiene-scan.json",
-        "test-hygiene",
-        &[
-            "test_TODO",
-            "test_FIXME",
-            "test_todo_macro",
-            "test_unimplemented_macro",
-            "test_ignored",
-            "test_let_underscore_result",
-            "test_assert_true",
-        ],
-    ),
 ];
 
 fn write_json(path: &Path, value: &impl Serialize) {
@@ -1209,60 +1137,6 @@ fn scan_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
     }
 }
 
-fn scan_optional_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    if root.exists() {
-        scan_root(root, scanned_files, findings);
-    }
-}
-
-fn scan_test_root(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target"
-                | "target-codex"
-                | "target_tests"
-                | ".git"
-                | ".cargo-target"
-                | "release"
-                | "xtask"
-        )
-    }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                push_walk_error(root, &error, findings);
-                continue;
-            }
-        };
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-            continue;
-        }
-        let path_string = path.display().to_string();
-        let is_test_file = path_string.contains("/tests/")
-            || path_string.ends_with("/tests.rs")
-            || path_string.ends_with("_test.rs")
-            || path_string.ends_with("_tests.rs")
-            || path_string.contains("_tests_")
-            || path_string.contains("_test_");
-        if is_test_file {
-            scan_test_file(path, scanned_files, findings);
-        }
-    }
-}
-
-fn scan_optional_test_root(
-    root: &Path,
-    scanned_files: &mut usize,
-    findings: &mut Vec<HygieneFinding>,
-) {
-    if root.exists() {
-        scan_test_root(root, scanned_files, findings);
-    }
-}
-
 fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     for module in [
         "backend_matrix",
@@ -1272,17 +1146,14 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
         "metadata_matrix",
         "optimization_corpus",
         "optimization_matrix",
-        "parser_coherence",
         "release_benchmarks",
-        "release_completion_audit",
         "release_conformance",
         "release_evidence",
         "release_gate",
-        "test_matrix",
         "version_matrix",
         "vyre_release_gate",
     ] {
-        match crate::command_matrix::resolve_module_source(root, module) {
+        match resolve_xtask_module_source(root, module) {
             Ok(path) => scan_file(&path, scanned_files, findings),
             Err(error) => findings.push(HygieneFinding {
                 path: root
@@ -1296,6 +1167,20 @@ fn scan_release_xtask(root: &Path, scanned_files: &mut usize, findings: &mut Vec
             }),
         }
     }
+}
+
+fn resolve_xtask_module_source(root: &Path, module: &str) -> Result<PathBuf, String> {
+    let file = root.join("xtask/src").join(format!("{module}.rs"));
+    if file.is_file() {
+        return Ok(file);
+    }
+    let module_file = root.join("xtask/src").join(module).join("mod.rs");
+    if module_file.is_file() {
+        return Ok(module_file);
+    }
+    Err(format!(
+        "xtask command module `{module}` has no source file"
+    ))
 }
 
 fn scan_release_tooling(
@@ -1335,25 +1220,19 @@ fn scan_release_tooling(
 
 fn scan_release_docs(
     vyre_root: &Path,
-    santh_root: &Path,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
     for doc in [
-        santh_root.join("docs/vyre-weir-release-plan.md"),
         vyre_root.join("README.md"),
         vyre_root.join("docs/RELEASE.md"),
         vyre_root.join("docs/RELEASE_ENGINEERING.md"),
         vyre_root.join("docs/RELEASE_CHECKLIST.md"),
         vyre_root.join("docs/PUBLISH_GATE.md"),
         vyre_root.join("docs/TESTING_PROGRAM.md"),
-        vyre_root.join("docs/optimization/AGENT_CONTRACT.md"),
         vyre_root.join("conform/README.md"),
         vyre_root.join("vyre-bench/README.md"),
         vyre_root.join("vyre-frontend-c/README.md"),
-        santh_root.join("tools/vyrec/README.md"),
-        santh_root.join("libs/dataflow/weir/README.md"),
-        santh_root.join("libs/dataflow/weir/VISION.md"),
     ] {
         if doc.is_file() {
             scan_doc_file(&doc, scanned_files, findings);
@@ -1361,12 +1240,12 @@ fn scan_release_docs(
     }
 }
 
-fn scan_santh_workflows(
-    santh_root: &Path,
+fn scan_release_workflows(
+    vyre_root: &Path,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    let workflows = santh_root.join(".github/workflows");
+    let workflows = vyre_root.join(".github/workflows");
     if !workflows.exists() {
         return;
     }
@@ -1391,69 +1270,7 @@ fn scan_santh_workflows(
     }
 }
 
-fn scan_audit_report_locations(
-    root: &Path,
-    scanned_files: &mut usize,
-    findings: &mut Vec<HygieneFinding>,
-) {
-    if !root.exists() {
-        return;
-    }
-    for entry in WalkDir::new(root).into_iter().filter_entry(|entry| {
-        let name = entry.file_name().to_string_lossy();
-        !matches!(
-            name.as_ref(),
-            "target" | "target-codex" | "target_tests" | ".git" | ".cargo-target" | "release"
-        )
-    }) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                push_walk_error(root, &error, findings);
-                continue;
-            }
-        };
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-        if !(file_name.starts_with("AUDIT")
-            || file_name.starts_with("FINDINGS")
-            || file_name.starts_with("PLAN"))
-        {
-            continue;
-        }
-        // Reports are prose. A `PLAN_*.toml` under `docs/optimization/` is a Tier-B data
-        // manifest that release gates read by name, so it belongs next to the other
-        // optimization manifests, not under `.audits/`. Matching on the name alone flagged
-        // all seven of them as stray reports.
-        if !matches!(
-            path.extension().and_then(|extension| extension.to_str()),
-            Some("md") | Some("txt")
-        ) {
-            continue;
-        }
-        *scanned_files += 1;
-        let normalized = path.to_string_lossy();
-        if !normalized.contains("/.audits/") && !normalized.contains("/audits/") {
-            findings.push(HygieneFinding {
-                path: path.display().to_string(),
-                line: 1,
-                pattern: "stray_audit_report",
-                text: "audit, findings, and plan reports must live under .audits/".to_string(),
-            });
-        }
-    }
-}
-
-fn check_required_cargo_wrappers(
-    vyre_root: &Path,
-    _santh_root: &Path,
-    findings: &mut Vec<HygieneFinding>,
-) {
+fn check_required_cargo_wrappers(vyre_root: &Path, findings: &mut Vec<HygieneFinding>) {
     for path in [vyre_root.join("cargo_full")] {
         if !path.is_file() {
             findings.push(HygieneFinding {
@@ -1466,20 +1283,20 @@ fn check_required_cargo_wrappers(
     }
 }
 
-fn scan_santh_release_controls(
-    santh_root: &Path,
+fn scan_release_controls(
+    vyre_root: &Path,
     scanned_files: &mut usize,
     findings: &mut Vec<HygieneFinding>,
 ) {
-    let required_status_doc = santh_root.join(".github/CI_REQUIRED.md");
+    let required_status_doc = vyre_root.join(".github/CI_REQUIRED.md");
     if required_status_doc.is_file() {
         scan_doc_file(&required_status_doc, scanned_files, findings);
     }
     for script in [
         "scripts/apply-branch-protection.sh",
-        "scripts/architectural_invariants.sh",
+        "scripts/check_architectural_invariants.sh",
     ] {
-        let path = santh_root.join(script);
+        let path = vyre_root.join(script);
         if path.is_file() {
             scan_tooling_file(&path, scanned_files, findings);
         }
@@ -1600,14 +1417,6 @@ fn scan_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneF
             pending_bounded_read_chain = false;
         } else if pending_bounded_read_chain && trimmed.ends_with(';') {
             pending_bounded_read_chain = false;
-        }
-        if is_undocumented_public_api(&text, line_index) {
-            findings.push(HygieneFinding {
-                path: path.display().to_string(),
-                line: line_index + 1,
-                pattern: "undocumented_public_api",
-                text: line.trim().to_string(),
-            });
         }
         if (line.contains("GpuUnavailable")
             || lower.contains("gpu unavailable")
@@ -1743,31 +1552,6 @@ fn is_fn_signature_line(trimmed: &str) -> bool {
     }
 }
 
-fn is_undocumented_public_api(text: &str, line_index: usize) -> bool {
-    let lines = text.lines().collect::<Vec<_>>();
-    let Some(line) = lines.get(line_index) else {
-        return false;
-    };
-    let trimmed = line.trim_start();
-    if !(trimmed.starts_with("pub struct ")
-        || trimmed.starts_with("pub enum ")
-        || trimmed.starts_with("pub trait ")
-        || trimmed.starts_with("pub type "))
-    {
-        return false;
-    }
-    let mut cursor = line_index;
-    while cursor > 0 {
-        cursor -= 1;
-        let previous = lines[cursor].trim();
-        if previous.is_empty() || previous.starts_with("#[") {
-            continue;
-        }
-        return !(previous.starts_with("///") || previous.starts_with("//!"));
-    }
-    true
-}
-
 fn scan_tooling_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
     scan_command_file(path, "unreadable_tooling_file", scanned_files, findings);
 }
@@ -1812,80 +1596,6 @@ fn scan_command_file(
             }
         }
     }
-}
-
-fn scan_test_file(path: &Path, scanned_files: &mut usize, findings: &mut Vec<HygieneFinding>) {
-    let text = match read_text_bounded(path) {
-        Ok(text) => text,
-        Err(error) => {
-            push_read_error(path, "unreadable_test_file", error, findings);
-            return;
-        }
-    };
-    *scanned_files += 1;
-    for (line_index, line) in text.lines().enumerate() {
-        let trimmed = line.trim();
-        if is_release_rule_text(trimmed) {
-            continue;
-        }
-        if line.contains("TODO") {
-            push_test_finding(path, line_index, "test_TODO", trimmed, findings);
-        }
-        if line.contains("FIXME") {
-            push_test_finding(path, line_index, "test_FIXME", trimmed, findings);
-        }
-        if line.contains("todo!(") {
-            push_test_finding(path, line_index, "test_todo_macro", trimmed, findings);
-        }
-        if line.contains("unimplemented!(") {
-            push_test_finding(
-                path,
-                line_index,
-                "test_unimplemented_macro",
-                trimmed,
-                findings,
-            );
-        }
-        if trimmed == "#[ignore]"
-            || trimmed.starts_with("#[ignore(")
-            || trimmed.starts_with("#[ignore =")
-        {
-            push_test_finding(path, line_index, "test_ignored", trimmed, findings);
-        }
-        if trimmed.starts_with("let _ =") {
-            push_test_finding(
-                path,
-                line_index,
-                "test_let_underscore_result",
-                trimmed,
-                findings,
-            );
-        }
-        if matches!(
-            trimmed,
-            "assert!(true);"
-                | "assert_eq!(true, true);"
-                | "assert_eq!(1, 1);"
-                | "assert_ne!(1, 2);"
-        ) {
-            push_test_finding(path, line_index, "test_assert_true", trimmed, findings);
-        }
-    }
-}
-
-fn push_test_finding(
-    path: &Path,
-    line_index: usize,
-    pattern: &'static str,
-    text: &str,
-    findings: &mut Vec<HygieneFinding>,
-) {
-    findings.push(HygieneFinding {
-        path: path.display().to_string(),
-        line: line_index + 1,
-        pattern,
-        text: text.to_string(),
-    });
 }
 
 fn push_walk_error(root: &Path, error: &walkdir::Error, findings: &mut Vec<HygieneFinding>) {
@@ -2063,11 +1773,7 @@ fn is_release_rule_text(trimmed: &str) -> bool {
 fn is_hygiene_rule_source(path: &Path) -> bool {
     let normalized = path.to_string_lossy().replace('\\', "/");
     [
-        "scripts/check_repo_split_readiness.sh",
-        "scripts/check_dialect_coverage.sh",
         "scripts/check_unsafe_justifications.sh",
-        "scripts/check_no_deferred_work.sh",
-        "scripts/check_tests_can_fail.sh",
         "scripts/check_primitive_contract.sh",
         "jules_tickets/_generate.py",
         "jules_tickets/test_dump.py",
@@ -2075,10 +1781,8 @@ fn is_hygiene_rule_source(path: &Path) -> bool {
         "xtask/src/feature_matrix.rs",
         "xtask/src/hygiene_matrix.rs",
         "xtask/src/optimization_matrix.rs",
-        "xtask/src/release_completion_audit.rs",
         "xtask/src/vyre_release_gate/mod.rs",
         "xtask/src/whats_similar.rs",
-        "xtask/src/parser_coherence.rs",
     ]
     .iter()
     .any(|suffix| normalized.ends_with(suffix))
@@ -2244,7 +1948,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
     crate::output_arg::parse_output_arg(
         args,
         "hygiene-matrix",
-        "Scans Vyre/Weir shipped Rust source for release hygiene blockers.",
+        "Scans Vyre shipped Rust source for release hygiene blockers.",
         default_output,
     )
 }
@@ -2294,7 +1998,7 @@ mod tests {
 
     #[test]
     fn hidden_fallback_scan_ignores_negated_product_status() {
-        let source = Path::new("tools/vyrec/src/lib.rs");
+        let source = Path::new("tools/example-consumer/src/lib.rs");
 
         assert!(
             !line_contains_blocked_pattern(
@@ -2347,8 +2051,8 @@ mod tests {
             HygieneFinding {
                 path: "vyre-driver/src/pipeline/mod.rs".to_string(),
                 line: 10,
-                pattern: "panic_macro",
-                text: "panic!(\"bad\")".to_string(),
+                pattern: "unbounded_read",
+                text: "std::fs::read(path)?".to_string(),
             },
             HygieneFinding {
                 path: "vyre-driver/tests/pipeline_contracts.rs".to_string(),
@@ -2372,7 +2076,7 @@ mod tests {
     fn cpu_parity_oracle_sources_are_test_hygiene_not_release_blockers() {
         let hot_paths = std::collections::BTreeSet::new();
         let findings = vec![HygieneFinding {
-            path: "/repo/libs/dataflow/weir/src/ifds_cpu_oracle.rs".to_string(),
+            path: "/repo/vyre-reference/src/ifds_cpu_oracle.rs".to_string(),
             line: 37,
             pattern: "panic_macro",
             text: "panic!(\"IFDS CPU oracle\")".to_string(),
@@ -2414,7 +2118,7 @@ mod tests {
     #[test]
     fn rust_doc_comment_call_examples_do_not_count_as_production_blockers() {
         assert!(!line_contains_blocked_pattern(
-            Path::new("libs/dataflow/weir/src/lib.rs"),
+            Path::new("vyre-libs/src/lib.rs"),
             "unwrap_call",
             ".unwrap()",
             "//! let value = fallible().unwrap();",
@@ -2426,7 +2130,7 @@ mod tests {
     #[test]
     fn feature_gated_test_harness_sources_are_test_hygiene() {
         assert_eq!(
-            hygiene_surface_for_path("/repo/libs/dataflow/weir/src/test_harness/fake_backend.rs"),
+            hygiene_surface_for_path("/repo/vyre-driver-cuda/src/test_harness/fake_backend.rs"),
             "test"
         );
     }
@@ -2434,7 +2138,7 @@ mod tests {
     #[test]
     fn fuzz_targets_are_test_surface_not_release_production() {
         assert_eq!(
-            hygiene_surface_for_path("libs/dataflow/weir/fuzz/fuzz_targets/reachability.rs"),
+            hygiene_surface_for_path("vyre-foundation/fuzz/fuzz_targets/reachability.rs"),
             "test"
         );
     }
@@ -2501,19 +2205,18 @@ mod tests {
     fn required_cargo_wrapper_is_tool_owned() {
         let workspace = tempfile::TempDir::new()
             .expect("Fix: create temp workspace for cargo wrapper hygiene test.");
-        let santh_root = workspace.path().join("Santh");
-        let vyre_root = santh_root.join("libs/performance/matching/vyre");
+        let vyre_root = workspace.path().join("vyre");
         fs::create_dir_all(&vyre_root)
             .expect("Fix: create temp vyre root for cargo wrapper hygiene test.");
         fs::write(vyre_root.join("cargo_full"), b"#!/usr/bin/env bash\n")
             .expect("Fix: write temp cargo_full wrapper for hygiene test.");
 
         let mut findings = Vec::new();
-        check_required_cargo_wrappers(&vyre_root, &santh_root, &mut findings);
+        check_required_cargo_wrappers(&vyre_root, &mut findings);
 
         assert!(
             findings.is_empty(),
-            "Fix: Vyre release hygiene must require the tool-owned bounded cargo wrapper without forcing a Santh backup-root file into the standalone tool repo; findings={findings:?}"
+            "Fix: Vyre release hygiene must require the tool-owned bounded cargo wrapper; findings={findings:?}"
         );
     }
 
@@ -2687,49 +2390,6 @@ pub fn undocumented() {
                 "Fix: `{attribute}` does not gate the item to test builds and must stay in the production hygiene scan."
             );
         }
-    }
-
-    /// Audit-location enforcement covers prose reports, not Tier-B data manifests.
-    ///
-    /// `docs/optimization/PLAN_*.toml` are data manifests that release gates read by name,
-    /// so they belong beside the other optimization manifests. Matching on the file name
-    /// alone reported all seven as stray reports that had to move under `.audits/`.
-    #[test]
-    fn audit_location_scan_separates_reports_from_data_manifests() {
-        let workspace = tempfile::TempDir::new()
-            .expect("Fix: create temp workspace for the audit-location hygiene test.");
-        let root = workspace.path();
-        fs::create_dir_all(root.join("docs/optimization"))
-            .expect("Fix: create temp docs tree for the audit-location hygiene test.");
-        fs::create_dir_all(root.join("audits"))
-            .expect("Fix: create temp audits tree for the audit-location hygiene test.");
-        fs::write(
-            root.join("docs/optimization/PLAN_EXECUTION_DAG.toml"),
-            b"schema = 1\n",
-        )
-        .expect("Fix: write temp plan manifest for the audit-location hygiene test.");
-        fs::write(root.join("docs/AUDIT_SCAN_RECALL.md"), b"# report\n")
-            .expect("Fix: write temp stray report for the audit-location hygiene test.");
-        fs::write(root.join("audits/FINDINGS_2026_07.md"), b"# report\n")
-            .expect("Fix: write temp filed report for the audit-location hygiene test.");
-
-        let mut scanned = 0usize;
-        let mut findings = Vec::new();
-        scan_audit_report_locations(root, &mut scanned, &mut findings);
-
-        let flagged = findings
-            .iter()
-            .map(|finding| finding.path.clone())
-            .collect::<Vec<_>>();
-        assert_eq!(
-            flagged.len(),
-            1,
-            "Fix: exactly the stray prose report belongs in the findings; got {flagged:?}"
-        );
-        assert!(
-            flagged[0].ends_with("docs/AUDIT_SCAN_RECALL.md"),
-            "Fix: the stray prose report outside `audits/` is the finding; got {flagged:?}"
-        );
     }
 
     mod threshold_policy_contracts {

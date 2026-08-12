@@ -81,8 +81,8 @@ pub fn regex_admission_by_region_reference(
     let origins: Vec<u32> = (0..haystack.len() as u32).collect();
     for m in validator.validate_candidates_leftmost_longest(haystack, &origins) {
         let region = region_of(m.start + region_base, region_starts);
-        let word = region * words + (m.pattern_id >> 5) as usize;
-        presence[word] |= 1u32 << (m.pattern_id & 31);
+        let word = region * words + (m.tag >> 5) as usize;
+        presence[word] |= 1u32 << (m.tag & 31);
     }
     presence
 }

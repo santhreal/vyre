@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Guarded crates.io publish launcher for the configured Vyre / Weir release train.
+# Guarded crates.io publish launcher for the configured Vyre release train.
 #
 # This script intentionally refuses to run unless the maintainer sets:
 #   VYRE_RELEASE_APPROVED=<token derived by scripts/lib/release_train.sh>
@@ -92,5 +92,5 @@ for entry in "${PUBLISH_ENTRIES[@]}"; do
     fi
 done
 
-printf 'crates.io publish completed for audited Vyre/Weir publish order.\n'
-printf 'Remaining launch actions: make repositories public, then push release branch and tags after explicit approval.\n'
+printf 'crates.io publish completed for audited Vyre publish order.\n'
+printf 'Remaining launch actions: verify the public repository, then push the release branch and tags after explicit approval.\n'

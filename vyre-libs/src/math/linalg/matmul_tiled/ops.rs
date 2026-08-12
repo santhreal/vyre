@@ -284,7 +284,7 @@ impl MatmulBiasTiled {
     impl_common_builder_controls!(MatmulBiasTiled);
 }
 
-/// Back-compat wrapper; returns an invalid-output program on contract violation.
+/// Name-based convenience constructor routed through [`MatmulTiled`].
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u32) -> Program {
@@ -305,7 +305,7 @@ pub fn matmul_tiled(a: &str, b: &str, out: &str, m: u32, k: u32, n: u32, tile: u
     })
 }
 
-/// Back-compat wrapper; returns an invalid-output program on contract violation.
+/// Name-based convenience constructor routed through [`MatmulBiasTiled`].
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn matmul_bias_tiled(

@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{Cursor, Write};
+use std::io::{self, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -40,6 +40,9 @@ use crate::VERSION;
 use vyre_megakernel::{ArtifactEnvelope, TargetPayload};
 
 const METRIC_RECORD_WORDS: u32 = 8;
+const MAX_BUNDLE_MANIFEST_BYTES: u64 = 1024 * 1024;
+const MAX_COMPRESSED_ENVELOPE_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_ENVELOPE_BYTES: usize = 64 * 1024 * 1024;
 
 /// Files written for one deployable artifact envelope.
 #[derive(Debug, Clone)]
@@ -195,7 +198,11 @@ fn write_package_files(
 pub fn read_bundle_artifact(
     bundle_dir: &Path,
 ) -> Result<(Manifest, ArtifactEnvelope), BundleError> {
-    let manifest_bytes = fs::read(bundle_dir.join("manifest.json"))?;
+    let manifest_bytes = read_bytes_bounded(
+        &bundle_dir.join("manifest.json"),
+        MAX_BUNDLE_MANIFEST_BYTES,
+        "manifest",
+    )?;
     let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
     if manifest.schema != Manifest::SCHEMA_VERSION {
         return Err(BundleError::InvalidArtifact(format!(
@@ -210,7 +217,11 @@ pub fn read_bundle_artifact(
             manifest.envelope_compression
         )));
     }
-    let compressed = fs::read(bundle_dir.join(&manifest.envelope_file))?;
+    let compressed = read_bytes_bounded(
+        &bundle_dir.join(&manifest.envelope_file),
+        MAX_COMPRESSED_ENVELOPE_BYTES,
+        "compressed envelope",
+    )?;
     let envelope_bytes = lzma_decompress(&compressed)?;
     if sha256_hex(&envelope_bytes) != manifest.envelope_sha256_hex {
         return Err(BundleError::InvalidArtifact(
@@ -393,6 +404,42 @@ fn digest_hex(digest: vyre_megakernel::Digest) -> String {
         .collect()
 }
 
+fn read_bytes_bounded(path: &Path, max_bytes: u64, label: &str) -> Result<Vec<u8>, BundleError> {
+    let mut bytes = Vec::new();
+    fs::File::open(path)?
+        .take(max_bytes + 1)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > max_bytes {
+        return Err(BundleError::InvalidArtifact(format!(
+            "{label} `{}` exceeds the {max_bytes}-byte limit",
+            path.display()
+        )));
+    }
+    Ok(bytes)
+}
+
+struct BoundedOutput {
+    bytes: Vec<u8>,
+    max_bytes: usize,
+}
+
+impl Write for BoundedOutput {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        if self.bytes.len().saturating_add(buffer.len()) > self.max_bytes {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "decompressed artifact envelope exceeds size limit",
+            ));
+        }
+        self.bytes.extend_from_slice(buffer);
+        Ok(buffer.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 fn lzma_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
     let mut out = Vec::with_capacity(input.len() / 2);
     let mut cursor = Cursor::new(input);
@@ -402,11 +449,14 @@ fn lzma_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
 }
 
 fn lzma_decompress(input: &[u8]) -> Result<Vec<u8>, BundleError> {
-    let mut output = Vec::new();
+    let mut output = BoundedOutput {
+        bytes: Vec::new(),
+        max_bytes: MAX_ENVELOPE_BYTES,
+    };
     let mut cursor = Cursor::new(input);
     lzma_rs::lzma_decompress(&mut cursor, &mut output)
         .map_err(|error| BundleError::Lzma(format!("{error:?}")))?;
-    Ok(output)
+    Ok(output.bytes)
 }
 
 fn brotli_compress(input: &[u8]) -> Result<Vec<u8>, BundleError> {

@@ -9,7 +9,7 @@
 use std::time::{Duration, Instant};
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::passes::fusion::Fusion;
+use vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion;
 use vyre_foundation::optimizer::{PassScheduler, ProgramPassKind};
 use vyre_reference::value::Value;
 

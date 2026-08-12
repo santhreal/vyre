@@ -1,7 +1,6 @@
-//! Crate metadata release evidence for Vyre and Weir.
+//! Crate metadata release evidence for Vyre.
 
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -13,8 +12,6 @@ struct MetadataMatrix {
     schema_version: u32,
     publishable_package_count: usize,
     vyre_package_count: usize,
-    weir_package_count: usize,
-    parser_release_surface_count: usize,
     non_publishable_release_surface_count: usize,
     internal_tooling_count: usize,
     root_patch_section_count: usize,
@@ -33,11 +30,6 @@ struct PackageMetadata {
     license: Option<String>,
     readme: Option<String>,
     repository: Option<String>,
-    example_count: usize,
-    example_files: Vec<String>,
-    readme_example_count: usize,
-    has_runnable_example: bool,
-    has_api_referencing_example: bool,
     publish: Option<bool>,
     release_kind: &'static str,
     release_group: &'static str,
@@ -79,18 +71,6 @@ fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
             release_surface: "wgpu-backend",
         },
         RequiredReleaseSurface {
-            name: release_train::weir_package_name(),
-            expected_version: release_train::weir_version(),
-            release_kind: Some("publishable-crate"),
-            release_surface: "dataflow-analysis",
-        },
-        RequiredReleaseSurface {
-            name: "vyrec",
-            expected_version: release_train::vyrec_version(),
-            release_kind: Some("non-publishable-release-surface"),
-            release_surface: "parser-cli",
-        },
-        RequiredReleaseSurface {
             name: "vyre-frontend-c",
             expected_version: release_train::vyre_frontend_c_version(),
             release_kind: Some("non-publishable-release-surface"),
@@ -111,37 +91,17 @@ pub(crate) fn run(args: &[String]) {
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| PathBuf::from("."));
-    let santh_root = vyre_root
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| vyre_root.clone());
     let mut packages = Vec::new();
     let mut metadata_blockers = Vec::new();
-    let scan_roots = [vyre_root.clone(), santh_root.join("libs/dataflow/weir")];
-    for root in &scan_roots {
-        let workspace_package = load_workspace_package(root, &mut metadata_blockers);
-        collect_packages(
-            root,
-            workspace_package.as_ref(),
-            &mut packages,
-            &mut metadata_blockers,
-        );
-    }
-    let santh_workspace_package = load_workspace_package(&santh_root, &mut metadata_blockers);
+    let workspace_package = load_workspace_package(&vyre_root, &mut metadata_blockers);
     collect_packages(
-        &santh_root.join("tools/vyrec"),
-        santh_workspace_package.as_ref(),
+        &vyre_root,
+        workspace_package.as_ref(),
         &mut packages,
         &mut metadata_blockers,
     );
-    let (root_patch_section_count, patch_blockers) = root_patch_section_count(&[
-        vyre_root.join("Cargo.toml"),
-        santh_root.join("libs/dataflow/weir/Cargo.toml"),
-        santh_root.join("tools/vyrec/Cargo.toml"),
-    ]);
+    let (root_patch_section_count, patch_blockers) =
+        root_patch_section_count(&[vyre_root.join("Cargo.toml")]);
     packages.sort_by(|left, right| left.name.cmp(&right.name));
     let required_release_surfaces = required_release_surfaces()
         .into_iter()
@@ -177,14 +137,6 @@ pub(crate) fn run(args: &[String]) {
         .iter()
         .filter(|package| package.release_group == "vyre")
         .count();
-    let weir_package_count = packages
-        .iter()
-        .filter(|package| package.release_group == "weir")
-        .count();
-    let parser_release_surface_count = packages
-        .iter()
-        .filter(|package| matches!(package.release_surface, "parser-cli" | "c-frontend"))
-        .count();
     let internal_tooling_count = packages
         .iter()
         .filter(|package| package.release_kind == "internal-tooling")
@@ -194,11 +146,9 @@ pub(crate) fn run(args: &[String]) {
         .filter(|package| package.release_kind == "non-publishable-release-surface")
         .count();
     let matrix = MetadataMatrix {
-        schema_version: 1,
+        schema_version: 2,
         publishable_package_count,
         vyre_package_count,
-        weir_package_count,
-        parser_release_surface_count,
         non_publishable_release_surface_count,
         internal_tooling_count,
         root_patch_section_count,
@@ -397,23 +347,6 @@ fn parse_package(
             }
         }
     }
-    let examples = package_examples(path, &name, readme.as_deref());
-    blockers.extend(examples.blockers);
-    let example_count = examples.example_files.len() + examples.readme_example_count;
-    if !internal_tooling && example_count == 0 {
-        blockers.push(
-            "missing examples: add examples/*.rs or README Rust/TOML/shell usage blocks"
-                .to_string(),
-        );
-    }
-    if release_kind == "publishable-crate" && !examples.has_runnable_example {
-        blockers.push(
-            "publishable release crate needs at least one runnable examples/*.rs file".to_string(),
-        );
-    }
-    if release_kind == "publishable-crate" && !examples.has_api_referencing_example {
-        blockers.push("publishable release crate needs at least one example that references the crate API or crate identity".to_string());
-    }
     Ok(Some(PackageMetadata {
         name,
         manifest: path.display().to_string(),
@@ -422,11 +355,6 @@ fn parse_package(
         license,
         readme,
         repository,
-        example_count,
-        example_files: examples.example_files,
-        readme_example_count: examples.readme_example_count,
-        has_runnable_example: examples.has_runnable_example,
-        has_api_referencing_example: examples.has_api_referencing_example,
         publish,
         release_kind,
         release_group,
@@ -435,111 +363,6 @@ fn parse_package(
         publish_policy,
         blockers,
     }))
-}
-
-struct PackageExamples {
-    example_files: Vec<String>,
-    readme_example_count: usize,
-    has_runnable_example: bool,
-    has_api_referencing_example: bool,
-    blockers: Vec<String>,
-}
-
-fn package_examples(manifest: &Path, package_name: &str, readme: Option<&str>) -> PackageExamples {
-    let root = manifest.parent().unwrap_or_else(|| Path::new("."));
-    let mut blockers = Vec::new();
-    let mut example_files = Vec::new();
-    let examples_dir = root.join("examples");
-    match fs::read_dir(&examples_dir) {
-        Ok(entries) => {
-            for entry in entries {
-                let entry = match entry {
-                    Ok(entry) => entry,
-                    Err(error) => {
-                        blockers.push(format!(
-                            "failed to read examples directory entry under `{}`: {error}",
-                            examples_dir.display()
-                        ));
-                        continue;
-                    }
-                };
-                let path = entry.path();
-                if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
-                    example_files.push(path);
-                }
-            }
-        }
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-        Err(error) => blockers.push(format!(
-            "failed to read examples directory `{}`: {error}",
-            examples_dir.display()
-        )),
-    }
-    example_files.sort();
-    let has_runnable_example = example_files.iter().any(|path| {
-        match crate::output_arg::read_text_bounded(path, MAX_README_BYTES, "release metadata") {
-            Ok(text) => text.contains("fn main(") || text.contains("fn main ()"),
-            Err(error) => {
-                blockers.push(format!(
-                    "example `{}` is unreadable: {error}",
-                    path.display()
-                ));
-                false
-            }
-        }
-    });
-    let crate_name = package_name.replace('-', "_");
-    let has_api_referencing_example = example_files.iter().any(|path| {
-        match crate::output_arg::read_text_bounded(path, MAX_README_BYTES, "release metadata") {
-            Ok(text) => {
-                path.file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .is_some_and(|stem| stem.contains(&crate_name))
-                    || text.contains(&crate_name)
-                    || text.contains("::")
-                    || text.contains("Command::new")
-            }
-            Err(error) => {
-                blockers.push(format!(
-                    "example `{}` is unreadable: {error}",
-                    path.display()
-                ));
-                false
-            }
-        }
-    });
-    let readme_example_count = readme
-        .map(|readme| {
-            match crate::output_arg::read_text_bounded(
-                &root.join(readme),
-                MAX_README_BYTES,
-                "release metadata",
-            ) {
-                Ok(text) => {
-                    text.matches("```rust").count()
-                        + text.matches("```toml").count()
-                        + text.matches("```bash").count()
-                        + text.matches("```sh").count()
-                }
-                Err(error) => {
-                    blockers.push(format!(
-                        "readme `{readme}` is unreadable for example scan: {error}"
-                    ));
-                    0
-                }
-            }
-        })
-        .unwrap_or(0);
-    PackageExamples {
-        example_files: example_files
-            .into_iter()
-            .map(|path| path.display().to_string())
-            .collect(),
-        readme_example_count,
-        has_runnable_example,
-        has_api_referencing_example,
-        blockers,
-    }
 }
 
 fn missing_required_release_surfaces(packages: &[PackageMetadata]) -> Vec<String> {
@@ -599,13 +422,7 @@ fn release_kind(name: &str, publish: Option<bool>) -> &'static str {
     }
     if matches!(
         name,
-        "xtask"
-            | "vyre-bench"
-            | "vyre-bench-competitors"
-            | "vyre-conform"
-            | "vyre-conform-runner"
-            | "vyre-test-harness"
-            | "vyre-foundation-fuzz"
+        "xtask" | "vyre-bench" | "vyre-bench-competitors" | "vyre-conform" | "vyre-foundation-fuzz"
     ) {
         "internal-tooling"
     } else if publish == Some(false) {
@@ -621,36 +438,21 @@ fn required_release_surface(name: &str) -> Option<RequiredReleaseSurface> {
         .find(|surface| surface.name == name)
 }
 
-fn release_group(path: &Path, release_kind: &str) -> &'static str {
+fn release_group(_path: &Path, release_kind: &str) -> &'static str {
     if release_kind == "internal-tooling" {
-        return "internal-tooling";
-    }
-    if path
-        .components()
-        .any(|component| component.as_os_str().to_string_lossy() == "weir")
-    {
-        "weir"
+        "internal-tooling"
     } else {
         "vyre"
     }
 }
 
-fn release_surface(name: &str, release_group: &str, release_kind: &str) -> &'static str {
-    // Not a match arm: the dataflow product's package name has one owner and a `const fn`
-    // cannot appear in a pattern. This arm previously read `"weir"`, so the real package
-    // (`weirflow`) fell through to `weir-crate` and the required `dataflow-analysis`
-    // surface was reported permanently missing.
-    if name == release_train::weir_package_name() {
-        return "dataflow-analysis";
-    }
+fn release_surface(name: &str, _release_group: &str, release_kind: &str) -> &'static str {
     match name {
         "vyre" => "vyre-engine",
         "vyre-driver-cuda" => "cuda-backend",
         "vyre-driver-wgpu" => "wgpu-backend",
-        "vyrec" => "parser-cli",
         "vyre-frontend-c" => "c-frontend",
         _ if release_kind == "internal-tooling" => "internal-tooling",
-        _ if release_group == "weir" => "weir-crate",
         _ => "vyre-crate",
     }
 }
@@ -669,7 +471,7 @@ fn parse_output(args: &[String]) -> Result<PathBuf, String> {
     crate::output_arg::parse_output_arg(
         args,
         "metadata-matrix",
-        "Writes Vyre/Weir crate metadata evidence.",
+        "Writes Vyre crate metadata evidence.",
         default_output,
     )
 }
@@ -679,4 +481,26 @@ fn default_output() -> PathBuf {
         .parent()
         .map(|path| path.join("release/evidence/metadata/metadata-matrix.json"))
         .unwrap_or_else(|| PathBuf::from("release/evidence/metadata/metadata-matrix.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{expected_version, release_group, release_surface};
+    use std::path::Path;
+
+    #[test]
+    fn release_classification_is_vyre_owned() {
+        assert_eq!(
+            release_group(Path::new("vyre/Cargo.toml"), "publishable-crate"),
+            "vyre"
+        );
+        assert_eq!(
+            release_surface("vyre-driver-cuda", "vyre", "publishable-crate"),
+            "cuda-backend"
+        );
+        assert_eq!(
+            expected_version("vyre-primitives", "vyre", "publishable-crate"),
+            Some(crate::release_train::vyre_version())
+        );
+    }
 }

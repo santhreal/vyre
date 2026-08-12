@@ -7,7 +7,7 @@ mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::matching::bracket_match::{
     bracket_match, bracket_match_dispatch_grid, cpu_ref as bracket_cpu, CLOSE_BRACE, MATCH_NONE,
     OPEN_BRACE, OTHER,

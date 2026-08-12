@@ -32,10 +32,7 @@ pub fn intern_string(s: &str) -> InternedOpId {
     InternedOpId(key.into_inner().get())
 }
 
-/// Function pointer used by reference-backend lowerings.
-pub type ReferenceKind = CpuFn;
-
-/// Backend lowering context retained for source compatibility.
+/// Backend lowering context passed to registered lowering builders.
 #[derive(Default, Debug, Clone)]
 pub struct LoweringCtx<'a> {
     /// Marker tying context references to the call lifetime.
@@ -98,7 +95,7 @@ pub type ExtensionLoweringFn =
 #[derive(Clone)]
 pub struct LoweringTable {
     /// Portable CPU reference implementation.
-    pub cpu_ref: ReferenceKind,
+    pub cpu_ref: CpuFn,
     /// Primary text builder. `None` in v0.4.1 pure-IR ops.
     pub primary_text: Option<PrimaryTextBuilder>,
     /// Primary binary builder. `None` in v0.4.1 pure-IR ops.
@@ -128,7 +125,7 @@ impl LoweringTable {
     /// extension); this constructor is for parity/conformance surfaces and
     /// incremental backend registration.
     #[must_use]
-    pub fn new(cpu_ref: ReferenceKind) -> Self {
+    pub fn new(cpu_ref: CpuFn) -> Self {
         Self {
             cpu_ref,
             primary_text: None,

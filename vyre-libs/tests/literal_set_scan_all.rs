@@ -2,29 +2,25 @@
 //! and no consumer-side paging, auto-resizing to the exact device count and
 //! never silently truncating.
 //!
-//! Runs on the CPU reference backend (`CpuRefBackend`), so it exercises the real
-//! dispatch + auto-resize control flow everywhere with no GPU. The oracle is
-//! `GpuLiteralSet::reference_scan` (an independent plain-Rust DFA walk).
+//! Runs through the registered CPU reference target, so it exercises the real
+//! artifact dispatch and auto-resize control flow without a GPU. The oracle is
+//! `GpuLiteralSet::reference_scan`, an independent plain-Rust DFA walk.
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{ByteRange, GpuLiteralSet};
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
 /// The fixed-cap default `scan_all` starts at; a corpus with more matches than
 /// this forces the auto-resize path. Mirrors `LITERAL_SET_DEFAULT_MAX_MATCHES`.
 const DEFAULT_CAP: u32 = 10_000;
 
-fn sorted_triples(matches: &[LiteralMatch]) -> Vec<(u32, u32, u32)> {
-    let mut v: Vec<(u32, u32, u32)> = matches
-        .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
-        .collect();
+fn sorted_triples(matches: &[ByteRange]) -> Vec<(u32, u32, u32)> {
+    let mut v: Vec<(u32, u32, u32)> = matches.iter().map(|m| (m.tag, m.start, m.end)).collect();
     v.sort_unstable();
     v
 }
 
 #[test]
 fn scan_all_returns_everything_past_the_fixed_cap() {
-    let backend = CpuRefBackend;
     let literals: &[&[u8]] = &[b"a"];
     let matcher = GpuLiteralSet::compile(literals);
 
@@ -33,7 +29,7 @@ fn scan_all_returns_everything_past_the_fixed_cap() {
     let haystack = vec![b'a'; n];
 
     let all = matcher
-        .scan_all(&backend, &haystack)
+        .scan_all(CPU_REF_BACKEND_ID, &haystack)
         .expect("scan_all auto-resizes and completes");
     assert_eq!(
         all.len(),
@@ -51,7 +47,7 @@ fn scan_all_returns_everything_past_the_fixed_cap() {
     );
 
     // The fixed-cap scan on the SAME input must fail closed (never truncate).
-    let capped = matcher.scan(&backend, &haystack, DEFAULT_CAP);
+    let capped = matcher.scan(CPU_REF_BACKEND_ID, &haystack, DEFAULT_CAP);
     assert!(
         capped.is_err(),
         "fixed-cap scan must fail closed when matches ({n}) exceed the cap ({DEFAULT_CAP}), not silently truncate"
@@ -60,13 +56,12 @@ fn scan_all_returns_everything_past_the_fixed_cap() {
 
 #[test]
 fn scan_all_single_dispatch_common_case() {
-    let backend = CpuRefBackend;
     let literals: &[&[u8]] = &[b"abc", b"bc", b"xyz"];
     let matcher = GpuLiteralSet::compile(literals);
     let haystack = b"__abc__bc__xyz__abc__".to_vec();
 
     let all = matcher
-        .scan_all(&backend, &haystack)
+        .scan_all(CPU_REF_BACKEND_ID, &haystack)
         .expect("scan_all completes for a small corpus in one dispatch");
     let oracle = matcher.reference_scan(&haystack);
     assert_eq!(
@@ -79,7 +74,6 @@ fn scan_all_single_dispatch_common_case() {
 
 #[test]
 fn scan_all_dense_multi_pattern_past_cap() {
-    let backend = CpuRefBackend;
     let literals: &[&[u8]] = &[b"a", b"aa"];
     let matcher = GpuLiteralSet::compile(literals);
 
@@ -88,7 +82,7 @@ fn scan_all_dense_multi_pattern_past_cap() {
     let haystack = vec![b'a'; n];
 
     let all = matcher
-        .scan_all(&backend, &haystack)
+        .scan_all(CPU_REF_BACKEND_ID, &haystack)
         .expect("scan_all auto-resizes for dense multi-pattern");
     let expected = n + (n - 1);
     assert_eq!(
@@ -107,16 +101,15 @@ fn scan_all_dense_multi_pattern_past_cap() {
 
 #[test]
 fn scan_all_empty_haystack_and_no_matches() {
-    let backend = CpuRefBackend;
     let matcher = GpuLiteralSet::compile(&[b"needle".as_slice()]);
 
     let empty = matcher
-        .scan_all(&backend, b"")
+        .scan_all(CPU_REF_BACKEND_ID, b"")
         .expect("scan_all handles an empty haystack");
     assert!(empty.is_empty(), "empty haystack yields no matches");
 
     let clean = matcher
-        .scan_all(&backend, b"nothing to find here")
+        .scan_all(CPU_REF_BACKEND_ID, b"nothing to find here")
         .expect("scan_all handles a clean haystack");
     assert!(clean.is_empty(), "clean haystack yields no matches");
 }
@@ -135,7 +128,6 @@ fn scan_all_empty_haystack_and_no_matches() {
 /// exercised the tail; this one deliberately places needles PAST it.
 #[test]
 fn cpuref_scan_covers_tail_past_buffer_inferred_grid() {
-    let backend = CpuRefBackend;
     let matcher = GpuLiteralSet::compile(&[b"needle".as_slice()]);
 
     // 64 KiB (comfortably larger than the ~41185-byte buffer-inferred grid).
@@ -149,7 +141,7 @@ fn cpuref_scan_covers_tail_past_buffer_inferred_grid() {
     }
 
     let all = matcher
-        .scan_all(&backend, &haystack)
+        .scan_all(CPU_REF_BACKEND_ID, &haystack)
         .expect("scan_all completes on the CPU reference backend");
 
     // Independent oracle (full-haystack DFA walk) (exact triple-set equality).

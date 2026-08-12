@@ -1,21 +1,8 @@
-//! Cross-layer parity tests for matching engines.
+//! Cross-layer matching construction and reference-oracle contracts.
 //!
-//! Same patterns + same haystack, run through every available
-//! engine + each engine's `reference_scan`. Assert the match sets are
-//! equal modulo ordering. Catches silent regressions whenever any
-//! layer changes:
-//!
-//!   - `vyre-primitives::matching::dfa_compile` (DFA construction)
-//!   - `vyre-primitives::nfa::subgroup_nfa::nfa_step` (NFA stepper)
-//!   - `vyre-libs::matching::literal_set::GpuLiteralSet`
-//!   - `vyre-libs::matching::mega_scan::RulePipeline`
-//!   - `vyre-libs::matching::regex_compile` (regex AST → NFA)
-//!
-//! The GPU `scan` paths are NOT exercised here  -  they require a real
-//! adapter and would gate CI on hardware. The `reference_scan` parity
-//! tests cover construction + execution semantics; the GPU dispatch
-//! correctness is covered separately by per-backend adversarial tests
-//! that DO run on hardware.
+//! These tests cover DFA construction, literal-set reference execution, and
+//! regex-to-NFA compilation. Registered artifact execution is covered by
+//! `vyre-scan` product tests and concrete backend conformance tests.
 
 #![allow(deprecated)]
 // (MatchScan trait imported in the tests that need it.)
@@ -27,8 +14,8 @@ fn literal_set_cpu_finds_planted_secret() {
     let haystack = b"foo AKIAIOSFODNN7 bar ghp_xxxx baz";
     let matches = engine.reference_scan(haystack);
     // Two distinct literals fire; AKIA at offset 4, ghp_ at offset 22.
-    assert!(matches.iter().any(|m| m.pattern_id == 0 && m.start == 4));
-    assert!(matches.iter().any(|m| m.pattern_id == 1 && m.start == 22));
+    assert!(matches.iter().any(|m| m.tag == 0 && m.start == 4));
+    assert!(matches.iter().any(|m| m.tag == 1 && m.start == 22));
 }
 
 #[test]
@@ -235,14 +222,6 @@ fn every_match_engine_implements_match_scan() {
     use vyre::scan::{GpuLiteralSet, MatchScan};
     let engine = GpuLiteralSet::compile(&[b"x".as_slice()]);
     let _trait_obj: &dyn MatchScan = &engine;
-}
-
-#[cfg(feature = "matching-nfa")]
-#[test]
-fn rule_pipeline_implements_match_scan() {
-    use vyre::scan::{build_rule_pipeline, MatchScan};
-    let pipe = build_rule_pipeline(&["abc"], "input", "hits", 16);
-    let _trait_obj: &dyn MatchScan = &pipe;
 }
 
 #[test]

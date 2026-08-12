@@ -26,9 +26,7 @@ fn positive_emitted_ir_is_consumed_by_reference_harness() {
     let value = match outputs.as_slice() {
         [Value::I32(value)] => *value,
         [Value::U32(value)] => *value as i32,
-        [Value::Bytes(bytes)] => {
-            i32::from_le_bytes(bytes[..4].try_into().expect("one i32 output"))
-        }
+        [Value::Bytes(bytes)] => i32::from_le_bytes(bytes[..4].try_into().expect("one i32 output")),
         other => panic!("unexpected reference output: {other:?}"),
     };
     assert_eq!(value, 42);

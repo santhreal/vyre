@@ -145,7 +145,7 @@ fn cuda_executes_world_allgather_as_single_rank_copy() {
 }
 
 #[test]
-fn cuda_compiled_pipeline_executes_world_reduce_scatter_as_single_rank_copy() {
+fn cuda_artifact_executes_world_reduce_scatter_as_single_rank_copy() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
     let program = Program::wrapped(
@@ -161,13 +161,12 @@ fn cuda_compiled_pipeline_executes_world_reduce_scatter_as_single_rank_copy() {
             group: CommGroup::WORLD,
         }],
     );
-    let pipeline = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .expect("Fix: CUDA native compile must pre-lower WORLD ReduceScatter before PTX emission.");
-
-    let outputs = pipeline
-        .dispatch(&[u32_bytes(&[8, 6, 7, 5])], &DispatchConfig::default())
-        .expect("Fix: compiled CUDA pipeline must execute single-rank ReduceScatter.");
+    let outputs = common::compiled_cuda_outputs(
+        &backend,
+        &program,
+        &[u32_bytes(&[8, 6, 7, 5])],
+        "world-reduce-scatter",
+    );
 
     assert_eq!(bytes_u32(&outputs[0]), vec![8, 6, 7, 5]);
 }
@@ -207,7 +206,7 @@ fn cuda_executes_world_allreduce_as_single_rank_identity() {
 }
 
 #[test]
-fn cuda_compiled_pipeline_executes_world_broadcast_root_zero_as_identity() {
+fn cuda_artifact_executes_world_broadcast_root_zero_as_identity() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
     let program = Program::wrapped(
@@ -225,18 +224,12 @@ fn cuda_compiled_pipeline_executes_world_broadcast_root_zero_as_identity() {
             },
         ],
     );
-    let pipeline = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .expect(
-            "Fix: CUDA native compile must pre-lower WORLD Broadcast root 0 before PTX emission.",
-        );
-
-    let outputs = pipeline
-        .dispatch(
-            &[u32_bytes(&[0, 1, u32::MAX - 1, u32::MAX])],
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: compiled CUDA pipeline must execute single-rank Broadcast root 0.");
+    let outputs = common::compiled_cuda_outputs(
+        &backend,
+        &program,
+        &[u32_bytes(&[0, 1, u32::MAX - 1, u32::MAX])],
+        "world-broadcast",
+    );
 
     assert_eq!(bytes_u32(&outputs[0]), vec![0, 1, u32::MAX - 1, u32::MAX]);
 }

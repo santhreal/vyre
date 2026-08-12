@@ -22,7 +22,7 @@ fn has_barrier(nodes: &[Node]) -> bool {
 
 #[test]
 fn softmax_runs_cooperatively_tiled_not_scalar() {
-    let program = vyre_libs::nn::softmax("input", "output", 1024);
+    let program = vyre_libs::nn::attention::softmax("input", "output", 1024);
     let wg = program.workgroup_size();
     assert!(
         wg[0] > 1,
@@ -38,7 +38,7 @@ fn softmax_runs_cooperatively_tiled_not_scalar() {
 
 #[test]
 fn layer_norm_runs_cooperatively_tiled_not_scalar() {
-    let program = vyre_libs::nn::layer_norm("input", "output", 1024, 1e-5);
+    let program = vyre_libs::nn::norm::layer_norm("input", "output", 1024, 1e-5);
     let wg = program.workgroup_size();
     assert!(
         wg[0] > 1,

@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# vyre-core's package name is just `vyre`. The dir is vyre-core/ for
-# historical layout reasons; the published crate is `vyre`.
+# The facade package name is `vyre`.
 vyre = "0.4.2"
 vyre-driver = "0.4.2"
 inventory = "=0.3.24"

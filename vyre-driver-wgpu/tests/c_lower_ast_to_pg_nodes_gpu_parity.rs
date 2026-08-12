@@ -21,7 +21,7 @@
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lower::ast_to_pg_nodes::{
     c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes,

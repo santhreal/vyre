@@ -236,8 +236,6 @@ pub use warp_word_automata::{
     CudaWarpWordInstructionClass, CUDA_WARP_WORD_AUTOMATA_LAYOUT_SCHEMA_VERSION,
 };
 
-use std::sync::Arc;
-
 use crate::backend::staging_reserve::reserve_smallvec;
 use smallvec::SmallVec;
 use vyre_driver::{BackendError, BackendRegistration, DispatchConfig, Resource, VyreBackend};
@@ -932,24 +930,6 @@ impl VyreBackend for CudaBackendRegistration {
             )
     }
 
-    fn compile_native(
-        &self,
-        program: &Program,
-        config: &DispatchConfig,
-    ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
-        self.validate_program_for_dispatch(program)?;
-        self.inner.compile_native(program, config).map(Some)
-    }
-
-    fn compile_native_shared(
-        &self,
-        program: Arc<Program>,
-        config: &DispatchConfig,
-    ) -> Result<Option<Arc<dyn vyre_driver::CompiledPipeline>>, BackendError> {
-        self.validate_program_for_dispatch(program.as_ref())?;
-        self.inner.compile_native_shared(program, config).map(Some)
-    }
-
     fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::pipeline::PipelineCacheSnapshot> {
         Some(self.inner.pipeline_cache_snapshot())
     }
@@ -1160,30 +1140,6 @@ inventory::submit! {
     }
 }
 
-fn emit_aot_bytes(program: &Program, config: &DispatchConfig) -> Result<Vec<u8>, String> {
-    let backend = CudaBackend::acquire().map_err(|error| {
-        format!(
-            "CUDA PTX AOT emission could not probe the live device target: {error}. Fix: run AOT emission on a host with the CUDA driver and target GPU visible."
-        )
-    })?;
-    crate::codegen::program_to_ptx_for_sm_and_subgroup(
-        program,
-        config,
-        backend.ptx_target_sm(),
-        backend.warp_size().ok_or_else(|| {
-            "CUDA PTX AOT emission could not read a hardware warp size from the live device probe. Fix: repair CUDA capability probing before AOT emission.".to_string()
-        })?,
-    )
-    .map(String::into_bytes)
-}
-
-inventory::submit! {
-    vyre_driver::aot::AotEmitter {
-        target: "secondary_text",
-        emit: emit_aot_bytes,
-    }
-}
-
 inventory::submit! {
     vyre_driver::aot::AotLauncherEmitter {
         target: "secondary_text",
@@ -1307,30 +1263,12 @@ mod tests {
                     "    fn dispatch_resident_sequence_read_ranges_into(",
                 ),
             ),
-            (
-                "compile_native",
-                method_region(
-                    source,
-                    "    fn compile_native(\n",
-                    "    fn compile_native_shared(",
-                ),
-            ),
         ] {
             assert!(
                 body.contains("validate_program_for_dispatch(program)?"),
                 "Fix: CUDA {name} must run the shared capability/grid-sync validation gate before lowering or launch."
             );
         }
-
-        let compile_shared = method_region(
-            source,
-            "    fn compile_native_shared(\n",
-            "    fn pipeline_cache_snapshot(",
-        );
-        assert!(
-            compile_shared.contains("validate_program_for_dispatch(program.as_ref())?"),
-            "Fix: CUDA compile_native_shared must validate the shared Program before lowering."
-        );
 
         let resident_sequence = method_region(
             source,
@@ -1345,7 +1283,7 @@ mod tests {
         let repeated_sequence = method_region(
             source,
             "    fn dispatch_resident_repeated_sequence_read_ranges_into(\n",
-            "    fn compile_native(",
+            "    fn pipeline_cache_snapshot(",
         );
         assert!(
             repeated_sequence.contains("validate_resident_steps_for_dispatch(prefix_steps)?")

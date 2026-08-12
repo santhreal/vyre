@@ -6,8 +6,8 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::{BackendError, BackendRegistration};
+use vyre_driver::{DispatchConfig, VyreBackend};
 pub use vyre_spec::DeterminismClass;
 
 use super::metric::BenchMetrics;
@@ -173,7 +173,7 @@ impl CpuReference {
         &self,
         prog: &vyre::ir::Program,
         inputs: &[Vec<u8>],
-        _config: &vyre::DispatchConfig,
+        _config: &vyre_driver::DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, String> {
         let ref_inputs: Vec<vyre_reference::value::Value> = inputs
             .iter()

@@ -1,34 +1,25 @@
-//! `cargo xtask catalog`  -  generate subsystem-by-subsystem markdown
-//! tables of every registered op with its tier, exemption status,
-//! fixpoint contract, and declared witness presence.
-//!
-//! External consumers browsing the Linux-kernel-flat `vyre-primitives`
-//! layout need a one-page summary per subsystem so they can tell at a
-//! glance what primitives exist. This emits `docs/catalog/<subsystem>.md`
-//! files from the live inventory registries  -  there's no hand-maintained
-//! list to drift out of sync.
+//! `cargo xtask catalog` renders subsystem views of the canonical operation schema.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use crate::operation_schema::{self, OperationRecord};
+
 const MAX_CATALOG_TEXT_BYTES: u64 = 4_194_304;
 
 pub(crate) fn run(args: &[String]) {
     let mut out_dir = default_out_dir();
     let mut check = false;
-    let mut it = args.iter().skip(2);
-    while let Some(arg) = it.next() {
-        match arg.as_str() {
+    let mut arguments = args.iter().skip(2);
+    while let Some(argument) = arguments.next() {
+        match argument.as_str() {
             "--out" => {
-                out_dir = match it.next() {
-                    Some(path) => PathBuf::from(path),
-                    None => {
-                        eprintln!("Fix: `--out` needs a directory path");
-                        std::process::exit(1);
-                    }
-                }
+                out_dir = arguments.next().map(PathBuf::from).unwrap_or_else(|| {
+                    eprintln!("Fix: `--out` needs a directory path");
+                    std::process::exit(1);
+                });
             }
             "--check" => check = true,
             other => {
@@ -46,31 +37,19 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-/// Resolve `docs/catalog` from the repository root.
-///
-/// The root is found by walking up from the current directory, then from the
-/// directory this binary was compiled in, looking for a workspace manifest
-/// that sits beside a `docs` directory. Reading `CARGO_MANIFEST_DIR` from the
-/// environment at run time is wrong here: the variable is set by `cargo run`
-/// and unset when the built binary is invoked directly, so the old default of
-/// `.` silently produced `./../docs/catalog` and reported every catalog file
-/// as missing. A path this command both writes and diffs has to fail loudly
-/// when it cannot be located rather than confidently check the wrong place.
 fn default_out_dir() -> PathBuf {
     let mut starts = Vec::new();
     if let Ok(cwd) = std::env::current_dir() {
         starts.push(cwd);
     }
     starts.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
-
     for start in &starts {
         if let Some(root) = find_workspace_root(start) {
             return root.join("docs/catalog");
         }
     }
-
     eprintln!(
-        "Fix: cannot find the vyre repository root from {}. Run this command from inside a checkout, or pass `--out <dir>` with the catalog directory.",
+        "Fix: cannot find the Vyre repository root from {}. Run this command inside the checkout or pass `--out <dir>`.",
         starts
             .iter()
             .map(|path| path.display().to_string())
@@ -80,230 +59,220 @@ fn default_out_dir() -> PathBuf {
     std::process::exit(1);
 }
 
-/// Walk up from `start` to the first directory holding a workspace manifest
-/// next to a `docs` directory.
 fn find_workspace_root(start: &Path) -> Option<PathBuf> {
     for candidate in start.ancestors() {
         let manifest = candidate.join("Cargo.toml");
-        if !candidate.join("docs").is_dir() || !manifest.is_file() {
-            continue;
-        }
-        if read_text_bounded(&manifest).is_ok_and(|text| text.contains("[workspace]")) {
+        if candidate.join("docs").is_dir()
+            && manifest.is_file()
+            && read_text_bounded(&manifest).is_ok_and(|text| text.contains("[workspace]"))
+        {
             return Some(candidate.to_path_buf());
         }
     }
     None
 }
 
-struct OpRow {
-    op_id: &'static str,
-    // Retained for future per-row catalog formatting (e.g. grouping by
-    // subsystem inside a single rendered page). The collect() path
-    // already groups outer BTreeMap keys by subsystem, so the field
-    // is redundant with the map key for now.
-    #[allow(dead_code)]
-    subsystem: String,
-    witness: bool,
-    expected: bool,
-    tolerance: u32,
-}
-
-fn op_tolerance(op_id: &str) -> u32 {
-    match op_id {
-        "vyre-libs::nn::softmax" => 1,
-        "vyre-libs::nn::attention" => 4,
-        "vyre-libs::nn::gqa_attention" => 4,
-        "vyre-libs::nn::layer_norm" => 1,
-        "vyre-libs::nn::silu" => 1,
-        "vyre-libs::nn::logit_softcap" => 1,
-        "vyre-libs::nn::rms_norm" => 2,
-        "vyre-libs::nn::rms_norm_linear" => 2,
-        "vyre-libs::optim::newton_schulz_5step" => 4,
-        _ => 0,
-    }
-}
-
-fn collect() -> BTreeMap<String, Vec<OpRow>> {
-    let mut by_subsystem: BTreeMap<String, Vec<OpRow>> = BTreeMap::new();
-
-    for entry in vyre_libs::harness::all_entries() {
-        let subsystem = subsystem_for(entry.id);
+fn collect() -> BTreeMap<String, Vec<OperationRecord>> {
+    let schema = operation_schema::build().unwrap_or_else(|errors| {
+        for error in errors {
+            eprintln!("Fix: {error}");
+        }
+        std::process::exit(1);
+    });
+    let mut by_subsystem: BTreeMap<String, Vec<OperationRecord>> = BTreeMap::new();
+    for operation in schema.operations {
         by_subsystem
-            .entry(subsystem.clone())
+            .entry(subsystem_for(&operation.id))
             .or_default()
-            .push(OpRow {
-                op_id: entry.id,
-                subsystem,
-                witness: entry.test_inputs.is_some(),
-                expected: entry.expected_output.is_some(),
-                tolerance: op_tolerance(entry.id),
-            });
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        let subsystem = subsystem_for(entry.id);
-        by_subsystem
-            .entry(subsystem.clone())
-            .or_default()
-            .push(OpRow {
-                op_id: entry.id,
-                subsystem,
-                witness: entry.test_inputs.is_some(),
-                expected: entry.expected_output.is_some(),
-                tolerance: op_tolerance(entry.id),
-            });
-    }
-    for entry in vyre_intrinsics::harness::all_entries() {
-        let subsystem = "intrinsics".to_string();
-        by_subsystem
-            .entry(subsystem.clone())
-            .or_default()
-            .push(OpRow {
-                op_id: entry.id,
-                subsystem,
-                witness: entry.test_inputs.is_some(),
-                expected: entry.expected_output.is_some(),
-                tolerance: op_tolerance(entry.id),
-            });
+            .push(operation);
     }
     for rows in by_subsystem.values_mut() {
-        rows.sort_by_key(|row| row.op_id);
+        rows.sort_by(|left, right| left.id.cmp(&right.id));
     }
     by_subsystem
 }
 
-fn subsystem_for(op_id: &str) -> String {
-    // `vyre-libs::<subsystem>::<rest>` or `vyre-intrinsics::<rest>`.
-    let no_prefix = op_id
-        .strip_prefix("vyre-libs::")
-        .or_else(|| op_id.strip_prefix("vyre-intrinsics::"))
-        .or_else(|| op_id.strip_prefix("vyre-primitives::"))
-        .unwrap_or(op_id);
-    match no_prefix.split_once("::") {
-        Some((subsystem, _)) => subsystem.to_string(),
-        None => no_prefix.to_string(),
-    }
+fn subsystem_for(operation_id: &str) -> String {
+    operation_id
+        .split("::")
+        .nth(1)
+        .or_else(|| operation_id.split('.').next())
+        .unwrap_or("runtime")
+        .to_string()
 }
 
-fn render(subsystem: &str, rows: &[OpRow]) -> String {
-    let mut s = String::new();
-    s.push_str(&format!("# {subsystem}\n\n"));
-    s.push_str(
-        "Auto-generated by `cargo_full run --bin xtask -- catalog`. Do not hand-edit  -  \
-         regenerate from the live inventory registries instead.\n\n",
+fn render(subsystem: &str, rows: &[OperationRecord]) -> String {
+    use std::fmt::Write;
+
+    let mut output = String::new();
+    let _ = writeln!(output, "# `{subsystem}` operations\n");
+    output.push_str(
+        "This page is generated from `docs/generated/OP_SCHEMA.json`. The JSON schema is the authority. Regenerate this view with `cargo_full run --bin xtask -- catalog`.\n\n",
     );
-    s.push_str(&format!(
-        "{} op(s) registered in this subsystem.\n\n",
+    let _ = writeln!(
+        output,
+        "{} operations are registered in this subsystem.\n",
         rows.len()
-    ));
-    s.push_str("| op id | witness | expected_output | universal diff |\n");
-    s.push_str("| --- | :---: | :---: | --- |\n");
+    );
+    output.push_str("| operation | tier | category | signature | features | oracle | backend support | laws | composition |\n");
+    output.push_str("| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n");
     for row in rows {
-        let witness = if row.witness { "✓" } else { "–" };
-        let expected = if row.expected { "✓" } else { "–" };
-        let diff = if row.tolerance == 0 {
-            "byte-identity".to_string()
+        let signature = if row.signature.kind == "program_buffers" {
+            row.signature
+                .buffers
+                .iter()
+                .map(|buffer| {
+                    format!(
+                        "{}:{}:{}:{}",
+                        buffer.binding, buffer.name, buffer.access, buffer.element
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("<br>")
         } else {
-            format!("{}-ULP", row.tolerance)
+            let inputs = row
+                .signature
+                .inputs
+                .iter()
+                .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let outputs = row
+                .signature
+                .outputs
+                .iter()
+                .map(|parameter| format!("{}:{}", parameter.name, parameter.data_type))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({inputs}) -> ({outputs})")
         };
-        s.push_str(&format!(
-            "| `{}` | {} | {} | {} |\n",
-            row.op_id, witness, expected, diff
-        ));
+        let oracle = format!(
+            "reference={} inputs={} expected={} tolerance={} ULP",
+            row.oracle.reference_eval,
+            row.oracle.fixture_inputs,
+            row.oracle.expected_output,
+            row.oracle.tolerance_ulp
+        );
+        let backends = row
+            .backend_support
+            .iter()
+            .map(|(backend, support)| format!("{backend}:{}", support.status))
+            .collect::<Vec<_>>()
+            .join("<br>");
+        let composition = if row.composition_chain.is_empty() {
+            "leaf".to_string()
+        } else {
+            row.composition_chain
+                .iter()
+                .map(|step| {
+                    format!(
+                        "{}{}{}",
+                        "&nbsp;".repeat(step.depth * 2),
+                        step.operation,
+                        if step.registered { "" } else { " (internal)" }
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("<br>")
+        };
+        let _ = writeln!(
+            output,
+            "| `{}` | `{}` | `{}` | {} | {} | {} | {} | {} | {} |",
+            row.id,
+            row.tier,
+            row.category,
+            signature,
+            row.features
+                .iter()
+                .map(|feature| format!("`{feature}`"))
+                .collect::<Vec<_>>()
+                .join("<br>"),
+            oracle,
+            backends,
+            if row.laws.is_empty() {
+                "none declared".to_string()
+            } else {
+                row.laws.join("<br>")
+            },
+            composition
+        );
     }
-    s
+    output
 }
 
-fn emit_to_disk(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &std::path::Path) {
+fn emit_to_disk(catalog: &BTreeMap<String, Vec<OperationRecord>>, out_dir: &Path) {
     fs::create_dir_all(out_dir).unwrap_or_else(|error| {
-        eprintln!("Fix: failed to create {}: {error}", out_dir.display());
+        eprintln!("Fix: create {}: {error}", out_dir.display());
         std::process::exit(1);
     });
     for (subsystem, rows) in catalog {
         let path = out_dir.join(format!("{subsystem}.md"));
-        let body = render(subsystem, rows);
-        fs::write(&path, body).unwrap_or_else(|error| {
-            eprintln!("Fix: failed to write {}: {error}", path.display());
+        fs::write(&path, render(subsystem, rows)).unwrap_or_else(|error| {
+            eprintln!("Fix: write {}: {error}", path.display());
             std::process::exit(1);
         });
     }
-    let index = render_index(catalog);
-    let index_path = out_dir.join("README.md");
-    fs::write(&index_path, index).unwrap_or_else(|error| {
-        eprintln!("Fix: failed to write {}: {error}", index_path.display());
+    fs::write(out_dir.join("README.md"), render_index(catalog)).unwrap_or_else(|error| {
+        eprintln!("Fix: write catalog index: {error}");
         std::process::exit(1);
     });
     for orphan in stale_catalog_files(catalog, out_dir) {
         fs::remove_file(&orphan).unwrap_or_else(|error| {
-            eprintln!("Fix: failed to remove stale {}: {error}", orphan.display());
+            eprintln!("Fix: remove stale {}: {error}", orphan.display());
             std::process::exit(1);
         });
-        println!("removed stale catalog {}", orphan.display());
     }
-    println!(
-        "wrote {} subsystem catalogs to {}",
-        catalog.len(),
-        out_dir.display()
-    );
+    println!("wrote {} schema-derived subsystem catalogs", catalog.len());
 }
 
-fn check_against_disk(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &std::path::Path) {
+fn check_against_disk(catalog: &BTreeMap<String, Vec<OperationRecord>>, out_dir: &Path) {
     let mut drift = Vec::new();
     for (subsystem, rows) in catalog {
         let path = out_dir.join(format!("{subsystem}.md"));
-        let expected = render(subsystem, rows);
         match read_text_bounded(&path) {
-            Ok(got) if got == expected => {}
-            Ok(_) => drift.push(format!("{} diverges from live inventory", path.display())),
-            Err(_) => drift.push(format!("{} missing on disk", path.display())),
+            Ok(current) if current == render(subsystem, rows) => {}
+            Ok(_) => drift.push(format!(
+                "{} differs from the canonical schema",
+                path.display()
+            )),
+            Err(error) => drift.push(format!("{} cannot be read: {error}", path.display())),
         }
     }
-    let index = render_index(catalog);
     let index_path = out_dir.join("README.md");
     match read_text_bounded(&index_path) {
-        Ok(got) if got == index => {}
+        Ok(current) if current == render_index(catalog) => {}
         Ok(_) => drift.push(format!(
-            "{} diverges from live inventory",
+            "{} differs from the canonical schema",
             index_path.display()
         )),
-        Err(_) => drift.push(format!("{} missing on disk", index_path.display())),
+        Err(error) => drift.push(format!("{} cannot be read: {error}", index_path.display())),
     }
     for orphan in stale_catalog_files(catalog, out_dir) {
-        drift.push(format!(
-            "{} is on disk but no subsystem registers it",
-            orphan.display()
-        ));
+        drift.push(format!("{} has no canonical subsystem", orphan.display()));
     }
-    if drift.is_empty() {
-        println!(
-            "catalog matches live inventory ({} subsystems)",
-            catalog.len()
-        );
-    } else {
-        eprintln!("catalog drift detected:");
-        for line in &drift {
-            eprintln!("  - {line}");
+    if !drift.is_empty() {
+        for error in drift {
+            eprintln!("Fix: {error}");
         }
-        eprintln!(
-            "Fix: run `cargo_full run --bin xtask -- catalog` to regenerate, commit the updated files, then re-run --check."
-        );
         std::process::exit(1);
     }
+    println!(
+        "catalog: {} schema-derived subsystem catalogs agree",
+        catalog.len()
+    );
 }
 
-/// Catalog files on disk that the live inventory no longer produces.
-///
-/// A subsystem that loses its last op, or whose ops move to a different
-/// subsystem, leaves its page behind. Without this the page keeps advertising
-/// op ids that no longer resolve, and `--check` still reports a match, so the
-/// stale page is invisible to every gate that trusts the check.
-fn stale_catalog_files(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &Path) -> Vec<PathBuf> {
+fn stale_catalog_files(
+    catalog: &BTreeMap<String, Vec<OperationRecord>>,
+    out_dir: &Path,
+) -> Vec<PathBuf> {
     let Ok(entries) = fs::read_dir(out_dir) else {
         return Vec::new();
     };
-    let mut stale: Vec<PathBuf> = entries
+    let mut stale = entries
         .flatten()
         .map(|entry| entry.path())
-        .filter(|path| path.extension().is_some_and(|ext| ext == "md"))
+        .filter(|path| path.extension().is_some_and(|extension| extension == "md"))
         .filter(
             |path| match path.file_stem().and_then(|stem| stem.to_str()) {
                 Some("README") => false,
@@ -311,41 +280,34 @@ fn stale_catalog_files(catalog: &BTreeMap<String, Vec<OpRow>>, out_dir: &Path) -
                 None => false,
             },
         )
-        .collect();
+        .collect::<Vec<_>>();
     stale.sort();
     stale
 }
 
-fn render_index(catalog: &BTreeMap<String, Vec<OpRow>>) -> String {
-    let mut s = String::new();
-    s.push_str("# Vyre Op Catalog\n\n");
-    s.push_str(
-        "Auto-generated by `cargo_full run --bin xtask -- catalog`. One table per subsystem; \
-         each row is a registered `OpEntry` drawn from `vyre-primitives` \
-         (Tier 2.5), `vyre-libs` (Tier 3), and `vyre-intrinsics` (Tier 2) \
-         inventories.\n\n",
+fn render_index(catalog: &BTreeMap<String, Vec<OperationRecord>>) -> String {
+    let mut output = String::from("# Vyre operation catalog\n\n");
+    output.push_str(
+        "These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The JSON schema is the authority for operation IDs, tiers, categories, signatures, features, oracles, backend support, laws, composition chains, and counts.\n\n",
     );
-    s.push_str("| subsystem | ops |\n| --- | ---: |\n");
+    output.push_str("| subsystem | operations |\n| --- | ---: |\n");
     for (subsystem, rows) in catalog {
-        s.push_str(&format!(
-            "| [{subsystem}]({subsystem}.md) | {} |\n",
+        output.push_str(&format!(
+            "| [`{subsystem}`]({subsystem}.md) | {} |\n",
             rows.len()
         ));
     }
-    s
+    output
 }
 
 fn read_text_bounded(path: &Path) -> io::Result<String> {
-    let mut reader = fs::File::open(path)?.take(MAX_CATALOG_TEXT_BYTES.saturating_add(1));
+    let mut reader = fs::File::open(path)?.take(MAX_CATALOG_TEXT_BYTES + 1);
     let mut text = String::new();
     reader.read_to_string(&mut text)?;
     if text.len() as u64 > MAX_CATALOG_TEXT_BYTES {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "{} exceeds {MAX_CATALOG_TEXT_BYTES} byte catalog read cap",
-                path.display()
-            ),
+            format!("{} exceeds the catalog read cap", path.display()),
         ));
     }
     Ok(text)

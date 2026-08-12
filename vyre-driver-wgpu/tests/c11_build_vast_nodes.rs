@@ -3,7 +3,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(deprecated)]
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::{
@@ -481,18 +481,18 @@ fn assert_expr_shape_row(
     assert_eq!(word_at(rows, row + 6), second, "second[{idx}]");
     assert_eq!(word_at(rows, row + 7), third, "third[{idx}]");
 }
-mod c11_build_vast_nodes_part1 {
-    include!("__split/c11_build_vast_nodes_part1.rs");
+mod c11_build_vast_nodes_cpu_reference_builds_delimiter_tree_for_function_body {
+    include!("contract_cases/c11_build_vast_nodes__cpu_reference_builds_delimiter_tree_for_function_body.rs");
 }
-mod c11_build_vast_nodes_part2 {
-    include!("__split/c11_build_vast_nodes_part2.rs");
+mod c11_build_vast_nodes_cpu_reference_classifies_c_expression_operators_as_first_class_vast_nodes {
+    include!("contract_cases/c11_build_vast_nodes__cpu_reference_classifies_c_expression_operators_as_first_class_vast_nodes.rs");
 }
-mod c11_build_vast_nodes_part3 {
-    include!("__split/c11_build_vast_nodes_part3.rs");
+mod c11_build_vast_nodes_cpu_reference_classifies_hostile_cast_vs_declaration_patterns {
+    include!("contract_cases/c11_build_vast_nodes__cpu_reference_classifies_hostile_cast_vs_declaration_patterns.rs");
 }
-mod c11_build_vast_nodes_part4 {
-    include!("__split/c11_build_vast_nodes_part4.rs");
+mod c11_build_vast_nodes_gpu_parity_classifies_gnu_attribute_and_inline_asm_nodes {
+    include!("contract_cases/c11_build_vast_nodes__gpu_parity_classifies_gnu_attribute_and_inline_asm_nodes.rs");
 }
-mod c11_build_vast_nodes_part5 {
-    include!("__split/c11_build_vast_nodes_part5.rs");
+mod c11_build_vast_nodes_gpu_parity_classifies_c_declarators_initializers_and_fields {
+    include!("contract_cases/c11_build_vast_nodes__gpu_parity_classifies_c_declarators_initializers_and_fields.rs");
 }

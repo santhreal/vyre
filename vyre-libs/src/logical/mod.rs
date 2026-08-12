@@ -1,5 +1,5 @@
 //! Elementwise logical operations (and, or, xor, nand, nor).
-//! Ported from the legacy target-text implementations in vyre-ops.
+//! These compositions replace legacy target-text implementations.
 
 macro_rules! define_wrapped_bitset_binary {
     ($module:ident, $function:ident, $op_id:literal, $primitive:path, $primitive_op_id:path, $expected:expr, $doc:literal) => {

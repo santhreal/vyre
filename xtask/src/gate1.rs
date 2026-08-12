@@ -64,7 +64,7 @@ impl Verdict {
 /// Entry point for the `gate1` subcommand.
 pub(crate) fn run(_args: &[String]) {
     let mut verdicts: Vec<Verdict> = Vec::new();
-    for entry in vyre_harness::all_entries() {
+    for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
         verdicts.push(verdict_for(
             entry.id,
             &entry

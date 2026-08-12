@@ -1,8 +1,7 @@
 //! `level_wave_program`  -  GPU-resident depth-wave dispatcher for
 //! bottom-up callee-before-caller computations.
 //!
-//! Semantically distinct from
-//! [`fixpoint::persistent_fixpoint`](crate::fixpoint::persistent_fixpoint):
+//! Semantically distinct from `fixpoint::persistent_fixpoint`:
 //! - **persistent_fixpoint**: re-run a transfer step until convergence.
 //!   No depth ordering  -  every lane runs the step every iteration.
 //! - **level_wave**: deterministic ordered traversal. Each lane runs

@@ -1,0 +1,122 @@
+impl core::default::Default for vyre_aot::launcher::LauncherOpts
+impl vyre_aot::manifest::Manifest
+pub const vyre_aot::VERSION: &str
+pub const vyre_aot::manifest::Manifest::SCHEMA_VERSION: &'static str
+pub enum vyre_aot::BundleError
+pub enum vyre_aot::CompileError
+pub enum vyre_aot::LauncherError
+pub enum vyre_aot::bundle::BundleError
+pub enum vyre_aot::cache::RuntimeCacheError
+pub enum vyre_aot::compile::CompileError
+pub enum vyre_aot::launcher::LauncherError
+pub fn vyre_aot::bundle(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_driver::registry::registry::Target, weights: &[u8], artifact_name: &str, launcher_opts: &vyre_aot::launcher::LauncherOpts, notes: &str) -> core::result::Result<vyre_aot::bundle::DeploymentBundle, vyre_aot::bundle::BundleError>
+pub fn vyre_aot::bundle::bundle(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_driver::registry::registry::Target, weights: &[u8], artifact_name: &str, launcher_opts: &vyre_aot::launcher::LauncherOpts, notes: &str) -> core::result::Result<vyre_aot::bundle::DeploymentBundle, vyre_aot::bundle::BundleError>
+pub fn vyre_aot::bundle::package_artifact(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_driver::registry::registry::Target, weights: &[u8], artifact_name: &str, notes: &str) -> core::result::Result<vyre_aot::bundle::DeploymentBundle, vyre_aot::bundle::BundleError>
+pub fn vyre_aot::bundle::read_bundle_artifact(bundle_dir: &std::path::Path) -> core::result::Result<(vyre_aot::manifest::Manifest, vyre_megakernel::envelope::ArtifactEnvelope), vyre_aot::bundle::BundleError>
+pub fn vyre_aot::cache::emit_runtime_cache_blob(envelope: &vyre_megakernel::envelope::ArtifactEnvelope, cache_dir: &std::path::Path) -> core::result::Result<std::path::PathBuf, vyre_aot::cache::RuntimeCacheError>
+pub fn vyre_aot::cache::fingerprint_hex(fingerprint: &[u8; 32]) -> alloc::string::String
+pub fn vyre_aot::compile(program: &vyre_foundation::ir_inner::model::program::core::Program, target: vyre_driver::registry::registry::Target) -> core::result::Result<vyre_megakernel::envelope::ArtifactEnvelope, vyre_aot::compile::CompileError>
+pub fn vyre_aot::compile::compile(program: &vyre_foundation::ir_inner::model::program::core::Program, target: vyre_driver::registry::registry::Target) -> core::result::Result<vyre_megakernel::envelope::ArtifactEnvelope, vyre_aot::compile::CompileError>
+pub fn vyre_aot::compile::compile_with_resolver(program: &vyre_foundation::ir_inner::model::program::core::Program, target: vyre_driver::registry::registry::Target, resolver: core::option::Option<vyre_foundation::transform::inline::OpResolver>) -> core::result::Result<vyre_megakernel::envelope::ArtifactEnvelope, vyre_aot::compile::CompileError>
+pub fn vyre_aot::compile_with_resolver(program: &vyre_foundation::ir_inner::model::program::core::Program, target: vyre_driver::registry::registry::Target, resolver: core::option::Option<vyre_foundation::transform::inline::OpResolver>) -> core::result::Result<vyre_megakernel::envelope::ArtifactEnvelope, vyre_aot::compile::CompileError>
+pub fn vyre_aot::emit_launcher_rust(envelope: &vyre_megakernel::envelope::ArtifactEnvelope, selected_target: vyre_driver::registry::registry::Target, opts: &vyre_aot::launcher::LauncherOpts) -> core::result::Result<alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>, vyre_aot::launcher::LauncherError>
+pub fn vyre_aot::launcher::LauncherOpts::default() -> Self
+pub fn vyre_aot::launcher::emit_launcher_rust(envelope: &vyre_megakernel::envelope::ArtifactEnvelope, selected_target: vyre_driver::registry::registry::Target, opts: &vyre_aot::launcher::LauncherOpts) -> core::result::Result<alloc::collections::btree::map::BTreeMap<std::path::PathBuf, alloc::string::String>, vyre_aot::launcher::LauncherError>
+pub fn vyre_aot::observability_snapshot() -> vyre_driver::observability::DriverObservability
+pub fn vyre_aot::package_artifact(out_dir: &std::path::Path, envelope: &vyre_megakernel::envelope::ArtifactEnvelope, target: vyre_driver::registry::registry::Target, weights: &[u8], artifact_name: &str, notes: &str) -> core::result::Result<vyre_aot::bundle::DeploymentBundle, vyre_aot::bundle::BundleError>
+pub fn vyre_aot::read_bundle_artifact(bundle_dir: &std::path::Path) -> core::result::Result<(vyre_aot::manifest::Manifest, vyre_megakernel::envelope::ArtifactEnvelope), vyre_aot::bundle::BundleError>
+pub mod vyre_aot
+pub mod vyre_aot::artifact
+pub mod vyre_aot::bundle
+pub mod vyre_aot::cache
+pub mod vyre_aot::compile
+pub mod vyre_aot::launcher
+pub mod vyre_aot::manifest
+pub struct vyre_aot::DeploymentBundle
+pub struct vyre_aot::LauncherOpts
+pub struct vyre_aot::Manifest
+pub struct vyre_aot::bundle::DeploymentBundle
+pub struct vyre_aot::launcher::LauncherOpts
+pub struct vyre_aot::manifest::Manifest
+pub use vyre_aot::Artifact
+pub use vyre_aot::ArtifactEnvelope
+pub use vyre_aot::Target
+pub use vyre_aot::TargetEntryPoint
+pub use vyre_aot::TargetPayload
+pub use vyre_aot::TargetPayloadFormat
+pub use vyre_aot::TargetResourceAccess
+pub use vyre_aot::TargetResourceBinding
+pub use vyre_aot::TargetResourceMemory
+pub use vyre_aot::artifact::Target
+pub vyre_aot::BundleError::Brotli(alloc::string::String)
+pub vyre_aot::BundleError::CanonicalArtifact(vyre_megakernel::CompileError)
+pub vyre_aot::BundleError::InvalidArtifact(alloc::string::String)
+pub vyre_aot::BundleError::Io(std::io::error::Error)
+pub vyre_aot::BundleError::Json(serde_json::error::Error)
+pub vyre_aot::BundleError::Launcher(vyre_aot::launcher::LauncherError)
+pub vyre_aot::BundleError::Lzma(alloc::string::String)
+pub vyre_aot::CompileError::ArtifactLayout(alloc::string::String)
+pub vyre_aot::CompileError::CanonicalArtifact
+pub vyre_aot::CompileError::CanonicalArtifact::source: vyre_megakernel::CompileError
+pub vyre_aot::CompileError::CanonicalArtifact::stage: &'static str
+pub vyre_aot::CompileError::ProgramPreparation(alloc::string::String)
+pub vyre_aot::CompileError::TargetCompilation(alloc::string::String)
+pub vyre_aot::CompileError::TargetNotEnabled(vyre_driver::registry::registry::Target)
+pub vyre_aot::DeploymentBundle::files: alloc::vec::Vec<std::path::PathBuf>
+pub vyre_aot::LauncherError::Backend(alloc::string::String)
+pub vyre_aot::LauncherError::InvalidArtifact(alloc::string::String)
+pub vyre_aot::LauncherError::TargetNotEnabled(&'static str)
+pub vyre_aot::LauncherOpts::crate_name: alloc::string::String
+pub vyre_aot::LauncherOpts::include_collectives: bool
+pub vyre_aot::LauncherOpts::include_ttt_loop: bool
+pub vyre_aot::Manifest::aot_version: alloc::string::String
+pub vyre_aot::Manifest::artifact_name: alloc::string::String
+pub vyre_aot::Manifest::envelope_compression: alloc::string::String
+pub vyre_aot::Manifest::envelope_file: alloc::string::String
+pub vyre_aot::Manifest::envelope_sha256_hex: alloc::string::String
+pub vyre_aot::Manifest::neutral_artifact_digest_hex: alloc::string::String
+pub vyre_aot::Manifest::notes: alloc::string::String
+pub vyre_aot::Manifest::schema: alloc::string::String
+pub vyre_aot::Manifest::target: vyre_driver::registry::registry::Target
+pub vyre_aot::Manifest::target_payload_digest_hex: alloc::string::String
+pub vyre_aot::Manifest::weights_compression: alloc::string::String
+pub vyre_aot::Manifest::weights_file: alloc::string::String
+pub vyre_aot::Manifest::weights_sha256_hex: alloc::string::String
+pub vyre_aot::bundle::BundleError::Brotli(alloc::string::String)
+pub vyre_aot::bundle::BundleError::CanonicalArtifact(vyre_megakernel::CompileError)
+pub vyre_aot::bundle::BundleError::InvalidArtifact(alloc::string::String)
+pub vyre_aot::bundle::BundleError::Io(std::io::error::Error)
+pub vyre_aot::bundle::BundleError::Json(serde_json::error::Error)
+pub vyre_aot::bundle::BundleError::Launcher(vyre_aot::launcher::LauncherError)
+pub vyre_aot::bundle::BundleError::Lzma(alloc::string::String)
+pub vyre_aot::bundle::DeploymentBundle::files: alloc::vec::Vec<std::path::PathBuf>
+pub vyre_aot::cache::RuntimeCacheError::CanonicalArtifact(vyre_megakernel::CompileError)
+pub vyre_aot::cache::RuntimeCacheError::Io
+pub vyre_aot::cache::RuntimeCacheError::Io::path: std::path::PathBuf
+pub vyre_aot::cache::RuntimeCacheError::Io::source: std::io::error::Error
+pub vyre_aot::compile::CompileError::ArtifactLayout(alloc::string::String)
+pub vyre_aot::compile::CompileError::CanonicalArtifact
+pub vyre_aot::compile::CompileError::CanonicalArtifact::source: vyre_megakernel::CompileError
+pub vyre_aot::compile::CompileError::CanonicalArtifact::stage: &'static str
+pub vyre_aot::compile::CompileError::ProgramPreparation(alloc::string::String)
+pub vyre_aot::compile::CompileError::TargetCompilation(alloc::string::String)
+pub vyre_aot::compile::CompileError::TargetNotEnabled(vyre_driver::registry::registry::Target)
+pub vyre_aot::launcher::LauncherError::Backend(alloc::string::String)
+pub vyre_aot::launcher::LauncherError::InvalidArtifact(alloc::string::String)
+pub vyre_aot::launcher::LauncherError::TargetNotEnabled(&'static str)
+pub vyre_aot::launcher::LauncherOpts::crate_name: alloc::string::String
+pub vyre_aot::launcher::LauncherOpts::include_collectives: bool
+pub vyre_aot::launcher::LauncherOpts::include_ttt_loop: bool
+pub vyre_aot::manifest::Manifest::aot_version: alloc::string::String
+pub vyre_aot::manifest::Manifest::artifact_name: alloc::string::String
+pub vyre_aot::manifest::Manifest::envelope_compression: alloc::string::String
+pub vyre_aot::manifest::Manifest::envelope_file: alloc::string::String
+pub vyre_aot::manifest::Manifest::envelope_sha256_hex: alloc::string::String
+pub vyre_aot::manifest::Manifest::neutral_artifact_digest_hex: alloc::string::String
+pub vyre_aot::manifest::Manifest::notes: alloc::string::String
+pub vyre_aot::manifest::Manifest::schema: alloc::string::String
+pub vyre_aot::manifest::Manifest::target: vyre_driver::registry::registry::Target
+pub vyre_aot::manifest::Manifest::target_payload_digest_hex: alloc::string::String
+pub vyre_aot::manifest::Manifest::weights_compression: alloc::string::String
+pub vyre_aot::manifest::Manifest::weights_file: alloc::string::String
+pub vyre_aot::manifest::Manifest::weights_sha256_hex: alloc::string::String

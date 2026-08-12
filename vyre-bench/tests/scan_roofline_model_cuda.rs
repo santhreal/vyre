@@ -18,7 +18,7 @@
 
 use vyre::scan::GpuLiteralSet;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 #[test]
 fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
@@ -73,7 +73,7 @@ fn resident_scan_roofline_model_has_both_ceilings_and_states_the_bound() {
         .expect("prepare resident fused scan");
 
     let mut presence: Vec<u32> = Vec::new();
-    let mut matches: Vec<Match> = Vec::new();
+    let mut matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     // Warm dispatch (tables resident, caches primed), then the timed measurement.
     session

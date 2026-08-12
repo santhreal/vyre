@@ -39,7 +39,7 @@ owning_crate = "vyre-libs"
 invariant = "every imported tuple keeps endpoint domains and source-span witness mapping"
 assumptions = ["finite relation tuple set", "canonical source-span digest"]
 bounded_scope = "relations<=8,tuples<=1024"
-counterexample_artifact = "weir-relation-import-certificate"
+counterexample_artifact = "external-relation-import-certificate"
 source_impact_edge = "SOURCE_IMPACT_GRAPH.toml"
 
 [[model]]

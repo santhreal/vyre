@@ -24,10 +24,7 @@ use super::protocol::*;
 use vyre_foundation::ir::{Expr, Node};
 
 mod offsets;
-pub use offsets::{
-    default_priority_offsets, default_priority_offsets_array, try_default_priority_offsets,
-    write_default_priority_offsets,
-};
+pub use offsets::{default_priority_offsets_array, write_default_priority_offsets};
 
 /// Number of priority levels the scheduler supports.
 pub const PRIORITY_LEVELS: u32 = 5;

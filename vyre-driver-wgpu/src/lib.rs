@@ -25,7 +25,6 @@ mod descriptor_mapping;
 mod device_buffer;
 pub mod emit;
 pub mod engine;
-mod executable_api;
 pub mod ext;
 mod materializer;
 mod numeric;
@@ -46,7 +45,6 @@ mod thread_pool;
 mod wait_backoff;
 
 pub use device_buffer::{WgpuDeviceBuffer, WGPU_BACKEND_ID};
-pub use executable_api::WgpuIR;
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;
 use std::sync::{atomic::AtomicBool, Arc};

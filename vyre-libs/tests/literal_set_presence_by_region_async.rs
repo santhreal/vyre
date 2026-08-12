@@ -24,20 +24,13 @@
 mod presence_corpus;
 
 use presence_corpus::{assert_planted_bits, planted_corpus, LITERALS};
-use vyre::VyreBackend;
-use vyre_driver_reference::CpuRefBackend;
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver::VyreBackend;
+use vyre_driver_reference::{self as _, CpuRefBackend, CPU_REF_BACKEND_ID};
+use vyre_driver_wgpu as _;
 
 #[test]
 fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping async region-presence GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let pattern_count = LITERALS.len() as u32;
     let words = pattern_count.div_ceil(32).max(1) as usize;
@@ -45,11 +38,11 @@ fn async_region_presence_matches_sync_and_planted_hits_on_gpu() {
     let region_count = region_starts.len();
 
     let sync_words = matcher
-        .scan_presence_by_region(backend.as_ref(), &haystack, &region_starts)
+        .scan_presence_by_region("wgpu", &haystack, &region_starts)
         .expect("sync gpu presence-by-region scan");
 
     let pending = matcher
-        .scan_presence_by_region_async(backend.as_ref(), &haystack, &region_starts, 0)
+        .scan_presence_by_region_async("wgpu", &haystack, &region_starts, 0)
         .expect("async gpu presence-by-region submit");
     // Exercise the non-blocking probe (value is backend/timing-dependent on a
     // pipelining backend, so we only require it be callable without blocking).
@@ -86,11 +79,11 @@ fn async_region_presence_equals_sync_on_cpu_reference() {
     let region_count = region_starts.len();
 
     let sync_words = matcher
-        .scan_presence_by_region(&CpuRefBackend, &haystack, &region_starts)
+        .scan_presence_by_region(CPU_REF_BACKEND_ID, &haystack, &region_starts)
         .expect("sync cpu-reference presence-by-region scan");
 
     let pending = matcher
-        .scan_presence_by_region_async(&CpuRefBackend, &haystack, &region_starts, 0)
+        .scan_presence_by_region_async(CPU_REF_BACKEND_ID, &haystack, &region_starts, 0)
         .expect("async cpu-reference presence-by-region submit");
     // Non-pipelining backend -> trivially-ready handle: is_ready is deterministically true.
     assert!(
@@ -125,7 +118,7 @@ fn prepared_region_presence_payload_reproduces_sync_scan_on_cpu_reference() {
     let region_count = region_starts.len();
 
     let sync_words = matcher
-        .scan_presence_by_region(&CpuRefBackend, &haystack, &region_starts)
+        .scan_presence_by_region(CPU_REF_BACKEND_ID, &haystack, &region_starts)
         .expect("sync cpu-reference presence-by-region scan");
 
     let prepared = matcher

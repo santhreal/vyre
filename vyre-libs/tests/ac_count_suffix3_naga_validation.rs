@@ -11,7 +11,7 @@ fn ac_count_suffix3_prefilter_naga_validates() {
     let program = build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa);
 
     let lowered =
-        vyre_lower::lower_for_emit(&program).expect("suffix3 AC count must lower to descriptor");
+        vyre_lower::lower_verified(&program).expect("suffix3 AC count must lower to descriptor");
     let module =
         vyre_emit_naga::emit(&lowered.descriptor).expect("suffix3 AC count must emit to Naga");
     let validation = naga::valid::Validator::new(

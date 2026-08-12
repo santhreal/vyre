@@ -47,10 +47,8 @@ pub trait NodeExtension: fmt::Debug + Send + Sync + 'static {
     /// little-endian host and decoded on a big-endian host must produce
     /// the same `crate::ir::Program::hash` and the same IR.
     ///
-    /// Extension authors are recommended (but not required, for API
-    /// compatibility) to use [`crate::opaque_payload::LeBytesWriter`] when
-    /// building payloads  -  it makes the right endianness the only choice at
-    /// the type level.
+    /// Extension authors should use [`crate::opaque_payload::endian::LeBytesWriter`] when
+    /// building payloads because it makes the required endianness explicit in the type.
     fn wire_payload(&self) -> Vec<u8> {
         Vec::new()
     }

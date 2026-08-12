@@ -198,10 +198,10 @@ fn run_conditional_mask(tok_types: &[u32]) -> Result<Vec<Value>, vyre_reference:
 // 1. Object-like macros
 // ---------------------------------------------------------------------------
 
-mod c_preprocess_pipeline_contracts_part1 {
+mod c_preprocess_pipeline_contracts_object_like_macro_replaces_identifier_with_token_sequence {
 
-    include!("__split/c_preprocess_pipeline_contracts_part1.rs");
+    include!("contract_cases/c_preprocess_pipeline_contracts__object_like_macro_replaces_identifier_with_token_sequence.rs");
 }
-mod c_preprocess_pipeline_contracts_part2 {
-    include!("__split/c_preprocess_pipeline_contracts_part2.rs");
+mod c_preprocess_pipeline_contracts_leading_hash_becomes_preproc_row_gpu_lexer {
+    include!("contract_cases/c_preprocess_pipeline_contracts__leading_hash_becomes_preproc_row_gpu_lexer.rs");
 }

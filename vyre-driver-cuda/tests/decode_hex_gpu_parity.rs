@@ -3,7 +3,7 @@
 mod common;
 
 use common::{bytes_u32, live_backend, u32_bytes};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::decode::hex::{
     hex_decode, hex_decode_reference_packed, hex_decode_table, hex_decoded_capacity,
     HEX_WORKGROUP_SIZE,

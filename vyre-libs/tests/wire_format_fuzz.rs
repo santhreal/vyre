@@ -17,7 +17,7 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre::scan::{GpuLiteralSet, RulePipeline};
+use vyre::scan::GpuLiteralSet;
 use vyre_primitives::matching::CompiledDfa;
 
 fn arb_random_bytes() -> impl Strategy<Value = Vec<u8>> {
@@ -37,10 +37,6 @@ proptest! {
         let _ = GpuLiteralSet::from_bytes(&bytes);
     }
 
-    #[test]
-    fn rule_pipeline_from_bytes_never_panics(bytes in arb_random_bytes()) {
-        let _ = RulePipeline::from_bytes(&bytes);
-    }
 
     /// Round-trip a real blob, then flip a single byte inside it. The
     /// decoder must reject (typed error) OR decode to a different
@@ -84,7 +80,6 @@ proptest! {
         let bytes = vec![0u8; len];
         let _ = CompiledDfa::from_bytes(&bytes);
         let _ = GpuLiteralSet::from_bytes(&bytes);
-        let _ = RulePipeline::from_bytes(&bytes);
     }
 
     /// Truncating a real blob at every byte length must produce a

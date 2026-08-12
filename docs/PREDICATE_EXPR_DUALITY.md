@@ -1,5 +1,8 @@
 # Predicate vs Expr Duality
 
+**Status: Archived.** This records a downstream design investigation and is
+not a current Vyre platform contract.
+
 Closes #97 F-F3 (unify Predicate vs Expr duality).
 
 ## Status

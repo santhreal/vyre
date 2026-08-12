@@ -133,9 +133,8 @@ pub mod optimizer;
 #[cfg(feature = "analysis")]
 pub use analysis::{
     cost_model, dataflow_fixpoint, decision_telemetry, diagnostic_aggregation,
-    diagnostic_comparison, effect_signature_check, incremental_invalidation,
-    knowledge_compile_pass_precondition, linear_type_check, persistent_fixpoint_program,
-    shape_smt_check,
+    effect_signature_check, incremental_invalidation, knowledge_compile_pass_precondition,
+    linear_type_check, persistent_fixpoint_program, shape_smt_check,
 };
 
 #[cfg(feature = "logic")]
@@ -183,6 +182,5 @@ pub use math::{
 pub(crate) use hardware::dispatch_buffers;
 #[cfg(feature = "optimizer")]
 pub use hardware::{
-    device_resident_token_fact_graph, gpu_preprocessing_coverage, gpu_probe_contract,
-    memory_ownership_contract,
+    device_resident_token_fact_graph, gpu_probe_contract, memory_ownership_contract,
 };

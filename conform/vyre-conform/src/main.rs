@@ -120,7 +120,7 @@ struct UnifiedEntry {
 struct PreparedEntry {
     id: &'static str,
     program: vyre::Program,
-    dispatch_config: vyre::DispatchConfig,
+    dispatch_config: vyre_driver::DispatchConfig,
     cases: FixtureCases,
     reference_cases: FixtureCases,
     input_plan: BackendDispatchPlan,
@@ -284,7 +284,9 @@ fn dispatch_pairs(backend_id: &str, ops: &str) -> Result<Vec<ConformanceResult>,
     Ok(pairs)
 }
 
-fn backend_registration(backend_id: &str) -> Result<&'static vyre::BackendRegistration, String> {
+fn backend_registration(
+    backend_id: &str,
+) -> Result<&'static vyre_driver::BackendRegistration, String> {
     let requested = if backend_id == "auto" {
         registered_backends()
             .iter()
@@ -308,7 +310,7 @@ fn backend_registration(backend_id: &str) -> Result<&'static vyre::BackendRegist
         })
 }
 
-fn dispatch_capable_backends() -> Vec<&'static vyre::BackendRegistration> {
+fn dispatch_capable_backends() -> Vec<&'static vyre_driver::BackendRegistration> {
     force_link_backend_inventory();
     registered_backends()
         .iter()
@@ -399,9 +401,9 @@ fn parse_shard_spec(value: &str) -> Result<ShardSpec, String> {
 }
 
 fn select_backends(
-    all_backends: &[&'static vyre::BackendRegistration],
+    all_backends: &[&'static vyre_driver::BackendRegistration],
     filter: &str,
-) -> Result<Vec<&'static vyre::BackendRegistration>, String> {
+) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
     if filter == "all" {
         return Ok(all_backends.to_vec());
     }
@@ -461,7 +463,8 @@ fn is_reference_backend(backend_id: &str) -> bool {
 }
 
 fn unified_entries() -> Vec<UnifiedEntry> {
-    vyre_harness::all_entries()
+    vyre_foundation::operation::OperationRegistry::global()
+        .iter()
         .map(|entry| UnifiedEntry {
             id: entry.id,
             build: entry.build,
@@ -641,7 +644,7 @@ fn emit_proof_timing(report: ProofTimingReport<'_>) {
 
 fn prepare_entries_in_parallel(
     entries: Vec<UnifiedEntry>,
-    backends: &[&'static vyre::BackendRegistration],
+    backends: &[&'static vyre_driver::BackendRegistration],
 ) -> PreparedEntryBatch {
     if entries.is_empty() {
         return PreparedEntryBatch {
@@ -726,7 +729,7 @@ fn prepare_entries_in_parallel(
 }
 
 fn prove_backends_in_parallel(
-    backends: &[&'static vyre::BackendRegistration],
+    backends: &[&'static vyre_driver::BackendRegistration],
     prepared_entries: &[PreparedEntry],
 ) -> Vec<Vec<ConformanceResult>> {
     std::thread::scope(|scope| {
@@ -768,7 +771,7 @@ fn prove_backends_in_parallel(
 }
 
 fn prove_one_backend(
-    backend: &'static vyre::BackendRegistration,
+    backend: &'static vyre_driver::BackendRegistration,
     prepared_entries: &[PreparedEntry],
 ) -> Vec<ConformanceResult> {
     let started = std::time::Instant::now();
@@ -906,7 +909,7 @@ fn prepare_reference_cases(
 }
 
 fn compare_backend_against_reference(
-    backend: &'static vyre::BackendRegistration,
+    backend: &'static vyre_driver::BackendRegistration,
     prepared: &PreparedEntry,
 ) -> ConformanceResult {
     let backend_id = backend.id.to_string();
@@ -1859,9 +1862,9 @@ fn prove(args: impl IntoIterator<Item = String>) -> Result<(), String> {
 }
 
 fn proof_plan_summary(
-    universe_backends: &[&'static vyre::BackendRegistration],
+    universe_backends: &[&'static vyre_driver::BackendRegistration],
     universe_entries: &[UnifiedEntry],
-    backends: &[&'static vyre::BackendRegistration],
+    backends: &[&'static vyre_driver::BackendRegistration],
     entries: &[PreparedEntry],
     pair_count: usize,
     options: &ProofOptions,
@@ -2067,7 +2070,7 @@ mod tests {
             &[reference_output],
         );
 
-        assert_eq!(capsule.schema_version, 1);
+        assert_eq!(capsule.schema_version, REPLAY_CAPSULE_SCHEMA_VERSION);
         assert_eq!(capsule.op_id, "test.replay_capsule");
         assert_eq!(capsule.backend_id, "metal");
         assert_eq!(capsule.case_index, 0);

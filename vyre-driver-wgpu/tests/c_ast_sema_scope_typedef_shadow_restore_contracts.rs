@@ -143,13 +143,13 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Scope-tree contract tests
 // ---------------------------------------------------------------------------
 
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_part1 {
+mod c_ast_sema_scope_typedef_shadow_restore_contracts_scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids {
 
-    include!("__split/c_ast_sema_scope_typedef_shadow_restore_contracts_part1.rs");
+    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids.rs");
 }
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_part2 {
-    include!("__split/c_ast_sema_scope_typedef_shadow_restore_contracts_part2.rs");
+mod c_ast_sema_scope_typedef_shadow_restore_contracts_annotation_multiple_typedefs_same_name_in_disjoint_blocks {
+    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__annotation_multiple_typedefs_same_name_in_disjoint_blocks.rs");
 }
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_part3 {
-    include!("__split/c_ast_sema_scope_typedef_shadow_restore_contracts_part3.rs");
+mod c_ast_sema_scope_typedef_shadow_restore_contracts_gpu_parity_annotation_deep_shadow_chain {
+    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__gpu_parity_annotation_deep_shadow_chain.rs");
 }

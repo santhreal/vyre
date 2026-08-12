@@ -1,0 +1,139 @@
+impl core::default::Default for vyre_emit_ptx::ComputeCapability
+impl core::default::Default for vyre_emit_ptx::PtxEmitOptions
+impl core::fmt::Display for vyre_emit_ptx::patterns::PtxAuditReport
+impl vyre_emit_ptx::ComputeCapability
+impl vyre_emit_ptx::PtxEmitOptions
+impl vyre_emit_ptx::patterns::PtxAuditReport
+impl vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
+impl vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+impl vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
+impl vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
+impl vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+pub const fn vyre_emit_ptx::ComputeCapability::supports_async_copy(&self) -> bool
+pub const fn vyre_emit_ptx::ComputeCapability::supports_ldmatrix(&self) -> bool
+pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_bf16(&self) -> bool
+pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_f16(&self) -> bool
+pub const vyre_emit_ptx::ComputeCapability::SM_70: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_75: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_80: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_86: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_89: Self
+pub const vyre_emit_ptx::ComputeCapability::SM_90: Self
+pub const vyre_emit_ptx::patterns::instruction_scheduling::LONG_CHAIN_THRESHOLD: u32
+pub const vyre_emit_ptx::patterns::predicated_execution::PREDICATION_OP_THRESHOLD: u32
+pub enum vyre_emit_ptx::EmitError
+pub enum vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
+pub fn vyre_emit_ptx::ComputeCapability::default() -> Self
+pub fn vyre_emit_ptx::PtxEmitOptions::default() -> Self
+pub fn vyre_emit_ptx::PtxEmitOptions::for_target(target: vyre_emit_ptx::ComputeCapability) -> Self
+pub fn vyre_emit_ptx::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
+pub fn vyre_emit_ptx::emit_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: vyre_emit_ptx::PtxEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
+pub fn vyre_emit_ptx::emit_with_target(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::format_short(&self) -> alloc::string::String
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::has_any(&self) -> bool
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::is_clean(&self) -> bool
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::merge(&mut self, other: vyre_emit_ptx::patterns::PtxAuditReport)
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::total_candidates(&self) -> usize
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::zero() -> Self
+pub fn vyre_emit_ptx::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::PtxAuditReport
+pub fn vyre_emit_ptx::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::PtxAuditReport
+pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::long_chain_count(&self) -> usize
+pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::longest_chain(&self) -> u32
+pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::schedule_latency_pressure(&self) -> u32
+pub fn vyre_emit_ptx::patterns::instruction_scheduling::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::candidate_count(&self) -> usize
+pub fn vyre_emit_ptx::patterns::ldmatrix_cp_async::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+pub fn vyre_emit_ptx::patterns::predicated_execution::PredicationPlan::safe_candidate_count(&self) -> usize
+pub fn vyre_emit_ptx::patterns::predicated_execution::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
+pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::dims(&self) -> (u32, u32, u32)
+pub fn vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::supported_on(&self, target: vyre_emit_ptx::ComputeCapability) -> bool
+pub fn vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::candidate_count(&self) -> usize
+pub fn vyre_emit_ptx::patterns::tensor_core_fragment::analyze(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+pub fn vyre_emit_ptx::patterns::vec_load_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
+pub fn vyre_emit_ptx::patterns::vec_store_fusion::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub mod vyre_emit_ptx
+pub mod vyre_emit_ptx::patterns
+pub mod vyre_emit_ptx::patterns::instruction_scheduling
+pub mod vyre_emit_ptx::patterns::ldmatrix_cp_async
+pub mod vyre_emit_ptx::patterns::predicated_execution
+pub mod vyre_emit_ptx::patterns::tensor_core_fragment
+pub mod vyre_emit_ptx::patterns::vec_load_fusion
+pub mod vyre_emit_ptx::patterns::vec_store_fusion
+pub struct vyre_emit_ptx::ComputeCapability
+pub struct vyre_emit_ptx::PtxEmitOptions
+pub struct vyre_emit_ptx::patterns::PtxAuditReport
+pub struct vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain
+pub struct vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate
+pub struct vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate
+pub struct vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
+pub struct vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate
+pub struct vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+pub struct vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate
+pub struct vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
+pub struct vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate
+pub struct vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub vyre_emit_ptx::ComputeCapability::major: u32
+pub vyre_emit_ptx::ComputeCapability::minor: u32
+pub vyre_emit_ptx::EmitError::InvalidBinding
+pub vyre_emit_ptx::EmitError::InvalidBinding::reason: alloc::string::String
+pub vyre_emit_ptx::EmitError::InvalidBinding::slot: u32
+pub vyre_emit_ptx::EmitError::InvalidDescriptor(alloc::string::String)
+pub vyre_emit_ptx::EmitError::PtxConstructionFailed(alloc::string::String)
+pub vyre_emit_ptx::EmitError::UnsupportedDataType(alloc::string::String)
+pub vyre_emit_ptx::EmitError::UnsupportedOp(vyre_lower::descriptor::KernelOp)
+pub vyre_emit_ptx::PtxEmitOptions::cooperative_grid_sync: bool
+pub vyre_emit_ptx::PtxEmitOptions::subgroup_size: u32
+pub vyre_emit_ptx::PtxEmitOptions::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::PtxEmitOptions::ulp_budget: core::option::Option<u32>
+pub vyre_emit_ptx::patterns::PtxAuditReport::async_copy: vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::PtxAuditReport::predication: vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::scheduling: vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints
+pub vyre_emit_ptx::patterns::PtxAuditReport::target: vyre_emit_ptx::ComputeCapability
+pub vyre_emit_ptx::patterns::PtxAuditReport::tensor_core: vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::vec_load: vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan
+pub vyre_emit_ptx::patterns::PtxAuditReport::vec_store: vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan
+pub vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain::length: u32
+pub vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain::start_op_index: usize
+pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::long_chains: alloc::vec::Vec<vyre_emit_ptx::patterns::instruction_scheduling::DependencyChain>
+pub vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::total_op_count: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::global_binding_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::load_op_index: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::shared_binding_slot: u32
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate::store_op_index: usize
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyCandidate>
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::target_supports_cp_async: bool
+pub vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan::target_supports_ldmatrix: bool
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::else_body_op_count: u32
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::has_global_store: bool
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::has_unsafe_effect: bool
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::if_op_index: usize
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate::then_body_op_count: u32
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::predicated_execution::PredicationCandidate>
+pub vyre_emit_ptx::patterns::predicated_execution::PredicationPlan::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::Bf16_16x16x16
+pub vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::F16_16x16x16
+pub vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile::F16_8x8x16
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate::estimated_speedup_factor: f32
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate::fma_op_count: u32
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate::fragment: vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::tensor_core_fragment::TensorCoreCandidate>
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::kernel_id: alloc::string::String
+pub vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan::target_sm: alloc::string::String
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::alignment_bytes: u32
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::binding_slot: u32
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::element_type: vyre_spec::data_type::DataType
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::first_load_idx: usize
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate::group_size: u8
+pub vyre_emit_ptx::patterns::vec_load_fusion::FusionPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::vec_load_fusion::FusionCandidate>
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::alignment_bytes: u32
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::binding_slot: u32
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::element_type: vyre_spec::data_type::DataType
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::first_store_idx: usize
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate::group_size: u8
+pub vyre_emit_ptx::patterns::vec_store_fusion::FusionPlan::candidates: alloc::vec::Vec<vyre_emit_ptx::patterns::vec_store_fusion::FusionCandidate>

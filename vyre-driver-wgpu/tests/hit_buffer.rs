@@ -4,10 +4,10 @@
 use proptest::prelude::*;
 use std::collections::BTreeSet;
 use vyre::scan::dispatch_io::pack_u32_slice as pack_words;
-use vyre::scan::{compact_hits_with_layout, emit_hit_with_layout};
-use vyre::DispatchConfig;
-use vyre::VyreBackend;
+use vyre_driver::DispatchConfig;
+use vyre_driver::VyreBackend;
 use vyre_foundation::optimizer::optimize;
+use vyre_libs::scan::{compact_hits_with_layout, emit_hit_with_layout};
 use vyre_reference::value::Value;
 
 fn unpack_words(bytes: &[u8]) -> Vec<u32> {

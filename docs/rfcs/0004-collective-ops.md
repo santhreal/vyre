@@ -1,5 +1,7 @@
 # RFC 0004  -  Collective ops (AllReduce, AllGather, ReduceScatter)
 
+Status: **Accepted in Vyre 0.7.2.**
+
 ## Summary
 
 Introduce first-class collective-communication IR nodes:

@@ -201,7 +201,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own backend-neutral lowering helpers and pre-emission transforms.
+Consume verified semantic programs and own the single backend-neutral lowering boundary and pre-emission transforms.
 
 ### Boundaries
 
@@ -240,4 +240,14 @@ requirements, evidence outputs, expected skips, and failure semantics.
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

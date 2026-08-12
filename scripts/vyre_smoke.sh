@@ -55,7 +55,7 @@ fi
 step "3/4 Three-substrate parity manifest"
 if [[ -f examples/three_substrate_parity/manifest.toml ]]; then
     echo "  manifest at examples/three_substrate_parity/manifest.toml lists $(grep -c '^\[\[claims\]\]' examples/three_substrate_parity/manifest.toml 2>/dev/null) parity claims."
-    echo "  full parity is enforced by conform/vyre-conform-runner; this smoke verifies the manifest exists."
+    echo "  full parity is enforced by conform/vyre-conform; this smoke verifies the manifest exists."
 else
     echo "Three-substrate parity manifest missing  -  re-create examples/three_substrate_parity/manifest.toml." >&2
     exit 2

@@ -5,7 +5,7 @@
 //! and return typed zero payloads for out-of-bounds loads instead of degrading
 //! through empty `Bytes`.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 fn run_single_load_store(ty: DataType, input: Vec<u8>, index: u32) -> Vec<u8> {

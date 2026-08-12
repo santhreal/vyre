@@ -23,7 +23,7 @@ cd "$ROOT"
 
 # Publishable crates only (publish = true / unset).
 PUBLISHABLE=(
-    "vyre-core/Cargo.toml"
+    "vyre/Cargo.toml"
     "vyre-foundation/Cargo.toml"
     "vyre-driver/Cargo.toml"
     "vyre-driver-wgpu/Cargo.toml"
@@ -37,10 +37,9 @@ PUBLISHABLE=(
     "vyre-libs/Cargo.toml"
     "vyre-intrinsics/Cargo.toml"
     "vyre-aot/Cargo.toml"
-    "vyre-harness/Cargo.toml"
 )
 
-INTERNAL_RE='^(vyre|vyre-foundation|vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-driver-cuda|vyre-reference|vyre-spec|vyre-macros|vyre-primitives|vyre-runtime|vyre-libs|vyre-intrinsics|vyre-aot|vyre-harness|vyre-test-harness|vyre-conform-spec|vyre-conform-generate|vyre-conform-enforce|vyre-conform-runner)$'
+INTERNAL_RE='^(vyre|vyre-foundation|vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-driver-cuda|vyre-reference|vyre-spec|vyre-macros|vyre-primitives|vyre-runtime|vyre-libs|vyre-intrinsics|vyre-aot|vyre-conform-spec|vyre-conform)$'
 
 errors=()
 

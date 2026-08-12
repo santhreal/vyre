@@ -20,8 +20,8 @@ sha2.workspace = true
 blake3.workspace = true
 vyre.workspace = true
 vyre-foundation.workspace = true
-vyre-harness.workspace = true
 vyre-driver.workspace = true
+vyre-spec.workspace = true
 # `xtask lego-audit` is the release catalog gate. It must link every
 # shipped Tier-3 consumer so primitive coverage is measured against the
 # real composition surface, not a feature-narrow slice.

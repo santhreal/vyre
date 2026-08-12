@@ -9,11 +9,8 @@ mod optimizer_combined_contracts;
 mod repeated_sequence_contracts;
 #[path = "resident_dispatch_contracts/sequence_readback_contracts.rs"]
 mod sequence_readback_contracts;
-#[path = "resident_dispatch_contracts/source_accounting_contracts.rs"]
-mod source_accounting_contracts;
 
-use common::{bytes_u32, resident_dispatch_source, u32_bytes};
-use std::sync::Arc;
+use common::{bytes_u32, u32_bytes};
 
 use vyre::scan::GpuLiteralSet;
 use vyre_driver::{DispatchConfig, Resource, VyreBackend};
@@ -261,7 +258,7 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
     );
     assert_eq!(
         matches,
-        vec![vyre::scan::LiteralMatch::new(0, 3, 8)],
+        vec![vyre::scan::ByteRange::new(0, 3, 8)],
         "Fix: resident fused async positions diverged from the literal-set contract."
     );
     let second = session
@@ -271,7 +268,7 @@ fn resident_fused_async_public_surface_preserves_evidence_and_validation() {
         .await_into(&mut presence, &mut matches)
         .expect("Fix: reused resident fused async result decode failed.");
     assert_eq!(presence, vec![1]);
-    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
+    assert_eq!(matches, vec![vyre::scan::ByteRange::new(0, 0, 5)]);
 
     session
         .free()
@@ -324,13 +321,13 @@ fn resident_fused_fork_dispatches_two_slots_concurrently() {
         .await_into(&mut presence, &mut matches)
         .expect("Fix: first pipelined resident result failed.");
     assert_eq!(presence, vec![1]);
-    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 3, 8)]);
+    assert_eq!(matches, vec![vyre::scan::ByteRange::new(0, 3, 8)]);
 
     second_pending
         .await_into(&mut presence, &mut matches)
         .expect("Fix: second pipelined resident result failed.");
     assert_eq!(presence, vec![1]);
-    assert_eq!(matches, vec![vyre::scan::LiteralMatch::new(0, 0, 5)]);
+    assert_eq!(matches, vec![vyre::scan::ByteRange::new(0, 0, 5)]);
 
     first
         .free()

@@ -61,7 +61,6 @@ bincode = { workspace = true }
 vyre-runtime.workspace = true
 vyre-scan.workspace = true
 vyre-test-support.workspace = true
-vyre-harness = { path = "../vyre-harness" }
 criterion.workspace = true
 stats_alloc.workspace = true
 tokio.workspace = true
@@ -74,7 +73,7 @@ vyre-libs = { path = "../vyre-libs", features = ["matching", "parsing", "c-parse
 # silently RED-ed ~90 test files (use of unlinked crate `vyre`). `default-features
 # = false` keeps the `wgpu` feature OFF, so vyre does NOT pull vyre-driver-wgpu back
 # in: no dependency cycle.
-# PATH-ONLY (no version): vyre (vyre-core) is published AFTER this crate in the publish
+# PATH-ONLY (no version): the `vyre` facade is published AFTER this crate in the publish
 # order, so a versioned/workspace dev-dep would be unsatisfiable at publish time.
 # cargo strips path-only dev-deps from the published manifest; the local test build
 # still links it through the path.

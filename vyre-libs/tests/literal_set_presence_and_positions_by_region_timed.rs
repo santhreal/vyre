@@ -9,9 +9,9 @@
 //! returned `TimedDispatchResult` reports honest timing (`device_ns` is `None`,
 //! a loud absence rather than a fabricated zero, on the CPU reference backend).
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
+use vyre_foundation::match_result::ByteRange;
 
 const MAX_MATCHES: u32 = 256;
 
@@ -32,13 +32,12 @@ fn fixture() -> (GpuLiteralSet, Vec<u8>, Vec<u32>) {
 
 #[test]
 fn timed_fused_equals_untimed_and_reports_timing() {
-    let backend = CpuRefBackend;
     let (set, haystack, region_starts) = fixture();
 
-    let mut plain_matches: Vec<Match> = Vec::new();
+    let mut plain_matches: Vec<ByteRange> = Vec::new();
     let plain_presence = set
         .scan_presence_and_positions_by_region(
-            &backend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,
@@ -47,10 +46,10 @@ fn timed_fused_equals_untimed_and_reports_timing() {
         )
         .expect("untimed fused scan");
 
-    let mut timed_matches: Vec<Match> = Vec::new();
+    let mut timed_matches: Vec<ByteRange> = Vec::new();
     let (timed_presence, timed) = set
         .scan_presence_and_positions_by_region_timed(
-            &backend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,
@@ -92,14 +91,13 @@ fn timed_fused_equals_untimed_and_reports_timing() {
 
 #[test]
 fn timed_fused_clears_stale_matches_and_is_stable() {
-    let backend = CpuRefBackend;
     let (set, haystack, region_starts) = fixture();
 
     // Seed the buffer with stale entries; the timed scan must clear them.
-    let mut matches: Vec<Match> = vec![Match::new(99, 7, 11); 5];
+    let mut matches: Vec<ByteRange> = vec![ByteRange::new(99, 7, 11); 5];
     let (first, _) = set
         .scan_presence_and_positions_by_region_timed(
-            &backend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,
@@ -109,13 +107,13 @@ fn timed_fused_clears_stale_matches_and_is_stable() {
         .expect("first timed fused scan");
     let first_matches = matches.clone();
     assert!(
-        !first_matches.iter().any(|m| m.pattern_id == 99),
+        !first_matches.iter().any(|m| m.tag == 99),
         "stale pre-seeded matches must be cleared, not accumulated"
     );
 
     let (second, _) = set
         .scan_presence_and_positions_by_region_timed(
-            &backend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,

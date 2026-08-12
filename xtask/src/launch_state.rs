@@ -27,8 +27,6 @@ struct PrepublishGates {
     metadata_matrix: &'static str,
     feature_matrix: &'static str,
     package_readiness: &'static str,
-    release_completion_audit: &'static str,
-    vyre_release_gate: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,8 +50,8 @@ pub(crate) fn run(args: &[String]) {
         .join("public-launch-completion.json");
     let complete = completion_marker_complete(&completion_marker);
     let state = LaunchState {
-        schema_version: 1,
-        objective: "complete release/plans/paradigm-shift-100-concrete.md",
+        schema_version: 2,
+        objective: "publish the canonical Vyre release artifacts",
         current_state: if complete {
             "public_launch_complete"
         } else {
@@ -65,8 +63,6 @@ pub(crate) fn run(args: &[String]) {
             metadata_matrix: "pass",
             feature_matrix: "pass",
             package_readiness: "pass",
-            release_completion_audit: "prepublish-pass",
-            vyre_release_gate: "prepublish-pass",
         },
         external_actions: vec![
             ExternalAction {
@@ -135,17 +131,12 @@ fn completion_marker_complete(path: &Path) -> bool {
     value
         .get("schema_version")
         .and_then(serde_json::Value::as_u64)
-        == Some(1)
+        == Some(2)
         && value
             .get("release_train")
             .and_then(|train| train.get("vyre"))
             .and_then(serde_json::Value::as_str)
             == Some(release_train::vyre_version())
-        && value
-            .get("release_train")
-            .and_then(|train| train.get("weir"))
-            .and_then(serde_json::Value::as_str)
-            == Some(release_train::weir_version())
         && value
             .get("completion_status")
             .and_then(serde_json::Value::as_str)
@@ -204,7 +195,7 @@ mod tests {
     /// The fixture is derived rather than pasted so cutting a release never leaves this
     /// suite asserting against a version that no longer ships. It previously hardcoded
     /// 0.6.3 and started failing the moment the train moved to 0.6.6.
-    fn completed_marker_json(vyre: &str, weir: &str) -> String {
+    fn completed_marker_json(vyre: &str) -> String {
         let tags = crate::release_train::tag_creation_order()
             .iter()
             .map(|tag| format!("      \"{tag}\""))
@@ -212,10 +203,9 @@ mod tests {
             .join(",\n");
         format!(
             r#"{{
-  "schema_version": 1,
+  "schema_version": 2,
   "release_train": {{
-    "vyre": "{vyre}",
-    "weir": "{weir}"
+    "vyre": "{vyre}"
   }},
   "git": {{
     "branch": "main",
@@ -251,18 +241,14 @@ mod tests {
         let marker = dir.path().join("public-launch-completion.json");
         std::fs::write(
             &marker,
-            completed_marker_json(
-                crate::release_train::vyre_version(),
-                crate::release_train::weir_version(),
-            ),
+            completed_marker_json(crate::release_train::vyre_version()),
         )
         .expect("Fix: write launch completion marker fixture.");
 
         assert!(
             completion_marker_complete(&marker),
-            "Fix: launch-state must accept the completed {}/{} marker that final-launch writes.",
-            crate::release_train::vyre_version(),
-            crate::release_train::weir_version()
+            "Fix: launch-state must accept the completed {} marker that final-launch writes.",
+            crate::release_train::vyre_version()
         );
     }
 
@@ -274,11 +260,8 @@ mod tests {
     fn completion_marker_rejects_a_previous_release_train() {
         let dir = tempfile::tempdir().expect("Fix: create launch-state test directory.");
         let marker = dir.path().join("public-launch-completion.json");
-        std::fs::write(
-            &marker,
-            completed_marker_json("0.4.2", crate::release_train::weir_version()),
-        )
-        .expect("Fix: write stale launch completion marker fixture.");
+        std::fs::write(&marker, completed_marker_json("0.4.2"))
+            .expect("Fix: write stale launch completion marker fixture.");
 
         assert!(
             !completion_marker_complete(&marker),
@@ -292,11 +275,8 @@ mod tests {
         let dir = tempfile::tempdir().expect("Fix: create missing RC tag fixture directory.");
         let marker = dir.path().join("public-launch-completion.json");
         let rc_line = format!("      \"{}\",\n", crate::release_train::vyre_rc_tag());
-        let marker_json = completed_marker_json(
-            crate::release_train::vyre_version(),
-            crate::release_train::weir_version(),
-        )
-        .replacen(&rc_line, "", 1);
+        let marker_json =
+            completed_marker_json(crate::release_train::vyre_version()).replacen(&rc_line, "", 1);
         std::fs::write(&marker, marker_json)
             .expect("Fix: write launch completion marker without the Vyre RC tag.");
 
@@ -314,17 +294,14 @@ mod tests {
         std::fs::write(
             &marker,
             r#"{
-  "schema_version": 1,
+  "schema_version": 2,
   "release_train": {
-    "vyre": "0.6.3",
-    "weir": "0.1.0"
+    "vyre": "0.6.3"
   },
   "git": {
     "branch": "main",
     "tags": [
-      "vyre-v0.6.3",
-      "weir-v0.1.0",
-      "vyre-0.6.3-weir-0.1.0"
+      "vyre-v0.6.3"
     ]
   },
   "repositories_public": ["santhreal/vyre"],

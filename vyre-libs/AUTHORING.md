@@ -52,7 +52,7 @@ fn my_op(input: TensorRef, output: TensorRef) -> Result<Program, TensorRefError>
 - Product overflows (m·k, s·d, etc.) must be guarded with
   `checked_mul` or routed through `TensorRef::element_count()`.
 - No raw WGSL, WGSL-like strings, or any backend-specific code
-  (`scripts/check_no_wgsl_in_libs.sh`).
+  (`scripts/check_no_string_wgsl.sh`).
 
 ## 2. Ship a typed builder
 

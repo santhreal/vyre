@@ -1,6 +1,6 @@
 use crate::region::wrap_child;
-use vyre_foundation::ir::Node;
 use vyre_foundation::ir::model::expr::GeneratorRef;
+use vyre_foundation::ir::Node;
 
 #[cfg_attr(
     not(any(feature = "c-parser", feature = "python-parser")),

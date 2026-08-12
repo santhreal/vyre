@@ -45,11 +45,11 @@ pub use engine::{
     ScanResult,
 };
 pub use literal_set::{
-    GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedPresenceByRegion,
-    LiteralSetPreparedScan, LiteralSetScanScratch, LiteralSetWireError, Match as LiteralMatch,
-    PendingFusedRegion, PendingMatches, PendingPresence, PendingPresenceByRegion,
-    PendingResidentFusedRegion, ResidentFusedRegionScan, ResidentFusedTiming, ResidentLiteralScan,
-    ScanAllTimed, LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
+    ByteRange, GpuLiteralSet, LiteralSetPreparedCount, LiteralSetPreparedPresenceByRegion,
+    LiteralSetPreparedScan, LiteralSetScanScratch, LiteralSetWireError, PendingFusedRegion,
+    PendingMatches, PendingPresence, PendingPresenceByRegion, PendingResidentFusedRegion,
+    ResidentFusedRegionScan, ResidentFusedTiming, ResidentLiteralScan, ScanAllTimed,
+    LITERAL_SET_COUNT_RESET_RESOURCE_INDICES, LITERAL_SET_COUNT_RESOURCE_INDEX,
     LITERAL_SET_COUNT_SCAN_RESOURCE_INDICES, LITERAL_SET_MATCHES_RESOURCE_INDEX,
     LITERAL_SET_MATCH_COUNT_RESOURCE_INDEX, LITERAL_SET_PRESENCE_BY_REGION_OUTPUT_RESOURCE_INDEX,
     LITERAL_SET_RESET_RESOURCE_INDICES, LITERAL_SET_SCAN_RESOURCE_INDICES,

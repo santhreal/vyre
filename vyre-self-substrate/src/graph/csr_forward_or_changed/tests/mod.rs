@@ -5,7 +5,6 @@ use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 
 mod reference_contracts;
-mod release_path_contracts;
 
 struct CsrChangedDispatcher {
     outputs: Vec<Vec<u8>>,

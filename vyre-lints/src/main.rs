@@ -291,7 +291,7 @@ fn run_production_cpu_fallbacks_cli(cli: &Cli) -> Result<()> {
 fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
     [
         "vyre-aot/src",
-        "vyre-core/src",
+        "vyre/src",
         "vyre-driver/src",
         "vyre-driver-cuda/src",
         "vyre-driver-wgpu/src",
@@ -309,7 +309,7 @@ fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
 fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
     [
         "docs",
-        "vyre-core/src",
+        "vyre/src",
         "vyre-driver/src",
         "vyre-driver-cuda/src",
         "vyre-driver-wgpu/src",

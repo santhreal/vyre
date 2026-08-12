@@ -1,0 +1,44 @@
+impl core::fmt::Display for vyre_emit_spirv::patterns::SpirvAuditReport
+impl vyre_emit_spirv::patterns::SpirvAuditReport
+impl vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport
+pub const vyre_emit_spirv::SPIRV_MAGIC: u32
+pub const vyre_emit_spirv::patterns::workgroup_size_validation::VULKAN_BASELINE: vyre_lower::target::WorkgroupLimits
+pub enum vyre_emit_spirv::EmitError
+pub fn vyre_emit_spirv::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<u32>, vyre_emit_spirv::EmitError>
+pub fn vyre_emit_spirv::emit_bytes(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<u8>, vyre_emit_spirv::EmitError>
+pub fn vyre_emit_spirv::emit_from_naga_module(module: &naga::ir::Module) -> core::result::Result<alloc::vec::Vec<u32>, vyre_emit_spirv::EmitError>
+pub fn vyre_emit_spirv::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<alloc::vec::Vec<u32>, vyre_emit_spirv::EmitError>
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::format_short(&self) -> alloc::string::String
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::is_clean(&self) -> bool
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::merge(&mut self, other: vyre_emit_spirv::patterns::SpirvAuditReport)
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::requires_action(&self) -> bool
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::total_findings(&self) -> usize
+pub fn vyre_emit_spirv::patterns::SpirvAuditReport::zero() -> Self
+pub fn vyre_emit_spirv::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::SpirvAuditReport
+pub fn vyre_emit_spirv::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::SpirvAuditReport
+pub fn vyre_emit_spirv::patterns::subgroup_capabilities::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport
+pub fn vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::invocations(&self) -> u32
+pub fn vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::ok(&self) -> bool
+pub fn vyre_emit_spirv::patterns::workgroup_size_validation::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport
+pub fn vyre_emit_spirv::patterns::workgroup_size_validation::analyze_against(desc: &vyre_lower::descriptor::KernelDescriptor, limits: vyre_lower::target::WorkgroupLimits) -> vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport
+pub mod vyre_emit_spirv
+pub mod vyre_emit_spirv::patterns
+pub mod vyre_emit_spirv::patterns::subgroup_capabilities
+pub mod vyre_emit_spirv::patterns::workgroup_size_validation
+pub struct vyre_emit_spirv::patterns::SpirvAuditReport
+pub struct vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport
+pub struct vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport
+pub vyre_emit_spirv::EmitError::NagaEmit(vyre_emit_naga::error::EmitError)
+pub vyre_emit_spirv::EmitError::NagaValidation(alloc::string::String)
+pub vyre_emit_spirv::EmitError::WriterConstruction(alloc::string::String)
+pub vyre_emit_spirv::EmitError::WriterWrite(alloc::string::String)
+pub vyre_emit_spirv::patterns::SpirvAuditReport::kernel_id: alloc::string::String
+pub vyre_emit_spirv::patterns::SpirvAuditReport::subgroup: vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport
+pub vyre_emit_spirv::patterns::SpirvAuditReport::workgroup_validation: vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport
+pub vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport::capabilities: vyre_lower::target::SubgroupCapabilities
+pub vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport::kernel_id: alloc::string::String
+pub vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::kernel_id: alloc::string::String
+pub vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::limits: vyre_lower::target::WorkgroupLimits
+pub vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::violations: alloc::vec::Vec<vyre_lower::target::WorkgroupLimitViolation>
+pub vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::workgroup_size: [u32; 3]

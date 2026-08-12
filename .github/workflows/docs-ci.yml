@@ -19,3 +19,5 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build Docs
         run: ./scripts/docs.sh --changed-only
+      - name: Validate CLI documentation
+        run: python3 scripts/cli_docs.py --check

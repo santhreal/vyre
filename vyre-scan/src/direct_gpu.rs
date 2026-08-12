@@ -7,7 +7,7 @@
 
 use crate::literal_set::GpuLiteralSet;
 use vyre_foundation::ir::Program;
-pub use vyre_foundation::match_result::Match;
+pub use vyre_foundation::match_result::ByteRange;
 
 /// State for a pipelined direct-to-GPU scan.
 pub struct DirectGpuScanner {
@@ -40,7 +40,7 @@ impl DirectGpuScanner {
 
     /// CPU oracle for parity and tests.
     #[must_use]
-    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
+    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange> {
         self.literal_set.reference_scan(haystack)
     }
 
@@ -55,7 +55,7 @@ impl DirectGpuScanner {
         backend_id: &str,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let session =
             self.literal_set
                 .prepare_resident_scan(backend_id, haystack.len(), max_matches)?;
@@ -80,7 +80,7 @@ mod tests {
         let literal_set = GpuLiteralSet::compile(&patterns);
         assert_eq!(
             scanner.reference_scan(b"zabc"),
-            vec![Match::new(0, 1, 4), Match::new(1, 2, 4)]
+            vec![ByteRange::new(0, 1, 4), ByteRange::new(1, 2, 4)]
         );
         assert_eq!(
             scanner.program().fingerprint(),

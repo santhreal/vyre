@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Wave 1.1  -  P0 performance inventory contract tests.
-# See audits/WAVE_EXECUTION.md
+# P0 performance inventory contract tests.
+# Evidence source: audits/VYRE_PERFORMANCE_ARCHITECTURE_INVENTORY_2026-04-28.md
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

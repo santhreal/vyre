@@ -22,7 +22,7 @@
 //! `rewrite_program`). A constant `2 + 3` in an async offset must fold to `5`.
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::passes::const_fold::ConstFold;
+use vyre_foundation::optimizer::passes::algebraic::const_fold::ConstFold;
 
 /// An `AsyncLoad` and an `AsyncStore` whose offset/size are literal BinOps that
 /// const-fold to known values.

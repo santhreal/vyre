@@ -1,3 +1,8 @@
+# AlgebraicLaw historical reference
+
+**Status: Superseded.** Use `AlgebraicLaw.txt` and
+`vyre-spec/src/algebraic_law.rs` for the frozen contract.
+
 pub enum AlgebraicLaw {
 /// Standard notation: `forall a b . f(a,b) = f(b,a)`.
 ///

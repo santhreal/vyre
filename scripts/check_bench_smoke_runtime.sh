@@ -13,10 +13,10 @@ source scripts/lib/cargo_runner.sh
 vyre_select_cargo_runner
 
 MANIFEST="contracts/perf_targets.toml"
-TARGET="benches-smoke.smoke_runtime"
+TARGET="vyre-bench.smoke_runtime"
 
 budget_ms=$(awk '
-    /^\[crates\.benches-smoke\.targets\.smoke_runtime\]/ { in_block = 1; next }
+    /^\[crates\.vyre-bench\.targets\.smoke_runtime\]/ { in_block = 1; next }
     /^\[/ && in_block { in_block = 0 }
     in_block && /^budget *= */ {
         v = $0
@@ -32,11 +32,11 @@ if [[ -z "$budget_ms" ]]; then
 fi
 
 "$CARGO_RUNNER" build -q -p vyre-bench
-target_dir="${CARGO_TARGET_DIR:-target}"
+target_dir=$("$CARGO_RUNNER" metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')
 bench_bin="$target_dir/debug/vyre-bench"
 if [[ ! -x "$bench_bin" ]]; then
     echo "bench-smoke gate: expected built benchmark binary at $bench_bin" >&2
-    echo "Fix: set CARGO_TARGET_DIR to the target dir used by $CARGO_RUNNER or repair the vyre-bench build." >&2
+    echo "Fix: repair the Cargo target directory or the vyre-bench build." >&2
     exit 1
 fi
 

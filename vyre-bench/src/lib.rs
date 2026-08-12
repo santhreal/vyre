@@ -1,7 +1,6 @@
 #![allow(unsafe_code)]
 //! Benchmark library types and backend registration support.
 
-
 #[cfg(not(target_os = "macos"))]
 use vyre_driver_cuda as _;
 use vyre_driver_metal as _;

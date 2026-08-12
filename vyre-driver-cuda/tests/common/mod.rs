@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre::memory_model::MemoryOrdering;
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_reference::value::Value;
 use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};
@@ -24,21 +24,6 @@ pub(crate) fn pack_nodes(nodes: &[u32], node_count: u32) -> Vec<u32> {
         words[node as usize / 32] |= 1 << (node % 32);
     }
     words
-}
-
-/// Concatenate the split CUDA resident-dispatch implementation for source contracts.
-pub(crate) fn resident_dispatch_source() -> String {
-    [
-        include_str!("../../src/backend/resident_dispatch/helpers.rs"),
-        include_str!("../../src/backend/resident_dispatch/borrowed.rs"),
-        include_str!("../../src/backend/resident_dispatch/async_dispatch.rs"),
-        include_str!("../../src/backend/resident_dispatch/batch.rs"),
-        include_str!("../../src/backend/resident_dispatch/sync.rs"),
-        include_str!("../../src/backend/resident_dispatch/sequence_api.rs"),
-        include_str!("../../src/backend/resident_dispatch/sequence_fused.rs"),
-        include_str!("../../src/backend/resident_dispatch/timed.rs"),
-    ]
-    .join("\n")
 }
 
 /// CUDA-backed optimizer dispatcher used by parity and self-optimizer tests.
@@ -113,7 +98,7 @@ pub(crate) fn reference_outputs(
         .collect()
 }
 
-/// Compile a CUDA program through the native pipeline path and dispatch it once.
+/// Compile and dispatch through the authenticated CUDA artifact route.
 pub(crate) fn compiled_cuda_outputs(
     backend: &CudaBackend,
     program: &Program,
@@ -129,22 +114,121 @@ pub(crate) fn compiled_cuda_outputs(
     )
 }
 
-/// Compile a CUDA program through the native pipeline path and dispatch it with explicit config.
+/// Compile and dispatch through the authenticated CUDA artifact route with explicit geometry.
 pub(crate) fn compiled_cuda_outputs_with_config(
-    backend: &CudaBackend,
+    _backend: &CudaBackend,
     program: &Program,
     inputs: &[Vec<u8>],
     config: &DispatchConfig,
     case_name: &str,
 ) -> Vec<Vec<u8>> {
-    let pipeline = backend
-        .compile_native(program, config)
-        .unwrap_or_else(|error| {
-            panic!("Fix: CUDA generated case `{case_name}` native compile failed: {error}")
+    let graph =
+        vyre::ir::ProgramGraph::from_program(case_name, program.clone()).unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` graph failed: {error}")
         });
-    pipeline.dispatch(inputs, config).unwrap_or_else(|error| {
-        panic!("Fix: CUDA generated case `{case_name}` compiled dispatch failed: {error}")
-    })
+    let request = vyre_megakernel::CompileRequest::new(
+        graph,
+        vyre_megakernel::ExternalFacts::new(
+            vyre_megakernel::Digest([0; 32]),
+            std::collections::BTreeMap::new(),
+        ),
+        vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
+        60_000,
+    )
+    .validate()
+    .unwrap_or_else(|error| {
+        panic!("Fix: CUDA generated case `{case_name}` compile request failed: {error}")
+    });
+    let artifact = vyre_megakernel::compile(&request).unwrap_or_else(|error| {
+        panic!("Fix: CUDA generated case `{case_name}` compiler failed: {error}")
+    });
+    let registration =
+        vyre_driver::backend::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+            .unwrap_or_else(|error| {
+                panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
+            });
+    let compiler = registration.target_compiler().unwrap_or_else(|error| {
+        panic!("Fix: CUDA generated case `{case_name}` target compiler failed: {error}")
+    });
+    let envelope =
+        vyre_megakernel::attach_target(artifact, compiler.as_ref()).unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` target attachment failed: {error}")
+        });
+    let materializer = registration.materializer().unwrap_or_else(|error| {
+        panic!("Fix: CUDA generated case `{case_name}` materializer acquisition failed: {error}")
+    });
+    let payload = envelope
+        .target_payloads()
+        .first()
+        .expect("Fix: CUDA target attachment must produce one payload");
+    let instance = materializer
+        .materialize(envelope.neutral(), payload)
+        .unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` materialization failed: {error}")
+        });
+    let plan = vyre_driver::BindingPlan::build(program).unwrap_or_else(|error| {
+        panic!("Fix: CUDA generated case `{case_name}` binding plan failed: {error}")
+    });
+    let mut bindings = vyre_driver::BindingSet::new(envelope.neutral().digest());
+    for binding in &plan.bindings {
+        let Some(input_index) = binding.input_index else {
+            continue;
+        };
+        let resource = envelope
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.name == binding.name.as_ref())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA generated case `{case_name}` artifact omitted input `{}`",
+                    binding.name
+                )
+            });
+        bindings.insert(
+            resource.value,
+            vyre_driver::BoundResource::Host(inputs[input_index].clone()),
+        );
+    }
+    if let Some(grid) = config.grid_override.or(config.dispatch_grid) {
+        bindings.set_invocation_grid(grid).unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` invocation grid failed: {error}")
+        });
+    }
+    let completion = instance
+        .submit(bindings)
+        .and_then(|submission| submission.wait())
+        .unwrap_or_else(|error| {
+            panic!("Fix: CUDA generated case `{case_name}` artifact submission failed: {error}")
+        });
+    let mut outputs = vec![Vec::new(); plan.output_indices.len()];
+    for binding in &plan.bindings {
+        let Some(output_index) = binding.output_index else {
+            continue;
+        };
+        let resource = envelope
+            .neutral()
+            .resources()
+            .iter()
+            .find(|resource| resource.name == binding.name.as_ref())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA generated case `{case_name}` artifact omitted output `{}`",
+                    binding.name
+                )
+            });
+        outputs[output_index] = completion
+            .outputs
+            .get(&resource.value)
+            .cloned()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Fix: CUDA generated case `{case_name}` completion omitted output `{}`",
+                    binding.name
+                )
+            });
+    }
+    outputs
 }
 
 /// Outputs from one generated CUDA/reference matrix case.

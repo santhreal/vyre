@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 #
-# Guarded public launch launcher for the configured Vyre / Weir release train.
+# Guarded public launch launcher for the configured Vyre release.
 #
 # This script intentionally refuses to run unless the maintainer sets:
 #   VYRE_RELEASE_APPROVED=<token derived by scripts/lib/release_train.sh>
 #
-# It performs the approval-gated publish and push, and records the launch
-# verification that completes
-# release/plans/paradigm-shift-100-concrete.md:
+# It performs the approval-gated publish and push and records launch
+# verification:
 #   1. cargo_full publish in audited dependency order.
 #   2. verify the configured public repository without changing the private repository.
 #   3. push the release branch and product-scoped tags.
@@ -33,6 +32,11 @@ vyre_select_cargo_runner
 vyre_load_repo_boundary
 vyre_load_release_train
 
+vyre_tags=(
+    "$VYRE_RELEASE_TAG_VYRE_RC"
+    "$VYRE_RELEASE_TAG_VYRE"
+)
+
 APPROVAL_TOKEN="$VYRE_RELEASE_LAUNCH_APPROVAL_TOKEN"
 if [[ "$PREFLIGHT" != "1" && "${VYRE_RELEASE_APPROVED:-}" != "$APPROVAL_TOKEN" ]]; then
     printf 'Fix: refusing final launch without explicit approval.\n' >&2
@@ -55,31 +59,37 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 2
 fi
 
-if ! git remote get-url origin >/dev/null 2>&1; then
-    printf 'Fix: git remote `origin` is missing; refusing final launch.\n' >&2
+vyre_origin="$(git remote get-url origin 2>/dev/null || true)"
+if [[ "$vyre_origin" != *"$VYRE_RELEASE_VYRE_REPOSITORY"* ]]; then
+    printf 'Fix: Vyre origin %s does not match release repository %s.\n' "$vyre_origin" "$VYRE_RELEASE_VYRE_REPOSITORY" >&2
     exit 2
 fi
 
 if ! release_branch="$(git symbolic-ref --quiet --short HEAD)"; then
-    printf 'Fix: refusing final launch from a detached HEAD.\n' >&2
+    printf 'Fix: refusing final launch from a detached Vyre HEAD.\n' >&2
+    exit 2
+fi
+if [[ "$release_branch" != "main" ]]; then
+    printf 'Fix: final launch requires main; found %s.\n' "$release_branch" >&2
     exit 2
 fi
 
-if [[ -n "$(git status --porcelain)" && "$PREFLIGHT" != "1" ]]; then
-    printf 'Fix: working tree has uncommitted or untracked changes; commit or intentionally clear them before final launch.\n' >&2
+vyre_dirty="$(git status --porcelain)"
+if [[ -n "$vyre_dirty" && "$PREFLIGHT" != "1" ]]; then
+    printf 'Fix: the release repository must be clean before final launch; commit or intentionally clear the reported work.\n' >&2
     exit 2
 fi
-if [[ "$PREFLIGHT" == "1" && -n "$(git status --porcelain)" ]]; then
-    printf 'final-launch preflight note: working tree is dirty; real launch will refuse until committed or intentionally cleared.\n'
+if [[ "$PREFLIGHT" == "1" && -n "$vyre_dirty" ]]; then
+    printf 'final-launch preflight note: the release repository is dirty; real launch will refuse until it is clean.\n'
 fi
 
-for tag in "${VYRE_RELEASE_TAGS[@]}"; do
+for tag in "${vyre_tags[@]}"; do
     if git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
-        printf 'Fix: release tag %s already exists locally; refusing to risk stale tag target.\n' "$tag" >&2
+        printf 'Fix: Vyre release tag %s already exists locally; refusing to risk a stale target.\n' "$tag" >&2
         exit 2
     fi
     if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
-        printf 'Fix: release tag %s already exists on origin; refusing to overwrite public release tags.\n' "$tag" >&2
+        printf 'Fix: Vyre release tag %s already exists on origin; refusing to overwrite it.\n' "$tag" >&2
         exit 2
     fi
 done
@@ -113,9 +123,25 @@ if [[ ! -s "$release_conformance_evidence" ]]; then
     exit 1
 fi
 
-VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 
+git tag -a "$VYRE_RELEASE_TAG_VYRE_RC" -m "$VYRE_RELEASE_TAG_VYRE_RC"
+git push origin "$release_branch"
+git push origin "$VYRE_RELEASE_TAG_VYRE_RC"
+
+
+"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate --prepublish
+VYRE_RELEASE_APPROVED="$VYRE_RELEASE_PUBLISH_APPROVAL_TOKEN" bash scripts/publish-release.sh
 printf 'verified GitHub repository is public: %s\n' "$VYRE_RELEASE_PUBLIC_REPO"
+
+git tag -a "$VYRE_RELEASE_TAG_VYRE" -m "$VYRE_RELEASE_TAG_VYRE"
+git push origin "$VYRE_RELEASE_TAG_VYRE"
+
+
+release_notes="docs/release/v${VYRE_RELEASE_VYRE_VERSION}.md"
+gh release create "$VYRE_RELEASE_TAG_VYRE" \
+    --repo "$VYRE_RELEASE_VYRE_REPOSITORY" \
+    --title "$VYRE_RELEASE_DISPLAY" \
+    --notes-file "$release_notes"
 
 mkdir -p release/evidence/final
 jq -n \
@@ -123,29 +149,19 @@ jq -n \
     --arg branch "$release_branch" \
     --arg conformance "$release_conformance_evidence" \
     --arg vyre_version "$VYRE_RELEASE_VYRE_VERSION" \
-    --arg weir_version "$VYRE_RELEASE_WEIR_VERSION" \
     --arg verify_public_repo_action "$VYRE_RELEASE_VERIFY_PUBLIC_REPO_ACTION" \
     --arg vyre_rc_tag "$VYRE_RELEASE_TAG_VYRE_RC" \
-    --arg weir_rc_tag "$VYRE_RELEASE_TAG_WEIR_RC" \
-    --arg combined_rc_tag "$VYRE_RELEASE_TAG_COMBINED_RC" \
     --arg vyre_tag "$VYRE_RELEASE_TAG_VYRE" \
-    --arg weir_tag "$VYRE_RELEASE_TAG_WEIR" \
-    --arg combined_tag "$VYRE_RELEASE_TAG_COMBINED" \
     '{
-        schema_version: 1,
+        schema_version: 2,
         release_train: {
-            vyre: $vyre_version,
-            weir: $weir_version
+            vyre: $vyre_version
         },
         git: {
             branch: $branch,
             tags: [
                 $vyre_rc_tag,
-                $weir_rc_tag,
-                $combined_rc_tag,
-                $vyre_tag,
-                $weir_tag,
-                $combined_tag
+                $vyre_tag
             ]
         },
         public_repository: $public_repo,
@@ -168,30 +184,21 @@ jq -n \
             {
                 action: "git push release branch and tags",
                 status: "complete",
-                evidence: ("git push origin release branch && git push origin " + $vyre_rc_tag + " " + $weir_rc_tag + " " + $combined_rc_tag + " " + $vyre_tag + " " + $weir_tag + " " + $combined_tag)
+                evidence: ("git push origin " + $branch + " " + $vyre_rc_tag + " " + $vyre_tag + " && gh release create " + $vyre_tag)
             }
         ],
         completion_status: "complete"
     }' > release/evidence/final/public-launch-completion.json
 
 "$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- launch-state --output release/evidence/final/public-launch-state.json
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- release-completion-audit --output release/evidence/final/completion-audit.json
-"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-weir-release-gate
+"$CARGO_RUNNER" run -j1 --manifest-path xtask/Cargo.toml --bin xtask -- vyre-release-gate
 
 git add \
     release/evidence/package/publish-readiness.json \
     release/evidence/conformance/release-all-backends-certificate.json \
     release/evidence/final/public-launch-completion.json \
-    release/evidence/final/public-launch-state.json \
-    release/evidence/final/completion-audit.json
+    release/evidence/final/public-launch-state.json
 git commit -m "Record ${VYRE_RELEASE_DISPLAY} public launch"
-
-for tag in "${VYRE_RELEASE_TAGS[@]}"; do
-    git tag -a "$tag" -m "$tag"
-done
-
-printf 'pushing release branch and product-scoped tags\n'
 git push origin "$release_branch"
-git push origin "${VYRE_RELEASE_TAGS[@]}"
 
 printf '%s public launch actions completed.\n' "$VYRE_RELEASE_DISPLAY"

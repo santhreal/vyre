@@ -1,17 +1,16 @@
 name: mutation-testing
 
-# Audit L.4.4: mutation-grade gate on every PR plus the long weekly
-# exhaustive run. The PR job is scoped to the hot-path subset that
-# must stay at 100% kill rate (equivalent to the audit's ≥95%
-# threshold); the weekly job covers the full workspace.
+# Mutation-grade audit for the conformance verifier and bitset XOR primitive.
+# This workflow is paused; re-enable it only after validating current runtime
+# and cost bounds.
 
 on:
   pull_request:
     paths:
       - 'libs/performance/matching/vyre/vyre-conform/src/algebra/**'
       - 'libs/performance/matching/vyre/vyre-conform/src/verify/**'
-      - 'libs/performance/matching/vyre/vyre-core/src/ops/primitive/bitwise/xor/**'
-      - 'libs/performance/matching/vyre/.github/workflows/mutation-testing.yml'
+      - 'libs/performance/matching/vyre/vyre-primitives/src/bitset/**'
+      - 'libs/performance/matching/vyre/.github/workflows-paused/mutation-testing.yml'
   schedule:
     # Weekly at 00:00 UTC on Sunday.
     - cron: '0 0 * * 0'
@@ -45,7 +44,7 @@ jobs:
           cargo mutants \
             --file "vyre-conform/src/algebra/**" \
             --file "vyre-conform/src/verify/**" \
-            --file "vyre-core/src/ops/primitive/bitwise/xor/**" \
+            --file "vyre-primitives/src/bitset/**" \
             --json \
             --output mutants-out \
             --timeout 300

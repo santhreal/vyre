@@ -1,5 +1,8 @@
 # CPU/GPU Convergence Lens  -  Security Ops
 
+**Status: Superseded.** Use `docs/optimization/OP_MATRIX.toml` and
+`release/evidence/backends/backend-matrix.json` for current backend parity.
+
 Tracks #79 F-A5 (real CPU/GPU convergence lens for security ops).
 
 ## The claim

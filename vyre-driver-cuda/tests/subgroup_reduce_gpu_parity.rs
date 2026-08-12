@@ -18,7 +18,7 @@ mod common;
 
 use common::with_live_backend;
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 
 const LANES: u32 = 32;
 

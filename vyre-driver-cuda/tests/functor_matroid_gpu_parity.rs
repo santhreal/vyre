@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::graph::functorial::{functor_apply, functor_apply_cpu};
 use vyre_primitives::graph::matroid::{matroid_exchange_bfs_step, matroid_exchange_bfs_step_cpu};
 

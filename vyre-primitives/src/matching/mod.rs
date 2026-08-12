@@ -6,9 +6,6 @@
 //!
 //! See `docs/primitives-tier.md` and `docs/lego-block-rule.md`.
 
-/// Back-compat module tree for older `matching::ops::*` imports.
-pub mod ops;
-
 /// Anchor-DFA plan shared by software, SPIR-V, and accelerator experiments.
 pub mod anchor_dfa;
 /// Bounded-stack bracket-pair detector.

@@ -23,7 +23,7 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// A consumer-shaped single corpus. Big enough that the first upload + dispatch is
 /// a real cost, small enough that the cold path is dominated by build/first-touch,
@@ -38,7 +38,7 @@ pub struct LiteralSetColdStart;
 
 struct ColdStartPrepared {
     corpus: Vec<u8>,
-    reference: Vec<Match>,
+    reference: Vec<ByteRange>,
     max_matches: u32,
     expected: u32,
     planted: u32,
@@ -57,8 +57,8 @@ struct ColdStartMeasurement {
     /// device timer (`None` on a backend without one, a loud absence, never a
     /// fabricated zero).
     warm_device_ns: Option<u64>,
-    cold_matches: Vec<Match>,
-    warm_matches: Vec<Match>,
+    cold_matches: Vec<ByteRange>,
+    warm_matches: Vec<ByteRange>,
 }
 
 /// Run the cold path and warm steady-state loop through one registered artifact
@@ -67,7 +67,7 @@ fn run_cold_then_warm(
     backend_id: &str,
     corpus: &[u8],
     max_matches: u32,
-) -> Result<ColdStartMeasurement, vyre::BackendError> {
+) -> Result<ColdStartMeasurement, vyre_driver::BackendError> {
     let mut cold_matches = Vec::new();
     let mut warm_matches = Vec::new();
 
@@ -76,7 +76,7 @@ fn run_cold_then_warm(
     // dispatch) is attributable, and sum them for the total cold wall.
     let compile_start = Instant::now();
     let engine = GpuLiteralSet::try_compile(PATTERNS).map_err(|error| {
-        vyre::BackendError::new(format!(
+        vyre_driver::BackendError::new(format!(
             "cold-start fixture failed to compile literal set: {error}"
         ))
     })?;
@@ -125,7 +125,7 @@ fn cold_start_overhead_x1000(cold_wall_ns: u64, warm_total_ns: u64, warm_iters: 
     (u128::from(cold_wall_ns) * 1000 / u128::from(warm_per_iter)).min(u128::from(u64::MAX)) as u64
 }
 
-fn encode_matches(matches: &[Match]) -> [Vec<u8>; 2] {
+fn encode_matches(matches: &[ByteRange]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
     [count.to_le_bytes().to_vec(), encode_match_triples(matches)]
 }
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn encode_matches_carries_count_then_triples() {
-        let matches = [Match::new(0, 1, 4), Match::new(1, 8, 12)];
+        let matches = [ByteRange::new(0, 1, 4), ByteRange::new(1, 8, 12)];
         let [count, triples] = encode_matches(&matches);
         assert_eq!(count, 2u32.to_le_bytes().to_vec());
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);

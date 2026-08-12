@@ -1,106 +1,71 @@
 # Error Surface Contract
 
-Closes #32 (A.8 Error surface  -  every error coded, fixable, documented).
+Last verified: 2026-08-04
 
-Every error produced anywhere in the vyre + consumer workspace satisfies
-three invariants. All three are machine-checkable and gated by CI.
+Applies to Vyre 0.7.2.
 
-## The three invariants
+Vyre publishes stable diagnostic codes in
+[`docs/error-codes.md`](error-codes.md). Use the code as the machine-readable
+key. Treat the accompanying prose as the operator-facing explanation.
 
-1. **Every error has a stable code.** A user who pastes the code
-   into a search engine finds this doc. Codes are `PREFIX-NN` where
-   `PREFIX` names the crate (e.g. `VYRE-IR-33`, `consumer-E012`,
-   `SANTH-IO-PERM`, `SCANNER-E001`).
+## Stable code families
 
-2. **Every error message starts with `Fix:`**  -  the actionable
-   hint a downstream developer follows to resolve it. No raw
-   "parse error" or "internal error" text. The pattern is enforced
-   in debug builds by `santh-error::SanthErrorBuilder` (typestate
-   prevents constructing without a Fix:) and at runtime by the
-   `debug_assert!(msg.starts_with("Fix:"))` in downstream wrappers.
-
-3. **Every error has a documented fix path in this workspace.**
-   The code is declared in `docs/error-codes.md` or the
-   per-crate equivalent (`libs/tools/consumer/docs/error-codes.md`)
-   with the named variant, the Fix: template, and a "common
-   causes" bullet list.
-
-## Where errors live
-
-| Crate | Error type | Code prefix |
+| Family | Surface | Typical owner |
 |---|---|---|
-| `vyre-foundation` | `ir::IrError`, validator variants | `VYRE-IR-NN` |
-| `vyre-driver` | `backend::BackendError`, dispatch errors | `VYRE-BE-NN` |
-| `vyre-driver-wgpu` | `LoweringError`, `DispatchError` | `VYRE-WGPU-NN` |
-| `vyre-runtime` | `PipelineError`, `ReplayLogError` | `VYRE-RT-NN` |
-| `vyre-conform-runner` | `BundleCertError`, `ConformanceError` | `VYRE-CONF-NN` |
-| `consumer` | `Error::{Parse, Compile, Io, …}` | `consumer-ENN` |
-| `santh-error` | `SanthError` (ecosystem-wide) | `SANTH-*` (see `santh-error` docs) |
-| `pocgen` | `PocError` | `POC-NN` |
-| `jsir` | `JsirError` | `JSIR-NN` |
-| `polyglot` | `PolyglotError` | `POLY-NN` |
-| … each `libs/` crate declares its own. |
+| `V###` | `Program` validation | `vyre-foundation` |
+| `E-*` | General IR and execution diagnostics | foundation / shared |
+| `W-*` | Warnings and deprecations | shared |
+| `B-*` | Backend capability and dispatch failures | `vyre-driver*` |
+| `P-*` | Runtime pipeline failures | `vyre-runtime` |
+| `C-*` | Conformance failures | `conform/*` |
+| megakernel `DiagnosticCode` | Artifact compile / envelope auth | `vyre-megakernel` |
 
-Every crate's `src/error.rs` is the single source of truth for that
-crate's variants. A new variant must land together with its entry
-in the crate's `docs/error-codes.md`.
+The registry reserves retired or unused values instead of reassigning them.
+Adding a code requires a matching registry row with a description and a
+concrete `Fix:` action.
 
-## The Fix: hint pattern
+## Operator workflow
 
-```
-"Fix: <what the caller did wrong in one sentence>. <the literal
-command or code change that unblocks them>. <optional: where to
-read more>."
-```
+1. Capture the full diagnostic string, including the stable code and `Fix:`.
+2. Match on the code in automation. Do not parse prose to identify the error.
+3. Apply the fix action. Prefer the smallest change that restores a valid
+   program, backend request, or artifact.
+4. Re-run the same command. A different code means a different boundary failed.
 
-Good example:
+### Examples
 
-> `Fix: BufferDecl::with_count(0) is rejected. Drop the
-> '.with_count(0)' call to declare a runtime-sized buffer, or pass
-> a strictly positive count. Zero-length static buffers are a
-> validation failure on every shipped backend.`
+| Code | Meaning | First fix |
+| --- | --- | --- |
+| `V052` | Call references an undeclared buffer | Add the buffer to `Program::buffers` |
+| Backend unavailable (`B-*`) | Requested device/path missing | Fix driver/device config; do not expect silent CPU fallback |
+| Envelope admission failure | Cache/package bytes are not an authentic target payload | Rebuild AOT package or discard corrupt cache entry |
+| Conformance mismatch (`C-*`) | Backend disagreed with reference oracle | Inspect op matrix support and fixture bounds |
 
-Bad example:
+Search the source for the code string when you need the exact emission site.
 
-> `invalid argument`
+## Layer-specific rules
 
-## CI enforcement
+- **Validation** fails before lowering. Invalid programs never reach a backend.
+- **Backend** failures name the selected backend. They do not rewrite the request
+  to another backend.
+- **Runtime** protocol and admission failures are fail closed. Malformed slots,
+  tenants, and envelopes reject before publication or dispatch.
+- **Artifact compile** (`vyre-megakernel`) rejects invalid graphs, incomplete
+  external facts, invalid search bounds, resource overflow, and envelope
+  authentication failures before bytes ship.
 
-- `cargo xtask gate1` includes an error-surface check that greps
-  every `Display` / `Error::message` site for "Fix:" and fails the
-  gate on any variant missing it.
-- `docs/error-codes.md` is gated by a test in each crate that
-  iterates every error variant and asserts an entry exists in the
-  doc. Adding a new variant without the doc entry blocks merge.
-- `santh-error` ships property tests that every constructed
-  `SanthError` carries a Fix: prefix (already in the 0.6 test
-  suite).
+## Source ownership
 
-## User-facing surface
+Each crate owns its error variants. The shared public code registry remains
+[`docs/error-codes.md`](error-codes.md). Backend errors also expose the stable
+numeric identifiers listed in that registry. Megakernel compile diagnostics use
+`vyre_megakernel::DiagnosticCode` and still carry actionable `Fix:` text.
 
-A user who sees an error like
+## Verification
 
-```
-consumer-E012: Fix: signal `sqli_sink` references an undeclared
-buffer `user_input`. Declare the buffer in the rule's
-`[[signal]] buffers = [...]` list, or rename the reference to an
-existing buffer. Common causes: typo in buffer name; deleted a
-buffer without updating every `{{buf}}` interpolation.
-```
-
-can:
-
-- Grep the crate source for `consumer-E012` to find the exact variant
-  and every place it fires.
-- Open `libs/tools/consumer/docs/error-codes.md#consumer-E012` to read
-  the full narrative.
-- Read the `Fix:` sentence and act on it without reading the code.
-
-## Open items
-
-- The per-crate `docs/error-codes.md` registry is scaffolded for
-  consumer; parity across every crate listed above is source-change work
-  tracked under #33 A.9 docs.
-- `santh-error::SanthErrorBuilder` already enforces the Fix: prefix
-  via typestate; the per-crate `cargo xtask` grep check adds
-  belt-and-braces coverage for crates not using the builder.
+- `scripts/check_error_codes_cataloged.sh` rejects emitted codes missing from
+  the registry.
+- `scripts/check_expect_has_fix.sh` rejects expectation messages without an
+  actionable fix.
+- Validation, backend, runtime admission, and megakernel artifact suites assert
+  exact codes on representative failure paths.

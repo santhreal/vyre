@@ -11,14 +11,11 @@
 //! prefix/suffix aliasing, adjacent hits, and empty-match edges are all exercised.
 
 use proptest::prelude::*;
-use vyre_driver_reference::CpuRefBackend;
-use vyre::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{ByteRange, GpuLiteralSet};
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
-fn sorted_triples(matches: &[LiteralMatch]) -> Vec<(u32, u32, u32)> {
-    let mut v: Vec<(u32, u32, u32)> = matches
-        .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
-        .collect();
+fn sorted_triples(matches: &[ByteRange]) -> Vec<(u32, u32, u32)> {
+    let mut v: Vec<(u32, u32, u32)> = matches.iter().map(|m| (m.tag, m.start, m.end)).collect();
     v.sort_unstable();
     v
 }
@@ -40,10 +37,9 @@ proptest! {
     ) {
         let lit_refs: Vec<&[u8]> = literals.iter().map(Vec::as_slice).collect();
         let matcher = GpuLiteralSet::compile(&lit_refs);
-        let backend = CpuRefBackend;
 
         let dispatched = matcher
-            .scan_all(&backend, &haystack)
+            .scan_all(CPU_REF_BACKEND_ID, &haystack)
             .expect("scan_all auto-resizes and completes");
         let oracle = matcher.reference_scan(&haystack);
 
@@ -66,14 +62,13 @@ fn planted_distinct_needles_report_exact_offsets() {
     // filler or of another needle.
     let literals: &[&[u8]] = &[b"XY", b"QRS", b"ZZ"];
     let matcher = GpuLiteralSet::compile(literals);
-    let backend = CpuRefBackend;
 
     // "..XY...QRS..ZZ." (filler is dots (absent from every needle)).
     //  0123456789012345
     let haystack = b"..XY...QRS..ZZ.";
     let got = sorted_triples(
         &matcher
-            .scan_all(&backend, haystack)
+            .scan_all(CPU_REF_BACKEND_ID, haystack)
             .expect("scan_all completes"),
     );
 

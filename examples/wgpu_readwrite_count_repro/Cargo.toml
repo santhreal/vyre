@@ -9,6 +9,7 @@ publish = false
 # published version. Three execution paths are needed because the finding is a
 # disagreement between them.
 vyre = { path = "../../vyre" }
+vyre-driver = { path = "../../vyre-driver" }
 vyre-reference = { path = "../../vyre-reference" }
 vyre-driver-cuda = { path = "../../vyre-driver-cuda" }
 vyre-driver-wgpu = { path = "../../vyre-driver-wgpu" }

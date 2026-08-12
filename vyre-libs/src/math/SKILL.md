@@ -1,16 +1,18 @@
 # vyre-libs::math SKILL
 
-Linear algebra, scans, and broadcasting compositions. Every op is
-pure vyre IR assembled from `vyre-ops` primitives.
+Linear algebra, scans, broadcasting, and related compositions. Every op is
+pure vyre IR assembled from `vyre-ops` primitives, except `atomic` (Category B
+because it requires `Expr::Atomic`).
 
-## Coverage targets
+## Coverage (shipped)
 
-- Linear algebra: `dot`, `matmul`, `matmul_tiled`. Future:
-  `matmul_batched`, `outer_product`, `trace`, `transpose`.
-- Scans: `scan_prefix_sum`. Future: `scan_max`, `scan_min`,
-  `scan_prefix_product`, `segmented_scan`.
-- Broadcast: `broadcast`. Future: `broadcast_to_shape`,
-  `broadcast_add`, `broadcast_mul`.
+- Linear algebra (`math-linalg`): `dot`, `matmul`, `matmul_tiled`,
+  `matmul_strassen`.
+- Scans (`math-scan`): `scan_prefix_sum`.
+- Broadcast (`math-broadcast`): `broadcast`.
+- Algebra / succinct / atomic / FFT / conv and scalar helpers under their
+  feature gates (`math-algebra`, `math-succinct`, and always-on modules such as
+  `atomic`, `fft`, `conv`, `reduce_mean`, `reduce_variance`, `welford`).
 
 ## Witness sources
 
@@ -44,6 +46,5 @@ collision path.
 
 ## Overflow contract
 
-`m * k`, `k * n`, `m * n`  -  any product that exceeds `u32::MAX` must
-panic with `"element-count overflows u32"` at builder time. See
-`tests/overflow_guards.rs` for the 7 panic-path assertions.
+`m * k`, `k * n`, `m * n` products that exceed `u32::MAX` must fail at
+builder time with an overflow message. See `tests/overflow_guards.rs`.

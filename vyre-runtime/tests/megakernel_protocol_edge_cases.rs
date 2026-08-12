@@ -10,7 +10,7 @@
 use vyre_runtime::resident_work_queue::{
     descriptor::{BatchDescriptor, BuiltinOpcode, SlotDescriptor, SlotOpcode, WindowDescriptor},
     protocol::{self, control, slot, ARGS_PER_SLOT, STATUS_WORD},
-    ResidentWorkQueue, ResidentExecutionMode,
+    ResidentExecutionMode, ResidentWorkQueue,
 };
 use vyre_runtime::PipelineError;
 
@@ -106,15 +106,16 @@ fn try_read_epoch_rejects_buffer_missing_epoch_word() {
 #[test]
 fn try_read_metrics_rejects_short_buffer() {
     let short = vec![0u8; ((control::METRICS_BASE + 1) as usize) * 4];
-    let err = ResidentWorkQueue::try_read_metrics(&short).expect_err("short metrics buffer must fail");
+    let err =
+        ResidentWorkQueue::try_read_metrics(&short).expect_err("short metrics buffer must fail");
     assert!(err.to_string().contains("Fix:"));
 }
 
 #[test]
 fn try_read_metrics_accepts_exact_size_buffer() {
     let exact = vec![0u8; ((control::METRICS_BASE + control::METRICS_SLOTS) as usize) * 4];
-    let metrics =
-        ResidentWorkQueue::try_read_metrics(&exact).expect("exact-size metrics buffer must succeed");
+    let metrics = ResidentWorkQueue::try_read_metrics(&exact)
+        .expect("exact-size metrics buffer must succeed");
     assert!(metrics.is_empty());
 }
 

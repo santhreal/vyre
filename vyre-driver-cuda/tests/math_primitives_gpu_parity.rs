@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::math::prefix_scan::{
     cpu_ref as prefix_cpu, prefix_scan, prefix_scan_large, ScanKind,
 };

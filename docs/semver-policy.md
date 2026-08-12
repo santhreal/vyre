@@ -1,15 +1,17 @@
 # vyre Semver Policy
 
-This document is binding. Every vyre crate follows
-[Semantic Versioning 2.0.0](https://semver.org/) with the amendments
-below. A release that violates these rules is a defect  -  file a YANK
-request via `scripts/publish-dryrun.sh --yank-reason`.
+Applies to Vyre 0.7.2.
+
+Every published Vyre crate follows
+[Semantic Versioning 2.0.0](https://semver.org/) with the amendments below.
+Report a release defect through the repository release owner; do not publish
+another version until the affected artifact is yanked or superseded.
 
 ## Scope
 
 The policy applies to every crate published from this workspace:
 
-- `vyre` (vyre-core library)  -  semver-major
+- `vyre` public facade  -  semver-major
 - `vyre-spec`  -  semver-major
 - `vyre-macros`  -  semver-minor allowed
 - `vyre-reference`  -  semver-minor allowed

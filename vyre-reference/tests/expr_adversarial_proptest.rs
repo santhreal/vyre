@@ -243,9 +243,9 @@ proptest! {
 // ---------------------------------------------------------------------------
 // Edge cases: divide-by-zero (proptest with any::<u32> never generates 0)
 // ---------------------------------------------------------------------------
-mod expr_adversarial_proptest_part1 {
-    include!("__split/expr_adversarial_proptest_part1.rs");
+mod expr_adversarial_proptest_div_u32_by_zero_is_max {
+    include!("contract_cases/expr_adversarial_proptest__div_u32_by_zero_is_max.rs");
 }
-mod expr_adversarial_proptest_part2 {
-    include!("__split/expr_adversarial_proptest_part2.rs");
+mod expr_adversarial_proptest_arithmetic_error_case_modules {
+    include!("contract_cases/expr_adversarial_proptest__arithmetic_error_case_modules.rs");
 }

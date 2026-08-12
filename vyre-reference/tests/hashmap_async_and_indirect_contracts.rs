@@ -1,6 +1,6 @@
 //! Contracts for hashmap interpreter async and indirect-dispatch nodes.
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 fn run(program: &Program, inputs: Vec<Vec<u8>>) -> Result<Vec<Vec<u8>>, String> {

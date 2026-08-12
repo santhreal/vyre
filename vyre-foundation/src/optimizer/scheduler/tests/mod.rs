@@ -5,10 +5,10 @@ use super::*;
 use crate::ir::{BufferDecl, DataType, Expr, Node, Program, ShapePredicate};
 use crate::ir_inner::model::program::LinearType;
 use crate::lower::effects::ProgramEffects;
-use crate::optimizer::passes::const_fold::ConstFold;
-use crate::optimizer::passes::fusion::Fusion;
-use crate::optimizer::passes::normalize_atomics::NormalizeAtomicsPass;
-use crate::optimizer::passes::strength_reduce::StrengthReduce;
+use crate::optimizer::passes::algebraic::const_fold::ConstFold;
+use crate::optimizer::passes::algebraic::normalize_atomics::NormalizeAtomicsPass;
+use crate::optimizer::passes::algebraic::strength_reduce::StrengthReduce;
+use crate::optimizer::passes::fusion_cse::fusion::Fusion;
 use crate::optimizer::{
     PassAnalysis, PassMetadata, PassResult, ProgramPass, RefusalReason, RewriteBatch,
     RewriteBatchCandidates, RewriteCandidate,

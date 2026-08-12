@@ -1,6 +1,4 @@
 impl core::error::Error for vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
-impl core::error::Error for vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError
-impl core::error::Error for vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError
 impl core::error::Error for vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError
 impl core::error::Error for vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError
 impl core::error::Error for vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError
@@ -13,8 +11,6 @@ impl core::error::Error for vyre_self_substrate::optimizer::pipeline::GpuOptimiz
 impl core::error::Error for vyre_self_substrate::optimizer::pipeline_resident::PipelineError
 impl core::error::Error for vyre_self_substrate::optimizer::validate_via_encoded::ValidateError
 impl core::fmt::Display for vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
-impl core::fmt::Display for vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError
-impl core::fmt::Display for vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError
 impl core::fmt::Display for vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError
 impl core::fmt::Display for vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError
 impl core::fmt::Display for vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError
@@ -76,18 +72,10 @@ pub const vyre_self_substrate::optimizer::validate_via_encoded::VIOLATION_INDEX_
 pub enum vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
 pub enum vyre_self_substrate::device_resident_token_fact_graph::TokenFactEdgeKind
 pub enum vyre_self_substrate::device_resident_token_fact_graph::TokenFactNodeKind
-pub enum vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub enum vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError
-pub enum vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError
-pub enum vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass
 pub enum vyre_self_substrate::gpu_probe_contract::GpuProbeContractError
 pub enum vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError
 pub enum vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdgeKind
 pub enum vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNodeKind
-pub enum vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub enum vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError
-pub enum vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError
-pub enum vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
 pub enum vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError
 pub enum vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner
 pub enum vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError
@@ -107,17 +95,11 @@ pub fn [u32]::canonical_of(&self, id: u32) -> u32
 pub fn [u32]::is_empty(&self) -> bool
 pub fn vyre_self_substrate::device_resident_token_fact_graph::plan_device_resident_token_fact_graph(nodes: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64) -> core::result::Result<vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
 pub fn vyre_self_substrate::device_resident_token_fact_graph::plan_device_resident_token_fact_graph_with_scratch(nodes: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64, scratch: &mut vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch) -> core::result::Result<vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
-pub fn vyre_self_substrate::gpu_preprocessing_coverage::validate_gpu_preprocessing_coverage(capabilities: &[vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord<'_>], token_classes: &[vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof, vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError>
-pub fn vyre_self_substrate::gpu_preprocessing_coverage::validate_gpu_preprocessing_linux_artifact(artifact: &str) -> core::result::Result<vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof, vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError>
 pub fn vyre_self_substrate::gpu_probe_contract::validate_gpu_probe_contract(records: &[vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractProof, vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError>
 pub fn vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch::new() -> Self
 pub fn vyre_self_substrate::hardware::device_resident_token_fact_graph::plan_device_resident_token_fact_graph(nodes: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64) -> core::result::Result<vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
 pub fn vyre_self_substrate::hardware::device_resident_token_fact_graph::plan_device_resident_token_fact_graph_with_scratch(nodes: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode], edges: &[vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdge], payload_bytes: u64, scratch: &mut vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch) -> core::result::Result<vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraph, vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphError>
-pub fn vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::hardware::gpu_preprocessing_coverage::validate_gpu_preprocessing_coverage(capabilities: &[vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord<'_>], token_classes: &[vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof, vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError>
-pub fn vyre_self_substrate::hardware::gpu_preprocessing_coverage::validate_gpu_preprocessing_linux_artifact(artifact: &str) -> core::result::Result<vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof, vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError>
 pub fn vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::hardware::gpu_probe_contract::validate_gpu_probe_contract(records: &[vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractProof, vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError>
 pub fn vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -225,11 +207,9 @@ pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits
 pub fn vyre_self_substrate::optimizer::validate_via_encoded::gpu_validate_limits_from_encoding(arena: &vyre_self_substrate::optimizer::expr_arena::ExprArenaEncoding, node_count: u32, dispatcher: &dyn vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher) -> core::result::Result<[bool; 2], vyre_self_substrate::optimizer::validate_via_encoded::ValidateError>
 pub mod vyre_self_substrate
 pub mod vyre_self_substrate::device_resident_token_fact_graph
-pub mod vyre_self_substrate::gpu_preprocessing_coverage
 pub mod vyre_self_substrate::gpu_probe_contract
 pub mod vyre_self_substrate::hardware
 pub mod vyre_self_substrate::hardware::device_resident_token_fact_graph
-pub mod vyre_self_substrate::hardware::gpu_preprocessing_coverage
 pub mod vyre_self_substrate::hardware::gpu_probe_contract
 pub mod vyre_self_substrate::hardware::memory_ownership_contract
 pub mod vyre_self_substrate::memory_ownership_contract
@@ -259,20 +239,12 @@ pub struct vyre_self_substrate::device_resident_token_fact_graph::DeviceResident
 pub struct vyre_self_substrate::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch
 pub struct vyre_self_substrate::device_resident_token_fact_graph::TokenFactEdge
 pub struct vyre_self_substrate::device_resident_token_fact_graph::TokenFactNode
-pub struct vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord<'a>
-pub struct vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof
-pub struct vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof
-pub struct vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClassRecord<'a>
 pub struct vyre_self_substrate::gpu_probe_contract::GpuProbeContractProof
 pub struct vyre_self_substrate::gpu_probe_contract::GpuProbeRecord<'a>
 pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraph
 pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::DeviceResidentTokenFactGraphScratch
 pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactEdge
 pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode
-pub struct vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord<'a>
-pub struct vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof
-pub struct vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof
-pub struct vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord<'a>
 pub struct vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractProof
 pub struct vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeRecord<'a>
 pub struct vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof
@@ -331,56 +303,6 @@ pub vyre_self_substrate::device_resident_token_fact_graph::TokenFactNodeKind::Fa
 pub vyre_self_substrate::device_resident_token_fact_graph::TokenFactNodeKind::MacroExpansion
 pub vyre_self_substrate::device_resident_token_fact_graph::TokenFactNodeKind::Semantic
 pub vyre_self_substrate::device_resident_token_fact_graph::TokenFactNodeKind::Token
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::BuiltinMacros
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::ConditionalInclusion
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::IncludeGraphTracking
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::LineMarkers
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::MacroExpansion
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::Stringification
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::TokenPasting
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::TokenProvenance
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapability::VariadicMacros
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::command: &'a str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::evidence: &'a str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::CommandDoesNotUseCargoFull
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::CommandDoesNotUseCargoFull::command: alloc::string::String
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilities
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata::field: &'static str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata::field: &'static str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClasses
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingCapability
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingCapability::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingTokenClass
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingTokenClass::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof::capability_count: usize
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof::token_class_count: usize
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingField
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingField::field: &'static str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingNumber
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingNumber::field: &'static str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::field: &'static str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::observed: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::required: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::include_cache_bytes_stored: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::preprocessor_pipeline_cache_hits: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::total_files: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::total_source_bytes: u64
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Comments
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Directives
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Identifiers
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Literals
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Punctuation
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::StringCharStates
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClass::Whitespace
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClassRecord::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClassRecord::command: &'a str
-pub vyre_self_substrate::gpu_preprocessing_coverage::GpuTokenClassRecord::evidence: &'a str
 pub vyre_self_substrate::gpu_probe_contract::GpuProbeContractError::EmptyMetadata
 pub vyre_self_substrate::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::field: &'static str
 pub vyre_self_substrate::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::gate: alloc::string::String
@@ -434,56 +356,6 @@ pub vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNo
 pub vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNodeKind::MacroExpansion
 pub vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNodeKind::Semantic
 pub vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNodeKind::Token
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::BuiltinMacros
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::ConditionalInclusion
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::IncludeGraphTracking
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::LineMarkers
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::MacroExpansion
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::Stringification
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::TokenPasting
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::TokenProvenance
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability::VariadicMacros
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::command: &'a str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapabilityRecord::evidence: &'a str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::CommandDoesNotUseCargoFull
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::CommandDoesNotUseCargoFull::command: alloc::string::String
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilities
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyCapabilityMetadata::field: &'static str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClassMetadata::field: &'static str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::EmptyTokenClasses
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingCapability
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingCapability::capability: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCapability
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingTokenClass
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageError::MissingTokenClass::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof::capability_count: usize
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingCoverageProof::token_class_count: usize
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingField
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingField::field: &'static str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingNumber
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::MissingNumber::field: &'static str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::field: &'static str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::observed: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactError::ThresholdMiss::required: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::include_cache_bytes_stored: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::preprocessor_pipeline_cache_hits: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::total_files: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuPreprocessingLinuxArtifactProof::total_source_bytes: u64
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Comments
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Directives
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Identifiers
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Literals
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Punctuation
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::StringCharStates
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass::Whitespace
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord::class: vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClass
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord::command: &'a str
-pub vyre_self_substrate::hardware::gpu_preprocessing_coverage::GpuTokenClassRecord::evidence: &'a str
 pub vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError::EmptyMetadata
 pub vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::field: &'static str
 pub vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError::EmptyMetadata::gate: alloc::string::String

@@ -45,8 +45,8 @@
 use std::fmt::Write;
 
 use vyre::ir::Program;
-use vyre::BackendRegistration;
 use vyre_conform_spec::{BundleCertificate, ConformanceCase, CERTIFICATE_SCHEMA_VERSION};
+use vyre_driver::BackendRegistration;
 
 use vyre_reference::value::Value;
 

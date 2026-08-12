@@ -44,27 +44,7 @@ config = "The command reads the enclosing Santh rules/launch and tests/launch_ru
 failure = "A missing rules tree or incomplete rule contract returns status 1."
 exit_codes = "0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments."
 
-[[binary]]
-package = "xtask"
-name = "lint_shape_tests"
-readme = "xtask/README.md"
-audience = "internal"
-hardware = "No accelerator is required."
-environment = "No environment variables alter CLI behavior."
-config = "--threshold sets the maximum shape-only test percentage."
-failure = "Incomplete scans, malformed sources, or a threshold violation return status 1."
-exit_codes = "0 within threshold or on help, 1 on scan or threshold failure, 2 on invalid arguments."
 
-[[binary]]
-package = "xtask"
-name = "public_api_check"
-readme = "xtask/README.md"
-audience = "internal"
-hardware = "No accelerator is required."
-environment = "VYRE_CARGO_RUNNER selects the Cargo wrapper."
-config = "--update refreshes snapshots and --allow-breaking explicitly permits removals."
-failure = "Tool launch, API generation, UTF-8, inventory, compatibility, and snapshot mismatches return status 1."
-exit_codes = "0 on matching or approved updated snapshots, 1 on API failure, 2 on invalid arguments."
 
 [[binary]]
 package = "xtask"

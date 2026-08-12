@@ -6,7 +6,7 @@ a manifest, then regenerate this file. `check-tier-deps` rejects drift.
 
 ## Current workspace
 
-The workspace contains 35 crates. An arrow points from a crate to
+The workspace contains 34 crates. An arrow points from a crate to
 an internal production dependency. Development dependencies are excluded because
 they do not define the shipped dependency DAG.
 
@@ -32,36 +32,35 @@ graph TD
   C17["vyre-frontend-c"]
   C18["vyre-frontend-rust"]
   C19["vyre-grammar-gen"]
-  C20["vyre-harness"]
-  C21["vyre-intrinsics"]
-  C22["vyre-libs"]
-  C23["vyre-lints"]
-  C24["vyre-lower"]
-  C25["vyre-macros"]
-  C26["vyre-megakernel"]
-  C27["vyre-primitives"]
-  C28["vyre-reference"]
-  C29["vyre-runtime"]
-  C30["vyre-scan"]
-  C31["vyre-self-substrate"]
-  C32["vyre-spec"]
-  C33["vyre-test-support"]
-  C34["xtask"]
+  C20["vyre-intrinsics"]
+  C21["vyre-libs"]
+  C22["vyre-lints"]
+  C23["vyre-lower"]
+  C24["vyre-macros"]
+  C25["vyre-megakernel"]
+  C26["vyre-primitives"]
+  C27["vyre-reference"]
+  C28["vyre-runtime"]
+  C29["vyre-scan"]
+  C30["vyre-self-substrate"]
+  C31["vyre-spec"]
+  C32["vyre-test-support"]
+  C33["xtask"]
   C0 --> C6
   C0 --> C7
   C0 --> C11
   C0 --> C16
-  C0 --> C22
+  C0 --> C21
+  C0 --> C25
   C0 --> C26
-  C0 --> C27
+  C0 --> C28
   C0 --> C29
-  C0 --> C30
-  C0 --> C32
+  C0 --> C31
   C1 --> C6
   C1 --> C16
+  C1 --> C25
   C1 --> C26
-  C1 --> C27
-  C1 --> C32
+  C1 --> C31
   C2 --> C0
   C2 --> C6
   C2 --> C7
@@ -73,13 +72,13 @@ graph TD
   C2 --> C16
   C2 --> C17
   C2 --> C18
+  C2 --> C20
   C2 --> C21
-  C2 --> C22
-  C2 --> C24
+  C2 --> C23
+  C2 --> C26
   C2 --> C27
   C2 --> C28
-  C2 --> C29
-  C2 --> C32
+  C2 --> C31
   C3 --> C0
   C3 --> C4
   C3 --> C6
@@ -90,109 +89,105 @@ graph TD
   C3 --> C16
   C3 --> C20
   C3 --> C21
-  C3 --> C22
+  C3 --> C25
   C3 --> C26
   C3 --> C27
   C3 --> C28
-  C3 --> C29
-  C3 --> C32
-  C4 --> C32
+  C3 --> C31
+  C4 --> C31
   C5 --> C0
   C5 --> C13
   C5 --> C16
-  C5 --> C22
-  C5 --> C24
-  C5 --> C27
-  C5 --> C30
+  C5 --> C21
+  C5 --> C23
+  C5 --> C26
+  C5 --> C29
   C6 --> C16
+  C6 --> C24
   C6 --> C25
-  C6 --> C26
+  C6 --> C30
   C6 --> C31
-  C6 --> C32
   C7 --> C6
   C7 --> C14
   C7 --> C16
-  C7 --> C24
-  C7 --> C26
+  C7 --> C23
+  C7 --> C25
+  C7 --> C30
   C7 --> C31
-  C7 --> C32
   C8 --> C6
   C8 --> C12
   C8 --> C16
-  C8 --> C24
-  C8 --> C26
+  C8 --> C23
+  C8 --> C25
   C9 --> C6
   C9 --> C16
-  C9 --> C28
+  C9 --> C27
   C10 --> C6
   C10 --> C15
   C10 --> C16
-  C10 --> C24
-  C10 --> C26
-  C10 --> C32
+  C10 --> C23
+  C10 --> C25
+  C10 --> C31
   C11 --> C6
   C11 --> C13
   C11 --> C16
-  C11 --> C24
-  C11 --> C26
+  C11 --> C23
+  C11 --> C25
+  C11 --> C30
   C11 --> C31
-  C11 --> C32
   C12 --> C13
   C12 --> C16
-  C12 --> C24
+  C12 --> C23
   C13 --> C16
-  C13 --> C24
+  C13 --> C23
   C14 --> C16
-  C14 --> C24
+  C14 --> C23
   C15 --> C13
-  C15 --> C24
-  C16 --> C25
-  C16 --> C32
+  C15 --> C23
+  C16 --> C24
+  C16 --> C31
   C17 --> C16
   C18 --> C16
-  C20 --> C0
   C20 --> C16
+  C20 --> C26
   C21 --> C16
-  C21 --> C27
-  C22 --> C16
-  C22 --> C27
-  C22 --> C32
-  C24 --> C16
+  C21 --> C26
+  C21 --> C31
+  C23 --> C16
+  C25 --> C16
   C26 --> C16
+  C26 --> C31
   C27 --> C16
-  C27 --> C32
+  C27 --> C26
+  C27 --> C31
+  C28 --> C6
   C28 --> C16
-  C28 --> C27
-  C28 --> C32
+  C28 --> C25
+  C28 --> C30
   C29 --> C6
   C29 --> C16
+  C29 --> C21
+  C29 --> C25
   C29 --> C26
-  C29 --> C31
-  C30 --> C6
+  C29 --> C28
   C30 --> C16
-  C30 --> C22
   C30 --> C26
-  C30 --> C27
-  C30 --> C29
-  C31 --> C16
-  C31 --> C27
-  C34 --> C0
-  C34 --> C2
-  C34 --> C6
-  C34 --> C7
-  C34 --> C9
-  C34 --> C10
-  C34 --> C11
-  C34 --> C12
-  C34 --> C16
-  C34 --> C20
-  C34 --> C21
-  C34 --> C22
-  C34 --> C23
-  C34 --> C24
-  C34 --> C27
-  C34 --> C28
-  C34 --> C32
+  C33 --> C0
+  C33 --> C2
+  C33 --> C6
+  C33 --> C7
+  C33 --> C9
+  C33 --> C10
+  C33 --> C11
+  C33 --> C12
+  C33 --> C16
+  C33 --> C20
+  C33 --> C21
+  C33 --> C22
+  C33 --> C23
+  C33 --> C26
+  C33 --> C27
+  C33 --> C31
 ```
 
 ## Current ownership and edges
@@ -202,7 +197,7 @@ graph TD
 | `vyre` | `vyre` | `public-facade` | `facade` | `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec` |
 | `vyre-aot` | `vyre-aot` | `aot-artifacts` | `packaging` | `vyre-driver`, `vyre-foundation`, `vyre-megakernel`, `vyre-primitives`, `vyre-spec` |
 | `vyre-bench` | `vyre-bench` | `benchmarks` | `tooling` | `vyre`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-ptx`, `vyre-foundation`, `vyre-frontend-c`, `vyre-frontend-rust`, `vyre-intrinsics`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
-| `vyre-conform` | `conform/vyre-conform` | `conformance` | `conformance` | `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
+| `vyre-conform` | `conform/vyre-conform` | `conformance` | `conformance` | `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec` |
 | `vyre-conform-spec` | `conform/vyre-conform-spec` | `conformance` | `conformance` | `vyre-spec` |
 | `vyre-debug` | `vyre-debug` | `debugging` | `tooling` | `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-scan` |
 | `vyre-driver` | `vyre-driver` | `backend-contract` | `backend-neutral` | `vyre-foundation`, `vyre-macros`, `vyre-megakernel`, `vyre-self-substrate`, `vyre-spec` |
@@ -219,7 +214,6 @@ graph TD
 | `vyre-frontend-c` | `vyre-frontend-c` | `c-frontend` | `frontend` | `vyre-foundation` |
 | `vyre-frontend-rust` | `vyre-frontend-rust` | `rust-frontend` | `frontend` | `vyre-foundation` |
 | `vyre-grammar-gen` | `vyre-grammar-gen` | `grammar-generation` | `tooling` | None |
-| `vyre-harness` | `vyre-harness` | `runtime-harness` | `tooling` | `vyre`, `vyre-foundation` |
 | `vyre-intrinsics` | `vyre-intrinsics` | `hardware-intrinsics` | `intrinsics` | `vyre-foundation`, `vyre-primitives` |
 | `vyre-libs` | `vyre-libs` | `product-libraries` | `libraries` | `vyre-foundation`, `vyre-primitives`, `vyre-spec` |
 | `vyre-lints` | `vyre-lints` | `lint-policy` | `tooling` | None |
@@ -233,7 +227,7 @@ graph TD
 | `vyre-self-substrate` | `vyre-self-substrate` | `self-substrate` | `scheduler` | `vyre-foundation`, `vyre-primitives` |
 | `vyre-spec` | `vyre-spec` | `specification` | `foundation` | None |
 | `vyre-test-support` | `vyre-test-support` | `test-support` | `test-tooling` | None |
-| `xtask` | `xtask` | `release-tooling` | `tooling` | `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec` |
+| `xtask` | `xtask` | `release-tooling` | `tooling` | `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec` |
 
 ## Planned compiler boundary
 

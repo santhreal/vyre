@@ -1,7 +1,7 @@
 //! Live WGPU contracts for resident programs with dispatch-level grid synchronization.
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::MemoryOrdering;
 
@@ -59,7 +59,7 @@ fn resident_grid_sync_completes_and_preserves_segment_order_on_oversubscribed_gr
             vec![[42u32.to_le_bytes(), 41u32.to_le_bytes()].concat()],
             "resident grid-sync segments must observe every prior segment's device-resident writes",
         );
-        Ok::<(), vyre::BackendError>(())
+        Ok::<(), vyre_driver::BackendError>(())
     })();
     let cleanup = backend.free_resident(state);
     result.expect("Fix: WGPU resident grid-sync dispatch must split before device submission.");

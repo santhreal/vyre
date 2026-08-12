@@ -17,7 +17,6 @@ cargo xtask <subcommand> [options]
 | `mutation-gate [--tests PATH]` | Wraps H6 (mutation gate) to probe agent-written tests for surviving mutations. |
 | `coverage-check` | Runs the workspace coverage check target. |
 | `conform-verify` | End-to-end pipeline: `generate-tests` → `mutation-gate` → `coverage-check` → `cargo test`. Exits non-zero on any failure. |
-| `quick-check --op NAME` | Minimal verification path for a single op (wraps the `contribute` binary). Target <10s. |
 
 ## Layout
 
@@ -46,42 +45,6 @@ Configuration: The command reads the enclosing Santh rules/launch and tests/laun
 Failure behavior: A missing rules tree or incomplete rule contract returns status 1.
 
 Exit codes: 0 on complete contracts or help, 1 on contract failure, 2 on invalid arguments.
-
-### `lint_shape_tests`
-
-```console
-./cargo_full run -p xtask --bin lint_shape_tests -- --help
-```
-
-Commands: none.
-
-Hardware: No accelerator is required.
-
-Environment: No environment variables alter CLI behavior.
-
-Configuration: --threshold sets the maximum shape-only test percentage.
-
-Failure behavior: Incomplete scans, malformed sources, or a threshold violation return status 1.
-
-Exit codes: 0 within threshold or on help, 1 on scan or threshold failure, 2 on invalid arguments.
-
-### `public_api_check`
-
-```console
-./cargo_full run -p xtask --bin public_api_check -- --help
-```
-
-Commands: none.
-
-Hardware: No accelerator is required.
-
-Environment: VYRE_CARGO_RUNNER selects the Cargo wrapper.
-
-Configuration: --update refreshes snapshots and --allow-breaking explicitly permits removals.
-
-Failure behavior: Tool launch, API generation, UTF-8, inventory, compatibility, and snapshot mismatches return status 1.
-
-Exit codes: 0 on matching or approved updated snapshots, 1 on API failure, 2 on invalid arguments.
 
 ### `scaffold_rule`
 
@@ -125,7 +88,7 @@ Exit codes: 0 on scaffold creation or help, 1 on validation or write failure, 2 
 ./cargo_full run -p xtask --bin xtask -- --help
 ```
 
-Commands: `abstraction-gate`, `acceleration-plan-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `research-audit`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `weir-matrix`, `whats-similar`.
+Commands: `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `print-composition`, `recursion-gate`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar`.
 
 Hardware: Requirements are command specific. Backend, conformance, and benchmark commands require their declared devices.
 
@@ -151,7 +114,7 @@ Generate evidence and enforce repository, release, documentation, and architectu
 ### Boundaries
 
 The `release-tooling` owner maintains this `tooling` crate at `xtask`.
-Its allowed internal production dependencies are: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-frontend-c`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -185,4 +148,14 @@ This crate is internal repository and release tooling for the 0.7.2 train and is
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

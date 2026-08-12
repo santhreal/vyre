@@ -5,7 +5,7 @@ use vyre_foundation::operation::{
     OperationRegistration, OperationRegistry, OperationTier, TolerancePolicy,
 };
 
-const OP_ID: &str = "fixture.operation_registry.identity";
+const OP_ID: &str = "external_fixture::operation_registry::identity";
 
 fn fixture_program() -> Program {
     Program::wrapped(
@@ -18,7 +18,7 @@ fn fixture_program() -> Program {
 inventory::submit! {
     OperationRegistration::new(
         OP_ID,
-        OperationTier::Primitive,
+        OperationTier::External,
         Some(fixture_program),
         None,
         None,

@@ -13,8 +13,7 @@ cd "$ROOT"
 scan_roots=(
     "vyre-libs/src"
     "vyre-runtime/src"
-    "conform/vyre-conform-runner/src"
-    "conform/vyre-test-harness/src"
+    "conform/vyre-conform/src"
 )
 
 hits="$(rg --no-heading --line-number --glob '*.rs' --glob '!**/tests/**' '\.dispatch\(' "${scan_roots[@]}" 2>/dev/null || true)"

@@ -5,7 +5,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
     csr_forward_or_changed_parallel_batch_grid, csr_forward_or_changed_parallel_grid,

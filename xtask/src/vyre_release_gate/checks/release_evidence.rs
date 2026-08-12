@@ -9,82 +9,8 @@ pub(crate) fn check_hygiene_release_surface_coverage(
         failures,
     );
 }
-pub(crate) fn check_release_surface_coverage(
-    requirement: &Requirement,
-    matrix: &serde_json::Value,
-    failures: &mut Vec<String>,
-) {
-    let Some(surfaces) = matrix
-        .get("surface_coverages")
-        .and_then(serde_json::Value::as_array)
-    else {
-        failures.push(format!(
-            "requirement `{}` test matrix is missing release surface coverage",
-            requirement.id
-        ));
-        return;
-    };
-    if surfaces.len() != 3 {
-        failures.push(format!(
-            "requirement `{}` test matrix must report exactly Vyre, Weir, and tools/vyrec surface coverage",
-            requirement.id
-        ));
-    }
-    for surface_id in ["vyre", "weir", "vyrec"] {
-        let Some(surface) = surfaces.iter().find(|surface| {
-            surface.get("surface").and_then(serde_json::Value::as_str) == Some(surface_id)
-        }) else {
-            failures.push(format!(
-                "requirement `{}` test matrix is missing `{surface_id}` surface coverage",
-                requirement.id
-            ));
-            continue;
-        };
-        for (field, label) in [
-            ("file_count", "test files"),
-            ("assertion_count", "assertions"),
-            ("entrypoint_count", "test entrypoints"),
-        ] {
-            if surface
-                .get(field)
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0)
-                == 0
-            {
-                failures.push(format!(
-                    "requirement `{}` `{surface_id}` release surface has zero {label}",
-                    requirement.id
-                ));
-            }
-        }
-        let missing_layers = surface
-            .get("missing_layers")
-            .and_then(serde_json::Value::as_array)
-            .map_or(usize::MAX, Vec::len);
-        if missing_layers != 0 {
-            failures.push(format!(
-                "requirement `{}` `{surface_id}` release surface reports {missing_layers} missing test layer(s)",
-                requirement.id
-            ));
-        }
-        let blockers = surface
-            .get("blockers")
-            .and_then(serde_json::Value::as_array)
-            .map_or(usize::MAX, Vec::len);
-        if blockers != 0 {
-            failures.push(format!(
-                "requirement `{}` `{surface_id}` release surface reports {blockers} blocker(s)",
-                requirement.id
-            ));
-        }
-    }
-}
 
 /// Artifacts every release-evidence generator command must produce.
-///
-/// Module level so `parser_coherence`'s component contract artifacts can be
-/// checked against the `parser-coherence` row: the component id owns the
-/// artifact file name, so renaming an id silently invalidates this list.
 const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
     (
         "version-matrix",
@@ -102,30 +28,11 @@ const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
             "resource-bound-scan.json",
             "error-surface-scan.json",
             "cargo-wrapper-scan.json",
-            "audit-location-scan.json",
-            "public-doc-scan.json",
-            "test-hygiene-scan.json",
-        ],
-    ),
-    (
-        "test-matrix",
-        &[
-            "test-matrix.json",
-            "modularization-map.json",
-            "oversized-test-closure.json",
-            "release-surface-suite-coverage.json",
-            "unit-suite.json",
-            "adversarial-suite.json",
-            "property-suite.json",
-            "conformance-suite.json",
-            "corpus-suite.json",
-            "benchmark-suite.json",
-            "gap-suite.json",
-            "fuzz-suite.json",
         ],
     ),
     ("metadata-matrix", &["metadata-matrix.json"]),
     ("feature-matrix", &["feature-matrix.json"]),
+    ("package-readiness", &["publish-readiness.json"]),
     (
         "optimization-corpus",
         &[
@@ -144,19 +51,8 @@ const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
             "alias-aware-stlf.json",
             "alias-aware-licm.json",
             "alias-aware-fusion-fission.json",
-            "weir-facts-pass-firing.json",
             "egraph-saturation-matrix.json",
             "egraph-semantic-contracts.json",
-        ],
-    ),
-    (
-        "parser-coherence",
-        &[
-            "distributed-parser-map.json",
-            "vyre-frontend-c-contracts.json",
-            "vyrec-cli-contracts.json",
-            "external-dataflow-contracts.json",
-            "compiler-consumer-grammar-gen-contracts.json",
         ],
     ),
 ];
@@ -166,7 +62,6 @@ pub(crate) fn check_release_evidence_run(
     run: &serde_json::Value,
     failures: &mut Vec<String>,
 ) {
-
     let total = run
         .get("total_commands")
         .and_then(serde_json::Value::as_u64)
@@ -291,36 +186,6 @@ pub(crate) fn check_release_evidence_run(
                         .unwrap_or_else(|| "<missing>".to_string())
                 ));
             }
-        }
-    }
-}
-
-
-#[cfg(test)]
-mod release_evidence_generator_tests {
-    use super::REQUIRED_GENERATORS;
-
-    /// Every parser-coherence component contract artifact is expected by the
-    /// release-evidence run.
-    ///
-    /// The artifact file name derives from the component id, which lives in
-    /// `parser_coherence`. This list is written out by hand, so a renamed id
-    /// would leave the gate expecting an artifact nothing generates while the
-    /// real one went unchecked.
-    #[test]
-    fn the_parser_coherence_row_expects_every_component_contract_artifact() {
-        let expected = REQUIRED_GENERATORS
-            .iter()
-            .find(|(command, _)| *command == "parser-coherence")
-            .map(|(_, artifacts)| *artifacts)
-            .expect("Fix: the release-evidence run must require the `parser-coherence` command.");
-
-        for artifact in crate::parser_coherence::component_contract_artifacts() {
-            assert!(
-                expected.contains(&artifact.as_str()),
-                "Fix: `parser-coherence` must expect `{artifact}`; the component id that owns it \
-                 was renamed without updating REQUIRED_GENERATORS."
-            );
         }
     }
 }

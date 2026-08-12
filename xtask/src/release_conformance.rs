@@ -128,7 +128,7 @@ fn run_backend_conformance(
     let mut args = vec![
         "run".to_string(),
         "-p".to_string(),
-        "vyre-conform-runner".to_string(),
+        "vyre-conform".to_string(),
         "--release".to_string(),
     ];
     if matches!(backend_id, "cuda" | "wgpu" | "metal") {
@@ -137,7 +137,7 @@ fn run_backend_conformance(
     }
     args.extend([
         "--bin".to_string(),
-        "vyre-conform-runner".to_string(),
+        "vyre-conform".to_string(),
         "--".to_string(),
         "dispatch".to_string(),
         "--backend".to_string(),
@@ -765,15 +765,15 @@ mod tests {
     }
 
     #[test]
-    fn diff_summary_derives_stable_success_digests_for_weir_flow_across_backends() {
+    fn diff_summary_derives_stable_success_digests_for_external_flow_across_backends() {
         let cuda = pair(
-            "weir.flow.alias_ifds",
+            "external.flow.alias_ifds",
             "cuda",
             true,
             "3 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",
         );
         let wgpu = pair(
-            "weir.flow.alias_ifds",
+            "external.flow.alias_ifds",
             "wgpu",
             true,
             "3 witness case(s) matched vyre-reference byte-for-byte via backend.dispatch",

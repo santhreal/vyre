@@ -67,20 +67,6 @@ fn registration_borrowed_async_rejects_unsupported_capability_before_launch() {
 }
 
 #[test]
-fn registration_compile_native_rejects_unsupported_capability_before_ptx_emit() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let registration = CudaBackendRegistration::new(backend);
-    let program = indirect_dispatch_program();
-    let err = expect_backend_error(
-        registration.compile_native(&program, &DispatchConfig::default()),
-        "Fix: CUDA registration compile_native must fail before PTX emission.",
-    );
-
-    assert_missing_indirect_dispatch_capability(err);
-}
-
-#[test]
 fn registration_resident_dispatch_rejects_unsupported_capability_before_launch() {
     let backend =
         CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");

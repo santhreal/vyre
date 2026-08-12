@@ -1,5 +1,9 @@
 # LEGO-BLOCK rule  -  composition is the architecture
 
+**Status: Superseded.** Use [`docs/ARCHITECTURE.md`](ARCHITECTURE.md),
+[`docs/ops-catalog.md`](ops-catalog.md), and the canonical operation schema for
+current composition rules.
+
 This doc codifies the workspace-wide rule that every author + agent
 MUST follow before adding a new sub-op.
 

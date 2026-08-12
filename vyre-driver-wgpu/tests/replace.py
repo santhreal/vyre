@@ -2,7 +2,7 @@ import os
 import re
 import glob
 
-TEST_DIR = "/media/mukund-thiru/SanthData/Santh/libs/performance/matching/vyre/vyre-driver-wgpu/tests"
+TEST_DIR = "${SANTH_ROOT}/libs/performance/matching/vyre/vyre-driver-wgpu/tests"
 
 def process_file(filepath):
     with open(filepath, 'r') as f:

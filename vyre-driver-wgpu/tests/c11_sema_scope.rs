@@ -6,7 +6,8 @@
 use proptest::prelude::*;
 use std::sync::OnceLock;
 use vyre::ir::{Expr, Program};
-use vyre::{validate, DispatchConfig, VyreBackend};
+use vyre::validate;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
 use vyre_libs::parsing::c::lex::tokens::*;

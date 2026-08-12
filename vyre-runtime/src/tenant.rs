@@ -194,7 +194,7 @@ pub enum TenantError {
         /// Current reserved count.
         used: u64,
     },
-    /// Protocol error bubbled up from `Megakernel::publish_slot`.
+    /// Protocol error bubbled up from [`ResidentWorkQueue::publish_slot`].
     #[error("{0}")]
     Pipeline(#[from] PipelineError),
 }
@@ -392,9 +392,7 @@ impl TenantHandle {
         Ok(global)
     }
 
-    /// Publish a slot into the tenant's ring with a tenant-local
-    /// opcode. Convenience wrapper that composes
-    /// [`Megakernel::publish_slot`] with tenant bookkeeping.
+    /// Publish a tenant-local opcode through [`ResidentWorkQueue::publish_slot`].
     ///
     /// # Errors
     ///

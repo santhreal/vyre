@@ -12,7 +12,7 @@ mod common;
 use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 
 const SENTINEL: u32 = u32::MAX;
 

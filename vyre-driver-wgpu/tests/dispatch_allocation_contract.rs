@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use stats_alloc::{Region, StatsAlloc, INSTRUMENTED_SYSTEM};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::{CompiledPipeline, DispatchConfig, VyreBackend};
+use vyre_driver::{CompiledPipeline, DispatchConfig, VyreBackend};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
@@ -201,8 +201,8 @@ fn compiled_pipeline_dispatch_steady_state_alloc_bounded() {
     let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
 
     let pipeline = backend
-        .compile_persistent(&program, &DispatchConfig::default())
-        .expect("Fix: compile_persistent must succeed");
+        .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
+        .expect("Fix: oracle pipeline compilation must succeed");
 
     let _ = pipeline
         .dispatch(&[input.clone()], &DispatchConfig::default())

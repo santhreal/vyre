@@ -1,37 +1,42 @@
 # vyre-libs::nn SKILL
 
-Neural-network primitives  -  activation, linear layers, normalization,
-attention. Every op is a Cat-A composition over `vyre-ops` primitives
-and lower-level `vyre-libs::math` functions.
+Neural-network primitives: activation, linear layers, normalization,
+attention, MoE, optimizers, and quantization. Every op is a Cat-A
+composition over `vyre-ops` primitives and lower-level `vyre-libs::math`
+functions.
 
-## Coverage targets
+## Coverage (shipped)
 
-- Activations: `relu`. Future: `gelu`, `silu`, `tanh`, `sigmoid`.
-- Linear: `linear` (feature-depends on `math-linalg`).
-- Normalization: `layer_norm`. Future: `rms_norm`, `batch_norm`,
-  `group_norm`.
-- Attention: `softmax`, `attention`. Future: `flash_attention_v2`
-  (post-0.6 LLM template crate R-3).
+- Activations (`nn-activation`): `relu`, `gelu`, `silu`, `swiglu`,
+  `leaky_relu_sq`, `logit_softcap`, `sigmoid_gate`, `skip_gate`,
+  `cross_entropy`, `embedding`, residual helpers.
+- Linear (`nn-linear`): affine / tiled / fused-activation builders,
+  including 4-bit paths where feature-gated.
+- Normalization (`nn-norm`): `layer_norm`, `rms_norm`, `gated_rms_norm`,
+  `last_dim_l2_norm`, `layerwise_ln_scale`.
+- Attention (`nn-attention`): `softmax`, `attention`,
+  `flash_attention` / `flash_attention_2`, GQA/MLA helpers, RoPE /
+  QK-gain / KV-cache utilities.
+- MoE, optimizers, quantization, and inference-graph composition under
+  their feature gates (`nn-moe`, `nn-inference`, and activation-gated
+  `optim` / `quant` modules).
 
 ## Witness sources
 
-- `relu`: trivial  -  identity for non-negative u32.
-- `layer_norm`: PyTorch's `torch.nn.LayerNorm` reference with
-  `eps=1e-5`, plus a corpus of edge cases (constant input, zero
-  variance, large variance).
-- `softmax`: exact probabilities summing to 1 ± 1e-6 (tolerance for
-  `f32` rounding).
-- `attention`: reference pulled from `scaled_dot_product_attention`
-  in PyTorch.
+- `relu`: identity for non-negative u32 lanes where that contract applies.
+- `layer_norm`: PyTorch `torch.nn.LayerNorm` reference with `eps=1e-5`,
+  plus edge cases (constant input, zero variance, large variance).
+- `softmax`: probabilities summing to 1 within documented `f32` tolerance.
+- `attention` / flash variants: scaled-dot-product reference fixtures in
+  crate tests.
 
 ## Benchmark targets (criterion)
 
-- `softmax` on 4096 F32 elements: ≤ 500 µs sequential, ≤ 20 µs with
-  workgroup-shared variant once `DataType::Shared` lands.
+- `softmax` on 4096 F32 elements: ≤ 500 µs sequential; shared-memory
+  variants use the backend's checked-in baseline.
 - `layer_norm` on 4096 F32 elements: ≤ 500 µs sequential.
-- `attention` at seq_len=128, head_dim=64: ≤ 5 ms sequential; the
-  FlashAttention-v2 variant (R-3, post-0.6) targets ≤ 200 µs on a
-  3090.
+- `attention` at seq_len=128, head_dim=64: sequential and dispatch
+  baselines live with the criterion targets for this crate.
 
 ## Backend parity contract
 
@@ -45,4 +50,4 @@ and lower-level `vyre-libs::math` functions.
 - `layer_norm(input, output, n, eps)`: both 1-D F32 length `n`.
 - `attention(q, k, v, out, s, d)`: all four 2-D F32 shape `[s, d]`.
 - All builders route through `check_tensors` for collision, dtype,
-  and overflow  -  no op-specific shape logic lives outside the builder.
+  and overflow. No op-specific shape logic lives outside the builder.

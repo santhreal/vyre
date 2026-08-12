@@ -1,9 +1,11 @@
 # vyre Error Codes
 
-This document is the canonical registry of every stable error/warning code
-in vyre-core. Codes are **append-only**: renames are semver-major events
-handled as migrations in `vyre-core::dialect::migration`. Every new code
-must appear here with a description and a `Fix:` template before it ships.
+Applies to Vyre 0.7.2.
+
+This document is the canonical registry of stable error and warning codes
+surfaced through the foundation-owned diagnostic protocol. Codes are
+append-only within a schema version. A new code must define its stage,
+corrective action, and retry class before release.
 
 Every message emitted through [`Diagnostic`](../vyre-foundation/src/lib.rs)
 carries one of these codes. Tooling (LSP clients, CI annotators, editor

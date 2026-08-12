@@ -16,10 +16,7 @@ fn statement_shaped_entry_runs_fusion_before_top_level_reconciliation() {
         Node::let_bind("snapshot", Expr::load("state", Expr::u32(0))),
         Node::let_bind("mutable", Expr::u32(0)),
         Node::assign("mutable", Expr::u32(1)),
-        Node::if_then(
-            Expr::gt(Expr::var("snapshot"), Expr::u32(0)),
-            Vec::new(),
-        ),
+        Node::if_then(Expr::gt(Expr::var("snapshot"), Expr::u32(0)), Vec::new()),
     ];
     let program = Program::wrapped(
         vec![BufferDecl::read("state", 0, DataType::U32).with_count(1)],

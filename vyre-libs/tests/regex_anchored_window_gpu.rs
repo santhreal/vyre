@@ -20,7 +20,7 @@ use vyre::scan::{
     build_regex_dfa_pipeline, pack_haystack_u32, pack_u32_slice, unpack_match_triples,
     AnchoredWindowValidator, RegionEvidencePipeline,
 };
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::scan::regex_anchored_window::anchored_window_extract_program;
 use vyre_libs::scan::regex_region_admission::{
@@ -90,7 +90,7 @@ fn gpu_extract_triples(
     );
     unpack_match_triples(&outputs[1], count)
         .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
+        .map(|m| (m.tag, m.start, m.end))
         .collect()
 }
 
@@ -122,7 +122,7 @@ fn anchored_window_extract_on_gpu_matches_cpu_oracle() {
     let oracle: BTreeSet<Triple> = AnchoredWindowValidator::new(dfa)
         .validate_candidates(haystack, &candidates)
         .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
+        .map(|m| (m.tag, m.start, m.end))
         .collect();
     assert!(
         !oracle.is_empty(),
@@ -175,7 +175,7 @@ fn anchored_window_variable_repeat_on_gpu_matches_cpu_oracle() {
     let oracle: BTreeSet<Triple> = validator
         .validate_candidates(haystack, &candidates)
         .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
+        .map(|m| (m.tag, m.start, m.end))
         .collect();
     assert!(
         oracle.len() > patterns.len(),
@@ -206,7 +206,7 @@ fn anchored_window_variable_repeat_on_gpu_matches_cpu_oracle() {
     let cpu_ll: BTreeSet<Triple> = validator
         .validate_candidates_leftmost_longest(haystack, &candidates)
         .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
+        .map(|m| (m.tag, m.start, m.end))
         .collect();
     assert_eq!(
         gpu_ll, cpu_ll,

@@ -1,8 +1,8 @@
 //! Live WGPU resident-output parity contracts.
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::Resource;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 
 #[test]

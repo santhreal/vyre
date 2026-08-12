@@ -5,7 +5,7 @@
 //! and trailing input bytes must fail instead of being ignored. Otherwise
 //! malformed vectors can accidentally match backend output.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn copy_input_to_output_program(input: BufferDecl) -> Program {
     Program::wrapped(

@@ -1,6 +1,7 @@
 //! Command-line diagnostics for Vyre IR and lowered descriptors.
 
 use clap::{Parser, Subcommand};
+use std::io::Read;
 use std::path::Path;
 use std::process::exit;
 use vyre_debug::{
@@ -10,6 +11,7 @@ use vyre_debug::{
 };
 use vyre_foundation::ir::Expr;
 use vyre_foundation::ir::Program;
+const MAX_ARTIFACT_ENVELOPE_BYTES: u64 = 64 * 1024 * 1024;
 
 #[derive(Parser)]
 #[command(name = "vyre-dbg")]
@@ -151,6 +153,22 @@ fn print_json_or_exit<T: ?Sized + serde::Serialize>(value: &T, context: &str) {
     }
 }
 
+fn read_bytes_bounded(path: &Path, max_bytes: u64) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .map_err(|error| format!("Failed to open {}: {error}", path.display()))?
+        .take(max_bytes + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Failed to read {}: {error}", path.display()))?;
+    if bytes.len() as u64 > max_bytes {
+        return Err(format!(
+            "{} exceeds the {max_bytes}-byte input limit",
+            path.display()
+        ));
+    }
+    Ok(bytes)
+}
+
 fn read_kdesc(path: &Path) -> Result<vyre_lower::KernelDescriptor, String> {
     let mut file = std::fs::File::open(path)
         .map_err(|e| format!("Failed to open kdesc {}: {e}", path.display()))?;
@@ -163,10 +181,11 @@ fn main() {
 
     match cli.command {
         Commands::ArtifactReport { envelope } => {
-            let bytes = match std::fs::read(&envelope) {
+            let path = Path::new(&envelope);
+            let bytes = match read_bytes_bounded(path, MAX_ARTIFACT_ENVELOPE_BYTES) {
                 Ok(bytes) => bytes,
                 Err(error) => {
-                    eprintln!("Failed to read artifact envelope {envelope}: {error}");
+                    eprintln!("{error}");
                     exit(2);
                 }
             };

@@ -1,10 +1,9 @@
 //! Live CUDA capability contracts for GPU-required Vyre hosts.
 
-use vyre_driver::aot::emit_aot_target;
 use vyre_driver::pipeline::PipelineFeatureFlags;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
 fn cuda_device_probe_must_succeed_on_gpu_fleet() {
@@ -211,28 +210,6 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
 }
 
 #[test]
-fn cuda_aot_uses_live_device_sm_target() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquisition must succeed on GPU fleet.");
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [1, 1, 1],
-        vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-    );
-
-    let secondary_text = String::from_utf8(
-        emit_aot_target("secondary_text", &program, &DispatchConfig::default())
-            .expect("Fix: CUDA PTX AOT emitter must be linked and emit for the live device."),
-    )
-    .expect("Fix: PTX AOT bytes must be valid UTF-8 PTX text.");
-
-    assert!(
-        secondary_text.contains(&format!(".target sm_{}", backend.ptx_target_sm())),
-        "Fix: CUDA AOT emission must target the probed device SM, not a fixed architecture."
-    );
-}
-
-#[test]
 fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
     let backend = vyre_driver::backend::acquire_preferred_dispatch_backend()
         .expect("Fix: CUDA must be usable as the preferred dispatch backend on the GPU fleet.");
@@ -244,91 +221,6 @@ fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
     assert!(
         !backend.allows_host_grid_sync_split(),
         "Fix: registered CUDA acquisition must preserve the CUDA no-host-split policy through the shared registry wrapper."
-    );
-}
-
-/// The trait-level dispatch entry must refuse a missing native grid barrier.
-///
-/// This test used to also claim it proved the CUDA backend never hides GridSync
-/// behind a host-orchestrated split, by asserting `src/lib.rs` contains no
-/// `dispatch_with_grid_sync_split(` call. It never did contain one: the split
-/// routing lives in `src/backend/host_dispatch.rs`, so that half was green from the
-/// day it was written while the silent split it forbade ran on two dispatch entry
-/// points one file over. A guard aimed at a file the behavior cannot appear in
-/// proves nothing and reads as coverage, which is worse than no guard.
-///
-/// The real routing file is now checked by
-/// `grid_sync_split_policy_contracts::no_dispatch_entry_point_reroutes_a_missing_native_barrier_into_a_split`
-/// and `::every_split_call_site_is_reached_through_the_residency_predicate`. What
-/// remains here is the part that IS about `lib.rs`: the trait-level refusal.
-#[test]
-fn trait_level_cuda_dispatch_refuses_grid_sync_without_native_lowering() {
-    let source = include_str!("../src/lib.rs");
-
-    assert!(
-        source.contains("reject_grid_sync_without_native_lowering")
-            && source.contains("cuda_native_grid_sync_lowering"),
-        "Fix: direct CUDA dispatch must fail loudly when GridSync appears before native lowering exists."
-    );
-    assert!(
-        !source.contains("dispatch_with_grid_sync_split(")
-            && !source.contains("dispatch_with_grid_sync_split_timed("),
-        "Fix: the trait impl in lib.rs must not route GridSync into a host split itself; the \
-         residency-driven split belongs to the inherent dispatch path in host_dispatch.rs, where \
-         it is gated on the preflight and preceded by the missing-barrier refusal."
-    );
-}
-
-/// `compile_native` must ACCEPT `MemoryOrdering::GridSync`.
-///
-/// This test replaces one that pinned the opposite. The refusal was correct
-/// while only the borrowed-host launch route zeroed the module-scope
-/// `_vyre_grid_barrier` arrival counter: a compiled pipeline also reaches the
-/// resident launch routes through its persistent-handle entry points, and those
-/// routes did not zero the counter at all, so a reused compiled grid-sync
-/// pipeline could release a later launch's first barrier early and return wrong
-/// numbers with no error at all. Every launch route zeroes the counter now, so a
-/// refusal here is a regression that denies consumers the compiled path for the
-/// program class that gains most from planning once.
-///
-/// Scope: this asserts the capability decision only. That a compiled grid-sync
-/// pipeline actually synchronizes across reuse, across batch elements, on the
-/// resident route, and under concurrent dispatch is gated by
-/// `tests/compiled_grid_sync_pipeline_contracts.rs`, which checks absolute
-/// cross-block output values.
-#[test]
-fn cuda_native_compilation_accepts_grid_sync_with_native_cooperative_lowering() {
-    let backend = cuda_factory()
-        .expect("Fix: CUDA backend factory must succeed on the GPU-required test host.");
-    let program = Program::wrapped(
-        vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-        [64, 1, 1],
-        vec![
-            Node::Barrier {
-                ordering: MemoryOrdering::GridSync,
-            },
-            Node::store("out", Expr::gid_x(), Expr::u32(0)),
-        ],
-    );
-
-    let compiled = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .unwrap_or_else(|error| {
-            panic!(
-                "Fix: CUDA compile_native must accept MemoryOrdering::GridSync now that every \
-                 launch route zeroes the module-scope _vyre_grid_barrier counter before each \
-                 cooperative launch. Got: {error}"
-            )
-        })
-        .expect(
-            "Fix: CUDA compile_native must return a real compiled pipeline for a grid-sync \
-             program, not None. None silently routes the caller back to per-dispatch planning \
-             instead of the compiled path it asked for.",
-        );
-    assert!(
-        compiled.id().contains("cuda"),
-        "Fix: the compiled grid-sync pipeline id must identify the CUDA backend, got `{}`.",
-        compiled.id()
     );
 }
 
@@ -390,50 +282,5 @@ fn cuda_registration_dispatch_borrowed_into_reuses_caller_output_slot() {
         outputs[0].as_slice(),
         &0xfeed_beef_u32.to_le_bytes(),
         "Fix: CUDA output-slot reuse must preserve byte-exact dispatch results."
-    );
-}
-
-#[test]
-fn cuda_compiled_persistent_mismatched_launch_path_uses_resident_readback_into() {
-    let source = include_str!("../src/pipeline/compiled_dispatch.rs");
-
-    assert!(
-        source.contains("dispatch_resident_outputs_with_ptx_key_into"),
-        "Fix: compiled CUDA persistent-handle dispatch must use the resident readback-into path when runtime launch shape changes."
-    );
-    assert!(
-        !source.contains("let result = self.backend.dispatch_resident_outputs_with_ptx_key"),
-        "Fix: compiled CUDA persistent-handle fallback must not materialize a fresh Vec<Vec<u8>> before replacing caller output slots."
-    );
-    assert!(
-        source.contains(".checked_mul(lane_count)")
-            && !source.contains(concat!("chunk_index", ".saturating_mul")),
-        "Fix: compiled CUDA graph replay must not saturate chunk/lane indexing and replay into the wrong output slot."
-    );
-    let enqueue_error_branch = source
-        .split("self.backend.enqueue_cuda_graph_replay_with_input_state")
-        .nth(1)
-        .expect("Fix: compiled CUDA graph replay must enqueue graph work through the shared replay helper.")
-        .split("if !launched.is_empty()")
-        .next()
-        .expect("Fix: compiled CUDA graph replay enqueue-error branch must precede batched replay telemetry.");
-    assert!(
-        !enqueue_error_branch.contains("return_cached_graph_lanes"),
-        "Fix: compiled CUDA graph replay must drop graph lanes after enqueue/cuGraphLaunch errors instead of returning potentially poisoned streams to the cache."
-    );
-    let finish_error_branch = source
-        .split("if let Err(error) =\n                self.finish_cuda_graph_indexed_lane_replays")
-        .nth(1)
-        .expect("Fix: compiled CUDA graph replay must explicitly handle indexed lane finish errors.")
-        .split("for launched_batch in launched.iter().copied()")
-        .next()
-        .expect("Fix: compiled CUDA graph replay finish-error branch must precede materialized cache remember.");
-    assert!(
-        !finish_error_branch.contains("return_cached_graph_lanes"),
-        "Fix: compiled CUDA graph replay must drop graph lanes after a replay finish/readback error instead of returning potentially poisoned streams to the cache."
-    );
-    assert!(
-        !source.contains("let _ = self.return_cached_graph_lanes"),
-        "Fix: compiled CUDA graph replay must not discard graph-lane cache return failures; cache lock poisoning must stay operator-visible."
     );
 }

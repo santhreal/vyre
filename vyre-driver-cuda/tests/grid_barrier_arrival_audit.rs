@@ -24,7 +24,7 @@ use common::{
     cross_block_grid_sync_expected, cross_block_grid_sync_inputs, cross_block_grid_sync_program,
     CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 
 /// Lanes for the cross-block fixture: four blocks, so a barrier that no-ops is

@@ -87,19 +87,20 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Execute generated conformance cases across eligible concrete and reference backends.
+Execute production artifacts against independent reference semantics, minimize counterexamples, check algebraic laws, and issue versioned certificates and replay records through one library and thin CLI.
 
 ### Boundaries
 
 The `conformance` owner maintains this `conformance` crate at `conform/vyre-conform`.
+Its allowed internal production dependencies are: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
 
-Run the checked-in behavior from `conform/vyre-conform/examples/vyre_conform_release_surface.rs`:
+Run the checked-in behavior from `conform/vyre-conform/examples/vyre_conform_runner_release_surface.rs`:
 
 ```console
-CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-conform --example vyre_conform_release_surface
+CARGO_BUILD_JOBS=1 ./cargo_full run -p vyre-conform --example vyre_conform_runner_release_surface
 ```
 
 ### Features
@@ -125,4 +126,14 @@ requirements, evidence outputs, expected skips, and failure semantics.
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

@@ -11,8 +11,8 @@
 //! not a fabricated zero, on the CPU reference backend that has no device
 //! timer).
 
-use vyre_driver_reference::CpuRefBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
 /// A haystack with two regions; region 0 contains `alpha`+`kilo`, region 1
 /// contains `tango` only (so the two region rows differ (a meaningful bitmap)).
@@ -29,14 +29,13 @@ fn fixture() -> (GpuLiteralSet, Vec<u8>, Vec<u32>) {
 
 #[test]
 fn timed_presence_equals_untimed_and_reports_timing() {
-    let backend = CpuRefBackend;
     let (set, haystack, region_starts) = fixture();
 
     let plain = set
-        .scan_presence_by_region(&backend, &haystack, &region_starts)
+        .scan_presence_by_region(CPU_REF_BACKEND_ID, &haystack, &region_starts)
         .expect("untimed region-presence scan");
     let (timed_bitmap, timed) = set
-        .scan_presence_by_region_timed(&backend, &haystack, &region_starts, 0)
+        .scan_presence_by_region_timed(CPU_REF_BACKEND_ID, &haystack, &region_starts, 0)
         .expect("timed region-presence scan");
 
     // Correctness: the timed path must not change the result by a single bit.
@@ -69,13 +68,12 @@ fn timed_presence_equals_untimed_and_reports_timing() {
 fn timed_scan_is_stable_across_repeated_calls() {
     // The prepare path allocates fresh owned buffers each call; two timed scans
     // of the same input must return identical bitmaps (no cross-call state leak).
-    let backend = CpuRefBackend;
     let (set, haystack, region_starts) = fixture();
     let (first, _) = set
-        .scan_presence_by_region_timed(&backend, &haystack, &region_starts, 0)
+        .scan_presence_by_region_timed(CPU_REF_BACKEND_ID, &haystack, &region_starts, 0)
         .expect("first timed scan");
     let (second, _) = set
-        .scan_presence_by_region_timed(&backend, &haystack, &region_starts, 0)
+        .scan_presence_by_region_timed(CPU_REF_BACKEND_ID, &haystack, &region_starts, 0)
         .expect("second timed scan");
     assert_eq!(first, second, "repeated timed scans must be deterministic");
 }

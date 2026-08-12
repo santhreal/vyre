@@ -1,5 +1,7 @@
 # vyre Memory Model
 
+Applies to Vyre 0.7.2.
+
 vyre's memory model is **parallel-first, substrate-neutral, and tiered**. It defines the visibility and ordering rules that every backend must preserve when lowering `Program` to hardware.
 
 ## Tiers

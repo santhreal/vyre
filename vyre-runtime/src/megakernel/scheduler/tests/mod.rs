@@ -21,11 +21,9 @@ fn collect_let_names_preorder<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
 
 #[test]
 fn default_offsets_cover_all_slots() {
-    let offsets = default_priority_offsets(256);
-    let array_offsets = default_priority_offsets_array(256);
+    let offsets = default_priority_offsets_array(256);
     assert_eq!(offsets.len(), PRIORITY_LEVELS as usize + 1);
     assert_eq!(*offsets.last().unwrap(), 256);
-    assert_eq!(offsets.as_slice(), array_offsets.as_slice());
     // Every partition has at least base_per_pri slots
     for i in 0..PRIORITY_LEVELS as usize {
         assert!(
@@ -37,9 +35,9 @@ fn default_offsets_cover_all_slots() {
 
 #[test]
 fn offsets_with_small_count() {
-    let offsets = default_priority_offsets(5);
+    let offsets = default_priority_offsets_array(5);
     // 5 / 5 = 1 per partition
-    assert_eq!(offsets, vec![0, 1, 2, 3, 4, 5]);
+    assert_eq!(offsets, [0, 1, 2, 3, 4, 5]);
 }
 
 #[test]
@@ -110,7 +108,7 @@ fn strided_probe_count_bounds_total_partition_work() {
     assert_eq!(priority_partition_probe_count(256, 256), 1);
     assert_eq!(priority_partition_probe_count(257, 256), 2);
 
-    let offsets = default_priority_offsets(1024);
+    let offsets = default_priority_offsets_array(1024);
     let total_worker_probes: u32 = offsets
         .windows(2)
         .map(|window| priority_partition_probe_budget(window[1] - window[0], 256))
@@ -123,7 +121,7 @@ fn strided_probe_count_bounds_total_partition_work() {
 
 #[test]
 fn default_priority_scan_masks_duplicate_partition_lanes() {
-    let offsets = default_priority_offsets(1024);
+    let offsets = default_priority_offsets_array(1024);
     let total_worker_probes: u32 = offsets
         .windows(2)
         .map(|window| priority_partition_probe_budget(window[1] - window[0], 1024))

@@ -108,7 +108,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Lower neutral programs into the primary binary backend text artifact.
+Consume verified lowering products and emit the primary binary backend text artifact.
 
 ### Boundaries
 
@@ -147,4 +147,14 @@ requirements, evidence outputs, expected skips, and failure semantics.
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

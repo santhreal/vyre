@@ -1287,20 +1287,16 @@ pub fn adaptive_dense_step(
     // reads/writes. Check in u64 first and refuse programs we
     // cannot represent faithfully.
     let Some(adj_count) = u64::from(node_count).checked_mul(u64::from(words)) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!("Fix: adaptive_dense_step buffer size overflows u64 ({node_count} nodes x {words} words)."),
-        );
+        return crate::invalid_output_program(OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!("Fix: adaptive_dense_step buffer size overflows u64 ({node_count} nodes x {words} words)."),);
     };
     if adj_count > u64::from(u32::MAX) {
-        return crate::invalid_output_program(
-            OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!("Fix: adaptive_dense_step buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph or use csr_forward_traverse."),
-        );
+        return crate::invalid_output_program(OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!("Fix: adaptive_dense_step buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph or use csr_forward_traverse."),);
     }
     let adj_count_u32 = adj_count as u32;
     let d = Expr::InvocationId { axis: 0 };
@@ -1526,20 +1522,16 @@ pub fn adaptive_sparse_dense_step(
 
     let words = bitset_words(node_count);
     let Some(adj_count) = u64::from(node_count).checked_mul(u64::from(words)) else {
-        return crate::invalid_output_program(
-            HYBRID_OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!("Fix: adaptive_sparse_dense_step dense buffer size overflows u64 ({node_count} nodes x {words} words)."),
-        );
+        return crate::invalid_output_program(HYBRID_OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!("Fix: adaptive_sparse_dense_step dense buffer size overflows u64 ({node_count} nodes x {words} words)."),);
     };
     if adj_count > u64::from(u32::MAX) {
-        return crate::invalid_output_program(
-            HYBRID_OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!("Fix: adaptive_sparse_dense_step dense buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph."),
-        );
+        return crate::invalid_output_program(HYBRID_OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!("Fix: adaptive_sparse_dense_step dense buffer size {adj_count} exceeds u32::MAX ({node_count} nodes x {words} words). Partition the graph."),);
     }
     let Some(offset_count) = node_count.checked_add(1) else {
         return crate::invalid_output_program(

@@ -21,11 +21,7 @@ pub fn mark_self_exclusive_region(generator: &str) -> String {
 }
 /// Wrap nodes in a named, substrate-neutral composition region.
 #[must_use]
-pub fn wrap_region(
-    generator: &str,
-    body: Vec<Node>,
-    source_region: Option<GeneratorRef>,
-) -> Node {
+pub fn wrap_region(generator: &str, body: Vec<Node>, source_region: Option<GeneratorRef>) -> Node {
     Node::Region {
         generator: Ident::from(generator),
         source_region,

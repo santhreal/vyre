@@ -18,7 +18,7 @@
 //! that makes validation process-wide instead of per-backend trips
 //! the assertion below.
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
 /// Stand-in for a reduced-capability future backend. Refuses every
@@ -39,9 +39,9 @@ impl VyreBackend for ReducedBackend {
         &self,
         _program: &vyre::Program,
         _inputs: &[Vec<u8>],
-        _config: &vyre::DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
-        Err(vyre::BackendError::new(
+        _config: &vyre_driver::DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
+        Err(vyre_driver::BackendError::new(
             "ReducedBackend refuses dispatch; tests only exercise capability surface.",
         ))
     }
@@ -75,13 +75,13 @@ fn structural_validation_does_not_substitute_for_capability_check() {
     // `program.is_structurally_validated()` state.
     let wgpu = WgpuBackend::acquire().expect("Fix: GPU required for cross-backend test");
     let program = vyre::Program::empty();
-    wgpu.dispatch(&program, &[], &vyre::DispatchConfig::default())
+    wgpu.dispatch(&program, &[], &vyre_driver::DispatchConfig::default())
         .expect("wgpu dispatch of empty program must succeed");
 
     // A global structural-validation shortcut would let unsupported programs
     // through. Reduced-capability backends must still return a structured error.
     let reduced = ReducedBackend { id: "reduced" };
-    let result = reduced.dispatch(&program, &[], &vyre::DispatchConfig::default());
+    let result = reduced.dispatch(&program, &[], &vyre_driver::DispatchConfig::default());
     assert!(
         result.is_err(),
         "transcendental parity6: reduced backend must refuse dispatch of a program validated elsewhere; \

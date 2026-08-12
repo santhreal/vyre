@@ -949,6 +949,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "regex-syntax"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
 name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1301,17 +1307,24 @@ checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
 
 [[package]]
 name = "vyre"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
- "blake3",
+ "bytemuck",
+ "smallvec",
+ "tracing",
  "vyre-driver",
  "vyre-foundation",
- "vyre-lower",
+ "vyre-libs",
+ "vyre-megakernel",
+ "vyre-primitives",
+ "vyre-runtime",
+ "vyre-scan",
+ "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-driver"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -1329,13 +1342,14 @@ dependencies = [
  "tracing",
  "vyre-foundation",
  "vyre-macros",
+ "vyre-megakernel",
  "vyre-self-substrate",
  "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-driver-cuda"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -1351,13 +1365,14 @@ dependencies = [
  "vyre-emit-ptx",
  "vyre-foundation",
  "vyre-lower",
+ "vyre-megakernel",
  "vyre-self-substrate",
  "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-driver-wgpu"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "arc-swap",
  "bincode",
@@ -1374,6 +1389,7 @@ dependencies = [
  "pollster",
  "rustc-hash 2.1.3",
  "serde",
+ "serde_json",
  "smallvec",
  "thiserror 2.0.19",
  "tokio",
@@ -1383,7 +1399,7 @@ dependencies = [
  "vyre-emit-naga",
  "vyre-foundation",
  "vyre-lower",
- "vyre-runtime",
+ "vyre-megakernel",
  "vyre-self-substrate",
  "vyre-spec",
  "wgpu",
@@ -1391,7 +1407,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-emit-naga"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "blake3",
  "inventory",
@@ -1401,15 +1417,13 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.19",
  "tracing",
- "vyre-driver",
  "vyre-foundation",
  "vyre-lower",
- "vyre-spec",
 ]
 
 [[package]]
 name = "vyre-emit-ptx"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "rustc-hash 2.1.3",
  "serde",
@@ -1421,7 +1435,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-foundation"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "arrayvec",
  "blake3",
@@ -1447,8 +1461,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-libs"
+version = "0.7.2"
+dependencies = [
+ "blake3",
+ "bytemuck",
+ "inventory",
+ "libm",
+ "rayon",
+ "regex-syntax",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.19",
+ "tracing",
+ "vyre-foundation",
+ "vyre-primitives",
+ "vyre-spec",
+]
+
+[[package]]
 name = "vyre-lower"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "im",
  "rustc-hash 2.1.3",
@@ -1460,7 +1495,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-macros"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1468,8 +1503,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "vyre-megakernel"
+version = "0.7.2"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+ "vyre-foundation",
+]
+
+[[package]]
 name = "vyre-primitives"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "bytemuck",
  "inventory",
@@ -1479,7 +1525,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-reference"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "blake3",
  "bytemuck",
@@ -1495,7 +1541,7 @@ dependencies = [
 
 [[package]]
 name = "vyre-runtime"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "arc-swap",
  "blake3",
@@ -1503,17 +1549,36 @@ dependencies = [
  "dashmap",
  "libc",
  "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
  "smallvec",
  "thiserror 2.0.19",
  "tracing",
  "vyre-driver",
  "vyre-foundation",
- "vyre-self-substrate",
+ "vyre-megakernel",
+]
+
+[[package]]
+name = "vyre-scan"
+version = "0.7.2"
+dependencies = [
+ "bytemuck",
+ "serde",
+ "smallvec",
+ "thiserror 2.0.19",
+ "tracing",
+ "vyre-driver",
+ "vyre-foundation",
+ "vyre-libs",
+ "vyre-megakernel",
+ "vyre-primitives",
+ "vyre-runtime",
 ]
 
 [[package]]
 name = "vyre-self-substrate"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "rustc-hash 2.1.3",
  "tracing",
@@ -1523,9 +1588,10 @@ dependencies = [
 
 [[package]]
 name = "vyre-spec"
-version = "0.7.0"
+version = "0.7.2"
 dependencies = [
  "serde",
+ "serde_json",
  "smallvec",
 ]
 
@@ -1746,6 +1812,7 @@ name = "wgpu_readwrite_count_repro"
 version = "0.1.0"
 dependencies = [
  "vyre",
+ "vyre-driver",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-reference",

@@ -194,15 +194,15 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
     );
 }
 
-fn build_registered_backend() -> &'static vyre::BackendRegistration {
+fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
     force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    vyre::backend::registered_backends()
+    vyre_driver::backend::registered_backends()
         .iter()
         .find(|registration| {
-            vyre::backend::backend_dispatches(registration.id)
+            vyre_driver::backend::backend_dispatches(registration.id)
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)

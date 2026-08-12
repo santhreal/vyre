@@ -14,12 +14,12 @@
 //! Granularity note (no overclaiming): this is a vyre-**IR** operation count, coarser
 //! than hardware SASS instructions. The ncu-SASS dynamic count is the finer refinement
 //! and remains the only root-gated piece; the IR-level operating point is complete and
-//! honest here. Runs on the real GPU; skips with none.
+//! honest here. Missing GPU configuration fails loudly.
 
-use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_driver_reference::CpuRefBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration, CUDA_BACKEND_ID};
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
+use vyre_foundation::match_result::ByteRange;
 
 fn planted_haystack(bytes: usize) -> Vec<u8> {
     let mut haystack = vec![b'.'; bytes];
@@ -33,13 +33,9 @@ fn planted_haystack(bytes: usize) -> Vec<u8> {
 
 #[test]
 fn scan_roofline_operating_point_is_memory_bound_under_both_ceilings() {
-    let backend = match CudaBackend::acquire() {
-        Ok(backend) => CudaBackendRegistration::new(backend),
-        Err(error) => {
-            eprintln!("no CUDA backend ({error}); skipping roofline operating-point measurement");
-            return;
-        }
-    };
+    let backend = CudaBackendRegistration::new(
+        CudaBackend::acquire().expect("CUDA roofline operating-point test requires a live GPU"),
+    );
     let caps = &backend.inner().caps;
     let peak_gbps = u64::from(caps.memory_bandwidth_gbps());
     let peak_compute_ops = caps.peak_compute_ops_per_sec();
@@ -55,7 +51,7 @@ fn scan_roofline_operating_point_is_memory_bound_under_both_ceilings() {
     const INTENSITY_BYTES: usize = 8 * 1024;
     let intensity_haystack = planted_haystack(INTENSITY_BYTES);
     let (scan_result, ir_ops) =
-        vyre_reference::count_ops(|| matcher.scan_all(&CpuRefBackend, &intensity_haystack));
+        vyre_reference::count_ops(|| matcher.scan_all(CPU_REF_BACKEND_ID, &intensity_haystack));
     let cpu_matches = scan_result.expect("reference scan_all must succeed for op counting");
     assert!(
         !cpu_matches.is_empty(),
@@ -72,13 +68,13 @@ fn scan_roofline_operating_point_is_memory_bound_under_both_ceilings() {
     // --- Achieved BANDWIDTH (memory-axis point), measured on the GPU ---
     const BANDWIDTH_BYTES: usize = 32 * 1024 * 1024;
     let gpu_haystack = planted_haystack(BANDWIDTH_BYTES);
-    let mut gpu_matches: Vec<Match> = Vec::new();
+    let mut gpu_matches: Vec<ByteRange> = Vec::new();
     // Warm, then timed.
     matcher
-        .scan_all_into(&backend, &gpu_haystack, &mut gpu_matches)
+        .scan_all_into(CUDA_BACKEND_ID, &gpu_haystack, &mut gpu_matches)
         .expect("warm GPU scan");
     let timed = matcher
-        .scan_all_timed(&backend, &gpu_haystack, &mut gpu_matches)
+        .scan_all_timed(CUDA_BACKEND_ID, &gpu_haystack, &mut gpu_matches)
         .expect("timed GPU scan");
     let Some(device_ns) = timed.timed.device_ns else {
         panic!("the CUDA backend must report device time for the roofline operating point");

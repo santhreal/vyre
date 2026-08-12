@@ -1330,7 +1330,7 @@ pub(super) fn inspect_backend_suite_artifact(
             );
         }
         if backend == "cuda" {
-            record_required_metric_percentile(
+            record_observed_metric_percentile(
                 &mut min_cuda_ptx_source_cache_entries,
                 metrics,
                 "cuda_ptx_source_cache_entries",

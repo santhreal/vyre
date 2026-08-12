@@ -288,7 +288,7 @@ pub fn try_output_bytes<'a>(
 }
 
 /// Decode a packed match-triple buffer (`pid, start, end` × N) into
-/// [`vyre_foundation::match_result::Match`] values. The triple layout is
+/// [`vyre_foundation::match_result::ByteRange`] values. The triple layout is
 /// shared between `GpuLiteralSet` and `ScanSession`; only the *position*
 /// of the buffer in the dispatch outputs differs.
 ///
@@ -307,7 +307,7 @@ pub fn try_output_bytes<'a>(
 pub fn unpack_match_triples(
     triples_bytes: &[u8],
     count: u32,
-) -> Vec<vyre_foundation::match_result::Match> {
+) -> Vec<vyre_foundation::match_result::ByteRange> {
     match try_unpack_match_triples(triples_bytes, count) {
         Ok(results) => results,
         Err(error) => {
@@ -331,7 +331,7 @@ pub fn unpack_match_triples(
 pub fn try_unpack_match_triples(
     triples_bytes: &[u8],
     count: u32,
-) -> Result<Vec<vyre_foundation::match_result::Match>, BackendError> {
+) -> Result<Vec<vyre_foundation::match_result::ByteRange>, BackendError> {
     let mut results = Vec::new();
     try_unpack_match_triples_into(triples_bytes, count, &mut results)?;
     Ok(results)
@@ -343,7 +343,7 @@ pub fn try_unpack_match_triples(
 /// allocation from benchmark loops and long-running daemons. The decode
 /// contract is identical to [`unpack_match_triples`]: at most `count`
 /// complete triples are read, truncated tail bytes are ignored, and the
-/// final output is sorted by [`vyre_foundation::match_result::Match`]'s
+/// final output is sorted by [`vyre_foundation::match_result::ByteRange`]'s
 /// ordering.
 ///
 /// # Panics
@@ -353,7 +353,7 @@ pub fn try_unpack_match_triples(
 pub fn unpack_match_triples_into(
     triples_bytes: &[u8],
     count: u32,
-    results: &mut Vec<vyre_foundation::match_result::Match>,
+    results: &mut Vec<vyre_foundation::match_result::ByteRange>,
 ) {
     if let Err(error) = try_unpack_match_triples_into(triples_bytes, count, results) {
         // Clearing `results` would silently drop every match the GPU found, a
@@ -375,7 +375,7 @@ pub fn unpack_match_triples_into(
 pub fn try_unpack_match_triples_into(
     triples_bytes: &[u8],
     count: u32,
-    results: &mut Vec<vyre_foundation::match_result::Match>,
+    results: &mut Vec<vyre_foundation::match_result::ByteRange>,
 ) -> Result<(), BackendError> {
     let n = decoded_match_triple_count(triples_bytes, count);
     vyre_foundation::allocation::try_reserve_vec_to_capacity(results, n).map_err(|source| {
@@ -404,7 +404,9 @@ pub fn try_unpack_match_triples_into(
             triples_bytes[off + 10],
             triples_bytes[off + 11],
         ]);
-        results.push(vyre_foundation::match_result::Match::new(pid, start, end));
+        results.push(vyre_foundation::match_result::ByteRange::new(
+            pid, start, end,
+        ));
     }
     results.sort_unstable();
     Ok(())
@@ -433,7 +435,7 @@ pub fn try_unpack_match_triples_into(
 pub fn try_unpack_match_triples_exact_prefix_into(
     triples_bytes: &[u8],
     count: u32,
-    results: &mut Vec<vyre_foundation::match_result::Match>,
+    results: &mut Vec<vyre_foundation::match_result::ByteRange>,
 ) -> Result<(), BackendError> {
     results.clear();
     let required = required_match_triple_bytes(count)?;
@@ -472,7 +474,7 @@ pub fn try_unpack_match_triples_capped_into(
     count: u32,
     cap: u32,
     context: &str,
-    results: &mut Vec<vyre_foundation::match_result::Match>,
+    results: &mut Vec<vyre_foundation::match_result::ByteRange>,
 ) -> Result<(), BackendError> {
     if count > cap {
         results.clear();
@@ -543,7 +545,7 @@ mod tests {
             triples.extend_from_slice(&i.to_le_bytes()); // start
             triples.extend_from_slice(&(i + 2).to_le_bytes()); // end
         }
-        let mut results = vec![vyre_foundation::match_result::Match::new(7, 7, 7)];
+        let mut results = vec![vyre_foundation::match_result::ByteRange::new(7, 7, 7)];
         let err =
             try_unpack_match_triples_capped_into(&triples, 9, 4, "unit cap test", &mut results)
                 .expect_err("count 9 over cap 4 must fail closed, not truncate");
@@ -576,9 +578,9 @@ mod tests {
         assert_eq!(
             results,
             vec![
-                vyre_foundation::match_result::Match::new(10, 0, 1),
-                vyre_foundation::match_result::Match::new(11, 1, 2),
-                vyre_foundation::match_result::Match::new(12, 2, 3),
+                vyre_foundation::match_result::ByteRange::new(10, 0, 1),
+                vyre_foundation::match_result::ByteRange::new(11, 1, 2),
+                vyre_foundation::match_result::ByteRange::new(12, 2, 3),
             ],
             "within-cap decode must yield exactly the first `count` triples"
         );
@@ -729,7 +731,7 @@ mod tests {
         ];
         let matches = unpack_match_triples(&bytes, 2);
         assert_eq!(matches.len(), 2);
-        // sort_unstable orders by (start, end, pid) via Match's Ord impl.
+        // sort_unstable orders by (start, end, pid) via ByteRange's Ord impl.
         assert!(matches[0].start <= matches[1].start);
     }
 
@@ -761,12 +763,12 @@ mod tests {
 
         assert_eq!(matches.len(), 2);
         assert_eq!(matches.as_ptr(), ptr);
-        assert_eq!(matches[0].pattern_id, 3);
-        assert_eq!(matches[1].pattern_id, 9);
+        assert_eq!(matches[0].tag, 3);
+        assert_eq!(matches[1].tag, 9);
     }
 
     #[test]
-    fn try_unpack_match_triples_owned_matches_compat_helper() {
+    fn try_unpack_match_triples_owned_matches_infallible_wrapper() {
         let bytes = [
             5, 0, 0, 0, 11, 0, 0, 0, 13, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 7, 0, 0, 0,
         ];
@@ -829,8 +831,8 @@ mod tests {
 
         assert_eq!(matches.len(), 2);
         assert_eq!(matches.as_ptr(), ptr);
-        assert_eq!(matches[0].pattern_id, 3);
-        assert_eq!(matches[1].pattern_id, 9);
+        assert_eq!(matches[0].tag, 3);
+        assert_eq!(matches[1].tag, 9);
     }
 
     #[test]
@@ -840,7 +842,7 @@ mod tests {
             1, 0, 0, 0, // start
             3, 0, 0, 0, // end
         ];
-        let mut matches = vec![vyre_foundation::match_result::Match::new(99, 1, 2)];
+        let mut matches = vec![vyre_foundation::match_result::ByteRange::new(99, 1, 2)];
 
         let err = try_unpack_match_triples_exact_prefix_into(&bytes, 2, &mut matches)
             .expect_err("short match triple readback must fail closed");
@@ -865,7 +867,7 @@ mod tests {
             1, 0, 0, 0, // start
             3, 0, 0, 0, // end
         ];
-        let mut matches = vec![vyre_foundation::match_result::Match::new(99, 1, 2)];
+        let mut matches = vec![vyre_foundation::match_result::ByteRange::new(99, 1, 2)];
 
         let err = try_unpack_match_triples_exact_prefix_into(&bytes, u32::MAX, &mut matches)
             .expect_err("huge count with short readback must fail closed");
@@ -896,7 +898,7 @@ mod tests {
         ];
         let matches = unpack_match_triples(&bytes, u32::MAX);
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].pattern_id, 7);
+        assert_eq!(matches[0].tag, 7);
         assert_eq!(matches[0].start, 1);
         assert_eq!(matches[0].end, 3);
     }

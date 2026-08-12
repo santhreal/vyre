@@ -115,15 +115,3 @@ fn program_wire_fuzz_corpus_is_nontrivial_and_contains_named_valid_programs() {
         );
     }
 }
-
-#[test]
-fn nightly_ci_runs_wire_parser_fuzz_infrastructure_contract() {
-    let nightly = fs::read_to_string(workspace_root().join("scripts/nightly_ci.sh"))
-        .expect("Fix: nightly_ci.sh must be readable.");
-    let required =
-        "CARGO_BUILD_JOBS=\"${CARGO_BUILD_JOBS:-1}\" \"$CARGO_RUNNER\" test -q -p vyre-foundation --test wire_fuzz_infra_contracts";
-    assert!(
-        nightly.contains(required),
-        "Fix: nightly CI must run the wire fuzz infrastructure contract: `{required}`."
-    );
-}

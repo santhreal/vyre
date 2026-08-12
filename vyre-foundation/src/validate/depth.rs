@@ -80,12 +80,8 @@ pub fn max_call_depth(_op_id: &str, depth: usize) -> Result<usize, usize> {
     if depth > DEFAULT_MAX_CALL_DEPTH {
         return Err(depth);
     }
-    // Foundation does not own the dialect registry, so it cannot walk an
-    // operation's callee graph on its own. Driver-level callers either pass
-    // an already-inlined program (no Expr::Call nodes remain, so this
-    // function is never invoked) or run their own registry-aware traversal
-    // before validation. See `vyre-driver::pipeline::compile` for the full
-    // call-depth walk that uses the DialectRegistry.
+    // The caller supplies the measured semantic call depth. Graph construction
+    // and verified lowering reject unresolved calls before target compilation.
     Ok(depth)
 }
 

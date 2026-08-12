@@ -61,7 +61,7 @@ run_driver() {
 
 run_conformance() {
     echo "metal-macbook: running Metal conformance gate" >&2
-    run_remote 'VYRE_BACKEND=metal "$CARGO_RUNNER" test -p vyre-conform-runner --features gpu'
+    run_remote 'VYRE_BACKEND=metal "$CARGO_RUNNER" test -p vyre-conform --features gpu'
 }
 
 run_benchmark() {

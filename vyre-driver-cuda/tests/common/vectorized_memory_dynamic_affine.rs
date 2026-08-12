@@ -1,5 +1,5 @@
 use crate::common::{assert_u32_output_lanes, cuda_reference_outputs, live_backend, u32_bytes};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 const DYNAMIC_AFFINE_GROUP_COUNT: usize = 256;

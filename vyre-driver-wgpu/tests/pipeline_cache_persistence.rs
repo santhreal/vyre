@@ -5,10 +5,13 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
+use std::collections::BTreeMap;
 use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::ir::ProgramGraph;
 use vyre_libs::fixture_catalog::{fp_contract, OpEntry};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
 const HELPER_CASE_ID: &str = "VYRE_PIPELINE_CACHE_HELPER_CASE";
@@ -26,11 +29,25 @@ fn compile_case(case: &OpEntry) -> (Duration, Vec<Vec<u8>>) {
         .expect("Fix: persistence regression fixture must define at least one input case");
     let backend =
         WgpuBackend::acquire().expect("Fix: pipeline-cache persistence test requires a live GPU");
-    let program = (case.build)();
+    let program = case
+        .program()
+        .unwrap_or_else(|| panic!("Fix: persistence case `{}` must provide a program", case.id));
+    let graph = ProgramGraph::from_program(case.id, program.clone())
+        .expect("Fix: persistence regression Program must adapt to one canonical graph");
+    let request = CompileRequest::new(
+        graph,
+        ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
+        SearchBudget::new(128, 128, 0, 0, 128),
+        60_000,
+    )
+    .validate()
+    .expect("Fix: persistence regression compile request must validate");
+    let registration =
+        vyre_driver::backend::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+            .expect("Fix: WGPU backend registration must be linked");
     let compile_start = Instant::now();
-    let _compiled = backend
-        .compile(&program)
-        .expect("Fix: persistence regression program must compile on the wgpu backend");
+    let _session = vyre_runtime::ArtifactSession::compile(registration, &request)
+        .expect("Fix: persistence regression must materialize an authenticated WGPU artifact");
     let compile_time = compile_start.elapsed();
     let output = backend
         .dispatch(&program, &input_case, &DispatchConfig::default())

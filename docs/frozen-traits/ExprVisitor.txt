@@ -34,6 +34,10 @@ ControlFlow::Continue(())
 fn visit_buf_len(&mut self, _expr: &Expr, _buffer: &Ident) -> ControlFlow<Self::Break> {
 ControlFlow::Continue(())
 }
+/// A whole buffer named as a call argument.
+fn visit_buffer_ref(&mut self, _expr: &Expr, _buffer: &Ident) -> ControlFlow<Self::Break> {
+ControlFlow::Continue(())
+}
 /// Invocation id axis (`gid.{x,y,z}`).
 fn visit_invocation_id(&mut self, _expr: &Expr, _axis: u32) -> ControlFlow<Self::Break> {
 ControlFlow::Continue(())

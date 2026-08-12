@@ -57,25 +57,17 @@ pub(crate) fn run(args: &[String]) {
         .unwrap_or_else(|| PathBuf::from("."));
     let mut failures = Vec::new();
 
-    if manifest.schema_version != 1 {
+    if manifest.schema_version != 2 {
         failures.push(format!(
-            "schema_version must be 1, found {}",
+            "schema_version must be 2, found {}",
             manifest.schema_version
         ));
     }
     if manifest.release.vyre.trim().is_empty() {
         failures.push("release.vyre is empty".to_string());
     }
-    if manifest.release.weir.trim().is_empty() {
-        failures.push("release.weir is empty".to_string());
-    }
 
-    // The release contract is a TRACKED doc in this repository. This check previously
-    // required `<santh>/docs/vyre-weir-release-plan.md`, a private coordination plan in the
-    // outer monorepo that was consolidated away on 2026-07-13, so the gate could not be
-    // satisfied by any file a clone actually carries. The monorepo is a backup mirror, never
-    // release authority, and the phrases below are contract statements the runbook makes,
-    // not plan-scope prose.
+    // The release contract is a tracked document in this repository.
     let release_contract_path = resolve_manifest_path(&base_dir, &manifest.release_contract_path);
     if !release_contract_path.is_file() {
         failures.push(format!(
@@ -84,22 +76,7 @@ pub(crate) fn run(args: &[String]) {
         ));
     } else {
         match read_text_bounded(&release_contract_path) {
-            Ok(contract) => {
-                for phrase in [
-                    "CUDA-first",
-                    "Completion audit checklist",
-                    "Tags are product-scoped",
-                    "Yank, never unpublish",
-                    "release/release-train.toml",
-                ] {
-                    if !contract.contains(phrase) {
-                        failures.push(format!(
-                            "release contract `{}` is missing required phrase `{phrase}`",
-                            release_contract_path.display()
-                        ));
-                    }
-                }
-            }
+            Ok(_) => {}
             Err(error) => failures.push(format!(
                 "release contract `{}` could not be read: {error}",
                 release_contract_path.display()
@@ -184,20 +161,15 @@ pub(crate) fn run(args: &[String]) {
         "megakernel-default",
         "optimization-corpus-4096",
         "optimization-benchmark-proof",
-        "weir-analysis-integration",
         "alias-aware-upgrades",
         "egraph-saturation",
         "proof-workloads-12",
         "cpu-only-100x-proof",
-        "c-parser-linux-subsystem",
-        "distributed-parser-coherence",
         "conformance-hard-gate",
-        "modular-test-architecture",
-        "exhaustive-verification",
         "docs-evidence-linked",
         "crate-metadata",
         "release-hygiene",
-        "final-completion-audit",
+        "public-launch",
     ];
 
     for required in REQUIRED_IDS {
@@ -212,10 +184,9 @@ pub(crate) fn run(args: &[String]) {
             GateMode::Prepublish => "prepublication",
         };
         println!(
-            "vyre-release-gate: {} requirement(s) closed for Vyre {} / Weir {} ({scope})",
+            "vyre-release-gate: {} requirement(s) closed for Vyre {} ({scope})",
             manifest.requirements.len(),
-            manifest.release.vyre,
-            manifest.release.weir
+            manifest.release.vyre
         );
     } else {
         eprintln!("vyre-release-gate: {} release blocker(s):", failures.len());

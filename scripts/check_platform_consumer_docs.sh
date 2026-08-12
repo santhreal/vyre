@@ -10,7 +10,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 PLATFORM_CRATES=(
-  "vyre-core"
+  "vyre"
   "vyre-spec"
   "vyre-macros"
   "vyre-foundation"
@@ -30,7 +30,6 @@ PLATFORM_MARKDOWN_FILES=(
   "docs/ARCHITECTURE.md"
   "docs/HOT_PATH_PROOFS.md"
   "docs/MATH_PRIMITIVES_PLACEMENT.md"
-  "docs/PARSING_EXECUTION_PLAN.md"
   "docs/PREDICATE_EXPR_DUALITY.md"
   "docs/ERROR_SURFACE.md"
   "docs/RELEASE.md"

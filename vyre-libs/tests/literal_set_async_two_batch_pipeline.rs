@@ -16,10 +16,10 @@
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_async_two_batch_pipeline --release -- --nocapture
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
+use vyre_driver_wgpu as _;
+use vyre_foundation::match_result::ByteRange;
 
 const LITERALS: &[&[u8]] = &[b"alpha", b"kilo", b"tango"];
 const MAX_MATCHES: u32 = 128;
@@ -36,13 +36,13 @@ fn batch_b() -> Vec<u8> {
 
 /// Drive the two-batch pipeline on `backend`: submit both presence scans, hold
 /// both handles in flight, then await both and check each against its sync twin.
-fn check_two_batch_presence<B: vyre::VyreBackend + ?Sized>(backend: &B) {
+fn check_two_batch_presence(backend_id: &str) {
     let set = GpuLiteralSet::compile(LITERALS);
     let a = batch_a();
     let b = batch_b();
 
-    let sync_a = set.scan_presence(backend, &a).expect("sync A");
-    let sync_b = set.scan_presence(backend, &b).expect("sync B");
+    let sync_a = set.scan_presence(backend_id, &a).expect("sync A");
+    let sync_b = set.scan_presence(backend_id, &b).expect("sync B");
     // The two batches must genuinely differ, else the test can't detect a mixup.
     assert_ne!(
         sync_a, sync_b,
@@ -50,8 +50,8 @@ fn check_two_batch_presence<B: vyre::VyreBackend + ?Sized>(backend: &B) {
     );
 
     // BOTH in flight before EITHER await.
-    let pending_a = set.scan_presence_async(backend, &a).expect("submit A");
-    let pending_b = set.scan_presence_async(backend, &b).expect("submit B");
+    let pending_a = set.scan_presence_async(backend_id, &a).expect("submit A");
+    let pending_b = set.scan_presence_async(backend_id, &b).expect("submit B");
 
     // Await in submit order; each must decode to its OWN batch's result.
     let got_a = pending_a.await_words().expect("await A");
@@ -69,15 +69,15 @@ fn check_two_batch_presence<B: vyre::VyreBackend + ?Sized>(backend: &B) {
 
 /// Same, but await in REVERSE submit order, a handle must not depend on being
 /// awaited first, and the later-submitted scan's buffers must stay valid.
-fn check_two_batch_presence_reverse_await<B: vyre::VyreBackend + ?Sized>(backend: &B) {
+fn check_two_batch_presence_reverse_await(backend_id: &str) {
     let set = GpuLiteralSet::compile(LITERALS);
     let a = batch_a();
     let b = batch_b();
-    let sync_a = set.scan_presence(backend, &a).expect("sync A");
-    let sync_b = set.scan_presence(backend, &b).expect("sync B");
+    let sync_a = set.scan_presence(backend_id, &a).expect("sync A");
+    let sync_b = set.scan_presence(backend_id, &b).expect("sync B");
 
-    let pending_a = set.scan_presence_async(backend, &a).expect("submit A");
-    let pending_b = set.scan_presence_async(backend, &b).expect("submit B");
+    let pending_a = set.scan_presence_async(backend_id, &a).expect("submit A");
+    let pending_b = set.scan_presence_async(backend_id, &b).expect("submit B");
     // Await B first, then A.
     let got_b = pending_b.await_words().expect("await B");
     let got_a = pending_a.await_words().expect("await A");
@@ -93,20 +93,20 @@ fn check_two_batch_presence_reverse_await<B: vyre::VyreBackend + ?Sized>(backend
 
 /// A mixed pipeline: a presence scan and a position scan in flight together
 /// two different program shapes sharing the backend at once.
-fn check_mixed_pipeline<B: vyre::VyreBackend + ?Sized>(backend: &B) {
+fn check_mixed_pipeline(backend_id: &str) {
     let set = GpuLiteralSet::compile(LITERALS);
     let a = batch_a();
 
-    let sync_presence = set.scan_presence(backend, &a).expect("sync presence");
-    let mut sync_matches: Vec<Match> = Vec::new();
-    set.scan_into(backend, &a, MAX_MATCHES, &mut sync_matches)
+    let sync_presence = set.scan_presence(backend_id, &a).expect("sync presence");
+    let mut sync_matches: Vec<ByteRange> = Vec::new();
+    set.scan_into(backend_id, &a, MAX_MATCHES, &mut sync_matches)
         .expect("sync scan_into");
 
     let pending_presence = set
-        .scan_presence_async(backend, &a)
+        .scan_presence_async(backend_id, &a)
         .expect("submit presence");
     let pending_matches = set
-        .scan_into_async(backend, &a, MAX_MATCHES)
+        .scan_into_async(backend_id, &a, MAX_MATCHES)
         .expect("submit matches");
 
     let got_presence = pending_presence.await_words().expect("await presence");
@@ -128,23 +128,16 @@ fn check_mixed_pipeline<B: vyre::VyreBackend + ?Sized>(backend: &B) {
 
 #[test]
 fn two_batch_pipeline_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping async two-batch pipeline GPU test");
-            return;
-        }
-    };
-    check_two_batch_presence(backend.as_ref());
-    check_two_batch_presence_reverse_await(backend.as_ref());
-    check_mixed_pipeline(backend.as_ref());
+    check_two_batch_presence("wgpu");
+    check_two_batch_presence_reverse_await("wgpu");
+    check_mixed_pipeline("wgpu");
 }
 
 #[test]
 fn two_batch_pipeline_on_cpu_reference() {
     // Synchronous default: the handles serialize, but both results must still be
     // exact (the degraded path must not corrupt or swap batch outputs (Law 10)).
-    check_two_batch_presence(&CpuRefBackend);
-    check_two_batch_presence_reverse_await(&CpuRefBackend);
-    check_mixed_pipeline(&CpuRefBackend);
+    check_two_batch_presence(CPU_REF_BACKEND_ID);
+    check_two_batch_presence_reverse_await(CPU_REF_BACKEND_ID);
+    check_mixed_pipeline(CPU_REF_BACKEND_ID);
 }

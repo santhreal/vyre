@@ -6,7 +6,9 @@ use std::io::{self, Read};
 use std::path::Path;
 use std::process;
 
-use vyre_harness::{classify_op_id, OpTier};
+use vyre_foundation::operation::{
+    classify_operation_id as classify_op_id, OperationTier as OpTier,
+};
 
 const DEFAULT_MATRIX_PATH: &str = "docs/optimization/OP_MATRIX.toml";
 const MAX_OP_MATRIX_TEXT_BYTES: u64 = 4_194_304;
@@ -221,7 +223,7 @@ fn manual_records() -> Vec<OpRecord> {
     vec![
         OpRecord {
             family: "integer_strength_reduction".to_string(),
-            tier: OpTier::FoundationIr,
+            tier: OpTier::Foundation,
             owners: vec!["vyre-foundation/src/optimizer/passes/algebraic/strength_reduce".to_string()],
             ops: vec![
                 "mul_power_of_two_to_shift".to_string(),
@@ -249,7 +251,7 @@ fn manual_records() -> Vec<OpRecord> {
         },
         OpRecord {
             family: "elementwise_add".to_string(),
-            tier: OpTier::FoundationIr,
+            tier: OpTier::Foundation,
             owners: vec!["vyre-bench/src/cases/elementwise.rs".to_string()],
             ops: vec!["f32_add".to_string()],
             registry_sources: vec!["manual.bench".to_string()],
@@ -273,18 +275,18 @@ fn registered_records() -> Result<Vec<OpRecord>, String> {
     let mut ids = BTreeMap::<String, BTreeSet<String>>::new();
     let mut inlined_callees = BTreeSet::new();
 
-    for entry in vyre_intrinsics::harness::all_entries() {
-        push_registered(&mut ids, entry.id, "vyre-intrinsics::harness")?;
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        push_registered(&mut ids, entry.id, "vyre-primitives::harness")?;
-    }
-    for entry in vyre_libs::fixture_catalog::all_entries() {
-        push_registered(&mut ids, entry.id, "vyre-harness")?;
+    let registry = vyre_foundation::operation::OperationRegistry::global();
+    for entry in registry.iter() {
+        push_registered(&mut ids, entry.id, "vyre-foundation::operation")?;
     }
     for registration in inventory::iter::<vyre_driver::OpDefRegistration> {
         let def = (registration.op)();
-        push_registered(&mut ids, def.id, "vyre-driver::registry")?;
+        if registry.get(def.id).is_none() {
+            return Err(format!(
+                "Fix: driver operation view `{}` has no canonical semantic registration.",
+                def.id
+            ));
+        }
         if def.category == vyre_driver::Category::Composite {
             inlined_callees.insert(def.id);
         }
@@ -292,9 +294,7 @@ fn registered_records() -> Result<Vec<OpRecord>, String> {
 
     ids.into_iter()
         .map(|(id, sources)| {
-            let inlined_callee = inlined_callees.contains(id.as_str())
-                && sources.len() == 1
-                && sources.contains("vyre-driver::registry");
+            let inlined_callee = inlined_callees.contains(id.as_str());
             record_for_registered_id(&id, sources, inlined_callee)
         })
         .collect()
@@ -326,9 +326,9 @@ fn record_for_registered_id(
             "Fix: op id `{id}` from `{sources:?}` has no canonical tier namespace."
         ));
     }
-    if sources.len() > 1 && !allowed_duplicate_sources(id, &sources) {
+    if sources.len() > 1 {
         return Err(format!(
-            "Fix: op id `{id}` is registered by `{sources:?}` without an allowed duplicate contract."
+            "Fix: op id `{id}` is registered by multiple semantic sources {sources:?}."
         ));
     }
 
@@ -360,13 +360,6 @@ fn record_for_registered_id(
     Ok(record)
 }
 
-fn allowed_duplicate_sources(id: &str, sources: &BTreeSet<String>) -> bool {
-    sources.len() == 2
-        && sources.contains("vyre-harness")
-        && sources.contains("vyre-driver::registry")
-        && id.starts_with("vyre-libs::math::atomic::")
-}
-
 fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
     match tier {
         OpTier::Intrinsic => vec!["vyre-intrinsics/src/hardware".to_string()],
@@ -377,7 +370,7 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
                 .unwrap_or("unknown");
             vec![format!("vyre-primitives/src/{domain}")]
         }
-        OpTier::Libs => {
+        OpTier::Library => {
             let domain = id
                 .strip_prefix("vyre-libs::")
                 .and_then(|rest| rest.split("::").next())
@@ -398,7 +391,8 @@ fn owner_paths(id: &str, tier: OpTier) -> Vec<String> {
             }
         }
         OpTier::External => vec!["docs/optimization/README.md".to_string()],
-        OpTier::FoundationIr | OpTier::Unknown => Vec::new(),
+        OpTier::Foundation | OpTier::Unknown => Vec::new(),
+        _ => Vec::new(),
     }
 }
 
@@ -406,7 +400,9 @@ fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
     let mut tests = match tier {
         OpTier::Intrinsic => vec!["vyre-intrinsics/tests/hardware_conform.rs".to_string()],
         OpTier::Primitive => vec!["vyre-primitives/tests/integration.rs".to_string()],
-        OpTier::Libs | OpTier::External => vec!["vyre-libs/tests/universal_harness.rs".to_string()],
+        OpTier::Library | OpTier::External => {
+            vec!["vyre-libs/tests/universal_harness.rs".to_string()]
+        }
         OpTier::Runtime => {
             if id.starts_with("core.") {
                 vec!["vyre-driver/src/registry/core_indirect.rs".to_string()]
@@ -414,7 +410,8 @@ fn test_paths(id: &str, tier: OpTier) -> Vec<String> {
                 vec!["vyre-driver/src/registry/io.rs".to_string()]
             }
         }
-        OpTier::FoundationIr | OpTier::Unknown => Vec::new(),
+        OpTier::Foundation | OpTier::Unknown => Vec::new(),
+        _ => Vec::new(),
     };
     tests.push("conform/vyre-conform/tests/op_matrix_truth.rs".to_string());
     tests
@@ -428,16 +425,17 @@ fn release_notes(id: &str, tier: OpTier) -> String {
         OpTier::Primitive => {
             "Source-backed row generated from vyre-primitives::harness; primitive ids must stay in the Tier 2.5 namespace.".to_string()
         }
-        OpTier::Libs => {
-            "Source-backed row generated from vyre-harness; Tier 3 ids must stay in the vyre-libs namespace.".to_string()
+        OpTier::Library => {
+            "Source-backed row generated from vyre-foundation::operation; library ids must stay in the vyre-libs namespace.".to_string()
         }
         OpTier::Runtime => {
             "Source-backed row generated from vyre-driver::registry; backend lowering support is opt-in and must be promoted by changing this generated contract.".to_string()
         }
         OpTier::External => {
-            "Source-backed row generated from the shared vyre-harness registry for an external consumer crate.".to_string()
+            "Source-backed row generated from vyre-foundation::operation for an external consumer crate.".to_string()
         }
-        OpTier::FoundationIr | OpTier::Unknown => String::new(),
+        OpTier::Foundation | OpTier::Unknown => String::new(),
+        _ => String::new(),
     }
 }
 
@@ -490,14 +488,12 @@ fn validate_records(records: &[OpRecord]) -> Result<(), String> {
     Ok(())
 }
 
-/// Two `OpTier` values mismatch when one is `Primitive` and the other
-/// is `Libs` (or vice versa)  -  the classes that S7 specifically
-/// guards. Other combinations are accepted (FoundationIr, Intrinsic,
-/// Runtime, External rows can legitimately carry varied ops by design).
+/// Two operation tiers mismatch when one is `Primitive` and the other
+/// is `Library` (or vice versa), the ownership distinction guarded here.
 fn tier_id_mismatch(declared: OpTier, observed: OpTier) -> bool {
     matches!(
         (declared, observed),
-        (OpTier::Primitive, OpTier::Libs) | (OpTier::Libs, OpTier::Primitive)
+        (OpTier::Primitive, OpTier::Library) | (OpTier::Library, OpTier::Primitive)
     )
 }
 

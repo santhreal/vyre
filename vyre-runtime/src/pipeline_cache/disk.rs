@@ -370,7 +370,7 @@ fn append_u64_decimal(out: &mut String, mut value: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline_cache::test_helpers::{tiny_artifact, unique_u64};
+    use crate::pipeline_cache::test_helpers::tiny_artifact;
 
     #[test]
     fn disk_cache_persists_across_store_reopen() {

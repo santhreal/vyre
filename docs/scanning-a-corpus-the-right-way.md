@@ -1,5 +1,7 @@
 # Scanning a corpus the right way
 
+Applies to Vyre 0.7.2.
+
 The fast-path scan APIs, resident sessions, async batches, timed attribution,
 and count-then-collect, are the ones consumers should reach for, and they are
 the least obvious from the type list. This guide is the intended route from "I

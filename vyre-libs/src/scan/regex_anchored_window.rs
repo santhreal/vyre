@@ -29,7 +29,7 @@
 //! byte-identical match set this walk defines.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
@@ -40,14 +40,14 @@ use crate::scan::builders::{append_match, load_packed_byte};
 /// GPU extraction intentionally emits accepting states without per-pattern
 /// scratch. Every host result path applies this in-place contract before
 /// exposing token findings.
-pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<Match>) {
-    matches.sort_unstable_by_key(|m| (m.start, m.pattern_id, m.end));
+pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<ByteRange>) {
+    matches.sort_unstable_by_key(|m| (m.start, m.tag, m.end));
     let mut write = 0usize;
     for read in 0..matches.len() {
         let current = matches[read];
         if write > 0
             && matches[write - 1].start == current.start
-            && matches[write - 1].pattern_id == current.pattern_id
+            && matches[write - 1].tag == current.tag
         {
             matches[write - 1] = current;
         } else {
@@ -56,7 +56,7 @@ pub(crate) fn canonicalize_leftmost_longest(matches: &mut Vec<Match>) {
         }
     }
     matches.truncate(write);
-    matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+    matches.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
 }
 /// Validates candidate origins against an anchored regex [`CompiledDfa`],
 /// extracting the full `(pattern_id, start, end)` match set that begins at each
@@ -103,13 +103,13 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// Replay the anchored DFA seeded at a single candidate `origin`, appending
     /// every `(pattern_id, origin, end)` it accepts to `out`.
     ///
-    /// Emits one [`Match`] per `(accepting state, pattern id in that state's
+    /// Emits one [`ByteRange`] per `(accepting state, pattern id in that state's
     /// output set)`, so a variable-length pattern that accepts at several ends,
     /// and distinct overlapping patterns that accept at one end, all surface
     /// (mirrors the whole-buffer AC dispatch's `output_records` fan-out). Does
     /// not sort or deduplicate; call [`Self::validate_candidates`] for a
     /// canonical, deduplicated batch result. Out-of-range origins are ignored.
-    pub fn validate_candidate(&self, haystack: &[u8], origin: u32, out: &mut Vec<Match>) {
+    pub fn validate_candidate(&self, haystack: &[u8], origin: u32, out: &mut Vec<ByteRange>) {
         let origin_idx = origin as usize;
         if origin_idx >= haystack.len() {
             return;
@@ -128,7 +128,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
             let lo = self.dfa.output_offsets[state as usize] as usize;
             let hi = self.dfa.output_offsets[state as usize + 1] as usize;
             for &pattern_id in &self.dfa.output_records[lo..hi] {
-                out.push(Match::new(pattern_id, origin, end));
+                out.push(ByteRange::new(pattern_id, origin, end));
             }
         }
     }
@@ -141,12 +141,12 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// collapse to one entry, so the result is a set a consumer can union with
     /// other shards without double counting.
     #[must_use]
-    pub fn validate_candidates(&self, haystack: &[u8], origins: &[u32]) -> Vec<Match> {
+    pub fn validate_candidates(&self, haystack: &[u8], origins: &[u32]) -> Vec<ByteRange> {
         let mut matches = Vec::new();
         for &origin in origins {
             self.validate_candidate(haystack, origin, &mut matches);
         }
-        matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        matches.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         matches.dedup();
         matches
     }
@@ -155,7 +155,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
     /// match per pattern id, the leftmost-longest ("maximal munch") semantics a
     /// scanner wants (to `out`).
     ///
-    /// [`Self::validate_candidate`] emits one [`Match`] per accepting end (the
+    /// [`Self::validate_candidate`] emits one [`ByteRange`] per accepting end (the
     /// raw DFA fan-out); for a variable-length pattern (`{n,m}`, `+`, `*`) that
     /// is `m - n + 1` overlapping partial hits for a single token. A credential
     /// scanner wants exactly one finding covering the whole token, so this
@@ -175,7 +175,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         &self,
         haystack: &[u8],
         origin: u32,
-        out: &mut Vec<Match>,
+        out: &mut Vec<ByteRange>,
     ) {
         let origin_idx = origin as usize;
         if origin_idx >= haystack.len() {
@@ -205,7 +205,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
             }
         }
         for (pattern_id, end) in longest {
-            out.push(Match::new(pattern_id, origin, end));
+            out.push(ByteRange::new(pattern_id, origin, end));
         }
     }
 
@@ -218,7 +218,7 @@ impl<'dfa> AnchoredWindowValidator<'dfa> {
         &self,
         haystack: &[u8],
         origins: &[u32],
-    ) -> Vec<Match> {
+    ) -> Vec<ByteRange> {
         let mut matches = Vec::new();
         for &origin in origins {
             self.validate_candidate_leftmost_longest(haystack, origin, &mut matches);
@@ -423,7 +423,7 @@ mod tests {
 
         assert_eq!(
             validator.validate_candidates(haystack, &[2]),
-            vec![Match::new(0, 2, 5)],
+            vec![ByteRange::new(0, 2, 5)],
             "candidate at the true start must extract the match with start==origin"
         );
         assert!(
@@ -448,7 +448,7 @@ mod tests {
         let haystack = b"abcabcabc";
         assert_eq!(
             validator.validate_candidates(haystack, &[0]),
-            vec![Match::new(0, 0, 3)],
+            vec![ByteRange::new(0, 0, 3)],
             "only the anchored match at the origin may surface; later 'abc's start at other origins"
         );
     }
@@ -464,7 +464,7 @@ mod tests {
         let got = validator.validate_candidates(haystack, &[0]);
         assert_eq!(
             got,
-            vec![Match::new(0, 0, 3), Match::new(1, 0, 5)],
+            vec![ByteRange::new(0, 0, 3), ByteRange::new(1, 0, 5)],
             "both the length-3 and length-5 pattern must extract at the shared origin"
         );
     }
@@ -533,7 +533,7 @@ mod tests {
         // match (the whole 4-'a' run, not three overlapping partial hits).
         assert_eq!(
             validator.validate_candidates_leftmost_longest(haystack, &[0]),
-            vec![Match::new(0, 0, 4)],
+            vec![ByteRange::new(0, 0, 4)],
             "leftmost-longest must emit exactly the longest {{2,4}} match at origin 0"
         );
     }
@@ -541,7 +541,7 @@ mod tests {
     /// Direct, un-optimized reference walk of `dfa` over every origin of
     /// `haystack` (no dead-state early-out), returning the canonical extracted
     /// set. This is the faithfulness oracle: the validator must equal it.
-    fn direct_walk_all_origins(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<Match> {
+    fn direct_walk_all_origins(dfa: &CompiledDfa, haystack: &[u8]) -> Vec<ByteRange> {
         let mut out = Vec::new();
         for origin in 0..haystack.len() {
             let window = (dfa.max_pattern_len as usize).min(haystack.len() - origin);
@@ -551,11 +551,15 @@ mod tests {
                 let lo = dfa.output_offsets[state as usize] as usize;
                 let hi = dfa.output_offsets[state as usize + 1] as usize;
                 for &pid in &dfa.output_records[lo..hi] {
-                    out.push(Match::new(pid, origin as u32, (origin + step + 1) as u32));
+                    out.push(ByteRange::new(
+                        pid,
+                        origin as u32,
+                        (origin + step + 1) as u32,
+                    ));
                 }
             }
         }
-        out.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        out.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         out.dedup();
         out
     }
@@ -569,7 +573,7 @@ mod tests {
         let haystack = b"abcd";
         assert_eq!(
             validator.validate_candidates(haystack, &[0, 1]),
-            vec![Match::new(0, 0, 3), Match::new(1, 1, 4)],
+            vec![ByteRange::new(0, 0, 3), ByteRange::new(1, 1, 4)],
             "each pattern extracts at the origin where it starts"
         );
     }
@@ -609,7 +613,7 @@ mod tests {
         let haystack = b"abc";
         assert_eq!(
             validator.validate_candidates(haystack, &[0, 0, 0]),
-            vec![Match::new(0, 0, 3)],
+            vec![ByteRange::new(0, 0, 3)],
             "repeated origins must not duplicate the extracted match"
         );
     }
@@ -654,7 +658,7 @@ mod tests {
 
         // Oracle.
         let mut expected = validator.validate_candidates(haystack, &candidates);
-        expected.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        expected.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
 
         // Reference dispatch of the emitted program (one lane per candidate).
         let num_candidates = candidates.len() as u32;
@@ -691,11 +695,11 @@ mod tests {
         let outputs = vyre_reference::reference_eval(&program, &inputs)
             .expect("Fix: anchored-window extract program must evaluate in the reference backend");
 
-        let mut actual: Vec<Match> = decode_match_triples(&outputs)
+        let mut actual: Vec<ByteRange> = decode_match_triples(&outputs)
             .into_iter()
-            .map(|(pid, start, end)| Match::new(pid, start, end))
+            .map(|(pid, start, end)| ByteRange::new(pid, start, end))
             .collect();
-        actual.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        actual.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         actual.dedup();
 
         assert_eq!(
@@ -734,13 +738,13 @@ mod tests {
         let got = validator.validate_candidates(&haystack, &origins);
 
         // Independent oracle: naive anchored substring test per pattern.
-        let mut oracle: Vec<Match> = Vec::new();
+        let mut oracle: Vec<ByteRange> = Vec::new();
         for (pid, pat) in patterns.iter().enumerate() {
             let pb = pat.as_bytes();
             if pb.len() <= haystack.len() {
                 for start in 0..=haystack.len() - pb.len() {
                     if &haystack[start..start + pb.len()] == pb {
-                        oracle.push(Match::new(
+                        oracle.push(ByteRange::new(
                             pid as u32,
                             start as u32,
                             (start + pb.len()) as u32,
@@ -749,7 +753,7 @@ mod tests {
                 }
             }
         }
-        oracle.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+        oracle.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         oracle.dedup();
 
         assert_eq!(
@@ -763,8 +767,7 @@ mod tests {
             "differential is vacuous: oracle found only {} matches",
             oracle.len()
         );
-        let distinct_pids: std::collections::BTreeSet<u32> =
-            oracle.iter().map(|m| m.pattern_id).collect();
+        let distinct_pids: std::collections::BTreeSet<u32> = oracle.iter().map(|m| m.tag).collect();
         assert!(
             distinct_pids.len() >= 4,
             "differential should exercise most patterns; saw pids {distinct_pids:?}"

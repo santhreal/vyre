@@ -20,7 +20,7 @@ cd "$REPO_ROOT"
 # .wgsl source files on disk (now that ORG-07 extracts embedded shaders
 # to real files) or naga integration shims that construct naga IR
 # structurally.
-allow_path_regex='(\.wgsl$|/tests/|/benches/|/docs/|vyre-driver-wgpu/src/|vyre-driver-wgpu/shaders/|vyre-ops/src/.*/wgsl\.rs|vyre-ops/src/.*/kernel\.rs|scripts/check_no_string_wgsl\.sh|ARCHITECTURE\.md|THESIS\.md|VISION\.md|docs/|benches/shaders/|\.internals/|_findings\.json$|vyre-foundation/src/transform/compiler/)'
+allow_path_regex='(\.wgsl$|/tests/|/benches/|/docs/|vyre-driver-wgpu/src/|vyre-driver-wgpu/shaders/|scripts/check_no_string_wgsl\.sh|ARCHITECTURE\.md|THESIS\.md|VISION\.md|docs/|benches/shaders/|\.internals/|_findings\.json$|vyre-foundation/src/transform/compiler/)'
 
 # WGSL-syntax tokens that are dead giveaways of shader construction. A
 # file outside vyre-driver-wgpu that has any of these in proximity to a

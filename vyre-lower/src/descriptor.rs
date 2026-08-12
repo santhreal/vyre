@@ -1089,9 +1089,8 @@ pub enum KernelOpKind {
 
     // ---------- Extension escape hatches ----------
     /// Opaque expression extension. The extension id resolves through
-    /// vyre-core's extension registry. Emitters that don't recognize
-    /// the extension MUST surface an error rather than silently emit
-    /// nothing.
+    /// the foundation extension registry. Emitters that do not recognize the
+    /// extension MUST surface an error rather than silently emit nothing.
     ///
     /// Boxed to keep the common-case `KernelOpKind` small: most ops
     /// are Literal/BinOp/Load/Store at ≤16 bytes; without boxing,

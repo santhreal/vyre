@@ -40,7 +40,7 @@
 
 ### §11: LFS Setup
 - `.gitattributes`  -  tracks `corpus/honest/**/*` via git-lfs.
-- `scripts/fetch_honest_corpus.sh`  -  idempotent corpus downloader (currently no-op since all data is synthesized).
+- `vyre-bench/scripts/fetch_honest_corpus.sh`  -  idempotent corpus downloader (currently no-op since all data is synthesized).
 
 ### §12: Documentation
 - `SCHEMA.md`  -  complete JSON schema for result format.

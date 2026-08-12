@@ -8,8 +8,8 @@ pub(crate) mod every_op_random_inputs;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::PendingDispatch;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program::emit_module;
 

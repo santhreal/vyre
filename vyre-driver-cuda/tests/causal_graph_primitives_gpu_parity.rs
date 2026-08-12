@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::graph::adjustment_set::{
     backdoor_descendants_check, backdoor_descendants_check_cpu,
 };

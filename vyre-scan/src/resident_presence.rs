@@ -337,8 +337,14 @@ impl ResidentPresencePipeline {
             (self.resource_names[5].as_str(), &self.haystack_len_buf),
             (self.resource_names[6].as_str(), &self.presence),
             (self.resource_names[7].as_str(), &self.candidate_end_mask),
-            (self.resource_names[8].as_str(), &self.candidate_suffix2_mask),
-            (self.resource_names[9].as_str(), &self.candidate_suffix3_bloom),
+            (
+                self.resource_names[8].as_str(),
+                &self.candidate_suffix2_mask,
+            ),
+            (
+                self.resource_names[9].as_str(),
+                &self.candidate_suffix3_bloom,
+            ),
             (self.resource_names[10].as_str(), &self.region_starts_buf),
             (self.resource_names[11].as_str(), &self.region_base_buf),
         ];

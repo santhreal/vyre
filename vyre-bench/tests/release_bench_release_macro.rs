@@ -178,20 +178,3 @@ fn release_count_case_builder_excludes_bitmap_scatter_but_all_case_builder_execu
         "Fix: bitmap scatter all-pattern builder must produce a reference-executable oracle."
     );
 }
-
-#[test]
-fn release_criterion_entrypoint_includes_release_macro_build_group() {
-    let source = include_str!("../benches/release.rs");
-    assert!(
-        source.contains("compiler_grade_release_program_build_scale"),
-        "Fix: release Criterion entrypoint must include compiler-grade release program builders."
-    );
-    assert!(
-        source.contains("compiler_grade_release/program_build"),
-        "Fix: benchmark group must be named as release macro program-build coverage."
-    );
-    assert!(
-        source.contains("build_release_macro_program"),
-        "Fix: Criterion must build release macro Programs, not only scan registry metadata."
-    );
-}

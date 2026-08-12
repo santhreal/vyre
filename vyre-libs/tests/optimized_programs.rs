@@ -7,7 +7,7 @@ use vyre::ir::{MemoryKind, Node};
 #[cfg(feature = "nn-linear")]
 #[test]
 fn linear_tiled_uses_tiled_matmul_kernel_shape() {
-    let program = vyre_libs::nn::linear_tiled("x", "w", "b", "out", 37, 65, 16)
+    let program = vyre_libs::nn::linear::linear_tiled("x", "w", "b", "out", 37, 65, 16)
         .expect("Fix: optimized linear_tiled must build for positive dimensions.");
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
@@ -44,7 +44,7 @@ fn attention_default_maps_one_workgroup_to_a_query_row() {
     // s = 16 clears the `s <= 8 && d <= 16` direct-unroll threshold, which
     // builds a fully unrolled straight-line program with a [1, 1, 1] workgroup
     // and no lane structure at all.
-    let program = vyre_libs::nn::attention("q", "k", "v", "out", 16, 4);
+    let program = vyre_libs::nn::attention::attention("q", "k", "v", "out", 16, 4);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     let body = root_region_body(&program);
@@ -88,7 +88,7 @@ fn attention_default_maps_one_workgroup_to_a_query_row() {
 #[cfg(feature = "nn-attention")]
 #[test]
 fn softmax_default_uses_tiled_workgroup_scratch() {
-    let program = vyre_libs::nn::softmax("input", "output", 513);
+    let program = vyre_libs::nn::attention::softmax("input", "output", 513);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     assert!(
@@ -104,7 +104,7 @@ fn softmax_default_uses_tiled_workgroup_scratch() {
 #[cfg(feature = "nn-norm")]
 #[test]
 fn rms_norm_default_uses_tiled_workgroup_scratch() {
-    let program = vyre_libs::nn::rms_norm("input", "output", 777, 1.0e-5);
+    let program = vyre_libs::nn::norm::rms_norm("input", "output", 777, 1.0e-5);
 
     assert_eq!(program.workgroup_size(), [256, 1, 1]);
     assert!(

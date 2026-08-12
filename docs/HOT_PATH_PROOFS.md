@@ -1,5 +1,8 @@
 # Hot-Path O(1) Proofs
 
+**Status: Superseded.** Use [`docs/optimization/README.md`](optimization/README.md)
+and `docs/optimization/BENCH_TARGETS.toml` for current performance proof rules.
+
 Closes #27 A.3 hot-path O(1) proofs.
 
 Every dispatch-time path that a scanner user hits millions of times
@@ -43,5 +46,6 @@ proof. The proof is either:
 - `.clone()` + `.to_string()` chaining (→ Arc + Cow).
 - Per-record mutex acquire (→ ThreadLocal or RwLock).
 
-Each pattern is documented in CRITIQUE audits when found and
-tracked in `docs/INNOVATION_SWEEP.md` for optimisation follow-ups.
+Each pattern is documented in critique audits when found. Historical
+optimization follow-ups remain in
+[`docs/archive/INNOVATION_SWEEP.md`](archive/INNOVATION_SWEEP.md).

@@ -151,8 +151,8 @@ fn assert_descriptor_shape(
     assert_eq!(descriptor.invariant, expected_invariant);
     assert!(descriptor
         .name
-        .starts_with("conform/vyre-conform-enforce/tests/invariants.rs::"));
-    assert!(descriptor.name.len() > "conform/vyre-conform-enforce/tests/invariants.rs::".len());
+        .starts_with("conform/vyre-conform/tests/invariants.rs::"));
+    assert!(descriptor.name.len() > "conform/vyre-conform/tests/invariants.rs::".len());
     assert!(descriptor.purpose.starts_with(purpose_prefix));
     assert!(
         descriptor.purpose.len() > purpose_prefix.len() + 32,

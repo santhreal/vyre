@@ -5,5 +5,5 @@
 mod common;
 use common::u32_bytes;
 
-include!("__split/c_parser_pipeline_malformed_stream_contracts_chunk1.rs");
-include!("__split/c_parser_pipeline_malformed_stream_contracts_chunk2.rs");
+include!("contract_cases/c_parser_pipeline_malformed_stream_contracts__word_at.rs");
+include!("contract_cases/c_parser_pipeline_malformed_stream_contracts__classifier_does_not_emit_all_zeros_for_nonempty_vast.rs");

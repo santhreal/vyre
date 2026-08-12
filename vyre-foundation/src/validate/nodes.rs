@@ -281,7 +281,6 @@ fn validate_node_inner(
                 }
             }
             shadowing::check_local(var, scope, options, &mut report.errors);
-            barrier::check_loop_back_edge(body, &mut report.errors);
             // The loop body is divergent only when its parent already is
             // OR when either bound varies across the workgroup. Uniform
             // bounds keep every invocation in lockstep  -  same iteration
@@ -293,6 +292,17 @@ fn validate_node_inner(
             // uniform-bound loop every lane sees the same counter value
             // at the same source position.
             let var_uniform = bounds_uniform && !divergent;
+            let mut back_edge_scope = scope.clone();
+            back_edge_scope.insert(
+                var.clone(),
+                Binding {
+                    ty: DataType::U32,
+                    ty_known: true,
+                    mutable: false,
+                    uniform: var_uniform,
+                },
+            );
+            barrier::check_loop_back_edge(body, &back_edge_scope, &mut report.errors);
             validate_scoped_nested_nodes(
                 body,
                 buffers,

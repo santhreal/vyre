@@ -684,6 +684,7 @@ name = "vyre-spec"
 version = "0.7.2"
 dependencies = [
  "serde",
+ "serde_json",
  "smallvec",
 ]
 

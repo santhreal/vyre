@@ -25,9 +25,11 @@ fn batch_descriptor_counts_duplicate_items_independently() {
         .expect("duplicate items must publish");
     assert_eq!(consumed, 2);
 
-    let telemetry =
-        RingTelemetry::try_decode(&ResidentWorkQueue::encode_control(false, 1, 0).unwrap(), &ring)
-            .expect("telemetry decode");
+    let telemetry = RingTelemetry::try_decode(
+        &ResidentWorkQueue::encode_control(false, 1, 0).unwrap(),
+        &ring,
+    )
+    .expect("telemetry decode");
     assert_eq!(telemetry.occupancy.published, 2);
 }
 

@@ -1,5 +1,7 @@
 # RFC 0002  -  Reverse-mode autodiff as an IR transform
 
+Status: **Accepted in Vyre 0.7.2.**
+
 ## Summary
 
 Add an IR transformation pass that consumes a `Program` + a set of

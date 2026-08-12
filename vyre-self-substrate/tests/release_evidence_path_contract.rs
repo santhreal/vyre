@@ -1,39 +1,15 @@
-//! Cargo-visible entry point for the release-evidence path contract.
+//! Cargo-visible entry point for `scripts/check_evidence_paths.sh`.
 //!
-//! The rule is implemented once, in `scripts/check_evidence_paths.sh`, because
-//! `scripts/nightly_ci.sh` runs the same gate. This test is how it reaches
-//! `cargo test`.
+//! Every cited release-evidence path must resolve to an owned artifact.
 
 use std::path::Path;
 use std::process::Command;
 
 /// Every filesystem path cited inside `release/evidence` must resolve on disk.
 ///
-/// This exists because, before it, NOTHING validated that. Exactly two
-/// consumers read the findings array workspace-wide,
-/// the completion-audit semantics and final release-gate semantics. Both only
-/// compare `findings.len()` against the summed `finding_summary` counts. Neither reads
-/// `findings[].path`, and nothing stats it. `release_evidence/artifact_status.rs`
-/// does stat files, but only the artifact files themselves from a hardcoded
-/// expected list, never paths parsed out of their contents.
-///
-/// So the only semantic check on an artifact was INTERNAL SELF-CONSISTENCY, and
-/// a stale artifact passes that trivially: deleting a source file changes
-/// neither the array nor the summary, so the counts still agree. The artifact
-/// stays perfectly self-validating while citing code that no longer exists.
-/// Release evidence is the worst place for that failure, because its entire
-/// purpose is to be trusted at release time.
-///
-/// Scope is every object array carrying a `path` field, not just `findings`.
-/// When this gate was written the tree carried 185 stale citations across 16
-/// artifacts and only 8 were in a findings array. The largest block, 124 of
-/// them, was a stale path prefix: a dataflow component was renamed, and two
-/// artifacts kept citing its former source prefix even though the analyses had
-/// moved to the renamed component.
-///
-/// Breaks if it regresses: release evidence keeps citing paths no reader can
-/// open, and a rename silently invalidates the evidence for a whole component
-/// while every self-consistency check on it stays green.
+/// The check covers every object array carrying a `path` field. This prevents
+/// source renames and artifact migrations from leaving internally consistent
+/// evidence that points to files no reader can open.
 #[test]
 fn release_evidence_cites_only_paths_that_exist() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));

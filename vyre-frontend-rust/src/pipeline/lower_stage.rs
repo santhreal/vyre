@@ -1,9 +1,9 @@
 //! Lowering stage over the frontend-owned typed-IR substrate.
 
-use vyre_foundation::ir::Program;
 use crate::lower as rust_lower;
 use crate::parse::Module;
 use crate::sema::Resolution;
+use vyre_foundation::ir::Program;
 
 use crate::RustFrontendError;
 

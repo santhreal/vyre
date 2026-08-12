@@ -93,13 +93,7 @@ fn resident_region_presence_matches_planted_hits_on_cuda() {
     let mut scratch = Vec::new();
     for iter in 0..4 {
         session
-            .scan_into(
-                &haystack,
-                &region_starts,
-                0,
-                &mut out,
-                &mut scratch,
-            )
+            .scan_into(&haystack, &region_starts, 0, &mut out, &mut scratch)
             .expect("resident CUDA region-presence artifact submission");
         assert_eq!(
             out, expected,

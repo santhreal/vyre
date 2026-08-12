@@ -2,13 +2,12 @@
 //!
 //! Downstream crates ship new `Expr`, `Node`, `DataType`, `BinOp`, `UnOp`,
 //! `AtomicOp`, `TernaryOp`, and `RuleCondition` variants by implementing the
-//! traits in this module and registering an id with the vyre-core inventory
-//! layer.
+//! traits in this module and registering an id with the foundation extension
+//! registry.
 //!
 //! `vyre-spec` is intentionally data-only and carries no dependency on
 //! `inventory`. The trait signatures below describe the stable contract;
-//! actual registration + resolution lives in `vyre::dialect::extension`
-//! (see the vyre-core crate).
+//! actual registration and resolution lives in `vyre_foundation::extension`.
 //!
 //! Every extension id occupies the range `0x8000_0000..=0xFFFF_FFFF`  -  the
 //! high bit of the wire tag distinguishes extension ids from the frozen
@@ -72,9 +71,9 @@ impl_extension_id!(ExtensionDataTypeId);
 /// how many bytes it occupies, whether it participates in the float
 /// conformance family, and how it should be displayed.
 ///
-/// vyre-core walks a link-time inventory of `ExtensionDataTypeRegistration`
-/// entries to resolve a `DataType::Opaque(id)` back to the trait vtable.
-/// The resolver caches `&'static dyn ExtensionDataType` so downstream
+/// The foundation extension registry walks a link-time inventory of
+/// `ExtensionDataTypeRegistration` entries. The resolver caches
+/// `&'static dyn ExtensionDataType` so downstream
 /// consumers never re-consult the registry on the hot path.
 pub trait ExtensionDataType: Send + Sync + Debug + 'static {
     /// Stable id for this data type.
@@ -99,9 +98,9 @@ pub trait ExtensionDataType: Send + Sync + Debug + 'static {
 
 /// Runtime contract for an extension-declared binary operator.
 ///
-/// Vyre-core's resolver caches `&'static dyn ExtensionBinOp` pointers keyed
-/// by [`ExtensionBinOpId`]; downstream evaluators / lowerings call through
-/// this trait without re-consulting the registry on the hot path.
+/// The foundation extension registry caches `&'static dyn ExtensionBinOp`
+/// pointers keyed by [`ExtensionBinOpId`]; downstream evaluators and lowerings
+/// call through this trait without re-consulting the registry on the hot path.
 pub trait ExtensionBinOp: Send + Sync + Debug + 'static {
     /// Stable id of this binary operator.
     fn id(&self) -> ExtensionBinOpId;

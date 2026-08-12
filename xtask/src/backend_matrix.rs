@@ -226,10 +226,14 @@ const CUDA_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
 
 const WGPU_FEATURE_MARKERS: &[BackendFeatureRequirement] = &[
     BackendFeatureRequirement {
-        id: "wgpu-persistent-engine",
-        relative: "vyre-driver-wgpu/src/engine/persistent.rs",
-        role: "WGPU persistent execution engine",
-        tokens: &["persistent", "dispatch"],
+        id: "wgpu-artifact-materializer",
+        relative: "vyre-driver-wgpu/src/materializer.rs",
+        role: "WGPU authenticated artifact materialization",
+        tokens: &[
+            "impl ArtifactMaterializer",
+            "fn materialize",
+            "TargetPayload",
+        ],
     },
     BackendFeatureRequirement {
         id: "runtime-artifact-admission",

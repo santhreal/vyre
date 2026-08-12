@@ -3,7 +3,7 @@
 //! This module provides reusable semiring and lattice primitives that support
 //! higher-level analyses (taint, range, reaching defs) and telemetry (sketching).
 //!
-//! Every op here is a pure Category A composition over vyre-ops primitives.
+//! Every op here is a pure Category A composition over foundation IR primitives.
 
 use crate::builder::{build_elementwise_unary, BuildOptions};
 use crate::region::wrap_anonymous;

@@ -1,5 +1,8 @@
 # Library tiers  -  the long-term organization
 
+**Status: Superseded.** Use [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) and
+`docs/generated/OP_SCHEMA.json` for current tiers and operation ownership.
+
 This doc locks the rule that says which ops live in which crate. It is
 the companion to `docs/primitives-tier.md` (Tier 2.5 rule) and
 `docs/lego-block-rule.md` (the workspace-wide reuse policy that makes

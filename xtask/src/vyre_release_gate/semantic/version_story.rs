@@ -38,16 +38,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             release_train::vyre_version()
         ));
     }
-    let weir_release = matrix
-        .get("requested_weir_release")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("");
-    if weir_release != release_train::weir_version() {
-        failures.push(format!(
-            "requirement `version-story` requested_weir_release is `{weir_release}`, expected `{}`",
-            release_train::weir_version()
-        ));
-    }
     if matrix
         .get("release_doc_tag_findings")
         .and_then(serde_json::Value::as_array)
@@ -83,10 +73,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    // Derived from the release train, not pasted. The pasted list was still pinned to
-    // 0.6.3 and named the dataflow product `weir` rather than its package name
-    // (`weirflow`), so five of its six entries could never match a current version matrix.
-    for (package, version, _group) in release_train::required_release_packages() {
+    for (package, version, group) in release_train::required_release_packages() {
+        if group != "vyre" {
+            continue;
+        }
         let required_package = format!("{package}@{version}");
         if !required_release_packages
             .iter()
@@ -105,7 +95,10 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .push("requirement `version-story` version matrix is missing `tag_story`".to_string());
         return;
     };
-    for (field, expected) in release_train::tag_story_fields() {
+    for (field, expected) in [
+        ("vyre_rc_tag", release_train::vyre_rc_tag()),
+        ("vyre_tag", release_train::vyre_tag()),
+    ] {
         let actual = tag_story
             .get(field)
             .and_then(serde_json::Value::as_str)
@@ -151,14 +144,13 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .and_then(serde_json::Value::as_str)
             .is_some_and(|command| {
                 command.contains("version-matrix")
-                    && command.contains("release-completion-audit")
                     && command.contains("vyre-release-gate")
                     && command.contains("scripts/apply-branch-protection.sh")
                     && command.contains("cargo_full")
             })
         {
             failures.push(
-            "requirement `version-story` release-tag-plan must require version matrix regeneration, completion audit, release gate, and branch-protection application before RC tag creation"
+            "requirement `version-story` release-tag-plan must require version matrix regeneration, release gate, and branch-protection application before RC tag creation"
                 .to_string(),
         );
         }
@@ -171,7 +163,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .iter()
             .filter_map(serde_json::Value::as_str)
             .collect::<Vec<_>>();
-        for (rc, final_tag) in release_train::rc_to_final_tags() {
+        for (rc, final_tag) in [(release_train::vyre_rc_tag(), release_train::vyre_tag())] {
             let rc_index = ordered_tags.iter().position(|tag| *tag == rc);
             let final_index = ordered_tags.iter().position(|tag| *tag == final_tag);
             if !matches!((rc_index, final_index), (Some(left), Some(right)) if left < right) {
@@ -185,15 +177,14 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .and_then(serde_json::Value::as_str)
             .is_some_and(|command| {
                 command.contains("version-matrix")
-                    && command.contains("release-completion-audit")
                     && command.contains("vyre-release-gate")
                     && command.contains("scripts/apply-branch-protection.sh")
                     && command.contains("cargo_full")
             })
         {
             failures.push(
-            "requirement `version-story` release-tag-plan must require version matrix regeneration, completion audit, release gate, and branch-protection application before tag creation"
-                .to_string(),
+                "requirement `version-story` release-tag-plan must require version matrix regeneration, release gate, and branch-protection application before tag creation"
+                    .to_string(),
         );
         }
         let version_blockers = tag_plan

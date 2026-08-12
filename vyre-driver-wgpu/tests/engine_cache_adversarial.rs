@@ -15,19 +15,16 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use vyre::scan::{cached_load_or_compile, engine_cache_path, GpuLiteralSet, MatchScan};
-use vyre_foundation::match_result::Match;
-
-#[cfg(feature = "matching-nfa")]
-use vyre::scan::build_rule_pipeline;
+use vyre_foundation::match_result::ByteRange;
 
 // ---------------------------------------------------------------------------
 // 1. Cache file corruption recovery (7 tests)
 // ---------------------------------------------------------------------------
 
-mod engine_cache_adversarial_part1 {
+mod engine_cache_adversarial_cache_recovers_from_truncated_file {
 
-    include!("__split/engine_cache_adversarial_part1.rs");
+    include!("contract_cases/engine_cache_adversarial__cache_recovers_from_truncated_file.rs");
 }
-mod engine_cache_adversarial_part2 {
-    include!("__split/engine_cache_adversarial_part2.rs");
+mod engine_cache_adversarial_write_failure_still_returns_engine {
+    include!("contract_cases/engine_cache_adversarial__write_failure_still_returns_engine.rs");
 }

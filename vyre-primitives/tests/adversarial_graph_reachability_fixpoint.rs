@@ -6,7 +6,7 @@
 //! fixpoint convergence semantics. GPU acquisition: none  -  every
 //! assertion uses CPU reference oracles.
 //!
-//! Implementation lives in two `include!`-d chunks under `__split/`.
+//! Implementation lives in two `include!`-d chunks under `contract_cases/`.
 #![cfg(feature = "graph")]
 #![cfg(feature = "fixpoint")]
 #![cfg(feature = "math")]

@@ -14,7 +14,10 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use vyre_foundation::optimizer::ctx::AdapterCaps;
-use vyre_libs::nn::{Attention, LayerNorm, Softmax};
+use vyre_libs::nn::{
+    attention::{Attention, Softmax},
+    norm::LayerNorm,
+};
 use vyre_libs::tensor_ref::TensorRef;
 
 const MAX_WORKGROUP_LANES: u32 = AdapterCaps::high_end().max_invocations_per_workgroup;
@@ -31,7 +34,7 @@ where
 fn relu_boundaries_do_not_panic() {
     for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
         assert_no_panic("relu", || {
-            let _ = vyre_libs::nn::relu("input", "output", n);
+            let _ = vyre_libs::nn::activation::relu("input", "output", n);
         });
     }
 }
@@ -119,7 +122,7 @@ fn dot_zero_returns_actionable_error() {
 
 #[test]
 fn linear_zero_returns_actionable_error() {
-    let error = vyre_libs::nn::linear("x", "w", "b", "out", 0, 1).unwrap_err();
+    let error = vyre_libs::nn::linear::linear("x", "w", "b", "out", 0, 1).unwrap_err();
     assert!(
         error.contains("linear") || error.contains("empty"),
         "Fix: linear n=0 error must mention the op and be actionable: {error}"
@@ -128,7 +131,7 @@ fn linear_zero_returns_actionable_error() {
 
 #[test]
 fn linear_zero_output_dim_returns_actionable_error() {
-    let error = vyre_libs::nn::linear("x", "w", "b", "out", 1, 0).unwrap_err();
+    let error = vyre_libs::nn::linear::linear("x", "w", "b", "out", 1, 0).unwrap_err();
     assert!(
         error.contains("linear") || error.contains("empty"),
         "Fix: linear out_dim=0 error must mention the op and be actionable: {error}"

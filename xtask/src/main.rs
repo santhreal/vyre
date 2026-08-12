@@ -13,7 +13,6 @@ mod binary;
 mod catalog;
 mod check_cat_a;
 mod check_tier_deps;
-mod command_matrix;
 mod compile;
 mod conformance_evidence_semantics;
 mod conformance_matrix;
@@ -32,7 +31,6 @@ mod launch_contract;
 mod launch_state;
 mod lego_audit;
 mod lego_quick;
-mod lint_shape_tests;
 mod list_ops;
 mod manifest_walk;
 mod metadata_matrix;
@@ -43,16 +41,11 @@ mod optimization_matrix;
 mod output_arg;
 mod ownership;
 mod package_readiness;
-mod parser_coherence;
-mod paths;
 mod platform_boundary;
 mod print_composition;
-mod quick;
-mod quick_cache;
 mod recursion_gate;
 mod release_backend_rows;
 mod release_benchmarks;
-mod release_completion_audit;
 mod release_conformance;
 mod release_evidence;
 mod release_gate;
@@ -62,8 +55,6 @@ mod repo_boundary;
 mod research_key;
 mod research_source_ledger;
 mod shrink;
-mod source_similar;
-mod test_matrix;
 mod text_markers;
 mod toml_config;
 mod trace_f32;
@@ -81,7 +72,6 @@ fn print_help() {
            cargo_full run --bin xtask -- <subcommand> [options]\n\
          \n\
          SUBCOMMANDS:\n\
-           quick-check --op NAME               Run minimal <5s verification path for a single op\n\
            abstraction-gate                     Enforce registered building-block boundaries\n\
            bench-crossback [program]           Cross-backend perf table\n\
            backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy\n\
@@ -89,7 +79,6 @@ fn print_help() {
            shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer\n\
            check-cat-a                         Run every Cat-A pre-merge gate\n\
            check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)\n\
-           command-matrix [--output PATH] [--check] Generate/check xtask command owner/proof matrix\n\
            compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)\n\
            conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage\n\
            dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version\n\
@@ -106,7 +95,6 @@ fn print_help() {
            optimization-matrix [--output PATH] Generate release optimization integration evidence\n\
            package-readiness [--output PATH]  Generate pre-publish package order evidence\n\
            optimization-corpus [--output PATH]  Generate release optimization corpus manifest\n\
-           parser-coherence [--output PATH]   Generate distributed C parser ownership evidence\n\
            platform-boundary                  Fail on consumer names in platform crate docs/comments\n\
            version-matrix [--output PATH]      Generate Vyre manifest version matrix\n\
            catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift\n\
@@ -114,7 +102,6 @@ fn print_help() {
            release-workload-matrix [--output PATH]  Generate cheap release workload family evidence\n\
            release-benchmarks [--backend cuda] Generate long-running release benchmark artifacts\n\
            release-conformance [--backend all] Generate real backend conformance artifacts\n\
-           release-completion-audit [--output PATH]  Generate final prompt-to-artifact audit evidence\n\
            release-evidence                    Generate cheap structural release evidence artifacts\n\
            vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure\n\
            recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)\n\
@@ -122,12 +109,9 @@ fn print_help() {
            verify-rewrite-proofs               Verify optimizer rewrite proof fixtures\n\
            hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers\n\
            lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management\n\
-           lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan\n\
+           lego-quick [--all]                  Fast pre-commit boundary checks\n\
            whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape\n\
-           source-similar [--root PATH] [--check] [--include-untracked] [--duplicate-report-json PATH] Repo-wide Rust source duplicate scanner\n\
            hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns\n\
-           test-matrix [--output PATH]         Generate Vyre test architecture evidence\n\
-           lint-shape-tests [--strict]         Scan test modules for shape-only assertions\n\
          \n\
            --help                              Print this message\n"
     );
@@ -141,7 +125,6 @@ fn main() {
     }
 
     match args[1].as_str() {
-        "quick-check" => quick::cmd_quick_check(&args),
         "abstraction-gate" => abstraction_gate::run(&args),
         "bench-crossback" => bench_crossback::run(&args),
         "backend-matrix" => backend_matrix::run(&args),
@@ -149,7 +132,6 @@ fn main() {
         "shrink" => shrink::run(&args),
         "check-cat-a" => check_cat_a::run(&args),
         "check-tier-deps" => check_tier_deps::run(&args),
-        "command-matrix" => command_matrix::run(&args),
         "compile" => compile::run(&args),
         "conformance-matrix" => conformance_matrix::run(&args),
         "dep-drift" => dep_drift::run(&args),
@@ -163,14 +145,12 @@ fn main() {
         "optimization-matrix" => optimization_matrix::run(&args),
         "package-readiness" => package_readiness::run(&args),
         "optimization-corpus" => optimization_corpus::run(&args),
-        "parser-coherence" => parser_coherence::run(&args),
         "platform-boundary" => platform_boundary::run(&args),
         "catalog" => catalog::run(&args),
         "release-gate" => release_gate::run(&args),
         "release-workload-matrix" => release_workload_matrix::run(&args),
         "release-benchmarks" => release_benchmarks::run(&args),
         "release-conformance" => release_conformance::run(&args),
-        "release-completion-audit" => release_completion_audit::run(&args),
         "release-evidence" => release_evidence::run(&args),
         "vyre-release-gate" => vyre_release_gate::run(&args),
         "recursion-gate" => recursion_gate::run(&args),
@@ -183,10 +163,7 @@ fn main() {
         "lego-audit" => lego_audit::run(&args),
         "lego-quick" => lego_quick::run(&args),
         "whats-similar" => whats_similar::run(&args),
-        "source-similar" => source_similar::run(&args),
         "hot-path-scan" => hot_path_scan::run(&args),
-        "test-matrix" => test_matrix::run(&args),
-        "lint-shape-tests" => lint_shape_tests::run(&args),
         "launch-state" => launch_state::run(&args),
         "--help" | "-h" => {
             print_help();

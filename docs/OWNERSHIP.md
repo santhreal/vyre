@@ -20,7 +20,7 @@ to its canonical owner before implementing it in a concrete backend.
 
 ### `vyre`
 
-Expose the public Vyre API and feature-gated backend selection surface.
+Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
 
 - Path: `vyre`
 - Owner: `public-facade`
@@ -52,7 +52,7 @@ Execute production artifacts against independent reference semantics, minimize c
 - Path: `conform/vyre-conform`
 - Owner: `conformance`
 - Layer: `conformance`
-- Allowed internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
+- Allowed internal production dependencies: `vyre`, `vyre-conform-spec`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-metal`, `vyre-driver-reference`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-reference`, `vyre-runtime`, `vyre-spec`
 
 ### `vyre-conform-spec`
 
@@ -198,15 +198,6 @@ Generate host-side grammar tables consumed by frontend and parsing crates.
 - Layer: `tooling`
 - Allowed internal production dependencies: None
 
-### `vyre-harness`
-
-Provide reusable backend-neutral harness utilities for executing and comparing programs.
-
-- Path: `vyre-harness`
-- Owner: `runtime-harness`
-- Layer: `tooling`
-- Allowed internal production dependencies: `vyre`, `vyre-foundation`
-
 ### `vyre-intrinsics`
 
 Own registered hardware-mapped intrinsic contracts and their neutral program builders.
@@ -331,7 +322,7 @@ Generate evidence and enforce repository, release, documentation, and architectu
 - Path: `xtask`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Allowed internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-harness`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
+- Allowed internal production dependencies: `vyre`, `vyre-bench`, `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-reference`, `vyre-driver-spirv`, `vyre-driver-wgpu`, `vyre-emit-metal`, `vyre-foundation`, `vyre-intrinsics`, `vyre-libs`, `vyre-lints`, `vyre-lower`, `vyre-primitives`, `vyre-reference`, `vyre-spec`
 
 ## Planned ownership
 

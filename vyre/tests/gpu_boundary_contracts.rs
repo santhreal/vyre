@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use vyre_test_support::monorepo::{dataflow_root, santh_root, skip_without_santh_root};
 
 const VYRE_WORKSPACE_CRATES: &[&str] = &[
-    "vyre-core",
+    "vyre",
     "vyre-foundation",
     "vyre-driver",
     "vyre-driver-wgpu",

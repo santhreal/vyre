@@ -33,8 +33,7 @@
 //! 9. **Name-stem collision**  -  ≥ 4 ops sharing a leaf-prefix stem
 //!    requires a discoverable namespace, merge, or explicit reviewed family.
 //! 10. **Operand-shape advisory**  -  identical fingerprint prefixes and
-//!     bigram-cosine ≥ 0.55 provide a review signal below check 1's hard
-//!     threshold. The source-similarity gate decides source duplication.
+//!     bigram-cosine ≥ 0.55 identify registered operations for semantic review.
 //!
 //! Exit code 0 when every hard check passes. Advisories remain visible.
 //! Intended to run in CI after Gate 1.
@@ -204,7 +203,8 @@ fn tier_of(op_id: &str) -> Tier {
 }
 
 pub(crate) fn collect_ops() -> Vec<OpInfo> {
-    vyre_harness::all_entries()
+    vyre_foundation::operation::OperationRegistry::global()
+        .iter()
         .filter_map(|entry| entry.program().map(|program| build_info(entry.id, program)))
         .collect()
 }
@@ -1531,7 +1531,9 @@ mod dedup_contract_tests {
     /// Signature-only operations belong to the canonical registry but have no IR to compare.
     #[test]
     fn signature_only_operations_are_excluded_from_ir_duplicate_analysis() {
-        assert!(vyre_harness::all_entries().any(|entry| entry.program().is_none()));
+        assert!(vyre_foundation::operation::OperationRegistry::global()
+            .iter()
+            .any(|entry| entry.program().is_none()));
         let ops = collect_ops();
         assert!(ops.iter().all(|op| {
             vyre_foundation::operation::OperationRegistry::global()

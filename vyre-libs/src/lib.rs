@@ -1,6 +1,6 @@
 //! # vyre-libs  -  Category A composition ecosystem
 //!
-//! `vyre-libs` is the library layer that sits ON TOP of `vyre-ops`.
+//! `vyre-libs` composes foundation IR and primitive-owned kernels into reusable programs.
 //!
 //! Almost every function is a **pure Category A composition**: it returns a
 //! [`vyre_foundation::ir::Program`] built entirely from existing vyre IR primitives. The
@@ -11,7 +11,7 @@
 //! This is the ML/DSP/cryptographic ecosystem layer. Examples:
 //!
 //! ```ignore
-//! use vyre_libs::nn::linear;
+//! use vyre_libs::nn::linear::linear;
 //! let program = linear(/* input_buf */ "x", /* weights */ "w", /* bias */ "b");
 //! // `program` is a standard vyre_foundation::ir::Program you dispatch against any backend.
 //! ```
@@ -296,14 +296,14 @@ pub mod prelude {
     pub use crate::math::succinct::{
         rank1_query, rank1_superblocks, try_rank1_query, try_rank1_superblocks,
     };
-    #[cfg(feature = "nn-linear")]
-    pub use crate::nn::linear;
     #[cfg(feature = "nn-activation")]
-    pub use crate::nn::relu;
+    pub use crate::nn::activation::relu;
     #[cfg(feature = "nn-attention")]
-    pub use crate::nn::{attention, softmax, Attention, Softmax};
+    pub use crate::nn::attention::{attention, softmax, Attention, Softmax};
+    #[cfg(feature = "nn-linear")]
+    pub use crate::nn::linear::linear;
     #[cfg(feature = "nn-norm")]
-    pub use crate::nn::{layer_norm, LayerNorm};
+    pub use crate::nn::norm::{layer_norm, LayerNorm};
     #[cfg(feature = "matching-dfa")]
     pub use crate::scan::aho_corasick;
     #[cfg(feature = "matching-substring")]

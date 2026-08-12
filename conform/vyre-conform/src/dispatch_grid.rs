@@ -2,7 +2,7 @@
 
 use crate::fp_parity::f32_ulp_tolerance;
 use vyre::ir::{BufferAccess, Program};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 
 /// Build the dispatch config required by a program's workgroup shape.
 ///

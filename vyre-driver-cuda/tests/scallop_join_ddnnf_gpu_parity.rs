@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::knowledge_compile::{
     ddnnf_evaluate, ddnnf_evaluate_cpu, ddnnf_evaluate_dispatch_grid, LITERAL_FALSE, LITERAL_TRUE,

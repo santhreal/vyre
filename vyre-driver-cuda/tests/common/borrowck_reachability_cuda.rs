@@ -4,11 +4,8 @@ use vyre_self_substrate::optimizer::dispatcher::OptimizerDispatcher;
 #[path = "borrowck_batched_cuda.rs"]
 mod batched;
 pub(crate) mod gpu {
-    pub(crate) use super::batched::{
-        analyze_crate_batched, analyze_crate_batched_with_shard_cap,
-    };
+    pub(crate) use super::batched::{analyze_crate_batched, analyze_crate_batched_with_shard_cap};
 }
-
 
 const ALLOW_ALL: u32 = 0xFFFF_FFFF;
 

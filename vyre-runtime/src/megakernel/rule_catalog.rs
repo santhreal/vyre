@@ -544,10 +544,8 @@ pub fn compress_dense_transitions_into(
 /// Pack a byte-class-compressed `state_count * num_classes` transition table
 /// (from [`compress_dense_transitions_into`]) into u16 targets stored two per
 /// u32 word: the LOW half holds the even flat index, the HIGH half the odd
-/// index. Halves the device transition footprint and bytes-per-transaction
-/// the lever the large-catalog-scale L1 working-set analysis identified as the one that
-/// directly narrows each transition read (`docs/GPU_OOM_SEGMENTATION.md`; row
-/// deduplication was measured and refuted there).
+/// index. This halves the device transition footprint and narrows every
+/// transition-table read. Row deduplication does not provide this bound.
 ///
 /// FAIL CLOSED (Law 10): every transition target is a state index, so it must
 /// fit `u16`. If ANY target exceeds `u16::MAX` this REFUSES the pack, a silent

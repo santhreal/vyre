@@ -39,9 +39,9 @@ pub enum AtomicOp {
     LruUpdate,
     /// Extension-declared atomic operator.
     ///
-    /// The `ExtensionAtomicOpId` resolves via the vyre-core extension
-    /// registry to a `&'static dyn ExtensionAtomicOp` with per-backend
-    /// lowerings. Wire encoding is `0x80 ++ u32 extension_id`.
+    /// The `ExtensionAtomicOpId` resolves through the foundation extension
+    /// registry to a `&'static dyn ExtensionAtomicOp` with per-backend lowerings.
+    /// Wire encoding is `0x80 ++ u32 extension_id`.
     Opaque(ExtensionAtomicOpId),
 }
 

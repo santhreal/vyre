@@ -51,12 +51,10 @@ pub const MAX_SUFFIX: u32 = 4;
 
 /// Build the 17b.2 integer-literal scanner `Program`.
 ///
-/// `source_len` is retained for source compatibility. The source byte
-/// bound is read from the runtime-sized `source` buffer so one resident
-/// scanner program serves every translation unit size.
+/// The source byte bound comes from the runtime-sized `source` buffer so one
+/// resident scanner program serves every translation unit size.
 #[must_use]
-pub fn gpu_int_literal_scan(source_len: u32) -> Program {
-    let _ = source_len;
+pub fn gpu_int_literal_scan() -> Program {
     let source_byte_len = packed_source_byte_len_expr();
     let safe_load =
         |addr: Expr| -> Expr { safe_load_source_byte_expr(addr, source_byte_len.clone()) };
@@ -473,7 +471,7 @@ mod tests {
     use vyre_reference::value::Value;
 
     fn run_literal_scan(source: &[u8], start: u32) -> (u32, u32) {
-        let program = gpu_int_literal_scan(source.len() as u32);
+        let program = gpu_int_literal_scan();
         let mut packed_source = Vec::with_capacity(source.len().div_ceil(4).max(1) * 4);
         for chunk in source.chunks(4) {
             let mut word = [0u8; 4];
@@ -519,14 +517,14 @@ mod tests {
 
     #[test]
     fn build_program_returns_well_formed_program() {
-        let p = gpu_int_literal_scan(64);
+        let p = gpu_int_literal_scan();
         assert_eq!(p.buffers().len(), 4);
         assert_eq!(p.workgroup_size(), [256, 1, 1]);
     }
 
     #[test]
     fn source_buffer_is_runtime_sized_not_source_length_specialized() {
-        let p = gpu_int_literal_scan(64);
+        let p = gpu_int_literal_scan();
         let source = p
             .buffers()
             .iter()

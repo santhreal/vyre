@@ -59,9 +59,9 @@ fn huge_node_count_exceeds_limit() {
     // The statement-node ceiling is deliberately large: 100_000, the value of
     // vyre-foundation's validate::depth::DEFAULT_MAX_NODE_COUNT, which must admit
     // a fully fused megakernel bundle AND agree with the substrate's GPU-native
-    // encoded validator. (The test asserts against the vyre-core public boundary,
-    // which does not re-export the const, so the ceiling is pinned as a literal;
-    // the substrate parity evidence guards the two validators against drift.)
+    // encoded validator. The public facade does not re-export the const, so the
+    // ceiling is pinned as a literal; substrate parity evidence guards the two
+    // validators against drift.
     // Build just past it so the test exercises the real V019 path rather than an
     // arbitrary smaller threshold the validator would correctly accept.
     const MAX_NODE_COUNT: usize = 100_000;

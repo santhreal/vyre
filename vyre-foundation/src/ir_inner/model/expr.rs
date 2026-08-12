@@ -252,10 +252,8 @@ pub trait ExprNode: fmt::Debug + Send + Sync + 'static {
     /// `to_ne_bytes` are forbidden because the wire format must stay
     /// byte-identical across architectures.
     ///
-    /// Extension authors are recommended (but not required, for API
-    /// compatibility) to use [`crate::opaque_payload::LeBytesWriter`] when
-    /// building payloads  -  it makes the right endianness the only choice at
-    /// the type level.
+    /// Extension authors should use [`crate::opaque_payload::endian::LeBytesWriter`] when
+    /// building payloads because it makes the required endianness explicit in the type.
     ///
     /// Literal extensions that encode regex payloads must also canonicalize
     /// inline flag prefixes before emitting bytes. For example, `(?mi)` and
@@ -412,9 +410,9 @@ impl Expr {
 
     /// Substrate-neutral alias for [`workgroup_x`](Self::workgroup_x).
     ///
-    /// "Parallel region" is the vocabulary used in vyre-core's public
-    /// surface. Concrete drivers translate this concept into their own
-    /// target vocabulary at the boundary.
+    /// "Parallel region" is the vocabulary used in the public `vyre` facade.
+    /// Concrete drivers translate this concept into target vocabulary at the
+    /// lowering boundary.
     #[must_use]
     #[inline]
     pub fn parallel_region_x() -> Self {

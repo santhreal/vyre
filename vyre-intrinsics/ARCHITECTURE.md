@@ -17,7 +17,7 @@ Hardware-conform differential harness. Cross-checks every
 intrinsic's CPU reference against its naga-emitted GPU output.
 
 ### `region.rs`
-Region-wrap helpers shared with `vyre-harness::region`.
+Region-wrap helpers for intrinsic program construction.
 
 ### `category_check.rs`
 Compile-time gate that asserts every op in this crate is

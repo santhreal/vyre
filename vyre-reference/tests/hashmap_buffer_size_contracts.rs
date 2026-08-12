@@ -5,7 +5,7 @@
 //! reaches the interpreter: an ordinary input, and a legacy output
 //! initializer.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::{reference_eval, value::Value};
 
 #[test]

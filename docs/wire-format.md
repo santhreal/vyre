@@ -1,5 +1,7 @@
 # vyre Wire Format (VIR0)
 
+Applies to Vyre 0.7.2.
+
 This document specifies the binary serialization of a `vyre::ir::Program`. The
 format is called VIR0. `Program::to_wire` produces it and `Program::from_wire`
 consumes it.
@@ -202,7 +204,8 @@ loop.
 
 `BinOp`, `UnOp`, and `AtomicOp` each encode as one `u8`. These tables are
 append-only: a new variant takes the next free code, and adding one bumps the
-format version. Source for all three: `serial/wire/tags/op_tag_decode.rs`.
+format version. Decoder dispatch is owned by
+`vyre-foundation/src/serial/wire/tags/op_tag_decode.rs`.
 
 `AtomicOp`:
 
@@ -305,24 +308,24 @@ Extension IDs in the range `[0x0000_0000, 0x7FFF_FFFF]` are reserved for vendor-
 
 ## Accepted versions
 
-The encoder writes `WIRE_FORMAT_VERSION`, currently 5. The decoder reads
-every version from `MIN_SUPPORTED_WIRE_FORMAT_VERSION` (4) through the
-current one, because rev 5 only appends a tag: nothing a rev-4 encoder
-could emit changed meaning. Both constants live in
-`serial::wire::framing`.
+The encoder writes `WIRE_FORMAT_VERSION`, currently 6. The decoder accepts
+versions from `MIN_SUPPORTED_WIRE_FORMAT_VERSION`, currently 4, through the
+current version. Both constants live in
+`vyre_foundation::serial::wire::framing`.
 
-Rev 5 adds one expression tag, decimal 22, `BufferRef`, carrying a single
-`Ident` naming a buffer. It appears only as an argument to a composite op,
-where inlining rebinds the callee's matching parameter onto that buffer.
-A rev-4 decoder rejects it as an unknown tag rather than misreading it.
+The decoder validates the magic, version, flags, digest, lengths, nesting
+limits, and discriminants before constructing a `Program`. An unsupported
+version or unknown discriminant is rejected instead of being reinterpreted.
 
 ## Versioning policy
 
-- Patch version bumps (`0.4.1 → 0.4.2`): no wire change.
-- Minor version bumps (`0.4 → 0.5`): may append new discriminants. Old decoders return `DecodeError::UnknownDiscriminant`, not a crash.
-- Major version bumps (`0.x → 1.x`): may change layout. A migration pass in `vyre-core::dialect::migration` translates old programs to the new format.
+- Patch releases do not change wire bytes.
+- Any encoding change increments `WIRE_FORMAT_VERSION`.
+- Decoders accept only the explicit inclusive version range.
+- A value outside that range must be reserialized by a compatible producer.
 
-Every change to the discriminant tables above updates `crate::ir::serial::wire::CORE_WIRE_VERSION` and adds a migration entry.
+Every discriminant-table change updates the framing version and adds canonical
+round-trip plus stale-version rejection coverage.
 
 ## Round-trip invariant
 

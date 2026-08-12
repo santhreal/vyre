@@ -35,7 +35,6 @@ This crate declares no Cargo features.
 | `test` | `collective_op_property_contracts` | `vyre-spec/tests/collective_op_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test collective_op_property_contracts` |
 | `test` | `collective_property_contracts` | `vyre-spec/tests/collective_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test collective_property_contracts` |
 | `test` | `comm_group_property_contracts` | `vyre-spec/tests/comm_group_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test comm_group_property_contracts` |
-| `test` | `cuda_resident_dispatch_hot_path_waivers` | `vyre-spec/tests/cuda_resident_dispatch_hot_path_waivers.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test cuda_resident_dispatch_hot_path_waivers` |
 | `test` | `data_type_generated_edge_matrix` | `vyre-spec/tests/data_type_generated_edge_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_generated_edge_matrix` |
 | `test` | `data_type_generated_edge_matrix_support` | `vyre-spec/tests/data_type_generated_edge_matrix_support.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_generated_edge_matrix_support` |
 | `test` | `data_type_layout_matrix` | `vyre-spec/tests/data_type_layout_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test data_type_layout_matrix` |
@@ -69,7 +68,6 @@ This crate declares no Cargo features.
 | `test` | `sweep_wire_u32_volume_oracle_matrix` | `vyre-spec/tests/sweep_wire_u32_volume_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test sweep_wire_u32_volume_oracle_matrix` |
 | `test` | `test_descriptor_property_contracts` | `vyre-spec/tests/test_descriptor_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test test_descriptor_property_contracts` |
 | `test` | `test_descriptor_surface` | `vyre-spec/tests/test_descriptor_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test test_descriptor_surface` |
-| `test` | `wire_tag_reservation_manifest` | `vyre-spec/tests/wire_tag_reservation_manifest.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test wire_tag_reservation_manifest` |
 | `test` | `wire_tag_surface` | `vyre-spec/tests/wire_tag_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-spec --test wire_tag_surface` |
 
 ## Test classes

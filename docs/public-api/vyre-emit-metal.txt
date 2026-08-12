@@ -1,0 +1,57 @@
+impl core::default::Default for vyre_emit_metal::MetalEmitOptions
+pub const vyre_emit_metal::DEFAULT_MSL_VERSION: (u8, u8)
+pub const vyre_emit_metal::METAL_ARTIFACT_SCHEMA: u32
+pub enum vyre_emit_metal::EmitError
+pub fn vyre_emit_metal::MetalEmitOptions::default() -> Self
+pub fn vyre_emit_metal::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_artifact(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<vyre_emit_metal::MetalArtifact, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_artifact_bytes(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::vec::Vec<u8>, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_artifact_json(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_artifact_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<vyre_emit_metal::MetalArtifact, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_from_naga_module(module: &naga::ir::Module, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
+pub fn vyre_emit_metal::emit_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_emit_metal::MetalEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_metal::EmitError>
+pub mod vyre_emit_metal
+pub struct vyre_emit_metal::MetalArtifact
+pub struct vyre_emit_metal::MetalBindingMetadata
+pub struct vyre_emit_metal::MetalEmitOptions
+pub struct vyre_emit_metal::MetalThreadgroupMemoryMetadata
+pub vyre_emit_metal::EmitError::ArtifactSerialization(alloc::string::String)
+pub vyre_emit_metal::EmitError::BindingMap
+pub vyre_emit_metal::EmitError::BindingMap::binding: u32
+pub vyre_emit_metal::EmitError::BindingMap::group: u32
+pub vyre_emit_metal::EmitError::BindingMap::reason: alloc::string::String
+pub vyre_emit_metal::EmitError::DescriptorHash(alloc::string::String)
+pub vyre_emit_metal::EmitError::EntryPoint
+pub vyre_emit_metal::EmitError::EntryPoint::entry_point: alloc::string::String
+pub vyre_emit_metal::EmitError::EntryPoint::reason: alloc::string::String
+pub vyre_emit_metal::EmitError::MslWriter(alloc::string::String)
+pub vyre_emit_metal::EmitError::NagaEmit(alloc::string::String)
+pub vyre_emit_metal::EmitError::NagaValidation(alloc::string::String)
+pub vyre_emit_metal::EmitError::PreEmit(alloc::string::String)
+pub vyre_emit_metal::MetalArtifact::bindings: alloc::vec::Vec<vyre_emit_metal::MetalBindingMetadata>
+pub vyre_emit_metal::MetalArtifact::descriptor_blake3: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::emitter: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::entry_point: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::msl: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::msl_blake3: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::msl_version: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::schema: u32
+pub vyre_emit_metal::MetalArtifact::sizes_buffer_index: core::option::Option<u8>
+pub vyre_emit_metal::MetalArtifact::target: alloc::string::String
+pub vyre_emit_metal::MetalArtifact::threadgroup_memories: alloc::vec::Vec<vyre_emit_metal::MetalThreadgroupMemoryMetadata>
+pub vyre_emit_metal::MetalArtifact::workgroup_size: [u32; 3]
+pub vyre_emit_metal::MetalBindingMetadata::element_count: core::option::Option<u32>
+pub vyre_emit_metal::MetalBindingMetadata::element_type: alloc::string::String
+pub vyre_emit_metal::MetalBindingMetadata::memory_class: alloc::string::String
+pub vyre_emit_metal::MetalBindingMetadata::metal_buffer_index: u8
+pub vyre_emit_metal::MetalBindingMetadata::name: alloc::string::String
+pub vyre_emit_metal::MetalBindingMetadata::slot: u32
+pub vyre_emit_metal::MetalBindingMetadata::visibility: alloc::string::String
+pub vyre_emit_metal::MetalEmitOptions::entry_point: alloc::string::String
+pub vyre_emit_metal::MetalEmitOptions::include_source: bool
+pub vyre_emit_metal::MetalEmitOptions::lang_version: (u8, u8)
+pub vyre_emit_metal::MetalThreadgroupMemoryMetadata::aligned_byte_length: u64
+pub vyre_emit_metal::MetalThreadgroupMemoryMetadata::byte_length: u64
+pub vyre_emit_metal::MetalThreadgroupMemoryMetadata::name: alloc::string::String
+pub vyre_emit_metal::MetalThreadgroupMemoryMetadata::slot: u32
+pub vyre_emit_metal::MetalThreadgroupMemoryMetadata::threadgroup_index: u8

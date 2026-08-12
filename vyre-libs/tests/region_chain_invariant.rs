@@ -117,7 +117,9 @@ fn every_tier3_op_region_chain_resolves_to_registered_generators() {
     let registered = registered_op_ids();
     let mut offenders: Vec<(String, Vec<String>)> = Vec::new();
     for entry in vyre_libs::fixture_catalog::all_entries() {
-        let program = entry.program().expect("Fix: registered library operation must provide a neutral builder");
+        let program = entry
+            .program()
+            .expect("Fix: registered library operation must provide a neutral builder");
         let generators = collect_generators(&program);
         let unregistered: Vec<String> = generators
             .into_iter()

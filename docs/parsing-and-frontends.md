@@ -1,5 +1,9 @@
 # Parsing & frontends  -  where source-language parsers live
 
+**Status: Superseded.** This file mixes a pre-0.7 packed-AST proposal with
+current code. Use `vyre-frontend-c/README.md`, `vyre-frontend-rust/README.md`,
+and [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for shipped frontend boundaries.
+
 vyre is a strictly GPU-first IR and op catalog. **Front ends** (e.g. C11,
 Rust, Go, Python) are first-class *computations*: lexing,
 preprocessing, structural parsing, and static analysis are expressed
@@ -209,13 +213,10 @@ The intent is: **one IR**, **registered ops**, **Region chain** (see
 `region-chain.md`). The exact `OpEntry` id for a walk or flow pass is
 whatever the catalog and `vyre-libs` register  -  not a second shadow IR.
 
-## Execution plan and current code status
+## Current code status
 
-- **Single roadmap** (phases, testing bar, innovation backlog):
-  `PARSING_EXECUTION_PLAN.md` in this directory. It is not linked because it is a
-  maintainer working document excluded from the repository, so it is present for a
-  maintainer and absent from a clone. Nothing in the design contract below depends
-  on reading it; it sequences the work, it does not define the interface.
+- Active parser work lives only in the maintainer's local root `BACKLOG.md`.
+  This document defines the frontend and IR handoff contract.
 - **`PackedAst` / VAST** in this file is a **design** contract. A shared
   Rust `PackedAst` / `VastHeader` type must land in source before this
   document can be treated as the default handoff contract.

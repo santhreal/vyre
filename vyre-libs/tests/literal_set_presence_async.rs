@@ -12,9 +12,9 @@
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_async --release -- --nocapture
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
+use vyre_driver_wgpu as _;
 
 /// Three patterns; two occur (`alpha`, `tango`), one does not (`kilo`), so the
 /// bitmap has some set and some clear bits (non-vacuous equality).
@@ -25,22 +25,15 @@ fn haystack() -> Vec<u8> {
 
 #[test]
 fn async_global_presence_matches_sync_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping async global-presence GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let hay = haystack();
 
     let sync_words = matcher
-        .scan_presence(backend.as_ref(), &hay)
+        .scan_presence("wgpu", &hay)
         .expect("sync gpu global-presence scan");
 
     let pending = matcher
-        .scan_presence_async(backend.as_ref(), &hay)
+        .scan_presence_async("wgpu", &hay)
         .expect("async gpu global-presence submit");
     let _ready_before_await = pending.is_ready();
     let async_words = pending
@@ -66,11 +59,11 @@ fn async_global_presence_equals_sync_on_cpu_reference() {
     let hay = haystack();
 
     let sync_words = matcher
-        .scan_presence(&CpuRefBackend, &hay)
+        .scan_presence(CPU_REF_BACKEND_ID, &hay)
         .expect("sync cpu-reference global-presence scan");
 
     let pending = matcher
-        .scan_presence_async(&CpuRefBackend, &hay)
+        .scan_presence_async(CPU_REF_BACKEND_ID, &hay)
         .expect("async cpu-reference global-presence submit");
     assert!(
         pending.is_ready(),

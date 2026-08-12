@@ -9,7 +9,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::graph::csr_backward_traverse::csr_backward_traverse_dispatch_grid;
 use vyre_primitives::graph::csr_forward_traverse::csr_forward_traverse_dispatch_grid;

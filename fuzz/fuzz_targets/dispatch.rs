@@ -15,7 +15,8 @@
 use libfuzzer_sys::fuzz_target;
 use std::sync::OnceLock;
 use vyre::ir::{BufferAccess, Program};
-use vyre::{validate, DispatchConfig, VyreBackend};
+use vyre::validate;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::optimize;
 

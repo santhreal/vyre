@@ -30,8 +30,6 @@ This crate declares no Cargo features.
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
 | `bin` | `audit_rule_contracts` | `xtask/src/bin/audit_rule_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin audit_rule_contracts` |
-| `bin` | `lint_shape_tests` | `xtask/src/bin/lint_shape_tests.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin lint_shape_tests` |
-| `bin` | `public_api_check` | `xtask/src/bin/public_api_check.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin public_api_check` |
 | `bin` | `scaffold_rule` | `xtask/src/bin/scaffold_rule.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin scaffold_rule` |
 | `bin` | `xtask` | `xtask/src/main.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --bin xtask` |
 | `test` | `architecture_docs` | `xtask/tests/architecture_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test architecture_docs` |
@@ -44,7 +42,6 @@ This crate declares no Cargo features.
 | `test` | `public_api_snapshot_inventory` | `xtask/tests/public_api_snapshot_inventory.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test public_api_snapshot_inventory` |
 | `test` | `relation_import_certificates` | `xtask/tests/relation_import_certificates.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test relation_import_certificates` |
 | `test` | `release_docs` | `xtask/tests/release_docs.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test release_docs` |
-| `test` | `root_readme` | `xtask/tests/root_readme.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test root_readme` |
 | `test` | `testing_guides` | `xtask/tests/testing_guides.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask --test testing_guides` |
 
 ## Test classes

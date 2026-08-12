@@ -32,7 +32,7 @@ use std::io::Read;
 use std::ops::Range;
 use std::path::Path;
 
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 use crate::literal_set::{GpuLiteralSet, PendingResidentFusedRegion};
 
@@ -358,7 +358,11 @@ fn window_presence_words(
 /// owns it), add the window byte offset for u64 global positions, and attribute the
 /// region by start. The single owner of the local→global match transform, shared by
 /// the sequential and parallel sharded globalization (ONE PLACE).
-fn map_window_matches(staging: &WindowStaging, win_matches: &[Match], out: &mut Vec<GlobalMatch>) {
+fn map_window_matches(
+    staging: &WindowStaging,
+    win_matches: &[ByteRange],
+    out: &mut Vec<GlobalMatch>,
+) {
     let own_starts = &staging.region_starts[..staging.own_region_count];
     for hit in win_matches {
         if (hit.start as usize) >= staging.own_len {
@@ -368,7 +372,7 @@ fn map_window_matches(staging: &WindowStaging, win_matches: &[Match], out: &mut 
             .partition_point(|&start| start <= hit.start)
             .saturating_sub(1);
         out.push(GlobalMatch {
-            pattern_id: hit.pattern_id,
+            pattern_id: hit.tag,
             region_id: staging.global_region_base + local_region as u32,
             start: staging.byte_offset + u64::from(hit.start),
             end: staging.byte_offset + u64::from(hit.end),
@@ -379,7 +383,7 @@ fn map_window_matches(staging: &WindowStaging, win_matches: &[Match], out: &mut 
 fn globalize_window(
     staging: &WindowStaging,
     win_presence: &[u32],
-    win_matches: &[Match],
+    win_matches: &[ByteRange],
     presence_words: &mut usize,
     presence: &mut Vec<u32>,
     matches: &mut Vec<GlobalMatch>,
@@ -498,7 +502,7 @@ pub fn scan_paged_fused_on(
     let mut presence_words: usize = 0;
     let mut matches: Vec<GlobalMatch> = Vec::new();
     let mut win_presence: Vec<u32> = Vec::new();
-    let mut win_matches: Vec<Match> = Vec::new();
+    let mut win_matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
 
     for window in &windows {
@@ -584,7 +588,7 @@ pub fn scan_paged_fused_timed(
     let mut presence_words: usize = 0;
     let mut matches: Vec<GlobalMatch> = Vec::new();
     let mut win_presence: Vec<u32> = Vec::new();
-    let mut win_matches: Vec<Match> = Vec::new();
+    let mut win_matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
 
     // Honest aggregation: sum wall over every window; sum device only while every
@@ -926,7 +930,7 @@ fn scan_sharded_core(
                         // Per-thread scratch reused across THIS shard's windows (the
                         // no-realloc property, held per thread rather than shared).
                         let mut win_presence: Vec<u32> = Vec::new();
-                        let mut win_matches: Vec<Match> = Vec::new();
+                        let mut win_matches: Vec<ByteRange> = Vec::new();
                         let mut scratch: Vec<u8> = Vec::new();
                         let mut outputs = Vec::with_capacity(indices.len());
                         let mut scan_error: Option<vyre_driver::BackendError> = None;
@@ -1091,27 +1095,26 @@ pub fn scan_pattern_sharded(
     shards: &[PatternShard<'_>],
     backend_ids: &[&str],
     haystack: &[u8],
-) -> Result<Vec<Match>, vyre_driver::BackendError> {
+) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
     if backend_ids.is_empty() {
         return Err(vyre_driver::BackendError::new(
             "scan_pattern_sharded: the backend ID set is empty. Fix: pass at least one registered backend ID to stripe the rule database across.".to_string(),
         ));
     }
-    let mut merged: Vec<Match> = Vec::new();
+    let mut merged: Vec<ByteRange> = Vec::new();
     for (index, shard) in shards.iter().enumerate() {
         let backend_id = backend_ids[index % backend_ids.len()];
         let local_matches = shard.matcher.scan_all(backend_id, haystack)?;
         for mut hit in local_matches {
-            let Some(&global_id) = shard.global_pattern_ids.get(hit.pattern_id as usize) else {
+            let Some(&global_id) = shard.global_pattern_ids.get(hit.tag as usize) else {
                 return Err(vyre_driver::BackendError::new(format!(
                     "scan_pattern_sharded: shard {index} produced local pattern id {} but its global_pattern_ids map has only {} entries. Fix: give each shard a global id for every rule in its sub-matcher.",
-                    hit.pattern_id,
+                    hit.tag,
                     shard.global_pattern_ids.len()
                 )));
             };
-            // In-place remap of the local rule id to the global one (Match is
-            // #[non_exhaustive]; mutating the pub field avoids reconstructing it).
-            hit.pattern_id = global_id;
+            // In-place remap of the local rule id to the global one.
+            hit.tag = global_id;
             merged.push(hit);
         }
     }
@@ -1186,7 +1189,7 @@ pub fn scan_paged_fused_async(
                   presence: &mut Vec<u32>,
                   matches: &mut Vec<GlobalMatch>,
                   win_presence: &mut Vec<u32>,
-                  win_matches: &mut Vec<Match>|
+                  win_matches: &mut Vec<ByteRange>|
      -> Result<(), vyre_driver::BackendError> {
         pending.await_into(win_presence, win_matches)?;
         globalize_window(
@@ -1399,7 +1402,7 @@ pub fn scan_paths_paged(
     let mut presence_words: usize = 0;
     let mut matches: Vec<GlobalMatch> = Vec::new();
     let mut win_presence: Vec<u32> = Vec::new();
-    let mut win_matches: Vec<Match> = Vec::new();
+    let mut win_matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
 
     for window in &windows {
@@ -1554,7 +1557,7 @@ pub fn scan_paths_paged_prefetched(
     let mut presence_words: usize = 0;
     let mut matches: Vec<GlobalMatch> = Vec::new();
     let mut win_presence: Vec<u32> = Vec::new();
-    let mut win_matches: Vec<Match> = Vec::new();
+    let mut win_matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     let mut outcome: Result<(), vyre_driver::BackendError> = Ok(());
 
@@ -1843,7 +1846,7 @@ mod tests {
             region_starts.push(whole.len() as u32);
             whole.extend_from_slice(file);
         }
-        let mut single_matches: Vec<Match> = Vec::new();
+        let mut single_matches: Vec<ByteRange> = Vec::new();
         let single_presence = matcher
             .scan_presence_and_positions_by_region(
                 "wgpu",
@@ -1874,7 +1877,7 @@ mod tests {
                     .partition_point(|&start| start <= hit.start)
                     .saturating_sub(1);
                 GlobalMatch {
-                    pattern_id: hit.pattern_id,
+                    pattern_id: hit.tag,
                     region_id: region as u32,
                     start: u64::from(hit.start),
                     end: u64::from(hit.end),
@@ -1969,11 +1972,9 @@ mod tests {
     ///: and an empty result. No GPU needed (plan is empty, no dispatch).
     #[test]
     fn timed_paged_fused_scan_empty_corpus_reports_zero_timing() {
-        use vyre_driver_reference::CpuRefBackend;
-
         let matcher = GpuLiteralSet::compile(&[b"secret".as_slice()]);
-        // A CpuRef backend is never touched here: an empty plan short-circuits
-        // before any dispatch, so this exercises the zero-window timing branch.
+        // No backend is touched here: an empty plan short-circuits before any
+        // dispatch, so this exercises the zero-window timing branch.
         let (result, timing) =
             scan_paged_fused_timed(&matcher, "wgpu", &[], 64, 16).expect("empty timed scan");
         assert_eq!(result.region_count, 0);

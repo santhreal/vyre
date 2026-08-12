@@ -4,7 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use toml::Value;
-use vyre_harness::{classify_op_id, OpTier};
+use vyre_foundation::operation::{
+    classify_operation_id as classify_op_id, OperationTier as OpTier,
+};
 
 #[derive(Debug)]
 struct RegisteredOp {
@@ -130,14 +132,13 @@ fn op_matrix_covers_every_registered_op_once() {
             op.source
         );
 
-        if sources_for_id.len() > 1 {
-            assert!(
-                allowed_duplicate_sources(&op.id, sources_for_id),
-                "Fix: duplicate registered op id `{}` has sources {:?} without an allowed duplicate contract.",
-                op.id,
-                sources_for_id
-            );
-        }
+        assert_eq!(
+            sources_for_id.len(),
+            1,
+            "Fix: semantic operation `{}` must have exactly one registry owner, found {:?}.",
+            op.id,
+            sources_for_id
+        );
 
         let Some(row_index) = op_to_row.get(&op.id) else {
             unmatrixed.push(op.id.clone());
@@ -376,7 +377,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
     for entry in vyre_libs::fixture_catalog::all_entries() {
         let tier = classify_op_id(entry.id);
         assert!(
-            matches!(tier, OpTier::Libs | OpTier::External),
+            matches!(tier, OpTier::Library | OpTier::External),
             "Fix: shared harness entry `{}` must be a Tier 3 library id or an external consumer id, not {tier:?}.",
             entry.id
         );
@@ -386,7 +387,7 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
         let def = (registration.op)();
         let tier = classify_op_id(def.id);
         assert!(
-            matches!(tier, OpTier::Runtime | OpTier::Libs),
+            matches!(tier, OpTier::Runtime | OpTier::Library),
             "Fix: driver registry op `{}` must use a runtime namespace or a deliberate Tier 3 Cat-B duplicate id.",
             def.id
         );
@@ -394,37 +395,14 @@ fn registry_namespaces_do_not_pollute_other_tiers() {
 }
 
 fn registered_ops() -> Vec<RegisteredOp> {
-    let mut ops = Vec::new();
-    for entry in vyre_intrinsics::harness::all_entries() {
-        ops.push(RegisteredOp {
+    vyre_foundation::operation::OperationRegistry::global()
+        .iter()
+        .map(|entry| RegisteredOp {
             id: entry.id.to_string(),
-            source: "vyre-intrinsics::harness",
-            tier: OpTier::Intrinsic,
-        });
-    }
-    for entry in vyre_primitives::harness::all_entries() {
-        ops.push(RegisteredOp {
-            id: entry.id.to_string(),
-            source: "vyre-primitives::harness",
-            tier: OpTier::Primitive,
-        });
-    }
-    for entry in vyre_libs::fixture_catalog::all_entries() {
-        ops.push(RegisteredOp {
-            id: entry.id.to_string(),
-            source: "vyre-harness",
-            tier: classify_op_id(entry.id),
-        });
-    }
-    for registration in inventory::iter::<vyre_driver::OpDefRegistration> {
-        let def = (registration.op)();
-        ops.push(RegisteredOp {
-            id: def.id.to_string(),
-            source: "vyre-driver::registry",
-            tier: classify_op_id(def.id),
-        });
-    }
-    ops
+            source: "vyre-foundation::operation",
+            tier: entry.tier,
+        })
+        .collect()
 }
 
 fn workspace_root() -> PathBuf {
@@ -500,13 +478,6 @@ fn assert_existing_paths(root: &Path, family: &str, field: &str, paths: Vec<&str
             "Fix: OP_MATRIX family `{family}` {field} path `{path}` does not exist."
         );
     }
-}
-
-fn allowed_duplicate_sources(id: &str, sources: &BTreeSet<&'static str>) -> bool {
-    sources.len() == 2
-        && sources.contains("vyre-harness")
-        && sources.contains("vyre-driver::registry")
-        && id.starts_with("vyre-libs::math::atomic::")
 }
 
 /// An `inlined_callee` row opts out of per-backend release conformance, so the

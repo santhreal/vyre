@@ -18,12 +18,12 @@ jobs:
         run: cargo install mdbook --locked
 
       - name: Build book
-        run: mdbook build vyre-core/docs/
+        run: mdbook build vyre/docs/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: vyre-core/docs/book
+          path: vyre/docs/book
 
   deploy:
     needs: build

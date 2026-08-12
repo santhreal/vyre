@@ -25,13 +25,13 @@ fn identity_program() -> Program {
     )
 }
 
-mod ptx_codegen_smoke_part1 {
+mod ptx_codegen_smoke_base64_decode_ptx_compiles_with_ptxas {
 
-    include!("__split/ptx_codegen_smoke_part1.rs");
+    include!("contract_cases/ptx_codegen_smoke__base64_decode_ptx_compiles_with_ptxas.rs");
 }
-mod ptx_codegen_smoke_part2 {
-    include!("__split/ptx_codegen_smoke_part2.rs");
+mod ptx_codegen_smoke_ptx_emits_bitwise_ops {
+    include!("contract_cases/ptx_codegen_smoke__ptx_emits_bitwise_ops.rs");
 }
-mod ptx_codegen_smoke_part3 {
-    include!("__split/ptx_codegen_smoke_part3.rs");
+mod ptx_codegen_smoke_ptx_emits_select {
+    include!("contract_cases/ptx_codegen_smoke__ptx_emits_select.rs");
 }

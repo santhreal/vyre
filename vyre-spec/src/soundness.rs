@@ -45,7 +45,7 @@ pub enum PrecisionContract {
 /// Soundness evidence for one primitive in a composed pipeline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct PrimitiveSoundness {
-    /// Stable primitive id, normally the `vyre_harness::OpEntry::id`.
+    /// Stable semantic operation identifier.
     pub op_id: &'static str,
     /// Primitive soundness marker.
     pub soundness: Soundness,
@@ -58,7 +58,7 @@ pub struct PrimitiveSoundness {
 /// artifact.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct DynamicPrimitiveSoundness {
-    /// Stable primitive id, normally the `vyre_harness::OpEntry::id`.
+    /// Stable semantic operation identifier.
     pub op_id: String,
     /// Primitive soundness marker.
     pub soundness: Soundness,

@@ -183,14 +183,12 @@ pub fn frontier_to_queue(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            FRONTIER_TO_QUEUE_OP_ID,
-            queue_len,
-            DataType::U32,
-            format!(
-                "Fix: frontier_to_queue requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(FRONTIER_TO_QUEUE_OP_ID,
+        queue_len,
+        DataType::U32,
+        format!(
+            "Fix: frontier_to_queue requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -296,14 +294,12 @@ pub fn frontier_to_queue_parallel(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
-            queue_len,
-            DataType::U32,
-            format!(
-                "Fix: frontier_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(FRONTIER_TO_QUEUE_PARALLEL_OP_ID,
+        queue_len,
+        DataType::U32,
+        format!(
+            "Fix: frontier_to_queue_parallel requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -425,14 +421,12 @@ fn frontier_words_to_queue_parallel_program(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            op_id,
-            queue_len,
-            DataType::U32,
-            format!(
-                "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(op_id,
+        queue_len,
+        DataType::U32,
+        format!(
+            "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -986,14 +980,12 @@ fn frontier_word_queue_scatter_program(
     queue_capacity: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            op_id,
-            queue_len,
-            DataType::U32,
-            format!(
-                "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(op_id,
+        queue_len,
+        DataType::U32,
+        format!(
+            "Fix: {op_id} requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
     let words = bitset_words(node_count);
     let num_blocks = words.div_ceil(FRONTIER_WORD_SCAN_BLOCK_LANES).max(1);
@@ -1164,14 +1156,12 @@ pub fn csr_queue_forward_traverse(
     allow_mask: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            CSR_QUEUE_FORWARD_OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!(
-                "Fix: csr_queue_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(CSR_QUEUE_FORWARD_OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!(
+            "Fix: csr_queue_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
     let lane = Expr::InvocationId { axis: 0 };
     let words = bitset_words(node_count);
@@ -1179,14 +1169,12 @@ pub fn csr_queue_forward_traverse(
     let edge_offset_count = match node_count.checked_add(1) {
         Some(edge_offset_count) => edge_offset_count,
         None => {
-            return crate::invalid_output_program(
-                CSR_QUEUE_FORWARD_OP_ID,
-                frontier_out,
-                DataType::U32,
-                format!(
-                    "Fix: csr_queue_forward_traverse node_count + 1 overflows u32 for node_count={node_count}. Shard the CSR graph before GPU dispatch."
-                ),
-            );
+            return crate::invalid_output_program(CSR_QUEUE_FORWARD_OP_ID,
+            frontier_out,
+            DataType::U32,
+            format!(
+                "Fix: csr_queue_forward_traverse node_count + 1 overflows u32 for node_count={node_count}. Shard the CSR graph before GPU dispatch."
+            ),);
         }
     };
     let body = vec![

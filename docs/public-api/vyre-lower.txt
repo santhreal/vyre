@@ -1,0 +1,1425 @@
+impl core::cmp::Eq for vyre_lower::descriptor::KernelBody
+impl core::cmp::Eq for vyre_lower::descriptor::KernelDescriptor
+impl core::cmp::Eq for vyre_lower::descriptor::KernelOp
+impl core::cmp::Eq for vyre_lower::descriptor::KernelOpKind
+impl core::cmp::Eq for vyre_lower::descriptor::LiteralValue
+impl core::default::Default for vyre_lower::rewrites::egraph_saturation::SaturationLimits
+impl core::error::Error for vyre_lower::LowerVerifiedError
+impl core::error::Error for vyre_lower::descriptor::DescriptorIntentError
+impl core::fmt::Display for vyre_lower::FullReport
+impl core::fmt::Display for vyre_lower::LowerVerifiedError
+impl core::fmt::Display for vyre_lower::analyses::op_histogram::OpHistogram
+impl core::fmt::Display for vyre_lower::audit::PerfAuditReport
+impl core::fmt::Display for vyre_lower::descriptor::DescriptorIntentError
+impl core::fmt::Display for vyre_lower::rewrites::OptimizationStats
+impl core::fmt::Display for vyre_lower::target::WorkgroupLimitViolation
+impl core::hash::Hash for vyre_lower::descriptor::KernelBody
+impl core::hash::Hash for vyre_lower::descriptor::KernelDescriptor
+impl core::hash::Hash for vyre_lower::descriptor::KernelOp
+impl core::hash::Hash for vyre_lower::descriptor::KernelOpKind
+impl core::hash::Hash for vyre_lower::descriptor::LiteralValue
+impl vyre_lower::FullReport
+impl vyre_lower::LowerVerifiedError
+impl vyre_lower::VerifyFailure
+impl vyre_lower::analyses::alias_facts::AliasFactSet
+impl vyre_lower::analyses::bank_conflict::report::BankConflictKind
+impl vyre_lower::analyses::bank_conflict::report::BankConflictReport
+impl vyre_lower::analyses::coalesce::report::AccessPattern
+impl vyre_lower::analyses::coalesce::report::CoalescenceReport
+impl vyre_lower::analyses::common_subexpr::CommonSubexprReport
+impl vyre_lower::analyses::const_buffer_promote::ConstBufferPlan
+impl vyre_lower::analyses::dead_op::DeadOpReport
+impl vyre_lower::analyses::op_histogram::OpHistogram
+impl vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
+impl vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+impl vyre_lower::analyses::value_range::IntRange
+impl vyre_lower::analyses::value_range::ValueRangeReport
+impl vyre_lower::analyses::vec_pack::VecPackChain
+impl vyre_lower::analyses::vec_pack::VecPackReport
+impl vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
+impl vyre_lower::audit::PerfAuditReport
+impl vyre_lower::descriptor::BindingVisibility
+impl vyre_lower::descriptor::DescriptorIntent
+impl vyre_lower::descriptor::DescriptorIntentEvidence
+impl vyre_lower::descriptor::DescriptorIntentKind
+impl vyre_lower::descriptor::DescriptorIntentSet
+impl vyre_lower::descriptor::Dispatch
+impl vyre_lower::descriptor::IntentAnnotatedDescriptor
+impl vyre_lower::descriptor::KernelDescriptor
+impl vyre_lower::descriptor::KernelOp
+impl vyre_lower::descriptor::MemoryClass
+impl vyre_lower::descriptor::ScanConstructIntentMapping
+impl vyre_lower::rewrites::OptimizationStats
+impl vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan
+impl vyre_lower::target::SubgroupCapabilities
+impl<'a> core::iter::traits::iterator::Iterator for vyre_lower::descriptor::KernelOpsIter<'a>
+impl<Candidate> vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
+pub const fn vyre_lower::analyses::coalesce::report::AccessPattern::is_problematic(&self) -> bool
+pub const fn vyre_lower::descriptor::DescriptorIntent::new(kind: vyre_lower::descriptor::DescriptorIntentKind, section_digest: u64) -> Self
+pub const fn vyre_lower::descriptor::DescriptorIntent::with_binding_slot(self, slot: u32) -> Self
+pub const fn vyre_lower::descriptor::DescriptorIntent::with_op_result(self, result: u32) -> Self
+pub const fn vyre_lower::descriptor::DescriptorIntent::with_relation_arity(self, arity: u16) -> Self
+pub const fn vyre_lower::descriptor::DescriptorIntent::with_stream_state_bytes(self, bytes: u32) -> Self
+pub const fn vyre_lower::descriptor::DescriptorIntentEvidence::covers_full_scan_pipeline(&self) -> bool
+pub const fn vyre_lower::descriptor::DescriptorIntentKind::strategy(self) -> vyre_lower::descriptor::DescriptorIntentStrategy
+pub const fn vyre_lower::descriptor::Dispatch::new(x: u32, y: u32, z: u32) -> Self
+pub const fn vyre_lower::target::SubgroupCapabilities::any(self) -> bool
+pub const fn vyre_lower::target::SubgroupCapabilities::count(self) -> u32
+pub const fn vyre_lower::target::SubgroupCapabilities::first_missing(self, required: Self) -> core::option::Option<&'static str>
+pub const vyre_lower::DESCRIPTOR_INTENT_SCHEMA_VERSION: u32
+pub const vyre_lower::SCAN_CONSTRUCT_INTENT_MAPPINGS: &[vyre_lower::descriptor::ScanConstructIntentMapping]
+pub const vyre_lower::TRAP_SIDECAR_NAME: &str
+pub const vyre_lower::TRAP_SIDECAR_WORDS: u32
+pub const vyre_lower::analyses::bank_conflict::DEFAULT_BANK_COUNT: u32
+pub const vyre_lower::analyses::const_buffer_promote::DEFAULT_CONST_BUFFER_BUDGET_BYTES: u32
+pub const vyre_lower::analyses::shared_mem_promote::DEFAULT_SHARED_BUDGET_BYTES: u32
+pub const vyre_lower::descriptor::DESCRIPTOR_INTENT_SCHEMA_VERSION: u32
+pub const vyre_lower::descriptor::SCAN_CONSTRUCT_INTENT_MAPPINGS: &[vyre_lower::descriptor::ScanConstructIntentMapping]
+pub const vyre_lower::descriptor::TRAP_SIDECAR_NAME: &str
+pub const vyre_lower::descriptor::TRAP_SIDECAR_WORDS: u32
+pub const vyre_lower::emit_adversarial_corpus::REQUIRED_BACKENDS: [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend; 6]
+pub const vyre_lower::optimization_corpus::RELEASE_MIN_OPTIMIZATION_CASES: usize
+pub const vyre_lower::rewrites::RUN_ALL_MAX_ITERS: usize
+pub const vyre_lower::rewrites::loop_unroll::MAX_UNROLL_COUNT: u32
+pub enum vyre_lower::BindingVisibility
+pub enum vyre_lower::DescriptorIntentError
+pub enum vyre_lower::DescriptorIntentKind
+pub enum vyre_lower::DescriptorIntentStrategy
+pub enum vyre_lower::KernelOpKind
+pub enum vyre_lower::LiteralValue
+pub enum vyre_lower::LowerError
+pub enum vyre_lower::MatrixMmaElement
+pub enum vyre_lower::MatrixMmaLayout
+pub enum vyre_lower::MatrixMmaShape
+pub enum vyre_lower::MemoryClass
+pub enum vyre_lower::RecommendationCategory
+pub enum vyre_lower::ScanConstructIntentClass
+pub enum vyre_lower::VerifyErrorKind
+pub enum vyre_lower::VerifyFailure
+pub enum vyre_lower::WorkgroupLimitViolation
+pub enum vyre_lower::analyses::AccessKind
+pub enum vyre_lower::analyses::access_kind::AccessKind
+pub enum vyre_lower::analyses::bank_conflict::BankConflictKind
+pub enum vyre_lower::analyses::bank_conflict::ConflictSeverity
+pub enum vyre_lower::analyses::bank_conflict::report::BankConflictKind
+pub enum vyre_lower::analyses::bank_conflict::report::ConflictSeverity
+pub enum vyre_lower::analyses::coalesce::AccessPattern
+pub enum vyre_lower::analyses::coalesce::report::AccessPattern
+pub enum vyre_lower::analyses::coalesce::report::CoalescenceRewrite
+pub enum vyre_lower::analyses::workgroup_uniform::BranchUniformity
+pub enum vyre_lower::analyses::workgroup_uniform::report::BranchEmitHint
+pub enum vyre_lower::analyses::workgroup_uniform::report::BranchUniformity
+pub enum vyre_lower::audit::RecommendationCategory
+pub enum vyre_lower::descriptor::BindingVisibility
+pub enum vyre_lower::descriptor::DescriptorIntentError
+pub enum vyre_lower::descriptor::DescriptorIntentKind
+pub enum vyre_lower::descriptor::DescriptorIntentStrategy
+pub enum vyre_lower::descriptor::KernelOpKind
+pub enum vyre_lower::descriptor::LiteralValue
+pub enum vyre_lower::descriptor::MatrixMmaElement
+pub enum vyre_lower::descriptor::MatrixMmaLayout
+pub enum vyre_lower::descriptor::MatrixMmaShape
+pub enum vyre_lower::descriptor::MemoryClass
+pub enum vyre_lower::descriptor::ScanConstructIntentClass
+pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend
+pub enum vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
+pub enum vyre_lower::emit_adversarial_corpus::EmitOutcome
+pub enum vyre_lower::error::LowerError
+pub enum vyre_lower::rewrites::AosSoaLayoutHint
+pub enum vyre_lower::rewrites::aos_to_soa_promote::LayoutHint
+pub enum vyre_lower::target::WorkgroupLimitViolation
+pub enum vyre_lower::verify::OperandClass
+pub enum vyre_lower::verify::VerifyErrorKind
+pub fn vyre_lower::FullReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::FullReport::format_long(&self) -> alloc::string::String
+pub fn vyre_lower::FullReport::format_short(&self) -> alloc::string::String
+pub fn vyre_lower::FullReport::verify_input_status(&self) -> &'static str
+pub fn vyre_lower::FullReport::verify_output_status(&self) -> &'static str
+pub fn vyre_lower::LowerVerifiedError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::LowerVerifiedError::message(&self) -> &str
+pub fn vyre_lower::VerifyFailure::errors(&self) -> &[vyre_lower::verify::VerifyError]
+pub fn vyre_lower::analyses::alias_facts::AliasFactSet::insert_no_alias(&mut self, fact: vyre_lower::analyses::alias_facts::NoAliasFact)
+pub fn vyre_lower::analyses::alias_facts::AliasFactSet::is_empty(&self) -> bool
+pub fn vyre_lower::analyses::alias_facts::AliasFactSet::len(&self) -> usize
+pub fn vyre_lower::analyses::alias_facts::AliasFactSet::proves_no_alias(&self, left_binding: u32, left_index: u32, right_binding: u32, right_index: u32) -> bool
+pub fn vyre_lower::analyses::analyze_bank_conflict(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub fn vyre_lower::analyses::analyze_coalesce(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub fn vyre_lower::analyses::analyze_common_subexpr(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::common_subexpr::CommonSubexprReport
+pub fn vyre_lower::analyses::analyze_const_buffer_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::const_buffer_promote::ConstBufferPlan
+pub fn vyre_lower::analyses::analyze_dead_op(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::dead_op::DeadOpReport
+pub fn vyre_lower::analyses::analyze_def_use(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::def_use::DefUseReport
+pub fn vyre_lower::analyses::analyze_layout_aos_to_soa(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::layout_aos_to_soa::plan::LayoutTransformPlan
+pub fn vyre_lower::analyses::analyze_op_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::op_histogram::OpHistogram
+pub fn vyre_lower::analyses::analyze_shared_mem_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub fn vyre_lower::analyses::analyze_texture_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
+pub fn vyre_lower::analyses::analyze_value_range(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::value_range::ValueRangeReport
+pub fn vyre_lower::analyses::analyze_workgroup_uniform(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
+pub fn vyre_lower::analyses::bank_conflict::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub fn vyre_lower::analyses::bank_conflict::analysis::analyze_with_bank_count(desc: &vyre_lower::descriptor::KernelDescriptor, bank_count: u32) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub fn vyre_lower::analyses::bank_conflict::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub fn vyre_lower::analyses::bank_conflict::analyze_with_bank_count(desc: &vyre_lower::descriptor::KernelDescriptor, bank_count: u32) -> vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub fn vyre_lower::analyses::bank_conflict::report::BankConflictKind::severity(&self) -> vyre_lower::analyses::bank_conflict::report::ConflictSeverity
+pub fn vyre_lower::analyses::bank_conflict::report::BankConflictReport::critical_count(&self) -> usize
+pub fn vyre_lower::analyses::bank_conflict::report::BankConflictReport::problematic_count(&self) -> usize
+pub fn vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>::candidate_count(&self) -> usize
+pub fn vyre_lower::analyses::coalesce::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub fn vyre_lower::analyses::coalesce::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub fn vyre_lower::analyses::coalesce::report::AccessPattern::throughput_factor(&self) -> f32
+pub fn vyre_lower::analyses::coalesce::report::CoalescenceReport::problematic_count(&self) -> usize
+pub fn vyre_lower::analyses::coalesce::report::CoalescenceReport::warnings(&self) -> alloc::vec::Vec<vyre_lower::analyses::coalesce::report::CoalescenceWarning>
+pub fn vyre_lower::analyses::coalesce::report::CoalescenceReport::waste_score(&self) -> f32
+pub fn vyre_lower::analyses::common_subexpr::CommonSubexprReport::ops_eliminable(&self) -> usize
+pub fn vyre_lower::analyses::common_subexpr::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::common_subexpr::CommonSubexprReport
+pub fn vyre_lower::analyses::common_subexpr::analyze_body(kernel_id: alloc::string::String, body: &vyre_lower::descriptor::KernelBody) -> vyre_lower::analyses::common_subexpr::CommonSubexprReport
+pub fn vyre_lower::analyses::common_subexpr::analyze_body_shallow(kernel_id: alloc::string::String, body: &vyre_lower::descriptor::KernelBody) -> vyre_lower::analyses::common_subexpr::CommonSubexprReport
+pub fn vyre_lower::analyses::const_buffer_promote::ConstBufferPlan::fits_in_budget(&self) -> bool
+pub fn vyre_lower::analyses::const_buffer_promote::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::const_buffer_promote::ConstBufferPlan
+pub fn vyre_lower::analyses::const_buffer_promote::analyze_with_budget(desc: &vyre_lower::descriptor::KernelDescriptor, budget_bytes: u32) -> vyre_lower::analyses::const_buffer_promote::ConstBufferPlan
+pub fn vyre_lower::analyses::dead_by_no_use(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
+pub fn vyre_lower::analyses::dead_op::DeadOpReport::dead_count(&self) -> usize
+pub fn vyre_lower::analyses::dead_op::DeadOpReport::dead_ratio(&self) -> f32
+pub fn vyre_lower::analyses::dead_op::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::dead_op::DeadOpReport
+pub fn vyre_lower::analyses::def_use::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::def_use::DefUseReport
+pub fn vyre_lower::analyses::def_use::dead_by_no_use(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<(alloc::vec::Vec<usize>, u32)>
+pub fn vyre_lower::analyses::import_descriptor_reaching_defs(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
+pub fn vyre_lower::analyses::layout_aos_to_soa::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::layout_aos_to_soa::plan::LayoutTransformPlan
+pub fn vyre_lower::analyses::layout_aos_to_soa::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::layout_aos_to_soa::plan::LayoutTransformPlan
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::dominant(&self) -> core::option::Option<(&'static str, u32)>
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::format_short(&self) -> alloc::string::String
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::is_arithmetic_bound(&self) -> bool
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::is_empty(&self) -> bool
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::is_memory_bound(&self) -> bool
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::merge(&mut self, other: vyre_lower::analyses::op_histogram::OpHistogram)
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::total(&self) -> u32
+pub fn vyre_lower::analyses::op_histogram::OpHistogram::zero() -> Self
+pub fn vyre_lower::analyses::op_histogram::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::op_histogram::OpHistogram
+pub fn vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet::has_single_reaching_def(&self, use_result: u32) -> bool
+pub fn vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet::is_empty(&self) -> bool
+pub fn vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet::len(&self) -> usize
+pub fn vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet::reaching_defs(&self, use_result: u32) -> &[u32]
+pub fn vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet::set_reaching_defs(&mut self, use_result: u32, defs: alloc::vec::Vec<u32>)
+pub fn vyre_lower::analyses::reaching_def_facts::import_descriptor_reaching_defs(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
+pub fn vyre_lower::analyses::reaching_def_facts::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
+pub fn vyre_lower::analyses::reaching_def_import::import_descriptor_reaching_defs(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
+pub fn vyre_lower::analyses::reaching_def_import::resolve_copy_alias(id: u32, copy_aliases: &rustc_hash::FxHashMap<u32, u32>) -> u32
+pub fn vyre_lower::analyses::shared_mem_promote::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub fn vyre_lower::analyses::shared_mem_promote::analysis::analyze_with_budget(desc: &vyre_lower::descriptor::KernelDescriptor, budget_bytes: u32) -> vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub fn vyre_lower::analyses::shared_mem_promote::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::fits_in_budget(&self) -> bool
+pub fn vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::sorted_by_speedup(&self) -> alloc::vec::Vec<&vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
+pub fn vyre_lower::analyses::texture_promote::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
+pub fn vyre_lower::analyses::texture_promote::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan
+pub fn vyre_lower::analyses::value_range::IntRange::contains(&self, v: i64) -> bool
+pub fn vyre_lower::analyses::value_range::IntRange::is_singleton(&self) -> bool
+pub fn vyre_lower::analyses::value_range::IntRange::singleton(v: i64) -> Self
+pub fn vyre_lower::analyses::value_range::IntRange::union(self, other: Self) -> Self
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::as_constant(&self, result_id: u32) -> core::option::Option<i64>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::get(&self, result_id: u32) -> core::option::Option<vyre_lower::analyses::value_range::IntRange>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::get_at(&self, result_id: u32, op_index: usize) -> core::option::Option<vyre_lower::analyses::value_range::IntRange>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely_at_least(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::is_definitely_below(&self, result_id: u32, target: i64) -> core::option::Option<bool>
+pub fn vyre_lower::analyses::value_range::ValueRangeReport::known_count(&self) -> usize
+pub fn vyre_lower::analyses::value_range::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::value_range::ValueRangeReport
+pub fn vyre_lower::analyses::value_range::analyze_body(body: &vyre_lower::descriptor::KernelBody) -> vyre_lower::analyses::value_range::ValueRangeReport
+pub fn vyre_lower::analyses::vec_pack::VecPackChain::pack_width(&self) -> u32
+pub fn vyre_lower::analyses::vec_pack::VecPackReport::has_chains(&self) -> bool
+pub fn vyre_lower::analyses::vec_pack::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::vec_pack::VecPackReport
+pub fn vyre_lower::analyses::workgroup_uniform::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
+pub fn vyre_lower::analyses::workgroup_uniform::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
+pub fn vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport::divergent_count(&self) -> usize
+pub fn vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport::hints(&self) -> alloc::vec::Vec<vyre_lower::analyses::workgroup_uniform::report::BranchHint>
+pub fn vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport::uniform_count(&self) -> usize
+pub fn vyre_lower::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::audit::PerfAuditReport
+pub fn vyre_lower::audit::PerfAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::audit::PerfAuditReport::format_short(&self) -> alloc::string::String
+pub fn vyre_lower::audit::PerfAuditReport::is_clean(&self) -> bool
+pub fn vyre_lower::audit::PerfAuditReport::recommendations_by_category(&self, category: vyre_lower::audit::RecommendationCategory) -> alloc::vec::Vec<&vyre_lower::audit::Recommendation>
+pub fn vyre_lower::audit::PerfAuditReport::top_recommendation(&self) -> core::option::Option<&vyre_lower::audit::Recommendation>
+pub fn vyre_lower::audit::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::audit::PerfAuditReport
+pub fn vyre_lower::audit::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::audit::PerfAuditReport
+pub fn vyre_lower::audit::audit_with_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::audit::PerfAuditReport, vyre_lower::analyses::op_histogram::OpHistogram)
+pub fn vyre_lower::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::audit::PerfAuditReport
+pub fn vyre_lower::audit_with_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::audit::PerfAuditReport, vyre_lower::analyses::op_histogram::OpHistogram)
+pub fn vyre_lower::descriptor::BindingVisibility::is_readable(self) -> bool
+pub fn vyre_lower::descriptor::BindingVisibility::is_writable(self) -> bool
+pub fn vyre_lower::descriptor::DescriptorIntentError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::descriptor::DescriptorIntentSet::new(intents: alloc::vec::Vec<vyre_lower::descriptor::DescriptorIntent>) -> Self
+pub fn vyre_lower::descriptor::DescriptorIntentSet::validate_for_descriptor(&self, descriptor: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<vyre_lower::descriptor::DescriptorIntentEvidence, vyre_lower::descriptor::DescriptorIntentError>
+pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::evidence(&self) -> core::result::Result<vyre_lower::descriptor::DescriptorIntentEvidence, vyre_lower::descriptor::DescriptorIntentError>
+pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::preserve_intents_after_rewrite(self, descriptor: vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<Self, vyre_lower::descriptor::DescriptorIntentError>
+pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::try_new(descriptor: vyre_lower::descriptor::KernelDescriptor, intents: vyre_lower::descriptor::DescriptorIntentSet) -> core::result::Result<Self, vyre_lower::descriptor::DescriptorIntentError>
+pub fn vyre_lower::descriptor::KernelBody::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::descriptor::KernelDescriptor::body_at(&self, path: &[usize]) -> core::option::Option<&vyre_lower::descriptor::KernelBody>
+pub fn vyre_lower::descriptor::KernelDescriptor::body_count(&self) -> usize
+pub fn vyre_lower::descriptor::KernelDescriptor::dispatch_total_threads(&self) -> u32
+pub fn vyre_lower::descriptor::KernelDescriptor::find_op_by_id(&self, id: u32) -> core::option::Option<&vyre_lower::descriptor::KernelOp>
+pub fn vyre_lower::descriptor::KernelDescriptor::has_side_effects(&self) -> bool
+pub fn vyre_lower::descriptor::KernelDescriptor::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::descriptor::KernelDescriptor::is_empty(&self) -> bool
+pub fn vyre_lower::descriptor::KernelDescriptor::is_pure(&self) -> bool
+pub fn vyre_lower::descriptor::KernelDescriptor::max_body_depth(&self) -> usize
+pub fn vyre_lower::descriptor::KernelDescriptor::ops_iter(&self) -> vyre_lower::descriptor::KernelOpsIter<'_>
+pub fn vyre_lower::descriptor::KernelDescriptor::summary(&self) -> alloc::string::String
+pub fn vyre_lower::descriptor::KernelDescriptor::summary_compact(&self) -> alloc::string::String
+pub fn vyre_lower::descriptor::KernelDescriptor::total_ops(&self) -> usize
+pub fn vyre_lower::descriptor::KernelDescriptor::with_id(&self, id: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_lower::descriptor::KernelOp::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::descriptor::KernelOp::result_id_count(&self) -> u32
+pub fn vyre_lower::descriptor::KernelOp::result_ids(&self) -> impl core::iter::traits::iterator::Iterator<Item = u32> + '_
+pub fn vyre_lower::descriptor::KernelOpKind::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::descriptor::KernelOpsIter<'a>::next(&mut self) -> core::option::Option<Self::Item>
+pub fn vyre_lower::descriptor::LiteralValue::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn vyre_lower::descriptor::MemoryClass::is_global_visibility(self) -> bool
+pub fn vyre_lower::descriptor::MemoryClass::is_writable(self) -> bool
+pub fn vyre_lower::descriptor::ScanConstructIntentMapping::includes_class(self, class: vyre_lower::descriptor::ScanConstructIntentClass) -> bool
+pub fn vyre_lower::descriptor::ScanConstructIntentMapping::requires_verifier_fragment(self) -> bool
+pub fn vyre_lower::descriptor::scan_construct_intent_mapping(construct_id: &str) -> core::option::Option<&'static vyre_lower::descriptor::ScanConstructIntentMapping>
+pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
+pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
+pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
+pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend]
+pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
+pub fn vyre_lower::full_report(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::FullReport
+pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
+pub fn vyre_lower::optimization_corpus::generate_release_corpus() -> alloc::vec::Vec<vyre_lower::optimization_corpus::OptimizationCorpusCase>
+pub fn vyre_lower::optimization_corpus::manifest_for(cases: &[vyre_lower::optimization_corpus::OptimizationCorpusCase]) -> vyre_lower::optimization_corpus::OptimizationCorpusManifest
+pub fn vyre_lower::optimization_corpus::validate_release_corpus(cases: &[vyre_lower::optimization_corpus::OptimizationCorpusCase]) -> vyre_lower::optimization_corpus::OptimizationCorpusValidation
+pub fn vyre_lower::required_subgroup_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::target::SubgroupCapabilities
+pub fn vyre_lower::rewrites::OptimizationStats::bindings_dropped(&self) -> usize
+pub fn vyre_lower::rewrites::OptimizationStats::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::rewrites::OptimizationStats::format_short(&self) -> alloc::string::String
+pub fn vyre_lower::rewrites::OptimizationStats::is_no_op(&self) -> bool
+pub fn vyre_lower::rewrites::OptimizationStats::merge(&mut self, other: vyre_lower::rewrites::OptimizationStats)
+pub fn vyre_lower::rewrites::OptimizationStats::off_graph_dropped(&self) -> usize
+pub fn vyre_lower::rewrites::OptimizationStats::ops_eliminated(&self) -> usize
+pub fn vyre_lower::rewrites::OptimizationStats::zero() -> Self
+pub fn vyre_lower::rewrites::add_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::add_combine::add_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::add_sub_cancel(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::add_sub_cancel::add_sub_cancel(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::aos_to_soa_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<(u32, vyre_lower::rewrites::aos_to_soa_promote::LayoutHint)>
+pub fn vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan::component_binding_count(&self) -> usize
+pub fn vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan::is_empty(&self) -> bool
+pub fn vyre_lower::rewrites::aos_to_soa_promote::plan_binding_splits(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan
+pub fn vyre_lower::rewrites::aos_to_soa_promote::promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<(u32, vyre_lower::rewrites::aos_to_soa_promote::LayoutHint)>
+pub fn vyre_lower::rewrites::apply_tail_mask(desc: &vyre_lower::descriptor::KernelDescriptor, logical_element_count: u32) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bank_conflict_pad(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bank_conflict_pad::bank_conflict_pad(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bank_conflict_pad::bank_conflict_pad_with_bank_count(desc: &vyre_lower::descriptor::KernelDescriptor, bank_count: u32) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bitwise_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bitwise_combine::bitwise_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bitwise_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::bitwise_idemp::bitwise_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::boolean_simplify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::boolean_simplify::boolean_simplify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::branch_collapse(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::branch_collapse::branch_collapse(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::canonicalize(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::canonicalize::canonicalize(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::cmp_normalize(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::cmp_normalize::cmp_normalize(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::cmp_self_false(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::cmp_self_false::cmp_self_false(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::const_buffer_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::const_buffer_promote::const_buffer_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::const_buffer_promote::const_buffer_promote_with_budget(desc: &vyre_lower::descriptor::KernelDescriptor, budget_bytes: u32) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store::dead_store(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store::dead_store_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store::dead_store_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store::dead_store_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store::dead_store_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::dead_store_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_const_fold(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_const_fold::descriptor_const_fold(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_cse(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_cse::descriptor_cse(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_dce(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::descriptor_dce::descriptor_dce(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::div_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::div_combine::div_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_bindings(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_bindings::drop_unused_bindings(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_child_bodies(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_child_bodies::drop_unused_child_bodies(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_literals(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::drop_unused_literals::drop_unused_literals(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::egraph_saturation::SaturationLimits::default() -> Self
+pub fn vyre_lower::rewrites::egraph_saturation::saturate_algebraic_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::egraph_saturation::SaturationReport)
+pub fn vyre_lower::rewrites::egraph_saturation::saturate_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, limits: vyre_lower::rewrites::egraph_saturation::SaturationLimits) -> (vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::egraph_saturation::SaturationReport)
+pub fn vyre_lower::rewrites::emit_order(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::emit_order::emit_order(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::identity_elim(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::identity_elim::identity_elim(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::infer_matmul_tile_loops(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan>
+pub fn vyre_lower::rewrites::licm(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm::licm(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm::licm_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm::licm_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm::licm_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm::licm_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::licm_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding::load_forwarding(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding::load_forwarding_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding::load_forwarding_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding::load_forwarding_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding::load_forwarding_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::load_forwarding_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission::loop_fission(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission::loop_fission_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission::loop_fission_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission::loop_fission_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission::loop_fission_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fission_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion::loop_fusion(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion::loop_fusion_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion::loop_fusion_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion::loop_fusion_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion::loop_fusion_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion_with_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_fusion_with_external_alias_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_unroll(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_unroll::loop_unroll(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_zero_iter(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::loop_zero_iter::loop_zero_iter(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::matmul_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::matmul_promote::infer_matmul_tile_loops(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan>
+pub fn vyre_lower::rewrites::matmul_promote::matmul_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::min_max_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::min_max_idemp::min_max_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mod_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mod_idemp::mod_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mul_add_to_fma(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mul_add_to_fma::mul_add_to_fma(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mul_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::mul_combine::mul_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::negate_cancel(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::negate_cancel::negate_cancel(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all_once(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all_once_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all_with_dataflow_analysis_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all_with_dataflow_facts(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::run_all_with_dataflow_stats(desc: &vyre_lower::descriptor::KernelDescriptor, alias_facts: &vyre_lower::analyses::alias_facts::AliasFactSet, reaching_defs: &vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet) -> (vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::OptimizationStats)
+pub fn vyre_lower::rewrites::run_all_with_stats(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::OptimizationStats)
+pub fn vyre_lower::rewrites::select_fold(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::select_fold::select_fold(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::shared_mem_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::shared_mem_promote::shared_mem_promote(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::shift_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::shift_combine::shift_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::strength_reduce(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::strength_reduce::strength_reduce(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::sub_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::sub_combine::sub_combine(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::tail_mask::apply_tail_mask(desc: &vyre_lower::descriptor::KernelDescriptor, logical_element_count: u32) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::unary_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::unary_idemp::unary_idemp(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::xor_self_zero(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::rewrites::xor_self_zero::xor_self_zero(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::descriptor::KernelDescriptor
+pub fn vyre_lower::scan_construct_intent_mapping(construct_id: &str) -> core::option::Option<&'static vyre_lower::descriptor::ScanConstructIntentMapping>
+pub fn vyre_lower::target::WorkgroupLimitViolation::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_lower::target::required_subgroup_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::target::SubgroupCapabilities
+pub fn vyre_lower::target::validate_workgroup_size(workgroup_size: [u32; 3], limits: vyre_lower::target::WorkgroupLimits) -> alloc::vec::Vec<vyre_lower::target::WorkgroupLimitViolation>
+pub fn vyre_lower::validate_workgroup_size(workgroup_size: [u32; 3], limits: vyre_lower::target::WorkgroupLimits) -> alloc::vec::Vec<vyre_lower::target::WorkgroupLimitViolation>
+pub fn vyre_lower::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::verify::VerifyResult
+pub fn vyre_lower::verify::classify_operand(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> vyre_lower::verify::OperandClass
+pub fn vyre_lower::verify::format_verify_errors(errors: &[vyre_lower::verify::VerifyError]) -> alloc::string::String
+pub fn vyre_lower::verify::verify(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::verify::VerifyResult
+pub fn vyre_lower::verify_then_optimize(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<(vyre_lower::descriptor::KernelDescriptor, vyre_lower::rewrites::OptimizationStats), vyre_lower::VerifyFailure>
+pub mod vyre_lower
+pub mod vyre_lower::analyses
+pub mod vyre_lower::analyses::access_kind
+pub mod vyre_lower::analyses::alias_facts
+pub mod vyre_lower::analyses::alias_import
+pub mod vyre_lower::analyses::bank_conflict
+pub mod vyre_lower::analyses::bank_conflict::analysis
+pub mod vyre_lower::analyses::bank_conflict::report
+pub mod vyre_lower::analyses::candidate_plan
+pub mod vyre_lower::analyses::coalesce
+pub mod vyre_lower::analyses::coalesce::analysis
+pub mod vyre_lower::analyses::coalesce::report
+pub mod vyre_lower::analyses::common_subexpr
+pub mod vyre_lower::analyses::const_buffer_promote
+pub mod vyre_lower::analyses::dead_op
+pub mod vyre_lower::analyses::def_use
+pub mod vyre_lower::analyses::layout_aos_to_soa
+pub mod vyre_lower::analyses::layout_aos_to_soa::analysis
+pub mod vyre_lower::analyses::layout_aos_to_soa::plan
+pub mod vyre_lower::analyses::op_histogram
+pub mod vyre_lower::analyses::reaching_def_facts
+pub mod vyre_lower::analyses::reaching_def_import
+pub mod vyre_lower::analyses::shared_mem_promote
+pub mod vyre_lower::analyses::shared_mem_promote::analysis
+pub mod vyre_lower::analyses::shared_mem_promote::plan
+pub mod vyre_lower::analyses::texture_promote
+pub mod vyre_lower::analyses::texture_promote::analysis
+pub mod vyre_lower::analyses::texture_promote::plan
+pub mod vyre_lower::analyses::value_range
+pub mod vyre_lower::analyses::vec_pack
+pub mod vyre_lower::analyses::workgroup_uniform
+pub mod vyre_lower::analyses::workgroup_uniform::analysis
+pub mod vyre_lower::analyses::workgroup_uniform::report
+pub mod vyre_lower::audit
+pub mod vyre_lower::descriptor
+pub mod vyre_lower::emit_adversarial_corpus
+pub mod vyre_lower::error
+pub mod vyre_lower::optimization_corpus
+pub mod vyre_lower::rewrites
+pub mod vyre_lower::rewrites::add_combine
+pub mod vyre_lower::rewrites::add_sub_cancel
+pub mod vyre_lower::rewrites::aos_to_soa_promote
+pub mod vyre_lower::rewrites::bank_conflict_pad
+pub mod vyre_lower::rewrites::bitwise_combine
+pub mod vyre_lower::rewrites::bitwise_idemp
+pub mod vyre_lower::rewrites::boolean_simplify
+pub mod vyre_lower::rewrites::branch_collapse
+pub mod vyre_lower::rewrites::canonicalize
+pub mod vyre_lower::rewrites::cmp_normalize
+pub mod vyre_lower::rewrites::cmp_self_false
+pub mod vyre_lower::rewrites::const_buffer_promote
+pub mod vyre_lower::rewrites::dead_store
+pub mod vyre_lower::rewrites::descriptor_const_fold
+pub mod vyre_lower::rewrites::descriptor_cse
+pub mod vyre_lower::rewrites::descriptor_dce
+pub mod vyre_lower::rewrites::div_combine
+pub mod vyre_lower::rewrites::drop_unused_bindings
+pub mod vyre_lower::rewrites::drop_unused_child_bodies
+pub mod vyre_lower::rewrites::drop_unused_literals
+pub mod vyre_lower::rewrites::egraph_saturation
+pub mod vyre_lower::rewrites::emit_order
+pub mod vyre_lower::rewrites::identity_elim
+pub mod vyre_lower::rewrites::licm
+pub mod vyre_lower::rewrites::load_forwarding
+pub mod vyre_lower::rewrites::loop_fission
+pub mod vyre_lower::rewrites::loop_fusion
+pub mod vyre_lower::rewrites::loop_unroll
+pub mod vyre_lower::rewrites::loop_zero_iter
+pub mod vyre_lower::rewrites::matmul_promote
+pub mod vyre_lower::rewrites::min_max_idemp
+pub mod vyre_lower::rewrites::mod_idemp
+pub mod vyre_lower::rewrites::mul_add_to_fma
+pub mod vyre_lower::rewrites::mul_combine
+pub mod vyre_lower::rewrites::negate_cancel
+pub mod vyre_lower::rewrites::select_fold
+pub mod vyre_lower::rewrites::shared_mem_promote
+pub mod vyre_lower::rewrites::shift_combine
+pub mod vyre_lower::rewrites::strength_reduce
+pub mod vyre_lower::rewrites::sub_combine
+pub mod vyre_lower::rewrites::tail_mask
+pub mod vyre_lower::rewrites::unary_idemp
+pub mod vyre_lower::rewrites::xor_self_zero
+pub mod vyre_lower::target
+pub mod vyre_lower::verify
+pub struct vyre_lower::BindingLayout
+pub struct vyre_lower::BindingSlot
+pub struct vyre_lower::DescriptorIntent
+pub struct vyre_lower::DescriptorIntentEvidence
+pub struct vyre_lower::DescriptorIntentSet
+pub struct vyre_lower::Dispatch
+pub struct vyre_lower::EmissionTargetCapabilities
+pub struct vyre_lower::FullReport
+pub struct vyre_lower::IntentAnnotatedDescriptor
+pub struct vyre_lower::KernelBody
+pub struct vyre_lower::KernelDescriptor
+pub struct vyre_lower::KernelOp
+pub struct vyre_lower::LowerVerifiedError
+pub struct vyre_lower::OpaqueExprData
+pub struct vyre_lower::OpaqueNodeData
+pub struct vyre_lower::PerfAuditReport
+pub struct vyre_lower::Recommendation
+pub struct vyre_lower::ScanConstructIntentMapping
+pub struct vyre_lower::SubgroupCapabilities
+pub struct vyre_lower::VerifiedLowering
+pub struct vyre_lower::VerifyError
+pub struct vyre_lower::WorkgroupLimits
+pub struct vyre_lower::analyses::BankConflictReport
+pub struct vyre_lower::analyses::CoalescenceReport
+pub struct vyre_lower::analyses::CommonSubexprReport
+pub struct vyre_lower::analyses::ConstBufferPlan
+pub struct vyre_lower::analyses::DeadOpReport
+pub struct vyre_lower::analyses::DefUseReport
+pub struct vyre_lower::analyses::IntRange
+pub struct vyre_lower::analyses::OpHistogram
+pub struct vyre_lower::analyses::PerBodyChains
+pub struct vyre_lower::analyses::PromotionPlan
+pub struct vyre_lower::analyses::UseSite
+pub struct vyre_lower::analyses::ValueRangeReport
+pub struct vyre_lower::analyses::WorkgroupUniformReport
+pub struct vyre_lower::analyses::alias_facts::AliasFactSet
+pub struct vyre_lower::analyses::alias_facts::NoAliasFact
+pub struct vyre_lower::analyses::alias_import::AliasFactSet
+pub struct vyre_lower::analyses::alias_import::NoAliasFact
+pub struct vyre_lower::analyses::bank_conflict::BankAccessSite
+pub struct vyre_lower::analyses::bank_conflict::BankConflictReport
+pub struct vyre_lower::analyses::bank_conflict::report::BankAccessSite
+pub struct vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub struct vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
+pub struct vyre_lower::analyses::coalesce::AccessSite
+pub struct vyre_lower::analyses::coalesce::CoalescenceReport
+pub struct vyre_lower::analyses::coalesce::report::AccessSite
+pub struct vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub struct vyre_lower::analyses::coalesce::report::CoalescenceWarning
+pub struct vyre_lower::analyses::common_subexpr::CommonSubexprReport
+pub struct vyre_lower::analyses::common_subexpr::EquivalenceGroup
+pub struct vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate
+pub struct vyre_lower::analyses::const_buffer_promote::ConstBufferPlan
+pub struct vyre_lower::analyses::dead_op::DeadOpReport
+pub struct vyre_lower::analyses::def_use::DefUseReport
+pub struct vyre_lower::analyses::def_use::PerBodyChains
+pub struct vyre_lower::analyses::def_use::UseSite
+pub struct vyre_lower::analyses::layout_aos_to_soa::LayoutCandidate
+pub struct vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate
+pub struct vyre_lower::analyses::op_histogram::OpHistogram
+pub struct vyre_lower::analyses::reaching_def_facts::ReachingDefFactSet
+pub struct vyre_lower::analyses::reaching_def_import::ReachingDefFactSet
+pub struct vyre_lower::analyses::shared_mem_promote::PromotionCandidate
+pub struct vyre_lower::analyses::shared_mem_promote::PromotionPlan
+pub struct vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate
+pub struct vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub struct vyre_lower::analyses::texture_promote::TextureCandidate
+pub struct vyre_lower::analyses::texture_promote::plan::TextureCandidate
+pub struct vyre_lower::analyses::value_range::IntRange
+pub struct vyre_lower::analyses::value_range::ValueRangeReport
+pub struct vyre_lower::analyses::vec_pack::VecPackChain
+pub struct vyre_lower::analyses::vec_pack::VecPackReport
+pub struct vyre_lower::analyses::workgroup_uniform::BranchSite
+pub struct vyre_lower::analyses::workgroup_uniform::WorkgroupUniformReport
+pub struct vyre_lower::analyses::workgroup_uniform::report::BranchHint
+pub struct vyre_lower::analyses::workgroup_uniform::report::BranchSite
+pub struct vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport
+pub struct vyre_lower::audit::PerfAuditReport
+pub struct vyre_lower::audit::Recommendation
+pub struct vyre_lower::descriptor::BindingLayout
+pub struct vyre_lower::descriptor::BindingSlot
+pub struct vyre_lower::descriptor::DescriptorIntent
+pub struct vyre_lower::descriptor::DescriptorIntentEvidence
+pub struct vyre_lower::descriptor::DescriptorIntentSet
+pub struct vyre_lower::descriptor::Dispatch
+pub struct vyre_lower::descriptor::IntentAnnotatedDescriptor
+pub struct vyre_lower::descriptor::KernelBody
+pub struct vyre_lower::descriptor::KernelDescriptor
+pub struct vyre_lower::descriptor::KernelOp
+pub struct vyre_lower::descriptor::KernelOpsIter<'a>
+pub struct vyre_lower::descriptor::OpaqueExprData
+pub struct vyre_lower::descriptor::OpaqueNodeData
+pub struct vyre_lower::descriptor::ScanConstructIntentMapping
+pub struct vyre_lower::emit_adversarial_corpus::EmitAdversarialCase
+pub struct vyre_lower::optimization_corpus::OptimizationCorpusCase
+pub struct vyre_lower::optimization_corpus::OptimizationCorpusManifest
+pub struct vyre_lower::optimization_corpus::OptimizationCorpusValidation
+pub struct vyre_lower::optimization_corpus::OptimizationFamilyCount
+pub struct vyre_lower::rewrites::MatmulTileLoopPlan
+pub struct vyre_lower::rewrites::OptimizationStats
+pub struct vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplit
+pub struct vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan
+pub struct vyre_lower::rewrites::egraph_saturation::SaturationLimits
+pub struct vyre_lower::rewrites::egraph_saturation::SaturationReport
+pub struct vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan
+pub struct vyre_lower::target::EmissionTargetCapabilities
+pub struct vyre_lower::target::SubgroupCapabilities
+pub struct vyre_lower::target::WorkgroupLimits
+pub struct vyre_lower::verify::VerifyError
+pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::verify::VerifyError>>
+pub type vyre_lower::analyses::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
+pub type vyre_lower::analyses::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
+pub type vyre_lower::analyses::layout_aos_to_soa::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
+pub type vyre_lower::analyses::layout_aos_to_soa::plan::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>
+pub type vyre_lower::analyses::texture_promote::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
+pub type vyre_lower::analyses::texture_promote::plan::TexturePromotionPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::texture_promote::plan::TextureCandidate>
+pub type vyre_lower::descriptor::KernelOpsIter<'a>::Item = &'a vyre_lower::descriptor::KernelOp
+pub type vyre_lower::descriptor::Name = alloc::sync::Arc<str>
+pub type vyre_lower::verify::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::verify::VerifyError>>
+pub use vyre_lower::SubgroupReduceOp
+pub vyre_lower::BindingLayout::slots: alloc::vec::Vec<vyre_lower::descriptor::BindingSlot>
+pub vyre_lower::BindingSlot::element_count: core::option::Option<u32>
+pub vyre_lower::BindingSlot::element_type: vyre_spec::data_type::DataType
+pub vyre_lower::BindingSlot::memory_class: vyre_lower::descriptor::MemoryClass
+pub vyre_lower::BindingSlot::name: alloc::string::String
+pub vyre_lower::BindingSlot::slot: u32
+pub vyre_lower::BindingSlot::visibility: vyre_lower::descriptor::BindingVisibility
+pub vyre_lower::BindingVisibility::ReadOnly
+pub vyre_lower::BindingVisibility::ReadWrite
+pub vyre_lower::BindingVisibility::WriteOnly
+pub vyre_lower::DescriptorIntent::binding_slot: core::option::Option<u32>
+pub vyre_lower::DescriptorIntent::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::DescriptorIntent::op_result: core::option::Option<u32>
+pub vyre_lower::DescriptorIntent::relation_arity: u16
+pub vyre_lower::DescriptorIntent::section_digest: u64
+pub vyre_lower::DescriptorIntent::stream_state_bytes: u32
+pub vyre_lower::DescriptorIntentError::EmptyIntentSet
+pub vyre_lower::DescriptorIntentError::MissingRelationArity
+pub vyre_lower::DescriptorIntentError::MissingSectionDigest
+pub vyre_lower::DescriptorIntentError::MissingSectionDigest::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::DescriptorIntentError::MissingStreamingStateBytes
+pub vyre_lower::DescriptorIntentError::UnknownBindingSlot
+pub vyre_lower::DescriptorIntentError::UnknownBindingSlot::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::DescriptorIntentError::UnknownBindingSlot::slot: u32
+pub vyre_lower::DescriptorIntentError::UnknownOpResult
+pub vyre_lower::DescriptorIntentError::UnknownOpResult::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::DescriptorIntentError::UnknownOpResult::result: u32
+pub vyre_lower::DescriptorIntentError::UnsupportedSchemaVersion
+pub vyre_lower::DescriptorIntentError::UnsupportedSchemaVersion::actual: u32
+pub vyre_lower::DescriptorIntentError::UnsupportedSchemaVersion::expected: u32
+pub vyre_lower::DescriptorIntentEvidence::descriptor_id: alloc::string::String
+pub vyre_lower::DescriptorIntentEvidence::has_automata_transition: bool
+pub vyre_lower::DescriptorIntentEvidence::has_literal_prefilter: bool
+pub vyre_lower::DescriptorIntentEvidence::has_output_compaction: bool
+pub vyre_lower::DescriptorIntentEvidence::has_relation_seed: bool
+pub vyre_lower::DescriptorIntentEvidence::has_streaming_state: bool
+pub vyre_lower::DescriptorIntentEvidence::has_verifier: bool
+pub vyre_lower::DescriptorIntentEvidence::intent_count: usize
+pub vyre_lower::DescriptorIntentEvidence::schema_version: u32
+pub vyre_lower::DescriptorIntentEvidence::strategy_digest: u64
+pub vyre_lower::DescriptorIntentKind::AutomataTransition
+pub vyre_lower::DescriptorIntentKind::LiteralPrefilter
+pub vyre_lower::DescriptorIntentKind::OutputCompaction
+pub vyre_lower::DescriptorIntentKind::RelationSeed
+pub vyre_lower::DescriptorIntentKind::StreamingState
+pub vyre_lower::DescriptorIntentKind::Verifier
+pub vyre_lower::DescriptorIntentSet::intents: alloc::vec::Vec<vyre_lower::descriptor::DescriptorIntent>
+pub vyre_lower::DescriptorIntentSet::schema_version: u32
+pub vyre_lower::DescriptorIntentStrategy::Automata
+pub vyre_lower::DescriptorIntentStrategy::Compaction
+pub vyre_lower::DescriptorIntentStrategy::Prefilter
+pub vyre_lower::DescriptorIntentStrategy::RelationSeed
+pub vyre_lower::DescriptorIntentStrategy::Streaming
+pub vyre_lower::DescriptorIntentStrategy::Verifier
+pub vyre_lower::Dispatch::workgroup_size: [u32; 3]
+pub vyre_lower::EmissionTargetCapabilities::subgroup: vyre_lower::target::SubgroupCapabilities
+pub vyre_lower::EmissionTargetCapabilities::workgroup: vyre_lower::target::WorkgroupLimits
+pub vyre_lower::FullReport::descriptor_id: alloc::string::String
+pub vyre_lower::FullReport::fix_text: alloc::string::String
+pub vyre_lower::FullReport::histogram: vyre_lower::analyses::op_histogram::OpHistogram
+pub vyre_lower::FullReport::optimization_ran: bool
+pub vyre_lower::FullReport::optimized_summary: alloc::string::String
+pub vyre_lower::FullReport::perf: vyre_lower::audit::PerfAuditReport
+pub vyre_lower::FullReport::stats: vyre_lower::rewrites::OptimizationStats
+pub vyre_lower::FullReport::summary: alloc::string::String
+pub vyre_lower::FullReport::verify_input: vyre_lower::verify::VerifyResult
+pub vyre_lower::FullReport::verify_output: vyre_lower::verify::VerifyResult
+pub vyre_lower::IntentAnnotatedDescriptor::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_lower::IntentAnnotatedDescriptor::intents: vyre_lower::descriptor::DescriptorIntentSet
+pub vyre_lower::KernelBody::child_bodies: alloc::vec::Vec<vyre_lower::descriptor::KernelBody>
+pub vyre_lower::KernelBody::literals: alloc::vec::Vec<vyre_lower::descriptor::LiteralValue>
+pub vyre_lower::KernelBody::ops: alloc::vec::Vec<vyre_lower::descriptor::KernelOp>
+pub vyre_lower::KernelDescriptor::bindings: vyre_lower::descriptor::BindingLayout
+pub vyre_lower::KernelDescriptor::body: vyre_lower::descriptor::KernelBody
+pub vyre_lower::KernelDescriptor::dispatch: vyre_lower::descriptor::Dispatch
+pub vyre_lower::KernelDescriptor::id: alloc::string::String
+pub vyre_lower::KernelOp::kind: vyre_lower::descriptor::KernelOpKind
+pub vyre_lower::KernelOp::operands: alloc::vec::Vec<u32>
+pub vyre_lower::KernelOp::result: core::option::Option<u32>
+pub vyre_lower::KernelOpKind::AsyncLoad
+pub vyre_lower::KernelOpKind::AsyncLoad::tag: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::AsyncStore
+pub vyre_lower::KernelOpKind::AsyncStore::tag: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::AsyncWait
+pub vyre_lower::KernelOpKind::AsyncWait::tag: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::Atomic
+pub vyre_lower::KernelOpKind::Atomic::op: vyre_spec::atomic_op::AtomicOp
+pub vyre_lower::KernelOpKind::Atomic::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::KernelOpKind::Barrier
+pub vyre_lower::KernelOpKind::Barrier::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::KernelOpKind::BinOpKind(vyre_spec::bin_op::BinOp)
+pub vyre_lower::KernelOpKind::BufferLength
+pub vyre_lower::KernelOpKind::Call
+pub vyre_lower::KernelOpKind::Call::op_id: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::Cast
+pub vyre_lower::KernelOpKind::Cast::target: vyre_spec::data_type::DataType
+pub vyre_lower::KernelOpKind::Copy
+pub vyre_lower::KernelOpKind::Fma
+pub vyre_lower::KernelOpKind::GlobalInvocationId
+pub vyre_lower::KernelOpKind::IndirectDispatch
+pub vyre_lower::KernelOpKind::IndirectDispatch::count_offset: u64
+pub vyre_lower::KernelOpKind::Literal
+pub vyre_lower::KernelOpKind::LoadConstant
+pub vyre_lower::KernelOpKind::LoadGlobal
+pub vyre_lower::KernelOpKind::LoadShared
+pub vyre_lower::KernelOpKind::LocalInvocationId
+pub vyre_lower::KernelOpKind::LoopCarrier
+pub vyre_lower::KernelOpKind::LoopCarrier::name: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::LoopCarrierEnd
+pub vyre_lower::KernelOpKind::LoopCarrierEnd::name: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::LoopCarrierInit
+pub vyre_lower::KernelOpKind::LoopCarrierInit::name: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::LoopIndex
+pub vyre_lower::KernelOpKind::LoopIndex::loop_var: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::MatrixMma
+pub vyre_lower::KernelOpKind::MatrixMma::a_layout: vyre_lower::descriptor::MatrixMmaLayout
+pub vyre_lower::KernelOpKind::MatrixMma::a_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::KernelOpKind::MatrixMma::accum_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::KernelOpKind::MatrixMma::b_layout: vyre_lower::descriptor::MatrixMmaLayout
+pub vyre_lower::KernelOpKind::MatrixMma::b_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::KernelOpKind::MatrixMma::shape: vyre_lower::descriptor::MatrixMmaShape
+pub vyre_lower::KernelOpKind::OpaqueExpr(alloc::boxed::Box<vyre_lower::descriptor::OpaqueExprData>)
+pub vyre_lower::KernelOpKind::OpaqueNode(alloc::boxed::Box<vyre_lower::descriptor::OpaqueNodeData>)
+pub vyre_lower::KernelOpKind::Region
+pub vyre_lower::KernelOpKind::Region::generator: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::Resume
+pub vyre_lower::KernelOpKind::Resume::tag: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::Return
+pub vyre_lower::KernelOpKind::Select
+pub vyre_lower::KernelOpKind::StoreGlobal
+pub vyre_lower::KernelOpKind::StoreShared
+pub vyre_lower::KernelOpKind::StructuredBlock
+pub vyre_lower::KernelOpKind::StructuredForLoop
+pub vyre_lower::KernelOpKind::StructuredForLoop::loop_var: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::StructuredIfThen
+pub vyre_lower::KernelOpKind::StructuredIfThenElse
+pub vyre_lower::KernelOpKind::SubgroupBallot
+pub vyre_lower::KernelOpKind::SubgroupBroadcast
+pub vyre_lower::KernelOpKind::SubgroupLocalId
+pub vyre_lower::KernelOpKind::SubgroupReduce
+pub vyre_lower::KernelOpKind::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_lower::KernelOpKind::SubgroupShuffle
+pub vyre_lower::KernelOpKind::SubgroupSize
+pub vyre_lower::KernelOpKind::Trap
+pub vyre_lower::KernelOpKind::Trap::tag: vyre_lower::descriptor::Name
+pub vyre_lower::KernelOpKind::UnOpKind(vyre_spec::un_op::UnOp)
+pub vyre_lower::KernelOpKind::WorkgroupId
+pub vyre_lower::LiteralValue::Bool(bool)
+pub vyre_lower::LiteralValue::F32(f32)
+pub vyre_lower::LiteralValue::I32(i32)
+pub vyre_lower::LiteralValue::U32(u32)
+pub vyre_lower::LowerError::InvalidProgram(alloc::string::String)
+pub vyre_lower::LowerError::NestingTooDeep(usize)
+pub vyre_lower::LowerError::OperandIdOverflow
+pub vyre_lower::LowerError::UndeclaredBuffer(alloc::string::String)
+pub vyre_lower::LowerError::UnsupportedConstruct(alloc::string::String)
+pub vyre_lower::MatrixMmaElement::BF16
+pub vyre_lower::MatrixMmaElement::F16
+pub vyre_lower::MatrixMmaElement::F32
+pub vyre_lower::MatrixMmaElement::TF32
+pub vyre_lower::MatrixMmaLayout::ColMajor
+pub vyre_lower::MatrixMmaLayout::RowMajor
+pub vyre_lower::MatrixMmaShape::M16N8K16
+pub vyre_lower::MemoryClass::Constant
+pub vyre_lower::MemoryClass::Global
+pub vyre_lower::MemoryClass::Scratch
+pub vyre_lower::MemoryClass::Shared
+pub vyre_lower::MemoryClass::Uniform
+pub vyre_lower::OpaqueExprData::extension_id: u32
+pub vyre_lower::OpaqueExprData::extension_kind: alloc::string::String
+pub vyre_lower::OpaqueExprData::payload: alloc::vec::Vec<u8>
+pub vyre_lower::OpaqueNodeData::extension_kind: alloc::string::String
+pub vyre_lower::OpaqueNodeData::payload: alloc::vec::Vec<u8>
+pub vyre_lower::PerfAuditReport::bank_conflict: vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub vyre_lower::PerfAuditReport::coalesce: vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub vyre_lower::PerfAuditReport::kernel_id: alloc::string::String
+pub vyre_lower::PerfAuditReport::recommendations: alloc::vec::Vec<vyre_lower::audit::Recommendation>
+pub vyre_lower::PerfAuditReport::shared_mem: vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub vyre_lower::PerfAuditReport::waste_score: f32
+pub vyre_lower::Recommendation::category: vyre_lower::audit::RecommendationCategory
+pub vyre_lower::Recommendation::estimated_speedup_upper_bound: f32
+pub vyre_lower::Recommendation::message: alloc::string::String
+pub vyre_lower::Recommendation::priority: u32
+pub vyre_lower::RecommendationCategory::BankConflict
+pub vyre_lower::RecommendationCategory::Coalesce
+pub vyre_lower::RecommendationCategory::SharedMemPromote
+pub vyre_lower::ScanConstructIntentClass::Automata
+pub vyre_lower::ScanConstructIntentClass::Derivative
+pub vyre_lower::ScanConstructIntentClass::ExternalAccelerator
+pub vyre_lower::ScanConstructIntentClass::Literal
+pub vyre_lower::ScanConstructIntentClass::Verifier
+pub vyre_lower::ScanConstructIntentMapping::classes: &'static [vyre_lower::descriptor::ScanConstructIntentClass]
+pub vyre_lower::ScanConstructIntentMapping::construct_id: &'static str
+pub vyre_lower::ScanConstructIntentMapping::required_intents: &'static [vyre_lower::descriptor::DescriptorIntentKind]
+pub vyre_lower::ScanConstructIntentMapping::tier: &'static str
+pub vyre_lower::ScanConstructIntentMapping::verifier_fragment_id: core::option::Option<&'static str>
+pub vyre_lower::SubgroupCapabilities::arithmetic: bool
+pub vyre_lower::SubgroupCapabilities::ballot: bool
+pub vyre_lower::SubgroupCapabilities::basic: bool
+pub vyre_lower::SubgroupCapabilities::shuffle: bool
+pub vyre_lower::VerifiedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_lower::VerifiedLowering::descriptor_stats: vyre_lower::rewrites::OptimizationStats
+pub vyre_lower::VerifiedLowering::program: vyre_foundation::ir_inner::model::program::core::Program
+pub vyre_lower::VerifyError::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::VerifyError::kind: vyre_lower::verify::VerifyErrorKind
+pub vyre_lower::VerifyError::op_index: usize
+pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange
+pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange::body_idx: u32
+pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange::child_count: usize
+pub vyre_lower::VerifyErrorKind::ChildBodyIndexOutOfRange::operand_pos: usize
+pub vyre_lower::VerifyErrorKind::DanglingResultRef
+pub vyre_lower::VerifyErrorKind::DanglingResultRef::operand_pos: usize
+pub vyre_lower::VerifyErrorKind::DanglingResultRef::ref_id: u32
+pub vyre_lower::VerifyErrorKind::DispatchZeroDim
+pub vyre_lower::VerifyErrorKind::DispatchZeroDim::axis: u8
+pub vyre_lower::VerifyErrorKind::DuplicateBindingSlotId
+pub vyre_lower::VerifyErrorKind::DuplicateBindingSlotId::slot: u32
+pub vyre_lower::VerifyErrorKind::DuplicateResultId(u32)
+pub vyre_lower::VerifyErrorKind::HostBindingInWorkgroupRange
+pub vyre_lower::VerifyErrorKind::HostBindingInWorkgroupRange::slot: u32
+pub vyre_lower::VerifyErrorKind::LiteralOpMissingPoolOperand
+pub vyre_lower::VerifyErrorKind::LiteralPoolOutOfRange
+pub vyre_lower::VerifyErrorKind::LiteralPoolOutOfRange::operand_pos: usize
+pub vyre_lower::VerifyErrorKind::LiteralPoolOutOfRange::pool_idx: u32
+pub vyre_lower::VerifyErrorKind::LiteralPoolOutOfRange::pool_size: usize
+pub vyre_lower::VerifyErrorKind::OperandCountTooShort
+pub vyre_lower::VerifyErrorKind::OperandCountTooShort::expected_min: usize
+pub vyre_lower::VerifyErrorKind::OperandCountTooShort::got: usize
+pub vyre_lower::VerifyErrorKind::ResultIdReusedAcrossBodies
+pub vyre_lower::VerifyErrorKind::ResultIdReusedAcrossBodies::first_body_path: alloc::vec::Vec<usize>
+pub vyre_lower::VerifyErrorKind::ResultIdReusedAcrossBodies::result: u32
+pub vyre_lower::VerifyErrorKind::WorkgroupBindingInHostRange
+pub vyre_lower::VerifyErrorKind::WorkgroupBindingInHostRange::slot: u32
+pub vyre_lower::VerifyFailure::Input(alloc::vec::Vec<vyre_lower::verify::VerifyError>)
+pub vyre_lower::VerifyFailure::Output(alloc::vec::Vec<vyre_lower::verify::VerifyError>)
+pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded
+pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded::actual: u32
+pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded::axis: u8
+pub vyre_lower::WorkgroupLimitViolation::DimensionExceeded::limit: u32
+pub vyre_lower::WorkgroupLimitViolation::InvocationsExceeded
+pub vyre_lower::WorkgroupLimitViolation::InvocationsExceeded::actual: u32
+pub vyre_lower::WorkgroupLimitViolation::InvocationsExceeded::limit: u32
+pub vyre_lower::WorkgroupLimitViolation::ZeroDimension
+pub vyre_lower::WorkgroupLimitViolation::ZeroDimension::axis: u8
+pub vyre_lower::WorkgroupLimits::max_invocations: u32
+pub vyre_lower::WorkgroupLimits::max_size: [u32; 3]
+pub vyre_lower::analyses::AccessKind::Load
+pub vyre_lower::analyses::AccessKind::Store
+pub vyre_lower::analyses::BankConflictReport::bank_count: u32
+pub vyre_lower::analyses::BankConflictReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::BankConflictReport::sites: alloc::vec::Vec<vyre_lower::analyses::bank_conflict::report::BankAccessSite>
+pub vyre_lower::analyses::CoalescenceReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::CoalescenceReport::sites: alloc::vec::Vec<vyre_lower::analyses::coalesce::report::AccessSite>
+pub vyre_lower::analyses::CommonSubexprReport::groups: alloc::vec::Vec<vyre_lower::analyses::common_subexpr::EquivalenceGroup>
+pub vyre_lower::analyses::CommonSubexprReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::ConstBufferPlan::budget_bytes: u32
+pub vyre_lower::analyses::ConstBufferPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate>
+pub vyre_lower::analyses::ConstBufferPlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::ConstBufferPlan::total_bytes: u32
+pub vyre_lower::analyses::DeadOpReport::dead_op_indices: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::DeadOpReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::DeadOpReport::total_op_count: u32
+pub vyre_lower::analyses::DefUseReport::bodies: alloc::vec::Vec<vyre_lower::analyses::def_use::PerBodyChains>
+pub vyre_lower::analyses::IntRange::max: i64
+pub vyre_lower::analyses::IntRange::min: i64
+pub vyre_lower::analyses::OpHistogram::arithmetic: u32
+pub vyre_lower::analyses::OpHistogram::builtin: u32
+pub vyre_lower::analyses::OpHistogram::control_flow: u32
+pub vyre_lower::analyses::OpHistogram::literal: u32
+pub vyre_lower::analyses::OpHistogram::memory: u32
+pub vyre_lower::analyses::OpHistogram::other: u32
+pub vyre_lower::analyses::OpHistogram::subgroup: u32
+pub vyre_lower::analyses::PerBodyChains::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::PerBodyChains::def_count: usize
+pub vyre_lower::analyses::PerBodyChains::use_count: usize
+pub vyre_lower::analyses::PerBodyChains::uses: rustc_hash::FxHashMap<u32, alloc::vec::Vec<vyre_lower::analyses::def_use::UseSite>>
+pub vyre_lower::analyses::PromotionPlan::budget_bytes: u32
+pub vyre_lower::analyses::PromotionPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
+pub vyre_lower::analyses::PromotionPlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::PromotionPlan::total_tile_bytes: u32
+pub vyre_lower::analyses::UseSite::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::UseSite::op_index: usize
+pub vyre_lower::analyses::UseSite::operand_pos: usize
+pub vyre_lower::analyses::ValueRangeReport::invalidated_from: rustc_hash::FxHashMap<u32, usize>
+pub vyre_lower::analyses::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::value_range::IntRange>
+pub vyre_lower::analyses::WorkgroupUniformReport::branches: alloc::vec::Vec<vyre_lower::analyses::workgroup_uniform::report::BranchSite>
+pub vyre_lower::analyses::WorkgroupUniformReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::access_kind::AccessKind::Load
+pub vyre_lower::analyses::access_kind::AccessKind::Store
+pub vyre_lower::analyses::alias_facts::NoAliasFact::left_binding: u32
+pub vyre_lower::analyses::alias_facts::NoAliasFact::left_index: u32
+pub vyre_lower::analyses::alias_facts::NoAliasFact::right_binding: u32
+pub vyre_lower::analyses::alias_facts::NoAliasFact::right_index: u32
+pub vyre_lower::analyses::alias_import::NoAliasFact::left_binding: u32
+pub vyre_lower::analyses::alias_import::NoAliasFact::left_index: u32
+pub vyre_lower::analyses::alias_import::NoAliasFact::right_binding: u32
+pub vyre_lower::analyses::alias_import::NoAliasFact::right_index: u32
+pub vyre_lower::analyses::bank_conflict::BankAccessSite::binding_slot: u32
+pub vyre_lower::analyses::bank_conflict::BankAccessSite::conflict: vyre_lower::analyses::bank_conflict::report::BankConflictKind
+pub vyre_lower::analyses::bank_conflict::BankAccessSite::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_lower::analyses::bank_conflict::BankAccessSite::op_index: usize
+pub vyre_lower::analyses::bank_conflict::BankConflictKind::BroadcastSafe
+pub vyre_lower::analyses::bank_conflict::BankConflictKind::Conflict
+pub vyre_lower::analyses::bank_conflict::BankConflictKind::Conflict::way_count: u32
+pub vyre_lower::analyses::bank_conflict::BankConflictKind::NoConflict
+pub vyre_lower::analyses::bank_conflict::BankConflictKind::Unknown
+pub vyre_lower::analyses::bank_conflict::BankConflictReport::bank_count: u32
+pub vyre_lower::analyses::bank_conflict::BankConflictReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::bank_conflict::BankConflictReport::sites: alloc::vec::Vec<vyre_lower::analyses::bank_conflict::report::BankAccessSite>
+pub vyre_lower::analyses::bank_conflict::ConflictSeverity::Critical
+pub vyre_lower::analyses::bank_conflict::ConflictSeverity::Mild
+pub vyre_lower::analyses::bank_conflict::ConflictSeverity::None
+pub vyre_lower::analyses::bank_conflict::ConflictSeverity::Severe
+pub vyre_lower::analyses::bank_conflict::ConflictSeverity::Unknown
+pub vyre_lower::analyses::bank_conflict::report::BankAccessSite::binding_slot: u32
+pub vyre_lower::analyses::bank_conflict::report::BankAccessSite::conflict: vyre_lower::analyses::bank_conflict::report::BankConflictKind
+pub vyre_lower::analyses::bank_conflict::report::BankAccessSite::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_lower::analyses::bank_conflict::report::BankAccessSite::op_index: usize
+pub vyre_lower::analyses::bank_conflict::report::BankConflictKind::BroadcastSafe
+pub vyre_lower::analyses::bank_conflict::report::BankConflictKind::Conflict
+pub vyre_lower::analyses::bank_conflict::report::BankConflictKind::Conflict::way_count: u32
+pub vyre_lower::analyses::bank_conflict::report::BankConflictKind::NoConflict
+pub vyre_lower::analyses::bank_conflict::report::BankConflictKind::Unknown
+pub vyre_lower::analyses::bank_conflict::report::BankConflictReport::bank_count: u32
+pub vyre_lower::analyses::bank_conflict::report::BankConflictReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::bank_conflict::report::BankConflictReport::sites: alloc::vec::Vec<vyre_lower::analyses::bank_conflict::report::BankAccessSite>
+pub vyre_lower::analyses::bank_conflict::report::ConflictSeverity::Critical
+pub vyre_lower::analyses::bank_conflict::report::ConflictSeverity::Mild
+pub vyre_lower::analyses::bank_conflict::report::ConflictSeverity::None
+pub vyre_lower::analyses::bank_conflict::report::ConflictSeverity::Severe
+pub vyre_lower::analyses::bank_conflict::report::ConflictSeverity::Unknown
+pub vyre_lower::analyses::candidate_plan::CandidatePlan::candidates: alloc::vec::Vec<Candidate>
+pub vyre_lower::analyses::candidate_plan::CandidatePlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::coalesce::AccessPattern::Broadcast
+pub vyre_lower::analyses::coalesce::AccessPattern::CoalescedUnitStride
+pub vyre_lower::analyses::coalesce::AccessPattern::Scattered
+pub vyre_lower::analyses::coalesce::AccessPattern::Strided
+pub vyre_lower::analyses::coalesce::AccessPattern::Strided::stride: u32
+pub vyre_lower::analyses::coalesce::AccessSite::binding_slot: u32
+pub vyre_lower::analyses::coalesce::AccessSite::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_lower::analyses::coalesce::AccessSite::op_index: usize
+pub vyre_lower::analyses::coalesce::AccessSite::pattern: vyre_lower::analyses::coalesce::report::AccessPattern
+pub vyre_lower::analyses::coalesce::CoalescenceReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::coalesce::CoalescenceReport::sites: alloc::vec::Vec<vyre_lower::analyses::coalesce::report::AccessSite>
+pub vyre_lower::analyses::coalesce::report::AccessPattern::Broadcast
+pub vyre_lower::analyses::coalesce::report::AccessPattern::CoalescedUnitStride
+pub vyre_lower::analyses::coalesce::report::AccessPattern::Scattered
+pub vyre_lower::analyses::coalesce::report::AccessPattern::Strided
+pub vyre_lower::analyses::coalesce::report::AccessPattern::Strided::stride: u32
+pub vyre_lower::analyses::coalesce::report::AccessSite::binding_slot: u32
+pub vyre_lower::analyses::coalesce::report::AccessSite::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_lower::analyses::coalesce::report::AccessSite::op_index: usize
+pub vyre_lower::analyses::coalesce::report::AccessSite::pattern: vyre_lower::analyses::coalesce::report::AccessPattern
+pub vyre_lower::analyses::coalesce::report::CoalescenceReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::coalesce::report::CoalescenceReport::sites: alloc::vec::Vec<vyre_lower::analyses::coalesce::report::AccessSite>
+pub vyre_lower::analyses::coalesce::report::CoalescenceRewrite::BroadcastStoreReduction
+pub vyre_lower::analyses::coalesce::report::CoalescenceRewrite::SharedMemoryGather
+pub vyre_lower::analyses::coalesce::report::CoalescenceRewrite::VectorPackOrTile
+pub vyre_lower::analyses::coalesce::report::CoalescenceWarning::code: &'static str
+pub vyre_lower::analyses::coalesce::report::CoalescenceWarning::message: alloc::string::String
+pub vyre_lower::analyses::coalesce::report::CoalescenceWarning::rewrite: vyre_lower::analyses::coalesce::report::CoalescenceRewrite
+pub vyre_lower::analyses::coalesce::report::CoalescenceWarning::site: vyre_lower::analyses::coalesce::report::AccessSite
+pub vyre_lower::analyses::common_subexpr::CommonSubexprReport::groups: alloc::vec::Vec<vyre_lower::analyses::common_subexpr::EquivalenceGroup>
+pub vyre_lower::analyses::common_subexpr::CommonSubexprReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::common_subexpr::EquivalenceGroup::op_indices: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate::binding_slot: u32
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate::bytes: u32
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate::load_count: u32
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferPlan::budget_bytes: u32
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::const_buffer_promote::ConstBufferCandidate>
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferPlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::const_buffer_promote::ConstBufferPlan::total_bytes: u32
+pub vyre_lower::analyses::dead_op::DeadOpReport::dead_op_indices: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::dead_op::DeadOpReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::dead_op::DeadOpReport::total_op_count: u32
+pub vyre_lower::analyses::def_use::DefUseReport::bodies: alloc::vec::Vec<vyre_lower::analyses::def_use::PerBodyChains>
+pub vyre_lower::analyses::def_use::PerBodyChains::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::def_use::PerBodyChains::def_count: usize
+pub vyre_lower::analyses::def_use::PerBodyChains::use_count: usize
+pub vyre_lower::analyses::def_use::PerBodyChains::uses: rustc_hash::FxHashMap<u32, alloc::vec::Vec<vyre_lower::analyses::def_use::UseSite>>
+pub vyre_lower::analyses::def_use::UseSite::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::def_use::UseSite::op_index: usize
+pub vyre_lower::analyses::def_use::UseSite::operand_pos: usize
+pub vyre_lower::analyses::layout_aos_to_soa::LayoutCandidate::binding_slot: u32
+pub vyre_lower::analyses::layout_aos_to_soa::LayoutCandidate::component_count: u32
+pub vyre_lower::analyses::layout_aos_to_soa::LayoutCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::layout_aos_to_soa::LayoutCandidate::load_count: u32
+pub vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate::binding_slot: u32
+pub vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate::component_count: u32
+pub vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate::load_count: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::arithmetic: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::builtin: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::control_flow: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::literal: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::memory: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::other: u32
+pub vyre_lower::analyses::op_histogram::OpHistogram::subgroup: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::access_count: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::binding_slot: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::bytes_per_element: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::distinct_indices_per_workgroup: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::shared_mem_promote::PromotionCandidate::tile_bytes: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionPlan::budget_bytes: u32
+pub vyre_lower::analyses::shared_mem_promote::PromotionPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
+pub vyre_lower::analyses::shared_mem_promote::PromotionPlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::shared_mem_promote::PromotionPlan::total_tile_bytes: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::access_count: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::binding_slot: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::bytes_per_element: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::distinct_indices_per_workgroup: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate::tile_bytes: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::budget_bytes: u32
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::candidates: alloc::vec::Vec<vyre_lower::analyses::shared_mem_promote::plan::PromotionCandidate>
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::kernel_id: alloc::string::String
+pub vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan::total_tile_bytes: u32
+pub vyre_lower::analyses::texture_promote::TextureCandidate::binding_slot: u32
+pub vyre_lower::analyses::texture_promote::TextureCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::texture_promote::TextureCandidate::load_count: u32
+pub vyre_lower::analyses::texture_promote::plan::TextureCandidate::binding_slot: u32
+pub vyre_lower::analyses::texture_promote::plan::TextureCandidate::estimated_speedup_factor: f32
+pub vyre_lower::analyses::texture_promote::plan::TextureCandidate::load_count: u32
+pub vyre_lower::analyses::value_range::IntRange::max: i64
+pub vyre_lower::analyses::value_range::IntRange::min: i64
+pub vyre_lower::analyses::value_range::ValueRangeReport::invalidated_from: rustc_hash::FxHashMap<u32, usize>
+pub vyre_lower::analyses::value_range::ValueRangeReport::ranges: rustc_hash::FxHashMap<u32, vyre_lower::analyses::value_range::IntRange>
+pub vyre_lower::analyses::vec_pack::VecPackChain::op_indices: alloc::vec::Vec<usize>
+pub vyre_lower::analyses::vec_pack::VecPackChain::slot: u32
+pub vyre_lower::analyses::vec_pack::VecPackChain::start_index: u32
+pub vyre_lower::analyses::vec_pack::VecPackReport::chains: alloc::vec::Vec<vyre_lower::analyses::vec_pack::VecPackChain>
+pub vyre_lower::analyses::vec_pack::VecPackReport::total_ops_eliminated: u32
+pub vyre_lower::analyses::workgroup_uniform::BranchSite::cond_operand_id: u32
+pub vyre_lower::analyses::workgroup_uniform::BranchSite::op_index: usize
+pub vyre_lower::analyses::workgroup_uniform::BranchSite::uniformity: vyre_lower::analyses::workgroup_uniform::report::BranchUniformity
+pub vyre_lower::analyses::workgroup_uniform::BranchUniformity::Divergent
+pub vyre_lower::analyses::workgroup_uniform::BranchUniformity::Uniform
+pub vyre_lower::analyses::workgroup_uniform::BranchUniformity::Unknown
+pub vyre_lower::analyses::workgroup_uniform::WorkgroupUniformReport::branches: alloc::vec::Vec<vyre_lower::analyses::workgroup_uniform::report::BranchSite>
+pub vyre_lower::analyses::workgroup_uniform::WorkgroupUniformReport::kernel_id: alloc::string::String
+pub vyre_lower::analyses::workgroup_uniform::report::BranchEmitHint::DivergentControlFlow
+pub vyre_lower::analyses::workgroup_uniform::report::BranchEmitHint::NeedsProfile
+pub vyre_lower::analyses::workgroup_uniform::report::BranchEmitHint::UniformControlFlow
+pub vyre_lower::analyses::workgroup_uniform::report::BranchHint::code: &'static str
+pub vyre_lower::analyses::workgroup_uniform::report::BranchHint::hint: vyre_lower::analyses::workgroup_uniform::report::BranchEmitHint
+pub vyre_lower::analyses::workgroup_uniform::report::BranchHint::message: alloc::string::String
+pub vyre_lower::analyses::workgroup_uniform::report::BranchHint::site: vyre_lower::analyses::workgroup_uniform::report::BranchSite
+pub vyre_lower::analyses::workgroup_uniform::report::BranchSite::cond_operand_id: u32
+pub vyre_lower::analyses::workgroup_uniform::report::BranchSite::op_index: usize
+pub vyre_lower::analyses::workgroup_uniform::report::BranchSite::uniformity: vyre_lower::analyses::workgroup_uniform::report::BranchUniformity
+pub vyre_lower::analyses::workgroup_uniform::report::BranchUniformity::Divergent
+pub vyre_lower::analyses::workgroup_uniform::report::BranchUniformity::Uniform
+pub vyre_lower::analyses::workgroup_uniform::report::BranchUniformity::Unknown
+pub vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport::branches: alloc::vec::Vec<vyre_lower::analyses::workgroup_uniform::report::BranchSite>
+pub vyre_lower::analyses::workgroup_uniform::report::WorkgroupUniformReport::kernel_id: alloc::string::String
+pub vyre_lower::audit::PerfAuditReport::bank_conflict: vyre_lower::analyses::bank_conflict::report::BankConflictReport
+pub vyre_lower::audit::PerfAuditReport::coalesce: vyre_lower::analyses::coalesce::report::CoalescenceReport
+pub vyre_lower::audit::PerfAuditReport::kernel_id: alloc::string::String
+pub vyre_lower::audit::PerfAuditReport::recommendations: alloc::vec::Vec<vyre_lower::audit::Recommendation>
+pub vyre_lower::audit::PerfAuditReport::shared_mem: vyre_lower::analyses::shared_mem_promote::plan::PromotionPlan
+pub vyre_lower::audit::PerfAuditReport::waste_score: f32
+pub vyre_lower::audit::Recommendation::category: vyre_lower::audit::RecommendationCategory
+pub vyre_lower::audit::Recommendation::estimated_speedup_upper_bound: f32
+pub vyre_lower::audit::Recommendation::message: alloc::string::String
+pub vyre_lower::audit::Recommendation::priority: u32
+pub vyre_lower::audit::RecommendationCategory::BankConflict
+pub vyre_lower::audit::RecommendationCategory::Coalesce
+pub vyre_lower::audit::RecommendationCategory::SharedMemPromote
+pub vyre_lower::descriptor::BindingLayout::slots: alloc::vec::Vec<vyre_lower::descriptor::BindingSlot>
+pub vyre_lower::descriptor::BindingSlot::element_count: core::option::Option<u32>
+pub vyre_lower::descriptor::BindingSlot::element_type: vyre_spec::data_type::DataType
+pub vyre_lower::descriptor::BindingSlot::memory_class: vyre_lower::descriptor::MemoryClass
+pub vyre_lower::descriptor::BindingSlot::name: alloc::string::String
+pub vyre_lower::descriptor::BindingSlot::slot: u32
+pub vyre_lower::descriptor::BindingSlot::visibility: vyre_lower::descriptor::BindingVisibility
+pub vyre_lower::descriptor::BindingVisibility::ReadOnly
+pub vyre_lower::descriptor::BindingVisibility::ReadWrite
+pub vyre_lower::descriptor::BindingVisibility::WriteOnly
+pub vyre_lower::descriptor::DescriptorIntent::binding_slot: core::option::Option<u32>
+pub vyre_lower::descriptor::DescriptorIntent::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::descriptor::DescriptorIntent::op_result: core::option::Option<u32>
+pub vyre_lower::descriptor::DescriptorIntent::relation_arity: u16
+pub vyre_lower::descriptor::DescriptorIntent::section_digest: u64
+pub vyre_lower::descriptor::DescriptorIntent::stream_state_bytes: u32
+pub vyre_lower::descriptor::DescriptorIntentError::EmptyIntentSet
+pub vyre_lower::descriptor::DescriptorIntentError::MissingRelationArity
+pub vyre_lower::descriptor::DescriptorIntentError::MissingSectionDigest
+pub vyre_lower::descriptor::DescriptorIntentError::MissingSectionDigest::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::descriptor::DescriptorIntentError::MissingStreamingStateBytes
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownBindingSlot
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownBindingSlot::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownBindingSlot::slot: u32
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownOpResult
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownOpResult::kind: vyre_lower::descriptor::DescriptorIntentKind
+pub vyre_lower::descriptor::DescriptorIntentError::UnknownOpResult::result: u32
+pub vyre_lower::descriptor::DescriptorIntentError::UnsupportedSchemaVersion
+pub vyre_lower::descriptor::DescriptorIntentError::UnsupportedSchemaVersion::actual: u32
+pub vyre_lower::descriptor::DescriptorIntentError::UnsupportedSchemaVersion::expected: u32
+pub vyre_lower::descriptor::DescriptorIntentEvidence::descriptor_id: alloc::string::String
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_automata_transition: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_literal_prefilter: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_output_compaction: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_relation_seed: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_streaming_state: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::has_verifier: bool
+pub vyre_lower::descriptor::DescriptorIntentEvidence::intent_count: usize
+pub vyre_lower::descriptor::DescriptorIntentEvidence::schema_version: u32
+pub vyre_lower::descriptor::DescriptorIntentEvidence::strategy_digest: u64
+pub vyre_lower::descriptor::DescriptorIntentKind::AutomataTransition
+pub vyre_lower::descriptor::DescriptorIntentKind::LiteralPrefilter
+pub vyre_lower::descriptor::DescriptorIntentKind::OutputCompaction
+pub vyre_lower::descriptor::DescriptorIntentKind::RelationSeed
+pub vyre_lower::descriptor::DescriptorIntentKind::StreamingState
+pub vyre_lower::descriptor::DescriptorIntentKind::Verifier
+pub vyre_lower::descriptor::DescriptorIntentSet::intents: alloc::vec::Vec<vyre_lower::descriptor::DescriptorIntent>
+pub vyre_lower::descriptor::DescriptorIntentSet::schema_version: u32
+pub vyre_lower::descriptor::DescriptorIntentStrategy::Automata
+pub vyre_lower::descriptor::DescriptorIntentStrategy::Compaction
+pub vyre_lower::descriptor::DescriptorIntentStrategy::Prefilter
+pub vyre_lower::descriptor::DescriptorIntentStrategy::RelationSeed
+pub vyre_lower::descriptor::DescriptorIntentStrategy::Streaming
+pub vyre_lower::descriptor::DescriptorIntentStrategy::Verifier
+pub vyre_lower::descriptor::Dispatch::workgroup_size: [u32; 3]
+pub vyre_lower::descriptor::IntentAnnotatedDescriptor::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_lower::descriptor::IntentAnnotatedDescriptor::intents: vyre_lower::descriptor::DescriptorIntentSet
+pub vyre_lower::descriptor::KernelBody::child_bodies: alloc::vec::Vec<vyre_lower::descriptor::KernelBody>
+pub vyre_lower::descriptor::KernelBody::literals: alloc::vec::Vec<vyre_lower::descriptor::LiteralValue>
+pub vyre_lower::descriptor::KernelBody::ops: alloc::vec::Vec<vyre_lower::descriptor::KernelOp>
+pub vyre_lower::descriptor::KernelDescriptor::bindings: vyre_lower::descriptor::BindingLayout
+pub vyre_lower::descriptor::KernelDescriptor::body: vyre_lower::descriptor::KernelBody
+pub vyre_lower::descriptor::KernelDescriptor::dispatch: vyre_lower::descriptor::Dispatch
+pub vyre_lower::descriptor::KernelDescriptor::id: alloc::string::String
+pub vyre_lower::descriptor::KernelOp::kind: vyre_lower::descriptor::KernelOpKind
+pub vyre_lower::descriptor::KernelOp::operands: alloc::vec::Vec<u32>
+pub vyre_lower::descriptor::KernelOp::result: core::option::Option<u32>
+pub vyre_lower::descriptor::KernelOpKind::AsyncLoad
+pub vyre_lower::descriptor::KernelOpKind::AsyncLoad::tag: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::AsyncStore
+pub vyre_lower::descriptor::KernelOpKind::AsyncStore::tag: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::AsyncWait
+pub vyre_lower::descriptor::KernelOpKind::AsyncWait::tag: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::Atomic
+pub vyre_lower::descriptor::KernelOpKind::Atomic::op: vyre_spec::atomic_op::AtomicOp
+pub vyre_lower::descriptor::KernelOpKind::Atomic::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::descriptor::KernelOpKind::Barrier
+pub vyre_lower::descriptor::KernelOpKind::Barrier::ordering: vyre_foundation::memory_model::MemoryOrdering
+pub vyre_lower::descriptor::KernelOpKind::BinOpKind(vyre_spec::bin_op::BinOp)
+pub vyre_lower::descriptor::KernelOpKind::BufferLength
+pub vyre_lower::descriptor::KernelOpKind::Call
+pub vyre_lower::descriptor::KernelOpKind::Call::op_id: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::Cast
+pub vyre_lower::descriptor::KernelOpKind::Cast::target: vyre_spec::data_type::DataType
+pub vyre_lower::descriptor::KernelOpKind::Copy
+pub vyre_lower::descriptor::KernelOpKind::Fma
+pub vyre_lower::descriptor::KernelOpKind::GlobalInvocationId
+pub vyre_lower::descriptor::KernelOpKind::IndirectDispatch
+pub vyre_lower::descriptor::KernelOpKind::IndirectDispatch::count_offset: u64
+pub vyre_lower::descriptor::KernelOpKind::Literal
+pub vyre_lower::descriptor::KernelOpKind::LoadConstant
+pub vyre_lower::descriptor::KernelOpKind::LoadGlobal
+pub vyre_lower::descriptor::KernelOpKind::LoadShared
+pub vyre_lower::descriptor::KernelOpKind::LocalInvocationId
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrier
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrier::name: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrierEnd
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrierEnd::name: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrierInit
+pub vyre_lower::descriptor::KernelOpKind::LoopCarrierInit::name: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::LoopIndex
+pub vyre_lower::descriptor::KernelOpKind::LoopIndex::loop_var: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::a_layout: vyre_lower::descriptor::MatrixMmaLayout
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::a_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::accum_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::b_layout: vyre_lower::descriptor::MatrixMmaLayout
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::b_type: vyre_lower::descriptor::MatrixMmaElement
+pub vyre_lower::descriptor::KernelOpKind::MatrixMma::shape: vyre_lower::descriptor::MatrixMmaShape
+pub vyre_lower::descriptor::KernelOpKind::OpaqueExpr(alloc::boxed::Box<vyre_lower::descriptor::OpaqueExprData>)
+pub vyre_lower::descriptor::KernelOpKind::OpaqueNode(alloc::boxed::Box<vyre_lower::descriptor::OpaqueNodeData>)
+pub vyre_lower::descriptor::KernelOpKind::Region
+pub vyre_lower::descriptor::KernelOpKind::Region::generator: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::Resume
+pub vyre_lower::descriptor::KernelOpKind::Resume::tag: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::Return
+pub vyre_lower::descriptor::KernelOpKind::Select
+pub vyre_lower::descriptor::KernelOpKind::StoreGlobal
+pub vyre_lower::descriptor::KernelOpKind::StoreShared
+pub vyre_lower::descriptor::KernelOpKind::StructuredBlock
+pub vyre_lower::descriptor::KernelOpKind::StructuredForLoop
+pub vyre_lower::descriptor::KernelOpKind::StructuredForLoop::loop_var: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::StructuredIfThen
+pub vyre_lower::descriptor::KernelOpKind::StructuredIfThenElse
+pub vyre_lower::descriptor::KernelOpKind::SubgroupBallot
+pub vyre_lower::descriptor::KernelOpKind::SubgroupBroadcast
+pub vyre_lower::descriptor::KernelOpKind::SubgroupLocalId
+pub vyre_lower::descriptor::KernelOpKind::SubgroupReduce
+pub vyre_lower::descriptor::KernelOpKind::SubgroupReduce::op: vyre_spec::subgroup_reduce_op::SubgroupReduceOp
+pub vyre_lower::descriptor::KernelOpKind::SubgroupShuffle
+pub vyre_lower::descriptor::KernelOpKind::SubgroupSize
+pub vyre_lower::descriptor::KernelOpKind::Trap
+pub vyre_lower::descriptor::KernelOpKind::Trap::tag: vyre_lower::descriptor::Name
+pub vyre_lower::descriptor::KernelOpKind::UnOpKind(vyre_spec::un_op::UnOp)
+pub vyre_lower::descriptor::KernelOpKind::WorkgroupId
+pub vyre_lower::descriptor::LiteralValue::Bool(bool)
+pub vyre_lower::descriptor::LiteralValue::F32(f32)
+pub vyre_lower::descriptor::LiteralValue::I32(i32)
+pub vyre_lower::descriptor::LiteralValue::U32(u32)
+pub vyre_lower::descriptor::MatrixMmaElement::BF16
+pub vyre_lower::descriptor::MatrixMmaElement::F16
+pub vyre_lower::descriptor::MatrixMmaElement::F32
+pub vyre_lower::descriptor::MatrixMmaElement::TF32
+pub vyre_lower::descriptor::MatrixMmaLayout::ColMajor
+pub vyre_lower::descriptor::MatrixMmaLayout::RowMajor
+pub vyre_lower::descriptor::MatrixMmaShape::M16N8K16
+pub vyre_lower::descriptor::MemoryClass::Constant
+pub vyre_lower::descriptor::MemoryClass::Global
+pub vyre_lower::descriptor::MemoryClass::Scratch
+pub vyre_lower::descriptor::MemoryClass::Shared
+pub vyre_lower::descriptor::MemoryClass::Uniform
+pub vyre_lower::descriptor::OpaqueExprData::extension_id: u32
+pub vyre_lower::descriptor::OpaqueExprData::extension_kind: alloc::string::String
+pub vyre_lower::descriptor::OpaqueExprData::payload: alloc::vec::Vec<u8>
+pub vyre_lower::descriptor::OpaqueNodeData::extension_kind: alloc::string::String
+pub vyre_lower::descriptor::OpaqueNodeData::payload: alloc::vec::Vec<u8>
+pub vyre_lower::descriptor::ScanConstructIntentClass::Automata
+pub vyre_lower::descriptor::ScanConstructIntentClass::Derivative
+pub vyre_lower::descriptor::ScanConstructIntentClass::ExternalAccelerator
+pub vyre_lower::descriptor::ScanConstructIntentClass::Literal
+pub vyre_lower::descriptor::ScanConstructIntentClass::Verifier
+pub vyre_lower::descriptor::ScanConstructIntentMapping::classes: &'static [vyre_lower::descriptor::ScanConstructIntentClass]
+pub vyre_lower::descriptor::ScanConstructIntentMapping::construct_id: &'static str
+pub vyre_lower::descriptor::ScanConstructIntentMapping::required_intents: &'static [vyre_lower::descriptor::DescriptorIntentKind]
+pub vyre_lower::descriptor::ScanConstructIntentMapping::tier: &'static str
+pub vyre_lower::descriptor::ScanConstructIntentMapping::verifier_fragment_id: core::option::Option<&'static str>
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Cuda
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Metal
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Naga
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Ptx
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Spirv
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend::Wgpu
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::family: vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::id: &'static str
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialCase::outcome: vyre_lower::emit_adversarial_corpus::EmitOutcome
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::AtomicCounter
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::DeadIdentityChain
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::DeepIfElse
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::HostileWorkgroup
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::LoopWithBarrier
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::MultiBinding
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::RejectCall
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::RejectGridSyncBarrier
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::SharedGlobalTile
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::SignedBufferArithmetic
+pub vyre_lower::emit_adversarial_corpus::EmitAdversarialFamily::VecLoadFusion
+pub vyre_lower::emit_adversarial_corpus::EmitOutcome::Reject
+pub vyre_lower::emit_adversarial_corpus::EmitOutcome::Success
+pub vyre_lower::error::LowerError::InvalidProgram(alloc::string::String)
+pub vyre_lower::error::LowerError::NestingTooDeep(usize)
+pub vyre_lower::error::LowerError::OperandIdOverflow
+pub vyre_lower::error::LowerError::UndeclaredBuffer(alloc::string::String)
+pub vyre_lower::error::LowerError::UnsupportedConstruct(alloc::string::String)
+pub vyre_lower::optimization_corpus::OptimizationCorpusCase::descriptor: vyre_lower::descriptor::KernelDescriptor
+pub vyre_lower::optimization_corpus::OptimizationCorpusCase::family: alloc::string::String
+pub vyre_lower::optimization_corpus::OptimizationCorpusCase::id: alloc::string::String
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::blockers: alloc::vec::Vec<alloc::string::String>
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::dataflow_analysis_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::dataflow_analysis_optimized_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::families: alloc::vec::Vec<vyre_lower::optimization_corpus::OptimizationFamilyCount>
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::generated_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::non_converged_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::optimized_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::required_min_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::schema_version: u32
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::total_ops_after: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::total_ops_before: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusManifest::verified_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::blockers: alloc::vec::Vec<alloc::string::String>
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::dataflow_analysis_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::dataflow_analysis_optimized_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::non_converged_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::optimized_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::total_ops_after: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::total_ops_before: usize
+pub vyre_lower::optimization_corpus::OptimizationCorpusValidation::verified_cases: usize
+pub vyre_lower::optimization_corpus::OptimizationFamilyCount::cases: usize
+pub vyre_lower::optimization_corpus::OptimizationFamilyCount::family: alloc::string::String
+pub vyre_lower::rewrites::AosSoaLayoutHint::Aos
+pub vyre_lower::rewrites::AosSoaLayoutHint::Soa
+pub vyre_lower::rewrites::MatmulTileLoopPlan::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::rewrites::MatmulTileLoopPlan::child_body_index: u32
+pub vyre_lower::rewrites::MatmulTileLoopPlan::fma_start_index: usize
+pub vyre_lower::rewrites::MatmulTileLoopPlan::loop_op_index: usize
+pub vyre_lower::rewrites::OptimizationStats::bindings_after: usize
+pub vyre_lower::rewrites::OptimizationStats::bindings_before: usize
+pub vyre_lower::rewrites::OptimizationStats::converged: bool
+pub vyre_lower::rewrites::OptimizationStats::iterations: usize
+pub vyre_lower::rewrites::OptimizationStats::literals_after: usize
+pub vyre_lower::rewrites::OptimizationStats::literals_before: usize
+pub vyre_lower::rewrites::OptimizationStats::ops_after: usize
+pub vyre_lower::rewrites::OptimizationStats::ops_before: usize
+pub vyre_lower::rewrites::aos_to_soa_promote::LayoutHint::Aos
+pub vyre_lower::rewrites::aos_to_soa_promote::LayoutHint::Soa
+pub vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplit::component_bindings: alloc::vec::Vec<vyre_lower::descriptor::BindingSlot>
+pub vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplit::first_component_slot: u32
+pub vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplit::source_slot: u32
+pub vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplitPlan::splits: alloc::vec::Vec<vyre_lower::rewrites::aos_to_soa_promote::SoaBindingSplit>
+pub vyre_lower::rewrites::egraph_saturation::SaturationLimits::max_iterations: u32
+pub vyre_lower::rewrites::egraph_saturation::SaturationLimits::max_nodes: u32
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::applied_rewrites: usize
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::equality_classes: usize
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::hit_iteration_limit: bool
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::hit_node_limit: bool
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::input_ops: usize
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::iterations: u32
+pub vyre_lower::rewrites::egraph_saturation::SaturationReport::output_ops: usize
+pub vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan::child_body_index: u32
+pub vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan::fma_start_index: usize
+pub vyre_lower::rewrites::matmul_promote::MatmulTileLoopPlan::loop_op_index: usize
+pub vyre_lower::target::EmissionTargetCapabilities::subgroup: vyre_lower::target::SubgroupCapabilities
+pub vyre_lower::target::EmissionTargetCapabilities::workgroup: vyre_lower::target::WorkgroupLimits
+pub vyre_lower::target::SubgroupCapabilities::arithmetic: bool
+pub vyre_lower::target::SubgroupCapabilities::ballot: bool
+pub vyre_lower::target::SubgroupCapabilities::basic: bool
+pub vyre_lower::target::SubgroupCapabilities::shuffle: bool
+pub vyre_lower::target::WorkgroupLimitViolation::DimensionExceeded
+pub vyre_lower::target::WorkgroupLimitViolation::DimensionExceeded::actual: u32
+pub vyre_lower::target::WorkgroupLimitViolation::DimensionExceeded::axis: u8
+pub vyre_lower::target::WorkgroupLimitViolation::DimensionExceeded::limit: u32
+pub vyre_lower::target::WorkgroupLimitViolation::InvocationsExceeded
+pub vyre_lower::target::WorkgroupLimitViolation::InvocationsExceeded::actual: u32
+pub vyre_lower::target::WorkgroupLimitViolation::InvocationsExceeded::limit: u32
+pub vyre_lower::target::WorkgroupLimitViolation::ZeroDimension
+pub vyre_lower::target::WorkgroupLimitViolation::ZeroDimension::axis: u8
+pub vyre_lower::target::WorkgroupLimits::max_invocations: u32
+pub vyre_lower::target::WorkgroupLimits::max_size: [u32; 3]
+pub vyre_lower::verify::OperandClass::ChildBodyIdx
+pub vyre_lower::verify::OperandClass::LiteralPoolIdx
+pub vyre_lower::verify::OperandClass::Other
+pub vyre_lower::verify::OperandClass::ResultRef
+pub vyre_lower::verify::VerifyError::body_path: alloc::vec::Vec<usize>
+pub vyre_lower::verify::VerifyError::kind: vyre_lower::verify::VerifyErrorKind
+pub vyre_lower::verify::VerifyError::op_index: usize
+pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange
+pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange::body_idx: u32
+pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange::child_count: usize
+pub vyre_lower::verify::VerifyErrorKind::ChildBodyIndexOutOfRange::operand_pos: usize
+pub vyre_lower::verify::VerifyErrorKind::DanglingResultRef
+pub vyre_lower::verify::VerifyErrorKind::DanglingResultRef::operand_pos: usize
+pub vyre_lower::verify::VerifyErrorKind::DanglingResultRef::ref_id: u32
+pub vyre_lower::verify::VerifyErrorKind::DispatchZeroDim
+pub vyre_lower::verify::VerifyErrorKind::DispatchZeroDim::axis: u8
+pub vyre_lower::verify::VerifyErrorKind::DuplicateBindingSlotId
+pub vyre_lower::verify::VerifyErrorKind::DuplicateBindingSlotId::slot: u32
+pub vyre_lower::verify::VerifyErrorKind::DuplicateResultId(u32)
+pub vyre_lower::verify::VerifyErrorKind::HostBindingInWorkgroupRange
+pub vyre_lower::verify::VerifyErrorKind::HostBindingInWorkgroupRange::slot: u32
+pub vyre_lower::verify::VerifyErrorKind::LiteralOpMissingPoolOperand
+pub vyre_lower::verify::VerifyErrorKind::LiteralPoolOutOfRange
+pub vyre_lower::verify::VerifyErrorKind::LiteralPoolOutOfRange::operand_pos: usize
+pub vyre_lower::verify::VerifyErrorKind::LiteralPoolOutOfRange::pool_idx: u32
+pub vyre_lower::verify::VerifyErrorKind::LiteralPoolOutOfRange::pool_size: usize
+pub vyre_lower::verify::VerifyErrorKind::OperandCountTooShort
+pub vyre_lower::verify::VerifyErrorKind::OperandCountTooShort::expected_min: usize
+pub vyre_lower::verify::VerifyErrorKind::OperandCountTooShort::got: usize
+pub vyre_lower::verify::VerifyErrorKind::ResultIdReusedAcrossBodies
+pub vyre_lower::verify::VerifyErrorKind::ResultIdReusedAcrossBodies::first_body_path: alloc::vec::Vec<usize>
+pub vyre_lower::verify::VerifyErrorKind::ResultIdReusedAcrossBodies::result: u32
+pub vyre_lower::verify::VerifyErrorKind::WorkgroupBindingInHostRange
+pub vyre_lower::verify::VerifyErrorKind::WorkgroupBindingInHostRange::slot: u32

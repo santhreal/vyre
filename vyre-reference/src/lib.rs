@@ -10,12 +10,12 @@
 //! intentionally slow and direct: every current IR expression and node variant
 //! has a named evaluator function.
 
-mod error;
-pub use error::ReferenceError;
 /// Dual-reference trait and registry types.
 pub mod dual;
 /// Canonical dual implementations and reference evaluators.
 pub mod dual_impls;
+mod error;
+pub use error::ReferenceError;
 /// Runtime value representation for interpreter inputs and outputs.
 pub mod value;
 
@@ -41,6 +41,7 @@ pub mod subgroup;
 /// Workgroup simulation: invocation IDs, shared memory.
 pub mod workgroup;
 
+mod float16;
 mod oob;
 mod ops;
 

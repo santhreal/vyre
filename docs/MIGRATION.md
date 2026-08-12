@@ -1,5 +1,9 @@
 # vyre  -  Migration Path
 
+**Status: Superseded.** This file records pre-0.7 migrations and stale open
+items. Use [`CHANGELOG.md`](../CHANGELOG.md) for shipped migrations and
+[`docs/semver-policy.md`](semver-policy.md) for current compatibility rules.
+
 vyre's public API is frozen across minor versions. Anything that
 breaks compatibility is recorded here with a migration path, deprecation
 window, and the gate that proves the migration is honored. The
@@ -22,16 +26,13 @@ breaks the contract without a migration entry below.
 ## Active compatibility migrations
 
 ### `Match` → `ByteRange`
-- **Why:** non-matching dialects (decode, future scanners) need a
-  byte-range type that does not carry matching-specific semantics
-  (`audits/VISION_ALIGNMENT_2026-04-23.md` V1).
-- **Path:** new code uses `vyre::ByteRange`; existing code keeps
-  `vyre::match_result::Match`. Zero-cost conversions both ways.
-- **Window:** `Match` stays for the entire 0.6.x line. Removal is
-  blocked until every in-workspace consumer has migrated and the
-  public API snapshot records the deletion as a semver-major change.
-- **Gate:** `scripts/check_public_api_snapshot.sh` keeps both surfaces
-  green; `audits/V7_api.toml` records the contract.
+- **Why:** non-matching dialects need a byte-range type without
+  matching-specific semantics.
+- **Path:** consumers use `vyre::ByteRange { tag, start, end }`.
+- **Status:** Complete in 0.7.2. `Match`, `LiteralMatch`, and the duplicate
+  primitive range type are removed.
+- **Gate:** `scripts/check_public_api_snapshot.sh` records the canonical
+  `ByteRange` surface.
 
 ### `vyre-ops` → `vyre-intrinsics`
 - **Why:** Cat-C hardware intrinsics moved out of the catch-all

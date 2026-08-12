@@ -13,7 +13,6 @@ use vyre_primitives::graph::adaptive_traverse::{
     four_russians_dense_columns_from_adj_rows, four_russians_dense_lut_from_adj_rows,
     four_russians_dense_lut_words, four_russians_frontier_words, four_russians_source_tile_count,
     select_dense_traversal_kernel, DenseTraversalKernel, DENSE_THRESHOLD_PCT,
-    FOUR_RUSSIANS_DENSE_OP_ID,
 };
 use vyre_reference::value::Value;
 
@@ -115,25 +114,6 @@ fn dense_kernel_selector_prefers_four_russians_only_when_reusable_and_dense() {
         select_dense_traversal_kernel(32, 32, 4),
         DenseTraversalKernel::RowScanBitmatrix
     );
-}
-
-#[test]
-fn adaptive_four_russians_source_contracts_stay_wired_to_packed_matvec() {
-    let source = include_str!("../src/graph/adaptive_traverse.rs");
-    for required in [
-        FOUR_RUSSIANS_DENSE_OP_ID,
-        "four_russians_dense_columns_from_adj_rows",
-        "four_russians_dense_lut_from_adj_rows",
-        "adaptive_four_russians_dense_step",
-        "cpu_four_russians_dense_step",
-        "four_russians_dense_matvec_byte_lut",
-        "dense_matvec_byte_lut",
-    ] {
-        assert!(
-            source.contains(required),
-            "Fix: adaptive traversal must keep Four-Russians dense marker `{required}`."
-        );
-    }
 }
 
 fn generated_dense_reverse_rows(seed: u32, node_count: u32) -> Vec<u32> {

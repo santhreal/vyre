@@ -12,7 +12,7 @@ Program walks the table one byte per step.
 - `aho_corasick` / `cooperative_dfa_scan` / `dfa_compile` /
   `dfa_compile_with_budget` (`matching-dfa`): multi-pattern scanners and
   CPU-side Aho-Corasick table builders with size-budget enforcement.
-- `RulePipeline` / `mega_scan` / NFA tables (`matching-nfa`).
+- `ScanProgram` and NFA tables (`matching-nfa`).
 - `compile_regex_set` / `regex_compile` / `RegexDfaPipeline` and related
   admission helpers (`matching-regex`, often combined with DFA features).
 - Hit packing, post-process, and fused-region evidence helpers on the

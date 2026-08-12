@@ -15,10 +15,10 @@
 //! - [`Softmax`]  -  typed builder. Accepts [`TensorRef`]s, checks dtype +
 //!   shape + name-uniqueness at [`Softmax::build`] time, returns
 //!   [`TensorRefError`] on contract violation.
-//! - [`softmax`]  -  back-compat free function. Calls the builder with
-//!   default options and lowers invalid inputs to an explicit trap.
+//! - [`softmax`]  -  name-based convenience constructor routed through the
+//!   typed builder with default options.
 //!
-//! Both paths produce the same IR. New code should prefer the builder.
+//! Both paths produce the same IR.
 
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
@@ -113,9 +113,8 @@ impl Softmax {
 
 crate::builder::impl_cat_a_builder_options!(Softmax);
 
-/// Build a softmax Program from raw buffer names. Back-compat wrapper
-/// around [`Softmax`]; panics on contract violation. New code should
-/// prefer the builder.
+/// Build a softmax Program from raw buffer names through [`Softmax`].
+/// Contract violations produce an explicit trap program.
 #[must_use]
 pub fn softmax(input: &str, output: &str, n: u32) -> Program {
     Softmax::new(TensorRef::f32_1d(input, n), TensorRef::f32_1d(output, n))

@@ -292,7 +292,10 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
     use vyre_driver::{DispatchConfig, VyreBackend};
+
+    static GPU_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn stack_carrier_snapshot_instrs() -> Vec<u32> {
         vec![
@@ -333,6 +336,9 @@ mod tests {
 
     #[test]
     fn bytecode_program_wgpu_matches_seeded_cpu_trace() {
+        let _gpu_guard = GPU_TEST_LOCK.lock().unwrap_or_else(|error| {
+            panic!("benchmark GPU test lock was poisoned: {error}");
+        });
         let instrs = stack_carrier_snapshot_instrs();
         let backend = vyre_driver_wgpu::WgpuBackend::new()
             .expect("Fix: wgpu backend must initialize on the release GPU machine");
@@ -352,6 +358,9 @@ mod tests {
 
     #[test]
     fn bytecode_program_cuda_matches_seeded_cpu_trace() {
+        let _gpu_guard = GPU_TEST_LOCK.lock().unwrap_or_else(|error| {
+            panic!("benchmark GPU test lock was poisoned: {error}");
+        });
         let instrs = stack_carrier_snapshot_instrs();
         let backend = vyre_driver_cuda::CudaBackend::acquire()
             .expect("Fix: CUDA backend must initialize on the release GPU machine");

@@ -1,3 +1,8 @@
+# VyreBackend historical reference
+
+**Status: Superseded.** Use `VyreBackend.txt` and
+`vyre-driver/src/backend/vyre_backend.rs` for the frozen contract.
+
 pub trait VyreBackend: Send + Sync {
 /// Stable backend identifier used for logging, certificates, and adapter selection.
 ///
@@ -117,9 +122,9 @@ self.dispatch(program, &owned, config)
 /// from. The cache key is the backend's responsibility  -  the framework
 /// does not deduplicate compile calls.
 ///
-/// Implementing this method is the P-6 contract from
-/// `docs/audits/ROADMAP_PERFORMANCE.md`: "compile WGSL + pipeline +
-/// bind-group-layout once; dispatch repeatedly with different inputs."
+/// Implementing this method commits the backend to compile target text,
+/// pipeline state, and binding layout once, then dispatch repeatedly with
+/// different inputs.
 ///
 /// # Errors
 ///

@@ -8,7 +8,6 @@ members = [
     "vyre-foundation",
     "vyre-megakernel",
     "vyre-driver",
-    "vyre-harness",
     "vyre-driver-metal",
     "vyre-driver-wgpu",
     "vyre-driver-spirv",
@@ -53,7 +52,6 @@ members = [
 exclude = [
     "examples/external_ir_extension",
     "examples/libs-template",
-    "examples/public_facade_smoke",
     "examples/wgpu_readwrite_count_repro",
     "vyre-foundation/fuzz",
 ]
@@ -218,7 +216,6 @@ vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }
 vyre-bench = { version = "0.7.2", path = "vyre-bench" }
 vyre-conform = { version = "0.7.2", path = "conform/vyre-conform", default-features = false }
-vyre-harness = { version = "0.7.2", path = "vyre-harness" }
 vyre-lower = { version = "0.7.2", path = "vyre-lower" }
 vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
 vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }

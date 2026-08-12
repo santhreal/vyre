@@ -9,9 +9,13 @@ use proptest::prelude::*;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::optimizer as optimize;
 use vyre_foundation::optimizer::passes::{
-    autotune::Autotune, const_fold::ConstFold, dead_buffer_elim::DeadBufferElim, fusion::Fusion,
-    normalize_atomics::NormalizeAtomicsPass, strength_reduce::StrengthReduce,
-    vectorization::Vectorization,
+    algebraic::{
+        const_fold::ConstFold, normalize_atomics::NormalizeAtomicsPass,
+        strength_reduce::StrengthReduce,
+    },
+    fusion_cse::fusion::Fusion,
+    memory::{dead_buffer_elim::DeadBufferElim, vectorization::Vectorization},
+    specialization::autotune::Autotune,
 };
 use vyre_foundation::optimizer::{PassScheduler, ProgramPassKind};
 use vyre_reference::value::Value;

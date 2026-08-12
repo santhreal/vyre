@@ -778,7 +778,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn scratch_buffer_is_declared_after_both_reported_outputs() {
         // The frontend reads outputs[0] as statements and outputs[1] as counts.

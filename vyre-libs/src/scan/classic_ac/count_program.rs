@@ -4,7 +4,7 @@ use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte_expr;
 
 use super::bounded_walk_prologue_nodes;
-use crate::scan::dfa::CompiledDfa;
+use vyre_primitives::matching::CompiledDfa;
 
 #[path = "count_program/suffix2.rs"]
 mod suffix2;

@@ -181,11 +181,7 @@ impl CudaCompiledPipeline {
             config.grid_override = Some(grid);
             config.dispatch_grid = Some(grid);
         }
-        vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(
-            self,
-            resources,
-            &config,
-        )
+        vyre_driver::CompiledPipeline::dispatch_persistent_handles_timed(self, resources, &config)
     }
 }
 

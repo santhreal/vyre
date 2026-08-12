@@ -394,10 +394,9 @@ mod tests {
     /// The spelled-name reader must decide by value, not by shape.
     ///
     /// The first version of the duplicate scan counted `concat!` occurrences.
-    /// That flagged eleven production files whose `concat!` calls assemble
-    /// shader source and have nothing to do with product names. Deciding on the
-    /// joined value keeps the guard exact: only a `concat!` that really spells a
-    /// forbidden name counts.
+    /// That flagged unrelated production strings with no consumer-name
+    /// semantics. Deciding on the joined value keeps the guard exact: only a
+    /// `concat!` that really spells a forbidden name counts.
     #[test]
     fn the_spelled_name_reader_matches_joined_values_and_ignores_unrelated_concats() {
         let name = FORBIDDEN_CONSUMER_NAMES[0];
@@ -405,7 +404,7 @@ mod tests {
         let spelled = format!("let x = concat!(\"{head}\", \"{tail}\");");
         assert_eq!(split_spelled_names(&spelled), vec![name.to_owned()]);
 
-        let unrelated = "let wgsl = concat!(\"@group(0) \", \"@binding(0)\");";
+        let unrelated = "let route = concat!(\"artifact-\", \"route\");";
         assert!(split_spelled_names(unrelated).is_empty());
 
         // Whole literals are the scanners' own business, not this reader's:

@@ -243,11 +243,11 @@ fn write_sibling_artifacts(
     }
     if manifest.dataflow_analysis_cases == 0 {
         family_blockers
-            .push("optimization corpus has zero Weir dataflow-aware DSE cases".to_string());
+            .push("optimization corpus has zero external-fact-aware DSE cases".to_string());
     }
     if manifest.dataflow_analysis_optimized_cases < manifest.dataflow_analysis_cases {
         family_blockers.push(format!(
-            "Weir dataflow-aware pipeline optimized {} of {} generated DSE case(s)",
+            "external-fact-aware pipeline optimized {} of {} generated DSE case(s)",
             manifest.dataflow_analysis_optimized_cases, manifest.dataflow_analysis_cases
         ));
     }

@@ -1,6 +1,6 @@
 //! Contract tests for RFC-0002 autodiff as an IR transform.
 
-#[path = "__split/autodiff_transform_contracts_support.rs"]
+#[path = "contract_cases/autodiff_transform_contracts_support.rs"]
 mod autodiff_transform_contracts_support;
 
 use autodiff_transform_contracts_support::{

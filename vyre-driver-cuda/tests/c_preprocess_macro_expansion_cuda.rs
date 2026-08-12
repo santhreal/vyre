@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use common::with_live_backend;
 use vyre::ir::Program;
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{
     gpu_preprocess_translation_unit, IncludeLoader, ProgramOracle,
 };

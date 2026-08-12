@@ -1,5 +1,7 @@
 # RFC 0003  -  DataType::Quantized
 
+Status: **Accepted in Vyre 0.7.2.**
+
 ## Summary
 
 Add a first-class quantization DataType:

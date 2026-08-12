@@ -10,8 +10,8 @@
 //! plus honest timing (`device_ns` is `None`: a loud absence, not a fabricated
 //! zero (on the CPU reference backend that has no device timer)).
 
-use vyre_driver_reference::CpuRefBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
 /// A haystack containing two of three patterns (`alpha`, `tango`) but not the
 /// third (`kilo`), so the global-presence bitmap has some set bits and some
@@ -26,14 +26,13 @@ fn fixture() -> (GpuLiteralSet, Vec<u8>) {
 
 #[test]
 fn timed_presence_equals_untimed_and_reports_timing() {
-    let backend = CpuRefBackend;
     let (set, haystack) = fixture();
 
     let plain = set
-        .scan_presence(&backend, &haystack)
+        .scan_presence(CPU_REF_BACKEND_ID, &haystack)
         .expect("untimed global-presence scan");
     let (timed_bitmap, timed) = set
-        .scan_presence_timed(&backend, &haystack)
+        .scan_presence_timed(CPU_REF_BACKEND_ID, &haystack)
         .expect("timed global-presence scan");
 
     // Correctness: the timed path must not change the result by a single bit.
@@ -65,13 +64,12 @@ fn timed_presence_equals_untimed_and_reports_timing() {
 fn timed_scan_is_stable_across_repeated_calls() {
     // The prepare path allocates fresh owned buffers each call; two timed scans
     // of the same input must return identical bitmaps (no cross-call state leak).
-    let backend = CpuRefBackend;
     let (set, haystack) = fixture();
     let (first, _) = set
-        .scan_presence_timed(&backend, &haystack)
+        .scan_presence_timed(CPU_REF_BACKEND_ID, &haystack)
         .expect("first timed scan");
     let (second, _) = set
-        .scan_presence_timed(&backend, &haystack)
+        .scan_presence_timed(CPU_REF_BACKEND_ID, &haystack)
         .expect("second timed scan");
     assert_eq!(first, second, "repeated timed scans must be deterministic");
 }

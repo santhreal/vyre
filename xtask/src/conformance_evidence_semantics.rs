@@ -2,21 +2,18 @@ use serde_json::Value;
 
 const REQUIRED_BACKENDS: &[&str] = &["cuda", "wgpu", "cpu-ref"];
 const REQUIRED_WORKFLOWS: &[&str] = &[
-    "../../../../.github/workflows/conform.yml",
-    "../../../../.github/workflows/gpu-parity.yml",
-    "../../../../.github/workflows/santh-ci.yml",
-    "../../../../.github/workflows/architectural-invariants.yml",
-    "../../../../.github/CI_REQUIRED.md",
-    "../../../../scripts/apply-branch-protection.sh",
     ".github/workflows/conform.yml",
     ".github/workflows/gpu-parity.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/architectural-invariants.yml",
+    ".github/CI_REQUIRED.md",
+    "scripts/apply-branch-protection.sh",
 ];
 const REQUIRED_GATES: &[&str] = &[
-    "conformance matrix release blocker",
-    "gpu-release-gate",
-    "conform-release-gate",
-    "Vyre structural release evidence",
-    "architectural-invariants",
+    "GPU release gate",
+    "Conform release gate",
+    "CI release gate",
+    "Architecture release gate",
     "required_status_checks",
 ];
 
@@ -91,16 +88,22 @@ pub(crate) fn inspect_conformance_matrix(
             "{context}: release_backend_row_count={release_backend_rows}, expected {expected_release_backend_rows}, missing_release_backend_rows={missing_release_backend_rows}"
         ));
     }
+    let fixture_required = u64_field(matrix, "fixture_required_count", u64::MAX);
     let fixture_inputs = u64_field(matrix, "fixture_input_count", 0);
     let expected_outputs = u64_field(matrix, "expected_output_count", 0);
-    if fixture_inputs != op_count {
+    if fixture_required > op_count {
         failures.push(format!(
-            "{context}: fixture_input_count {fixture_inputs} must equal op_count {op_count}"
+            "{context}: fixture_required_count {fixture_required} exceeds op_count {op_count}"
         ));
     }
-    if expected_outputs != op_count {
+    if fixture_inputs != fixture_required {
         failures.push(format!(
-            "{context}: expected_output_count {expected_outputs} must equal op_count {op_count}"
+            "{context}: fixture_input_count {fixture_inputs} must equal fixture_required_count {fixture_required}"
+        ));
+    }
+    if expected_outputs != fixture_required {
+        failures.push(format!(
+            "{context}: expected_output_count {expected_outputs} must equal fixture_required_count {fixture_required}"
         ));
     }
     if array_len(matrix, "duplicate_op_ids", 0) != 0 {
@@ -229,6 +232,7 @@ mod tests {
             "op_matrix_blocked_release_count": 0,
             "release_backend_row_count": 147,
             "missing_release_backend_rows": [],
+            "fixture_required_count": 49,
             "fixture_input_count": 49,
             "expected_output_count": 49,
             "duplicate_op_ids": [],

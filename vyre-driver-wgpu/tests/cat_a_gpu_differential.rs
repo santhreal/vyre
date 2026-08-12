@@ -180,7 +180,12 @@ fn entry_by_id(op_id: &str) -> &'static vyre_libs::fixture_catalog::OpEntry {
 }
 
 fn run_entry_diff(entry: &'static vyre_libs::fixture_catalog::OpEntry) {
-    let program = (entry.build)();
+    let program = entry.program().unwrap_or_else(|| {
+        panic!(
+            "Fix: executable operation `{}` must provide a program",
+            entry.id
+        )
+    });
     let input_cases = entry
         .test_inputs
         .expect("Fix: regression entry must provide test_inputs")();
@@ -200,7 +205,12 @@ fn primitive_entry_by_id(op_id: &str) -> &'static vyre_primitives::harness::OpEn
 }
 
 fn run_primitive_entry_diff(entry: &'static vyre_primitives::harness::OpEntry) {
-    let program = (entry.build)();
+    let program = entry.program().unwrap_or_else(|| {
+        panic!(
+            "Fix: executable operation `{}` must provide a program",
+            entry.id
+        )
+    });
     let input_cases = entry
         .test_inputs
         .expect("Fix: primitive regression entry must provide test_inputs")();
@@ -294,7 +304,12 @@ fn diff_universal_registry() {
             "{} has no expected_output. Fix: every registry entry must provide an oracle fixture before GPU differential coverage can pass.",
             entry.id
         );
-        let program = (entry.build)();
+        let program = entry.program().unwrap_or_else(|| {
+            panic!(
+                "Fix: executable operation `{}` must provide a program",
+                entry.id
+            )
+        });
         if let Some(reason) = missing_capability_reason(&program) {
             panic!(
                 "{} missing backend capability: {reason}. Fix: wire the op or capability before running the differential sweep.",

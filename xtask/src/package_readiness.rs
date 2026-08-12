@@ -1,4 +1,4 @@
-//! Pre-publish package graph evidence for the Vyre / Weir release train.
+//! Pre-publish package graph evidence for the Vyre release.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
@@ -32,8 +32,6 @@ struct PackageReadiness {
 #[derive(Debug, Serialize)]
 struct ReleaseTrain {
     vyre: &'static str,
-    weir: &'static str,
-    vyrec: &'static str,
     cuda_release_path: bool,
 }
 
@@ -83,7 +81,6 @@ struct PackageContentCheck {
     cargo_package_list_succeeded: bool,
     file_count: usize,
     file_list_digest: String,
-    example_count: usize,
     rust_source_count: usize,
     missing_required_files: Vec<String>,
     forbidden_files: Vec<String>,
@@ -121,6 +118,11 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-foundation",
             release_train::vyre_version(),
             "vyre-foundation/Cargo.toml",
+        ),
+        step(
+            "vyre-megakernel",
+            release_train::vyre_version(),
+            "vyre-megakernel/Cargo.toml",
         ),
         step(
             "vyre-lower",
@@ -163,6 +165,11 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-emit-naga/Cargo.toml",
         ),
         step(
+            "vyre-emit-spirv",
+            release_train::vyre_version(),
+            "vyre-emit-spirv/Cargo.toml",
+        ),
+        step(
             "vyre-emit-metal",
             release_train::vyre_version(),
             "vyre-emit-metal/Cargo.toml",
@@ -193,23 +200,6 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-driver-reference/Cargo.toml",
         ),
         step(
-            "vyre",
-            release_train::vyre_version(),
-            "vyre-core/Cargo.toml",
-        ),
-        step(
-            "vyre-harness",
-            release_train::vyre_version(),
-            "vyre-harness/Cargo.toml",
-        ),
-        // The product and its tags are named `weir`; the publishable package is `weirflow`.
-        // See `release_train::weir_package_name` for why, and keep that the single owner.
-        step(
-            release_train::weir_package_name(),
-            release_train::weir_version(),
-            "../../../dataflow/weir/Cargo.toml",
-        ),
-        step(
             "vyre-intrinsics",
             release_train::vyre_version(),
             "vyre-intrinsics/Cargo.toml",
@@ -220,6 +210,12 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-libs/Cargo.toml",
         ),
         step(
+            "vyre-scan",
+            release_train::vyre_version(),
+            "vyre-scan/Cargo.toml",
+        ),
+        step("vyre", release_train::vyre_version(), "vyre/Cargo.toml"),
+        step(
             "vyre-debug",
             release_train::vyre_version(),
             "vyre-debug/Cargo.toml",
@@ -228,11 +224,6 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-aot",
             release_train::vyre_version(),
             "vyre-aot/Cargo.toml",
-        ),
-        step(
-            "vyre-emit-spirv",
-            release_train::vyre_version(),
-            "vyre-emit-spirv/Cargo.toml",
         ),
     ]
 }
@@ -307,7 +298,7 @@ pub(crate) fn run(args: &[String]) {
 
     let package_content_checks = publish_order
         .iter()
-        .map(|step| audit_package_contents(&vyre_root, step))
+        .map(|step| audit_package_contents(&vyre_root, step, &publish_order))
         .collect::<Vec<_>>();
     for check in &package_content_checks {
         blockers.extend(
@@ -330,28 +321,18 @@ pub(crate) fn run(args: &[String]) {
     });
 
     let readiness = PackageReadiness {
-        schema_version: 1,
+        schema_version: 2,
         release_train: ReleaseTrain {
             vyre: release_train::vyre_version(),
-            weir: release_train::weir_version(),
-            vyrec: release_train::vyrec_train_version(),
             cuda_release_path: true,
         },
         publish_order,
-        non_publish_release_surfaces: vec![
-            ReleaseSurface {
-                package: "vyre-frontend-c",
-                version: release_train::vyre_frontend_c_version(),
-                surface: "c-frontend",
-                reason: "library release surface for beta Vyrec, intentionally not published as a standalone crate",
-            },
-            ReleaseSurface {
-                package: "vyrec",
-                version: release_train::vyrec_version(),
-                surface: "parser-cli",
-                reason: "beta compiler CLI release surface, intentionally not published to crates.io in this release",
-            },
-        ],
+        non_publish_release_surfaces: vec![ReleaseSurface {
+            package: "vyre-frontend-c",
+            version: release_train::vyre_frontend_c_version(),
+            surface: "c-frontend",
+            reason: "C frontend library release surface, intentionally not published as a standalone crate",
+        }],
         package_verify_passed: release_train::package_verify_passed(),
         observed_package_failures: vec![
             // The versions come from the release train: these two failures are inherent to
@@ -362,18 +343,6 @@ pub(crate) fn run(args: &[String]) {
                 command: "cargo_full package --allow-dirty --manifest-path vyre-lower/Cargo.toml",
                 reason: format!(
                     "crates.io does not yet contain vyre-foundation@{}",
-                    release_train::vyre_version()
-                ),
-            },
-            ObservedPackageFailure {
-                package: format!(
-                    "{}@{}",
-                    release_train::weir_package_name(),
-                    release_train::weir_version()
-                ),
-                command: "cargo_full package --allow-dirty --manifest-path libs/dataflow/weir/Cargo.toml",
-                reason: format!(
-                    "crates.io does not yet contain vyre@{}",
                     release_train::vyre_version()
                 ),
             },
@@ -398,10 +367,34 @@ pub(crate) fn run(args: &[String]) {
     }
 }
 
-fn audit_package_contents(root: &Path, step: &PublishStep) -> PackageContentCheck {
+fn audit_package_contents(
+    root: &Path,
+    step: &PublishStep,
+    publish_order: &[PublishStep],
+) -> PackageContentCheck {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
+    let patch_args = match cargo_package_patch_args(root, step, publish_order) {
+        Ok(args) => args,
+        Err(error) => {
+            return PackageContentCheck {
+                package: step.package.to_string(),
+                manifest: step.manifest.to_string(),
+                cargo_package_list_succeeded: false,
+                file_count: 0,
+                file_list_digest: String::new(),
+                rust_source_count: 0,
+                missing_required_files: Vec::new(),
+                forbidden_files: Vec::new(),
+                command_error: Some(error.clone()),
+                blockers: vec![format!(
+                    "could not prepare local release dependency patches: {error}"
+                )],
+            };
+        }
+    };
     let output = Command::new(cargo)
         .current_dir(root)
+        .args(&patch_args)
         .args([
             "package",
             "--list",
@@ -423,7 +416,6 @@ fn audit_package_contents(root: &Path, step: &PublishStep) -> PackageContentChec
                 cargo_package_list_succeeded: false,
                 file_count: 0,
                 file_list_digest: String::new(),
-                example_count: 0,
                 rust_source_count: 0,
                 missing_required_files: Vec::new(),
                 forbidden_files: Vec::new(),
@@ -437,7 +429,6 @@ fn audit_package_contents(root: &Path, step: &PublishStep) -> PackageContentChec
             cargo_package_list_succeeded: false,
             file_count: 0,
             file_list_digest: String::new(),
-            example_count: 0,
             rust_source_count: 0,
             missing_required_files: Vec::new(),
             forbidden_files: Vec::new(),
@@ -445,6 +436,88 @@ fn audit_package_contents(root: &Path, step: &PublishStep) -> PackageContentChec
             blockers: vec![format!("could not launch `cargo package --list`: {error}")],
         },
     }
+}
+
+fn cargo_package_patch_args(
+    root: &Path,
+    step: &PublishStep,
+    publish_order: &[PublishStep],
+) -> Result<Vec<OsString>, String> {
+    let manifest = root.join(step.manifest);
+    let text = crate::output_arg::read_text_bounded(&manifest, MAX_MANIFEST_BYTES, "")
+        .map_err(|error| format!("failed to read `{}`: {error}", manifest.display()))?;
+    let value = toml::from_str::<toml::Value>(&text)
+        .map_err(|error| format!("failed to parse `{}`: {error}", manifest.display()))?;
+    let mut workspace_blockers = Vec::new();
+    let workspace_dependencies = workspace_dependencies(&manifest, &mut workspace_blockers);
+    if !workspace_blockers.is_empty() {
+        return Err(workspace_blockers.join("; "));
+    }
+
+    let local_manifests = publish_order
+        .iter()
+        .filter(|candidate| candidate.package != step.package)
+        .map(|candidate| (candidate.package, candidate))
+        .collect::<BTreeMap<_, _>>();
+    let mut patches = BTreeMap::<String, PathBuf>::new();
+    for table_name in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        let Some(table) = value.get(table_name).and_then(toml::Value::as_table) else {
+            continue;
+        };
+        for (dependency, spec) in table {
+            let package = dependency_package_name(spec, &workspace_dependencies, dependency);
+            let Some(candidate) = local_manifests.get(package.as_str()) else {
+                continue;
+            };
+            let Some(version) = dependency_version(spec, &workspace_dependencies, dependency)
+            else {
+                continue;
+            };
+            if version != candidate.version {
+                continue;
+            }
+            let Some(crate_dir) = root
+                .join(candidate.manifest)
+                .parent()
+                .map(Path::to_path_buf)
+            else {
+                return Err(format!(
+                    "release package `{package}` manifest `{}` has no parent directory",
+                    candidate.manifest
+                ));
+            };
+            patches.insert(package, crate_dir);
+        }
+    }
+
+    let mut args = Vec::with_capacity(patches.len() * 2);
+    for (package, path) in patches {
+        args.push(OsString::from("--config"));
+        args.push(OsString::from(format!(
+            "patch.crates-io.{package}.path={:?}",
+            path.to_string_lossy()
+        )));
+    }
+    Ok(args)
+}
+
+fn dependency_package_name(
+    spec: &toml::Value,
+    workspace_dependencies: &BTreeMap<String, toml::Value>,
+    dependency: &str,
+) -> String {
+    spec.get("package")
+        .and_then(toml::Value::as_str)
+        .or_else(|| {
+            dependency_uses_workspace(spec).then(|| {
+                workspace_dependencies
+                    .get(dependency)
+                    .and_then(|value| value.get("package"))
+                    .and_then(toml::Value::as_str)
+            })?
+        })
+        .unwrap_or(dependency)
+        .to_string()
 }
 
 fn inspect_package_file_list(step: &PublishStep, stdout: &str) -> PackageContentCheck {
@@ -476,10 +549,6 @@ fn inspect_package_file_list(step: &PublishStep, stdout: &str) -> PackageContent
         .filter(|path| package_path_is_forbidden(path))
         .cloned()
         .collect::<Vec<_>>();
-    let example_count = files
-        .iter()
-        .filter(|path| path.starts_with("examples/") && path.ends_with(".rs"))
-        .count();
     let rust_source_count = files
         .iter()
         .filter(|path| path.starts_with("src/") && path.ends_with(".rs"))
@@ -493,9 +562,6 @@ fn inspect_package_file_list(step: &PublishStep, stdout: &str) -> PackageContent
             "missing required package files: {}",
             missing_required_files.join(", ")
         ));
-    }
-    if example_count == 0 {
-        blockers.push("contains no runnable `examples/*.rs` release surface".to_string());
     }
     if rust_source_count == 0 {
         blockers.push("contains no Rust source under `src/`".to_string());
@@ -516,7 +582,6 @@ fn inspect_package_file_list(step: &PublishStep, stdout: &str) -> PackageContent
             "blake3:{}",
             blake3::hash(canonical_file_list.as_bytes()).to_hex()
         ),
-        example_count,
         rust_source_count,
         missing_required_files,
         forbidden_files,
@@ -640,7 +705,7 @@ pub(crate) fn package_content_evidence_issues(value: &serde_json::Value) -> Vec<
                 "package `{package}` did not pass `cargo package --list`"
             ));
         }
-        for field in ["file_count", "example_count", "rust_source_count"] {
+        for field in ["file_count", "rust_source_count"] {
             if check
                 .get(field)
                 .and_then(serde_json::Value::as_u64)

@@ -58,24 +58,20 @@ pub fn sheaf_laplacian_eigenvalue(
     // to it immediately), so it does not influence the emitted program.
     let _ = iterations;
     if n_nodes == 0 || d == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            lambda,
-            DataType::U32,
-            format!(
-                "Fix: sheaf_laplacian_eigenvalue requires n_nodes > 0 and d > 0, got n_nodes={n_nodes}, d={d}."
-            ),
-        );
+        return crate::invalid_output_program(OP_ID,
+        lambda,
+        DataType::U32,
+        format!(
+            "Fix: sheaf_laplacian_eigenvalue requires n_nodes > 0 and d > 0, got n_nodes={n_nodes}, d={d}."
+        ),);
     }
     let Some(cells) = n_nodes.checked_mul(d) else {
-        return crate::invalid_output_program(
-            OP_ID,
-            lambda,
-            DataType::U32,
-            format!(
-                "Fix: sheaf_laplacian_eigenvalue n_nodes*d overflows vector cell count for n_nodes={n_nodes}, d={d}; shard the sheaf spectrum before GPU dispatch."
-            ),
-        );
+        return crate::invalid_output_program(OP_ID,
+        lambda,
+        DataType::U32,
+        format!(
+            "Fix: sheaf_laplacian_eigenvalue n_nodes*d overflows vector cell count for n_nodes={n_nodes}, d={d}; shard the sheaf spectrum before GPU dispatch."
+        ),);
     };
 
     // Closed-form dominant eigenpair of diag(r): serial single-lane scan for the max diagonal entry

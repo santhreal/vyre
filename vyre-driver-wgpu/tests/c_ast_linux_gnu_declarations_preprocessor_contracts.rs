@@ -163,17 +163,17 @@ fn fixture_typedef_shadowed_by_auto_type() -> Fixture {
 }
 // Flat include of all parts so cross-part fixture references resolve
 // in a single scope (per-part `mod {...}` wrappers broke this).
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part1.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part2.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part3.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part4.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part5.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part6.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part7.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part8.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part9.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part10.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part11.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part12.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part13.rs");
-include!("__split/c_ast_linux_gnu_declarations_preprocessor_contracts_part14.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_typedef_shadowed_by_auto_type_variable.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_enum_tag_forward_declaration.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_attribute_on_struct_definition_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_attribute_on_function_pointer_typedef.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_typeof_unqual_simple_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_alignas_on_variable_stays_raw_and_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_nested_designated_init_complex_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_bitfield_mixed_with_attribute_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_flexible_array_member_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_signal_function.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_statement_expr_with_asm_in_init_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_macro_shaped_declaration_list_head_classifies.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_nested_conditional_preproc_mask_contract.rs");
+include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_nested_conditional_preproc_stream.rs");

@@ -2,7 +2,7 @@
 
 use vyre_driver::backend::backend_registration;
 use vyre_driver_wgpu as _;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_scan::{
     build_scan_session, DirectGpuScanner, GpuLiteralSet, MatchScan, Pipeline, ScanArtifactError,
 };
@@ -25,7 +25,10 @@ fn scan_executes_through_authenticated_artifact_submission() -> Result<(), ScanA
     let first_payload = session.payload_digest();
     let actual = session.scan(haystack, 16)?;
 
-    assert_eq!(actual, vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]);
+    assert_eq!(
+        actual,
+        vec![ByteRange::new(0, 1, 3), ByteRange::new(1, 2, 4)]
+    );
     assert_eq!(actual, expected);
     assert_ne!(first_artifact.0, [0; 32]);
     assert_ne!(first_payload.0, [0; 32]);
@@ -50,7 +53,7 @@ fn resident_literal_scan_uses_authenticated_artifact_resources(
     let matcher = GpuLiteralSet::compile(&[b"ab".as_slice(), b"bc".as_slice()]);
     let expected = matcher.reference_scan(haystack);
     let session = matcher.prepare_resident_scan("wgpu", haystack.len() + 16, 16)?;
-    let mut actual = vec![Match::new(99, 0, 0)];
+    let mut actual = vec![ByteRange::new(99, 0, 0)];
     let mut scratch = Vec::new();
 
     session.scan_into(haystack, &mut actual, &mut scratch)?;
@@ -122,7 +125,10 @@ fn resident_fused_scan_uses_authenticated_artifact_resources(
             &mut scratch,
         )?;
         assert_eq!(presence, vec![1, 2]);
-        assert_eq!(matches, vec![Match::new(0, 0, 2), Match::new(1, 4, 6)]);
+        assert_eq!(
+            matches,
+            vec![ByteRange::new(0, 0, 2), ByteRange::new(1, 4, 6)]
+        );
     }
     session.free()?;
     Ok(())
@@ -133,7 +139,7 @@ fn resident_fused_scan_uses_authenticated_artifact_resources(
 #[test]
 fn public_scan_facades_submit_registered_artifacts() -> Result<(), Box<dyn std::error::Error>> {
     let haystack = b"zabc";
-    let expected = vec![Match::new(0, 1, 4), Match::new(1, 2, 4)];
+    let expected = vec![ByteRange::new(0, 1, 4), ByteRange::new(1, 2, 4)];
 
     let direct = DirectGpuScanner::compile(&[b"abc".as_slice(), b"bc".as_slice()]);
     assert_eq!(direct.scan("wgpu", haystack, 8)?, expected);

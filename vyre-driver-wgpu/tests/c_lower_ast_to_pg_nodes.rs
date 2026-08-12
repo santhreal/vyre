@@ -10,7 +10,7 @@ use c_grammar_gen::lex_c11_max_munch_kinds;
 use proptest::prelude::*;
 use std::sync::OnceLock;
 use vyre::ir::{Expr, Program};
-use vyre::VyreBackend;
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit_naga::program as naga_emit;
 use vyre_foundation::optimizer::optimize;
@@ -477,18 +477,20 @@ fn adversarial_vast_cases() -> Vec<Vec<u8>> {
     }
     cases
 }
-mod c_lower_ast_to_pg_nodes_part1 {
-    include!("__split/c_lower_ast_to_pg_nodes_part1.rs");
+mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_registration_is_witnessed {
+    include!(
+        "contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_registration_is_witnessed.rs"
+    );
 }
-mod c_lower_ast_to_pg_nodes_part2 {
-    include!("__split/c_lower_ast_to_pg_nodes_part2.rs");
+mod c_lower_ast_to_pg_nodes_c11_vast_reference_feeds_program_graph_node_lowering {
+    include!("contract_cases/c_lower_ast_to_pg_nodes__c11_vast_reference_feeds_program_graph_node_lowering.rs");
 }
-mod c_lower_ast_to_pg_nodes_part3 {
-    include!("__split/c_lower_ast_to_pg_nodes_part3.rs");
+mod c_lower_ast_to_pg_nodes_typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes {
+    include!("contract_cases/c_lower_ast_to_pg_nodes__typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes.rs");
 }
-mod c_lower_ast_to_pg_nodes_part4 {
-    include!("__split/c_lower_ast_to_pg_nodes_part4.rs");
+mod c_lower_ast_to_pg_nodes_gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph {
+    include!("contract_cases/c_lower_ast_to_pg_nodes__gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph.rs");
 }
-mod c_lower_ast_to_pg_nodes_part5 {
-    include!("__split/c_lower_ast_to_pg_nodes_part5.rs");
+mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_has_zero_ulp_tolerance {
+    include!("contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_has_zero_ulp_tolerance.rs");
 }

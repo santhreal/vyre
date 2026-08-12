@@ -7,6 +7,7 @@
 //! - every crate's `version` matches the workspace version token
 //! - every crate's `rust-version` matches the workspace baseline
 //! - the workspace `Cargo.lock` has no uncommitted changes
+//! - `cargo_full run -p xtask --bin xtask -- operation-schema --check` would pass
 //! - `cargo_full run -p xtask --bin xtask -- catalog --check` would pass (catalog matches live
 //!   inventory)
 //! - `cargo_full run -p xtask --bin xtask -- gate1` would pass (Gate 1 complexity budget)
@@ -15,7 +16,7 @@
 //!   pins stay aligned across sibling manifests)
 //! - `cargo_full run -p xtask --bin xtask -- platform-boundary` would pass (platform docs/comments
 //!   remain consumer-neutral)
-//! - `cargo_full run -p xtask --bin xtask -- vyre-release-gate` would pass (Vyre/Weir
+//! - `cargo_full run -p xtask --bin xtask -- vyre-release-gate` would pass (Vyre
 //!   release evidence manifest is closed)
 //!
 //! This is not a substitute for `cargo_full publish --dry-run`; it catches
@@ -32,7 +33,13 @@ pub(crate) fn run(_args: &[String]) {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".to_string());
     let workspace_root = PathBuf::from(&manifest_dir).join("..");
 
-    // 1. Catalog drift
+    // 1. Canonical operation schema and derived catalog drift
+    run_xtask_check(
+        &workspace_root,
+        &["operation-schema", "--check"],
+        &mut failures,
+    );
+    run_xtask_check(&workspace_root, &["list-ops", "--check"], &mut failures);
     run_xtask_check(&workspace_root, &["catalog", "--check"], &mut failures);
 
     // 2. Gate 1 budget
@@ -47,7 +54,7 @@ pub(crate) fn run(_args: &[String]) {
     // 5. Platform boundary
     run_xtask_check(&workspace_root, &["platform-boundary"], &mut failures);
 
-    // 6. Vyre/Weir release objective evidence gate
+    // 6. Vyre release objective evidence gate
     run_xtask_check(&workspace_root, &["vyre-release-gate"], &mut failures);
 
     // 7. Workspace clean

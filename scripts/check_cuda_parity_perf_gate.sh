@@ -22,7 +22,7 @@ vyre_select_cargo_runner
 CONTRACT_TESTS=(
     capability_contracts
     cuda_device_contract
-    cuda_release_surface_contracts
+    target_compiler
     gpu_elementwise_conformance
     megakernel_scale_scheduler_contracts
     module_cache_contracts

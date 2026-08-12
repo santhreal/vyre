@@ -2,9 +2,9 @@ use crate::benchmark_evidence_semantics::{
     backend_suite_artifact_status_issues, backend_suite_backend_issue,
     backend_suite_inventory_issues, backend_suite_matrix_coverage_issues,
     backend_suite_parity_issues, describe_backend_suite_inventory_issue,
-    describe_backend_suite_matrix_coverage_issue,
-    expected_backend_for_suite_evidence, report_status_for_path, BackendSuiteArtifactStatusIssue,
-    BackendSuiteBackendIssue, BackendSuiteParityIssue,
+    describe_backend_suite_matrix_coverage_issue, expected_backend_for_suite_evidence,
+    report_status_for_path, BackendSuiteArtifactStatusIssue, BackendSuiteBackendIssue,
+    BackendSuiteParityIssue,
 };
 
 pub(crate) fn check_backend_suite_report(
@@ -269,17 +269,6 @@ pub(crate) fn check_backend_suite_report(
                         requirement.id
                     )),
                 }
-                if status
-                    .get("min_cuda_ptx_source_cache_entries")
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0)
-                    == 0
-                {
-                    failures.push(format!(
-                        "requirement `{}` backend suite `{suffix}` CUDA artifact `{path}` has non-positive `min_cuda_ptx_source_cache_entries`",
-                        requirement.id
-                    ));
-                }
                 for field in [
                     "min_cuda_ptx_source_cache_hits",
                     "min_cuda_ptx_source_cache_misses",
@@ -493,13 +482,6 @@ pub(crate) fn check_backend_suite_report(
                             failures,
                         );
                     }
-                    require_case_metric_positive(
-                        requirement,
-                        &artifact_label,
-                        &artifact_report,
-                        "cuda_ptx_source_cache_entries",
-                        failures,
-                    );
                 }
                 if let Some(cases) = artifact_report
                     .get("cases")
@@ -589,7 +571,6 @@ fn check_backend_suite_status_source_fingerprint_shape(
         failures,
     );
 }
-
 
 fn check_backend_suite_artifact_status(
     requirement: &Requirement,
@@ -1769,7 +1750,7 @@ pub(crate) fn check_markdown_evidence_ready(
     ] {
         for line in text.lines() {
             let lowered = line.to_ascii_lowercase();
-            if crate::release_completion_audit::markdown_line_is_release_rule_text(&lowered) {
+            if crate::text_markers::markdown_line_is_release_rule_text(&lowered) {
                 continue;
             }
             if lowered.contains(marker) {

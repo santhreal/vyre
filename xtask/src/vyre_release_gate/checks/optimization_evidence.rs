@@ -38,7 +38,7 @@ pub(crate) fn check_backend_feature_markers(
             "megakernel-paired-speculation",
         ],
         "wgpu_feature_markers" => &[
-            "wgpu-persistent-engine",
+            "wgpu-artifact-materializer",
             "wgpu-megakernel-dispatcher",
             "wgpu-readback-ring",
             "wgpu-async-dispatch-prefetch",
@@ -326,10 +326,7 @@ pub(crate) fn before_after_semantic_win(
     case_id: &str,
     metrics: &serde_json::Map<String, serde_json::Value>,
 ) -> bool {
-    crate::benchmark_evidence_semantics::benchmark_before_after_semantic_win(
-        case_id,
-        Some(metrics),
-    )
+    crate::benchmark_evidence_semantics::benchmark_before_after_semantic_win(case_id, Some(metrics))
 }
 pub(crate) fn metric_percentile(
     metric: Option<&serde_json::Value>,
@@ -383,10 +380,6 @@ pub(crate) fn check_named_cuda_benchmark_report(
         .map(|evidence| resolve_manifest_path(base_dir, evidence))
         .unwrap_or_else(|| base_dir.join(suffix));
     check_single_benchmark_report(requirement, base_dir, &path, &report, true, None, failures);
-    if suffix == "dataflow-analysis-release.json" {
-        require_case_metric_positive(requirement, suffix, &report, "weir_nodes", failures);
-        require_case_metric_positive(requirement, suffix, &report, "weir_bitset_words", failures);
-    }
     if suffix == "megakernel-condition-cuda.json" {
         for metric in [
             "megakernel_condition_slots",

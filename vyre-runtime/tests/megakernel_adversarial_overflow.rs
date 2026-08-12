@@ -69,7 +69,10 @@ fn try_read_observable_accepts_max_safe_index() {
         ctrl.resize(needed, 0);
     }
     write_word(&mut ctrl, OBSERVABLE_BASE as usize, 0xBEEF);
-    assert_eq!(ResidentWorkQueue::try_read_observable(&ctrl, 0).unwrap(), 0xBEEF);
+    assert_eq!(
+        ResidentWorkQueue::try_read_observable(&ctrl, 0).unwrap(),
+        0xBEEF
+    );
 }
 
 // ---------------------------------------------------------------------------

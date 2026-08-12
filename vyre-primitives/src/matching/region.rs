@@ -2,7 +2,7 @@
 //!
 //! Every multimatch consumer (`vyre-libs::matching` engines, scanner consumer,
 //! external analyzer) ends up doing the same operation after the GPU dispatch
-//! returns: take the raw `Vec<Match>`, collapse adjacent overlapping
+//! returns: take the raw `Vec<ByteRange>`, collapse adjacent overlapping
 //! or duplicate spans into a representative, return the deduped set.
 //! Each consumer wrote it differently  -  some by `(detector_id,
 //! credential)` HashMap, some by `(start, end)` pair sort, some by ad-
@@ -45,9 +45,10 @@ pub use super::region_programs::{
     DEDUP_REGIONS_CLUSTER_OP_ID, DEDUP_REGIONS_FLAG_OP_ID, REGION_DEDUP_WORKGROUP_SIZE,
 };
 
-/// One match as exposed by `vyre_foundation::match_result::Match`  -
-/// duplicated here as a plain triple so this primitive doesn't depend
-/// on foundation. Consumers convert at the boundary.
+/// Operation-local region triple used by sort and dedup kernels.
+///
+/// Product boundaries use `vyre_foundation::match_result::ByteRange`; this type
+/// retains `pid` because the region ABI operates directly on packed pattern ids.
 ///
 /// `pid`: pattern id; `start` / `end`: byte offsets, half-open
 /// `[start, end)`.

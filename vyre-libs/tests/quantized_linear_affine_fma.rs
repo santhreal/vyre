@@ -2,7 +2,7 @@
 
 #![cfg(feature = "nn-linear-4bit")]
 
-use vyre_libs::nn::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
+use vyre_libs::nn::linear::{linear_4bit_affine_grouped_typed, QuantizedLinear4BitSpec};
 use vyre_reference::value::Value;
 
 const MAX_ABS_DRIFT: f32 = 1.0e-4;

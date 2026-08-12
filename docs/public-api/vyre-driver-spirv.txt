@@ -1,9 +1,42 @@
-pub const BACKEND_ID: &'static str = super::SPIRV_BACKEND_ID;
-pub const SPIRV_BACKEND_ID: &str = "spirv";
-pub fn emit_spv(module: &naga::Module) -> Result<Vec<u32>, String> {
-pub fn new() -> Self {
-pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
-pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-pub mod backend;
-pub struct SpirvBackend;
-pub struct SpirvBackendRegistration;
+impl core::default::Default for vyre_driver_spirv::backend::SpirvBackend
+impl vyre_driver::backend::private::Sealed for vyre_driver_spirv::SpirvBackendRegistration
+impl vyre_driver::backend::vyre_backend::VyreBackend for vyre_driver_spirv::SpirvBackendRegistration
+impl vyre_driver_spirv::SpirvBackendRegistration
+impl vyre_driver_spirv::backend::SpirvBackend
+pub const vyre_driver_spirv::SPIRV_BACKEND_ID: &str
+pub const vyre_driver_spirv::backend::SpirvBackend::BACKEND_ID: &'static str
+pub fn vyre_driver_spirv::SpirvBackendRegistration::acquire() -> core::result::Result<Self, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::allocate_device_buffer(&self, byte_len: usize) -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::device_profile(&self) -> vyre_driver::device_profile::DeviceProfile
+pub fn vyre_driver_spirv::SpirvBackendRegistration::dispatch(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[alloc::vec::Vec<u8>], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::dispatch_borrowed(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&[u8]], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<alloc::vec::Vec<alloc::vec::Vec<u8>>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::dispatch_with_device_buffers(&self, program: &vyre_foundation::ir_inner::model::program::core::Program, inputs: &[&dyn vyre_driver::backend::device_buffer::DeviceBuffer], outputs: &mut [&mut dyn vyre_driver::backend::device_buffer::DeviceBuffer], config: &vyre_driver::backend::dispatch_config::DispatchConfig) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::download_device_buffer(&self, buffer: &dyn vyre_driver::backend::device_buffer::DeviceBuffer) -> core::result::Result<alloc::vec::Vec<u8>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::free_device_buffer(&self, _buffer: alloc::boxed::Box<dyn vyre_driver::backend::device_buffer::DeviceBuffer>) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::id(&self) -> &'static str
+pub fn vyre_driver_spirv::SpirvBackendRegistration::max_compute_invocations_per_workgroup(&self) -> u32
+pub fn vyre_driver_spirv::SpirvBackendRegistration::max_compute_workgroups_per_dimension(&self) -> u32
+pub fn vyre_driver_spirv::SpirvBackendRegistration::max_storage_buffer_bytes(&self) -> u64
+pub fn vyre_driver_spirv::SpirvBackendRegistration::max_workgroup_size(&self) -> [u32; 3]
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_async_compute(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_bf16(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_f16(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_grid_sync(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_indirect_dispatch(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_subgroup_ops(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::supports_tensor_cores(&self) -> bool
+pub fn vyre_driver_spirv::SpirvBackendRegistration::upload_device_buffer(&self, buffer: &mut dyn vyre_driver::backend::device_buffer::DeviceBuffer, bytes: &[u8]) -> core::result::Result<(), vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::SpirvBackendRegistration::version(&self) -> &'static str
+pub fn vyre_driver_spirv::backend::SpirvBackend::default() -> Self
+pub fn vyre_driver_spirv::backend::SpirvBackend::new() -> Self
+pub fn vyre_driver_spirv::backend::SpirvBackend::observability_snapshot() -> vyre_driver::observability::DriverObservability
+pub fn vyre_driver_spirv::backend::SpirvBackend::program_fingerprint(program: &vyre_foundation::ir_inner::model::program::core::Program) -> alloc::vec::Vec<u32>
+pub fn vyre_driver_spirv::backend::SpirvBackend::program_to_spv(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::vec::Vec<u32>, alloc::string::String>
+pub fn vyre_driver_spirv::backend::SpirvBackend::spv_disk_cache_dir() -> std::path::PathBuf
+pub fn vyre_driver_spirv::spirv_factory() -> core::result::Result<alloc::boxed::Box<dyn vyre_driver::backend::vyre_backend::VyreBackend>, vyre_driver::backend::error::BackendError>
+pub fn vyre_driver_spirv::spirv_supported_ops() -> &'static std::collections::hash::set::HashSet<vyre_foundation::ir_inner::model::node_kind::OpId>
+pub mod vyre_driver_spirv
+pub mod vyre_driver_spirv::backend
+pub struct vyre_driver_spirv::SpirvBackend
+pub struct vyre_driver_spirv::SpirvBackendRegistration
+pub struct vyre_driver_spirv::backend::SpirvBackend

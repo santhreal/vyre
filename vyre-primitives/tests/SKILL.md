@@ -21,12 +21,6 @@ the full op catalog.
 - Minimal  -  this crate has no byte-in / byte-out surface. Tests
   focus on ensuring the marker types remain stable.
 
-## Current gaps
-
-- No test today confirms every `vyre-ops` primitive has a marker
-  in this crate. Gap: "every `primitive.*` op in the registry has
-  a matching `PrimitiveKind` variant".
-
 ## Cross-crate contracts
 
 - Consumed by `vyre-reference` for dispatch

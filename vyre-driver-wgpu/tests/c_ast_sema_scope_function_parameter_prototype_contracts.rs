@@ -141,10 +141,10 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Function parameter scope
 // ---------------------------------------------------------------------------
 
-mod c_ast_sema_scope_function_parameter_prototype_contracts_part1 {
+mod c_ast_sema_scope_function_parameter_prototype_contracts_scope_tree_function_parameter_is_variable_decl {
 
-    include!("__split/c_ast_sema_scope_function_parameter_prototype_contracts_part1.rs");
+    include!("contract_cases/c_ast_sema_scope_function_parameter_prototype_contracts__scope_tree_function_parameter_is_variable_decl.rs");
 }
-mod c_ast_sema_scope_function_parameter_prototype_contracts_part2 {
-    include!("__split/c_ast_sema_scope_function_parameter_prototype_contracts_part2.rs");
+mod c_ast_sema_scope_function_parameter_prototype_contracts_scope_tree_kr_function_definition_classified_correctly {
+    include!("contract_cases/c_ast_sema_scope_function_parameter_prototype_contracts__scope_tree_kr_function_definition_classified_correctly.rs");
 }

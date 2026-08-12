@@ -310,6 +310,20 @@ fn write_element(element: IrDataType, target: &mut [u8], value: &Value) {
         IrDataType::U64 => {
             value.write_bytes_width_into(target);
         }
+        IrDataType::F16 => {
+            let value = match value {
+                Value::Float(value) => *value as f32,
+                _ => 0.0,
+            };
+            target.copy_from_slice(&crate::float16::f32_to_f16(value).to_le_bytes());
+        }
+        IrDataType::BF16 => {
+            let value = match value {
+                Value::Float(value) => *value as f32,
+                _ => 0.0,
+            };
+            target.copy_from_slice(&crate::float16::f32_to_bf16(value).to_le_bytes());
+        }
         IrDataType::F32 => {
             // Value::Float carries an f64; the GPU buffer is four bytes
             // of f32, so narrow via `as f32` before writing. Dropping the
@@ -333,7 +347,23 @@ fn write_element(element: IrDataType, target: &mut [u8], value: &Value) {
 }
 
 fn read_element(ty: DataType, bytes: &[u8]) -> Result<Value, String> {
-    Value::from_element_bytes(ty, bytes)
+    match ty {
+        DataType::F16 => {
+            if bytes.len() < 2 {
+                return Err("f16 requires 2 bytes".to_string());
+            }
+            let bits = u16::from_le_bytes([bytes[0], bytes[1]]);
+            Ok(Value::Float(f64::from(crate::float16::f16_to_f32(bits))))
+        }
+        DataType::BF16 => {
+            if bytes.len() < 2 {
+                return Err("bf16 requires 2 bytes".to_string());
+            }
+            let bits = u16::from_le_bytes([bytes[0], bytes[1]]);
+            Ok(Value::Float(f64::from(crate::float16::bf16_to_f32(bits))))
+        }
+        _ => Value::from_element_bytes(ty, bytes),
+    }
 }
 
 fn read_u32(bytes: &[u8]) -> u32 {

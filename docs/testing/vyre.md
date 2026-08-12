@@ -6,7 +6,7 @@ Run the default crate suite from the workspace root:
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre
 ```
 
-Expose the public Vyre API and feature-gated backend selection surface.
+Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
 
 The crate lives at `vyre`. The `public-facade` owner maintains its
 `facade` testing contract.
@@ -31,13 +31,12 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --all-features
 
 | Kind | Target | Source | Required features | Focused command |
 | --- | --- | --- | --- | --- |
-| `example` | `vyre_core_release_surface` | `vyre/examples/vyre_core_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --example vyre_core_release_surface` |
+| `example` | `vyre_release_surface` | `vyre/examples/vyre_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --example vyre_release_surface` |
 | `lib` | `vyre` | `vyre/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre` |
 | `test` | `artifact_workflow` | `vyre/tests/artifact_workflow.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test artifact_workflow` |
 | `test` | `cross_crate_import_path_migration_contract` | `vyre/tests/cross_crate_import_path_migration_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test cross_crate_import_path_migration_contract` |
-| `test` | `cross_crate_perf_contracts` | `vyre/tests/cross_crate_perf_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test cross_crate_perf_contracts` |
 | `test` | `gpu_boundary_contracts` | `vyre/tests/gpu_boundary_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test gpu_boundary_contracts` |
-| `test` | `ops` | `vyre/tests/ops.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test ops` |
+| `test` | `ir_surface` | `vyre/tests/ir_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test ir_surface` |
 | `test` | `wire_malformed_adversarial` | `vyre/tests/wire_malformed_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test wire_malformed_adversarial` |
 | `test` | `wire_v1_round_trip` | `vyre/tests/wire_v1_round_trip.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --test wire_v1_round_trip` |
 

@@ -8,16 +8,16 @@
 //! match-counter reset. This test pins, on REAL GPU hardware (wgpu, the RTX 5090
 //! here), that the resident `(pattern_id, start, end)` triples are byte-identical to
 //! the borrowed `scan_into` across repeated scans, the resident table-residency
-//! optimization must not change a single match (Law 10). Skips cleanly with no GPU.
+//! optimization must not change a single match (Law 10). Missing GPU configuration fails loudly.
 //!
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_resident_scan --release -- --nocapture
 
 use std::time::Instant;
 
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_wgpu as _;
+use vyre_foundation::match_result::ByteRange;
 
 // pattern_id order matches the compile order: key=0 .. api=7.
 const LITERALS: &[&[u8]] = &[
@@ -45,21 +45,14 @@ fn planted_haystack() -> Vec<u8> {
 
 #[test]
 fn resident_position_scan_matches_borrowed_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident position-scan GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let haystack = planted_haystack();
     let max_matches = 8_192u32;
 
     // Ground truth: the borrowed position scan.
-    let mut borrowed: Vec<Match> = Vec::new();
+    let mut borrowed: Vec<ByteRange> = Vec::new();
     matcher
-        .scan_into(backend.as_ref(), &haystack, max_matches, &mut borrowed)
+        .scan_into("wgpu", &haystack, max_matches, &mut borrowed)
         .expect("borrowed gpu position scan");
     assert!(
         !borrowed.is_empty(),
@@ -68,18 +61,18 @@ fn resident_position_scan_matches_borrowed_on_gpu() {
 
     // Prepare a resident session sized for this corpus with a little head room.
     let session = matcher
-        .prepare_resident_scan(backend.as_ref(), haystack.len() + 64, max_matches)
+        .prepare_resident_scan("wgpu", haystack.len() + 64, max_matches)
         .expect("prepare resident position-scan session");
     assert_eq!(session.max_matches(), max_matches);
 
     // Re-dispatch the SAME corpus several times through the resident session: the
     // immutable tables stay resident (uploaded once at prepare), and every scan
     // must reproduce the borrowed triples match-for-match.
-    let mut out: Vec<Match> = Vec::new();
+    let mut out: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     for iter in 0..4 {
         session
-            .scan_into(backend.as_ref(), &haystack, &mut out, &mut scratch)
+            .scan_into(&haystack, &mut out, &mut scratch)
             .expect("resident position scan");
         assert_eq!(
             out, borrowed,
@@ -87,9 +80,7 @@ fn resident_position_scan_matches_borrowed_on_gpu() {
         );
     }
 
-    session
-        .free(backend.as_ref())
-        .expect("free resident position-scan session");
+    session.free().expect("free resident position-scan session");
 }
 
 #[test]
@@ -97,32 +88,25 @@ fn resident_position_scan_serves_smaller_haystacks_under_the_capacity_on_gpu() {
     // One resident session sized for the full corpus must also correctly scan a
     // SHORTER haystack, the kernel bounds its cursor with the per-scan haystack_len,
     // not the resident buffer capacity.
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident sub-capacity GPU test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let full = planted_haystack();
     let max_matches = 8_192u32;
 
     let session = matcher
-        .prepare_resident_scan(backend.as_ref(), full.len() + 64, max_matches)
+        .prepare_resident_scan("wgpu", full.len() + 64, max_matches)
         .expect("prepare resident position-scan session");
 
     // A short haystack, far under the resident capacity.
     let short = b"api key token AKIA api";
-    let mut borrowed: Vec<Match> = Vec::new();
+    let mut borrowed: Vec<ByteRange> = Vec::new();
     matcher
-        .scan_into(backend.as_ref(), short, max_matches, &mut borrowed)
+        .scan_into("wgpu", short, max_matches, &mut borrowed)
         .expect("borrowed short scan");
 
-    let mut out: Vec<Match> = Vec::new();
+    let mut out: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     session
-        .scan_into(backend.as_ref(), short, &mut out, &mut scratch)
+        .scan_into(short, &mut out, &mut scratch)
         .expect("resident short scan under capacity");
 
     assert_eq!(
@@ -130,7 +114,7 @@ fn resident_position_scan_serves_smaller_haystacks_under_the_capacity_on_gpu() {
         "a short haystack on a session sized for the full corpus must match the borrowed scan"
     );
 
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }
 
 /// PERF (opt-in via `--ignored`): the resident position pipeline must be FASTER
@@ -145,13 +129,6 @@ fn resident_position_scan_serves_smaller_haystacks_under_the_capacity_on_gpu() {
 #[test]
 #[ignore = "perf measurement; needs a GPU and runs a timed multi-batch loop"]
 fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping resident position throughput test");
-            return;
-        }
-    };
     // A large detector set => a large DFA transition table: exactly the multi-MiB
     // per-scan re-upload the resident path eliminates.
     let detectors: Vec<Vec<u8>> = (0..400)
@@ -179,19 +156,19 @@ fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
     let cap_bytes = corpus.iter().map(Vec::len).max().unwrap() + 64;
 
     let session = matcher
-        .prepare_resident_scan(backend.as_ref(), cap_bytes, max_matches)
+        .prepare_resident_scan("wgpu", cap_bytes, max_matches)
         .expect("prepare resident throughput session");
 
     // Correctness gate (hard): every batch's resident triples equal the borrowed set.
-    let mut out: Vec<Match> = Vec::new();
+    let mut out: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
-    let mut borrowed: Vec<Match> = Vec::new();
+    let mut borrowed: Vec<ByteRange> = Vec::new();
     for h in &corpus {
         matcher
-            .scan_into(backend.as_ref(), h, max_matches, &mut borrowed)
+            .scan_into("wgpu", h, max_matches, &mut borrowed)
             .expect("borrowed scan");
         session
-            .scan_into(backend.as_ref(), h, &mut out, &mut scratch)
+            .scan_into(h, &mut out, &mut scratch)
             .expect("resident scan");
         assert_eq!(
             out, borrowed,
@@ -201,8 +178,8 @@ fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
 
     // Warm up both paths (compile caches, device queues) before timing.
     for h in &corpus {
-        let _ = matcher.scan_into(backend.as_ref(), h, max_matches, &mut borrowed);
-        let _ = session.scan_into(backend.as_ref(), h, &mut out, &mut scratch);
+        let _ = matcher.scan_into("wgpu", h, max_matches, &mut borrowed);
+        let _ = session.scan_into(h, &mut out, &mut scratch);
     }
 
     // Timed: borrowed re-uploads tables + rebuilds the program every batch.
@@ -210,7 +187,7 @@ fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
     for _ in 0..ITERS {
         for h in &corpus {
             matcher
-                .scan_into(backend.as_ref(), h, max_matches, &mut borrowed)
+                .scan_into("wgpu", h, max_matches, &mut borrowed)
                 .expect("timed borrowed scan");
         }
     }
@@ -221,7 +198,7 @@ fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
     for _ in 0..ITERS {
         for h in &corpus {
             session
-                .scan_into(backend.as_ref(), h, &mut out, &mut scratch)
+                .scan_into(h, &mut out, &mut scratch)
                 .expect("timed resident scan");
         }
     }
@@ -240,5 +217,5 @@ fn resident_position_throughput_beats_borrowed_across_a_corpus_gpu() {
         "resident table-residency must beat re-uploading the DFA + rebuilding the program every batch \
          (borrowed {borrowed_time:?}, resident {resident_time:?})"
     );
-    session.free(backend.as_ref()).expect("free session");
+    session.free().expect("free session");
 }

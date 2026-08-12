@@ -7,7 +7,7 @@
 //! completion readback. The explicit reference scan remains an independent CPU oracle.
 
 use vyre_driver::BackendRegistration;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_libs::scan::ScanProgram;
 
 use super::nfa;
@@ -59,7 +59,7 @@ impl MaterializedScanSession {
         &self,
         haystack: &[u8],
         max_matches: u32,
-    ) -> Result<Vec<Match>, crate::ScanArtifactError> {
+    ) -> Result<Vec<ByteRange>, crate::ScanArtifactError> {
         let mut matches = Vec::new();
         self.scan_into(haystack, max_matches, &mut matches)?;
         Ok(matches)
@@ -71,7 +71,7 @@ impl MaterializedScanSession {
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
-    ) -> Result<Vec<Match>, crate::ScanArtifactError> {
+    ) -> Result<Vec<ByteRange>, crate::ScanArtifactError> {
         let mut matches = Vec::new();
         self.scan_bounded_into(haystack, max_matches, max_scan_bytes, &mut matches)?;
         Ok(matches)
@@ -82,7 +82,7 @@ impl MaterializedScanSession {
         &self,
         haystack: &[u8],
         max_matches: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), crate::ScanArtifactError> {
         self.scan_bounded_into(haystack, max_matches, u32::MAX, matches)
     }
@@ -93,7 +93,7 @@ impl MaterializedScanSession {
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
     ) -> Result<(), crate::ScanArtifactError> {
         let mut scratch = crate::dispatch_io::ScanDispatchScratch::default();
         self.scan_bounded_into_with_scratch(
@@ -111,7 +111,7 @@ impl MaterializedScanSession {
         haystack: &[u8],
         max_matches: u32,
         max_scan_bytes: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut crate::dispatch_io::ScanDispatchScratch,
     ) -> Result<(), crate::ScanArtifactError> {
         use crate::dispatch_io;
@@ -173,7 +173,7 @@ impl MaterializedScanSession {
 impl ScanSession {
     /// Compute matches against `haystack` on the CPU using the same NFA
     /// the GPU program runs. Mirrors [`super::GpuLiteralSet::reference_scan`]
-    ///  -  same `Match` type, same sort, so any consumer can write a
+    ///  -  same `ByteRange` type, same sort, so any consumer can write a
     /// single parity test that swaps backends and asserts equality.
     ///
     /// This is intentionally O(n × patterns)  -  it is only meant for
@@ -183,13 +183,13 @@ impl ScanSession {
     ///
     /// Aborts when the CPU stepper cannot honor the `u32` match ABI the GPU
     /// path uses (a haystack longer than `u32::MAX` bytes). This is a LOUD
-    /// failure on purpose: an empty `Vec<Match>` is indistinguishable from "no
+    /// failure on purpose: an empty `Vec<ByteRange>` is indistinguishable from "no
     /// secrets here", so swallowing a scan failure into `[]` would be a silent
     /// recall lie (a >4 GiB haystack would be reported clean (Law 10)).
     /// Callers that must handle an over-`u32` haystack without unwinding use
     /// the fallible [`Self::try_reference_scan`] instead.
     #[must_use]
-    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<Match> {
+    pub fn reference_scan(&self, haystack: &[u8]) -> Vec<ByteRange> {
         match self.try_reference_scan(haystack) {
             Ok(matches) => matches,
             Err(error) => {
@@ -215,7 +215,7 @@ impl ScanSession {
     pub fn try_reference_scan(
         &self,
         haystack: &[u8],
-    ) -> Result<Vec<Match>, vyre_driver::BackendError> {
+    ) -> Result<Vec<ByteRange>, vyre_driver::BackendError> {
         let mut results = Vec::new();
         self.try_reference_scan_into(haystack, &mut results)?;
         Ok(results)
@@ -234,7 +234,7 @@ impl ScanSession {
     pub fn try_reference_scan_into(
         &self,
         haystack: &[u8],
-        results: &mut Vec<Match>,
+        results: &mut Vec<ByteRange>,
     ) -> Result<(), vyre_driver::BackendError> {
         crate::dispatch_io::scan_guard(haystack, "ScanSession::reference_scan", u32::MAX)?;
         results.clear();
@@ -295,7 +295,7 @@ impl ScanSession {
                                 "ScanSession::reference_scan end offset exceeds u32 capacity. Fix: split the haystack before parity scanning.",
                             )
                         })?;
-                        results.push(Match::new(pattern_id, start_u32, end_u32));
+                        results.push(ByteRange::new(pattern_id, start_u32, end_u32));
                     }
                 }
             }
@@ -731,7 +731,7 @@ mod tests {
         assert_eq!(decoded.compiled.epsilon_table, pipe.compiled.epsilon_table);
         assert_eq!(
             decoded.reference_scan(b"zabc"),
-            vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]
+            vec![ByteRange::new(0, 1, 3), ByteRange::new(1, 2, 4)]
         );
     }
 
@@ -850,7 +850,10 @@ mod tests {
 
         assert_eq!(scratch, owned);
         assert!(scratch.capacity() >= retained_capacity);
-        assert_eq!(scratch, vec![Match::new(0, 1, 3), Match::new(1, 2, 4)]);
+        assert_eq!(
+            scratch,
+            vec![ByteRange::new(0, 1, 3), ByteRange::new(1, 2, 4)]
+        );
     }
 
     #[test]
@@ -861,7 +864,7 @@ mod tests {
 
         let pipe = build(&["ab", "bc"], "input", "hits", 16);
         let haystack = b"zabc";
-        let expected = vec![Match::new(0, 1, 3), Match::new(1, 2, 4)];
+        let expected = vec![ByteRange::new(0, 1, 3), ByteRange::new(1, 2, 4)];
 
         let infallible = pipe.reference_scan(haystack);
         let fallible = pipe

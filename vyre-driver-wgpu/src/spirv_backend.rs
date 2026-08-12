@@ -18,7 +18,7 @@
 //!   fail loudly with an actionable driver/probe error.
 //!
 //! The actual dispatch implementation shares machinery with the
-//! WGSL path via the trait surface in `vyre::backend`; this module
+//! WGPU dispatch via the driver-owned backend trait surface; this module
 //! only needs to name itself and point wgpu at the Vulkan backend.
 
 use naga::back::spv::{Options, PipelineOptions, WriterFlags};

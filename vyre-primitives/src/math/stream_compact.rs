@@ -32,12 +32,10 @@ pub fn stream_compact(
     count: u32,
 ) -> Program {
     if count == 0 {
-        return crate::invalid_output_program(
-            OP_ID,
-            compacted,
-            DataType::U32,
-            "Fix: stream_compact requires count > 0 so live_count can be derived from the final lane.".to_string(),
-        );
+        return crate::invalid_output_program(OP_ID,
+        compacted,
+        DataType::U32,
+        "Fix: stream_compact requires count > 0 so live_count can be derived from the final lane.".to_string(),);
     }
     let t = Expr::InvocationId { axis: 0 };
 

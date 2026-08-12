@@ -4071,3 +4071,110 @@ release_floor_eligible = true
 artifact_url = "https://www.w3.org/TR/WGSL/"
 vx_rows = ["VX-640", "VX-641", "VX-676", "VX-680"]
 digest_material = "WGSL_SUBGROUPS|https://www.w3.org/TR/WGSL/|official-technical-documentation|wgsl-subgroup-uniformity-rules-subgroup-built-ins-and-portability-constraints-for-gpu-scan-kernels|official-doc|documentation-only|release_floor_eligible=true|https://www.w3.org/TR/WGSL/"
+[[sources]]
+key = "CAUSAL_CONV1D"
+url = "https://github.com/Dao-AILab/causal-conv1d"
+source_class = "official-reference-implementation"
+baseline_type = "depthwise-causal-convolution-prefill-and-state-update"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/Dao-AILab/causal-conv1d"
+vx_rows = ["VX-1649", "VX-1650", "VX-1676", "VX-1683"]
+digest_material = "CAUSAL_CONV1D|https://github.com/Dao-AILab/causal-conv1d|official-reference-implementation|depthwise-causal-convolution-prefill-and-state-update|source-available|source-available|release_floor_eligible=true|https://github.com/Dao-AILab/causal-conv1d"
+
+[[sources]]
+key = "FLASH_LINEAR_ATTENTION"
+url = "https://github.com/fla-org/flash-linear-attention"
+source_class = "official-reference-implementation"
+baseline_type = "chunked-and-recurrent-gated-delta-rule"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/fla-org/flash-linear-attention"
+vx_rows = ["VX-1647", "VX-1648", "VX-1651", "VX-1652", "VX-1659", "VX-1670", "VX-1671", "VX-1676", "VX-1683"]
+digest_material = "FLASH_LINEAR_ATTENTION|https://github.com/fla-org/flash-linear-attention|official-reference-implementation|chunked-and-recurrent-gated-delta-rule|source-available|source-available|release_floor_eligible=true|https://github.com/fla-org/flash-linear-attention"
+
+[[sources]]
+key = "HUGGINGFACE_QWEN35_MODELING"
+url = "https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py"
+source_class = "official-generated-model-implementation"
+baseline_type = "qwen35-text-model-and-cache-semantics-external-benchmark-only"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = false
+artifact_url = "https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py"
+vx_rows = []
+digest_material = "HUGGINGFACE_QWEN35_MODELING|https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py|official-generated-model-implementation|qwen35-text-model-and-cache-semantics|source-available|source-available|release_floor_eligible = false|https://github.com/huggingface/transformers/blob/main/src/transformers/models/qwen3_5/modeling_qwen3_5.py"
+
+[[sources]]
+key = "MIRAGE_MEGAKERNEL"
+url = "https://github.com/mirage-project/mirage"
+source_class = "research-compiler-implementation"
+baseline_type = "compiler-generated-persistent-megakernel-task-graph"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/mirage-project/mirage"
+vx_rows = ["VX-1621", "VX-1622", "VX-1623", "VX-1624", "VX-1625", "VX-1626", "VX-1627", "VX-1628", "VX-1629", "VX-1630", "VX-1633", "VX-1635", "VX-1636", "VX-1637", "VX-1682", "VX-1686", "VX-1689", "VX-1699"]
+digest_material = "MIRAGE_MEGAKERNEL|https://github.com/mirage-project/mirage|research-compiler-implementation|compiler-generated-persistent-megakernel-task-graph|source-available|source-available|release_floor_eligible=true|https://github.com/mirage-project/mirage"
+
+[[sources]]
+key = "PHOTON_2"
+url = "https://moondream.ai/"
+source_class = "vendor-compiler-announcement"
+baseline_type = "qwen35-megakernel-low-concurrency-inference-external-benchmark-only"
+reproducibility_class = "published-claims"
+artifact_state = "documentation-only"
+release_floor_eligible = false
+artifact_url = "https://moondream.ai/"
+vx_rows = []
+digest_material = "PHOTON_2|https://moondream.ai/|vendor-compiler-announcement|qwen35-megakernel-low-concurrency-inference|published-claims|documentation-only|release_floor_eligible=false|https://moondream.ai/"
+
+[[sources]]
+key = "QWEN35_27B_CARD"
+url = "https://huggingface.co/Qwen/Qwen3.5-27B"
+source_class = "official-model-card-and-checkpoint"
+baseline_type = "qwen35-27b-architecture-dimensions-context-and-weights-external-benchmark-only"
+reproducibility_class = "checkpoint-available"
+artifact_state = "checkpoint-and-documentation"
+release_floor_eligible = false
+artifact_url = "https://huggingface.co/Qwen/Qwen3.5-27B"
+vx_rows = []
+digest_material = "QWEN35_27B_CARD|https://huggingface.co/Qwen/Qwen3.5-27B|official-model-card-and-checkpoint|qwen35-27b-architecture-dimensions-context-and-weights|checkpoint-available|checkpoint-and-documentation|release_floor_eligible = false|https://huggingface.co/Qwen/Qwen3.5-27B"
+
+[[sources]]
+key = "SAFETENSORS_FORMAT"
+url = "https://github.com/huggingface/safetensors"
+source_class = "official-format-and-reference-implementation"
+baseline_type = "bounded-zero-copy-tensor-metadata-and-weight-ingestion"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/huggingface/safetensors"
+vx_rows = ["VX-1643", "VX-1662", "VX-1663", "VX-1664"]
+digest_material = "SAFETENSORS_FORMAT|https://github.com/huggingface/safetensors|official-format-and-reference-implementation|bounded-zero-copy-tensor-metadata-and-weight-ingestion|source-available|source-available|release_floor_eligible=true|https://github.com/huggingface/safetensors"
+
+[[sources]]
+key = "SGLANG"
+url = "https://github.com/sgl-project/sglang"
+source_class = "production-inference-engine"
+baseline_type = "llm-serving-correctness-latency-and-throughput"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/sgl-project/sglang"
+vx_rows = ["VX-1672", "VX-1674", "VX-1681", "VX-1684", "VX-1685", "VX-1687"]
+digest_material = "SGLANG|https://github.com/sgl-project/sglang|production-inference-engine|llm-serving-correctness-latency-and-throughput|source-available|source-available|release_floor_eligible=true|https://github.com/sgl-project/sglang"
+
+[[sources]]
+key = "VLLM"
+url = "https://github.com/vllm-project/vllm"
+source_class = "production-inference-engine"
+baseline_type = "paged-attention-batching-latency-and-throughput"
+reproducibility_class = "source-available"
+artifact_state = "source-available"
+release_floor_eligible = true
+artifact_url = "https://github.com/vllm-project/vllm"
+vx_rows = ["VX-1645", "VX-1664", "VX-1665", "VX-1669", "VX-1672", "VX-1674", "VX-1675", "VX-1677", "VX-1678", "VX-1679", "VX-1681", "VX-1684", "VX-1685", "VX-1686", "VX-1687"]
+digest_material = "VLLM|https://github.com/vllm-project/vllm|production-inference-engine|paged-attention-batching-latency-and-throughput|source-available|source-available|release_floor_eligible=true|https://github.com/vllm-project/vllm"

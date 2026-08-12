@@ -7,7 +7,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::bitset::and_into::{bitset_and_into, cpu_ref as and_into_cpu};
 use vyre_primitives::bitset::and_not_into::{bitset_and_not_into, cpu_ref as and_not_into_cpu};
 use vyre_primitives::bitset::clear_bit::{bitset_clear_bit, cpu_ref as clear_bit_cpu};

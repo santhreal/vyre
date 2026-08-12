@@ -208,8 +208,7 @@ pub(crate) fn validate_duplicate_family_report_artifact(
 }
 
 fn duplicate_subject_fingerprint_is_supported(fingerprint: &str) -> bool {
-    fingerprint.starts_with("source-token-fingerprint:v1:")
-        || fingerprint.starts_with("registered-op-ir-fingerprint:v1:")
+    fingerprint.starts_with("registered-op-ir-fingerprint:v1:")
 }
 
 pub(crate) fn duplicate_family_id(detector: &str, left: &str, right: &str) -> String {
@@ -225,38 +224,6 @@ pub(crate) fn duplicate_family_id(detector: &str, left: &str, right: &str) -> St
 
 pub(crate) fn registered_op_duplicate_family_id(left: &str, right: &str) -> String {
     duplicate_family_id("registered-op", left, right)
-}
-
-pub(crate) fn source_duplicate_family_id(left: &str, right: &str) -> String {
-    duplicate_family_id("source-similar", left, right)
-}
-
-pub(crate) fn source_duplicate_subject(
-    path: &str,
-    owner_lane: &str,
-    fingerprint: &str,
-    tokens: usize,
-    bytes: u64,
-) -> DuplicateSubject {
-    DuplicateSubject {
-        id: path.to_string(),
-        owner_lane: owner_lane.to_string(),
-        fingerprint: Some(fingerprint.to_string()),
-        tokens: Some(tokens),
-        bytes: Some(bytes),
-    }
-}
-
-pub(crate) fn source_token_fingerprint(tokens: &[String]) -> String {
-    let mut material = String::from("source-token-fingerprint:v1\n");
-    for token in tokens {
-        material.push_str(token);
-        material.push('\n');
-    }
-    format!(
-        "source-token-fingerprint:v1:{}",
-        sha256_hex(material.as_bytes())
-    )
 }
 
 pub(crate) fn registered_op_duplicate_subject(
@@ -384,58 +351,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn duplicate_family_id_is_pair_order_stable() {
+    fn duplicate_family_id_is_pair_order_and_detector_stable() {
         assert_eq!(
-            duplicate_family_id("source-similar", "b.rs", "a.rs"),
-            duplicate_family_id("source-similar", "a.rs", "b.rs")
-        );
-    }
-
-    #[test]
-    fn registered_op_duplicate_family_id_is_detector_stable() {
-        assert_eq!(
-            registered_op_duplicate_family_id("vyre-libs::math::matmul", "vyre-libs::math::dot"),
-            registered_op_duplicate_family_id("vyre-libs::math::dot", "vyre-libs::math::matmul")
+            duplicate_family_id("registered-op", "right", "left"),
+            duplicate_family_id("registered-op", "left", "right")
         );
         assert_ne!(
-            registered_op_duplicate_family_id("vyre-libs::math::matmul", "vyre-libs::math::dot"),
-            duplicate_family_id(
-                "source-similar",
-                "vyre-libs::math::matmul",
-                "vyre-libs::math::dot"
-            )
+            duplicate_family_id("registered-op", "left", "right"),
+            duplicate_family_id("other-detector", "left", "right")
         );
-    }
-
-    #[test]
-    fn source_duplicate_subject_preserves_source_identity_fields() {
-        let subject = source_duplicate_subject(
-            "xtask/src/source_similar.rs",
-            "testing_evidence",
-            "source-token-fingerprint:v1:abc",
-            128,
-            4096,
-        );
-
-        assert_eq!(subject.id, "xtask/src/source_similar.rs");
-        assert_eq!(subject.owner_lane, "testing_evidence");
-        assert_eq!(
-            subject.fingerprint.as_deref(),
-            Some("source-token-fingerprint:v1:abc")
-        );
-        assert_eq!(subject.tokens, Some(128));
-        assert_eq!(subject.bytes, Some(4096));
-    }
-
-    #[test]
-    fn source_token_fingerprint_is_stable_for_same_tokens() {
-        let tokens = vec!["fn".to_string(), "ident".to_string(), "num".to_string()];
-
-        assert_eq!(
-            source_token_fingerprint(&tokens),
-            source_token_fingerprint(&tokens)
-        );
-        assert!(source_token_fingerprint(&tokens).starts_with("source-token-fingerprint:v1:"));
     }
 
     #[test]
@@ -455,35 +379,23 @@ mod tests {
     #[test]
     fn duplicate_family_report_counts_families() {
         let finding = DuplicateFamilyFinding {
-            family_id: duplicate_family_id("source-similar", "a.rs", "b.rs"),
-            detector: "source-similar".to_string(),
+            family_id: registered_op_duplicate_family_id("left", "right"),
+            detector: "registered-op".to_string(),
             severity: duplicate_severity(0.96),
             score: 0.96,
-            left: DuplicateSubject {
-                id: "a.rs".to_string(),
-                owner_lane: "coordination".to_string(),
-                fingerprint: Some("source-token-fingerprint:v1:left".to_string()),
-                tokens: Some(128),
-                bytes: Some(2048),
-            },
-            right: DuplicateSubject {
-                id: "b.rs".to_string(),
-                owner_lane: "coordination".to_string(),
-                fingerprint: Some("source-token-fingerprint:v1:right".to_string()),
-                tokens: Some(129),
-                bytes: Some(2050),
-            },
-            import_owner: "coordination".to_string(),
-            import_target: "coordination".to_string(),
+            left: registered_op_duplicate_subject("left", &[1, 2, 3], 3),
+            right: registered_op_duplicate_subject("right", &[1, 2, 4], 3),
+            import_owner: "op_matrix".to_string(),
+            import_target: "op_matrix".to_string(),
             evidence: DuplicateEvidence {
-                similarity_metric: "normalized-token-shingle-cosine",
-                left_metric: "tokens=128:bytes=2048".to_string(),
-                right_metric: "tokens=129:bytes=2050".to_string(),
-                dedup_action: "extract_shared_module_or_import_existing_owner",
+                similarity_metric: "ordered-ir-word-equality",
+                left_metric: "words=3".to_string(),
+                right_metric: "words=3".to_string(),
+                dedup_action: "reuse_registered_operation",
             },
         };
 
-        let report = duplicate_family_report("xtask source-similar", "rust-source", vec![finding]);
+        let report = duplicate_family_report("xtask whats-similar", "registered-op", vec![finding]);
 
         assert_eq!(report.schema_version, DUPLICATE_FAMILY_SCHEMA_VERSION);
         assert_eq!(report.family_count, 1);
@@ -619,18 +531,18 @@ mod tests {
         let blockers = validate_duplicate_family_report_artifact(
             br#"{
   "schema_version": 2,
-  "generator_command": "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
+  "generator_command": "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
   "family_count": 1,
   "families": [
     {
       "family_id": "duplicate-family:v1:abc",
-      "detector": "source-similar",
+      "detector": "registered-op",
       "left": {"fingerprint": "unknown:v1:left"},
-      "right": {"fingerprint": "source-token-fingerprint:v1:right"}
+      "right": {"fingerprint": "registered-op-ir-fingerprint:v1:right"}
     }
   ]
 }"#,
-            "xtask source-similar --duplicate-report-json release/evidence/dedup/source-similar-duplicates.json",
+            "xtask whats-similar --all --duplicate-report-json release/evidence/dedup/registered-op-duplicates.json",
         );
 
         assert!(blockers

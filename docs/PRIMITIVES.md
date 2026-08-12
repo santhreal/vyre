@@ -1,5 +1,8 @@
 # Primitive Operation Inventory
 
+**Status: Superseded.** Use `docs/generated/OP_SCHEMA.json` and
+`docs/generated/OP_INVENTORY.md` for the current operation inventory.
+
 This is the canonical enumeration of primitive ops shipped in vyre 0.4.1. The benchmark showcase, conform KAT corpus, and adversarial test matrix are all indexed off this list. Adding a new primitive = new row here + new file in `vyre-core/src/ops/primitive/<family>/<op>.rs` + new KAT file in `rules/kat/primitive/<op>.toml`. Everything else (bench, oracle, adversarial) is generated.
 
 ## Families

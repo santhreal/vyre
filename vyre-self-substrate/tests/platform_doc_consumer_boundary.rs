@@ -8,7 +8,7 @@ use std::process::Command;
 use vyre_test_support::consumer_boundary::FORBIDDEN_CONSUMER_NAMES;
 
 const PLATFORM_CRATES: &[&str] = &[
-    "vyre-core",
+    "vyre",
     "vyre-spec",
     "vyre-macros",
     "vyre-foundation",
@@ -92,11 +92,9 @@ fn platform_crate_docs_and_comments_do_not_name_consumers() {
 /// is index-aware, so a file matching an ignore pattern that is already tracked
 /// is already in public history and stays indexed.
 ///
-/// The rule is implemented once, in scripts/check_docs_index.sh, because
-/// scripts/nightly_ci.sh runs the same gate; this test is the cargo-visible
-/// entry point. Breaks if it regresses: an uncommitted new doc fails CI for
-/// existing, a deleted doc keeps a permanent dead row in the index, and private
-/// plans leak into the public routing table.
+/// `scripts/check_docs_index.sh` owns the rule; this test is the cargo-visible
+/// entry point. An uncommitted new document fails CI, a deleted document cannot
+/// retain a dead index row, and private plans cannot enter public navigation.
 #[test]
 fn docs_index_covers_every_public_markdown_document() {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -185,33 +183,6 @@ fn public_docs_never_link_unreachable_targets() {
         String::from_utf8_lossy(&output.stderr).as_ref(),
         "",
         "documentation link contract must be quiet on success"
-    );
-}
-
-#[test]
-fn roadmap_status_and_changelog_are_separate_contracts() {
-    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let workspace = manifest
-        .parent()
-        .expect("vyre-self-substrate should live directly under the workspace root");
-    let script = workspace.join("scripts/check_roadmap_status_split.sh");
-
-    let output = Command::new("bash")
-        .arg(&script)
-        .current_dir(workspace)
-        .output()
-        .expect("roadmap/status split contract script should execute");
-
-    assert!(
-        output.status.success(),
-        "roadmap/status split contract failed.\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr).as_ref(),
-        "",
-        "roadmap/status split contract must be quiet on success"
     );
 }
 

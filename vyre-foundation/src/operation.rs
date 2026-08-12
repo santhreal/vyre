@@ -26,6 +26,45 @@ pub enum OperationTier {
     Runtime,
     /// External extension operation.
     External,
+    /// Identifier does not match an accepted semantic namespace.
+    Unknown,
+}
+
+impl OperationTier {
+    /// Stable operation-matrix spelling.
+    #[must_use]
+    pub const fn matrix_value(self) -> &'static str {
+        match self {
+            Self::Foundation => "foundation_ir",
+            Self::Intrinsic => "intrinsic",
+            Self::Primitive => "primitive",
+            Self::Library => "libs",
+            Self::Runtime => "runtime",
+            Self::External => "external",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+/// Classify one operation identity by its canonical namespace.
+#[must_use]
+pub fn classify_operation_id(id: &str) -> OperationTier {
+    if id.starts_with("vyre-intrinsics::hardware::") {
+        OperationTier::Intrinsic
+    } else if id.starts_with("vyre-primitives::") {
+        OperationTier::Primitive
+    } else if id.starts_with("vyre-libs::") {
+        OperationTier::Library
+    } else if id.starts_with("core.") || id.starts_with("io.") || id.starts_with("mem.") {
+        OperationTier::Runtime
+    } else if id
+        .split_once("::")
+        .is_some_and(|(crate_name, _)| !crate_name.is_empty() && !crate_name.starts_with("vyre-"))
+    {
+        OperationTier::External
+    } else {
+        OperationTier::Unknown
+    }
 }
 
 /// Semantic memory and synchronization effects derived from an operation program.
@@ -250,6 +289,18 @@ pub enum OperationRegistryError {
         /// Incomplete operation id.
         id: &'static str,
     },
+    /// Registration tier does not match its canonical namespace.
+    #[error(
+        "operation `{id}` declares tier {declared:?}, but its canonical namespace classifies as {classified:?}"
+    )]
+    InvalidTier {
+        /// Invalid operation id.
+        id: &'static str,
+        /// Tier supplied by the registration.
+        declared: OperationTier,
+        /// Tier derived from the canonical namespace.
+        classified: OperationTier,
+    },
 }
 
 /// Immutable validated view over every linked semantic operation registration.
@@ -271,6 +322,14 @@ impl OperationRegistry {
             }
             if entry.build.is_none() && entry.signature.is_none() {
                 return Err(OperationRegistryError::MissingSemantics { id: entry.id });
+            }
+            let classified = classify_operation_id(entry.id);
+            if classified == OperationTier::Unknown || classified != entry.tier {
+                return Err(OperationRegistryError::InvalidTier {
+                    id: entry.id,
+                    declared: entry.tier,
+                    classified,
+                });
             }
             if by_id.insert(entry.id, *entry).is_some() {
                 return Err(OperationRegistryError::DuplicateId { id: entry.id });

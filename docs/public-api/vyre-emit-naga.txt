@@ -1,0 +1,99 @@
+impl core::fmt::Display for vyre_emit_naga::patterns::NagaAuditReport
+impl vyre_emit_naga::patterns::NagaAuditReport
+impl vyre_emit_naga::patterns::vec_pack::plan::PackGroup
+impl vyre_emit_naga::patterns::vec_pack::plan::PackKind
+impl vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+pub const fn vyre_emit_naga::patterns::vec_pack::plan::PackKind::lane_count(&self) -> u32
+pub const vyre_emit_naga::patterns::pipeline_prewarm::PREWARM_OP_THRESHOLD: u32
+pub const vyre_emit_naga::program::TRAP_SIDECAR_NAME: &str
+pub const vyre_emit_naga::program::TRAP_SIDECAR_WORDS: u32
+pub enum vyre_emit_naga::EmitError
+pub enum vyre_emit_naga::patterns::vec_pack::PackKind
+pub enum vyre_emit_naga::patterns::vec_pack::plan::PackKind
+pub fn vyre_emit_naga::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
+pub fn vyre_emit_naga::emit_many(descs: &[vyre_lower::descriptor::KernelDescriptor]) -> alloc::vec::Vec<core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>>
+pub fn vyre_emit_naga::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
+pub fn vyre_emit_naga::patterns::NagaAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_emit_naga::patterns::NagaAuditReport::format_short(&self) -> alloc::string::String
+pub fn vyre_emit_naga::patterns::NagaAuditReport::has_any(&self) -> bool
+pub fn vyre_emit_naga::patterns::NagaAuditReport::is_clean(&self) -> bool
+pub fn vyre_emit_naga::patterns::NagaAuditReport::merge(&mut self, other: vyre_emit_naga::patterns::NagaAuditReport)
+pub fn vyre_emit_naga::patterns::NagaAuditReport::total_candidates(&self) -> usize
+pub fn vyre_emit_naga::patterns::NagaAuditReport::zero() -> Self
+pub fn vyre_emit_naga::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::NagaAuditReport
+pub fn vyre_emit_naga::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::NagaAuditReport
+pub fn vyre_emit_naga::patterns::pipeline_prewarm::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint
+pub fn vyre_emit_naga::patterns::vec_pack::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+pub fn vyre_emit_naga::patterns::vec_pack::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+pub fn vyre_emit_naga::patterns::vec_pack::plan::PackGroup::op_count(&self) -> usize
+pub fn vyre_emit_naga::patterns::vec_pack::plan::PackGroup::op_stream_span(&self) -> usize
+pub fn vyre_emit_naga::patterns::vec_pack::plan::PackKind::throughput_factor(&self) -> f32
+pub fn vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::estimated_savings_score(&self) -> f32
+pub fn vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::ops_eliminated(&self) -> usize
+pub fn vyre_emit_naga::program::bind_group_for(kind: vyre_foundation::ir_inner::model::program::MemoryKind) -> u32
+pub fn vyre_emit_naga::program::emit_module(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3]) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::emit_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::emit_prepared_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::prepared_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::trap_sidecar_decl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::trap_tags(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::sync::Arc<[vyre_emit_naga::program::TrapTag]>, vyre_foundation::lower::LoweringError>
+pub mod vyre_emit_naga
+pub mod vyre_emit_naga::patterns
+pub mod vyre_emit_naga::patterns::pipeline_prewarm
+pub mod vyre_emit_naga::patterns::vec_pack
+pub mod vyre_emit_naga::patterns::vec_pack::analysis
+pub mod vyre_emit_naga::patterns::vec_pack::plan
+pub mod vyre_emit_naga::program
+pub struct vyre_emit_naga::BindResultEntry
+pub struct vyre_emit_naga::patterns::NagaAuditReport
+pub struct vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint
+pub struct vyre_emit_naga::patterns::vec_pack::PackGroup
+pub struct vyre_emit_naga::patterns::vec_pack::PackingPlan
+pub struct vyre_emit_naga::patterns::vec_pack::plan::PackGroup
+pub struct vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+pub struct vyre_emit_naga::program::TrapTag
+pub vyre_emit_naga::BindResultEntry::child_body_depth: usize
+pub vyre_emit_naga::BindResultEntry::init_handle: u32
+pub vyre_emit_naga::BindResultEntry::init_scalar_kind: core::option::Option<alloc::string::String>
+pub vyre_emit_naga::BindResultEntry::local_allocated_ty: core::option::Option<u32>
+pub vyre_emit_naga::BindResultEntry::op_kind: alloc::string::String
+pub vyre_emit_naga::BindResultEntry::publish_path: alloc::string::String
+pub vyre_emit_naga::BindResultEntry::value_types_at_call: core::option::Option<u32>
+pub vyre_emit_naga::BindResultEntry::vyre_op_id: u32
+pub vyre_emit_naga::EmitError::InvalidBinding
+pub vyre_emit_naga::EmitError::InvalidBinding::reason: alloc::string::String
+pub vyre_emit_naga::EmitError::InvalidBinding::slot: u32
+pub vyre_emit_naga::EmitError::InvalidDescriptor(alloc::string::String)
+pub vyre_emit_naga::EmitError::NagaConstructionFailed(alloc::string::String)
+pub vyre_emit_naga::EmitError::UnsupportedCapability(&'static str)
+pub vyre_emit_naga::EmitError::UnsupportedOp(vyre_lower::descriptor::KernelOp)
+pub vyre_emit_naga::EmitError::UnsupportedWorkgroup(vyre_lower::target::WorkgroupLimitViolation)
+pub vyre_emit_naga::patterns::NagaAuditReport::kernel_id: alloc::string::String
+pub vyre_emit_naga::patterns::NagaAuditReport::prewarm: vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint
+pub vyre_emit_naga::patterns::NagaAuditReport::vec_pack: vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+pub vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint::estimated_first_dispatch_us: u32
+pub vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint::kernel_id: alloc::string::String
+pub vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint::reason: alloc::string::String
+pub vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint::should_prewarm: bool
+pub vyre_emit_naga::patterns::vec_pack::PackGroup::binding_slot: u32
+pub vyre_emit_naga::patterns::vec_pack::PackGroup::end_op_index: usize
+pub vyre_emit_naga::patterns::vec_pack::PackGroup::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_emit_naga::patterns::vec_pack::PackGroup::pack: vyre_emit_naga::patterns::vec_pack::plan::PackKind
+pub vyre_emit_naga::patterns::vec_pack::PackGroup::start_op_index: usize
+pub vyre_emit_naga::patterns::vec_pack::PackKind::Vec2
+pub vyre_emit_naga::patterns::vec_pack::PackKind::Vec3
+pub vyre_emit_naga::patterns::vec_pack::PackKind::Vec4
+pub vyre_emit_naga::patterns::vec_pack::PackingPlan::groups: alloc::vec::Vec<vyre_emit_naga::patterns::vec_pack::plan::PackGroup>
+pub vyre_emit_naga::patterns::vec_pack::PackingPlan::kernel_id: alloc::string::String
+pub vyre_emit_naga::patterns::vec_pack::plan::PackGroup::binding_slot: u32
+pub vyre_emit_naga::patterns::vec_pack::plan::PackGroup::end_op_index: usize
+pub vyre_emit_naga::patterns::vec_pack::plan::PackGroup::kind: vyre_lower::analyses::access_kind::AccessKind
+pub vyre_emit_naga::patterns::vec_pack::plan::PackGroup::pack: vyre_emit_naga::patterns::vec_pack::plan::PackKind
+pub vyre_emit_naga::patterns::vec_pack::plan::PackGroup::start_op_index: usize
+pub vyre_emit_naga::patterns::vec_pack::plan::PackKind::Vec2
+pub vyre_emit_naga::patterns::vec_pack::plan::PackKind::Vec3
+pub vyre_emit_naga::patterns::vec_pack::plan::PackKind::Vec4
+pub vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::groups: alloc::vec::Vec<vyre_emit_naga::patterns::vec_pack::plan::PackGroup>
+pub vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::kernel_id: alloc::string::String
+pub vyre_emit_naga::program::TrapTag::code: u32
+pub vyre_emit_naga::program::TrapTag::tag: alloc::sync::Arc<str>

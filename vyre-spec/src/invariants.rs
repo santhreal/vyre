@@ -21,12 +21,12 @@ pub fn empty_test_family() -> &'static [TestDescriptor] {
 
 const I1_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::deterministic_backend_passes",
+        "conform/vyre-conform/tests/invariants.rs::deterministic_backend_passes",
         "Happy path: a stable backend produces byte-identical output across repeated runs.",
         InvariantId::I1,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::flaky_backend_run_3_at_wg_256",
+        "conform/vyre-conform/tests/invariants.rs::flaky_backend_run_3_at_wg_256",
         "Adversarial path: a backend that changes output on a later run is rejected.",
         InvariantId::I1,
     ),
@@ -34,12 +34,12 @@ const I1_TESTS: &[TestDescriptor] = &[
 
 const I2_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::xor_then_popcount_matches_sequential",
+        "conform/vyre-conform/tests/invariants.rs::xor_then_popcount_matches_sequential",
         "Happy path: lowering a composed XOR and popcount chain matches sequential execution.",
         InvariantId::I2,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::sub_then_abs_then_clamp_matches_sequential",
+        "conform/vyre-conform/tests/invariants.rs::sub_then_abs_then_clamp_matches_sequential",
         "Adversarial path: mixed signed arithmetic composition preserves sequential semantics.",
         InvariantId::I2,
     ),
@@ -47,12 +47,12 @@ const I2_TESTS: &[TestDescriptor] = &[
 
 const I3_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::reference_backend_certifies_clean",
+        "conform/vyre-conform/tests/invariants.rs::reference_backend_certifies_clean",
         "Happy path: the reference backend certifies cleanly against the conformance runner.",
         InvariantId::I3,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::broken_cpu_fn_produces_actionable_violation",
+        "conform/vyre-conform/tests/invariants.rs::broken_cpu_fn_produces_actionable_violation",
         "Adversarial path: backend/reference disagreement produces an actionable violation.",
         InvariantId::I3,
     ),
@@ -60,12 +60,12 @@ const I3_TESTS: &[TestDescriptor] = &[
 
 const I4_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::structural_wire_round_trip_preserves_program",
+        "conform/vyre-conform/tests/invariants.rs::structural_wire_round_trip_preserves_program",
         "Happy path: valid generated programs survive structural wire-format round trips.",
         InvariantId::I4,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::handcrafted_structural_violation_is_detected",
+        "conform/vyre-conform/tests/invariants.rs::handcrafted_structural_violation_is_detected",
         "Adversarial path: malformed structural wire input is detected instead of accepted.",
         InvariantId::I4,
     ),
@@ -73,12 +73,12 @@ const I4_TESTS: &[TestDescriptor] = &[
 
 const I5_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::reference_round2_1_validation_gate_rejects_invalid_programs",
+        "conform/vyre-conform/tests/invariants.rs::reference_round2_1_validation_gate_rejects_invalid_programs",
         "Happy path: validation gates invalid programs before execution or lowering.",
         InvariantId::I5,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::reference_round2_7_huge_workgroup_allocation_is_rejected",
+        "conform/vyre-conform/tests/invariants.rs::reference_round2_7_huge_workgroup_allocation_is_rejected",
         "Adversarial path: validated programs reject unbounded workgroup allocation requests.",
         InvariantId::I5,
     ),
@@ -86,12 +86,12 @@ const I5_TESTS: &[TestDescriptor] = &[
 
 const I6_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::validation_generation_emits_accept_and_reject_cases",
+        "conform/vyre-conform/tests/invariants.rs::validation_generation_emits_accept_and_reject_cases",
         "Happy path: generated validation suites include both accepting and rejecting cases.",
         InvariantId::I6,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::reference_round2_8_call_arity_rejected_before_allocation",
+        "conform/vyre-conform/tests/invariants.rs::reference_round2_8_call_arity_rejected_before_allocation",
         "Adversarial path: call-arity validation fires independently before allocation.",
         InvariantId::I6,
     ),
@@ -99,12 +99,12 @@ const I6_TESTS: &[TestDescriptor] = &[
 
 const I7_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::xor_then_xor_proof_preserves_commutative_and_associative",
+        "conform/vyre-conform/tests/invariants.rs::xor_then_xor_proof_preserves_commutative_and_associative",
         "Happy path: composition proof preserves commutative and associative laws.",
         InvariantId::I7,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::xor_then_add_does_not_claim_commutativity_without_theorem",
+        "conform/vyre-conform/tests/invariants.rs::xor_then_add_does_not_claim_commutativity_without_theorem",
         "Adversarial path: law inference refuses unproven composition claims.",
         InvariantId::I7,
     ),
@@ -112,12 +112,12 @@ const I7_TESTS: &[TestDescriptor] = &[
 
 const I8_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::reference_run_bit_matches_cpu_fn_for_registered_specs",
+        "conform/vyre-conform/tests/invariants.rs::reference_run_bit_matches_cpu_fn_for_registered_specs",
         "Happy path: reference execution matches each registered CPU reference function.",
         InvariantId::I8,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::dual_references_agree_on_all_registered_ops",
+        "conform/vyre-conform/tests/invariants.rs::dual_references_agree_on_all_registered_ops",
         "Adversarial path: dual reference oracles fuzz registered operations for disagreement.",
         InvariantId::I8,
     ),
@@ -125,12 +125,12 @@ const I8_TESTS: &[TestDescriptor] = &[
 
 const I9_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::falsifiability_matrix_covers_every_algebraic_law_variant",
+        "conform/vyre-conform/tests/invariants.rs::falsifiability_matrix_covers_every_algebraic_law_variant",
         "Happy path: the falsifiability matrix covers every declared algebraic-law variant.",
         InvariantId::I9,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::every_matrix_entry_catches_violators",
+        "conform/vyre-conform/tests/invariants.rs::every_matrix_entry_catches_violators",
         "Adversarial path: every matrix entry catches a concrete law violator.",
         InvariantId::I9,
     ),
@@ -138,12 +138,12 @@ const I9_TESTS: &[TestDescriptor] = &[
 
 const I10_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::budget_tracker_rejects_oversized_input",
+        "conform/vyre-conform/tests/invariants.rs::budget_tracker_rejects_oversized_input",
         "Happy path: budget tracking rejects inputs beyond declared resource limits.",
         InvariantId::I10,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::public_entry_points_survive_fail_on_every_allocation",
+        "conform/vyre-conform/tests/invariants.rs::public_entry_points_survive_fail_on_every_allocation",
         "Adversarial path: public entry points survive allocator failure injection.",
         InvariantId::I10,
     ),
@@ -151,12 +151,12 @@ const I10_TESTS: &[TestDescriptor] = &[
 
 const I11_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::correct_backend_passes_all_oob_tests",
+        "conform/vyre-conform/tests/invariants.rs::correct_backend_passes_all_oob_tests",
         "Happy path: a conforming backend handles out-of-bounds cases without panics.",
         InvariantId::I11,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::unop_negate_i32_min_wraps_without_panic",
+        "conform/vyre-conform/tests/invariants.rs::unop_negate_i32_min_wraps_without_panic",
         "Adversarial path: signed minimum negation wraps according to spec instead of panicking.",
         InvariantId::I11,
     ),
@@ -164,12 +164,12 @@ const I11_TESTS: &[TestDescriptor] = &[
 
 const I12_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::enforces_oob_load_store_and_atomic_contract",
+        "conform/vyre-conform/tests/invariants.rs::enforces_oob_load_store_and_atomic_contract",
         "Happy path: OOB load, store, and atomic semantics are defined by the interpreter.",
         InvariantId::I12,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::bad_atomic_backend_fails_with_actionable_message",
+        "conform/vyre-conform/tests/invariants.rs::bad_atomic_backend_fails_with_actionable_message",
         "Adversarial path: undefined atomic OOB behavior is caught with an actionable error.",
         InvariantId::I12,
     ),
@@ -177,12 +177,12 @@ const I12_TESTS: &[TestDescriptor] = &[
 
 const I13_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::published_specs_have_not_drifted",
+        "conform/vyre-conform/tests/invariants.rs::published_specs_have_not_drifted",
         "Happy path: published specs remain stable across compatible versions.",
         InvariantId::I13,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::golden_replay_all",
+        "conform/vyre-conform/tests/invariants.rs::golden_replay_all",
         "Adversarial path: committed golden cases replay to detect userspace semantic drift.",
         InvariantId::I13,
     ),
@@ -190,12 +190,12 @@ const I13_TESTS: &[TestDescriptor] = &[
 
 const I14_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::every_public_enum_in_vyre_is_non_exhaustive",
+        "conform/vyre-conform/tests/invariants.rs::every_public_enum_in_vyre_is_non_exhaustive",
         "Happy path: public enums keep non-exhaustive compatibility discipline.",
         InvariantId::I14,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::unknown_data_type_byte_returns_error_not_panic",
+        "conform/vyre-conform/tests/invariants.rs::unknown_data_type_byte_returns_error_not_panic",
         "Adversarial path: unknown data-type tags produce structured errors instead of panics.",
         InvariantId::I14,
     ),
@@ -203,12 +203,12 @@ const I14_TESTS: &[TestDescriptor] = &[
 
 const I15_TESTS: &[TestDescriptor] = &[
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::certificate_public_getters_are_available",
+        "conform/vyre-conform/tests/invariants.rs::certificate_public_getters_are_available",
         "Happy path: certificate data remains inspectable without mutable escape hatches.",
         InvariantId::I15,
     ),
     descriptor(
-        "conform/vyre-conform-enforce/tests/invariants.rs::certificate_strength_controls_witnessed_law_detection",
+        "conform/vyre-conform/tests/invariants.rs::certificate_strength_controls_witnessed_law_detection",
         "Adversarial path: certificate strength changes expose previously missed law violations.",
         InvariantId::I15,
     ),

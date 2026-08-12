@@ -18,10 +18,10 @@ use vyre_reference::value::Value;
 // Lattice Join (bitwise OR)
 // ---------------------------------------------------------------------------
 
-mod algebra_lattice_semiring_contracts_part1 {
+mod algebra_lattice_semiring_contracts_lattice_join_specific_values {
 
-    include!("__split/algebra_lattice_semiring_contracts_part1.rs");
+    include!("contract_cases/algebra_lattice_semiring_contracts__lattice_join_specific_values.rs");
 }
-mod algebra_lattice_semiring_contracts_part2 {
-    include!("__split/algebra_lattice_semiring_contracts_part2.rs");
+mod algebra_lattice_semiring_contracts_semiring_min_plus_mul_zero_is_identity {
+    include!("contract_cases/algebra_lattice_semiring_contracts__semiring_min_plus_mul_zero_is_identity.rs");
 }

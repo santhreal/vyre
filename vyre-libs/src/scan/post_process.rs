@@ -1,11 +1,11 @@
-//! Match post-processing: dedup, entropy, and confidence in one pass.
+//! ByteRange post-processing: dedup, entropy, and confidence in one pass.
 //!
 //! The module is the canonical host reference for matcher output shaping.
 //! Consumers that need device-resident post-processing use the same field
 //! contract: sorted non-overlapping `(pattern_id, start, end)` spans plus
 //! deterministic entropy and confidence signals.
 
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::region::{dedup_regions_inplace, RegionTriple};
 
 /// Post-processing contract violation.
@@ -46,7 +46,7 @@ impl std::error::Error for PostProcessError {}
 /// two derived signals every downstream consumer reads.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PostProcessedMatch {
-    /// Pattern id from the original `Match`.
+    /// Pattern id from the original `ByteRange`.
     pub pattern_id: u32,
     /// Inclusive start byte offset.
     pub start: u32,
@@ -76,7 +76,7 @@ pub struct PostProcessedMatch {
 /// outside `haystack`.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_post_process(
-    matches: &[Match],
+    matches: &[ByteRange],
     haystack: &[u8],
 ) -> Result<Vec<PostProcessedMatch>, PostProcessError> {
     let mut triples = Vec::new();
@@ -96,7 +96,7 @@ pub fn try_reference_post_process(
 /// outside `haystack`.
 #[cfg(any(test, feature = "cpu-parity"))]
 pub fn try_reference_post_process_into(
-    matches: &[Match],
+    matches: &[ByteRange],
     haystack: &[u8],
     triples: &mut Vec<RegionTriple>,
     out: &mut Vec<PostProcessedMatch>,
@@ -111,7 +111,7 @@ pub fn try_reference_post_process_into(
     triples.extend(
         matches
             .iter()
-            .map(|m| RegionTriple::new(m.pattern_id, m.start, m.end)),
+            .map(|m| RegionTriple::new(m.tag, m.start, m.end)),
     );
     dedup_regions_inplace(triples);
 
@@ -151,7 +151,7 @@ pub fn try_reference_post_process_into(
 /// use [`try_reference_post_process`].
 #[must_use]
 #[cfg(any(test, feature = "cpu-parity"))]
-pub fn reference_post_process(matches: &[Match], haystack: &[u8]) -> Vec<PostProcessedMatch> {
+pub fn reference_post_process(matches: &[ByteRange], haystack: &[u8]) -> Vec<PostProcessedMatch> {
     try_reference_post_process(matches, haystack).unwrap_or_else(|error| {
         panic!("vyre-libs scan Reference oracle post-process contract failed: {error}")
     })
@@ -188,9 +188,9 @@ mod tests {
     fn into_reuses_scratch_and_matches_allocating_api() {
         let haystack = b"AKIA1234567890ZZ";
         let matches = [
-            Match::new(7, 0, 8),
-            Match::new(7, 0, 8),
-            Match::new(8, 4, 12),
+            ByteRange::new(7, 0, 8),
+            ByteRange::new(7, 0, 8),
+            ByteRange::new(8, 4, 12),
         ];
 
         let expected = try_reference_post_process(&matches, haystack).unwrap();
@@ -228,7 +228,7 @@ mod tests {
         let mut triples = Vec::new();
         let mut out = Vec::new();
         let err = try_reference_post_process_into(
-            &[Match::new(1, 10, 12)],
+            &[ByteRange::new(1, 10, 12)],
             b"short",
             &mut triples,
             &mut out,
@@ -250,6 +250,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "post-process contract failed")]
     fn infallible_wrapper_panics_on_corrupt_ranges() {
-        let _ = reference_post_process(&[Match::new(1, 10, 12)], b"short");
+        let _ = reference_post_process(&[ByteRange::new(1, 10, 12)], b"short");
     }
 }

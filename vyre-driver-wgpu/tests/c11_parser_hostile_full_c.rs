@@ -19,7 +19,7 @@
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
@@ -396,10 +396,10 @@ fn fixture_compound_literal_stress() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 // Table-driven CPU reference tests
 // ---------------------------------------------------------------------------
 
-mod c11_parser_hostile_full_c_part1 {
+mod c11_parser_hostile_full_c_cpu_reference_typedef_expr_ambiguity {
 
-    include!("__split/c11_parser_hostile_full_c_part1.rs");
+    include!("contract_cases/c11_parser_hostile_full_c__cpu_reference_typedef_expr_ambiguity.rs");
 }
-mod c11_parser_hostile_full_c_part2 {
-    include!("__split/c11_parser_hostile_full_c_part2.rs");
+mod c11_parser_hostile_full_c_gpu_parity_pg_lower_typedef_ambiguity {
+    include!("contract_cases/c11_parser_hostile_full_c__gpu_parity_pg_lower_typedef_ambiguity.rs");
 }

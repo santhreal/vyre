@@ -1,5 +1,8 @@
 # Wire-format tag reservations  -  vyre 0.6 terminal allocation
 
+**Status: Superseded.** Use [`docs/wire-format.md`](wire-format.md) for the
+current wire contract. This file remains historical tag-allocation evidence.
+
 This document is the terminal tag allocation table for the VIR0 wire format
 as frozen in vyre 0.6. It supplements `docs/wire-format.md` (VIR0 structural
 spec) with the byte-level byte-to-variant mapping for every enum that crosses

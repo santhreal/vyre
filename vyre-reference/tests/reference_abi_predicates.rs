@@ -11,7 +11,7 @@
 //! The restatement that actually shipped was `!decl.is_output()`, in the
 //! pairwise composition harness. See BACKLOG.md R72.
 
-use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 use vyre_reference::{is_reference_input, is_reference_output, reference_eval};
 

@@ -19,4 +19,4 @@ jobs:
       - name: Install cargo-public-api
         run: cargo install cargo-public-api --locked
       - name: Diff every publishable crate
-        run: bash scripts/check_public_api.sh
+        run: bash scripts/check_public_api_snapshot.sh

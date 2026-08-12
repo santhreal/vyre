@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::reduce::all::{cpu_ref as all_cpu, reduce_all};
 use vyre_primitives::reduce::any::{cpu_ref as any_cpu, reduce_any};
 use vyre_primitives::reduce::count::{cpu_ref as count_cpu, reduce_count};

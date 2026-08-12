@@ -1,5 +1,7 @@
 # vyre-libs op naming
 
+Applies to Vyre 0.7.2.
+
 Every public Cat-A free function follows the pattern:
 
 ```

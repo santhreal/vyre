@@ -95,9 +95,9 @@ pub enum UnOp {
     Reciprocal,
     /// Extension-declared unary operator.
     ///
-    /// The `ExtensionUnOpId` resolves via the vyre-core extension
-    /// registry to a `&'static dyn ExtensionUnOp` with per-backend
-    /// lowerings. Wire encoding is `0x80 ++ u32 extension_id`.
+    /// The `ExtensionUnOpId` resolves through the foundation extension registry
+    /// to a `&'static dyn ExtensionUnOp` with per-backend lowerings.
+    /// Wire encoding is `0x80 ++ u32 extension_id`.
     Opaque(ExtensionUnOpId),
 }
 

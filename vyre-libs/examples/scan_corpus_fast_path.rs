@@ -22,7 +22,7 @@ use std::path::Path;
 
 use vyre::scan::GpuLiteralSet;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// The demo pattern set, a handful of secret-shaped literals a consumer might
 /// hunt for. In a real consumer these come from a rule catalog (Tier-B data).
@@ -202,12 +202,12 @@ fn print_presence(presence: &[u32], words_per_region: usize, pattern_count: u32)
     }
 }
 
-fn print_matches(matches: &[Match]) {
+fn print_matches(matches: &[ByteRange]) {
     println!("\npositioned matches ({} total):", matches.len());
     for hit in matches {
         println!(
             "  {} @ [{}..{})",
-            pattern_label(hit.pattern_id),
+            pattern_label(hit.tag),
             hit.start,
             hit.end
         );

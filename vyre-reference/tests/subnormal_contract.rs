@@ -8,7 +8,7 @@
 //!
 //! Every assertion uses `to_bits()` rather than approximate float equality.
 
-use vyre::ir::{BinOp, Expr, UnOp};
+use vyre_foundation::ir::{BinOp, Expr, UnOp};
 use vyre_reference::execution::expr as eval_expr;
 use vyre_reference::value::Value;
 use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
@@ -17,11 +17,11 @@ use vyre_reference::workgroup::{Invocation, InvocationIds, Memory};
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn empty_program() -> vyre::ir::Program {
-    vyre::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
+fn empty_program() -> vyre_foundation::ir::Program {
+    vyre_foundation::ir::Program::wrapped(Vec::new(), [1, 1, 1], Vec::new())
 }
 
-fn zero_invocation(program: &vyre::ir::Program) -> Invocation<'_> {
+fn zero_invocation(program: &vyre_foundation::ir::Program) -> Invocation<'_> {
     Invocation::new(InvocationIds::ZERO, program.entry())
 }
 

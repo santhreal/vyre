@@ -6,7 +6,7 @@ use std::path::Path;
 fn workspace_root() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
-        .expect("vyre-core must live under the Vyre workspace root")
+        .expect("vyre facade must live under the Vyre workspace root")
 }
 
 fn read_doc(rel: &str) -> String {

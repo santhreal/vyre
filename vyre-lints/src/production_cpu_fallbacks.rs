@@ -5,7 +5,7 @@
 //! production GPU dispatch paths because a hidden reference path can turn a
 //! GPU regression into a green release.
 
-use crate::{Violation, ViolationKind};
+use crate::{paths::workspace_relative, Violation, ViolationKind};
 use anyhow::{Context, Result};
 use proc_macro2::{Span, TokenTree};
 use std::path::Path;
@@ -59,43 +59,6 @@ pub fn scan_tree(root: &Path) -> Result<Vec<Violation>> {
         all.extend(scan_file(path, &workspace_rel)?);
     }
     Ok(all)
-}
-
-fn workspace_relative(path: &Path) -> String {
-    let s = path.to_string_lossy();
-    for marker in [
-        "vyre-aot/",
-        "vyre-bench/",
-        "vyre-core/",
-        "vyre-debug/",
-        "vyre-driver/",
-        "vyre-driver-cuda/",
-        "vyre-driver-spirv/",
-        "vyre-driver-wgpu/",
-        "vyre-emit-naga/",
-        "vyre-emit-ptx/",
-        "vyre-emit-spirv/",
-        "vyre-foundation/",
-        "vyre-frontend-c/",
-        "vyre-harness/",
-        "vyre-intrinsics/",
-        "vyre-libs/",
-        "vyre-lints/",
-        "vyre-lower/",
-        "vyre-macros/",
-        "vyre-ops/",
-        "vyre-primitives/",
-        "vyre-runtime/",
-        "vyre-self-substrate/",
-        "vyre-spec/",
-        "vyre-std/",
-        "xtask/",
-    ] {
-        if let Some(idx) = s.find(marker) {
-            return s[idx..].to_string();
-        }
-    }
-    s.to_string()
 }
 
 fn is_approved_parity_path(workspace_rel: &str) -> bool {

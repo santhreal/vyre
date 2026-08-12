@@ -101,9 +101,9 @@ pub use resident::ResidentQueueBuffers;
 #[cfg(feature = "megakernel-batch")]
 pub use rule_catalog::{BatchRuleProgram, BatchRuleRejection};
 pub use scheduler::{
-    default_priority_offsets, priority_partition_active_lane_count,
+    default_priority_offsets_array, priority_partition_active_lane_count,
     priority_partition_probe_budget, priority_partition_probe_count, priority_scan_body,
-    priority_scan_body_with_stride, try_default_priority_offsets, write_default_priority_offsets,
+    priority_scan_body_with_stride, write_default_priority_offsets,
 };
 pub use speculation::{PairedSpeculationSample, PairedSpeculationUpdate, PairedSpeculationWindow};
 pub use task::{TaskPriority, TaskQueueSnapshot, TaskState, TaskWorkItem};

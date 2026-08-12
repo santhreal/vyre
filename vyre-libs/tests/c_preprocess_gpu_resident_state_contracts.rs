@@ -291,57 +291,57 @@ fn run_conditional_mask_with_directives(
 // ---------------------------------------------------------------------------
 // 1. Macro table arena contracts
 // ---------------------------------------------------------------------------
-mod c_preprocess_gpu_resident_state_contracts_part1 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part1.rs");
+mod c_preprocess_gpu_resident_state_contracts_macro_table_has_exactly_4096_slots {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__macro_table_has_exactly_4096_slots.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part2 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part2.rs");
+mod c_preprocess_gpu_resident_state_contracts_dynamic_macro_table_probe_skips_empty_slots_then_matches {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__dynamic_macro_table_probe_skips_empty_slots_then_matches.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part3 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part3.rs");
+mod c_preprocess_gpu_resident_state_contracts_macro_replacement_range_must_be_inside_table_bounds {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__macro_replacement_range_must_be_inside_table_bounds.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part4 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part4.rs");
+mod c_preprocess_gpu_resident_state_contracts_function_like_macro_arg_arena_preserves_nested_parens {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__function_like_macro_arg_arena_preserves_nested_parens.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part5 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part5.rs");
+mod c_preprocess_gpu_resident_state_contracts_function_like_macro_parameter_count_overflow_fails_loudly {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__function_like_macro_parameter_count_overflow_fails_loudly.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part6 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part6.rs");
+mod c_preprocess_gpu_resident_state_contracts_conditional_stack_open_increments_depth_and_sets_active_bit {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__conditional_stack_open_increments_depth_and_sets_active_bit.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part7 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part7.rs");
+mod c_preprocess_gpu_resident_state_contracts_conditional_stack_else_selects_when_nothing_taken {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__conditional_stack_else_selects_when_nothing_taken.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part8 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part8.rs");
+mod c_preprocess_gpu_resident_state_contracts_conditional_stack_unclosed_open_fails_loudly {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__conditional_stack_unclosed_open_fails_loudly.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part9 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part9.rs");
+mod c_preprocess_gpu_resident_state_contracts_conditional_stack_endif_without_open_fails_loudly {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__conditional_stack_endif_without_open_fails_loudly.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part10 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part10.rs");
+mod c_preprocess_gpu_resident_state_contracts_directive_metadata_evaluates_ifdef_truth {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__directive_metadata_evaluates_ifdef_truth.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part11 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part11.rs");
+mod c_preprocess_gpu_resident_state_contracts_directive_metadata_rejects_span_not_covering_logical_row {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__directive_metadata_rejects_span_not_covering_logical_row.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part12 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part12.rs");
+mod c_preprocess_gpu_resident_state_contracts_expansion_queue_accumulates_warp_base_per_token {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__expansion_queue_accumulates_warp_base_per_token.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part13 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part13.rs");
+mod c_preprocess_gpu_resident_state_contracts_overflow_named_macro_expansion_output_capacity {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__overflow_named_macro_expansion_output_capacity.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part14 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part14.rs");
+mod c_preprocess_gpu_resident_state_contracts_overflow_function_like_macro_missing_rparen {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__overflow_function_like_macro_missing_rparen.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part15 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part15.rs");
+mod c_preprocess_gpu_resident_state_contracts_collision_safe_macro_name_hash_matches_fnv1a32 {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__collision_safe_macro_name_hash_matches_fnv1a32.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part16 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part16.rs");
+mod c_preprocess_gpu_resident_state_contracts_collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__collision_safe_macro_name_long_name_exceeds_pool_bounds_fails_loudly.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part17 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part17.rs");
+mod c_preprocess_gpu_resident_state_contracts_table_conditional_mask_all_directive_shapes {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__table_conditional_mask_all_directive_shapes.rs");
 }
-mod c_preprocess_gpu_resident_state_contracts_part18 {
-    include!("__split/c_preprocess_gpu_resident_state_contracts_part18.rs");
+mod c_preprocess_gpu_resident_state_contracts_table_line_splice_offset_map_is_monotonic {
+    include!("contract_cases/c_preprocess_gpu_resident_state_contracts__table_line_splice_offset_map_is_monotonic.rs");
 }

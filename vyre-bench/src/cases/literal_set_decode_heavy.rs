@@ -24,7 +24,7 @@ use crate::api::suite::SuiteKind;
 use crate::cases::scan_ac_irregular::support::{build_irregular_haystack, encode_match_triples};
 use crate::cases::scan_ac_irregular::PATTERNS;
 use vyre::scan::GpuLiteralSet;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// A consumer-shaped corpus, tiled densely so the scan produces many thousands of
 /// matches and the host readback/decode is the load-bearing cost.
@@ -42,7 +42,7 @@ pub struct LiteralSetDecodeHeavy;
 struct DecodeHeavyPrepared {
     engine: GpuLiteralSet,
     corpus: Vec<u8>,
-    reference: Vec<Match>,
+    reference: Vec<ByteRange>,
     max_matches: u32,
     expected: u32,
     planted: u32,
@@ -58,7 +58,7 @@ struct DecodeHeavyMeasurement {
     /// device timer (`None` on a backend without one, a loud absence, never a
     /// fabricated zero).
     device_ns: Option<u64>,
-    matches: Vec<Match>,
+    matches: Vec<ByteRange>,
 }
 
 /// Build a dense-match corpus: an irregular background with the SHORTEST pattern
@@ -94,7 +94,7 @@ fn run_decode_heavy(
     corpus: &[u8],
     max_matches: u32,
     iters: usize,
-) -> Result<DecodeHeavyMeasurement, vyre::BackendError> {
+) -> Result<DecodeHeavyMeasurement, vyre_driver::BackendError> {
     // Resident session: the seven immutable tables upload ONCE here, so the timed
     // loop below re-stages only the haystack + counter reset, the residual cost is
     // the dense match write-out + readback + decode.
@@ -126,7 +126,7 @@ fn clamp_ns(duration: std::time::Duration) -> u64 {
     duration.as_nanos().min(u128::from(u64::MAX)) as u64
 }
 
-fn encode_matches(matches: &[Match]) -> [Vec<u8>; 2] {
+fn encode_matches(matches: &[ByteRange]) -> [Vec<u8>; 2] {
     let count = u32::try_from(matches.len()).unwrap_or(u32::MAX);
     [count.to_le_bytes().to_vec(), encode_match_triples(matches)]
 }
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn encode_matches_carries_count_then_triples() {
-        let matches = [Match::new(0, 1, 4), Match::new(1, 8, 12)];
+        let matches = [ByteRange::new(0, 1, 4), ByteRange::new(1, 8, 12)];
         let [count, triples] = encode_matches(&matches);
         assert_eq!(count, 2u32.to_le_bytes().to_vec());
         assert_eq!(triples.len(), 2 * MATCH_TRIPLE_BYTES as usize);

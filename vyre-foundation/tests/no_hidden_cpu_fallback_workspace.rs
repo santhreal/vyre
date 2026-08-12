@@ -17,7 +17,6 @@ const PRODUCTION_SRC_DIRS: &[&str] = &[
     "vyre-emit-ptx/src",
     "vyre-foundation/src",
     "vyre-frontend-c/src",
-    "vyre-harness/src",
     "vyre-libs/src",
     "vyre-lower/src",
     "vyre-primitives/src",

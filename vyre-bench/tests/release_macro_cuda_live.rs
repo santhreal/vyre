@@ -1,11 +1,11 @@
 //! Live CUDA validation for generated compiler-grade release macro workloads.
 
 use vyre::ir::BufferAccess;
-use vyre::DispatchConfig;
 use vyre_bench::cases::release_workloads::{
     build_release_macro_case_for_records, release_macro_program_specs_for_records,
     ReleaseMacroGeneratedCase,
 };
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 
 const REDUCED_RECORDS: u32 = 512;

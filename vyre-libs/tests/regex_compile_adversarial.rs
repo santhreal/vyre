@@ -7,9 +7,7 @@
 
 #![cfg(feature = "matching-regex")]
 
-use vyre::scan::{
-    build_rule_pipeline_from_regex, compile_regex_set, MatchScan, RegexCompileError,
-};
+use vyre::scan::{compile_regex_set, RegexCompileError};
 
 const STATE_CAP: usize = vyre_primitives::nfa::subgroup_nfa::LANES_PER_SUBGROUP * 32;
 
@@ -364,33 +362,4 @@ fn cross_pattern_accept_state_count_matches_input_len() {
             "accept_state_ids.len() must equal pattern count"
         );
     }
-}
-
-#[test]
-fn cross_pattern_cache_key_changes_on_order_swap() {
-    let a = build_rule_pipeline_from_regex(&["foo", "bar"], "input", "hit", 0).unwrap();
-    let b = build_rule_pipeline_from_regex(&["bar", "foo"], "input", "hit", 0).unwrap();
-    assert_ne!(
-        a.cache_key(),
-        b.cache_key(),
-        "swapping pattern order must change cache key"
-    );
-}
-
-#[test]
-fn cross_pattern_cache_key_stable_for_identical_set() {
-    let a = build_rule_pipeline_from_regex(&["foo", "bar"], "input", "hit", 0).unwrap();
-    let b = build_rule_pipeline_from_regex(&["foo", "bar"], "input", "hit", 0).unwrap();
-    assert_eq!(
-        a.cache_key(),
-        b.cache_key(),
-        "identical patterns must produce identical cache key"
-    );
-}
-
-#[test]
-fn cross_pattern_cache_key_stable_across_rebuilds() {
-    let a = build_rule_pipeline_from_regex(&["a", "bb", "ccc"], "in", "hit", 16).unwrap();
-    let b = build_rule_pipeline_from_regex(&["a", "bb", "ccc"], "in", "hit", 16).unwrap();
-    assert_eq!(a.cache_key(), b.cache_key());
 }

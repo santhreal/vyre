@@ -141,7 +141,6 @@ rolls back all earlier resources. Sequence cancellation, completion, and reset
 release or zero mutable state, and generation checks reject stale leases.
 Eviction refuses a model while any sequence remains active.
 
-
 <!-- BEGIN GENERATED CRATE CONTRACT -->
 ## Crate contract
 
@@ -150,7 +149,7 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own backend-neutral execution planning, persistent runtime contracts, caches, telemetry, and IO substrate.
+Own compile-to-materialize orchestration, artifact sessions, recovery, persistence, residency, scheduling, caches, telemetry, readback, and IO.
 
 ### Boundaries
 
@@ -189,4 +188,14 @@ This crate is an active experimental runtime surface in the 0.7.2 workspace. Its
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

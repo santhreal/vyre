@@ -1,7 +1,7 @@
 //! CUDA target-compiler registry and immutable module-bundle contracts.
 
 use std::collections::BTreeMap;
-use vyre_driver::BindingSet;
+use vyre_driver::{BindingSet, BoundResource};
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
@@ -87,4 +87,34 @@ fn registered_materializer_executes_authenticated_ptx() {
         completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
         Some(&1_u32.to_le_bytes().to_vec())
     );
+}
+
+/// WHY: resident resources must remain inside the authenticated artifact route.
+#[test]
+fn registered_materializer_executes_authenticated_ptx_with_resident_bindings() {
+    let registration =
+        vyre_driver::backend::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+            .expect("CUDA materializer registration must be linked");
+    let compiler = registration.target_compiler().unwrap();
+    let materializer = registration
+        .materializer()
+        .expect("CUDA materializer must acquire on the GPU-required host");
+    let artifact = artifact();
+    let payload = compiler.compile(&artifact).unwrap();
+    let instance = materializer.materialize(&artifact, &payload).unwrap();
+    let resource = materializer.allocate_resident(4).unwrap();
+    materializer
+        .upload_resident(&resource, &0_u32.to_le_bytes())
+        .unwrap();
+    let mut bindings = BindingSet::new(artifact.digest());
+    bindings.insert(
+        vyre_megakernel::ArtifactValueId(0),
+        BoundResource::Resident(resource.clone()),
+    );
+    let completion = instance.submit(bindings).unwrap().wait().unwrap();
+    assert_eq!(
+        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
+        Some(&1_u32.to_le_bytes().to_vec())
+    );
+    materializer.free_resident(resource).unwrap();
 }

@@ -10,7 +10,7 @@ use vyre::scan::{
     RegexCompileError, RegexReplayPolicy, RegionEvidencePipeline,
     DEFAULT_OPEN_ENDED_REPLAY_LIMIT_BYTES,
 };
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_reference::value::Value;
 
 fn with_reference_dispatch_lanes(program: Program, lanes: u32) -> Program {
@@ -36,14 +36,14 @@ fn words(bytes: &[u8]) -> Vec<u32> {
         .collect()
 }
 
-fn canonicalize(matches: &mut Vec<Match>) {
-    matches.sort_unstable_by_key(|m| (m.start, m.pattern_id, m.end));
+fn canonicalize(matches: &mut Vec<ByteRange>) {
+    matches.sort_unstable_by_key(|m| (m.start, m.tag, m.end));
     let mut write = 0usize;
     for read in 0..matches.len() {
         let current = matches[read];
         if write > 0
             && matches[write - 1].start == current.start
-            && matches[write - 1].pattern_id == current.pattern_id
+            && matches[write - 1].tag == current.tag
         {
             matches[write - 1] = current;
         } else {
@@ -52,10 +52,10 @@ fn canonicalize(matches: &mut Vec<Match>) {
         }
     }
     matches.truncate(write);
-    matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+    matches.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
 }
 
-fn independent_oracle(patterns: &[&str], replay_limits: &[u32], haystack: &[u8]) -> Vec<Match> {
+fn independent_oracle(patterns: &[&str], replay_limits: &[u32], haystack: &[u8]) -> Vec<ByteRange> {
     let regexes: Vec<_> = patterns
         .iter()
         .map(|pattern| Regex::new(&format!("^(?:{pattern})")).unwrap())
@@ -67,7 +67,7 @@ fn independent_oracle(patterns: &[&str], replay_limits: &[u32], haystack: &[u8])
                 .len()
                 .min(origin.saturating_add(replay_limits[pattern_id] as usize));
             if let Some(found) = regex.find(&haystack[origin..end]) {
-                matches.push(Match::new(
+                matches.push(ByteRange::new(
                     pattern_id as u32,
                     origin as u32,
                     (origin + found.end()) as u32,
@@ -75,7 +75,7 @@ fn independent_oracle(patterns: &[&str], replay_limits: &[u32], haystack: &[u8])
             }
         }
     }
-    matches.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+    matches.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
     matches
 }
 
@@ -83,7 +83,7 @@ fn execute_pipeline(
     pipeline: &vyre::scan::RegexDfaPipeline,
     haystack: &[u8],
     max_matches: u32,
-) -> Vec<Match> {
+) -> Vec<ByteRange> {
     let lanes = haystack.len() as u32;
     let program = with_reference_dispatch_lanes(pipeline.program.clone(), lanes);
     let packed_haystack = pack_haystack_u32(haystack);
@@ -106,7 +106,7 @@ fn execute_pipeline(
     let match_words = words(&outputs[1].to_bytes());
     let mut matches = match_words[..count * 3]
         .chunks_exact(3)
-        .map(|triple| Match::new(triple[0], triple[1], triple[2]))
+        .map(|triple| ByteRange::new(triple[0], triple[1], triple[2]))
         .collect();
     canonicalize(&mut matches);
     matches
@@ -180,8 +180,8 @@ fn whole_buffer_variable_matches_report_origin_derived_exact_extents() {
     let actual = execute_pipeline(&pipeline, haystack, max_matches);
     let expected = independent_oracle(&patterns, &pipeline.pattern_lengths, haystack);
     assert_eq!(actual, expected);
-    assert!(actual.contains(&Match::new(0, 1, 5)));
-    assert!(actual.contains(&Match::new(1, 7, 13)));
+    assert!(actual.contains(&ByteRange::new(0, 1, 5)));
+    assert!(actual.contains(&ByteRange::new(1, 7, 13)));
 }
 
 /// Ensures evidence consumers expose one maximal token per origin instead of every accepting end.
@@ -203,9 +203,9 @@ fn region_evidence_positions_use_the_same_leftmost_longest_contract() {
     assert_eq!(
         evidence.positions,
         vec![
-            Match::new(0, 0, 4),
-            Match::new(0, 1, 4),
-            Match::new(0, 2, 4),
+            ByteRange::new(0, 0, 4),
+            ByteRange::new(0, 1, 4),
+            ByteRange::new(0, 2, 4),
         ]
     );
     assert_eq!(evidence.presence, vec![1]);

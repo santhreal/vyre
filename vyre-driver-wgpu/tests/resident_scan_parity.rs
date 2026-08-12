@@ -3,7 +3,6 @@
 //! The resident session uploads the NFA tables once, reuses one authenticated
 //! artifact across submissions, and must match the backend-neutral reference scan.
 
-
 use vyre_driver_wgpu as _;
 use vyre_scan::{build_scan_session, ResidentScanSession};
 
@@ -15,10 +14,8 @@ const PATTERNS: &[&str] = &[
 
 const MAX_MATCHES: u32 = 10_000;
 
-
 #[test]
 fn resident_rule_pipeline_matches_reference_on_real_gpu() {
-
     let haystacks: &[&[u8]] = &[
         b"zabcd",
         b"the api key=secret and the token=AKIAEXAMPLE passwd=def",

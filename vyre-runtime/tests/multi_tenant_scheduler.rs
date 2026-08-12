@@ -86,7 +86,9 @@ fn encode_control_populates_tenant_table_with_all_lanes_allowed() {
 
 #[test]
 fn priority_offsets_and_fairness_counters_do_not_alias() {
-    use vyre_runtime::resident_work_queue::scheduler::{write_default_priority_offsets, PRIORITY_LEVELS};
+    use vyre_runtime::resident_work_queue::scheduler::{
+        write_default_priority_offsets, PRIORITY_LEVELS,
+    };
 
     let mut ctrl = resident_work_queue::ResidentWorkQueue::encode_control(false, 40, 4).unwrap();
     write_default_priority_offsets(&mut ctrl, 40).expect("priority offsets must encode");
@@ -108,7 +110,7 @@ fn priority_offsets_and_fairness_counters_do_not_alias() {
         ctrl[off..off + 4].copy_from_slice(&(pri + 1).to_le_bytes());
     }
 
-    let offsets = vyre_runtime::resident_work_queue::scheduler::default_priority_offsets(40);
+    let offsets = vyre_runtime::resident_work_queue::scheduler::default_priority_offsets_array(40);
     for (i, expected) in offsets.iter().copied().enumerate() {
         let off = ((control::PRIORITY_OFFSETS_BASE as usize) + i) * 4;
         let word = u32::from_le_bytes(ctrl[off..off + 4].try_into().unwrap());
@@ -137,7 +139,14 @@ fn encode_control_keeps_fairness_counters_cold_at_boot() {
 #[test]
 fn publish_slot_stamps_tenant_id_at_word_2() {
     let mut ring = resident_work_queue::ResidentWorkQueue::encode_empty_ring(2).unwrap();
-    resident_work_queue::ResidentWorkQueue::publish_slot(&mut ring, 1, 7, opcode::STORE_U32, &[42, 3]).unwrap();
+    resident_work_queue::ResidentWorkQueue::publish_slot(
+        &mut ring,
+        1,
+        7,
+        opcode::STORE_U32,
+        &[42, 3],
+    )
+    .unwrap();
     // Slot 1 starts at byte offset SLOT_WORDS * 4.
     let base = (SLOT_WORDS as usize) * 4;
     let tenant = u32::from_le_bytes(ring[base + 2 * 4..base + 2 * 4 + 4].try_into().unwrap());

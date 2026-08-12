@@ -7,21 +7,17 @@
 //! honest timing (`device_ns` is `None`: a loud absence, not a fabricated zero
 //! on the CPU reference backend that has no device timer).
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre::scan::{GpuLiteralSet, LiteralMatch};
+use vyre::scan::{ByteRange, GpuLiteralSet};
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
-fn sorted_triples(matches: &[LiteralMatch]) -> Vec<(u32, u32, u32)> {
-    let mut v: Vec<(u32, u32, u32)> = matches
-        .iter()
-        .map(|m| (m.pattern_id, m.start, m.end))
-        .collect();
+fn sorted_triples(matches: &[ByteRange]) -> Vec<(u32, u32, u32)> {
+    let mut v: Vec<(u32, u32, u32)> = matches.iter().map(|m| (m.tag, m.start, m.end)).collect();
     v.sort_unstable();
     v
 }
 
 #[test]
 fn timed_scan_into_equals_untimed_and_reports_timing() {
-    let backend = CpuRefBackend;
     let patterns: [&[u8]; 3] = [b"alpha", b"kilo", b"tango"];
     let set = GpuLiteralSet::compile(&patterns);
     // Multiple occurrences so the match set is non-trivial.
@@ -29,12 +25,17 @@ fn timed_scan_into_equals_untimed_and_reports_timing() {
     let max_matches = 64;
 
     let mut plain = Vec::new();
-    set.scan_into(&backend, haystack, max_matches, &mut plain)
+    set.scan_into(CPU_REF_BACKEND_ID, haystack, max_matches, &mut plain)
         .expect("untimed scan_into");
 
     let mut timed_matches = Vec::new();
     let timed = set
-        .scan_into_timed(&backend, haystack, max_matches, &mut timed_matches)
+        .scan_into_timed(
+            CPU_REF_BACKEND_ID,
+            haystack,
+            max_matches,
+            &mut timed_matches,
+        )
         .expect("timed scan_into");
 
     // Correctness: the timed path must not change the decoded matches.
@@ -64,13 +65,12 @@ fn timed_scan_into_equals_untimed_and_reports_timing() {
 fn timed_scan_into_clears_stale_matches() {
     // scan_into_timed must clear the caller's buffer first, so a reused Vec does
     // not accumulate matches across calls.
-    let backend = CpuRefBackend;
     let set = GpuLiteralSet::compile(&[b"kilo".as_slice()]);
     let mut matches = vec![]; // will be reused
-    set.scan_into_timed(&backend, b"kilo kilo", 64, &mut matches)
+    set.scan_into_timed(CPU_REF_BACKEND_ID, b"kilo kilo", 64, &mut matches)
         .expect("first timed scan");
     let first_len = matches.len();
-    set.scan_into_timed(&backend, b"kilo", 64, &mut matches)
+    set.scan_into_timed(CPU_REF_BACKEND_ID, b"kilo", 64, &mut matches)
         .expect("second timed scan");
     assert_eq!(
         matches.len(),

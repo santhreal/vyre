@@ -1,0 +1,413 @@
+//! Recurrent gated delta-rule execution contracts.
+
+#![forbid(unsafe_code)]
+
+use vyre::ir::{
+    BufferAccess, DataType, GraphInput, GraphOutput, ProgramGraph, ShapeDim, ValueContract,
+    ValueLifetime,
+};
+use vyre_libs::nn::attention::{recurrent_gated_delta, RecurrentGatedDeltaError};
+use vyre_reference::value::Value;
+
+fn bytes(values: &[f32]) -> Vec<u8> {
+    values
+        .iter()
+        .flat_map(|value| value.to_le_bytes())
+        .collect()
+}
+
+fn decode(value: &Value) -> Vec<f32> {
+    value
+        .to_bytes()
+        .chunks_exact(4)
+        .map(|word| f32::from_le_bytes(word.try_into().expect("Fix: exact f32 word")))
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute(
+    query: &[f32],
+    key: &[f32],
+    value: &[f32],
+    decay: &[f32],
+    beta: &[f32],
+    state: &[f32],
+    sequence: u32,
+    key_heads: u32,
+    value_heads: u32,
+    key_dim: u32,
+    value_dim: u32,
+) -> (Vec<f32>, Vec<f32>) {
+    let program = recurrent_gated_delta(
+        "query",
+        "key",
+        "value",
+        "decay",
+        "beta",
+        "state.in",
+        "output",
+        "state.out",
+        1,
+        sequence,
+        key_heads,
+        value_heads,
+        key_dim,
+        value_dim,
+        0.0,
+        DataType::F32,
+    )
+    .expect("Fix: valid recurrent delta fixture must build");
+    let outputs = vyre_reference::reference_eval(
+        &program,
+        &[
+            Value::from(bytes(query)),
+            Value::from(bytes(key)),
+            Value::from(bytes(value)),
+            Value::from(bytes(decay)),
+            Value::from(bytes(beta)),
+            Value::from(bytes(state)),
+            Value::from(vec![0; value.len() * 4]),
+            Value::from(vec![0; state.len() * 4]),
+        ],
+    )
+    .expect("Fix: recurrent delta must execute");
+    assert_eq!(outputs.len(), 3);
+    assert_eq!(decode(&outputs[0]), state);
+    (decode(&outputs[1]), decode(&outputs[2]))
+}
+
+/// Locks the exact scalar recurrence over two tokens from a cold state.
+#[test]
+fn cold_scalar_recurrence_matches_hand_oracle() {
+    let (output, state) = execute(
+        &[1.0, 1.0],
+        &[1.0, 1.0],
+        &[1.0, 2.0],
+        &[0.0, 0.0],
+        &[100.0, 100.0],
+        &[0.0],
+        2,
+        1,
+        1,
+        1,
+        1,
+    );
+    assert_eq!(output, vec![1.0, 2.0]);
+    assert_eq!(state, vec![2.0]);
+}
+
+/// Proves warm state, exponential decay, and sigmoid beta are applied in authoritative order.
+#[test]
+fn warm_state_decay_and_beta_match_exact_update_order() {
+    let (output, state) = execute(
+        &[1.0],
+        &[1.0],
+        &[2.0],
+        &[0.5_f32.ln()],
+        &[0.0],
+        &[3.0],
+        1,
+        1,
+        1,
+        1,
+        1,
+    );
+    assert_eq!(output, vec![1.75]);
+    assert_eq!(state, vec![1.75]);
+}
+
+/// Ensures one key/query head repeats independently across grouped value heads.
+#[test]
+fn grouped_value_heads_share_normalized_key_without_sharing_state() {
+    let (output, state) = execute(
+        &[1.0],
+        &[1.0],
+        &[2.0, 3.0],
+        &[0.0, 0.0],
+        &[100.0, 100.0],
+        &[0.0, 0.0],
+        1,
+        1,
+        2,
+        1,
+        1,
+    );
+    assert_eq!(output, vec![2.0, 3.0]);
+    assert_eq!(state, vec![2.0, 3.0]);
+}
+
+/// Proves token partitioning with the returned matrix state is identical to one recurrent sequence.
+#[test]
+fn returned_state_continues_across_token_partitions_exactly() {
+    let full = execute(
+        &[1.0, 1.0],
+        &[1.0, 1.0],
+        &[1.0, 2.0],
+        &[0.0, 0.0],
+        &[100.0, 100.0],
+        &[0.0],
+        2,
+        1,
+        1,
+        1,
+        1,
+    );
+    let first = execute(
+        &[1.0],
+        &[1.0],
+        &[1.0],
+        &[0.0],
+        &[100.0],
+        &[0.0],
+        1,
+        1,
+        1,
+        1,
+        1,
+    );
+    let second = execute(
+        &[1.0],
+        &[1.0],
+        &[2.0],
+        &[0.0],
+        &[100.0],
+        &first.1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    );
+    assert_eq!(full.0, [first.0, second.0].concat());
+    assert_eq!(full.1, second.1);
+}
+
+/// Locks fail-closed dimension, grouping, overflow, and dtype boundaries.
+#[test]
+fn invalid_recurrent_delta_contracts_are_rejected() {
+    assert_eq!(
+        recurrent_gated_delta(
+            "q",
+            "k",
+            "v",
+            "g",
+            "b",
+            "s",
+            "o",
+            "n",
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1e-6,
+            DataType::F32
+        )
+        .expect_err("Fix: zero batch must fail"),
+        RecurrentGatedDeltaError::EmptyShape
+    );
+    assert_eq!(
+        recurrent_gated_delta(
+            "q",
+            "k",
+            "v",
+            "g",
+            "b",
+            "s",
+            "o",
+            "n",
+            1,
+            1,
+            2,
+            3,
+            1,
+            1,
+            1e-6,
+            DataType::F32
+        )
+        .expect_err("Fix: invalid head ratio must fail"),
+        RecurrentGatedDeltaError::InvalidHeadGrouping {
+            key_heads: 2,
+            value_heads: 3
+        }
+    );
+    assert_eq!(
+        recurrent_gated_delta(
+            "q",
+            "k",
+            "v",
+            "g",
+            "b",
+            "s",
+            "o",
+            "n",
+            u32::MAX,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1e-6,
+            DataType::F32
+        )
+        .expect_err("Fix: flattened overflow must fail"),
+        RecurrentGatedDeltaError::ElementCountOverflow
+    );
+    assert_eq!(
+        recurrent_gated_delta(
+            "q",
+            "k",
+            "v",
+            "g",
+            "b",
+            "s",
+            "o",
+            "n",
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1e-6,
+            DataType::U32
+        )
+        .expect_err("Fix: integer dtype must fail"),
+        RecurrentGatedDeltaError::UnsupportedDtype {
+            dtype: DataType::U32
+        }
+    );
+}
+
+/// Locks decay-to-zero and beta-to-zero boundaries without stale-state leakage.
+#[test]
+fn extreme_decay_and_beta_erase_state_without_update() {
+    let (output, state) = execute(
+        &[1.0],
+        &[1.0],
+        &[5.0],
+        &[-100.0],
+        &[-100.0],
+        &[10.0],
+        1,
+        1,
+        1,
+        1,
+        1,
+    );
+    assert_eq!(output, vec![0.0]);
+    assert_eq!(state, vec![0.0]);
+}
+
+fn tensor(shape: Vec<ShapeDim>, lifetime: ValueLifetime, access: BufferAccess) -> ValueContract {
+    ValueContract {
+        dtype: DataType::F32,
+        shape,
+        access,
+        lifetime,
+    }
+}
+
+/// Proves matrix state is a typed, shape-preserving ProgramGraph generation rather than a hidden buffer convention.
+#[test]
+fn recurrent_matrix_state_has_explicit_graph_successor() {
+    let mut graph = ProgramGraph::new();
+    let qk = tensor(
+        vec![ShapeDim::Known(1); 4],
+        ValueLifetime::Invocation,
+        BufferAccess::ReadOnly,
+    );
+    let activation = qk.clone();
+    let scalar = tensor(
+        vec![ShapeDim::Known(1); 3],
+        ValueLifetime::Invocation,
+        BufferAccess::ReadOnly,
+    );
+    let state_contract = tensor(
+        vec![ShapeDim::Known(1); 4],
+        ValueLifetime::Retained,
+        BufferAccess::ReadWrite,
+    );
+    let mut external = Vec::new();
+    for (name, contract) in [
+        ("query", qk.clone()),
+        ("key", qk.clone()),
+        ("value", activation.clone()),
+        ("decay", scalar.clone()),
+        ("beta", scalar.clone()),
+        ("state.0", state_contract.clone()),
+    ] {
+        external.push(
+            graph
+                .add_external_value(name, contract)
+                .expect("Fix: recurrent graph input must register"),
+        );
+    }
+    let program = recurrent_gated_delta(
+        "query",
+        "key",
+        "value",
+        "decay",
+        "beta",
+        "state.in",
+        "output",
+        "state.out",
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0.0,
+        DataType::F32,
+    )
+    .expect("Fix: recurrent graph Program must build");
+    let (_, outputs) = graph
+        .add_node(
+            "delta.step",
+            program,
+            [
+                ("query", qk),
+                ("key", activation.clone()),
+                ("value", activation.clone()),
+                ("decay", scalar.clone()),
+                ("beta", scalar),
+                ("state.in", state_contract.clone()),
+            ]
+            .into_iter()
+            .zip(external.iter().copied())
+            .map(|((buffer, contract), value)| GraphInput {
+                buffer: buffer.into(),
+                value,
+                contract,
+            })
+            .collect(),
+            vec![
+                GraphOutput {
+                    buffer: "output".into(),
+                    name: "delta.output".into(),
+                    contract: tensor(
+                        activation.shape,
+                        ValueLifetime::Output,
+                        BufferAccess::ReadWrite,
+                    ),
+                    retained_successor_of: None,
+                },
+                GraphOutput {
+                    buffer: "state.out".into(),
+                    name: "state.1".into(),
+                    contract: state_contract,
+                    retained_successor_of: Some(external[5]),
+                },
+            ],
+        )
+        .expect("Fix: recurrent state edge must connect");
+    assert_eq!(
+        graph.values()[outputs[1].0 as usize].retained_successor_of,
+        Some(external[5])
+    );
+    graph
+        .analyze()
+        .expect("Fix: recurrent matrix-state graph must analyze");
+}

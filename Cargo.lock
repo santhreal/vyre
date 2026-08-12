@@ -3387,6 +3387,7 @@ dependencies = [
  "vyre-primitives",
  "vyre-runtime",
  "vyre-scan",
+ "vyre-spec",
  "vyre-test-support",
 ]
 
@@ -3435,6 +3436,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.117",
+ "tempfile",
  "thiserror 2.0.19",
  "toml",
  "tracing",
@@ -3486,7 +3488,6 @@ dependencies = [
  "vyre-driver-reference",
  "vyre-driver-wgpu",
  "vyre-foundation",
- "vyre-harness",
  "vyre-intrinsics",
  "vyre-libs",
  "vyre-megakernel",
@@ -3525,6 +3526,7 @@ dependencies = [
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
+ "vyre-scan",
  "vyre-test-support",
 ]
 
@@ -3586,6 +3588,7 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
+ "vyre-scan",
  "vyre-self-substrate",
  "vyre-spec",
  "vyre-test-support",
@@ -3676,13 +3679,13 @@ dependencies = [
  "vyre-emit-spirv",
  "vyre-foundation",
  "vyre-grammar-gen",
- "vyre-harness",
  "vyre-libs",
  "vyre-lower",
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
+ "vyre-scan",
  "vyre-self-substrate",
  "vyre-spec",
  "vyre-test-support",
@@ -3820,18 +3823,6 @@ dependencies = [
  "regex-automata",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "vyre-harness"
-version = "0.7.2"
-dependencies = [
- "inventory",
- "proptest",
- "vyre",
- "vyre-foundation",
- "vyre-primitives",
- "vyre-self-substrate",
 ]
 
 [[package]]
@@ -3978,7 +3969,6 @@ dependencies = [
  "regex-automata",
  "rustc-hash 2.1.3",
  "smallvec",
- "vyre",
  "vyre-foundation",
  "vyre-primitives",
  "vyre-spec",
@@ -4018,6 +4008,7 @@ version = "0.7.2"
 dependencies = [
  "bytemuck",
  "proptest",
+ "serde",
  "smallvec",
  "tempfile",
  "thiserror 2.0.19",
@@ -4037,6 +4028,7 @@ dependencies = [
 name = "vyre-self-substrate"
 version = "0.7.2"
 dependencies = [
+ "proptest",
  "rustc-hash 2.1.3",
  "tracing",
  "vyre-foundation",
@@ -4752,7 +4744,6 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-emit-metal",
  "vyre-foundation",
- "vyre-harness",
  "vyre-intrinsics",
  "vyre-libs",
  "vyre-lints",

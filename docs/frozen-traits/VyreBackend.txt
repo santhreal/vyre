@@ -31,9 +31,10 @@ default_supported_ops()
 /// # Examples
 ///
 /// ```no_run
-/// use vyre::{Program, VyreBackend, DispatchConfig};
+/// use vyre_foundation::Program;
+/// use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
 ///
-/// # fn example(backend: &dyn VyreBackend, program: &Program) -> Result<Vec<Vec<u8>>, vyre::BackendError> {
+/// # fn example(backend: &dyn VyreBackend, program: &Program) -> Result<Vec<Vec<u8>>, BackendError> {
 /// let inputs = vec![vec![1u8, 2, 3]];
 /// let config = DispatchConfig::default();
 /// backend.dispatch(program, &inputs, &config)
@@ -347,6 +348,38 @@ name: "resident timed dispatch".to_string(),
 backend: self.id().to_string(),
 })
 }
+/// Start a dispatch against backend-resident resources without waiting for
+/// device execution or output readback to complete.
+///
+/// The returned handle owns every backend-specific in-flight reference
+/// needed to keep `resources` valid until
+/// [`PendingDispatch::await_result`]. Callers may overlap host acquisition
+/// and staging for another independent resident slot while this dispatch is
+/// in flight. They must not upload to, free, or redispatch any resource in
+/// `resources` until the pending handle has completed.
+///
+/// The conservative default preserves correctness by running
+/// [`VyreBackend::dispatch_resident_timed`] synchronously and returning a
+/// ready handle. Backends with queue/stream support override this method.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] if validation, command submission, or resident
+/// resource binding fails before the dispatch can start. Device and
+/// readback failures may surface from [`PendingDispatch::await_result`].
+fn dispatch_resident_async(
+&self,
+program: &Program,
+resources: &[Resource],
+config: &DispatchConfig,
+) -> Result<Box<dyn PendingDispatch>, BackendError> {
+let outputs = self
+.dispatch_resident_timed(program, resources, config)?
+.outputs;
+Ok(Box::new(crate::backend::pending_dispatch::ReadyPending {
+outputs,
+}))
+}
 /// Dispatch an ordered sequence of resident-buffer programs and read
 /// selected resident byte ranges into caller-owned storage.
 ///
@@ -376,6 +409,66 @@ let ranges = read_ranges
 .map(|range| (range.resource, range.byte_offset, range.byte_len))
 .collect::<SmallVec<[_; 8]>>();
 self.download_resident_ranges_into(&ranges, outputs)
+}
+/// Timed variant of
+/// [`VyreBackend::dispatch_resident_sequence_read_ranges_into`].
+///
+/// The default preserves correctness by summing each step's resident
+/// dispatch timing and then downloading the requested ranges. Backends with
+/// a fused resident sequence path should override this to keep their
+/// optimized stream/queue behavior while exposing device timing.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] when any step fails, when readback ranges are
+/// invalid, or when resident sequence timing overflows.
+fn dispatch_resident_sequence_read_ranges_timed_into(
+&self,
+steps: &[ResidentDispatchStep<'_>],
+read_ranges: &[ResidentReadRange<'_>],
+outputs: &mut [&mut Vec<u8>],
+) -> Result<ResidentSequenceTiming, BackendError> {
+let started = std::time::Instant::now();
+let mut device_ns = Some(0_u64);
+let mut enqueue_ns = Some(0_u64);
+let mut wait_ns = Some(0_u64);
+for step in steps {
+let mut config = DispatchConfig::default();
+config.grid_override = step.grid_override;
+let timed = self.dispatch_resident_timed(step.program, step.resources, &config)?;
+device_ns = crate::accounting::sum_optional_timing(
+device_ns,
+timed.device_ns,
+"device timing",
+"resident sequence",
+"per-step",
+)?;
+enqueue_ns = crate::accounting::sum_optional_timing(
+enqueue_ns,
+timed.enqueue_ns,
+"enqueue timing",
+"resident sequence",
+"per-step",
+)?;
+wait_ns = crate::accounting::sum_optional_timing(
+wait_ns,
+timed.wait_ns,
+"wait timing",
+"resident sequence",
+"per-step",
+)?;
+}
+let ranges = read_ranges
+.iter()
+.map(|range| (range.resource, range.byte_offset, range.byte_len))
+.collect::<SmallVec<[_; 8]>>();
+self.download_resident_ranges_into(&ranges, outputs)?;
+Ok(ResidentSequenceTiming {
+wall_ns: elapsed_resident_sequence_wall_ns(started)?,
+device_ns,
+enqueue_ns,
+wait_ns,
+})
 }
 /// Dispatch a resident prefix, repeat a resident sub-sequence, and read
 /// selected resident byte ranges into caller-owned storage.
@@ -415,54 +508,6 @@ let ranges = read_ranges
 .map(|range| (range.resource, range.byte_offset, range.byte_len))
 .collect::<SmallVec<[_; 8]>>();
 self.download_resident_ranges_into(&ranges, outputs)
-}
-/// Optional pre-compilation hook for the pipeline-mode API.
-///
-/// Default returns `Ok(None)`  -  the framework wraps in a passthrough
-/// pipeline whose `dispatch` calls back into [`VyreBackend::dispatch`]
-/// every time. Backends that genuinely cache compiled state (compute
-/// pipeline, bind-group layout, lowered shader text) override this and
-/// return `Ok(Some(...))` so repeated dispatches skip the compilation
-/// overhead.
-///
-/// The returned pipeline MUST be bit-identical to repeated
-/// `dispatch(program, inputs, config)` for the program it was compiled
-/// from. The cache key is the backend's responsibility  -  the framework
-/// does not deduplicate compile calls.
-///
-/// Implementing this method is the P-6 contract from
-/// `docs/audits/ROADMAP_PERFORMANCE.md`: "compile target-text + pipeline +
-/// bind-group-layout once; dispatch repeatedly with different inputs."
-///
-/// # Errors
-///
-/// Returns [`BackendError`] when the backend cannot complete the
-/// pre-compilation. Callers should treat this as fatal for the program
-/// (the program will not dispatch successfully via any path).
-fn compile_native(
-&self,
-_program: &Program,
-_config: &DispatchConfig,
-) -> Result<Option<Arc<dyn CompiledPipeline>>, BackendError> {
-Ok(None)
-}
-/// Optional pre-compilation hook for callers that already own a shared
-/// program allocation.
-///
-/// Backends that store the program inside the compiled pipeline should
-/// override this method and keep the supplied [`Arc<Program>`] instead of
-/// cloning the IR. The default preserves the older borrowed-program hook
-/// for backends that only inspect the program while compiling.
-///
-/// # Errors
-///
-/// Returns [`BackendError`] when backend-native compilation fails.
-fn compile_native_shared(
-&self,
-program: Arc<Program>,
-config: &DispatchConfig,
-) -> Result<Option<Arc<dyn CompiledPipeline>>, BackendError> {
-self.compile_native(&program, config)
 }
 /// Optional compiled-pipeline cache counters for compile telemetry.
 ///
@@ -626,6 +671,35 @@ false
 fn supports_grid_sync(&self) -> bool {
 false
 }
+/// Whether a native cooperative grid-sync launch of `program` with these
+/// `inputs` and `config` can be made fully resident on this device.
+///
+/// [`VyreBackend::supports_grid_sync`] reports that native lowering is
+/// *available*; this reports whether it *fits* for a specific dispatch. A
+/// cooperative launch requires every block co-resident, so a grid whose
+/// block count exceeds the device's cooperative residency cannot run
+/// natively and must route to the resident-fixpoint or host-split path.
+/// Orchestrators call this to choose the native route only when it fits,
+/// avoiding a wasted allocate/upload that would otherwise end in
+/// [`crate::backend::ErrorCode::CooperativeResidencyExceeded`].
+///
+/// Default: `Ok(false)` (no native cooperative launch). Backends that lower
+/// grid sync override this with the real residency check. Returns `Ok(false)`
+///: not an error, when the program carries no grid-sync barrier, since
+/// there is then nothing to launch cooperatively.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] if the launch geometry cannot be computed for
+/// the program/inputs (a structurally invalid dispatch).
+fn cooperative_grid_sync_fits(
+&self,
+_program: &Program,
+_inputs: &[&[u8]],
+_config: &DispatchConfig,
+) -> Result<bool, BackendError> {
+Ok(false)
+}
 /// Whether the shared registry wrapper may emulate whole-grid
 /// synchronization for this backend by splitting one program into
 /// multiple host-dispatched kernels.
@@ -642,6 +716,27 @@ false
 #[must_use]
 fn allows_host_grid_sync_split(&self) -> bool {
 true
+}
+/// Whether this backend implements the resident half of the contract
+/// (`allocate_resident` / `upload_resident` / `dispatch_resident_timed` /
+/// `dispatch_resident_repeated_sequence_read_ranges_into` /
+/// `download_resident_*` / `free_resident`) well enough to run a
+/// device-resident dispatch sequence.
+///
+/// Consumers use this to choose
+/// [`crate::grid_sync::dispatch_resident_grid_sync_fixpoint_into`] (which
+/// keeps live buffers device-resident across every grid-sync segment and
+/// fixpoint pass) over the host-orchestrated
+/// [`crate::grid_sync::dispatch_with_grid_sync_split_into`] (which
+/// round-trips every live buffer host↔device between segments). Both are
+/// correct; the choice is a performance route on a probed capability, not
+/// a silent failure fallback.
+///
+/// Default: `false`. Backends that implement resident dispatch override
+/// this to `true`.
+#[must_use]
+fn supports_resident_dispatch(&self) -> bool {
+false
 }
 /// Whether this backend partitions a program across more than one
 /// physical device / node.
@@ -687,12 +782,7 @@ fn max_compute_workgroups_per_dimension(&self) -> u32 {
 fn max_compute_invocations_per_workgroup(&self) -> u32 {
 let [x, y, z] = self.max_workgroup_size();
 let invocations = u128::from(x) * u128::from(y) * u128::from(z);
-u32::try_from(invocations).unwrap_or_else(|_| {
-panic!(
-"backend `{}` reported max_workgroup_size [{x}, {y}, {z}], whose invocation product {invocations} exceeds u32. Fix: report a valid hardware workgroup limit; silent saturation corrupts scheduler admission.",
-self.id()
-)
-})
+u32::try_from(invocations).unwrap_or(u32::MAX)
 }
 /// Native subgroup size for the backing device when the backend
 /// knows it. Returning
@@ -750,6 +840,9 @@ regs_per_thread_max: 0,
 l1_cache_bytes: 0,
 l2_cache_bytes: 0,
 mem_bw_gbps: 0,
+timing_quality: crate::DeviceTimingQuality::HostOnly,
+supports_device_timestamps: false,
+supports_hardware_counters: false,
 ideal_unroll_depth: 0,
 ideal_vector_pack_bits: 0,
 ideal_workgroup_tile: [0, 0, 0],

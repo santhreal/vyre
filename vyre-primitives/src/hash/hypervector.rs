@@ -113,14 +113,12 @@ pub fn hypervector_majority_bundle(stacked: &str, out: &str, dim_words: u32, k: 
         );
     }
     let Some(stacked_words) = k.checked_mul(dim_words) else {
-        return crate::invalid_output_program(
-            BUNDLE_OP_ID,
-            out,
-            DataType::U32,
-            format!(
-                "Fix: hypervector_majority_bundle k*dim_words overflows stacked input count for k={k}, dim_words={dim_words}; shard the bundle before GPU dispatch."
-            ),
-        );
+        return crate::invalid_output_program(BUNDLE_OP_ID,
+        out,
+        DataType::U32,
+        format!(
+            "Fix: hypervector_majority_bundle k*dim_words overflows stacked input count for k={k}, dim_words={dim_words}; shard the bundle before GPU dispatch."
+        ),);
     };
 
     let t = Expr::InvocationId { axis: 0 };

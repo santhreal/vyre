@@ -1,8 +1,8 @@
 # NEW-MOD-002  -  enforce zero unused dependencies on every PR.
 #
 # Motivation: the MOD-001/002/003 sweep found percent-encoding, wgpu,
-# pollster, and automoduse declared in vyre-core/Cargo.toml with zero uses in
-# vyre-core/src. Manual audit found them; CI should catch them next time.
+# pollster, and automoduse declared in vyre/Cargo.toml with zero uses in
+# vyre/src. Manual audit found them; CI should catch them next time.
 #
 # cargo-machete is faster + less noisy than cargo-udeps for this purpose:
 # cargo-udeps requires nightly and a full build, cargo-machete parses

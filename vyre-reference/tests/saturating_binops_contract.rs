@@ -1,6 +1,6 @@
 //! Reference-oracle coverage for saturating integer binops.
 
-use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 
 fn run_binop(op: BinOp, left: u32, right: u32) -> u32 {

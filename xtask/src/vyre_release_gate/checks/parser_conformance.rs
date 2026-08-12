@@ -3,16 +3,12 @@ pub(crate) fn required_marker_ids_for_suffix(suffix: &str) -> &'static [&'static
         &[
             "alias-aware-dse-entrypoint",
             "reaching-def-dse-entrypoint",
-            "weir-alias-analysis-api",
-            "weir-reaching-def-analysis-api",
             "dataflow-analysis-pipeline-entrypoint",
         ]
     } else if suffix == "alias-aware-stlf.json" {
         &[
             "alias-aware-stlf-entrypoint",
             "reaching-def-stlf-entrypoint",
-            "weir-alias-analysis-api",
-            "weir-reaching-def-analysis-api",
             "dataflow-analysis-pipeline-entrypoint",
             "dataflow-analysis-stlf-firing-test",
         ]
@@ -20,8 +16,6 @@ pub(crate) fn required_marker_ids_for_suffix(suffix: &str) -> &'static [&'static
         &[
             "alias-aware-licm-entrypoint",
             "reaching-def-licm-entrypoint",
-            "weir-alias-analysis-api",
-            "weir-reaching-def-analysis-api",
         ]
     } else if suffix == "alias-aware-fusion-fission.json" {
         &[
@@ -29,24 +23,6 @@ pub(crate) fn required_marker_ids_for_suffix(suffix: &str) -> &'static [&'static
             "reaching-def-loop-fusion-entrypoint",
             "alias-aware-loop-fission-entrypoint",
             "reaching-def-loop-fission-entrypoint",
-            "weir-alias-analysis-api",
-            "weir-reaching-def-analysis-api",
-        ]
-    } else if suffix == "weir-facts-pass-firing.json" {
-        &[
-            "alias-aware-dse-entrypoint",
-            "reaching-def-dse-entrypoint",
-            "alias-aware-stlf-entrypoint",
-            "reaching-def-stlf-entrypoint",
-            "alias-aware-licm-entrypoint",
-            "reaching-def-licm-entrypoint",
-            "alias-aware-loop-fusion-entrypoint",
-            "reaching-def-loop-fusion-entrypoint",
-            "alias-aware-loop-fission-entrypoint",
-            "reaching-def-loop-fission-entrypoint",
-            "weir-alias-analysis-api",
-            "weir-reaching-def-analysis-api",
-            "dataflow-analysis-pipeline-entrypoint",
         ]
     } else if suffix == "egraph-saturation-matrix.json"
         || suffix == "egraph-semantic-contracts.json"
@@ -104,259 +80,6 @@ pub(crate) fn check_backend_feature_marker_id(
     if unresolved_markers != 0 {
         failures.push(format!(
             "requirement `{requirement_id}` backend matrix `{field}` marker `{required_id}` reports {unresolved_markers} unresolved marker(s)"
-        ));
-    }
-}
-pub(crate) fn check_parser_contract_evidence(
-    requirement: &Requirement,
-    base_dir: &Path,
-    suffix: &str,
-    failures: &mut Vec<String>,
-) {
-    let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
-        return;
-    };
-    // `parser_coherence` owns the component-id-to-artifact mapping. This check
-    // used to re-derive the id from the file name, which is the same rule
-    // written twice and drifted the moment an artifact name stopped being
-    // `<id>-contracts.json`.
-    let Some(expected_component) = crate::parser_coherence::component_id_for_contract_artifact(suffix)
-    else {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` is not owned by any parser-coherence component",
-            requirement.id
-        ));
-        return;
-    };
-    let component_id = report
-        .get("component_id")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("");
-    if component_id != expected_component {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has component_id `{component_id}`, expected `{expected_component}`",
-            requirement.id
-        ));
-    }
-    if report
-        .get("role")
-        .and_then(serde_json::Value::as_str)
-        .is_none_or(|role| role.is_empty())
-    {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has an empty role",
-            requirement.id
-        ));
-    }
-    if report
-        .get("root")
-        .and_then(serde_json::Value::as_str)
-        .is_none_or(|root| root.is_empty())
-    {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has an empty root",
-            requirement.id
-        ));
-    }
-    let required_terms = report
-        .get("required_terms")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if required_terms == 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has no required terms",
-            requirement.id
-        ));
-    }
-    let missing_terms = report
-        .get("missing_terms")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if missing_terms != 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` reports {missing_terms} missing term(s)",
-            requirement.id
-        ));
-    }
-    let required_contract_topics = report
-        .get("required_contract_topics")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if required_contract_topics == 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has no required contract topics",
-            requirement.id
-        ));
-    }
-    let missing_contract_topics = report
-        .get("missing_contract_topics")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if missing_contract_topics != 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` reports {missing_contract_topics} missing contract topic(s)",
-            requirement.id
-        ));
-    }
-    let required_test_categories = report
-        .get("required_test_categories")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if required_test_categories == 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has no required test categories",
-            requirement.id
-        ));
-    }
-    let missing_test_categories = report
-        .get("missing_test_categories")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if missing_test_categories != 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` reports {missing_test_categories} missing test categor(ies)",
-            requirement.id
-        ));
-    }
-    let required_evidence_trees = report
-        .get("required_evidence_trees")
-        .and_then(serde_json::Value::as_array);
-    if required_evidence_trees.is_none_or(|trees| trees.len() < 3) {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` must list tests, benches, and fuzz evidence trees",
-            requirement.id
-        ));
-    }
-    check_duplicate_parser_contract_object_rows(
-        requirement,
-        suffix,
-        &report,
-        "required_evidence_trees",
-        "tree",
-        failures,
-    );
-    if let Some(trees) = required_evidence_trees {
-        for tree in trees {
-            let tree_name = tree
-                .get("tree")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("<unknown>");
-            if tree.get("exists").and_then(serde_json::Value::as_bool) != Some(true) {
-                failures.push(format!(
-                    "requirement `{}` parser contract `{suffix}` evidence tree `{tree_name}` does not exist",
-                    requirement.id
-                ));
-            }
-            let source_bytes = tree
-                .get("source_bytes")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0);
-            if source_bytes == 0 {
-                failures.push(format!(
-                    "requirement `{}` parser contract `{suffix}` evidence tree `{tree_name}` has zero source bytes",
-                    requirement.id
-                ));
-            }
-            let unreadable = tree
-                .get("unreadable_file_count")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(u64::MAX);
-            if unreadable != 0 {
-                failures.push(format!(
-                    "requirement `{}` parser contract `{suffix}` evidence tree `{tree_name}` has {unreadable} unreadable source file(s)",
-                    requirement.id
-                ));
-            }
-        }
-    }
-    let unresolved_ownership_markers = report
-        .get("unresolved_ownership_markers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    if unresolved_ownership_markers != 0 {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` reports {unresolved_ownership_markers} unresolved ownership marker(s)",
-            requirement.id
-        ));
-    }
-    let Some(required_files) = report
-        .get("required_files")
-        .and_then(serde_json::Value::as_array)
-    else {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has no required_files array",
-            requirement.id
-        ));
-        return;
-    };
-    if required_files.is_empty() {
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has zero required file(s)",
-            requirement.id
-        ));
-    }
-    check_duplicate_parser_contract_object_rows(
-        requirement,
-        suffix,
-        &report,
-        "required_files",
-        "path",
-        failures,
-    );
-    for file in required_files {
-        let path = file
-            .get("path")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("<unknown>");
-        if file.get("exists").and_then(serde_json::Value::as_bool) != Some(true) {
-            failures.push(format!(
-                "requirement `{}` parser contract `{suffix}` required file `{path}` does not exist",
-                requirement.id
-            ));
-        }
-        if file
-            .get("source_bytes")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            == 0
-        {
-            failures.push(format!(
-                "requirement `{}` parser contract `{suffix}` required file `{path}` is empty",
-                requirement.id
-            ));
-        }
-        let read_error = file.get("read_error");
-        if !read_error.is_some_and(serde_json::Value::is_null) {
-            failures.push(format!(
-                "requirement `{}` parser contract `{suffix}` required file `{path}` read_error={}",
-                requirement.id,
-                read_error
-                    .map(serde_json::Value::to_string)
-                    .unwrap_or_else(|| "<missing>".to_string())
-            ));
-        }
-    }
-}
-
-fn check_duplicate_parser_contract_object_rows(
-    requirement: &Requirement,
-    suffix: &str,
-    report: &serde_json::Value,
-    array_field: &str,
-    object_field: &str,
-    failures: &mut Vec<String>,
-) {
-    let duplicates =
-        crate::benchmark_evidence_semantics::duplicate_nonblank_object_array_field_values(
-            report,
-            array_field,
-            object_field,
-        );
-    if !duplicates.is_empty() {
-        let duplicates = duplicates.into_iter().collect::<Vec<_>>().join(", ");
-        failures.push(format!(
-            "requirement `{}` parser contract `{suffix}` has duplicate {array_field}.{object_field} rows: {duplicates}",
-            requirement.id
         ));
     }
 }
@@ -530,70 +253,9 @@ pub(crate) fn check_backend_conformance_report(
     }
 }
 
-
 #[cfg(test)]
-mod parser_conformance_tests {
+mod backend_conformance_tests {
     use super::*;
-
-    #[test]
-    fn parser_contract_rejects_duplicate_required_object_rows() {
-        let dir = tempfile::TempDir::new()
-            .expect("Fix: create temp workspace for parser contract duplicate row test.");
-        let report = serde_json::json!({
-            "component_id": "vyrec",
-            "role": "cli parser contract",
-            "root": "crates/vyrec",
-            "required_terms": ["parse"],
-            "missing_terms": [],
-            "required_contract_topics": ["ownership"],
-            "missing_contract_topics": [],
-            "required_test_categories": ["unit"],
-            "missing_test_categories": [],
-            "required_evidence_trees": [
-                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
-                {"tree": "tests", "exists": true, "source_bytes": 128, "unreadable_file_count": 0},
-                {"tree": "benches", "exists": true, "source_bytes": 128, "unreadable_file_count": 0}
-            ],
-            "unresolved_ownership_markers": [],
-            "required_files": [
-                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null},
-                {"path": "crates/vyrec/src/lib.rs", "exists": true, "source_bytes": 128, "read_error": null}
-            ]
-        });
-        std::fs::write(
-            dir.path().join("vyrec-cli-contracts.json"),
-            report.to_string(),
-        )
-        .expect("Fix: write parser contract duplicate row fixture.");
-        let requirement = Requirement {
-            id: "parser-contract".to_string(),
-            title: "parser contract".to_string(),
-            status: "required".to_string(),
-            evidence: vec!["vyrec-cli-contracts.json".to_string()],
-            minimum_evidence: 1,
-        };
-        let mut failures = Vec::new();
-
-        check_parser_contract_evidence(
-            &requirement,
-            dir.path(),
-            "vyrec-cli-contracts.json",
-            &mut failures,
-        );
-
-        assert!(
-            failures
-                .iter()
-                .any(|failure| failure.contains("duplicate required_evidence_trees.tree rows: tests")),
-            "Fix: parser contract gate must reject duplicate required evidence tree rows; failures={failures:?}"
-        );
-        assert!(
-            failures.iter().any(|failure| failure.contains(
-                "duplicate required_files.path rows: crates/vyrec/src/lib.rs"
-            )),
-            "Fix: parser contract gate must reject duplicate required file rows; failures={failures:?}"
-        );
-    }
 
     #[test]
     fn backend_conformance_rejects_duplicate_pair_op_ids() {

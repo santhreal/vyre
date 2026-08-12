@@ -1,0 +1,8 @@
+{
+  "num_states": 1,
+  "num_tokens": 1,
+  "num_nonterminals": 1,
+  "action": [536870912],
+  "goto": [4294967295],
+  "productions": []
+}

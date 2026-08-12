@@ -1,0 +1,264 @@
+#[repr(u16)] pub enum vyre_grammar_gen::BlobKind
+#[repr(u16)] pub enum vyre_grammar_gen::dfa::Action
+#[repr(u16)] pub enum vyre_grammar_gen::wire::BlobKind
+#[repr(u32)] pub enum vyre_grammar_gen::lr::Action
+impl vyre_grammar_gen::dfa::DfaBuilder
+impl vyre_grammar_gen::dfa::DfaTable
+impl vyre_grammar_gen::dfa::Transition
+impl vyre_grammar_gen::lr::Action
+impl vyre_grammar_gen::lr::LrBuilder
+impl vyre_grammar_gen::lr::LrTable
+impl vyre_grammar_gen::wire::PackedBlob
+pub const vyre_grammar_gen::C11_PATTERNS: &[(u32, &str)]
+pub const vyre_grammar_gen::c11_lexer::C11_PATTERNS: &[(u32, &str)]
+pub const vyre_grammar_gen::c11_lexer::TOK_ALIGNAS: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ALIGNOF: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_AMP: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_AMP_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_AND: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ARROW: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ASSIGN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ATOMIC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_AUTO: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BANG: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BOOL: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BREAK: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_CHOOSE_EXPR: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_CONSTANT_P: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_BUILTIN_TYPES_COMPATIBLE_P: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CARET: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CARET_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CASE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CHAR_KW: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_COLON: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_COMMA: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_COMMENT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_COMPLEX: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CONST: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_CONTINUE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_DEC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_DEFAULT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_DO: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_DOT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_DOUBLE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ELLIPSIS: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ELSE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_ENUM: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_EXTERN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_FLOAT_KW: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_FOR: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GENERIC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_ASM: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_ATTRIBUTE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_EXTENSION: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_IMAG: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_REAL: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GNU_TYPEOF: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GOTO: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_GT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_HASH: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_HASHHASH: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_IDENTIFIER: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_IF: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_IMAGINARY: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_INC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_INLINE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_INT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_INTEGER: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LBRACE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LBRACKET: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LONG: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LPAREN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LSHIFT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LSHIFT_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_LT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_MINUS: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_MINUS_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_NE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_NORETURN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_OR: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PERCENT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PERCENT_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PIPE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PIPE_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PLUS: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PLUS_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_PREPROC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_QUESTION: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RBRACE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RBRACKET: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_REGISTER: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RESTRICT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RETURN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RPAREN: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RSHIFT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_RSHIFT_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SEMICOLON: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SHORT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SIGNED: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SIZEOF: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SLASH: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SLASH_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STAR: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STAR_EQ: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STATIC: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STATIC_ASSERT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STRING: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_STRUCT: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_SWITCH: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_THREAD_LOCAL: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_TILDE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_TYPEDEF: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_UNION: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_UNSIGNED: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_VOID: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_VOLATILE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_WHILE: u32
+pub const vyre_grammar_gen::c11_lexer::TOK_WHITESPACE: u32
+pub const vyre_grammar_gen::wire::MAGIC: [u8; 4]
+pub const vyre_grammar_gen::wire::VERSION: u16
+pub enum vyre_grammar_gen::LexCpuError
+pub enum vyre_grammar_gen::WireError
+pub enum vyre_grammar_gen::max_munch_cpu::LexCpuError
+pub enum vyre_grammar_gen::wire::WireError
+pub fn vyre_grammar_gen::build_c11_lexer_dfa() -> vyre_grammar_gen::dfa::DfaTable
+pub fn vyre_grammar_gen::build_c11_lexer_dfa_for_host() -> vyre_grammar_gen::dfa::DfaTable
+pub fn vyre_grammar_gen::c11_lexer::build_c11_lexer_dfa() -> vyre_grammar_gen::dfa::DfaTable
+pub fn vyre_grammar_gen::c11_lexer::build_c11_lexer_dfa_for_host() -> vyre_grammar_gen::dfa::DfaTable
+pub fn vyre_grammar_gen::chunk_lexer_cpu::count_chunked_valid_tokens(transitions: &[u32], token_ids: &[u32], haystack: &[u8], haystack_len: u32, state_count: u32, chunk_size: u32, num_classes: u32) -> u32
+pub fn vyre_grammar_gen::count_chunked_valid_tokens(transitions: &[u32], token_ids: &[u32], haystack: &[u8], haystack_len: u32, state_count: u32, chunk_size: u32, num_classes: u32) -> u32
+pub fn vyre_grammar_gen::decode_dfa_from_bytes(bytes: &[u8]) -> core::result::Result<vyre_grammar_gen::dfa::DfaTable, vyre_grammar_gen::wire::WireError>
+pub fn vyre_grammar_gen::decode_lr_from_bytes(bytes: &[u8]) -> core::result::Result<vyre_grammar_gen::lr::LrTable, vyre_grammar_gen::wire::WireError>
+pub fn vyre_grammar_gen::dfa::DfaBuilder::accept(&mut self, state: u32, token_id: u32)
+pub fn vyre_grammar_gen::dfa::DfaBuilder::add_pattern(&mut self, token_id: u32, pattern: &str)
+pub fn vyre_grammar_gen::dfa::DfaBuilder::build(self) -> core::result::Result<vyre_grammar_gen::dfa::DfaTable, alloc::string::String>
+pub fn vyre_grammar_gen::dfa::DfaBuilder::build_with_match_kind(self, kind: regex_automata::util::search::MatchKind) -> core::result::Result<vyre_grammar_gen::dfa::DfaTable, alloc::string::String>
+pub fn vyre_grammar_gen::dfa::DfaBuilder::continue_to(&mut self, state: u32, class: u32, next_state: u32) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_grammar_gen::dfa::DfaBuilder::new(num_states: u32, num_classes: u32) -> Self
+pub fn vyre_grammar_gen::dfa::DfaTable::set_transition(&mut self, state: u32, class: u32, t: vyre_grammar_gen::dfa::Transition)
+pub fn vyre_grammar_gen::dfa::DfaTable::transition(&self, state: u32, class: u32) -> vyre_grammar_gen::dfa::Transition
+pub fn vyre_grammar_gen::dfa::Transition::pack(self) -> u32
+pub fn vyre_grammar_gen::dfa::Transition::unpack(word: u32) -> Self
+pub fn vyre_grammar_gen::host_preprocess::preprocess_c_host(input: &str) -> alloc::string::String
+pub fn vyre_grammar_gen::kinds_blake3(kinds: &[u32]) -> blake3::Hash
+pub fn vyre_grammar_gen::lex_c11_max_munch::lex_c11_max_munch_kinds(input: &[u8]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_grammar_gen::max_munch_cpu::LexCpuError>
+pub fn vyre_grammar_gen::lex_c11_max_munch_kinds(input: &[u8]) -> core::result::Result<alloc::vec::Vec<u32>, vyre_grammar_gen::max_munch_cpu::LexCpuError>
+pub fn vyre_grammar_gen::lr::Action::pack(self) -> u32
+pub fn vyre_grammar_gen::lr::Action::unpack(word: u32) -> Self
+pub fn vyre_grammar_gen::lr::LrBuilder::add_production(&mut self, lhs: u32, rhs_len: u32) -> u32
+pub fn vyre_grammar_gen::lr::LrBuilder::build(self) -> vyre_grammar_gen::lr::LrTable
+pub fn vyre_grammar_gen::lr::LrBuilder::new(num_states: u32, num_tokens: u32, num_nonterminals: u32) -> Self
+pub fn vyre_grammar_gen::lr::LrBuilder::set_action(&mut self, state: u32, token: u32, action: vyre_grammar_gen::lr::Action)
+pub fn vyre_grammar_gen::lr::LrBuilder::set_goto(&mut self, state: u32, nt: u32, next_state: u32)
+pub fn vyre_grammar_gen::lr::LrTable::action_at(&self, state: u32, token: u32) -> vyre_grammar_gen::lr::Action
+pub fn vyre_grammar_gen::lr::LrTable::goto_at(&self, state: u32, nt: u32) -> u32
+pub fn vyre_grammar_gen::lr::validate_lr_table(table: &vyre_grammar_gen::lr::LrTable) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_grammar_gen::max_munch_cpu::kinds_blake3(kinds: &[u32]) -> blake3::Hash
+pub fn vyre_grammar_gen::preprocess_c_host(input: &str) -> alloc::string::String
+pub fn vyre_grammar_gen::validate_lr_table(table: &vyre_grammar_gen::lr::LrTable) -> core::result::Result<(), alloc::string::String>
+pub fn vyre_grammar_gen::wire::PackedBlob::from_dfa(dfa: &vyre_grammar_gen::dfa::DfaTable) -> Self
+pub fn vyre_grammar_gen::wire::PackedBlob::from_lr(lr: &vyre_grammar_gen::lr::LrTable) -> core::result::Result<Self, alloc::string::String>
+pub fn vyre_grammar_gen::wire::PackedBlob::try_as_dfa(&self) -> core::result::Result<vyre_grammar_gen::dfa::DfaTable, vyre_grammar_gen::wire::WireError>
+pub fn vyre_grammar_gen::wire::PackedBlob::try_as_lr(&self) -> core::result::Result<vyre_grammar_gen::lr::LrTable, vyre_grammar_gen::wire::WireError>
+pub fn vyre_grammar_gen::wire::decode_dfa_from_bytes(bytes: &[u8]) -> core::result::Result<vyre_grammar_gen::dfa::DfaTable, vyre_grammar_gen::wire::WireError>
+pub fn vyre_grammar_gen::wire::decode_lr_from_bytes(bytes: &[u8]) -> core::result::Result<vyre_grammar_gen::lr::LrTable, vyre_grammar_gen::wire::WireError>
+pub mod vyre_grammar_gen
+pub mod vyre_grammar_gen::c11_lexer
+pub mod vyre_grammar_gen::chunk_lexer_cpu
+pub mod vyre_grammar_gen::dfa
+pub mod vyre_grammar_gen::host_preprocess
+pub mod vyre_grammar_gen::lex_c11_max_munch
+pub mod vyre_grammar_gen::lr
+pub mod vyre_grammar_gen::max_munch_cpu
+pub mod vyre_grammar_gen::wire
+pub struct vyre_grammar_gen::DfaBuilder
+pub struct vyre_grammar_gen::DfaTable
+pub struct vyre_grammar_gen::LrBuilder
+pub struct vyre_grammar_gen::LrTable
+pub struct vyre_grammar_gen::PackedBlob
+pub struct vyre_grammar_gen::dfa::DfaBuilder
+pub struct vyre_grammar_gen::dfa::DfaTable
+pub struct vyre_grammar_gen::dfa::Transition
+pub struct vyre_grammar_gen::lr::LrBuilder
+pub struct vyre_grammar_gen::lr::LrTable
+pub struct vyre_grammar_gen::lr::Production
+pub struct vyre_grammar_gen::wire::PackedBlob
+pub vyre_grammar_gen::BlobKind::LexerDfa = 0
+pub vyre_grammar_gen::BlobKind::LrTables = 1
+pub vyre_grammar_gen::DfaTable::num_classes: u32
+pub vyre_grammar_gen::DfaTable::num_states: u32
+pub vyre_grammar_gen::DfaTable::token_ids: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::DfaTable::transitions: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::LexCpuError::NoTokenAt
+pub vyre_grammar_gen::LexCpuError::NoTokenAt::offset: usize
+pub vyre_grammar_gen::LrTable::action: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::LrTable::goto: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::LrTable::num_nonterminals: u32
+pub vyre_grammar_gen::LrTable::num_states: u32
+pub vyre_grammar_gen::LrTable::num_tokens: u32
+pub vyre_grammar_gen::LrTable::productions: alloc::vec::Vec<vyre_grammar_gen::lr::Production>
+pub vyre_grammar_gen::PackedBlob::bytes: alloc::vec::Vec<u8>
+pub vyre_grammar_gen::PackedBlob::kind: vyre_grammar_gen::wire::BlobKind
+pub vyre_grammar_gen::WireError::BadMagic([u8; 4])
+pub vyre_grammar_gen::WireError::ChecksumMismatch
+pub vyre_grammar_gen::WireError::ChecksumMismatch::expected: [u8; 16]
+pub vyre_grammar_gen::WireError::ChecksumMismatch::got: [u8; 16]
+pub vyre_grammar_gen::WireError::LexerPayloadWordCount
+pub vyre_grammar_gen::WireError::LexerPayloadWordCount::expected: usize
+pub vyre_grammar_gen::WireError::LexerPayloadWordCount::got: usize
+pub vyre_grammar_gen::WireError::LrPayloadSize
+pub vyre_grammar_gen::WireError::PayloadTruncated
+pub vyre_grammar_gen::WireError::PayloadTruncated::expected: usize
+pub vyre_grammar_gen::WireError::PayloadTruncated::got: usize
+pub vyre_grammar_gen::WireError::TooShort
+pub vyre_grammar_gen::WireError::TooShort::got: usize
+pub vyre_grammar_gen::WireError::TooShort::need: usize
+pub vyre_grammar_gen::WireError::UnsupportedKind(u16)
+pub vyre_grammar_gen::WireError::UnsupportedVersion(u16)
+pub vyre_grammar_gen::dfa::Action::Continue = 0
+pub vyre_grammar_gen::dfa::Action::EmitToken = 1
+pub vyre_grammar_gen::dfa::Action::Error = 3
+pub vyre_grammar_gen::dfa::Action::PushBack = 2
+pub vyre_grammar_gen::dfa::DfaTable::num_classes: u32
+pub vyre_grammar_gen::dfa::DfaTable::num_states: u32
+pub vyre_grammar_gen::dfa::DfaTable::token_ids: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::dfa::DfaTable::transitions: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::dfa::Transition::action: vyre_grammar_gen::dfa::Action
+pub vyre_grammar_gen::dfa::Transition::next_state: u16
+pub vyre_grammar_gen::lr::Action::Accept
+pub vyre_grammar_gen::lr::Action::Error
+pub vyre_grammar_gen::lr::Action::Reduce(u32)
+pub vyre_grammar_gen::lr::Action::Shift(u32)
+pub vyre_grammar_gen::lr::LrTable::action: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::lr::LrTable::goto: alloc::vec::Vec<u32>
+pub vyre_grammar_gen::lr::LrTable::num_nonterminals: u32
+pub vyre_grammar_gen::lr::LrTable::num_states: u32
+pub vyre_grammar_gen::lr::LrTable::num_tokens: u32
+pub vyre_grammar_gen::lr::LrTable::productions: alloc::vec::Vec<vyre_grammar_gen::lr::Production>
+pub vyre_grammar_gen::lr::Production::lhs: u32
+pub vyre_grammar_gen::lr::Production::rhs_len: u32
+pub vyre_grammar_gen::max_munch_cpu::LexCpuError::NoTokenAt
+pub vyre_grammar_gen::max_munch_cpu::LexCpuError::NoTokenAt::offset: usize
+pub vyre_grammar_gen::wire::BlobKind::LexerDfa = 0
+pub vyre_grammar_gen::wire::BlobKind::LrTables = 1
+pub vyre_grammar_gen::wire::PackedBlob::bytes: alloc::vec::Vec<u8>
+pub vyre_grammar_gen::wire::PackedBlob::kind: vyre_grammar_gen::wire::BlobKind
+pub vyre_grammar_gen::wire::WireError::BadMagic([u8; 4])
+pub vyre_grammar_gen::wire::WireError::ChecksumMismatch
+pub vyre_grammar_gen::wire::WireError::ChecksumMismatch::expected: [u8; 16]
+pub vyre_grammar_gen::wire::WireError::ChecksumMismatch::got: [u8; 16]
+pub vyre_grammar_gen::wire::WireError::LexerPayloadWordCount
+pub vyre_grammar_gen::wire::WireError::LexerPayloadWordCount::expected: usize
+pub vyre_grammar_gen::wire::WireError::LexerPayloadWordCount::got: usize
+pub vyre_grammar_gen::wire::WireError::LrPayloadSize
+pub vyre_grammar_gen::wire::WireError::PayloadTruncated
+pub vyre_grammar_gen::wire::WireError::PayloadTruncated::expected: usize
+pub vyre_grammar_gen::wire::WireError::PayloadTruncated::got: usize
+pub vyre_grammar_gen::wire::WireError::TooShort
+pub vyre_grammar_gen::wire::WireError::TooShort::got: usize
+pub vyre_grammar_gen::wire::WireError::TooShort::need: usize
+pub vyre_grammar_gen::wire::WireError::UnsupportedKind(u16)
+pub vyre_grammar_gen::wire::WireError::UnsupportedVersion(u16)

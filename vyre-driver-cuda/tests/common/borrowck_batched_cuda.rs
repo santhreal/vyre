@@ -84,7 +84,7 @@ fn build_csr(n: u32, edges: &[(u32, u32)], reverse: bool) -> (Vec<u32>, Vec<u32>
 /// # Errors
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
-pub(super) fn analyze_crate_batched(
+pub(crate) fn analyze_crate_batched(
     dispatcher: &dyn OptimizerDispatcher,
     functions: &[BorrowFacts],
 ) -> Result<Vec<Vec<Conflict>>, DispatchError> {
@@ -107,7 +107,7 @@ const MAX_GRID_SYNC_FREE_SHARD_POINTS: u32 = PERSISTENT_BFS_WORKGROUP_SIZE[0];
 /// # Errors
 ///
 /// Returns [`DispatchError`] if a device upload or batch dispatch fails.
-pub(super) fn analyze_crate_batched_with_shard_cap(
+pub(crate) fn analyze_crate_batched_with_shard_cap(
     dispatcher: &dyn OptimizerDispatcher,
     functions: &[BorrowFacts],
     max_shard_words: usize,

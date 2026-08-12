@@ -80,6 +80,7 @@ pub mod nvme_gpu_ingest;
 pub mod optimizer_impact;
 pub mod quantized_linear;
 pub(crate) mod queue_closure_profile;
+pub(crate) mod queue_stage;
 pub mod reduce_sum;
 pub mod regex_bt;
 pub mod release_workloads;
@@ -89,8 +90,3 @@ pub(crate) mod skewed_graph;
 pub mod stencil;
 pub mod synthetic;
 pub mod transpose;
-// External dataflow baselines live behind an opt-in feature so vyre-bench's
-pub(crate) mod queue_stage;
-// default surface stays platform-only.
-#[cfg(feature = "external-baselines")]
-pub mod dataflow_baseline;

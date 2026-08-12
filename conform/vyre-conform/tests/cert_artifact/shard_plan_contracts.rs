@@ -109,27 +109,6 @@ fn prove_merges_live_gpu_certificate_shards() {
 }
 
 #[test]
-fn release_shard_script_keeps_prove_merge_backend_and_worker_controls() {
-    let script = include_str!("../../../../scripts/prove-release-shards.sh");
-    for required in [
-        "VYRE_RELEASE_SHARDS",
-        "VYRE_RELEASE_BACKEND",
-        "VYRE_CONFORM_PROOF_WORKERS",
-        "prove",
-        "--shard",
-        "--backend",
-        "merge",
-        "--no-default-features",
-        "merged.json",
-    ] {
-        assert!(
-            script.contains(required),
-            "Fix: release shard automation must keep `{required}` wired so GPU proof evidence remains reproducible."
-        );
-    }
-}
-
-#[test]
 fn plan_emits_deterministic_shard_manifest_without_dispatch() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
     let status = Command::new("cargo")

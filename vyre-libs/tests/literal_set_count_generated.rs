@@ -5,6 +5,7 @@
 //! and compare against an independent brute-force literal counter.
 
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
 
 const GENERATED_CASES: usize = 2_048;
 const ALPHABET: &[u8] = b"\0\x01abAB_:/-\xff";
@@ -19,7 +20,7 @@ fn public_literal_set_count_matches_bruteforce_generated_matrix() {
         let expected = brute_force_literal_count(&patterns, &haystack);
         let reference_matches = engine.reference_scan(&haystack);
         let got = engine
-            .count(&vyre_driver_reference::CpuRefBackend, &haystack)
+            .count(CPU_REF_BACKEND_ID, &haystack)
             .expect("Fix: public literal-set count must dispatch through cpu-ref");
 
         assert_eq!(
@@ -56,7 +57,7 @@ fn public_literal_set_count_handles_binary_overlap_seeds() {
             .collect::<Vec<_>>();
         let expected = brute_force_literal_count(&owned_patterns, haystack);
         let got = engine
-            .count(&vyre_driver_reference::CpuRefBackend, haystack)
+            .count(CPU_REF_BACKEND_ID, haystack)
             .expect("Fix: public literal-set count must dispatch seeded cases through cpu-ref");
 
         assert_eq!(

@@ -5,7 +5,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::bitset::four_russians::{
     binary_byte_lut, cpu_ref, four_russians_apply_byte_lut, BooleanTileOp,
 };

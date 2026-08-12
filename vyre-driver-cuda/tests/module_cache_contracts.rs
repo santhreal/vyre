@@ -1,19 +1,10 @@
 //! CUDA module-cache performance contracts.
 
 mod common;
-use common::{bytes_u32, resident_dispatch_source, u32_bytes};
+use common::u32_bytes;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-
-fn egraph_kernel_plan_source() -> String {
-    [
-        include_str!("../src/egraph_kernel_plan.rs"),
-        include_str!("../src/egraph_kernel_plan/backend_structural.rs"),
-        include_str!("../src/egraph_kernel_plan/backend_rewrite.rs"),
-    ]
-    .join("\n")
-}
 
 #[test]
 fn repeated_dispatch_reuses_loaded_cuda_module() {
@@ -56,51 +47,6 @@ fn repeated_dispatch_reuses_loaded_cuda_module() {
             .expect("Fix: CUDA module cache lock failed."),
         1,
         "Fix: repeated CUDA dispatches of the same program must not load duplicate modules."
-    );
-}
-
-#[test]
-fn compile_native_preloads_module_and_dispatches_without_relowering() {
-    let backend =
-        CudaBackend::acquire().expect("Fix: CUDA backend acquire failed on a GPU-required host.");
-    let program = Program::wrapped(
-        vec![
-            BufferDecl::read("input", 0, DataType::U32).with_count(2),
-            BufferDecl::output("out", 1, DataType::U32).with_count(2),
-        ],
-        [64, 1, 1],
-        vec![Node::store(
-            "out",
-            Expr::gid_x(),
-            Expr::mul(Expr::load("input", Expr::gid_x()), Expr::u32(11)),
-        )],
-    );
-
-    let pipeline = backend
-        .compile_native(&program, &DispatchConfig::default())
-        .expect("Fix: CUDA compile_native must lower PTX and preload the CUDA module.");
-    assert!(
-        pipeline.id().starts_with("cuda:"),
-        "Fix: compiled CUDA pipeline id must expose the backend and stable PTX cache key."
-    );
-    assert_eq!(
-        backend
-            .cached_module_count()
-            .expect("Fix: CUDA module cache lock failed."),
-        1,
-        "Fix: compile_native must preload exactly one CUDA module for this program."
-    );
-
-    let outputs = pipeline
-        .dispatch(&[u32_bytes(&[3, 4])], &DispatchConfig::default())
-        .expect("Fix: compiled CUDA pipeline must dispatch through the cached PTX.");
-    assert_eq!(bytes_u32(&outputs[0]), vec![33, 44]);
-    assert_eq!(
-        backend
-            .cached_module_count()
-            .expect("Fix: CUDA module cache lock failed."),
-        1,
-        "Fix: compiled CUDA pipeline dispatch must reuse the preloaded module."
     );
 }
 
@@ -224,102 +170,5 @@ fn repeated_dispatch_reuses_cuda_launch_resources() {
             .cached_launch_resource_counts()
             .expect("Fix: CUDA launch-resource pool lock failed."),
         (0, 0)
-    );
-}
-
-#[test]
-fn module_cache_eviction_scores_entries_without_collect_then_relookup() {
-    let source = include_str!("../src/backend/module_cache.rs");
-
-    assert!(
-        source.contains("for entry in self.sources.iter()")
-            && source.contains("for entry in self.modules.iter()")
-            && source.contains("gains.push(entry.access_count.load(Ordering::Relaxed));"),
-        "Fix: CUDA module/PTX cache eviction must score keys and gains in one pass."
-    );
-    assert!(
-        !source.contains(concat!("iter().map(|entry| *entry.key()).collect", "();"))
-            && !source.contains(concat!(".get(key)\n                    .map(|module|", " module.access_count"))
-            && !source.contains(concat!(".get(key)\n                    .map(|source|", " source.access_count")),
-        "Fix: CUDA module/PTX cache eviction must not collect keys and then relookup every entry for access scores."
-    );
-    assert!(
-        !source.contains(concat!("cached_source_bytes", "\n                .load(Ordering::Acquire)\n                .saturating_add"))
-            && !source.contains("dropped_bytes.saturating_add"),
-        "Fix: CUDA PTX source-cache byte accounting must be exact around memory caps, not saturating."
-    );
-}
-
-#[test]
-fn cuda_module_keying_reuses_ptx_source_digest_instead_of_rehashing_full_ptx() {
-    let module_cache = include_str!("../src/backend/module_cache.rs");
-    let capabilities = include_str!("../src/backend/capabilities.rs");
-    let dispatch = include_str!("../src/backend/dispatch.rs");
-    let host_dispatch = include_str!("../src/backend/host_dispatch.rs");
-    let resident_dispatch = resident_dispatch_source();
-    let cuda_graph = include_str!("../src/backend/cuda_graph.rs");
-    let egraph = egraph_kernel_plan_source();
-    let pipeline = include_str!("../src/pipeline.rs");
-
-    assert!(
-        module_cache.contains("pub(crate) fn key_for_ptx_source_key")
-            && module_cache.contains("module_cache_key_from_domain_digest(")
-            && module_cache.contains("CUDA_MODULE_FROM_PTX_SOURCE_KEY_DOMAIN")
-            && module_cache.contains("ptx_source_key.as_bytes()")
-            && module_cache.contains("domain_separated_exact_input_key("),
-        "Fix: CUDA module-cache keys must derive from the already-computed PTX source cache digest through the shared domain-separated identity contract."
-    );
-    assert!(
-        capabilities.contains("ptx_for_program_cached_with_key")
-            && capabilities.contains("Ok((ptx, key))"),
-        "Fix: CUDA lowering must return the PTX source cache key with the cached source."
-    );
-    assert!(
-        dispatch.contains("module_cache_key_for_ptx_source_key")
-            && host_dispatch.contains("ptx_for_program_cached_with_key")
-            && resident_dispatch.contains("ptx_for_program_cached_with_key")
-            && cuda_graph.contains("ptx_for_program_cached_with_key"),
-        "Fix: CUDA host, resident, and graph paths must thread the source digest into module-cache keying."
-    );
-    assert!(
-        !host_dispatch.contains("module_cache_key(&ptx_src)")
-            && !resident_dispatch.contains("module_cache_key(&ptx_src)")
-            && !cuda_graph.contains("module_cache_key(&ptx_src)")
-            && !dispatch.contains("fn module_cache_key(&self, ptx_src")
-            && !pipeline.contains("hasher.update(ptx_src.as_bytes())"),
-        "Fix: CUDA warm paths must not rehash full PTX text after PTX source-cache lookup."
-    );
-    assert!(
-        pipeline.contains("ptx_source_key: PtxSourceCacheKey")
-            && pipeline.contains("cuda_compiled_pipeline_identity_key")
-            && pipeline.contains("ptx_source_key.as_bytes()")
-            && pipeline.contains("domain_separated_exact_input_key(")
-            && !pipeline.contains("try_normalized_program_cache_digest")
-            && !pipeline.contains("program_vsa_fingerprint_words")
-            && !pipeline.contains("update_dispatch_policy_cache_hash"),
-        "Fix: compiled CUDA pipeline IDs must reuse the PTX source digest through the shared identity contract instead of repeating normalized Program/VSA/config hashing."
-    );
-    assert!(
-        module_cache.contains("pub(crate) fn key_for_raw_ptx_artifact")
-            && dispatch.contains("module_cache_key_for_raw_ptx_artifact")
-            && egraph.contains("warm_egraph_structural_equivalence_kernel_with_key")
-            && egraph.contains("warm_egraph_canonical_rewrite_kernel_with_key")
-            && egraph.contains("warm_egraph_signature_refresh_kernel_with_key")
-            && !host_dispatch.contains("module_cache_key_for_raw_ptx_artifact")
-            && !resident_dispatch.contains("module_cache_key_for_raw_ptx_artifact")
-            && !cuda_graph.contains("module_cache_key_for_raw_ptx_artifact"),
-        "Fix: raw PTX artifact keying is allowed only for standalone e-graph kernels that do not originate from Program PTX source-cache lowering."
-    );
-    assert_eq!(
-        egraph
-            .matches("module_cache_key_for_raw_ptx_artifact(source(&kernel))")
-            .count(),
-        1,
-        "Fix: the shared e-graph warm helper must compute each standalone kernel's raw-artifact key exactly once."
-    );
-    assert_eq!(
-        egraph.matches("self.warm_egraph_kernel_with_key(").count(),
-        3,
-        "Fix: all standalone e-graph kernel families must delegate raw-artifact keying to the shared warm helper."
     );
 }

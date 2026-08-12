@@ -10,6 +10,6 @@
 #![allow(deprecated)]
 #[cfg(feature = "visual")]
 mod tests {
-    include!("__split/visual_compositions_chunk1.rs");
-    include!("__split/visual_compositions_chunk2.rs");
+    include!("contract_cases/visual_compositions__program_has_correct_buffers.rs");
+    include!("contract_cases/visual_compositions__default_params.rs");
 }

@@ -145,7 +145,7 @@ impl BenchCase for LiteralSetPagedCorpus {
         let mut expected: Vec<GlobalMatch> = reference
             .iter()
             .map(|hit| GlobalMatch {
-                pattern_id: hit.pattern_id,
+                pattern_id: hit.tag,
                 region_id: region_of(hit.start),
                 start: u64::from(hit.start),
                 end: u64::from(hit.end),

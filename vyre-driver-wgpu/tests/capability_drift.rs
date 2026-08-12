@@ -1,6 +1,6 @@
 //! Failure-oriented tests for backend trait / capability drift.
 //!
-//! These tests lock the contract that [`vyre::VyreBackend`] capability
+//! These tests lock the contract that [`vyre_driver::VyreBackend`] capability
 //! queries and [`vyre_foundation::validate::BackendValidationCapabilities`]
 //! remain in sync, and that capabilities without a lowering path stay
 //! honestly `false` (LAW 9).
@@ -8,7 +8,7 @@
 mod common;
 use common::shared_live_backend as live_backend;
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 

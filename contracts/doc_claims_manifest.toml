@@ -48,19 +48,6 @@ phrase = "Tier-2.5 LEGO substrate"
 test = "vyre-primitives/tests/region_adversarial.rs"
 description = "Tier-2.5 LEGO substrate compositional contract claim."
 
-[[claim]]
-id = "harness_universal_registry"
-doc = "vyre-harness/README.md"
-phrase = "Universal Cat-A op harness registry"
-test = "vyre-harness/tests/categorical_laws_proptest.rs"
-description = "Single-registry universal harness claim verified by categorical-laws proptest."
-
-[[claim]]
-id = "harness_self_consumer"
-doc = "vyre-harness/README.md"
-phrase = "OpEntry"
-test = "vyre-harness/tests/self_consumer_conform.rs"
-description = "OpEntry self-consumer conformance contract."
 
 [[claim]]
 id = "aot_no_runtime_dependency"
@@ -82,10 +69,3 @@ doc = "rules/README.md"
 phrase = "No Rust code required"
 test = "rules/op/decode.base64.toml"
 description = "Tier-B rule corpus extensibility  -  zero-Rust contribution path."
-
-[[claim]]
-id = "public_facade_consumer_path"
-doc = "vyre-core/README.md"
-phrase = "single user-facing import path"
-test = "examples/public_facade_smoke/src/main.rs"
-description = "Consumer uses `vyre::*` only; internal-import gate (#124) enforces this."

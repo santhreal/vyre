@@ -1,66 +1,76 @@
-# Build Performance & Optimization Guide (PGO, SCCache, LTO)
+# Build Performance and Optimization
 
-This document describes the performance optimizations configured for the Vyre execution substrate and details the Profile Guided Optimization (PGO) workflow.
+Last verified: 2026-08-04
 
----
+Applies to Vyre 0.7.2.
 
-## 1. Profile Guided Optimization (PGO)
+Runtime benchmark claims come from `docs/optimization/BENCH_TARGETS.toml` and
+the generated evidence under `release/evidence/benchmarks/`. Build settings do
+not substitute for workload evidence.
 
-PGO is a compiler optimization technique that uses profiles collected from actual program execution to guide the compiler in making better optimization decisions (e.g., inlining hot functions, reordering branches).
+## Release profile
 
-To optimize a release build using PGO, follow this procedure:
+The workspace release profile uses Thin LTO and one codegen unit:
 
-### Step 1: Install `cargo-pgo`
-Ensure you have the `cargo-pgo` helper subcommand installed:
-```bash
-cargo install cargo-pgo --locked
-```
-
-### Step 2: Build with Instrumentation
-Compile the workspace with profiling instrumentation enabled:
-```bash
-cargo pgo build
-```
-This generates binaries instrumented to collect execution profiles.
-
-### Step 3: Collect Profile Data (Run Workloads)
-Run your benchmark suite, unit tests, or representative workloads using the instrumented binaries to collect execution profiles:
-```bash
-cargo pgo test
-```
-*(Optionally run your benchmarks: `cargo pgo bench`)*
-
-### Step 4: Build Optimized Binary
-Compile the final, highly optimized release binary using the collected profile data:
-```bash
-cargo pgo optimize
-```
-This generates optimized binaries built specifically for your hot paths.
-
----
-
-## 2. SCCache (Shared Compilation Cache)
-
-We have enabled `sccache` by default in all `.cargo/config.toml` files using:
-```toml
-[build]
-rustc-wrapper = "sccache"
-```
-
-To take advantage of sccache locally, make sure it is installed and in your `PATH`:
-- **Linux**: `cargo install sccache --locked`
-- **macOS**: `brew install sccache`
-- **Windows**: `choco install sccache`
-
----
-
-## 3. Thin LTO (Link-Time Optimization)
-
-Workspace release builds are configured to use **Thin LTO** and single codegen units to maximize runtime execution performance without the massive compile-time penalty of Fat LTO.
-
-This is set in the workspace `Cargo.toml` as:
 ```toml
 [profile.release]
 lto = "thin"
 codegen-units = 1
 ```
+
+These settings live in the root `Cargo.toml`.
+
+## Local build configuration
+
+The checked-in `.cargo/config.toml` sets bounded build jobs, disables proptest
+failure persistence, and defines workspace aliases. It does not configure a
+compiler cache. You may configure `sccache` locally, but release instructions
+must not assume it is installed.
+
+Prefer:
+
+```bash
+CARGO_BUILD_JOBS=1 ./cargo_full test -p <crate>
+```
+
+when diagnosing flaky link pressure or reproducing CI-like load.
+
+## Profile-guided optimization
+
+PGO is optional local experimentation. If you use `cargo-pgo`, collect profiles
+from the exact release workload and backend route you intend to optimize:
+
+```bash
+cargo pgo build
+cargo pgo test
+cargo pgo optimize
+```
+
+Record the toolchain, workload identity, backend, device, and before/after
+measurements. Do not publish a PGO result as a general Vyre claim unless the
+release benchmark evidence reproduces it.
+
+## Runtime performance claims
+
+| Claim type | Authority |
+| --- | --- |
+| Target budgets | `docs/optimization/BENCH_TARGETS.toml` |
+| Measured samples | `release/evidence/benchmarks/` |
+| Backend availability | `release/evidence/backends/backend-matrix.json` |
+| Operation support | `docs/optimization/OP_MATRIX.toml` + generated OP schema |
+
+A faster local laptop run is not release evidence. Prefer `vyre-bench` and the
+xtask benchmark/release commands documented in [`CLI.md`](CLI.md).
+
+## Common slow paths
+
+- Full workspace builds while other cargo jobs hold the shared target dir
+- Enabling every `vyre-libs` feature when you only need one domain
+- Rebuilding emitters after naga/toolchain bumps (pipeline caches must invalidate)
+- Treating reference-oracle runs as throughput benchmarks
+
+## Related docs
+
+- [`optimization/README.md`](optimization/README.md)
+- [`optimization/START_HERE.md`](optimization/START_HERE.md)
+- [`vyre-bench` testing guide](testing/vyre-bench.md)

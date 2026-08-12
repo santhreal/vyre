@@ -1,5 +1,8 @@
 # Per-op Surface Contract
 
+**Status: Superseded.** Use `docs/generated/OP_SCHEMA.json` for the current
+per-operation contract.
+
 Closes #28 A.4 per-op surface complete.
 
 Every registered op (Tier 2 intrinsic, Tier 2.5 primitive, Tier 3

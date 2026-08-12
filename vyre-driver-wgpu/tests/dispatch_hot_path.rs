@@ -18,8 +18,8 @@ use common::acquire_live_backend as live_backend;
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
 use vyre_driver::CompiledPipeline;
+use vyre_driver::{DispatchConfig, VyreBackend};
 
 static HOT_PATH_TEST_LOCK: Mutex<()> = Mutex::new(());
 
@@ -110,8 +110,8 @@ fn bind_group_cache_reused_on_repeated_dispatches() {
     let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256u32);
 
     let pipeline = backend
-        .compile_persistent(&program, &DispatchConfig::default())
-        .expect("Fix: compile_persistent must succeed");
+        .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
+        .expect("Fix: oracle pipeline compilation must succeed");
 
     // First dispatch: bind groups are created fresh.
     let _ = pipeline
@@ -155,8 +155,8 @@ fn persistent_pool_reuses_allocations_on_repeated_dispatches() {
     let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..256u32);
 
     let pipeline = backend
-        .compile_persistent(&program, &DispatchConfig::default())
-        .expect("Fix: compile_persistent must succeed");
+        .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
+        .expect("Fix: oracle pipeline compilation must succeed");
 
     let stats_before = backend.stats().persistent_pool;
 
@@ -188,8 +188,8 @@ fn compiled_dispatch_never_cpu_fallback() {
     let input: Vec<u8> = vyre_primitives::wire::pack_u32_iter(0..1024u32);
 
     let pipeline = backend
-        .compile_persistent(&program, &DispatchConfig::default())
-        .expect("Fix: compile_persistent must succeed");
+        .compile_pipeline_for_oracle(&program, &DispatchConfig::default())
+        .expect("Fix: oracle pipeline compilation must succeed");
 
     let start = Instant::now();
     let outputs = pipeline

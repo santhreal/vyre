@@ -1,11 +1,11 @@
 #![allow(deprecated)]
 
+use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IF, TOK_PREPROC};
 use vyre_libs::parsing::c::parse::gnu_builtins::gpu_builtin_hash_table_words;
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_if_expression::gpu_if_expression;
 use vyre_libs::parsing::c::preprocess::reference_c_preprocessor_directive_metadata;
-use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
 use vyre_reference::value::Value;
 
 fn pack_macro_values_with_builtin_hashes(values: &[u32]) -> Vec<u8> {

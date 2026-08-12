@@ -28,3 +28,30 @@ fn output_marker_takes_precedence_over_read_write_access_for_graph_lifetime() {
     assert_eq!(state.contract.lifetime, ValueLifetime::Retained);
     assert_eq!(result.contract.lifetime, ValueLifetime::Output);
 }
+
+/// WHY: workgroup scratch is node-local storage. Projecting it as an external value makes the
+/// canonical graph wire format reject otherwise runnable programs and falsely asks callers to bind it.
+#[test]
+fn workgroup_scratch_remains_internal_to_single_program_graph_nodes() {
+    let program = Program::from_raw_parts(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(64),
+            BufferDecl::workgroup("scratch", 64, DataType::U32),
+            BufferDecl::output("result", 1, DataType::U32).with_count(1),
+        ],
+        [64, 1, 1],
+        Vec::new(),
+    );
+
+    let graph = ProgramGraph::from_program("main", program).expect("program graph must validate");
+    let names = graph
+        .values()
+        .iter()
+        .map(|value| value.name.as_str())
+        .collect::<Vec<_>>();
+
+    assert_eq!(names, ["input", "result"]);
+    graph
+        .to_wire()
+        .expect("host-visible graph boundary must encode");
+}

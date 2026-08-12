@@ -12,7 +12,7 @@ mod common;
 use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{BinOp, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_self_substrate::optimizer::canonicalize_via_encoded::gpu_canonicalize;
 use vyre_self_substrate::optimizer::dispatcher::{DispatchError, OptimizerDispatcher};

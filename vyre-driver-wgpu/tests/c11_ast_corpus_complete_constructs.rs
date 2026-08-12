@@ -1,12 +1,12 @@
 //! Generated wrapper test crate for c11 ast corpus complete constructs.
 //!
-//! Implementation lives in `__split/` chunks.
+//! Implementation lives in `contract_cases/` chunks.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::type_complexity)]
 #![allow(deprecated)]
 use std::sync::OnceLock;
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::lower::{c_lower_ast_to_pg_nodes, reference_ast_to_pg_nodes};
@@ -451,33 +451,35 @@ const CORPUS_CASES: &[CorpusCase] = &[
         fixture: fixture_stmt_expr_nesting,
     },
 ];
-mod c11_ast_corpus_complete_constructs_part1 {
-    include!("__split/c11_ast_corpus_complete_constructs_part1.rs");
+mod c11_ast_corpus_complete_constructs_cpu_reference_all_corpus_fixtures_build_vast_without_panic {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__cpu_reference_all_corpus_fixtures_build_vast_without_panic.rs");
 }
-mod c11_ast_corpus_complete_constructs_part2 {
-    include!("__split/c11_ast_corpus_complete_constructs_part2.rs");
+mod c11_ast_corpus_complete_constructs_cpu_reference_function_pointer_array_with_qualifiers {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__cpu_reference_function_pointer_array_with_qualifiers.rs");
 }
-mod c11_ast_corpus_complete_constructs_part3 {
-    include!("__split/c11_ast_corpus_complete_constructs_part3.rs");
+mod c11_ast_corpus_complete_constructs_cpu_reference_enum_values_typed_correctly {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__cpu_reference_enum_values_typed_correctly.rs");
 }
-mod c11_ast_corpus_complete_constructs_part4 {
-    include!("__split/c11_ast_corpus_complete_constructs_part4.rs");
+mod c11_ast_corpus_complete_constructs_pg_lower_preserves_corpus_kinds_and_spans {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__pg_lower_preserves_corpus_kinds_and_spans.rs");
 }
-mod c11_ast_corpus_complete_constructs_part5 {
-    include!("__split/c11_ast_corpus_complete_constructs_part5.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_vast_builder_nested_designated_init {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_vast_builder_nested_designated_init.rs");
 }
-mod c11_ast_corpus_complete_constructs_part6 {
-    include!("__split/c11_ast_corpus_complete_constructs_part6.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_classifier_nested_anonymous_aggregates {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_classifier_nested_anonymous_aggregates.rs");
 }
-mod c11_ast_corpus_complete_constructs_part7 {
-    include!("__split/c11_ast_corpus_complete_constructs_part7.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_classifier_attribute_and_asm {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_classifier_attribute_and_asm.rs");
 }
-mod c11_ast_corpus_complete_constructs_part8 {
-    include!("__split/c11_ast_corpus_complete_constructs_part8.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_classifier_stmt_expr_nesting {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_classifier_stmt_expr_nesting.rs");
 }
-mod c11_ast_corpus_complete_constructs_part9 {
-    include!("__split/c11_ast_corpus_complete_constructs_part9.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_pg_lower_function_pointer_array {
+    include!("contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_pg_lower_function_pointer_array.rs");
 }
-mod c11_ast_corpus_complete_constructs_part10 {
-    include!("__split/c11_ast_corpus_complete_constructs_part10.rs");
+mod c11_ast_corpus_complete_constructs_gpu_parity_pg_lower_enum_values {
+    include!(
+        "contract_cases/c11_ast_corpus_complete_constructs__gpu_parity_pg_lower_enum_values.rs"
+    );
 }

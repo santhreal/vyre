@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_reference::value::Value;
 
 #[test]

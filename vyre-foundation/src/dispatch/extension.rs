@@ -69,7 +69,7 @@ pub trait NodeNode: Debug + Send + Sync + 'static {
 }
 
 /// Opaque rule condition extension  -  lets third-party rule-engine crates
-/// compose bespoke predicates without editing vyre-core's `RuleCondition`.
+/// compose bespoke predicates without editing the facade or foundation model.
 pub trait RuleConditionExt: Debug + Send + Sync + 'static {
     /// Stable extension id.
     fn extension_id(&self) -> ExtensionRuleConditionId;
@@ -451,7 +451,7 @@ mod tests {
 
     #[test]
     fn per_kind_resolvers_are_empty_by_default() {
-        // vyre-core links no extension crates in its own test binary.
+        // Foundation links no extension crates in its own test binary.
         // Every resolver must return None for any id.
         let data_type_id = ExtensionDataTypeId::from_name("tensor.gather");
         assert!(resolve_data_type(data_type_id).is_none());

@@ -56,7 +56,7 @@ vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
 serde_json.workspace = true
 pollster.workspace = true
-# Required by tests/common/mod.rs (vyre::ir, vyre::DispatchConfig) and by
+# Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
 # vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep
 # without that feature flag does not create a cycle. Cargo dev-deps are only

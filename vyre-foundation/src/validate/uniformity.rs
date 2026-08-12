@@ -30,6 +30,20 @@ use smallvec::SmallVec;
 /// and `Opaque`. A `Var` for which no binding is known is also
 /// treated as divergent.
 pub(crate) fn is_uniform(expr: &Expr, scope: &FxHashMap<crate::ir::Ident, Binding>) -> bool {
+    is_uniform_with_load_policy(expr, scope, |_| false)
+}
+
+/// Return whether `expr` is uniform when selected loads have a proven
+/// workgroup-uniform value.
+///
+/// The load policy is a proof boundary, not a fallback. Callers may return
+/// `true` only when every lane reads the same settled address and no write can
+/// race the read. The ordinary [`is_uniform`] analysis rejects every load.
+pub(crate) fn is_uniform_with_load_policy(
+    expr: &Expr,
+    scope: &FxHashMap<crate::ir::Ident, Binding>,
+    mut load_is_uniform: impl FnMut(&crate::ir::Ident) -> bool,
+) -> bool {
     let mut stack: SmallVec<[&Expr; 32]> = SmallVec::new();
     stack.push(expr);
     while let Some(expr) = stack.pop() {
@@ -62,6 +76,7 @@ pub(crate) fn is_uniform(expr: &Expr, scope: &FxHashMap<crate::ir::Ident, Bindin
                 stack.push(b);
                 stack.push(a);
             }
+            Expr::Load { buffer, index } if load_is_uniform(buffer) => stack.push(index),
             Expr::InvocationId { .. }
             | Expr::LocalId { .. }
             | Expr::SubgroupLocalId

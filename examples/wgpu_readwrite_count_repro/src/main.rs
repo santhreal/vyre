@@ -19,7 +19,7 @@ use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
 // `WgpuBackend::dispatch` comes from the `VyreBackend` trait, so the trait must
 // be in scope. `CudaBackend::dispatch` is an inherent method and does not need
 // it. Importing the trait covers both.
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_reference::value::Value;
 
 const LEN: u32 = 4;

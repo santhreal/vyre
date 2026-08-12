@@ -590,7 +590,7 @@ fix_plan = """
 resolution = """
 Resolved as within the accepted FP contract (NOT by achieving bit-for-bit
 identity: that criterion was superseded). The project's parity policy
-(vyre-harness/src/fp_contract.rs) deliberately allows GPU transcendentals a
+(conform/vyre-conform/src/fp_contract.rs) deliberately allows GPU transcendentals a
 bounded ULP window: BACKEND_TRANSCENDENTAL_ULP_BUDGET = 128 ULP for any program
 containing Exp/Log/etc., because "GPU backends may use native approximate
 transcendental instructions" and forcing a deterministic libm-matching exp into
@@ -645,7 +645,7 @@ resolution = """
 Resolved on the same basis as FINDING-GPU-9 (its predicted root cause): attention
 shares softmax's `Exp` lowering path, and its few-LSB drift is within the
 documented BACKEND_TRANSCENDENTAL_ULP_BUDGET = 128 ULP transcendental window
-(vyre-harness/src/fp_contract.rs). The dedicated diff_attention_regression passes
+(conform/vyre-conform/src/fp_contract.rs). The dedicated diff_attention_regression passes
 on a live RTX 5090 (1/0, 2026-06-22) and the full diff_universal_registry sweep is
 green, so there is no additional accumulation-order divergence beyond the accepted
 transcendental contract. Byte-identity is intentionally out of scope per the FP
@@ -985,7 +985,7 @@ Expr::Call was deprecated and replaced by the first-class `Expr::Select` IR
 variant (direct evaluator, no call-inlining). The coverage was migrated to a
 LIVE, non-ignored proptest with the same semantics (`cond != 0 ? value : 0`):
 `prop_select_matches_conditional` in
-vyre-reference/tests/__split/expr_adversarial_proptest_part2_chunk4.rs:57 (256
+vyre-reference/tests/contract_cases/expr_adversarial_proptest__prop_store_u32_roundtrip.rs:57 (256
 cases, real-value `prop_assert_eq!(result, expected)`). Verified: the whole
 expr_adversarial_proptest suite runs 102 tests with 0 ignored, there is no
 remaining undocumented `#[ignore]` in vyre-reference, and select evaluation is
@@ -1454,7 +1454,7 @@ the build break). Total suite state: 1158 passed, 96 failed (85 = SELFOPT-1, 11 
   - cuda_release_surface_contracts.rs: cuda_release_path_tracks_resident_borrowed_fallback_telemetry_gate,
     cuda_release_gate_evidence_matches_executable_gate (release telemetry gate).
   - cuda_vyre_libs_scan_prefix_sum_recursive_block_totals (scan prefix-sum block totals).
-  - __split/ptx_codegen_smoke_part2.rs: ptx_emits_integer_comparisons,
+  - contract_cases/ptx_codegen_smoke__ptx_emits_bitwise_ops.rs: ptx_emits_integer_comparisons,
     ptx_lowers_workgroup_sum_region_to_subgroup_reduction (PTX emission shape).
   - cuda_scallop_join_high_cell_chain_converges,
     cuda_scallop_join_wide_copies_high_words_past_cell_lane_count (datalog join;
@@ -1470,7 +1470,7 @@ Triage each cluster separately (do NOT lump):
    the executable gate; reconcile the gate after recent backend changes.
 3. scan_prefix_sum recursive block totals: differential vs the CPU oracle for the
    multi-block recursive path.
-4. ptx_codegen_smoke_part2: PTX emission shape for integer comparisons + workgroup-sum
+4. ptx_codegen_smoke__ptx_emits_bitwise_ops: PTX emission shape for integer comparisons + workgroup-sum
    subgroup reduction; compare emitted PTX against the expected lowering.
 5. scallop_join: shares the high-word/cell-lane handling with FINDING-OPT-IDEM-1; fix
    together. Re-run the suite after each; assert real result equality, never non-empty.
@@ -1496,7 +1496,7 @@ real code/contract fix:
     exceeds cooperative residency (host-split = regular per-segment launches, no
     co-residency requirement). launch.rs cooperative_residency_admits +
     host_dispatch.rs grid_sync_program_needs_host_split, on both sync entrypoints.
-  - ptx_codegen_smoke_part2 @baadce9602: both were WRONG TEST EXPECTATIONS, not code
+  - ptx_codegen_smoke__ptx_emits_bitwise_ops @baadce9602: both were WRONG TEST EXPECTATIONS, not code
     bugs. gt/ge expected setp.gt/ge.u32 but cmp_normalize canonicalizes Gt->Lt-swap /
     Ge->Le-swap (documented CSE win) so they emit setp.lt/le.u32. The workgroup-sum
     f32 reduction expected shfl.sync.down.b32 but the emitter intentionally uses the

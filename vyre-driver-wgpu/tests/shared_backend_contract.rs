@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
 fn selected_adapter(backend: &WgpuBackend) -> wgpu::Adapter {

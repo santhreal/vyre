@@ -7,10 +7,10 @@
 //!
 //! This is intentionally a thin coordinator. The actual measurement is
 //! delegated to existing benches and probes (criterion harnesses in
-//! `vyre-bench`, GPU dispatch latency probes in `vyre-driver-wgpu`,
-//! ULP differential in `vyre-harness`). This xtask collapses the measurement
-//! surfaces into one canonical entry point, so the active Vyre release numbers
-//! are reproducible by anyone running one command.
+//! `vyre-bench`, GPU dispatch latency probes in `vyre-driver-wgpu`, and
+//! conformance parity evidence in `vyre-conform`). This xtask collapses the
+//! measurement surfaces into one canonical entry point, so the active Vyre
+//! release numbers are reproducible by anyone running one command.
 //!
 //! Substrate-attribution per-axis (which optimization fired and saved
 //! how much) lives behind `VYRE_TRACE=1` and the substrate audit log

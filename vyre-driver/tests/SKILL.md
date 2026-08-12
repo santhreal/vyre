@@ -37,14 +37,6 @@ has no direct GPU / shader knowledge.
 - `DispatchConfig` with an insane `timeout` (near-zero, `u64::MAX`)
    -  must not panic
 
-## Current gaps
-
-- A true LRU for the pipeline cache (currently uses deterministic
-  bounded eviction in concrete caches). Gap test: "cache
-  keeps the hottest N pipelines after N+k insertions".
-- Per-backend stats trait. Gap:
-  add to VyreBackend as a defaulted method.
-
 ## Cross-crate contracts
 
 - `VyreBackend` trait  -  implemented by concrete backend crates

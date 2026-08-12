@@ -9,7 +9,7 @@ mod common;
 mod misc_line_splice_generated;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::bitset::popcount::{bitset_popcount, cpu_ref as popcount_cpu};
 use vyre_primitives::decode::rle_segment_lengths::{
     rle_segment_lengths, rle_segment_lengths_cpu, rle_segment_lengths_dispatch_grid,

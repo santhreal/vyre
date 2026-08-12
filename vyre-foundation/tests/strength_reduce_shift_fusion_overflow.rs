@@ -6,7 +6,7 @@
 //! After the fix:   `(x << 16) << 16`  →  `0`          (correct: all bits shifted out)
 
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::passes::strength_reduce::StrengthReduce;
+use vyre_foundation::optimizer::passes::algebraic::strength_reduce::StrengthReduce;
 
 /// Run StrengthReduce on a one-node program and extract the store value.
 fn run_and_extract_store_value(program: Program) -> Expr {

@@ -202,16 +202,16 @@ pub enum DataType {
     /// Extension-declared data type.
     ///
     /// The `ExtensionDataTypeId` is stable across process runs and
-    /// resolves to a `&'static dyn ExtensionDataType` via
-    /// `vyre::dialect::extension::resolve_data_type` (in vyre-core).
+    /// resolves to a `&'static dyn ExtensionDataType` through the foundation
+    /// extension registry.
     /// Wire encoding of Opaque is `0x80 ++ u32 extension_id`  -  see
     /// `docs/wire-format.md` §Extensions.
     ///
     /// The builtin const methods on `DataType` (`min_bytes`, `max_bytes`,
     /// `size_bytes`, `is_float_family`) return conservative sentinels for
     /// Opaque because the real values live behind the trait and are not
-    /// known at compile time. Consumers that need the actual values
-    /// should resolve the trait via the vyre-core registry.
+    /// known at compile time. Consumers that need the actual values should
+    /// resolve the trait through the foundation extension registry.
     Opaque(ExtensionDataTypeId),
 }
 

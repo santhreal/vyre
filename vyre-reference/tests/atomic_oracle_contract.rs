@@ -5,7 +5,7 @@
 //! must define old-value return semantics and the exact stored value after
 //! every supported operation.
 
-use vyre::ir::AtomicOp;
+use vyre_foundation::ir::AtomicOp;
 use vyre_reference::atomics;
 
 #[test]

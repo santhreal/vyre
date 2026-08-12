@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use vyre::ir::{Node, Program};
 use vyre_foundation::algebra::algebraic_law_registry::AlgebraicLawRegistration;
+use vyre_foundation::operation::classify_operation_id as classify_op_id;
 use vyre_foundation::operation::OperationTier;
-use vyre_harness::classify_op_id;
 
 use crate::conformance_matrix::read_conformance_required_op_matrix;
 
@@ -263,7 +263,8 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
             .insert(registration.law.name().to_string());
     }
 
-    let live = vyre_harness::all_entries()
+    let live = vyre_foundation::operation::OperationRegistry::global()
+        .iter()
         .map(|entry| LiveEntry {
             id: entry.id,
             signature: entry.signature.as_ref(),

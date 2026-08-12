@@ -1,29 +1,60 @@
 # Getting Support
 
-vyre is a research-stage alpha. These are the channels, in order of speed.
+Last verified: 2026-08-04
 
-## I have a specific bug or repro
-→ File a GitHub issue using the bug template: github.com/santhreal/vyre/issues/new/choose
+Applies to Vyre 0.7.2.
 
-Include: vyre version, backend, minimal reproduction, expected vs actual output, conformance output if relevant.
+## Supported release line
 
-## I want to discuss an idea or design decision
-→ GitHub Discussions: github.com/santhreal/vyre/discussions
+The active open-source support line is the `0.7.2` train published from the
+`santhreal/vyre` workspace. Pre-1.0 means public APIs can still move within the
+semver policy in [`docs/semver-policy.md`](semver-policy.md). Experimental
+crates (`vyre-runtime` experimental surfaces, beta frontends) may change faster
+than frozen foundation and wire contracts.
 
-Good for: architectural questions, feature ideas, comparison with other compiler frameworks.
+## Report a reproducible bug
 
-## I'm stuck on a 'how do I do X' question
-→ Read the book first: vyre-core/docs/
-→ Still stuck? Ask in GitHub Discussions. Most questions are answered in the book.
+Open a GitHub issue at
+[santhreal/vyre](https://github.com/santhreal/vyre/issues/new/choose). Include:
 
-## I found a security issue
-→ See SECURITY.md. Do NOT file a public issue.
+- Vyre crate versions (`vyre`, backend crates if selected)
+- Host OS, GPU, and driver/backend (`cuda`, `wgpu`, `metal`, `spirv`, `cpu-ref`)
+- Minimal input program or fixture
+- Expected result and observed result
+- Exact diagnostic codes and full messages
+- Relevant conformance or test command output
 
-## I want to contribute
-→ See CONTRIBUTING.md for the 5 contributor flows.
+Do not attach secrets, credentials, or proprietary model weights.
 
-## I want to cite vyre academically
-→ See CITATION.cff. GitHub renders a 'Cite this repository' button.
+## Ask a design or usage question
 
-## Commercial support
-→ Not offered for 0.4 alpha. After 1.0, contact security@santh.dev for commercial inquiries.
+Use [GitHub Discussions](https://github.com/santhreal/vyre/discussions). Read
+the indexed guides in [`docs/INDEX.md`](INDEX.md) first so the question can
+name the current contract. Useful starting points:
+
+- Architecture: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- Megakernel ownership: [`megakernel-wiring.md`](megakernel-wiring.md)
+- FAQ: [`faq.md`](faq.md)
+- Errors: [`error-codes.md`](error-codes.md)
+
+## Report a security issue
+
+Follow [`SECURITY.md`](../SECURITY.md). Do not open a public issue for an
+unpatched vulnerability.
+
+## Contribute
+
+Follow [`CONTRIBUTING.md`](../CONTRIBUTING.md). Operation, backend, and
+conformance changes have separate contribution paths. Architecture edge changes
+must update `docs/CRATE_OWNERSHIP.toml` in the same patch.
+
+## Cite Vyre
+
+Use [`CITATION.cff`](../CITATION.cff).
+
+## What support does not cover
+
+- Private consumer product paths (for example Keyhog-specific rule packs)
+- Untested operation domains outside recorded evidence
+- Silent recovery after a requested GPU backend fails
+- Commercial SLAs (not part of the Vyre 0.7.2 open-source support contract)

@@ -36,12 +36,12 @@ the crate manifest, release train, ownership registry, and crate-guide metadata.
 
 ### Purpose
 
-Own SPIR-V backend lowering, dispatch integration, and backend evidence.
+Own SPIR-V target compilation, immutable module-bundle emission, Vulkan materialization and dispatch integration, and backend evidence.
 
 ### Boundaries
 
 The `spirv-driver` owner maintains this `concrete-backend` crate at `vyre-driver-spirv`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-naga`, `vyre-foundation`, `vyre-lower`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-emit-spirv`, `vyre-foundation`, `vyre-lower`, `vyre-megakernel`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example
@@ -75,4 +75,14 @@ requirements, evidence outputs, expected skips, and failure semantics.
 `docs/CRATE_OWNERSHIP.toml` is authoritative for this crate's responsibility
 and allowed internal edges. Regenerate `docs/CRATE_GRAPH.md` and
 `docs/OWNERSHIP.md` after changing that registry.
+
+### License
+
+Licensed under either of
+
+- Apache License, Version 2.0, or
+- MIT license
+
+at your option. See the workspace `LICENSE-APACHE` and `LICENSE-MIT` files.
+
 <!-- END GENERATED CRATE CONTRACT -->

@@ -6,7 +6,7 @@
 
 use vyre_runtime::resident_work_queue::{
     protocol::{self, control, debug},
-    ResidentWorkQueue, ResidentIoQueue, SLOT_WORDS,
+    ResidentIoQueue, ResidentWorkQueue, SLOT_WORDS,
 };
 use vyre_runtime::PipelineError;
 

@@ -345,9 +345,11 @@ fn fixture_attribute_names() -> Fixture {
 // Tests
 // ---------------------------------------------------------------------------
 
-mod c_ast_gnu_extensions_e2e_part1 {
-    include!("__split/c_ast_gnu_extensions_e2e_part1.rs");
+mod c_ast_gnu_extensions_e2e_attribute_before_declarator_gpu_cpu_parity {
+    include!(
+        "contract_cases/c_ast_gnu_extensions_e2e__attribute_before_declarator_gpu_cpu_parity.rs"
+    );
 }
-mod c_ast_gnu_extensions_e2e_part2 {
-    include!("__split/c_ast_gnu_extensions_e2e_part2.rs");
+mod c_ast_gnu_extensions_e2e_attribute_names_classify_as_specific_kinds_gpu_cpu_parity {
+    include!("contract_cases/c_ast_gnu_extensions_e2e__attribute_names_classify_as_specific_kinds_gpu_cpu_parity.rs");
 }

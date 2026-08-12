@@ -218,10 +218,10 @@ fn parse_source(source: &str) -> Parsed {
 // 1. GNU __attribute__ with double-underscore forms (macro-expanded look)
 // ---------------------------------------------------------------------------
 
-mod c_ast_linux_style_raw_source_contracts_part1 {
+mod c_ast_linux_style_raw_source_contracts_attribute_double_underscore_section_classified_correctly {
 
-    include!("__split/c_ast_linux_style_raw_source_contracts_part1.rs");
+    include!("contract_cases/c_ast_linux_style_raw_source_contracts__attribute_double_underscore_section_classified_correctly.rs");
 }
-mod c_ast_linux_style_raw_source_contracts_part2 {
-    include!("__split/c_ast_linux_style_raw_source_contracts_part2.rs");
+mod c_ast_linux_style_raw_source_contracts_macro_expanded_dense_attribute_asm_typeof_stream {
+    include!("contract_cases/c_ast_linux_style_raw_source_contracts__macro_expanded_dense_attribute_asm_typeof_stream.rs");
 }

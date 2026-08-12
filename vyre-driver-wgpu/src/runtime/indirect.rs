@@ -5,9 +5,8 @@
 //! upstream kernel can decide the downstream dispatch shape
 //! without a round-trip to host.
 //!
-//! The `core.indirect_dispatch` op (registered in
-//! `vyre-core/src/dialect/core_indirect.rs`) names this operation
-//! in vyre IR; this module is the wgpu-side implementation.
+//! The foundation IR node for indirect dispatch names this operation; this
+//! module is the WGPU-side implementation.
 
 use std::sync::Arc;
 use vyre_driver::BackendError;

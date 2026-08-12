@@ -130,7 +130,7 @@ fn every_builtin_invariant_has_happy_and_adversarial_descriptors() {
             assert!(
                 descriptor
                     .name
-                    .starts_with("conform/vyre-conform-enforce/tests/invariants.rs::"),
+                    .starts_with("conform/vyre-conform/tests/invariants.rs::"),
                 "Fix: descriptor `{}` must point at the executable conformance invariant suite.",
                 descriptor.name
             );

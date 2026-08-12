@@ -1,7 +1,6 @@
 //! Generic engine plus post-process pipeline.
 //!
-//! Pairs any [`MatchScan`] engine with the canonical reference
-//! [`post_process::try_reference_post_process`] output.
+//! Pairs any [`MatchScan`] engine with canonical reference post-processing.
 //!
 //! The pipeline is intentionally `Pipeline<E>` rather than a trait  -
 //! every consumer wants the *same* post-processing semantics, so
@@ -13,16 +12,17 @@ use crate::engine::MatchScan;
 use crate::post_process::try_reference_post_process;
 use crate::post_process::{PostProcessError, PostProcessedMatch};
 use vyre_driver::BackendError;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 /// Function pointer for the post-processing stage. Stored as an `fn`
 /// (not `Box<dyn Fn>`) to keep `Pipeline<E>` `Copy + Sync` and avoid
 /// indirection in the hot path.
-pub type PostProcessFn = fn(&[Match], &[u8]) -> Result<Vec<PostProcessedMatch>, PostProcessError>;
+pub type PostProcessFn =
+    fn(&[ByteRange], &[u8]) -> Result<Vec<PostProcessedMatch>, PostProcessError>;
 
-/// Engine plus post-processor pair. Construct via [`Pipeline::new`] for the
-/// default Reference oracle post-process, or [`Pipeline::with_post_process`] to
-/// inject a custom one.
+/// Engine plus post-processor pair. Construct via
+/// [`Pipeline::with_post_process`] or use `Pipeline::new` when the
+/// `cpu-parity` feature supplies the reference oracle.
 pub struct Pipeline<E> {
     /// Underlying scan engine. Anything that implements `MatchScan`
     /// composes  -  `GpuLiteralSet`, `ScanSession`, future custom

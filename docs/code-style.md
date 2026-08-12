@@ -1,79 +1,56 @@
-# vyre code style
+# Vyre Code Style
 
-Conventions this workspace follows. When an external contributor asks "what
-is the style", this is the authoritative answer.
+Applies to Vyre 0.7.2.
 
-## Naming
+Use the surrounding module as the first example. Run `cargo fmt --all` after a
+coherent edit batch.
 
-### Modules
+## Modules and files
 
-| Case                               | Convention      | Example                                   |
-|------------------------------------|-----------------|-------------------------------------------|
-| Module groups a category of peers  | **plural noun** | `enforcers/`, `passes/`, `witnesses/`     |
-| Module is the single concept       | **singular**    | `optimizer`, `scheduler`, `validate`      |
-| Module re-exports a trait family   | **singular**    | `backend`, `value`, `program`             |
-| Module holds one op spec           | **op name**     | `sub_sat`, `f32_add`, `fnv1a`             |
+- Name Rust modules in `snake_case`.
+- Give each module one responsibility and one clear owner.
+- Group peers under a plural module when that improves navigation.
+- Keep domain logic independent of CLI, transport, and UI layers.
+- Use explicit re-exports. Do not add wildcard public re-exports.
+- Extend an existing canonical helper before adding a second implementation.
 
-Rule of thumb: if the file you're writing adds *one more of the same thing*
-(one more enforcer, one more pass, one more witness), the module name is
-plural. If the module defines *the* thing itself (the optimizer, the
-scheduler, the validator), it is singular.
+A cohesive file may be long. Split when responsibilities or ownership diverge,
+not at an arbitrary line count.
 
-Crate-level naming (`vyre-wgpu`, `vyre-reference`, etc.) is singular by
-convention  -  crates are products, not collections.
+## Public APIs
 
-### Files
+- Use `CamelCase` for types and traits, and `snake_case` for functions.
+- Make non-public items `pub(crate)` or private.
+- Treat every exported signature and behavior as a compatibility contract.
+- Add public items through the owning crate's existing facade.
+- Run the public API snapshot gate when an exported surface changes.
 
-- One file = one concept (LAW 7). If you need `// --- section ---`
-  separators to divide concerns in a file, split the file.
-- File name is the concept name in `snake_case`. Don't prefix with the
-  module name: `optimizer/rewrite.rs`, not `optimizer/optimizer_rewrite.rs`.
-- Test files in `vyre-core/tests/` mirror the source tree. An integration test
-  for `src/foo/bar.rs` lives at `tests/foo/bar.rs` and is wired via the
-  mirror module in `tests/foo.rs`.
+## Errors
 
-### Types and functions
-
-- `CamelCase` for types/traits, `snake_case` for functions and methods.
-- Avoid `fn get_x()` when `fn x()` is unambiguous.
-- Return `Result<T, ConcreteError>` with `Fix: ...` prefixed error
-  messages. Never return `String` for errors in new code.
-
-### Pub visibility
-
-- `pub(crate)` is the default for everything you don't explicitly expose.
-- `pub` items in `lib.rs` are the crate's public contract  -  adding one
-  bumps the minor version.
-- `pub(super)` is a smell. It usually means the module boundary is wrong;
-  consider moving the item up or making it `pub(crate)`.
-
-## Comments
-
-- Default to writing none. Only comment when the **why** is non-obvious.
-- Never explain what the code does  -  the code already does. Explain
-  constraints, prior incidents, subtle invariants, workarounds.
-- Every `expect(...)` in non-test code must start with `"Fix: ..."`.
-- No `TODO` / `FIXME` / `XXX` / `HACK` / `STUB` in shipped code (LAW 9).
-  The `zero_stubs` enforcer catches evasions too (`T0DO`, `// TO DO`, etc.).
+Return a concrete error type at a public boundary. Include the failed operation,
+relevant identity, and a concrete fix. Do not log secret inputs. Do not convert
+an unsupported backend or device request into a silent fallback.
 
 ## Tests
 
-- Unit tests (`#[cfg(test)] mod tests`) live next to the code.
-- Integration tests (`vyre-core/tests/*.rs`) mirror the source tree.
-- Tests are written to **fail** first  -  the assert is the spec. If a test
-  passes without the engine, the test is wrong.
-- Every module covered by `vyre-core/tests/` has adversarial and property
-  coverage, not just happy path.
+Put new behavior tests under the owning crate's `tests/` directory. Update an
+existing inline test only when the changed contract already lives there.
 
-## Benchmarks
+Each regression test:
 
-- Every perf-sensitive crate has `benches/*.rs` with Criterion.
-- Bench baselines live in `benches/baselines/<bench-name>.json`.
-- CI fails on a >5% regression against committed baseline (NEW-TEST-002).
+1. names the observable behavior,
+2. carries a doc comment explaining the bug it prevents,
+3. asserts exact values or state transitions,
+4. includes the relevant negative or adversarial boundary,
+5. runs deterministically in the full suite.
 
-## When the rule is wrong
+## Performance work
 
-This file is advisory for the cases it covers. When the existing code
-consistently does something different, follow the surrounding code  -  a
-local convention almost always beats a global one. Open an issue to
-re-align the doc if the divergence is permanent.
+Measure the real path before and after the change. Use
+`docs/optimization/BENCH_TARGETS.toml` for release targets and keep backend
+counter collection inside the owning concrete driver or benchmark crate.
+
+## Comments
+
+Comment the constraint or reason, not the syntax. Do not leave TODO, FIXME,
+placeholder, or deferral markers in shipped code.

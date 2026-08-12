@@ -27,7 +27,7 @@ fn cpu_ref(kinds: &[u32], max_depth: u32) -> Vec<u32> {
 
 #[test]
 fn bracket_match_cpu_ref_empty_inputs() {
-    let cases = [
+    let cases: [(Vec<u32>, u32, Vec<u32>); 3] = [
         (vec![], 0, vec![]),
         (vec![], 1, vec![]),
         (vec![], 100, vec![]),

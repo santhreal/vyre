@@ -16,7 +16,7 @@
 //! `scripts/check_gpu_test_loudness.sh` enforces the loudness rule.
 
 use vyre::ir::{BufferDecl, DataType, Program};
-use vyre::{BackendError, VyreBackend};
+use vyre_driver::{BackendError, VyreBackend};
 
 fn empty_program() -> Program {
     Program::wrapped(
@@ -36,7 +36,7 @@ fn empty_program_dispatch_returns_structured_error() {
         .expect("Fix: live WGPU backend is required for empty-program dispatch coverage");
 
     let inputs: Vec<Vec<u8>> = vec![];
-    let config = vyre::DispatchConfig::default();
+    let config = vyre_driver::DispatchConfig::default();
     let result = backend.dispatch(&program, &inputs, &config);
     assert!(
         matches!(
@@ -64,7 +64,7 @@ fn dispatch_with_mismatched_inputs_yields_structured_error() {
     let backend = vyre_driver_wgpu::WgpuBackend::acquire()
         .expect("Fix: live WGPU backend is required for adversarial dispatch coverage");
     let inputs: Vec<Vec<u8>> = vec![]; // mismatched: 0 < 1 expected
-    let config = vyre::DispatchConfig::default();
+    let config = vyre_driver::DispatchConfig::default();
     let result = backend.dispatch(&program, &inputs, &config);
     assert!(
         matches!(
@@ -75,23 +75,4 @@ fn dispatch_with_mismatched_inputs_yields_structured_error() {
         ),
         "missing-input dispatch must fail; got {result:?}"
     );
-}
-
-#[test]
-fn empty_program_compile_native_returns_result() {
-    let program = empty_program();
-    let backend = vyre_driver_wgpu::WgpuBackend::acquire()
-        .expect("Fix: live WGPU backend is required for compile_native adversarial coverage");
-    // Compiled-pipeline path: `VyreBackend::compile_native` must
-    // either return a CompiledPipeline (Ok(Some)), opt out (Ok(None)),
-    // or surface a structured BackendError. The failure modes the
-    // gate forbids are a panic or undefined behavior.
-    let config = vyre::DispatchConfig::default();
-    if let Err(error) = backend.compile_native(&program, &config) {
-        assert_ne!(
-            error.to_string().len(),
-            0,
-            "structured BackendError must carry diagnostic text"
-        );
-    }
 }

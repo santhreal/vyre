@@ -1,6 +1,6 @@
 //! Generated `reference_eval` coverage for FMA and Select expression nodes.
 
-use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::reference_eval;
 
 fn eval_f32_expr(expr: Expr) -> f32 {

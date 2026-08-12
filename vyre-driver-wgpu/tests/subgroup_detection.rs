@@ -5,7 +5,7 @@
 //! matches the emitted shader.
 
 use vyre::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::emit;
 use vyre_driver_wgpu::WgpuBackend;
 

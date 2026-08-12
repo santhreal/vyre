@@ -4,7 +4,7 @@
 //! need. Buffer layouts are defined by each `Program`’s `BufferDecl`
 //! (`with_count`, read/write); see each builder's module for harness fixtures.
 //!
-//! Full roadmap: `docs/COMPILER_E2E_PLAN.md`.
+//! Frontend ownership is defined in `docs/ARCHITECTURE.md`.
 
 pub use crate::parsing::c::lex::diagnostics::{
     first_c11_lexer_diagnostic, C11LexerDiagnostic, C11LexerDiagnosticKind,
@@ -47,10 +47,6 @@ pub use crate::parsing::c::preprocess::synthesis::{
 pub use crate::parsing::c::preprocess::{c_translation_phase_line_splice, CLineSplicedSource};
 pub use crate::parsing::c::sema::registry::{c_sema_scope, c_sema_scope_packed_haystack};
 pub use crate::parsing::core::ast::shunting::ast_shunting_yard;
-pub use crate::{
-    c11_build_cfg_and_gotos, c11_compute_alignments, opt_lower_elf, opt_stack_layout_generation,
-    opt_x86_64_register_allocation,
-};
 
 /// Upper bound on token stream length for `ast_shunting_yard` / padded tok buffers.
 /// Must match `vyre-libs` `ast_shunting_yard` implementation.

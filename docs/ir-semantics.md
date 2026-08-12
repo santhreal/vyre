@@ -1,16 +1,18 @@
 # vyre IR statement semantics
 
+Applies to Vyre 0.7.2.
+
 This document specifies how each `Node` variant evaluates. It is the semantic
 contract; the byte encoding is a separate concern and lives in
 [wire-format.md](wire-format.md).
 
-Every backend must produce identical output for every program these rules cover:
-the CPU reference interpreter, CUDA, WGPU, Metal, and the SPIR-V surface. A
-divergence is a conformance bug, tracked through the OCC registry (see
-[occ.md](occ.md)).
+For an operation and backend pair marked supported by the operation matrix, the
+backend result must agree with the registered reference oracle within the
+operation's declared exact or ULP tolerance. Unsupported pairs fail visibly.
 
-These rules are frozen for the 0.6 and 0.7 series. A semver-major release may
-add node variants. No existing variant's semantics may change.
+Existing variant semantics remain stable within the 0.7 series. A breaking
+semantic change requires the compatibility process in
+[`docs/semver-policy.md`](semver-policy.md).
 
 One naming note before the rules. `Node::forever` is a constructor, not a node
 variant. It builds a `Node::Loop` whose upper bound is `u32::MAX`. Wherever this
@@ -48,8 +50,8 @@ of `name` in scope. It is an error (surfaced by the validator) to
 - `Let(state, 0)` at the outer scope then a sequence of `Assign(state, …)`
   inside an inner scope observably mutates the outer binding from the
   perspective of every later statement in the outer scope.
-- `Assign` does not create a new binding. A failed `Assign` (no prior
-  `Let`) MUST return a `PipelineError::Validation` with code `V033`.
+- `Assign` does not create a new binding.
+- `Assign` to a name with no visible `Let` is a validation error.
 
 ### Scope rules
 
@@ -58,13 +60,11 @@ of `name` in scope. It is an error (surfaced by the validator) to
 | `Node::Block` | yes | yes |
 | `Node::Loop` | yes (per-iteration scope is child of loop header scope) | yes |
 | `Node::If { then, otherwise }` | yes (one per branch) | yes |
-| `Node::Region { body, … }` | **no** (transparent wrapper) | yes |
+| `Node::Region { body, … }` | yes | yes |
 
-Region transparency is load-bearing: it means `Assign` from inside a
-vyre-libs composition can mutate a binding the caller established
-before wrapping the call in a `Region`. Composition-preserving
-refactors (e.g. `region_inline`) are guaranteed not to change any
-observable state by this rule.
+Region preserves the same child-scope behavior as `Node::Block`. An `Assign`
+inside a region still resolves a visible outer binding when no inner binding
+shadows it. Composition-preserving rewrites must keep that lookup behavior.
 
 ### Why Assign exists at all
 
@@ -107,22 +107,17 @@ it without a new variant.
 
 ## Region semantics recap
 
-`Node::Region { generator, source_region, body }` is a pure
-debug wrapper. Evaluation is identical to `Node::Block(body)`. The
-two fields are informational only and do not affect semantics. The
-reference interpreter executes the body in the current scope; the
-wgpu/spirv backends lower the body in place; `region_inline`
-flattens it into the surrounding sequence when its node count is
-below the inline threshold.
+`Node::Region { generator, source_region, body }` is a scoped debug wrapper.
+Evaluation matches `Node::Block(body)`: the body executes in a child scope, and
+the metadata fields do not affect values. Backend lowering and region-inlining
+must preserve the same binding behavior.
 
 ## `Node::Opaque` semantics
 
-`Node::Opaque(extension)` delegates evaluation to the registered
-`OpaqueNodeResolver` for `extension.extension_kind()`. If no
-resolver is registered for that kind at dispatch time, the backend
-returns `PipelineError::Backend` with a `B-CAP-003` code. The
-resolver's evaluation MUST satisfy the same observable-state
-contract as core nodes.
+`Node::Opaque(extension)` requires explicit support from the selected execution
+path. The reference interpreter rejects an opaque node until it is lowered to
+core nodes or receives a reference evaluator. A backend that cannot honor the
+extension returns an actionable unsupported-capability error.
 
 ## Error codes introduced by this contract
 

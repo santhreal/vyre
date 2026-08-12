@@ -107,7 +107,11 @@ impl BenchCase for RegisterExhaustionCase {
         rng.fill(input.as_mut_slice());
 
         let timed = ctx
-            .dispatch_timed(program, &[input.clone()], &vyre::DispatchConfig::default())
+            .dispatch_timed(
+                program,
+                &[input.clone()],
+                &vyre_driver::DispatchConfig::default(),
+            )
             .map_err(|e| crate::api::case::BenchError::ExecutionFailed(e.to_string()))?;
 
         let start_ref = std::time::Instant::now();

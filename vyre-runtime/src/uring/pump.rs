@@ -2,12 +2,10 @@
 //!
 //! The two halves needed for mapped-read → GPU-visible-memory → compute
 //! already existed separately before this module: [`AsyncUringStream`] owns
-//! the io_uring submission + completion queue and the GPU-mapped DMA buffer,
-//! while [`crate::megakernel::Megakernel::publish_slot`] owns the host-side
-//! ring-slot writer that signals a persistent GPU kernel. Nothing composed
-//! them  -  a caller had to manually reach into both every dispatch.
-//! [`UringResidentQueuePump`] wires them together so a host thread can run one
-//! compact loop:
+//! the io_uring submission and completion queue plus the GPU-mapped DMA buffer,
+//! while [`ResidentWorkQueue::publish_slot`] owns the host-side ring-slot writer
+//! that signals a persistent GPU kernel. [`UringResidentQueuePump`] wires them
+//! together so a host thread can run one compact loop:
 //!
 //! ```text
 //! pump.submit_file_scan(fd, offset, len, tenant, opcode, [a0,a1,a2])?;
@@ -25,9 +23,9 @@
 //! 2. The (tenant, opcode, args) payload is staged in
 //!    `pending: Vec<PendingPublish>` keyed by `chunk_idx`.
 //! 3. `drain_into_ring` polls the io_uring CQ and, for each success,
-//!    writes the staged slot into the caller-supplied ring buffer
-//!    via `Megakernel::publish_slot`. Errors surface with a
-//!    structured `PipelineError` that names the failing chunk.
+//!    writes the staged slot into the caller-supplied ring buffer through
+//!    [`ResidentWorkQueue::publish_slot`]. Errors surface with a structured
+//!    `PipelineError` that names the failing chunk.
 //!
 //! ## Backpressure
 //!
@@ -229,7 +227,7 @@ impl<'a> UringResidentQueuePump<'a> {
     /// # Errors
     ///
     /// - [`PipelineError::IoUringSyscall`] on the first failed CQE.
-    /// - [`PipelineError::QueueFull`] if `Megakernel::publish_slot`
+    /// - [`PipelineError::QueueFull`] if [`ResidentWorkQueue::publish_slot`]
     ///   rejects the published slot (e.g., `slot_idx` still in-flight
     ///   on the GPU side  -  caller must wait for the kernel to drain).
     pub fn drain_into_ring(&mut self, ring_bytes: &mut [u8]) -> Result<u32, PipelineError> {

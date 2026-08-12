@@ -1,19 +1,4 @@
-//! Native scan match result  -  **legacy scan-domain shim.**
-//!
-//! CRITIQUE_VISION_ALIGNMENT_2026-04-23 V1: this type was the Tier-1
-//! return shape for every byte-range scan in vyre. Its field name
-//! (`pattern_id`) pre-decided that every byte range is a "match"
-//! from a "pattern"  -  a matching-dialect concept that shouldn't
-//! live in foundation. A crypto decoder, an AST-span emitter, or a
-//! capture-group producer would either adopt matching vocabulary
-//! awkwardly or ship a parallel type.
-//!
-//! The canonical neutral name is `ByteRange`. `Match` remains here as
-//! a backward-compat scan-domain shape. Bridges between the two types
-//! are zero-cost (`repr(C)` u32×3 on both sides).
-//!
-//! The full migration removes `Match` entirely; we keep it for one
-//! release so dependent crates don't hard-break.
+//! Domain-neutral tagged byte ranges shared by scan and source-processing products.
 
 /// A tagged, half-open byte range `[start, end)`.
 ///
@@ -69,74 +54,6 @@ impl ByteRange {
     }
 }
 
-/// A byte-range match emitted by vyre scanning engines.
-///
-/// **Deprecated:** callers should migrate to
-/// [`ByteRange`]. The two types share layout and the `From` bridges are
-/// zero-cost.
-///
-/// Background: `pattern_id` is a matching-dialect concept. The
-/// neutral name on the new type is `tag`; the producer decides what
-/// it means (pattern id, encoding id, AST kind, source index, …).
-/// CRITIQUE_VISION_ALIGNMENT_2026-04-23 V1.
-#[non_exhaustive]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Match {
-    /// Stable pattern identifier that produced the match.
-    pub pattern_id: u32,
-    /// Inclusive byte start offset.
-    pub start: u32,
-    /// Exclusive byte end offset.
-    pub end: u32,
-}
-
-impl Match {
-    /// Construct a match from its pattern id and byte range.
-    ///
-    /// This constructor is a const fn so that engines can emit match
-    /// literals at compile time. The byte range is half-open `[start, end)`
-    /// to match Rust slicing conventions.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use vyre::Match;
-    ///
-    /// let m = Match::new(1, 10, 20);
-    /// assert_eq!(m.pattern_id, 1);
-    /// assert_eq!(m.start, 10);
-    /// assert_eq!(m.end, 20);
-    /// ```
-    #[must_use]
-    pub const fn new(pattern_id: u32, start: u32, end: u32) -> Self {
-        // Same half-open `[start, end)` invariant as the sibling `ByteRange`,
-        // so the zero-cost `From<Match> for ByteRange` bridge cannot panic on a
-        // value `Match` itself permitted. Reversed ranges fail loudly at
-        // construction, not later at conversion.
-        assert!(
-            end >= start,
-            "Match::new requires end >= start. Fix: pass half-open byte ranges as [start, end)."
-        );
-        Self {
-            pattern_id,
-            start,
-            end,
-        }
-    }
-}
-
-impl From<Match> for ByteRange {
-    fn from(value: Match) -> Self {
-        ByteRange::new(value.pattern_id, value.start, value.end)
-    }
-}
-
-impl From<ByteRange> for Match {
-    fn from(value: ByteRange) -> Self {
-        Match::new(value.tag, value.start, value.end)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,70 +61,56 @@ mod tests {
 
     #[test]
     fn construction() {
-        let m = Match::new(1, 10, 20);
-        assert_eq!(m.pattern_id, 1);
-        assert_eq!(m.start, 10);
-        assert_eq!(m.end, 20);
+        let range = ByteRange::new(1, 10, 20);
+        assert_eq!(range.tag, 1);
+        assert_eq!(range.start, 10);
+        assert_eq!(range.end, 20);
     }
 
     #[test]
     fn ordering() {
-        let a = Match::new(0, 5, 10);
-        let b = Match::new(0, 15, 20);
-        let c = Match::new(1, 0, 5);
-        let mut v = [c, a, b];
-        v.sort();
-        assert_eq!(v[0].start, 5);
-        assert_eq!(v[1].start, 15);
-        assert_eq!(v[2].pattern_id, 1);
-    }
-
-    #[test]
-    fn clone_and_eq() {
-        let a = Match::new(1, 0, 100);
-        let b = a;
-        assert_eq!(a, b);
+        let a = ByteRange::new(0, 5, 10);
+        let b = ByteRange::new(0, 15, 20);
+        let c = ByteRange::new(1, 0, 5);
+        let mut ranges = [c, a, b];
+        ranges.sort();
+        assert_eq!(ranges[0].start, 5);
+        assert_eq!(ranges[1].start, 15);
+        assert_eq!(ranges[2].tag, 1);
     }
 
     #[test]
     fn hash_consistency() {
         let mut set = HashSet::new();
-        let m = Match::new(1, 0, 10);
-        set.insert(m);
-        assert!(set.contains(&Match::new(1, 0, 10)));
-        assert!(!set.contains(&Match::new(2, 0, 10)));
-    }
-
-    #[test]
-    fn byte_range_bridge_preserves_fields() {
-        let range = ByteRange::new(7, 11, 22);
-        let matched: Match = range.into();
-        assert_eq!(matched.pattern_id, 7);
-        assert_eq!(matched.start, 11);
-        assert_eq!(matched.end, 22);
-        let roundtrip: ByteRange = matched.into();
-        assert_eq!(roundtrip, range);
+        let range = ByteRange::new(1, 0, 10);
+        set.insert(range);
+        assert!(set.contains(&ByteRange::new(1, 0, 10)));
+        assert!(!set.contains(&ByteRange::new(2, 0, 10)));
     }
 
     #[test]
     #[should_panic(expected = "ByteRange::new requires end >= start")]
-    fn byte_range_rejects_reversed_ranges() {
+    fn reversed_ranges_fail_at_construction() {
         let _ = ByteRange::new(1, 10, 9);
     }
 
     #[test]
-    #[should_panic(expected = "Match::new requires end >= start")]
-    fn match_rejects_reversed_ranges_at_construction() {
-        let _ = Match::new(1, 10, 9);
+    fn range_predicates_cover_boundaries() {
+        let outer = ByteRange::new(0, 0, 100);
+        let inner = ByteRange::new(1, 10, 90);
+        let adjacent = ByteRange::new(2, 100, 100);
+
+        assert!(outer.contains(&inner));
+        assert!(outer.contains(&outer));
+        assert!(!inner.contains(&outer));
+        assert!(outer.ends_before(&adjacent));
+        assert_eq!(inner.len(), 80);
+        assert!(adjacent.is_empty());
     }
 
     #[test]
-    fn match_to_byte_range_bridge_preserves_fields() {
-        let matched = Match::new(9, 4, 17);
-        let range: ByteRange = matched.into();
-        assert_eq!(range.tag, 9);
-        assert_eq!(range.start, 4);
-        assert_eq!(range.end, 17);
-        assert_eq!(range.len(), 13);
+    fn layout_matches_packed_triple_abi() {
+        assert_eq!(std::mem::size_of::<ByteRange>(), 12);
+        assert_eq!(std::mem::align_of::<ByteRange>(), 4);
     }
 }

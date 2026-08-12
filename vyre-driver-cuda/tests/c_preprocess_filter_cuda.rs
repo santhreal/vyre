@@ -8,7 +8,7 @@
 mod common;
 
 use common::with_live_backend;
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::parsing::c::preprocess::gpu_comment_strip_mask::reference_gpu_comment_strip_mask;
 use vyre_libs::parsing::c::preprocess::gpu_pipeline::{gpu_filter_source_bytes, ProgramOracle};

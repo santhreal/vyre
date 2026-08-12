@@ -1,9 +1,8 @@
 //! Linear algebra, scans, broadcasting, and atomic compositions.
 //!
-//! Every function here is a pure Category-A composition over
-//! vyre-ops primitives, **except** `atomic` which is Category-B
-//! (`Category::Intrinsic`) because it requires the backend to support
-//! `Expr::Atomic` (F-IR-35).
+//! Every function here is a pure Category-A composition over foundation IR
+//! primitives, except `atomic`, which requires backend support for
+//! `Expr::Atomic`.
 //!
 //! Organized into sub-dialects so each concern has its own namespace:
 //! - `linalg`  -  dot, matmul, matmul_tiled
@@ -29,15 +28,14 @@ pub mod algebra;
 #[cfg(feature = "math-succinct")]
 pub mod succinct;
 
-/// Atomic read-modify-write compositions (add/and/or/xor/min/max/exchange/compare_exchange)
-///  -  migrated from vyre-ops per the intrinsic-vs-library rule (Expr::Atomic is an
-/// existing IR variant, so these are library compositions rather than intrinsics).
+/// Atomic read-modify-write compositions (add/and/or/xor/min/max/exchange/compare_exchange).
+/// These are library compositions over the canonical `Expr::Atomic` IR variant.
 pub mod atomic;
 /// Average floor operation
 pub mod avg_floor;
 mod bit_count_ops;
 mod bit_count_u32;
-/// Clamp to [lo, hi] per lane (migrated from vyre-ops per the intrinsic-vs-library rule).
+/// Clamp to [lo, hi] per lane.
 pub mod clamp_u32;
 /// 2D convolution  -  direct 3x3 kernel base case (ROADMAP H3).
 pub mod conv;

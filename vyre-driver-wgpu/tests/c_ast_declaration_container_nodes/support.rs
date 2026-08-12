@@ -3,7 +3,7 @@
 use std::sync::OnceLock;
 
 use vyre::ir::Expr;
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::parsing::c::parse::vast::{
     c11_build_vast_nodes, c11_classify_vast_node_kinds, reference_c11_build_vast_nodes,

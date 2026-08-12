@@ -11,7 +11,7 @@ mod common;
 use common::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 
 fn dummy_program(workgroup_size: [u32; 3]) -> Program {
     Program::wrapped(

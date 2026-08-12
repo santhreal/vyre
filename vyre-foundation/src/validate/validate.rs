@@ -31,7 +31,7 @@ use std::ops::ControlFlow;
 /// Validate a program for structural and semantic correctness.
 ///
 /// The validator checks the stable rules documented in
-/// `vyre/docs/ir/validation.md`: workgroup dimensions must be positive,
+/// `docs/ir-semantics.md`: workgroup dimensions must be positive,
 /// buffer names and bindings must be unique, workgroup buffers must have
 /// a positive element count, and the node tree must respect depth limits.
 /// A successful validation (empty error vector) means the program is
@@ -820,7 +820,19 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
             }
         }
         shadowing::check_local(var, &self.scope, self.options, &mut self.errors);
-        barrier::check_loop_back_edge(body, &mut self.errors);
+        let bounds_uniform = is_uniform(from, &self.scope) && is_uniform(to, &self.scope);
+        let var_uniform = bounds_uniform && !self.current_divergent();
+        let mut back_edge_scope = self.scope.clone();
+        back_edge_scope.insert(
+            var.clone(),
+            Binding {
+                ty: DataType::U32,
+                ty_known: true,
+                mutable: false,
+                uniform: var_uniform,
+            },
+        );
+        barrier::check_loop_back_edge(body, &back_edge_scope, &mut self.errors);
 
         let mut accesses = NodeAccesses::default();
         collect_expr_accesses(from, &mut accesses);

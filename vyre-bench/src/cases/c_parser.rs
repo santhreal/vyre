@@ -65,10 +65,7 @@ impl BenchCase for CSourceToIrCase {
             needs_network: false,
             min_vram_bytes: None,
             min_input_bytes: None,
-            feature_set: vec![
-                "vyre-frontend-c".to_owned(),
-                "source-to-ir".to_owned(),
-            ],
+            feature_set: vec!["vyre-frontend-c".to_owned(), "source-to-ir".to_owned()],
         }
     }
 

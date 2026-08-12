@@ -1,5 +1,8 @@
 # Migration  -  `vyre-ops` → `vyre-intrinsics` + library relocation
 
+**Status: Archived.** This records a completed crate migration. Use
+[`docs/library-tiers.md`](library-tiers.md) for current operation placement.
+
 **Governing rule**: if an op can be written as `fn(...) -> Program`
 using only `vyre::ir::*` types (no new Expr/Node variant, no dedicated
 Naga emitter arm, no dedicated `vyre-reference` eval arm)  -  it belongs

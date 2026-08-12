@@ -7,7 +7,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "vyre Category A library ecosystem  -  pure-IR compositions over vyre-ops hardware primitives"
+description = "vyre Category A library ecosystem  -  pure-IR compositions over foundation IR and primitive-owned kernels"
 readme = "README.md"
 keywords = ["gpu", "ml", "linear-algebra", "cryptography", "vyre"]
 categories = ["algorithms", "science"]
@@ -349,8 +349,3 @@ required-features = ["c-parser"]
 name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
-
-[[test]]
-name = "qwen35_config_contract"
-path = "tests/qwen35_config_contract.rs"
-required-features = ["nn-inference"]

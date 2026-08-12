@@ -25,7 +25,6 @@ GENERATED_SOURCES = {
     "RELEASE_CHECKLIST.md": "../scripts/release_docs.py",
     "generated/OP_INVENTORY.md": "generated/OP_SCHEMA.json",
     "generated/README.md": "generated/OP_SCHEMA.json",
-    "optimization/XTASK_COMMAND_MATRIX.md": "../xtask/src/command_matrix.rs",
 }
 
 

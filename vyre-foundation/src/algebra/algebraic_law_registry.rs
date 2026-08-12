@@ -33,7 +33,7 @@ impl AlgebraicLawRegistration {
     /// ```ignore
     /// inventory::submit! {
     ///     AlgebraicLawRegistration::new(
-    ///         "vyre-ops::math::add",
+    ///         "vyre-libs::math::add",
     ///         AlgebraicLaw::Commutative,
     ///     )
     /// }

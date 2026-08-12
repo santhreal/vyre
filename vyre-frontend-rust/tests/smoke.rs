@@ -40,7 +40,10 @@ fn compile_pipeline_lexes_and_checks_source() {
         .compile_unit(b"fn main() { let x: i32 = 5; }")
         .expect("Fix: the source pipeline must feed lexer output into parser and type checking");
     assert_eq!(unit.module.functions.len(), 1);
-    assert!(unit.token_count > 8, "the lexer must return a real token stream");
+    assert!(
+        unit.token_count > 8,
+        "the lexer must return a real token stream"
+    );
     assert!(unit.program.is_none(), "lowering is off in this smoke path");
 }
 

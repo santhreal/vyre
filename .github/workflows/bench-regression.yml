@@ -23,8 +23,7 @@ jobs:
 
       - name: Compile non-GPU bench targets
         run: |
-          ./cargo_full bench -p vyre-bench-smoke --no-run
-          ./cargo_full bench -p vyre-bench-deep --no-run
+          ./cargo_full bench -p vyre-bench --no-run
           ./cargo_full bench -p vyre-foundation --no-run
           ./cargo_full bench -p vyre-intrinsics --no-run
           ./cargo_full bench -p vyre-libs --no-run

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # fetch_honest_corpus.sh  -  download and verify honest workload corpora.
 #
-# Usage: ./scripts/fetch_honest_corpus.sh
+# Usage: ./vyre-bench/scripts/fetch_honest_corpus.sh
 #
 # Idempotent: skips files whose SHA-256 already matches CHECKSUMS.toml.
 # Requires: curl, sha256sum, toml-cli (or grep+awk fallback).

@@ -1,5 +1,8 @@
 # Testing Program  -  SQLite / NASA JPL / Linux / Chromium Standard
 
+**Status: Superseded.** Use `docs/testing/TESTING.toml` and the generated
+guides under [`docs/testing/`](testing/) for current test commands and evidence.
+
 Closes #31 A.7 testing program direction.
 
 ## The bar
@@ -123,7 +126,7 @@ Every crate using interior mutability / atomics ships:
 
 ## Coverage record
 
-`scripts/coverage.sh` collects `cargo-llvm-cov` per crate.
+`scripts/check_test_coverage_per_crate.sh` verifies that each crate has an executable test target.
 Baseline for the 0.4.1 release train:
 
 - vyre-foundation: 92% line / 81% branch
@@ -138,11 +141,6 @@ Release target: ≥ 95% line / ≥ 85% branch on every vyre core crate;
 
 ## Release evidence
 
-Release readiness for this document is proven through the platform and dataflow evidence manifest and generated artifacts under `release/evidence/`. Claims here must map to concrete gate output, benchmark output, conformance output, parser corpus output, or documentation proof files before the release requirement can be closed.
-
-Concrete evidence anchors:
-
-- `release/evidence/tests/test-matrix.json`
-- `release/evidence/tests/unit-suite.json`
-- `release/evidence/tests/adversarial-suite.json`
-- `release/evidence/tests/fuzz-suite.json`
+Release verification uses the package commands in [`docs/testing/`](testing/),
+the conformance matrix, backend integration tests, parser corpus tests, and
+benchmark artifacts under `release/evidence/`.

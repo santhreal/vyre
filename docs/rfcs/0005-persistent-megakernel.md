@@ -1,118 +1,141 @@
-# RFC 0005  -  Persistent megakernel + ring-buffer submission
+# RFC 0005: Persistent megakernel and ring-buffer submission
 
-## Summary
+Last verified: 2026-08-04
 
-Add a persistent-kernel dispatch primitive: the GPU runs a single
-long-lived megakernel that reads VIR0 bytecode from a ring buffer
-and executes it. The CPU submits bytecode via the ring buffer
-instead of launching per-Program compute pipelines. Result:
-per-dispatch latency drops from ~50 µs (pipeline launch) to ~200 ns
-(ring-buffer write).
+Status: **Superseded**
 
-This is the paradigm-shift item  -  turns the GPU from a coprocessor
-you dispatch to into a VM you submit bytecode to.
+This RFC records the historical motivation for persistent GPU submission. Its
+original device-bytecode-interpreter design is not the current Vyre
+architecture. Use [`../megakernel-wiring.md`](../megakernel-wiring.md) and
+[`../ARCHITECTURE.md`](../ARCHITECTURE.md) for current ownership and execution
+contracts.
 
-## Motivation
+## Historical motivation
 
-Every current GPU compute stack (CUDA, wgpu, Metal, TVM, IREE,
-ONNX Runtime, PyTorch) treats the GPU as a coprocessor. Each
-dispatch is a pipeline launch with 10–50 µs overhead. Multi-tenancy
-requires context switches.
+Per-program launches have fixed driver, queue, and synchronization costs.
+Workloads made from many small dependent operations can spend more time in
+submission than in useful device work. A resident kernel with a bounded queue
+can amortize that cost and keep scheduler state on the device.
 
-Megakernel + io_uring-style submission rejects that model:
+The original proposal therefore explored:
 
-- Single persistent kernel never exits.
-- Ring buffer is a submission queue; CPU pushes VIR0 bytecode.
-- GPU decodes bytecode on-device and executes with ~zero dispatch
-  overhead.
-- N tenants = N submission queues, served fairly from one
-  megakernel.
+- one long-lived device kernel;
+- ring-buffer submission;
+- explicit queue identities for multiple tenants;
+- device-visible completion states;
+- comparison against ordinary dispatch for correctness and latency.
 
-This is what Jim Keller described as "throw out the ISA, ship the
-compiler"  -  vyre ships the compiler + the bytecode, and the GPU
-interprets. It's the structural payoff of having a portable
-bytecode IR in the first place.
+That motivation remains valid. Persistent scheduling is implemented under
+`vyre-runtime/src/megakernel/`.
 
-## Design
+## Superseded design
 
-Three components:
+The original RFC proposed sending VIR bytes to a general interpreter inside the
+resident kernel. The kernel would decode arbitrary IR tags and execute them.
+That design is superseded for three reasons.
 
-### 1. VIR0 interpreter kernel (WGSL)
+1. It creates a Category B execution engine. Vyre does not support a general
+   host or device opcode interpreter as an alternative to typed lowering.
+2. It duplicates validation and lowering semantics inside a persistent kernel.
+   Every IR change would require synchronized interpreter changes.
+3. It weakens backend ownership. Concrete targets would share an interpreter
+   implementation while still needing target-specific device behavior.
 
-A single WGSL megakernel that:
-- Reads a byte at a time from a ring buffer.
-- Switches on the node tag (Let / Store / If / Loop / ... / Region /
-  Opaque).
-- Executes the node against per-workgroup state (locals, buffers).
+Current persistent execution starts from a validated typed `Program`, derives a
+runtime descriptor and backend requirements, and uses the selected concrete
+driver for device lowering and dispatch.
 
-The interpreter is emitted via the naga-AST path; no hand-written
-WGSL. The opcode set = the terminal BinOp/UnOp/AtomicOp/DataType
-surface frozen in 0.6.
+## Current resolution
 
-### 2. Ring-buffer submission API
+The current ownership split is:
 
-```rust
-pub trait MegakernelBackend: VyreBackend {
-    fn submit_ir(&self, bytecode: &[u8], queue_id: QueueId)
-        -> Result<SubmissionId, BackendError>;
-    fn poll_completion(&self, submission: SubmissionId)
-        -> CompletionStatus;
-}
-```
+- `vyre-foundation` owns typed IR, validation, and semantic optimization.
+- `vyre-lower` owns backend-neutral lowering analysis and descriptors.
+- `vyre-driver` owns backend-neutral launch, capability, routing, cache, and
+  evidence contracts.
+- `vyre-runtime/src/megakernel/` owns persistent queue protocol, scheduling,
+  resident execution coordination, readback, telemetry, and recovery.
+- Concrete drivers own target lowering and device dispatch.
+- `vyre-aot` owns artifact packaging.
+- `vyre-megakernel` is a current workspace member. It compiles typed program
+  graphs into canonical static and persistent artifacts without owning backend
+  dispatch. Vyre does not support a general interpreter inside the kernel.
 
-New method-pair on a subtrait so backends that don't support
-megakernel mode are unaffected. A backend that DOES support it
-registers a persistent kernel at `prepare()` time.
+## Queue invariants retained from this RFC
 
-### 3. Multi-tenant queue routing
+The persistent runtime keeps the useful protocol requirements:
 
-Each `QueueId` has its own ring buffer. The megakernel fairly
-drains N queues in round-robin order. Tenant isolation at the IR
-level: the validator rejects any program that reads/writes a
-buffer outside the tenant's declared scope.
+- Publication initializes a complete slot before making it visible.
+- One claimant owns a published slot.
+- Completion makes outputs visible before reuse.
+- Capacity, offsets, state transitions, and tenant identity are validated.
+- Unsupported capabilities and malformed descriptors fail explicitly.
+- Timeout, recovery, and device failure produce terminal operator-visible
+  results.
 
-## Testing
+Exact slot constants and codecs live in `vyre-runtime/src/megakernel/protocol/`.
+They are intentionally not copied into this historical RFC.
 
-- Correctness: dispatch the same Program via `VyreBackend::dispatch`
-  and `MegakernelBackend::submit_ir`; assert byte-identical outputs
-- Latency bench: 100,000 tiny dispatches  -  traditional path vs
-  megakernel path; expect 100–200× speedup
-- Multi-tenancy: two tenants submit disjoint work; neither sees
-  the other's buffers
+## Multi-tenancy
 
-## Prerequisites
+Tenant isolation remains a runtime requirement. A descriptor names its tenant
+and resources. Scheduling validates ownership before publication and before
+readback. One tenant cannot use another tenant's queue slot or buffer identity.
 
-- RFC 0001 (Region inline pass)  -  megakernel needs composable
-  Region-level primitives
-- RFC 0002 (autodiff) OR not  -  orthogonal
-- RFC 0003 (quantized)  -  megakernel decoder needs to handle
-  Quantized DataType
-- RFC 0004 (collectives)  -  multi-GPU megakernel implies cross-node
-  work queues
+Fairness policy belongs in `vyre-runtime/src/megakernel/scheduler.rs` and
+`policy.rs`. A concrete backend does not define a separate fairness model.
 
-## Alternatives considered
+## Backend scope
 
-- **CUDA Dynamic Parallelism.** Works on CUDA only; vyre ships
-  portable IR.
-- **Graph APIs (CUDA Graphs, DirectX DXGraphs).** Solves dispatch
-  overhead within a single graph but doesn't generalize to
-  bytecode-interpreted work.
-- **Per-backend megakernel implementation.** Rejected: every
-  backend writes its own interpreter = 5× maintenance, no shared
-  optimization.
+Persistent execution is capability-gated. CUDA is the preferred release route
+on the NVIDIA evidence host. WGPU is the portable GPU route. SPIR-V is a
+registered dispatch route. Metal is active on supported Apple targets. A
+backend that cannot honor a persistent requirement returns an explicit error.
+It does not route through the reference interpreter or ordinary dispatch
+silently.
 
-## Open questions
+Current executable backend state is recorded in
+`release/evidence/backends/backend-matrix.json`. Operation support is recorded
+in `docs/optimization/OP_MATRIX.toml`.
 
-- Memory budget: the interpreter's local state (program counter,
-  operand stack) competes with user workgroup memory. Quantify.
-- Subgroup divergence cost: different tenants' bytecode at
-  different program counters create warp divergence. Bench.
-- Debuggability: the interpreter hides user-level stack frames;
-  how does `tracing::trace_span` survive the indirection?
+## Verification contract
 
-## Scope split
+A persistent-path change proves:
 
-The interpreter, single-queue submission API, multi-tenancy,
-ring-buffer fairness, and cross-node collectives are separate source
-changes. None is considered shipped by this RFC text; each needs its
-implementation, conformance tests, and latency benchmarks.
+1. Standard and persistent routes produce the same declared output bytes for an
+   eligible program.
+2. Queue publication, claim, completion, reuse, and recovery transitions are
+   deterministic under adversarial scheduling.
+3. Tenant resources remain isolated.
+4. Unsupported requirements return the documented error.
+5. Performance evidence preserves raw samples and matches the current source
+   fingerprint.
+
+The original latency estimates in this RFC were design targets. They are not
+release claims. Only current benchmark artifacts may support a measured claim.
+
+## Alternatives
+
+### Ordinary dispatch only
+
+Ordinary dispatch remains the baseline path. It is simpler and supports programs
+that are not eligible for resident execution. It does not amortize repeated
+submission for small compatible work.
+
+### Backend graph APIs
+
+Concrete graph APIs can reduce launch overhead for a fixed graph. They remain
+backend-owned Layer 2 or runtime integration mechanisms. They do not define the
+portable typed megakernel artifact.
+
+### One interpreter per backend
+
+This was rejected with the general interpreter design. It multiplies semantic
+implementations and conflicts with typed lowering.
+
+## Historical outcome
+
+The RFC established the need for persistent submission and explicit queue
+semantics. The bytecode-interpreter mechanism was replaced by typed program
+planning, a shared runtime protocol, concrete backend lowering, and the current
+`vyre-megakernel` workspace member that freezes canonical megakernel artifacts.

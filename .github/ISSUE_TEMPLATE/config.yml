@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/santhreal/vyre/tree/main/vyre-core/docs
+    url: https://github.com/santhreal/vyre/tree/main/vyre/docs
     about: Read the vyre book first. Most questions are answered there.
   - name: Contributing guide
     url: https://github.com/santhreal/vyre/blob/main/CONTRIBUTING.md

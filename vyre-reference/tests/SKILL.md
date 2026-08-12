@@ -52,7 +52,7 @@ is the contract.
   to wire this interpreter without creating a driver/reference
   dependency cycle.
 - Consumes `vyre_foundation::Program`, `vyre_foundation::ir::*`
-- Consumes `DialectLookup` (post-0.6)  -  routes `Expr::Call` through
+- Consumes `DialectLookup`  -  routes `Expr::Call` through
   the registry rather than matching on op-id strings
 - Output `Value` is consumed by conform runners + byte-identity
   proofs in every backend

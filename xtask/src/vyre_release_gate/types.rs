@@ -19,7 +19,6 @@ pub(super) struct EvidenceManifest {
 #[derive(Debug, Deserialize)]
 pub(super) struct ReleaseNames {
     pub(super) vyre: String,
-    pub(super) weir: String,
 }
 
 #[derive(Debug, Deserialize)]

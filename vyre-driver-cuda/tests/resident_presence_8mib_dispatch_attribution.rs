@@ -27,7 +27,7 @@
 
 use std::time::Instant;
 
-use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
+use vyre_driver_cuda as _;
 use vyre_scan::GpuLiteralSet;
 
 const HAYSTACK_BYTES: usize = 8 * 1024 * 1024;
@@ -93,14 +93,6 @@ fn popcount(words: &[u32]) -> u32 {
 #[test]
 #[ignore = "perf diagnosis; run explicitly with --ignored on a CUDA host"]
 fn region_presence_8mib_dispatch_attribution_cuda() {
-    let backend = match CudaBackend::acquire() {
-        Ok(b) => CudaBackendRegistration::new(b),
-        Err(e) => {
-            eprintln!("no CUDA backend ({e}); skipping 8MiB dispatch attribution");
-            return;
-        }
-    };
-
     let literals = synth_literals();
     let lit_refs: Vec<&[u8]> = literals.iter().map(|v| v.as_slice()).collect();
     // Plant literal index 0 (its byte form) so the scan has real, assertable hits.
@@ -116,7 +108,7 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
 
     // --- Ground truth + real-scan gate: borrowed presence-by-region. ---
     let borrowed_bitmap = matcher
-        .scan_presence_by_region(&backend, &haystack, &region_starts)
+        .scan_presence_by_region("cuda", &haystack, &region_starts)
         .expect("borrowed CUDA presence-by-region scan");
     assert_eq!(
         borrowed_bitmap.len(),
@@ -141,7 +133,7 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
     for _ in 0..ITERS + 1 {
         let t = Instant::now();
         let bm = matcher
-            .scan_presence_by_region(&backend, &haystack, &region_starts)
+            .scan_presence_by_region("cuda", &haystack, &region_starts)
             .expect("borrowed scan");
         let dt = t.elapsed().as_secs_f64() * 1e3;
         assert_eq!(popcount(&bm), hits, "borrowed hit count must be stable");
@@ -162,13 +154,7 @@ fn region_presence_8mib_dispatch_attribution_cuda() {
     for _ in 0..ITERS + 1 {
         let t = Instant::now();
         let timed = session
-            .scan_into_timed(
-                &haystack,
-                &region_starts,
-                0,
-                &mut out,
-                &mut scratch,
-            )
+            .scan_into_timed(&haystack, &region_starts, 0, &mut out, &mut scratch)
             .expect("resident timed artifact submission");
         let call_ms = t.elapsed().as_secs_f64() * 1e3;
         assert_eq!(out, borrowed_bitmap, "resident bitmap must equal borrowed");

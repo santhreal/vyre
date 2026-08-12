@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::artifact_paths::{
     FRONTIER_LEADERBOARD_ARTIFACT, LEGO_AUDIT_DUPLICATES_ARTIFACT,
-    REGISTERED_OP_DUPLICATES_ARTIFACT, SOURCE_SIMILAR_DUPLICATES_ARTIFACT,
+    REGISTERED_OP_DUPLICATES_ARTIFACT,
 };
 
 pub(crate) const EXPECTED_ARTIFACT_REGISTRY: &str =
@@ -44,29 +44,11 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/hygiene/resource-bound-scan.json",
             "release/evidence/hygiene/error-surface-scan.json",
             "release/evidence/hygiene/cargo-wrapper-scan.json",
-            "release/evidence/hygiene/audit-location-scan.json",
-            "release/evidence/hygiene/public-doc-scan.json",
-            "release/evidence/hygiene/test-hygiene-scan.json",
-        ],
-        "test-matrix" => &[
-            "release/evidence/tests/test-matrix.json",
-            "release/evidence/tests/modularization-map.json",
-            "release/evidence/tests/oversized-test-closure.json",
-            "release/evidence/tests/modularity-findings.json",
-            "release/evidence/tests/risk-coverage.json",
-            "release/evidence/tests/release-surface-suite-coverage.json",
-            "release/evidence/tests/unit-suite.json",
-            "release/evidence/tests/adversarial-suite.json",
-            "release/evidence/tests/property-suite.json",
-            "release/evidence/tests/conformance-suite.json",
-            "release/evidence/tests/corpus-suite.json",
-            "release/evidence/tests/benchmark-suite.json",
-            "release/evidence/tests/gap-suite.json",
-            "release/evidence/tests/fuzz-suite.json",
         ],
         "docs-check" => &["docs/DOCS.toml", "docs/SUMMARY.md", "docs/INDEX.md"],
         "metadata-matrix" => &["release/evidence/metadata/metadata-matrix.json"],
         "feature-matrix" => &["release/evidence/metadata/feature-matrix.json"],
+        "package-readiness" => &["release/evidence/package/publish-readiness.json"],
         "optimization-corpus" => &[
             "release/evidence/optimization/optimization-corpus.json",
             "release/evidence/optimization/optimization-corpus-contracts.json",
@@ -80,22 +62,12 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/optimization/alias-aware-stlf.json",
             "release/evidence/optimization/alias-aware-licm.json",
             "release/evidence/optimization/alias-aware-fusion-fission.json",
-            "release/evidence/optimization/weir-facts-pass-firing.json",
             "release/evidence/optimization/egraph-saturation-matrix.json",
             "release/evidence/optimization/egraph-semantic-contracts.json",
         ],
-        "parser-coherence" => &[
-            "release/evidence/parser/distributed-parser-map.json",
-            "release/evidence/parser/vyre-frontend-c-contracts.json",
-            "release/evidence/parser/vyrec-cli-contracts.json",
-            "release/evidence/parser/external-dataflow-contracts.json",
-            "release/evidence/parser/compiler-consumer-grammar-gen-contracts.json",
-        ],
-        "source-similar" => &[SOURCE_SIMILAR_DUPLICATES_ARTIFACT],
         "whats-similar" => &[REGISTERED_OP_DUPLICATES_ARTIFACT],
         "lego-audit" => &[LEGO_AUDIT_DUPLICATES_ARTIFACT],
         "release-evidence" => RELEASE_EVIDENCE_EXPECTED_ARTIFACTS,
-        "release-completion-audit" => &["release/evidence/final/completion-audit.json"],
         _ => &[],
     }
 }

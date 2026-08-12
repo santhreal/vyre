@@ -13,7 +13,7 @@
 
 use vyre::scan::GpuLiteralSet;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 #[test]
 fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
@@ -56,7 +56,7 @@ fn resident_scan_reports_achieved_bandwidth_within_device_peak() {
 
     // Warm dispatch (tables resident, caches primed), then a timed measurement.
     let mut presence: Vec<u32> = Vec::new();
-    let mut matches: Vec<Match> = Vec::new();
+    let mut matches: Vec<ByteRange> = Vec::new();
     let mut scratch: Vec<u8> = Vec::new();
     session
         .scan_into(

@@ -5,7 +5,7 @@ use common::acquire_live_backend as live_backend;
 use common::bytes_u32;
 use common::u32_bytes;
 
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_primitives::bitset::zero::bitset_zero;
 
 #[test]

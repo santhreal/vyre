@@ -23,7 +23,14 @@ fn assert_entry_matches_declared_witness(id: &'static str) {
     let expected = (entry
         .expected_output
         .expect("Fix: expected_output required"))();
-    assert_entry_matches_cases(id, entry.build.expect("Fix: registered library operation must provide a neutral builder"), inputs, expected);
+    assert_entry_matches_cases(
+        id,
+        entry
+            .build
+            .expect("Fix: registered library operation must provide a neutral builder"),
+        inputs,
+        expected,
+    );
 }
 
 fn assert_entry_matches_cases(
@@ -62,7 +69,14 @@ fn assert_entry_matches_cases(
 fn assert_entry_matches_pinned_witness(id: &'static str, expected: Vec<Vec<Vec<u8>>>) {
     let entry = entry(id);
     let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
-    assert_entry_matches_cases(id, entry.build.expect("Fix: registered library operation must provide a neutral builder"), inputs, expected);
+    assert_entry_matches_cases(
+        id,
+        entry
+            .build
+            .expect("Fix: registered library operation must provide a neutral builder"),
+        inputs,
+        expected,
+    );
 }
 
 #[test]
@@ -166,10 +180,6 @@ fn silu_cpu_witness_is_pinned() {
 
 #[test]
 fn substring_cpu_witness_is_pinned() {
-    // The harness OpEntry is registered under the canonical `scan` op id.
-    // `vyre-libs::matching::substring_search` is the deprecated alias, which
-    // relabels the same program and has no entry of its own; the relabel is
-    // proved in vyre-libs/tests/substring_op_id_compatibility.rs.
     assert_entry_matches_pinned_witness(
         "vyre-libs::scan::substring_search",
         vec![

@@ -11,7 +11,7 @@
 use std::sync::OnceLock;
 
 use proptest::test_runner::{Config, TestRunner};
-use vyre::{DispatchConfig, VyreBackend};
+use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::optimizer::optimize;
 use vyre_libs::fixture_catalog::{all_entries, fp_contract};
@@ -68,7 +68,12 @@ fn every_op_random_input_stress() {
             );
         }
 
-        let program = (entry.build)();
+        let program = entry.program().unwrap_or_else(|| {
+            panic!(
+                "Fix: stress-tested operation `{}` must provide a program",
+                entry.id
+            )
+        });
 
         if let Some(reason) = missing_capability_reason(backend, &program) {
             panic!("{} missing backend capability: {reason}. Fix: wire the op or capability before stress testing.", entry.id);

@@ -20,7 +20,7 @@
 use std::collections::HashSet;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::optimizer::passes::fusion::Fusion;
+use vyre_foundation::optimizer::passes::fusion_cse::fusion::Fusion;
 use vyre_reference::value::Value;
 
 /// `let v = in[0] + in[1]` (single-use, fusable BinOp) consumed exactly once

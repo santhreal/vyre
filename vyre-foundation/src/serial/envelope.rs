@@ -1,19 +1,15 @@
 //! Reusable on-wire envelope for `vyre`-level serializable types.
 //!
-//! Higher layers in the workspace ship their own little binary blobs:
-//! `CompiledDfa` in `vyre-primitives`, `GpuLiteralSet` in `vyre-libs`,
-//! and (next) `RulePipeline` plus downstream consumer-side caches. Each one
-//! re-implemented the same four moves:
+//! Higher layers ship their own binary payloads, including `CompiledDfa` in
+//! `vyre-primitives`, `GpuLiteralSet` in `vyre-libs`, and scan databases in
+//! `vyre-scan`. Each format needs the same framing operations:
 //!
-//!   1. Write a 4-byte magic + LE u32 version header.
-//!   2. Emit length-prefixed `&[u8]` sections.
-//!   3. Emit length-prefixed `&[u32]` little-endian word arrays.
-//!   4. Decode the same back, producing typed errors that distinguish
-//!      "stale cache, recompile" from "blob is corrupt, refuse".
+//! 1. Write a 4-byte magic and little-endian `u32` version header.
+//! 2. Emit length-prefixed byte sections.
+//! 3. Emit length-prefixed little-endian word arrays.
+//! 4. Decode typed version, truncation, and corruption errors.
 //!
-//! This module is the lego block. One implementation, one set of typed
-//! errors, one suite of round-trip / version-mismatch / truncation
-//! tests  -  every consumer adopts it and its fixes propagate.
+//! This module owns those operations so fixes propagate to every consumer.
 //!
 //! # Layered usage
 //!

@@ -1,5 +1,7 @@
 # What the reference interpreter can and cannot witness
 
+Applies to Vyre 0.7.2.
+
 `vyre-reference` is the CPU oracle that most of this tree's correctness evidence
 rests on. This document states, as a property of the instrument rather than of any
 one kernel, which classes of concurrency defect it can expose and which it cannot.
@@ -171,7 +173,7 @@ Because a `GridSync` inside a `Node::Loop` is a silent no-op, a grid-synced fixp
 cannot loop its waves on the device; it must emit one barrier instance per wave,
 which means unrolling. That is a real constraint for `persistent_fixpoint_grid` and
 for `persistent_bfs`'s grid form, which unrolls its whole budget with no cap
-(`persistent_bfs/program.rs:388`).
+(`vyre-primitives/src/graph/persistent_bfs/program.rs:388`).
 
 `vyre-self-substrate`'s DCE was once recorded here as the worst case of this,
 because it passes `max_iters = node_count`. It is not a case of it at all.

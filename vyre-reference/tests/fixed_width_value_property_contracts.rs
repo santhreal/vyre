@@ -1,7 +1,7 @@
 //! Generated property coverage for fixed-width `Value::from_element_bytes`.
 
 use proptest::prelude::*;
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_reference::ieee754::canonical_f32;
 use vyre_reference::value::Value;
 

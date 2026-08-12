@@ -3,7 +3,9 @@
 
 use proptest::prelude::*;
 
-use vyre_runtime::resident_work_queue::scheduler::{default_priority_offsets, PRIORITY_LEVELS};
+use vyre_runtime::resident_work_queue::scheduler::{
+    default_priority_offsets_array, PRIORITY_LEVELS,
+};
 
 // A differential model of the GPU megakernel ring buffer priority scheduling logic.
 // This proves the mathematical properties of our priority implementation
@@ -30,9 +32,9 @@ proptest! {
         total_slots in 0u32..10_000_000
     ) {
         // Assert mathematical equivalence between the monolithic code and our strict model
-        let actual = default_priority_offsets(total_slots);
+        let actual = default_priority_offsets_array(total_slots);
         let expected = model_default_priority_offsets(total_slots);
-        prop_assert_eq!(&actual, &expected);
+        prop_assert_eq!(actual.as_slice(), expected.as_slice());
 
         // Assert invariants:
         // 1. Array is length PRIORITY_LEVELS + 1

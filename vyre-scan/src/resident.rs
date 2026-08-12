@@ -1,7 +1,7 @@
 //! Resident-buffer dispatch for [`ScanSession`] (the regex/NFA mega-scan path).
 //!
-//! [`ScanSession::scan`](crate::session::ScanSession::scan) transfers immutable
-//! NFA tables for each borrowed submission. [`ResidentScanSession`] compiles one
+//! [`MaterializedScanSession::scan`](crate::session::MaterializedScanSession::scan)
+//! transfers immutable NFA tables for each borrowed submission. [`ResidentScanSession`] compiles one
 //! canonical artifact, materializes it for a registered backend, uploads the
 //! transition and epsilon tables once, and reuses that artifact instance across
 //! submissions.
@@ -16,7 +16,7 @@
 //! through the registered backend rather than selecting a raw fallback route.
 
 use vyre_driver::{BackendError, Resource};
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 use super::dispatch_io;
 use super::session::{hit_buffer_byte_len, ScanSession};
@@ -84,8 +84,9 @@ impl ScanSession {
             )));
         }
         let registration = vyre_driver::backend::backend_registration(backend_id)?;
-        let artifact = crate::artifact_session::ScanArtifactSession::compile(&program, registration)
-            .map_err(crate::artifact_session::as_backend_error)?;
+        let artifact =
+            crate::artifact_session::ScanArtifactSession::compile(&program, registration)
+                .map_err(crate::artifact_session::as_backend_error)?;
         let haystack = artifact
             .allocate_resident(haystack_capacity)
             .map_err(crate::artifact_session::as_backend_error)?;
@@ -130,14 +131,17 @@ impl ScanSession {
 
 impl ResidentScanSession {
     /// Scan `haystack` against the resident pipeline, decoding matches into
-    /// caller-owned `matches`. Equivalent to [`ScanSession::scan`] but with the
-    /// NFA tables already resident (no per-scan table transfer).
+    /// caller-owned `matches`. Equivalent to
+    /// [`MaterializedScanSession::scan`](crate::session::MaterializedScanSession::scan)
+    /// but with the NFA tables already resident (no per-scan table transfer).
     ///
     /// `scratch` reuses the packed-haystack staging buffer across calls; pass a
     /// per-thread `Vec` that lives as long as the scan loop.
     ///
     /// Walks every workgroup to end-of-haystack (`max_scan_bytes = u32::MAX`),
-    /// matching [`ScanSession::scan`]. Use [`scan_bounded_into`](Self::scan_bounded_into)
+    /// matching
+    /// [`MaterializedScanSession::scan`](crate::session::MaterializedScanSession::scan).
+    /// Use [`scan_bounded_into`](Self::scan_bounded_into)
     /// to cap per-workgroup work to the longest possible match length.
     ///
     /// # Errors
@@ -146,13 +150,14 @@ impl ResidentScanSession {
     pub fn scan_into(
         &self,
         haystack: &[u8],
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
         self.scan_bounded_into(haystack, u32::MAX, matches, scratch)
     }
 
-    /// Per-workgroup-bounded resident scan. See [`ScanSession::scan_bounded`]
+    /// Per-workgroup-bounded resident scan. See
+    /// [`MaterializedScanSession::scan_bounded`](crate::session::MaterializedScanSession::scan_bounded)
     /// for the bound's semantics (O(N × max_scan_bytes) instead of O(N²)).
     ///
     /// # Errors
@@ -161,7 +166,7 @@ impl ResidentScanSession {
         &self,
         haystack: &[u8],
         max_scan_bytes: u32,
-        matches: &mut Vec<Match>,
+        matches: &mut Vec<ByteRange>,
         scratch: &mut Vec<u8>,
     ) -> Result<(), BackendError> {
         matches.clear();
@@ -188,11 +193,7 @@ impl ResidentScanSession {
             .upload_resident_at(&self.haystack_len_buf, 0, &haystack_len.to_le_bytes())
             .map_err(crate::artifact_session::as_backend_error)?;
         self.artifact
-            .upload_resident_at(
-                &self.max_scan_bytes_buf,
-                0,
-                &max_scan_bytes.to_le_bytes(),
-            )
+            .upload_resident_at(&self.max_scan_bytes_buf, 0, &max_scan_bytes.to_le_bytes())
             .map_err(crate::artifact_session::as_backend_error)?;
         let resources = [
             (self.resource_names[0].as_str(), &self.haystack),

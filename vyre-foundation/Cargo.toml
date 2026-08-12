@@ -53,7 +53,7 @@ workspace = true
 vyre-lower = { path = "../vyre-lower" }
 vyre-reference = { path = "../vyre-reference" }
 # Integration tests under tests/ use the `vyre` umbrella facade (vyre::ir::*)
-# as the public boundary they assert against. `vyre` (the vyre-core package)
+# as the public boundary they assert against. The `vyre` facade package
 # depends on vyre-foundation, so this is a dev-dependency CYCLE, which cargo
 # permits because dev-deps are excluded from the normal build graph.
 vyre = { path = "../vyre", default-features = false }

@@ -4,55 +4,18 @@ All jobs listed below are **required** to pass before a PR can merge into `main`
 This list is enforced by branch protection rules (see `scripts/apply-branch-protection.sh`).
 
 ## From `ci.yml` (run on every PR + push to main)
-- `${os} / ${rust-toolchain}` matrix entries for:
-  - `./cargo_full fmt --check`
-  - `./cargo_full run -p xtask -- abstraction-gate`
-  - `./cargo_full clippy --workspace -- -D warnings`
-  - `./cargo_full test --workspace`
-  - `./cargo_full doc --workspace`
+- `CI release gate`
 
-## From `bench.yml` (run on PRs touching benchmarked crates)
+## From `bench.yml` (run on every PR and push to main)
 - `criterion-regression`
 
 ## From `architectural-invariants.yml` (run on every PR)
-- `architectural-invariants`
-- `law-a-closed-enums`
-- `law-b-string-wgsl`
-- `law-b-shader-assets`
-- `law-c-capability-negotiation`
-- `law-d-unsafe-justifications`
-- `dialect-coverage`
-- `trait-freeze`
-- `registry-consistency`
-- `no-raw-unwrap`
-- `no-hot-path-inventory`
-- `no-opspec-tokens`
-- `error-codes-cataloged`
-- `consistency-contracts`
-- `base-monument`
-- `abstraction-gate`
-- `vyre-lints-raw-ir`
-- `vyre-lints-allowlist-drift`
-- `op-matrix-coverage`
-- `lego-audit`
+- `Architecture release gate`
 
 ## From `conform.yml` (run on every PR)
-- `conformance matrix release blocker`
-- `Operation matrix release gate`
-- `conform/* CPU substrate`
 - `Conform release gate`
 
 ## From `gpu-parity.yml` (run on self-hosted GPU runner)
-- `Probe real GPU adapter`
-- `WGPU backend contracts`
-- `Composition parity on real GPU`
-- `Determinism stress on real GPU`
-- `Mandatory GPU enforcement`
-- `CUDA conformance all ops`
-- `WGPU conformance all ops`
-- `Release conformance artifacts`
-- `Weir CUDA parity`
-- `CUDA release benchmark evidence`
 - `GPU release gate`
 
 ## From `reproducible-build.yml` (nightly schedule)

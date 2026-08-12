@@ -1,5 +1,7 @@
 # vyre-libs Feature Matrix
 
+Applies to Vyre 0.7.2.
+
 `vyre-libs` uses feature flags for footprint control, not for product
 shape. The matrix has three layers:
 

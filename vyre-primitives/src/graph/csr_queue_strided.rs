@@ -63,14 +63,12 @@ pub fn csr_queue_strided_forward_traverse(
     allow_mask: u32,
 ) -> Program {
     if node_count == 0 || queue_capacity == 0 {
-        return crate::invalid_output_program(
-            CSR_QUEUE_STRIDED_FORWARD_OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!(
-                "Fix: csr_queue_strided_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
-            ),
-        );
+        return crate::invalid_output_program(CSR_QUEUE_STRIDED_FORWARD_OP_ID,
+        frontier_out,
+        DataType::U32,
+        format!(
+            "Fix: csr_queue_strided_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
+        ),);
     }
 
     let lane = Expr::InvocationId { axis: 0 };

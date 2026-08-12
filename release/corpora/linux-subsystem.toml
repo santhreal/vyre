@@ -2,9 +2,9 @@
 schema_version = 1
 name = "linux-lib"
 description = "Linux kernel lib subsystem: broad C utility code without driver-specific extension bias."
-linux_root = "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux"
+linux_root = "${SANTH_ROOT}/corpus/repos/linux"
 subsystem = "lib"
-corpus_root = "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/lib"
+corpus_root = "${SANTH_ROOT}/corpus/repos/linux/lib"
 file_list = "release/corpora/linux-subsystem-files.txt"
 c_file_count = 490
 source_bytes = 7394810
@@ -26,11 +26,11 @@ kbuild_file = "lib/Kbuild"
 kconfig_file = "lib/Kconfig"
 
 include_dirs = [
-  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/include",
-  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/arch/x86/include",
-  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/arch/x86/include/generated",
-  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/include/generated",
-  "/media/mukund-thiru/SanthData/Santh/corpus/repos/linux/lib",
+  "${SANTH_ROOT}/corpus/repos/linux/include",
+  "${SANTH_ROOT}/corpus/repos/linux/arch/x86/include",
+  "${SANTH_ROOT}/corpus/repos/linux/arch/x86/include/generated",
+  "${SANTH_ROOT}/corpus/repos/linux/include/generated",
+  "${SANTH_ROOT}/corpus/repos/linux/lib",
 ]
 
 defines = [

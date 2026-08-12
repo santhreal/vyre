@@ -2,7 +2,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte_expr;
-use crate::scan::dfa::CompiledDfa;
+use vyre_primitives::matching::CompiledDfa;
 
 use super::bounded_ranges_scan_nodes;
 

@@ -6,7 +6,7 @@
 mod common;
 
 use common::{bytes_u32, u32_bytes, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::reduce::gather::{cpu_ref as gather_cpu, gather};
 use vyre_primitives::reduce::histogram::{cpu_ref as hist_cpu, histogram};
 use vyre_primitives::reduce::radix_sort::{cpu_ref as radix_cpu, radix_sort};

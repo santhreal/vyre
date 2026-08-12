@@ -1,5 +1,8 @@
 # vyre  -  vision
 
+**Status: Superseded.** Use [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for the
+current workspace and compiler boundaries.
+
 vyre is **LLVM-for-GPU**: a substrate-neutral compiler whose IR is the
 unit of work, the unit of caching, and the unit of optimization. The
 moat is composability  -  perfect math primitives compose into perfect
@@ -108,19 +111,14 @@ optional reverse dep makes a cycle). Foundation maintains its own
 `pass_substrate/` module  -  same Linux-style "arch-local libs" pattern
 documented in `cpu_references.rs` (no smell, intentional).
 
-## Release trajectory
+## Long-term direction
 
-The next major release ships when:
+Vyre aims to consume its own substrate for scheduling, provenance,
+observability, and optimizer ordering instead of maintaining parallel
+heuristics. Backend observability stays uniform, megakernel reports preserve
+region lineage, and optimizer ordering remains derivable from registered
+contracts.
 
-1. ≥ 80% of self_substrate modules are actively consumed (grep
-   verifiable, not just compiled).
-2. Every backend (wgpu, cuda, spirv) exposes the same observability
-   surface via `BackendObservabilityProvider`.
-3. The `MegakernelReport` includes `region_lineage` populated by
-   scallop_provenance (shipped  -  P-RUNTIME-1).
-4. Foundation `optimize()` routes through `PassScheduler` whose
-   ordering decisions are derivable from substrate, not hand-curated.
-
-Beyond that, V3 paradigm shifts (effects-handler lowering, linear
-types, liquid types) move vyre from "good compiler" to "categorical
-substrate compiler"  -  see `docs/PARADIGM_SHIFT_TRAJECTORY.md`.
+Effects-handler lowering, linear types, and liquid types extend that direction
+toward a categorical substrate compiler. Active delivery work is recorded only
+in the maintainer's local root `BACKLOG.md`.

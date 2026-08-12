@@ -1,33 +1,53 @@
-# `lower/` vs `emit/` naming convention
+# Lowering vs emission ownership
 
-Established by audit cleanup A11 (2026-04-30).
+Last verified: 2026-08-04
+
+Applies to Vyre 0.7.2.
+
+Established by audit cleanup A11 (2026-04-30) and updated for the current crate
+split (`vyre-lower`, `vyre-emit-*`).
 
 ## Rule
 
 | Name | Lives in | Purpose |
 |---|---|---|
-| `lower/` | `vyre-foundation/src/lower/` | Substrate-side lowering: vyre IR → backend-IR / dialect-specific IR. Backend-agnostic. Substrate decides what to lower; backends decide how to emit. |
-| `emit/` | `vyre-driver-<backend>/src/emit/` | Backend-specific final emit: backend-IR → final source (WGSL string), bytecode (PTX/SPIR-V), or binary. Backend-specific. |
-| `codegen/` | `vyre-driver-cuda/src/codegen/` | CUDA convention; equivalent to `emit/` for the cuda backend. Kept for nvcc/PTX-tooling familiarity. |
-| `lowering.rs` | `vyre-driver/src/backend/lowering.rs` | Cross-backend lowering trait boundary (`LowerableOp`, `TargetGenCtx`). Lives at the driver layer because it defines the contract every backend implements. |
+| Foundation substrate lower | `vyre-foundation/src/lower/` | Semantic, backend-agnostic IR transforms that still produce Vyre IR or shared analysis facts |
+| Neutral lowering crate | `vyre-lower` | Backend-neutral descriptors, pre-emission shaping, and shared lowering helpers |
+| Emitter crates | `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, `vyre-emit-metal` | Target text/binary construction from lowered programs |
+| Driver emit glue | `vyre-driver-<backend>/src/emit/` (where present) | Backend-local integration of emitter output with device objects |
+| CUDA codegen alias | `vyre-driver-cuda/src/codegen/` | CUDA-facing name for emission integration |
+| Shared lowering traits | `vyre-driver` backend contracts | Cross-backend lowering/capability contracts without concrete dialects |
 
-## Renamings done in A11
+## Pipeline placement
 
-- `vyre-driver-wgpu/src/lowering/` → `vyre-driver-wgpu/src/emit/` (the
-  naga_emit subdir + WGSL emission code is final emit, not substrate
-  lowering).
+```text
+Program (foundation)
+  -> IR-pure optimizer (foundation)
+  -> vyre-lower descriptors / shaping
+  -> vyre-emit-* target bytes
+  -> concrete driver acquires device objects and dispatches
+```
 
-## Why
+Artifact freeze (`vyre-megakernel`) can capture neutral structure before or
+beside target emission. It does not replace emitters.
 
-Before A11, `lower/` and `lowering/` co-existed across crates with no
-documented division. Two different concepts shared similar names. The
-A11 convention disambiguates: substrate-side transformation = `lower/`;
-backend-final-output = `emit/` (or `codegen/` for CUDA).
+## Historical note
+
+The WGPU emitter previously lived under a directory named `lowering`. Target
+emission now lives in `vyre-emit-naga` plus `vyre-driver-wgpu` integration.
+Do not recreate a backend-local `lowering/` tree for final shader text.
 
 ## Where to put new code
 
-- New cross-backend IR transformation that vyre IR enters and a backend-
-  IR exits → `vyre-foundation/src/lower/`.
-- New backend-specific emission code (WGSL string, PTX text, SPIR-V
-  binary, naga IR construction) → `vyre-driver-<backend>/src/emit/`.
-- New trait that backends implement → `vyre-driver/src/backend/`.
+- New cross-backend IR transformation that stays in Vyre IR →
+  `vyre-foundation` optimizer/lower substrate.
+- New shared pre-emission analysis used by multiple emitters → `vyre-lower`.
+- New WGSL/Naga/PTX/SPIR-V/Metal encoding → the matching `vyre-emit-*` crate.
+- New device object binding after bytes exist → concrete `vyre-driver-*`.
+- New trait every backend implements → `vyre-driver` neutral contracts.
+
+## Related docs
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- [`megakernel-wiring.md`](megakernel-wiring.md)
+- [`docs/CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml)

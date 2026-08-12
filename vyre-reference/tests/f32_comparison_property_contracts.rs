@@ -1,7 +1,7 @@
 //! Generated property coverage for f32 comparison oracle semantics.
 
 use proptest::prelude::*;
-use vyre::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::ieee754::canonical_f32;
 use vyre_reference::reference_eval;
 

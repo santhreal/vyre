@@ -9,7 +9,7 @@
 mod common;
 use common::shared_live_backend as live_backend;
 
-use vyre::VyreBackend;
+use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 

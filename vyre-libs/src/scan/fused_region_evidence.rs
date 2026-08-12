@@ -32,7 +32,7 @@
 //! Prefer those until a segmentation/occupancy redesign makes fusion pay.
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
@@ -50,7 +50,7 @@ pub struct FusedRegionEvidence {
     pub presence: Vec<u32>,
     /// `(pid, start, end)` triples for patterns with `position_mask[pid] != 0`,
     /// in canonical `(start, end, pid)` order.
-    pub positions: Vec<Match>,
+    pub positions: Vec<ByteRange>,
     /// Per-region bitmap (same shape as `presence`) for patterns with
     /// `admission_mask[pid] != 0`.
     pub admission: Vec<u32>,
@@ -78,28 +78,18 @@ pub fn fused_region_evidence_reference(
         let origins: Vec<u32> = (0..haystack.len() as u32).collect();
         for m in validator.validate_candidates_leftmost_longest(haystack, &origins) {
             let region = region_of(m.start + region_base, region_starts);
-            let word = region * words + (m.pattern_id >> 5) as usize;
-            let bit = 1u32 << (m.pattern_id & 31);
+            let word = region * words + (m.tag >> 5) as usize;
+            let bit = 1u32 << (m.tag & 31);
             presence[word] |= bit;
-            if position_mask
-                .get(m.pattern_id as usize)
-                .copied()
-                .unwrap_or(0)
-                != 0
-            {
+            if position_mask.get(m.tag as usize).copied().unwrap_or(0) != 0 {
                 positions.push(m);
             }
-            if admission_mask
-                .get(m.pattern_id as usize)
-                .copied()
-                .unwrap_or(0)
-                != 0
-            {
+            if admission_mask.get(m.tag as usize).copied().unwrap_or(0) != 0 {
                 admission[word] |= bit;
             }
         }
     }
-    positions.sort_unstable_by_key(|m| (m.start, m.end, m.pattern_id));
+    positions.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
     positions.dedup();
     FusedRegionEvidence {
         presence,
@@ -298,7 +288,7 @@ mod tests {
         assert!(bit(&ev.presence, 0, 0) && bit(&ev.presence, 0, 1));
         assert!(bit(&ev.presence, 1, 2) && bit(&ev.presence, 1, 3));
         // positions only for masked pids.
-        let pids: Vec<u32> = ev.positions.iter().map(|m| m.pattern_id).collect();
+        let pids: Vec<u32> = ev.positions.iter().map(|m| m.tag).collect();
         assert!(
             pids.contains(&0) && pids.contains(&2),
             "positions must include abc, token"
@@ -393,9 +383,9 @@ mod tests {
             .collect();
         let count = words_of(&outputs[1])[0] as usize;
         let match_words = words_of(&outputs[2]);
-        let mut positions: Vec<Match> = match_words[..count * 3]
+        let mut positions: Vec<ByteRange> = match_words[..count * 3]
             .chunks_exact(3)
-            .map(|c| Match::new(c[0], c[1], c[2]))
+            .map(|c| ByteRange::new(c[0], c[1], c[2]))
             .collect();
         canonicalize_leftmost_longest(&mut positions);
         let admission: Vec<u32> = words_of(&outputs[3])

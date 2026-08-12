@@ -1,5 +1,9 @@
 # Open Conformance Certificates (OCC)
 
+**Status: Superseded.** This proposed certificate distribution contract is not
+the Vyre 0.7.2 release mechanism. Use `docs/optimization/OP_MATRIX.toml` and
+the generated conformance evidence under `release/evidence/`.
+
 OCC is vyre's trust mechanism. Every op × every backend × every
 release ships a signed JSON certificate asserting byte-identity
 against the CPU reference on a published witness set. Consumers

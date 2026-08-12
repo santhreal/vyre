@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Ω.3  -  Machine-checkable enforcement of the v0.4.1 layer DAG
-# (COMPUTE_2_0.md §3, R1–R6).
+# Machine-checkable dependency direction from docs/CRATE_OWNERSHIP.toml.
 #
 # Cross-layer imports go DOWN only. Violations fail CI, not review.
 
@@ -27,14 +26,11 @@ check_deps() {
 }
 
 # R1: vyre-foundation depends only on vyre-spec, vyre-macros, and lightweight
-# data crates. No driver, ops, conform, wgpu, naga, or toml.
-check_deps vyre-foundation "vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-ops|vyre-conform|wgpu|naga"
+# data crates. No driver, conform, concrete backend, target writer, or TOML dependency.
+check_deps vyre-foundation "vyre-driver|vyre-driver-wgpu|vyre-driver-spirv|vyre-conform|wgpu|naga"
 
-# R2: vyre-driver is substrate-agnostic. No backend-specific or stdlib deps.
-check_deps vyre-driver "vyre-ops|vyre-driver-wgpu|vyre-driver-spirv|wgpu"
-
-# R3: vyre-ops is the stdlib tier. No backend-specific deps.
-check_deps vyre-ops "vyre-driver-wgpu|vyre-driver-spirv|wgpu"
+# R2: vyre-driver is substrate-agnostic. No concrete backend dependency.
+check_deps vyre-driver "vyre-driver-wgpu|vyre-driver-spirv|wgpu"
 
 # R5 strict: vyre-reference is foundation-only. It must not depend on the
 # driver tier, backend crates, or the `vyre` meta shim.
@@ -47,7 +43,7 @@ fi
 
 if [ "$FAIL" -eq 1 ]; then
     echo "" >&2
-    echo "One or more layer violations detected. See COMPUTE_2_0.md §3." >&2
+    echo "One or more layer violations detected. See docs/CRATE_OWNERSHIP.toml." >&2
     exit 1
 fi
 echo "All layer invariants green."

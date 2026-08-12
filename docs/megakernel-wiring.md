@@ -1,218 +1,225 @@
-# Megakernel Wiring  -  Historical Phase 0 Snapshot
+# Megakernel wiring
 
-Written 2026-04-21. Authoritative snapshot of the persistent-kernel path
-before Phase 1 source work. Every claim cites the file:line state from
-that date. Treat this as an audit snapshot, not current implementation
-truth.
+Last verified: 2026-08-09
 
-## What exists (the parts that work)
+This guide is the living ownership map for every surface named "megakernel" in
+Vyre 0.7.2. The word is overloaded on purpose across four stages. Collapsing
+them into one crate is a boundary failure.
 
-### Protocol  -  `vyre-runtime/src/megakernel/protocol.rs`
-- 16-word slot layout, `STATUS_WORD=0`, `OPCODE_WORD=1`, `TENANT_WORD=2`,
-  `ARG0_WORD=3`, `ARGS_PER_SLOT=13`.
-- Slot state machine: `EMPTY → PUBLISHED → CLAIMED → DONE`
-  (`protocol.rs:29-43`).
-- Control layout: `SHUTDOWN=0`, `DONE_COUNT=1`, `TENANT_BASE=2`,
-  `OBSERVABLE_BASE=32`, `METRICS_BASE=64`, `EPOCH=96`
-  (`protocol.rs:46-72`).
-- Built-in opcodes: NOP(0), STORE_U32(1), ATOMIC_ADD(2), LOAD_U32(3),
-  COMPARE_SWAP(4), MEMCPY(5), DFA_STEP(6), BATCH_FENCE(7), PRINTF(0xFFFE),
-  SHUTDOWN(u32::MAX) (`protocol.rs:75-125`).
-- Debug log: CURSOR_WORD(0), RECORDS_BASE(1), RECORD_WORDS(4)
-  (`protocol.rs:130-137`).
+The 2026-04-21 Phase 0 snapshot is historical evidence only. It no longer
+defines source paths, open gates, or ownership.
 
-### Program builder  -  `vyre-runtime/src/megakernel/builder.rs`
-- `build_program_sharded(workgroup_size_x, opcodes)` returns a
-  `Program` with 3 buffers (control[binding=0], ring_buffer[1],
-  debug_log[2]) and body `Node::forever(persistent_body(...))`
-  (`builder.rs:21-31`).
-- `build_program_jit(workgroup_size_x, payload_processor)`  -  same
-  shape but splices user-provided nodes instead of the If-tree
-  (`builder.rs:33-48`).
-- `persistent_body` (`builder.rs:53-103`) reads `shutdown_flag`
-  from control, early-returns on non-zero, computes
-  `lane_id = wgid.x * WG_SIZE + lid.x`, `slot_base = lane_id *
-  SLOT_WORDS`, loads `tenant_id` from ring_buffer, loads
-  `tenant_base` from control, loads `tenant_mask` from
-  `control[tenant_base + tenant_id]`, gates the slot body on
-  `tenant_mask != 0`.
-- `execute_slot_body` (`builder.rs:105-126`) CAS'es
-  `ring_buffer[slot_base + STATUS_WORD]` from PUBLISHED → CLAIMED.
-  On success, executes `claimed_slot_body(opcodes)` from
-  `handlers.rs`.
+## Four concepts, four owners
 
-### Opcode handlers  -  `vyre-runtime/src/megakernel/handlers.rs`
-(Renamed from `opcode.rs` by codex-622ee963 during this session  - 
-do NOT edit while codex runs.)
-- `claimed_slot_body` (`handlers.rs:143-214`) loads opcode +
-  arg0/arg1/arg2 from ring_buffer, dispatches via
-  `opcode_if(...)` chain over 8 built-ins + user-provided extensions,
-  `atomic_add(control, DONE_COUNT, 1)`, stores DONE into status.
-- `printf_body` atomically reserves 4 words via `atomic_add(debug_log,
-  CURSOR_WORD, 4)` + writes (fmt_id, arg0, arg1, arg2, slot_base) into
-  the reserved region (`handlers.rs:46-80`).
+| # | Concept | Owner | Allowed inputs | Forbidden responsibilities | Primary consumers |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **Artifact compiler** | `vyre-megakernel` | Validated typed `ProgramGraph`, `ExternalFacts`, `SearchBudget`, artifact byte bound | Protocol, resident execution, device topology, runtime retention policy, concrete backend policy, frontend adapters | `vyre-aot` (package), `vyre-runtime::artifact_admission` (admit) |
+| 2 | **Persistent runtime** | `vyre-runtime/src/megakernel/**` | Validated `Program`, admitted envelopes, host telemetry | Canonical artifact schema authorship, concrete shader dialect emission | benches, conform, drivers (device exec only), product pipelines |
+| 3 | **Backend-neutral wave policy** | `vyre-driver/src/megakernel_execution.rs` (plus `megakernel_barrier`, `megakernel_frontier`) | Graph shape, memory budgets, launch overhead, fusion pressure samples | Queue protocol, slot codecs, IR semantic rewrites, artifact freeze | concrete drivers (CUDA adapters today) |
+| 4 | **IR pre-dispatch fusion** | `vyre-foundation/src/optimizer/megakernel/**` | Pass costs, exchange graphs, program facts | Runtime queues, device admission, envelope bytes | optimizer pass scheduler, later compile request construction |
 
-### Node + Expr surface the megakernel uses
-| Used by megakernel | Exists in IR | Emittable by naga_emit/node.rs |
+```mermaid
+flowchart LR
+    IR[Typed Program / ProgramGraph] --> Opt[Foundation IR fusion oracles]
+    Opt --> Compile[vyre-megakernel compile]
+    Compile --> Envelope[ArtifactEnvelope]
+    Envelope --> AOT[vyre-aot package]
+    Envelope --> Admit[runtime artifact_admission]
+    IR --> Live[runtime builder + planner + protocol]
+    Live --> Wave[driver megakernel_execution policy]
+    Wave --> CUDA[cuda thin telemetry adapters]
+    Wave --> WGPU[wgpu device exec only]
+    Admit --> Live
+    AOT --> Admit
+```
+
+### What `vyre-megakernel` is
+
+The crate **exists** as a current workspace member. Ownership registry:
+`docs/CRATE_OWNERSHIP.toml` row `vyre-megakernel`, layer `compiler-boundary`,
+allowed dependency `vyre-foundation` only.
+
+It owns:
+
+- `compile` → immutable `Artifact` (nodes, geometry, resources, selected plan,
+  ABI, provenance, and digests)
+- `ArtifactEnvelope` + `TargetPayload` attach, validate, and round-trip
+- stable diagnostic codes for compile and envelope failures
+
+It does **not** own:
+
+- queue protocol, slots, opcodes, tenant publication
+- resident handles, readback, recovery, io_uring
+- sparse/dense/hybrid topology selection from device telemetry
+- matroid or homotopy algorithms used only as optimizer oracles
+- C frontend workspace adapters
+
+Fully building out this crate means completing the **artifact seam**: every
+static and persistent package path freezes through `compile`, every load path
+authenticates through admission, and no parallel private "plan blob" redefines
+fusion/barrier/resource records. It does **not** mean moving runtime or driver
+code into the crate.
+
+### What `vyre-runtime/src/megakernel/**` is
+
+Persistent runtime scheduling and protocol behavior for live and admitted work.
+
+| Responsibility | Module boundary |
+| --- | --- |
+| Queue protocol and publication | `protocol.rs`, `protocol/`, `protocol_api.rs` |
+| Work descriptors and rule catalog | `descriptor.rs`, `task.rs`, `rule_catalog.rs` |
+| Lifecycle planning (geometry, grid, sizing, cross-pipeline, provenance) | `vyre-runtime/src/megakernel/planner/`, `policy.rs` |
+| Runtime program construction | `builder.rs`, `builder/` |
+| Scheduling and fairness | `scheduler.rs`, `scheduler/` |
+| Resident execution and handles | `resident.rs`, `execution.rs`, `execution/` |
+| Completion and readback | `readback.rs`, `io/` |
+| Telemetry, recommendations, recovery | `telemetry.rs`, `telemetry/`, `recovery.rs` |
+| Envelope authentication | `vyre-runtime/src/artifact_admission.rs` |
+| Native Linux IO | `vyre-runtime/src/uring/` |
+
+One backend-neutral protocol. Concrete drivers allocate, lower, submit, sync,
+and read back. They do not define a second queue model.
+
+### What driver `megakernel_*` modules are
+
+Backend-neutral **wave** policy shared by concrete drivers:
+
+- `megakernel_execution`: topology (sparse / dense / hybrid / fused) and memory
+  plan from telemetry and graph shape
+- `megakernel_barrier`: wave dependency groups
+- `megakernel_frontier`: frontier pressure helpers
+
+These answer "how should this device wave look given budgets?" They do not
+publish slots or author envelope schema.
+
+### What foundation `optimizer/megakernel/**` is
+
+IR-time fusion support **before** dispatch and before artifact freeze:
+
+- `matroid_subset::max_fusion_subset` — greedy exchange-compatible subset
+- `schedule_oracle` — homotopy-weighted fusion weights for the pass scheduler
+- `scratch_reuse` — escape-fact scratch pool plan
+
+This is not the runtime planner and not the artifact compiler.
+
+## Adapters and residue
+
+| Surface | Status | Rule |
 | --- | --- | --- |
-| `Node::Loop { var, from, to, body }` (forever = `from=0, to=u32::MAX`) | `impl_node.rs:152`  -  `forever` is `loop_for("__forever__", 0, u32::MAX, body)` | ✅ `node.rs:119-176` emits a bounded for-loop |
-| `Node::Return` | yes | ✅ `node.rs:115-118` |
-| `Node::let_bind / Assign / Store / If / Block / Region / Barrier` | yes | ✅ `node.rs:15-111` |
-| `Node::loop_for` (for MEMCPY opcode body) | yes | ✅ same as above |
-| `Expr::load(buf, idx)` | yes | ✅ `expr.rs` |
-| `Expr::atomic_add(buf, idx, val)` → returns prev | yes | ✅ `expr.rs:97` `AtomicOp::Add` |
-| `Expr::atomic_exchange(buf, idx, val)` | yes | ✅ `expr.rs:104-107` `AtomicOp::Exchange` |
-| `Expr::atomic_compare_exchange(buf, idx, exp, desired)` | yes | ⚠️ `expr.rs:108-117` emits `AtomicFunction::Exchange { compare: Some }` but returns `atomic_compare_exchange_u32_ty` (a struct {old_value, exchanged}). builder.rs:112-120 binds `prev_status` as if it were a scalar `u32` and compares it to `slot::PUBLISHED` directly  -  this needs the `.old_value` field projection or CAS returns a struct the rest of the IR cannot consume. **Gate #1.** |
-| `Expr::workgroup_x()` / `Expr::local_x()` | yes | ✅ BuiltIn::WorkGroupId / LocalInvocationId in `naga_emit/mod.rs:278-289` |
+| `vyre-driver-cuda/src/megakernel_*.rs` | Live | Keep as **thin telemetry adapters** over driver policy (`CudaX` aliases + sample mapping). Device-local caches/gates may stay CUDA-owned. No second topology policy. |
+| Portable wgpu driver | **No megakernel planner** | There is no second wgpu megakernel planner. Protocol, lifecycle planning, and queue encoding live under `vyre-runtime/src/megakernel/` only. Do not recreate a driver-local planner. |
+| `vyre-self-substrate` matroid / `scheduling/megakernel_schedule` | Live | Self-hosted algorithm implementations on Vyre primitives. Call into them from one stage owner; do not fork a fifth public fusion API. |
+| `vyre-frontend-c::{megakernel_workspace, sparse_lexer_megakernel}` | Live product | Consumers of the persistent model. Not owners of protocol or artifact schema. |
+| benches / conform / xtask | Evidence | Must import protocol and artifact types from the owners above. |
 
-### Buffer lowering  -  `vyre-driver-wgpu/src/lowering/naga_emit/mod.rs`
-- `add_buffer` (`mod.rs:216-267`) emits `array<u32>` elements for
-  DataType::U32 (via `storage_scalar_type`). For ReadWrite + Global
-  MemoryKind, `storage_access = LOAD|STORE`
-  (`utils.rs:66-71`).
-- **Gate #2:** WGSL atomic operations require `array<atomic<u32>>`,
-  not `array<u32>`. The megakernel's three buffers
-  (control / ring_buffer / debug_log) are all used with
-  `atomic_add / atomic_exchange / atomic_compare_exchange`. Currently
-  `storage_scalar_type` returns a plain u32 for DataType::U32. Naga
-  validation will reject the emitted Statement::Atomic against a
-  non-atomic pointer.
+## Fusion and subset selection (do not merge blindly)
 
-## Historical missing gates recorded on 2026-04-21
+Same vocabulary, different stages:
 
-### 2026-04-29 closure status
+| Stage | Symbol home | Role |
+| --- | --- | --- |
+| IR / pass scheduling | `vyre-foundation::optimizer::megakernel::max_fusion_subset` | Bounded subset for optimizer fusion decisions |
+| Runtime lifecycle planning | `vyre-runtime::megakernel::planner::select_fused_subset*` | Costed subset for resident/batch fusion |
+| Continuous relaxation | `vyre-self-substrate::scheduling::megakernel_schedule` | Homotopy indicators before discrete rounding |
+| Artifact freeze | `vyre-megakernel` `SelectedPlan` / `FusionRecord` | Immutable compiler-selected groups in the envelope |
+| Device wave pressure | `vyre-driver/src/megakernel_execution.rs` fusion_pressure inputs | Topology bias, not subset ILP |
 
-The Phase 1 WGPU gates in this snapshot are closed in source:
+Dedup work collapses **duplicate implementations of the same stage**, not the
+stage boundaries themselves.
 
-- Gate A (`array<atomic<u32/i32>>`) is implemented by the atomic-target
-  scan in `vyre-driver-wgpu/src/lowering/naga_emit/mod.rs`.
-- Gate B (CompareExchange scalar projection) is implemented in
-  `vyre-driver-wgpu/src/lowering/naga_emit/expr.rs`.
-- Gate C/E are covered by `vyre-driver-wgpu/tests/megakernel_emit.rs`,
-  which validates Naga, emits WGSL, asserts CAS/atomicAdd serialization,
-  and dispatches a pre-shutdown megakernel program on GPU.
-- Gate D is covered through `vyre-runtime::WgpuMegakernelDispatcher`,
-  which implements `vyre_runtime::megakernel::MegakernelDispatch`.
-  `vyre-driver-wgpu/tests/dispatch_megakernel.rs` exercises the trait
-  path with a SHUTDOWN work item and validates misaligned raw queues.
+## Start with a typed program
 
-1. **No test emits a megakernel Program through the wgpu emitter.**
-   `vyre-runtime/tests/multi_tenant_scheduler.rs:84` constructs
-   `build_program_sharded(1024, &[])` but never dispatches.
-   `vyre-driver-wgpu/tests/` contains zero megakernel tests.
-   `vyre-driver-wgpu/src/megakernel.rs` module doc described
-   ring-consumer shader work as separate at the time of this snapshot
-   (`megakernel.rs:11-17`).
+A persistent route starts from the same validated `Program` used by standard
+dispatch. The route does not consume a general VIR bytecode interpreter.
+Validation, effects, memory rules, output ranges, and backend requirements
+remain in force.
 
-2. **`engine/megakernel_emit.rs` does not exist.** `ls
-   vyre-driver-wgpu/src/engine/` gives
-   `graph.rs  multi_gpu.rs  persistent.rs  record_and_readback.rs
-   streaming streaming.rs`  -  no `megakernel_emit.rs`.
+```mermaid
+flowchart TD
+    Program[Validated typed Program] --> OptionalFreeze[Optional vyre-megakernel compile]
+    OptionalFreeze --> Admit[artifact_admission when packaged]
+    Program --> Planner[Runtime megakernel planner]
+    Admit --> Planner
+    Planner --> Descriptor[Runtime descriptor and queue contract]
+    Descriptor --> Wave[Driver wave policy]
+    Wave --> Driver[Selected concrete driver]
+    Driver --> Resident[Resident device execution]
+    Resident --> Completion[Explicit completion and readback]
+```
 
-3. **`MegakernelDispatch` trait is declared but unimplemented on
-   `WgpuBackend`.** `megakernel.rs:128-141` defines the trait;
-   `grep -rn "impl MegakernelDispatch" vyre-driver-wgpu/src` returns
-   nothing. There is no `WgpuBackend` impl.
+## Protocol invariants
 
-4. **io_uring ↔ megakernel ring never connected.** Both halves exist
-   (`vyre-runtime/src/uring/stream.rs` + `megakernel::publish_slot`),
-   but no function composes them. No `uring_publish_read` helper
-   exists. Stream emits completion callbacks into nowhere.
+A queue slot has an explicit state transition. Publication initializes the full
+slot before it becomes visible. Claiming establishes one owner. Completion makes
+outputs visible before the slot can be reused.
 
-## Gate list for Phase 1 (ranked)
+The owning source defines exact words, codecs, and transition values. This guide
+does not copy those constants. Tests under `protocol/tests/`,
+`protocol_api/tests/`, `scheduler/tests/`, and `io/tests/` lock the current
+contract.
 
-**Gate A  -  atomic element types.** `add_buffer` in `naga_emit/mod.rs`
-must detect buffers used atomically in the program body and emit
-`array<atomic<u32>>` (or interior atomic via `TypeInner::Atomic`
-wrapping the element) instead of `array<u32>`. Easiest: a pre-pass that
-walks the IR and collects the set of buffer names touched by
-`Expr::Atomic`; during `add_buffer`, if the name is in that set, wrap
-element in `TypeInner::Atomic`.
+Every transition is fail closed:
 
-**Gate B  -  atomic CAS result projection.** `expr.rs:108-130` emits an
-`AtomicResult` with `ty: atomic_compare_exchange_u32_ty` (the struct).
-`builder.rs:112` binds the return directly as if it were u32 and then
-compares `prev_status == PUBLISHED`. Options:
-- (i) always emit a `.old_value` AccessIndex after the atomic result,
-  so the IR-visible return is u32.
-- (ii) change the Expr::Atomic arm to return the struct only for the
-  compare-exchange case and make the builder pull `.old_value`
-  explicitly.
-Option (i) is less invasive.
+- A malformed or incompatible descriptor is rejected before publication.
+- Capacity arithmetic and offsets are checked before a queue write.
+- Tenant identity is validated before work can observe a resource.
+- Unsupported backend requirements return an error.
+- Timeout, recovery, or device failure produces an explicit terminal result.
+- Readback uses declared output ranges and completion state.
 
-**Gate C  -  persistent entry point verification.** Once Gates A+B are
-fixed, emit the program through `emit_module` and run
-`naga::back::wgsl::write_string(&module, &info, flags)`. Assert no
-validation errors. Add
-`vyre-driver-wgpu/tests/megakernel_emit.rs` with: build_program_jit(64,
-&[]) → emit_module → naga validate → wgsl emit → assert starts with
-`@compute @workgroup_size(64, 1, 1)` and contains `loop { … break if
-(…); continuing { … } }` shape.
+## Planner boundary
 
-**Gate D  -  `impl MegakernelDispatch for WgpuBackend`.** The trait is
-declared (`megakernel.rs:128-141`). Implementation: compile the
-megakernel Program via `pipeline::compile`, allocate control +
-ring_buffer + debug_log with `MAP_READ|MAP_WRITE`, kick off a single
-dispatch (workgroup_count = slot_count / workgroup_size_x), poll
-`DONE_COUNT` / `SHUTDOWN` flag from host side. This is what makes the
-Megakernel::bootstrap call actually do something on wgpu.
+Split by stage, not by "everything named plan":
 
-**Gate E  -  shutdown / drain.** After Gates A-D, validate a full
-lifecycle test: host publishes N slots, observes DONE_COUNT == N,
-writes SHUTDOWN=1, waits for kernel to exit. Without this test passing
-end-to-end, Phase 2 (fusion) cannot be meaningfully benchmarked.
+| Plan kind | Owner |
+| --- | --- |
+| Semantic legality / IR facts | `vyre-foundation` |
+| Frozen fusion, barrier, resource records | `vyre-megakernel` artifact |
+| Resident geometry, grid, sizing, cross-pipeline batching | `vyre-runtime/src/megakernel/planner/` |
+| Device topology and memory envelope from telemetry | `vyre-driver::megakernel_execution` |
+| Target instruction selection and concrete limits | selected concrete driver |
 
-## wgpu capability requirements (for `runtime/adapter_caps_probe.rs`)
+Target instruction selection and concrete device limits belong in the selected
+driver. IR-semantic rewrites belong in `vyre-foundation/src/optimizer/`.
 
-The persistent shader requires:
-- `wgpu::Features::empty()` baseline. No exotic features.
-- `Limits::max_compute_workgroup_size_x ≥ workgroup_size_x` (default
-  256 today).
-- `Limits::max_compute_invocations_per_workgroup ≥ workgroup_size_x`.
-- Storage buffer bindings: 3 (control, ring_buffer, debug_log).
-  `max_storage_buffers_per_shader_stage ≥ 3`. wgpu default = 8 ✅.
-- No subgroup features needed (subgroup intrinsics are feature-gated
-  and not used by the megakernel body).
-- Atomic ops on storage buffers  -  unconditional in WGSL core.
-- Long-running kernel tolerance: some platforms (Windows TDR) reset
-  the GPU after ~2s without progress. `max_wall_time` in
-  MegakernelConfig is the user-facing guard; the impl must either
-  periodically yield (not straightforward on wgpu) or break the work
-  into slot-batches with `max_wall_time` observed host-side. Document
-  this cliff.
+## Artifact seam (current wiring)
 
-## What Phase 1 actually is
+| Path | Role |
+| --- | --- |
+| `vyre_megakernel::compile` | Neutral artifact from validated graph |
+| `vyre-aot::compile` | Neutral compile + target payload + package |
+| `vyre_runtime::artifact_admission::admit_artifact` | Decode, authenticate, select exact payload |
+| Runtime builder / live planner | Still may construct live programs without an envelope; closing bypasses is remaining work, not permission to grow forbidden responsibilities into `vyre-megakernel` |
 
-Not: "implement megakernel_emit.rs from scratch."
+## Backend support
 
-Is: (1) fix two emitter gaps (atomic element type, CAS result
-projection) that block a 25-line IR from emitting valid WGSL; (2) add
-the `impl MegakernelDispatch for WgpuBackend` that runs the compiled
-pipeline; (3) add a lifecycle test that exercises the full cycle
-publish → claim → execute → done → shutdown. No new emitter module  - 
-the existing `naga_emit` IS the emitter. The old
-`engine/megakernel_emit.rs` doc comment is stale; delete or rewrite it
-in the source patch that owns the megakernel emitter path.
+CUDA is the preferred release route on the NVIDIA evidence host. WGPU is the
+portable GPU route. SPIR-V is a registered dispatch route. Metal is active on
+supported Apple targets. A persistent route is eligible only when its backend
+capabilities and operation rows say so.
 
-## Cross-session hazard
+Use `release/evidence/backends/backend-matrix.json` for live backend probes and
+`docs/optimization/OP_MATRIX.toml` for operation support. Missing or stale
+evidence does not authorize a fallback.
 
-Codex-622ee963 was running V7 source-finding refactors in this
-workspace during the snapshot. It had the scope lock and was modifying
-at least: vyre-foundation (Program OnceLock fields), vyre-libs/tensor_ref,
-vyre-driver-wgpu/buffer, vyre-libs/tests/universal_harness.rs. Do NOT
-start Phase 1 edits to `vyre-driver-wgpu/src/lowering/naga_emit/` or
-`vyre-driver-wgpu/src/buffer/` while another local agent owns that
-write set. Phase 2 (consumer fusion) is outside the vyre scope lock and
-safe to start now.
+## Verification
 
-## Source paths summary
+Use focused runtime, aot, megakernel, and driver suites for the changed
+boundary. Then run the structural gates:
 
-- Protocol: `vyre-runtime/src/megakernel/protocol.rs`
-- Builder: `vyre-runtime/src/megakernel/builder.rs`
-- Handlers (renamed from opcode.rs): `vyre-runtime/src/megakernel/handlers.rs`
-- Megakernel host API: `vyre-runtime/src/megakernel/mod.rs`
-- io_uring: `vyre-runtime/src/uring/{ring,stream}.rs`
-- wgpu emitter: `vyre-driver-wgpu/src/lowering/naga_emit/{mod,node,expr,utils}.rs`
-- wgpu MegakernelDispatch trait (unimpl): `vyre-driver-wgpu/src/megakernel.rs`
-- wgpu engine (no megakernel_emit.rs): `vyre-driver-wgpu/src/engine/`
-- Runtime caps probe: `vyre-driver-wgpu/src/runtime/adapter_caps_probe.rs`
+```text
+cargo_full run --bin xtask -- check-tier-deps
+cargo_full run --bin xtask -- operation-schema --check
+cargo_full run --bin xtask -- conformance-matrix --check
+```
+
+A performance claim additionally requires current raw benchmark samples and a
+matching source fingerprint. Historical speedup estimates are not architecture
+contracts.
+
+## Historical design
+
+[`rfcs/0005-persistent-megakernel.md`](rfcs/0005-persistent-megakernel.md)
+records the earlier device-bytecode-interpreter proposal and why persistent
+submission was pursued. That interpreter design is superseded. Current work
+preserves typed program contracts and the four-owner split above.

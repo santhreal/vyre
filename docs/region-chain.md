@@ -1,5 +1,7 @@
 # Region chain  -  the compositional back-pointer invariant
 
+Applies to Vyre 0.7.2.
+
 Every vyre op, at every tier, wraps its body in `Node::Region`. The
 `Region` carries a stable generator ID and, when the body was built by
 composing another registered op, a `source_region` pointer to the
@@ -166,5 +168,6 @@ without being decomposed into smaller child Regions.
   chain AND an AST-span map).
 - Region identity across wire-format round-trip: the generator Ident
   survives encode/decode; the `source_region` does too (see
-  `generated.rs` and `serial/wire/encode/put_node.rs`). No schema
-  changes needed.
+  `vyre-foundation/src/ir_inner/model/generated.rs` and
+  `vyre-foundation/src/serial/wire/encode/put_node.rs`). No schema changes are
+  needed.

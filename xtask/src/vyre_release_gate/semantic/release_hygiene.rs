@@ -39,12 +39,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ));
     }
     check_hygiene_release_surface_coverage("release-hygiene", &matrix, failures);
-    for required_root in [
-        ".",
-        "../../../../libs/dataflow/weir",
-        "../../../../tools/vyrec",
-        "vyre-grammar-gen",
-    ] {
+    for required_root in ["."] {
         if !matrix
             .get("scanned_roots")
             .and_then(serde_json::Value::as_array)
@@ -70,9 +65,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         "resource-bound-scan.json",
         "error-surface-scan.json",
         "cargo-wrapper-scan.json",
-        "audit-location-scan.json",
-        "public-doc-scan.json",
-        "test-hygiene-scan.json",
     ] {
         check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
     }

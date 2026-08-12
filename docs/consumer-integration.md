@@ -1,9 +1,22 @@
-# Consumer integration spec
+# Downstream analyzer integration
 
-Downstream analyzers should lower into a small set of true graph and
-predicate primitives, then compose higher-level rules in their own rule
-libraries. This document pins the tier contract that keeps platform semantics
-inside Vyre while leaving product-specific policy outside the platform crates.
+Applies to Vyre 0.7.2.
+
+Use this guide for any analyzer that lowers domain data into Vyre programs. It
+defines a generic platform boundary. It does not depend on a particular product,
+repository layout, rule language, benchmark policy, or severity taxonomy.
+
+Named integrations are examples of this contract, not authorities for it. See
+[`docs/consumer-showcase.md`](consumer-showcase.md) for the current named
+external integration.
+
+## Integration boundary
+
+Keep reusable graph, matching, and predicate semantics in Vyre. Keep
+product-specific rule policy, severity, configuration, and reporting in the
+downstream analyzer. If a required semantic is broadly reusable, add it to its
+canonical Vyre owner and expose it through the public facade. Do not import a
+private consumer tree into a platform crate.
 
 ## Tier 2.5 substrate: `vyre-primitives`
 

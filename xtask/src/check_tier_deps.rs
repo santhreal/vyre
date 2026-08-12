@@ -5,7 +5,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process;
+use std::process::{self, Command};
 
 use toml::Value;
 
@@ -16,7 +16,7 @@ pub(crate) fn run(args: &[String]) {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         println!(
             "USAGE:\n  cargo xtask check-tier-deps\n\n\
-             Fails if any workspace crate depends (path dep) on a higher tier crate."
+             Fails on upward tier dependencies, undeclared production edges, incomplete crate ownership, or generated crate-documentation drift."
         );
         return;
     }
@@ -37,10 +37,11 @@ pub(crate) fn run(args: &[String]) {
         scan_manifest(&member, tier, &table, &mut failures);
     }
     validate_cross_crate_promotion_contract(&root, &mut failures);
+    validate_crate_ownership_registry(&root, &mut failures);
 
     if failures.is_empty() {
         println!(
-            "check-tier-deps: {} workspace members; no upward tier violations",
+            "check-tier-deps: {} workspace members; tier, ownership, and generated graph contracts agree",
             members.len()
         );
     } else {
@@ -49,7 +50,7 @@ pub(crate) fn run(args: &[String]) {
             eprintln!("  - {f}");
         }
         eprintln!(
-            "Fix: remove the upward dependency or move shared code down-tier (see docs/library-tiers.md)."
+            "Fix: remove the upward dependency or update the manifest and docs/CRATE_OWNERSHIP.toml together, then regenerate the ownership docs."
         );
         process::exit(1);
     }
@@ -60,6 +61,39 @@ fn workspace_root() -> PathBuf {
         .parent()
         .map(PathBuf::from)
         .expect("Fix: xtask must live under the vyre workspace root.")
+}
+
+fn validate_crate_ownership_registry(root: &Path, failures: &mut Vec<String>) {
+    let script = root.join("scripts/crate_ownership.py");
+    let output = match Command::new("python3")
+        .arg(&script)
+        .arg("--check")
+        .current_dir(root)
+        .output()
+    {
+        Ok(output) => output,
+        Err(error) => {
+            failures.push(format!(
+                "could not launch `{}` with python3: {error}",
+                script.display()
+            ));
+            return;
+        }
+    };
+    if output.status.success() {
+        return;
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let message = stderr.trim();
+    failures.push(if message.is_empty() {
+        format!(
+            "`{}` failed with status {} and no diagnostic",
+            script.display(),
+            output.status
+        )
+    } else {
+        message.to_string()
+    });
 }
 
 fn workspace_members(root: &Path) -> Vec<String> {
@@ -82,25 +116,20 @@ fn workspace_members(root: &Path) -> Vec<String> {
 fn crate_tier(member_path: &str) -> u32 {
     let name = member_path.rsplit('/').next().unwrap_or(member_path);
     match name {
-        "vyre-foundation" | "vyre-spec" | "vyre-core" | "vyre-macros" => 10,
+        "vyre-foundation" | "vyre-spec" | "vyre" | "vyre-macros" => 10,
         "vyre-intrinsics" => 20,
         "vyre-primitives" => 25,
         "vyre-self-substrate" => 28,
         "vyre-libs" | "vyre-frontend-c" => 30,
         "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx"
         | "vyre-emit-spirv" => 35,
-        "vyre-conform-spec"
-        | "vyre-conform-generate"
-        | "vyre-conform-enforce"
-        | "vyre-conform-runner"
-        | "vyre-test-harness" => 35,
+        "vyre-conform-spec" | "vyre-conform" => 35,
         "vyre-driver"
         | "vyre-driver-wgpu"
         | "vyre-driver-cuda"
         | "vyre-driver-spirv"
         | "vyre-driver-reference"
         | "vyre-runtime"
-        | "vyre-harness"
         | "vyre-aot"
         | "vyre-bench"
         | "vyre-debug"
@@ -179,7 +208,7 @@ fn validate_cross_crate_promotion_contract(root: &Path, failures: &mut Vec<Strin
     let library_tiers = read_contract_doc(root, "docs/library-tiers.md", failures);
     let import_test = read_contract_doc(
         root,
-        "vyre-core/tests/cross_crate_import_path_migration_contract.rs",
+        "vyre/tests/cross_crate_import_path_migration_contract.rs",
         failures,
     );
     failures.extend(cross_crate_promotion_contract_text_failures(

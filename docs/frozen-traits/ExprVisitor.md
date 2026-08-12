@@ -1,3 +1,8 @@
+# ExprVisitor historical reference
+
+**Status: Superseded.** Use `ExprVisitor.txt` and
+`vyre-foundation/src/visit/expr.rs` for the frozen contract.
+
 pub trait ExprVisitor {
 /// Result type returned from each variant.
 type Output;

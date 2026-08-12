@@ -37,17 +37,6 @@ naga / wgpu / toml  -  foundation tier.
   explicit walker
 - Opaque extension with arbitrary random payload_len
 
-## Current gaps
-
-- `tests/opaque_wire_round_trip.rs` already exists  -  audit which
-  invariants it covers vs which are missing; move missing ones to
-  `gap.rs` with a citation.
-- Optimizer passes: check whether `pass(pass(p)) == pass(p)` is
-  proven for every pass. If not, each unproven pass gets a failing
-  gap test.
-- Validator: every error variant the spec implies should be
-  reachable by at least one test input; gaps land in `gap.rs`.
-
 ## Cross-crate contracts
 
 - `Program`, `Expr`, `Node`, `BufferDecl`, `MemoryKind`,

@@ -9,7 +9,7 @@
 #![cfg(all(feature = "math-linalg", feature = "nn-attention"))]
 
 use vyre_libs::math::linalg::{matmul, matmul_tiled, Matmul, MatmulTiled};
-use vyre_libs::nn::{attention, Attention};
+use vyre_libs::nn::attention::{attention, Attention};
 use vyre_libs::tensor_ref::TensorRef;
 
 /// Near-overflow bound: any `a*b > u32::MAX` must panic.

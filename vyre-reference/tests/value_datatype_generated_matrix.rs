@@ -6,7 +6,7 @@
 //! silently collapse typed values into empty byte payloads.
 
 use smallvec::smallvec;
-use vyre::ir::DataType;
+use vyre_foundation::ir::DataType;
 use vyre_reference::value::Value;
 use vyre_spec::{QuantizationScale, QuantizationZeroPoint};
 

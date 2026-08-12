@@ -11,10 +11,10 @@
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_and_positions_by_region_async --release -- --nocapture
 
-use vyre_driver_reference::CpuRefBackend;
-use vyre_driver_wgpu::WgpuBackend;
-use vyre_foundation::match_result::Match;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_reference::{self as _, CPU_REF_BACKEND_ID};
+use vyre_driver_wgpu as _;
+use vyre_foundation::match_result::ByteRange;
 
 const LITERALS: &[&[u8]] = &[b"alpha", b"kilo", b"tango"];
 const MAX_MATCHES: u32 = 256;
@@ -32,19 +32,12 @@ fn fixture() -> (GpuLiteralSet, Vec<u8>, Vec<u32>) {
 
 #[test]
 fn async_fused_matches_sync_on_gpu() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping async fused GPU test");
-            return;
-        }
-    };
     let (set, haystack, region_starts) = fixture();
 
-    let mut sync_matches: Vec<Match> = Vec::new();
+    let mut sync_matches: Vec<ByteRange> = Vec::new();
     let sync_presence = set
         .scan_presence_and_positions_by_region(
-            backend.as_ref(),
+            "wgpu",
             &haystack,
             &region_starts,
             0,
@@ -55,7 +48,7 @@ fn async_fused_matches_sync_on_gpu() {
 
     let pending = set
         .scan_presence_and_positions_by_region_async(
-            backend.as_ref(),
+            "wgpu",
             &haystack,
             &region_starts,
             0,
@@ -63,7 +56,7 @@ fn async_fused_matches_sync_on_gpu() {
         )
         .expect("async gpu fused submit");
     let _ready = pending.is_ready();
-    let mut async_matches: Vec<Match> = Vec::new();
+    let mut async_matches: Vec<ByteRange> = Vec::new();
     let async_presence = pending
         .await_into(&mut async_matches)
         .expect("async gpu fused await");
@@ -84,10 +77,10 @@ fn async_fused_matches_sync_on_gpu() {
 fn async_fused_equals_sync_on_cpu_reference() {
     let (set, haystack, region_starts) = fixture();
 
-    let mut sync_matches: Vec<Match> = Vec::new();
+    let mut sync_matches: Vec<ByteRange> = Vec::new();
     let sync_presence = set
         .scan_presence_and_positions_by_region(
-            &CpuRefBackend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,
@@ -98,7 +91,7 @@ fn async_fused_equals_sync_on_cpu_reference() {
 
     let pending = set
         .scan_presence_and_positions_by_region_async(
-            &CpuRefBackend,
+            CPU_REF_BACKEND_ID,
             &haystack,
             &region_starts,
             0,
@@ -111,13 +104,13 @@ fn async_fused_equals_sync_on_cpu_reference() {
     );
 
     // Pre-seed the match buffer; await_into must clear it.
-    let mut async_matches: Vec<Match> = vec![Match::new(77, 3, 5); 4];
+    let mut async_matches: Vec<ByteRange> = vec![ByteRange::new(77, 3, 5); 4];
     let async_presence = pending
         .await_into(&mut async_matches)
         .expect("async cpu-reference fused await");
 
     assert!(
-        !async_matches.iter().any(|m| m.pattern_id == 77),
+        !async_matches.iter().any(|m| m.tag == 77),
         "stale pre-seeded matches must be cleared by await_into, not accumulated"
     );
     assert_eq!(

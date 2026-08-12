@@ -12,11 +12,9 @@ rebuild every binary, execute every help route, and reject drift.
 | `vyre-driver-wgpu` | `vyre-wgpu` | public | `demo` | [`vyre-driver-wgpu/README.md`](../vyre-driver-wgpu/README.md) |
 | `vyre-conform` | `vyre-conform` | internal | `dispatch`, `merge`, `plan`, `prove` | [`conform/vyre-conform/README.md`](../conform/vyre-conform/README.md) |
 | `xtask` | `audit_rule_contracts` | internal | none | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `lint_shape_tests` | internal | none | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `public_api_check` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `scaffold_rule` | internal | none | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
-| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `command-matrix`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `lint-shape-tests`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `parser-coherence`, `platform-boundary`, `print-composition`, `quick-check`, `recursion-gate`, `release-benchmarks`, `release-completion-audit`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `source-similar`, `test-matrix`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
+| `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `print-composition`, `recursion-gate`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
 | `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
@@ -208,75 +206,6 @@ Exit codes:
   2  command-line arguments are invalid
 ```
 
-## `lint_shape_tests`
-
-Package: `xtask`. Audience: internal.
-
-Hardware: No accelerator is required.
-
-Environment: No environment variables alter CLI behavior.
-
-Configuration: --threshold sets the maximum shape-only test percentage.
-
-Failure behavior: Incomplete scans, malformed sources, or a threshold violation return status 1.
-
-Exit codes: 0 within threshold or on help, 1 on scan or threshold failure, 2 on invalid arguments.
-
-### Top-level help
-
-```text
-Audit tests for assertions that prove only result shape.
-
-Usage: lint_shape_tests [--threshold <percentage>]
-
-Options:
-  --threshold <percentage>  maximum permitted shape-test percentage (default: 0)
-  -h, --help                print this help
-
-Output:
-  TEST_AUDIT_<date>.md in the enclosing Santh workspace
-
-Exit codes:
-  0  scan completed within the threshold
-  1  scan failed, was incomplete, or exceeded the threshold
-  2  command-line arguments are invalid
-```
-
-## `public_api_check`
-
-Package: `xtask`. Audience: internal.
-
-Hardware: No accelerator is required.
-
-Environment: VYRE_CARGO_RUNNER selects the Cargo wrapper.
-
-Configuration: --update refreshes snapshots and --allow-breaking explicitly permits removals.
-
-Failure behavior: Tool launch, API generation, UTF-8, inventory, compatibility, and snapshot mismatches return status 1.
-
-Exit codes: 0 on matching or approved updated snapshots, 1 on API failure, 2 on invalid arguments.
-
-### Top-level help
-
-```text
-Check publishable facade APIs against committed snapshots.
-
-Usage: public_api_check [--update [--allow-breaking]]
-
-Options:
-  --update          refresh snapshots after compatibility checks
-  --allow-breaking  permit removed API items while refreshing
-  -h, --help        print this help
-
-Environment:
-  VYRE_CARGO_RUNNER  Cargo wrapper to invoke (default: cargo_full)
-
-Exit codes:
-  0  snapshots match or were refreshed
-  1  API generation, compatibility, or snapshot checks failed
-  2  command-line arguments are invalid
-```
-
 ## `scaffold_rule`
 
 Package: `xtask`. Audience: internal.
@@ -356,7 +285,6 @@ USAGE:
 cargo_full run --bin xtask -- <subcommand> [options]
 
 SUBCOMMANDS:
-quick-check --op NAME               Run minimal <5s verification path for a single op
 abstraction-gate                     Enforce registered building-block boundaries
 bench-crossback [program]           Cross-backend perf table
 backend-matrix [--output PATH]      Probe linked CUDA/WGPU backend release policy
@@ -364,7 +292,6 @@ bench-release [--backend all]        Run the legacy cross-backend release benchm
 shrink <file.vir> <oracle.sh>       Delta-debug a crashing vyre wire formulation down to a minimal reproducer
 check-cat-a                         Run every Cat-A pre-merge gate
 check-tier-deps                     Reject upward tier path dependencies (T4→T1 only)
-command-matrix [--output PATH] [--check] Generate/check xtask command owner/proof matrix
 compile <program.vir> --to TARGET   Emit target artifact(s) (wgsl/spirv/secondary_text/native_module/hlsl)
 conformance-matrix [--check] [--output PATH] Enumerate/check release op/backend conformance coverage
 dep-drift                           Fail if any repo manifest pins a workspace-managed dependency to a different version
@@ -381,7 +308,6 @@ op-matrix [--output PATH]           Generate operation/backend coverage evidence
 optimization-matrix [--output PATH] Generate release optimization integration evidence
 package-readiness [--output PATH]  Generate pre-publish package order evidence
 optimization-corpus [--output PATH]  Generate release optimization corpus manifest
-parser-coherence [--output PATH]   Generate distributed C parser ownership evidence
 platform-boundary                  Fail on consumer names in platform crate docs/comments
 version-matrix [--output PATH]      Generate Vyre manifest version matrix
 catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift
@@ -389,7 +315,6 @@ release-gate                        Pre-publish sanity checks (catalog + gate1 +
 release-workload-matrix [--output PATH]  Generate cheap release workload family evidence
 release-benchmarks [--backend cuda] Generate long-running release benchmark artifacts
 release-conformance [--backend all] Generate real backend conformance artifacts
-release-completion-audit [--output PATH]  Generate final prompt-to-artifact audit evidence
 release-evidence                    Generate cheap structural release evidence artifacts
 vyre-release-gate [--prepublish] [--manifest PATH]  Enforce final or prepublication evidence closure
 recursion-gate [--strict]           Enforce recursion thesis (every Tier-2.5 primitive has a vyre-self consumer)
@@ -397,12 +322,9 @@ heuristic-audit [--strict]          Surface hand-rolled heuristics that should b
 verify-rewrite-proofs               Verify optimizer rewrite proof fixtures
 hygiene-matrix [--output PATH]      Scan Vyre source hygiene release blockers
 lego-audit [--report-only|--with-repo|--write-baseline] [--duplicate-report-json PATH] Deeper LEGO-block enforcement and composition baseline management
-lego-quick [--all] [--source-similar] Fast pre-commit gate plus optional source-dedup scan
+lego-quick [--all]                  Fast pre-commit boundary checks
 whats-similar (--op-id <id>|--all) [--duplicate-report-json PATH] Pre-write/all-pairs duplicate query by IR shape
-source-similar [--root PATH] [--check] [--include-untracked] [--duplicate-report-json PATH] Repo-wide Rust source duplicate scanner
 hot-path-scan [--strict]            Scan files in HOT_PATHS.toml for clone/alloc/lock patterns
-test-matrix [--output PATH]         Generate Vyre test architecture evidence
-lint-shape-tests [--strict]         Scan test modules for shape-only assertions
 
 --help                              Print this message
 ```

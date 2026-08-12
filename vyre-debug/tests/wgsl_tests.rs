@@ -42,12 +42,7 @@ fn dump_wgsl_with_lines_prefixes_each_line() {
 
 #[test]
 fn dump_wgsl_propagates_naga_validation_failure() {
-    // To trigger a naga validation failure but pass lowering, we can create an invalid construct
-    // e.g., mismatched types that vyre-lower accepts but naga rejects.
-    // However, vyre_lower has type verification.
-    // Let's create an invalid assignment type mismatch by bypassing `Expr` helpers.
-    // Or just manually corrupt a Lowered descriptor? No, the API takes Program.
-    // Let's use `vyre_lower::lower_for_emit` and intercept, or wait, we just use a Program that vyre_lower doesn't catch.
+    // A zero workgroup axis passes frontend construction but fails lowering or Naga validation.
     let buffer =
         BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16);
     let p = Program::wrapped(

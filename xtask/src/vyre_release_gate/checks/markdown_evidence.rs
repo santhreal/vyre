@@ -34,7 +34,7 @@ pub(crate) fn check_markdown_evidence_path_ready(
     ] {
         for line in text.lines() {
             let lowered = line.to_ascii_lowercase();
-            if crate::release_completion_audit::markdown_line_is_release_rule_text(&lowered) {
+            if crate::text_markers::markdown_line_is_release_rule_text(&lowered) {
                 continue;
             }
             if lowered.contains(marker) {

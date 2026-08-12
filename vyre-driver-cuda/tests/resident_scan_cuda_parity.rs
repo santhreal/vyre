@@ -5,19 +5,18 @@
 //! every result against the backend-neutral reference scan.
 
 use vyre_driver_cuda as _;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 use vyre_scan::build_scan_session;
 
 /// Sort matches into a deterministic order so the expected-set assertion is
 /// independent of the kernel's per-workgroup emission order.
-fn sorted(mut matches: Vec<Match>) -> Vec<Match> {
-    matches.sort_by_key(|m| (m.start, m.end, m.pattern_id));
+fn sorted(mut matches: Vec<ByteRange>) -> Vec<ByteRange> {
+    matches.sort_by_key(|m| (m.start, m.end, m.tag));
     matches
 }
 
 #[test]
 fn resident_rule_pipeline_matches_reference_on_cuda() {
-
     // Patterns ab=0, cd=1, xyz=2. Haystack plants known, overlap-free hits:
     // "ab"@[2,4), "cd"@[6,8), "xyz"@[8,11), "ab"@[11,13). The NFA program declares a
     // STATIC input buffer of `input_len` bytes (the CUDA backend enforces it, unlike
@@ -39,10 +38,10 @@ fn resident_rule_pipeline_matches_reference_on_cuda() {
     assert_eq!(
         expected,
         vec![
-            Match::new(0, 2, 4),
-            Match::new(1, 6, 8),
-            Match::new(2, 8, 11),
-            Match::new(0, 11, 13),
+            ByteRange::new(0, 2, 4),
+            ByteRange::new(1, 6, 8),
+            ByteRange::new(2, 8, 11),
+            ByteRange::new(0, 11, 13),
         ],
         "CUDA reference scan must find exactly the planted ab/cd/xyz/ab hits"
     );

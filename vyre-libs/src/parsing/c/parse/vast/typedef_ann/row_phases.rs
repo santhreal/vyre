@@ -220,4 +220,3 @@ pub(super) fn c11_typedef_decl_kind_for_row() -> Program {
 pub(super) fn c11_typedef_decl_kind_for_row_packed_haystack() -> Program {
     decl_kind_for_row(DECL_KIND_FOR_ROW_PACKED_OP_ID, true)
 }
-

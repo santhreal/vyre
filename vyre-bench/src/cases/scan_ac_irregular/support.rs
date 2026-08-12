@@ -1,7 +1,7 @@
 use crate::api::case::BenchError;
-use vyre_foundation::ir::Program;
-use vyre_foundation::match_result::Match;
 use vyre::scan::dispatch_io::try_unpack_match_triples;
+use vyre_foundation::ir::Program;
+use vyre_foundation::match_result::ByteRange;
 
 use super::metrics::ScanAcStats;
 use super::{MATCH_TRIPLE_WORDS, PATTERNS};
@@ -46,7 +46,7 @@ pub(crate) fn build_irregular_haystack(len: usize) -> (Vec<u8>, u32) {
 pub(super) fn decode_scan_outputs(
     outputs: &[Vec<u8>],
     context: &str,
-) -> Result<Vec<Match>, BenchError> {
+) -> Result<Vec<ByteRange>, BenchError> {
     let count_bytes = outputs.first().ok_or_else(|| {
         BenchError::CorrectnessViolation(format!("{context} did not produce match_count"))
     })?;
@@ -79,10 +79,10 @@ pub(super) fn decode_scan_outputs(
     })
 }
 
-pub(crate) fn encode_match_triples(matches: &[Match]) -> Vec<u8> {
+pub(crate) fn encode_match_triples(matches: &[ByteRange]) -> Vec<u8> {
     let mut encoded = Vec::with_capacity(matches.len() * 12);
     for hit in matches {
-        encoded.extend_from_slice(&hit.pattern_id.to_le_bytes());
+        encoded.extend_from_slice(&hit.tag.to_le_bytes());
         encoded.extend_from_slice(&hit.start.to_le_bytes());
         encoded.extend_from_slice(&hit.end.to_le_bytes());
     }

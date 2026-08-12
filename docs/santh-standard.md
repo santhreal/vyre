@@ -1,5 +1,9 @@
 # Santh Rust Engineering Standard
 
+**Status: Superseded.** Use [`docs/code-style.md`](code-style.md),
+[`docs/CONVENTIONS.md`](CONVENTIONS.md), and the repository quality gates for
+current Vyre contributor rules.
+
 Every Santh crate follows these rules.
 
 ## Module management

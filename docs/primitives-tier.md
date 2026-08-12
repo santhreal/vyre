@@ -1,5 +1,9 @@
 # Tier 2.5  -  `vyre-primitives` (the LEGO block layer)
 
+**Status: Superseded.** Use [`docs/ARCHITECTURE.md`](ARCHITECTURE.md),
+[`docs/ops-catalog.md`](ops-catalog.md), and `docs/generated/OP_SCHEMA.json`
+for the current primitive boundary.
+
 This doc promotes shared primitive ops out of Tier 3 (`vyre-libs`) into
 the `vyre-primitives` crate between intrinsics and library
 compositions. It is a direct response to:

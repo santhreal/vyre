@@ -42,7 +42,7 @@ def rust_files(root: Path) -> list[Path]:
     # `benches/` subdirectory; standalone benchmark / test-harness
     # crates ship unwraps intentionally because they are measurement
     # / scaffolding code, not the dispatch path.
-    ignored_crates = {"vyre-bench", "vyre-test-harness"}
+    ignored_crates = {"vyre-bench"}
     # File-name exclusions. `test_helpers.rs` is the in-crate
     # test-fixture convention used by vyre-runtime / vyre-foundation.
     ignored_filenames = {"build.rs", "tests.rs", "test_helpers.rs"}

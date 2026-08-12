@@ -8,13 +8,8 @@
 //! so changes take effect immediately. A cached snapshot would
 //! silently drift from reality.
 //!
-//! Consumers:
-//!
-//! * IDE integrations that display "what ops exist in this dialect."
-//! * CI gates that diff `docs/coverage-matrix.md` (the
-//!   [`coverage_matrix`] output) against the committed file.
-//! * Backend routers that filter by dialect support before dispatch.
-//! * Documentation generators.
+//! Consumers include IDE integrations, backend routers, and documentation
+//! generators that need a live semantic registry view.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -70,8 +65,7 @@ pub enum CoverageCell {
 }
 
 impl CoverageCell {
-    /// Render as the single-character label used in
-    /// `docs/coverage-matrix.md`.
+    /// Render as the compact label used in coverage reports.
     #[must_use]
     pub fn label(self) -> &'static str {
         match self {
@@ -215,17 +209,13 @@ pub fn coverage_matrix() -> CoverageMatrix {
 }
 
 impl CoverageMatrix {
-    /// Render the matrix as a markdown table for
-    /// `docs/coverage-matrix.md`.
+    /// Render the live matrix as a Markdown table.
     #[must_use]
     pub fn render_markdown(&self) -> String {
         let mut out = String::new();
         out.push_str("# dialect × backend coverage matrix\n\n");
         out.push_str(
-            "Generated from the live `DialectRegistry` + `OpBackendTarget`\n\
-             inventory. Regenerate via `VYRE_REGEN_COVERAGE=1 cargo_full test -p vyre\n\
-             --test coverage_matrix`. Every cell transition from ✓ → - is a\n\
-             coverage regression gated by CI.\n\n",
+            "Generated from the live `DialectRegistry` and `OpBackendTarget` inventory.\n\n",
         );
         // Header row: dialect | backend1 | backend2 | ...
         out.push_str("| dialect |");

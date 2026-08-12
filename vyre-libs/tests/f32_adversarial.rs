@@ -31,7 +31,9 @@ fn output_bytes(program: &Program, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
 }
 
 fn harness_path_outputs(entry: &'static OpEntry, inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
-    let program = entry.program().expect("Fix: registered library operation must provide a neutral builder");
+    let program = entry
+        .program()
+        .expect("Fix: registered library operation must provide a neutral builder");
     let errors = vyre::ir::validate(&program);
     assert!(
         errors.is_empty(),

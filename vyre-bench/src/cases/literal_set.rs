@@ -19,7 +19,7 @@ use vyre::scan::{
 };
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
-use vyre_foundation::match_result::Match;
+use vyre_foundation::match_result::ByteRange;
 
 const HAYSTACK_BYTES: usize = 4 * 1024 * 1024;
 const DEFAULT_LITERAL_SET_MATCH_CAP: u32 = 10_000;
@@ -43,7 +43,7 @@ pub struct LiteralSetIrregularCountHotloop;
 struct LiteralSetIrregularPrepared {
     engine: GpuLiteralSet,
     haystack: Vec<u8>,
-    matches: Vec<Match>,
+    matches: Vec<ByteRange>,
     scratch: LiteralSetScanScratch,
     prepared_scan: LiteralSetPreparedScan,
     reset_program: Program,
@@ -527,7 +527,7 @@ impl BenchCase for LiteralSetIrregularCountHotloop {
 
 fn literal_microbench_stratification(
     haystack: &[u8],
-    matches: &[Match],
+    matches: &[ByteRange],
     planted_matches: u32,
 ) -> LiteralMicrobenchStratification {
     let mut pattern_byte_counts = [0_u32; 256];
@@ -705,11 +705,11 @@ fn literal_pattern_digest() -> u64 {
     digest
 }
 
-fn literal_match_digest(matches: &[Match], pattern_digest: u64) -> u64 {
+fn literal_match_digest(matches: &[ByteRange], pattern_digest: u64) -> u64 {
     let mut digest = fnv64_u64(FNV64_OFFSET_BASIS, pattern_digest);
     digest = fnv64_u64(digest, matches.len() as u64);
     for hit in matches {
-        digest = fnv64_u64(digest, u64::from(hit.pattern_id));
+        digest = fnv64_u64(digest, u64::from(hit.tag));
         digest = fnv64_u64(digest, u64::from(hit.start));
         digest = fnv64_u64(digest, u64::from(hit.end));
     }
@@ -1084,8 +1084,8 @@ inventory::submit! {
 mod tests {
     use super::*;
 
-    fn sample_matches() -> [Match; 2] {
-        [Match::new(0, 31, 35), Match::new(1, 64, 68)]
+    fn sample_matches() -> [ByteRange; 2] {
+        [ByteRange::new(0, 31, 35), ByteRange::new(1, 64, 68)]
     }
 
     #[test]

@@ -57,7 +57,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
     let dir = tempfile::tempdir().expect("tempdir");
     for root in [
         "vyre-aot/src",
-        "vyre-core/src",
+        "vyre/src",
         "vyre-driver/src",
         "vyre-driver-cuda/src",
         "vyre-driver-wgpu/src",
@@ -241,7 +241,7 @@ fn flags_cpu_module_export_in_production_source() {
 #[test]
 fn flags_public_cpu_reexport_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-core/src");
+    let src = dir.path().join("vyre/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(src.join("lib.rs"), "pub use vyre_foundation::cpu_op;\n").expect("write fixture");
 
@@ -319,6 +319,23 @@ fn reports_external_consumer_production_cpu_reference_paths() {
         .file
         .ends_with("external-consumer/src/dispatch.rs"));
     assert!(violations[0].message.contains("cpu_ref"));
+}
+
+#[test]
+fn normalizes_new_vyre_crate_paths_without_registry_updates() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("vyre-scan/src");
+    fs::create_dir_all(&src).expect("create src");
+    fs::write(
+        src.join("dispatch.rs"),
+        "pub fn dispatch() { cpu_ref(); }\n",
+    )
+    .expect("write fixture");
+
+    let violations =
+        vyre_lints::run_production_cpu_fallbacks(&[src.as_path()]).expect("fallback scan");
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].file, "vyre-scan/src/dispatch.rs");
 }
 
 #[test]

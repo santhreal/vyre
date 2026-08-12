@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Public-API stability gate.
 #
-# Uses rustdoc through `cargo public-api` to snapshot the externally reachable
+# Uses rustdoc through `cargo_full public-api` to snapshot the externally reachable
 # API of every publishable workspace crate, including modules and reexports,
 # then diffs it against docs/public-api/<package>.txt.
 #
@@ -45,7 +45,7 @@ extract_api() {
     local crate_name="$1"
     local current
 
-    if ! current="$(cargo public-api -sss -p "$crate_name")"; then
+    if ! current="$(./cargo_full public-api -sss -p "$crate_name")"; then
         echo "Fix: cargo public-api could not extract the $crate_name surface." >&2
         return 1
     fi
@@ -71,8 +71,7 @@ elif [[ -n "${1:-}" ]]; then
     exit 2
 fi
 
-# Crate names accepted by --refresh: either the directory or the snapshot name,
-# since those differ for vyre-core (snapshot `vyre`).
+# Crate names accepted by --refresh: either the workspace directory or package name.
 if [[ -n "$only_crate" ]]; then
     matched=0
     for entry in "${PUBLISHED_CRATES[@]}"; do

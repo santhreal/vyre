@@ -1,5 +1,8 @@
 # Math frontier  -  what we could revolutionize via primitives
 
+**Status: Archived.** This research memo does not define shipped operations.
+Use `docs/generated/OP_SCHEMA.json` for the current operation surface.
+
 This is the **deep-research memo** companion to `INNOVATION_SWEEP.md`.
 Where `INNOVATION_SWEEP.md` is a rolling product-feature ledger, this
 file is a research catalog of frontier math that could become

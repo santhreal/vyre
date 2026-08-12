@@ -14,7 +14,7 @@
 //! prefilter already supplies a smaller candidate set.
 //!
 //! Subset construction can exceed `max_dfa_states`. In that case, shard the
-//! pattern set or use `RulePipeline`.
+//! pattern set or use `ScanProgram`.
 
 use std::error::Error;
 use std::fmt;
@@ -63,7 +63,7 @@ pub enum RegexDfaError {
     Compile(RegexCompileError),
     /// Subset construction couldn't lower the NFA - typically state
     /// explosion. The caller should either raise `max_dfa_states`,
-    /// shard the pattern set, or fall back to `RulePipeline`.
+    /// shard the pattern set, or fall back to `ScanProgram`.
     Lower(NfaToDfaError),
     /// Regex/DFA metadata exceeded the GPU program's u32 ABI or host-side
     /// staging allocation budget.
@@ -780,7 +780,7 @@ mod tests {
     }
 
     /// A regex with a character class should also lower - this is the
-    /// case `RulePipeline` would scan via NFA bit-vector. The DFA path
+    /// case `ScanProgram` would scan via NFA bit-vector. The DFA path
     /// must produce an accept somewhere so the consumer gets a hit.
     #[test]
     fn character_class_pattern_lowers_to_acceptor_dfa() {

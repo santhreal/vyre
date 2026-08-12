@@ -127,7 +127,7 @@ fn csr_forward_traverse_empty_frontier() {
 #[test]
 fn csr_forward_traverse_zero_nodes() {
     let got = cpu_ref(0, &[0], &[], &[], &[], 0xFFFF_FFFF);
-    assert_eq!(got, vec![]);
+    assert!(got.is_empty());
 }
 
 #[test]

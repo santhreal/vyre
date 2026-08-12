@@ -96,7 +96,7 @@ impl ResidentWorkQueue {
     /// Apply one explicit lifecycle transition to a ring slot status word.
     ///
     /// This helper is for host-side tests, recovery, cancellation, and
-    /// diagnostics. Normal publication should still use [`Megakernel::publish_slot`]
+    /// diagnostics. Normal publication should still use [`Self::publish_slot`]
     /// or batch publishers so payload words are written before the PUBLISHED
     /// status barrier.
     ///
@@ -205,8 +205,8 @@ impl ResidentWorkQueue {
     /// This is the resident hot path for repeated megakernel queue updates:
     /// validate the whole target window first, then write each slot once and
     /// store [`slot::PUBLISHED`] last. Unlike
-    /// [`Megakernel::encode_work_items_ring_into`], this does not clear the
-    /// full ring, so sparse updates scale with `items.len()` rather than
+    /// [`Self::encode_work_items_ring_into`], this does not clear the full ring,
+    /// so sparse updates scale with `items.len()` rather than
     /// `slot_count`.
     ///
     /// # Errors
@@ -260,9 +260,9 @@ impl ResidentWorkQueue {
     /// Reset `ring_words` to an empty ring and publish a contiguous `ResidentWorkItem`
     /// queue as native little-endian u32 words.
     ///
-    /// This is equivalent to [`Megakernel::encode_work_items_ring_into`] but
-    /// avoids thousands of tiny byte-slice stores on hot dispatch paths. Callers
-    /// can pass the result to backends as bytes with `bytemuck::cast_slice`.
+    /// This is equivalent to [`Self::encode_work_items_ring_into`] but avoids
+    /// thousands of tiny byte-slice stores on hot dispatch paths. Callers can
+    /// pass the result to backends as bytes with `bytemuck::cast_slice`.
     ///
     /// # Errors
     ///

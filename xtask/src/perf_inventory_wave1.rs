@@ -1,11 +1,12 @@
-//! `cargo xtask perf-inventory-wave1` runs Phase 1 wave 1.1 contract tests
-//! for [`audits/WAVE_EXECUTION.md`](../audits/WAVE_EXECUTION.md).
+//! `cargo xtask perf-inventory-wave1` runs the P0 performance inventory
+//! contract tests.
 
 use std::path::PathBuf;
 use std::process::Command;
 
 fn repo_root() -> PathBuf {
-    std::env::current_dir().expect("Fix: xtask must run in a cwd; restore this invariant before continuing.")
+    std::env::current_dir()
+        .expect("Fix: xtask must run in a cwd; restore this invariant before continuing.")
 }
 
 pub fn run(_args: &[String]) {

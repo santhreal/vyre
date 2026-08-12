@@ -1,39 +1,21 @@
-//! The DCE fixpoint program must not let an invocation leave a synchronizing
-//! loop body after that body's last barrier.
+//! V055 must distinguish collective fixpoint exits from lane-dependent exits.
 //!
-//! The program's iteration body ends with a barrier and then an early exit:
-//! once a step adds no bit, lane 0 records convergence and the invocation
-//! returns. For a while that exit was the LAST thing in the body, after the
-//! final barrier. One invocation could then take the back edge and write while
-//! a sibling had not yet reached the exit; the sibling left the kernel and
-//! froze the data it owned partway through. Nothing hangs, because a barrier
-//! does not count invocations that already returned, so the damage is to
-//! ANSWERS rather than to liveness, and one workgroup is enough to produce it.
-//! `V055` in `vyre-foundation` refuses exactly that shape.
+//! The DCE iteration ends with an early exit after a barrier. Its condition
+//! loads `changed[0]`, the same address in every lane, after the barrier settles
+//! all writes to that word. No write intervenes. Every lane therefore returns
+//! together or every lane takes the back edge together, so a second trailing
+//! barrier would add synchronization without adding safety.
 //!
-//! The bug stayed invisible for as long as it did because the program's
-//! correctness argument rested on a nested `Node::Return` being emitted as
-//! NOTHING: the loop ran its full iteration budget on device and a `converged`
-//! flag, not the `Return`, made the early exit real. When a nested `Return`
-//! started lowering to a real branch, that argument became false and the
-//! program became illegal at the same moment, with no test anywhere between the
-//! two crates to notice. So these tests deliberately do not test the emitter or
-//! the lowering. They assert the property that has to hold no matter what a
-//! `Return` lowers to: the built program VALIDATES, and its body's last
-//! synchronizing node comes after its exit.
-//!
-//! The last four tests are negative controls. A suite that only asserts "the
-//! program is clean" cannot tell a real fix from a validator that stopped
-//! looking, so each control breaks the program in one specific way and proves
-//! `V055` still fires: with the trailing barrier removed (the original bug),
-//! with the barrier moved inside the convergence gate (the plausible WRONG fix,
-//! which desynchronizes a workgroup whose lanes may read the flag stale), and
-//! with the exit moved after the barrier again.
+//! These tests couple the producer to the validator contract. Both public
+//! builders must validate with the exit as the final body node and exactly two
+//! barriers. Negative controls replace the settled condition with a
+//! lane-dependent predicate, dirty the settled word before the exit, and place
+//! a barrier only on a conditional path. V055 must reject every unsafe twin.
 #![forbid(unsafe_code)]
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::{validate, Node, Program};
+use vyre_foundation::ir::{validate, Expr, Node, Program};
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_self_substrate::optimizer::dce_program::{
     build_dce_bfs_program, build_persistent_bfs_program,
@@ -154,24 +136,6 @@ fn top_level_barriers(nodes: &[Node]) -> usize {
         .count()
 }
 
-/// Name of a node kind, for failure messages only.
-///
-/// Local on purpose: the production namer is not public, and a test that
-/// reports what it FOUND is much faster to diagnose than one reporting only
-/// that a match failed.
-fn node_name(node: &Node) -> &'static str {
-    match node {
-        Node::Barrier { .. } => "Barrier",
-        Node::Return => "Return",
-        Node::If { .. } => "If",
-        Node::Loop { .. } => "Loop",
-        Node::Store { .. } => "Store",
-        Node::Let { .. } => "Let",
-        Node::Block(_) => "Block",
-        _ => "other",
-    }
-}
-
 /// `Return` nodes at any nesting depth.
 fn returns_at_any_depth(nodes: &[Node]) -> usize {
     nodes
@@ -236,24 +200,20 @@ fn v055_count(program: &Program) -> usize {
 /// lowering, or barrier placement in any crate, because this is the test that
 /// is supposed to stop you.
 ///
-/// The program's early exit is legal ONLY because of the unconditional barrier
-/// appended as the last node of its loop body. Its safety argument used to rest
-/// on something else entirely: that a `Return` nested in a loop lowered to
-/// NOTHING, so the exit was inert on device. That argument lived in a comment,
-/// in one direction only, and nothing anywhere asserted it. When a nested
-/// `Return` began lowering to a real branch, this program became illegal at that
-/// instant and the news arrived as roughly 95 failures in a different crate,
-/// pointing at a dispatch, naming neither the program nor the lowering change
-/// that caused it.
+/// The program's early exit is legal because the validator derives a
+/// collective condition from the acquiring barrier, the same-address
+/// `changed[0]` load, and the absence of an intervening write. Its safety
+/// argument used to rest on a nested `Node::Return` emitting no device code.
+/// When nested returns became real branches, a trailing barrier was added as a
+/// conservative workaround.
 ///
-/// So this test does not test lowering, and deliberately so. It asserts the
-/// property that must hold whatever a `Return` compiles to: the built program
-/// VALIDATES. A future change to `Return` or barrier lowering that invalidates
-/// this program fails HERE, in the crate that owns the program, naming the rule
-/// it broke, instead of downstream as unrelated dispatch failures.
+/// This test asserts the stronger current contract: the built program validates
+/// after that workaround is removed. A change to return lowering, barrier
+/// ordering, or uniformity analysis now fails in the crate that owns the
+/// program instead of surfacing as unrelated dispatch failures downstream.
 ///
-/// It asserts the exact error list is empty rather than counting errors, so a
-/// NEW rule this program violates also names itself here.
+/// It asserts the exact error list is empty so any new violated rule names
+/// itself here.
 #[test]
 fn dce_program_validates_with_no_errors() {
     let program = dce_program();
@@ -264,12 +224,10 @@ fn dce_program_validates_with_no_errors() {
     );
 }
 
-/// Locks out: the sticky variant regressing while the DCE variant stays clean.
+/// The sticky variant must retain the same collective proof.
 ///
-/// Both public builders share one internal body builder, and the sticky path
-/// pushes an extra node into that body. If a future edit appends the trailing
-/// barrier on the DCE path only, or pushes the sticky mirror after the barrier,
-/// this fails and the other test does not.
+/// It inserts one extra atomic mirror before the settling barrier. If that
+/// mirror drifts after the barrier, the settled-load proof must fail here.
 #[test]
 fn sticky_persistent_program_validates_with_no_errors() {
     let program = sticky_program();
@@ -280,44 +238,41 @@ fn sticky_persistent_program_validates_with_no_errors() {
     );
 }
 
-/// Locks out: the early exit becoming the last thing in the loop body again.
+/// The uniform exit is intentionally the final iteration-body node.
 ///
-/// The structural form of the fix. The body's final node must be a barrier so
-/// that an invocation cannot leave while a sibling is still inside the
-/// iteration.
+/// This proves the validator's uniformity carve-out subsumes the old trailing
+/// barrier workaround rather than retaining it under a different comment.
 #[test]
-fn iteration_body_ends_with_a_barrier_in_both_variants() {
+fn iteration_body_ends_with_the_collective_exit_in_both_variants() {
     for (label, program) in [("dce", dce_program()), ("sticky", sticky_program())] {
         let body = loop_body(&program);
-        let last = body.last().expect("the iteration body is not empty");
+        let exit = exit_index(body);
+        assert_eq!(
+            exit,
+            body.len() - 1,
+            "{label}: the collective exit must be the final body node"
+        );
         assert!(
-            matches!(last, Node::Barrier { .. }),
-            "{label}: the iteration body must END with a barrier, found {}",
-            node_name(last)
+            returns_at_any_depth(std::slice::from_ref(&body[exit])) == 1,
+            "{label}: final node must carry exactly one return"
         );
     }
 }
 
-/// Locks out: reordering the exit after the final barrier.
+/// The acquiring barrier must immediately precede the collective exit.
 ///
-/// Stronger than "the last node is a barrier": it pins the RELATIVE order that
-/// makes the program legal, so inserting any further node after the exit but
-/// before the barrier stays legal, while moving the exit down does not.
+/// Any intervening write to `changed` invalidates the settled-load proof and
+/// must reactivate V055.
 #[test]
-fn the_early_exit_precedes_the_last_barrier() {
+fn the_collective_exit_follows_the_last_barrier() {
     for (label, program) in [("dce", dce_program()), ("sticky", sticky_program())] {
         let body = loop_body(&program);
         let exit = exit_index(body);
         let barrier = last_top_level_barrier(body);
-        assert!(
-            exit < barrier,
-            "{label}: the exit at index {exit} must come BEFORE the body's last \
-             barrier at index {barrier}"
-        );
         assert_eq!(
-            barrier,
-            body.len() - 1,
-            "{label}: the last barrier must be the final node of the body"
+            barrier + 1,
+            exit,
+            "{label}: no node may intervene between the settling barrier and exit"
         );
     }
 }
@@ -341,20 +296,18 @@ fn no_barrier_sits_inside_a_conditional_in_the_iteration_body() {
     }
 }
 
-/// Locks out: silently adding or dropping a barrier in the body.
+/// The loop pays only the two barriers required by its data dependencies.
 ///
-/// Three, at real values: one after lane 0 zeroes the per-iteration flag, one
-/// after the CSR step publishes it, and the trailing one that orders the exit
-/// against the back edge. A count of two means the fix was reverted; four means
-/// someone paid for an extra workgroup-wide sync without saying so.
+/// One follows lane 0 clearing the iteration flag. One settles all atomic
+/// updates before the collective exit reads the flag.
 #[test]
-fn the_iteration_body_holds_exactly_three_barriers() {
+fn the_iteration_body_holds_exactly_two_barriers() {
     for (label, program) in [("dce", dce_program()), ("sticky", sticky_program())] {
         let body = loop_body(&program);
         assert_eq!(
             top_level_barriers(body),
-            3,
-            "{label}: expected exactly three unconditional barriers"
+            2,
+            "{label}: expected exactly two unconditional barriers"
         );
     }
 }
@@ -385,11 +338,7 @@ fn the_early_exit_is_retained_and_stays_conditional() {
     }
 }
 
-/// Locks out: the fix depending on the iteration budget.
-///
-/// The builder clamps the budget with `max(1)`, so 0 and 1 both produce a real
-/// loop. Those are the boundary values a caller reaches with an empty or
-/// single-node graph, and the ordering argument must hold there too.
+/// Boundary iteration budgets retain the collective-exit proof.
 #[test]
 fn edge_iteration_budgets_still_validate() {
     for max_iters in [0_u32, 1, 2, 1024] {
@@ -400,18 +349,15 @@ fn edge_iteration_budgets_still_validate() {
             "max_iters {max_iters} must validate clean"
         );
         let body = loop_body(&program);
-        assert!(
-            matches!(body.last(), Some(Node::Barrier { .. })),
-            "max_iters {max_iters} must still end its body with a barrier"
-        );
+        assert_eq!(exit_index(body), body.len() - 1);
     }
 }
 
 /// Locks out: the fix holding only for one graph shape.
 ///
 /// The body is built around `shape.node_count`, and the CSR walk is emitted
-/// under a bounds condition derived from it. A degenerate shape must not shift
-/// the trailing barrier out of place.
+/// under a bounds condition derived from it. A degenerate shape must retain the
+/// same barrier-settled exit proof.
 #[test]
 fn assorted_graph_shapes_still_validate() {
     for (nodes, edges) in [(1_u32, 0_u32), (2, 1), (64, 256), (4096, 16384)] {
@@ -424,131 +370,140 @@ fn assorted_graph_shapes_still_validate() {
     }
 }
 
-/// NEGATIVE CONTROL. Locks out: a validator that stopped enforcing V055.
+/// A lane-dependent exit after the settling barrier must still trigger V055.
 ///
-/// Removes the trailing barrier and nothing else, reproducing the exact shape
-/// that failed roughly 95 tests, and requires the refusal to come back. If this
-/// test ever passes silently, every other test in this file has become
-/// decoration.
+/// This is the direct negative twin of the production condition. A validator
+/// that accepted it would allow only part of a workgroup to leave.
 #[test]
-fn removing_the_trailing_barrier_is_still_refused() {
+fn lane_dependent_exit_is_refused() {
     let mut program = dce_program();
-    assert_eq!(v055_count(&program), 0, "the built program starts clean");
     edit_loop_body(&mut program, |body| {
-        let last = body.pop().expect("body is not empty");
-        assert!(
-            matches!(last, Node::Barrier { .. }),
-            "expected to remove the trailing barrier"
-        );
+        let exit = exit_index(body);
+        let Node::If { cond, .. } = &mut body[exit] else {
+            panic!("collective exit must remain an If");
+        };
+        *cond = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
     });
     assert_eq!(
         v055_count(&program),
         1,
-        "with its trailing barrier gone the program must be refused; messages \
-         were {:?}",
+        "lane-dependent exit must be refused: {:?}",
         messages(&program)
     );
 }
 
-/// NEGATIVE CONTROL. Locks out: the plausible wrong fix passing validation.
+/// A write after the barrier invalidates the settled-load proof.
 ///
-/// Moves the trailing barrier INSIDE the convergence gate, which is what
-/// someone reaches for when they want the exit to be last. A barrier reached
-/// only on the taken branch does not order the back edge, so the refusal must
-/// stand. This is the check that makes the warning in the source comment
-/// enforceable rather than advisory.
+/// Even an identical scalar store is conservatively rejected because it races
+/// the exit load without another acquiring barrier.
 #[test]
-fn a_barrier_moved_inside_the_convergence_gate_is_still_refused() {
+fn write_after_barrier_invalidates_uniform_exit() {
     let mut program = dce_program();
     edit_loop_body(&mut program, |body| {
-        let barrier = body.pop().expect("body is not empty");
-        assert!(matches!(barrier, Node::Barrier { .. }));
-        let exit = body.pop().expect("body still holds the exit");
-        match exit {
-            Node::If {
-                cond,
-                mut then,
-                otherwise,
-            } => {
-                then.insert(0, barrier);
-                body.push(Node::If {
-                    cond,
-                    then,
-                    otherwise,
-                });
-            }
-            other => panic!("expected the exit to be an If, found {}", node_name(&other)),
-        }
+        let exit = exit_index(body);
+        body.insert(exit, Node::store("changed", Expr::u32(0), Expr::u32(0)));
     });
     assert_eq!(
         v055_count(&program),
         1,
-        "a barrier under the convergence condition must not satisfy the \
-         back-edge rule; messages were {:?}",
+        "dirty settled word must reactivate V055: {:?}",
         messages(&program)
     );
 }
 
-/// NEGATIVE CONTROL. Locks out: V055 accepting an exit that trails the barrier
-/// by any distance.
+/// A barrier on only one path cannot rescue a lane-dependent exit.
 ///
-/// Keeps every node, and only moves the exit to the very end. The program is
-/// otherwise identical to the clean one, including barrier count, which proves
-/// the rule is about ORDER and not about how many barriers a body contains.
+/// The back-edge guard credits only unconditional barriers, so this plausible
+/// workaround remains rejected.
 #[test]
-fn moving_the_exit_after_the_last_barrier_is_still_refused() {
+fn conditional_barrier_does_not_rescue_lane_dependent_exit() {
     let mut program = dce_program();
-    let clean_barriers = top_level_barriers(loop_body(&program));
     edit_loop_body(&mut program, |body| {
-        let barrier = body.pop().expect("body is not empty");
-        let exit = body.pop().expect("body still holds the exit");
-        body.push(barrier);
-        body.push(exit);
+        let exit = exit_index(body);
+        let Node::If { cond, .. } = &mut body[exit] else {
+            panic!("collective exit must remain an If");
+        };
+        *cond = Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0));
+        body.push(Node::if_then(
+            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            vec![Node::barrier()],
+        ));
     });
-    assert_eq!(
-        top_level_barriers(loop_body(&program)),
-        clean_barriers,
-        "the reordering must not change the barrier count"
-    );
     assert_eq!(
         v055_count(&program),
         1,
-        "an exit after the last barrier must be refused however the body is \
-         otherwise shaped; messages were {:?}",
+        "conditional barrier must not satisfy V055: {:?}",
         messages(&program)
     );
 }
 
-/// Pins the rule's CURRENT conservative reach, deliberately, and records the
-/// one refinement this suite argues for.
+/// An unconditional return after an acquiring barrier is collective by shape.
 ///
-/// Appends an unconditional `Return` after the trailing barrier. Every
-/// invocation reaches that exit together, so no sibling can be left mid
-/// iteration and the shape is harmless in fact. `V055` refuses it anyway,
-/// because it asks only whether an invocation CAN return after the last
-/// barrier, not whether the invocations agree about it. OBSERVED, and the
-/// reason this test exists rather than the accepting version it started as.
-///
-/// That over-refusal is a real cost and is accepted for now: refusing a safe
-/// program is recoverable in one node, while admitting an unsafe one corrupts
-/// answers silently, and proving uniformity is a genuine analysis rather than a
-/// predicate. The trailing barrier the DCE program carries is safe for exactly
-/// the reason this test's shape is safe (the exit condition is settled by the
-/// preceding barrier, so it is workgroup-uniform), which makes that program the
-/// motivating example for a uniformity carve-out.
-///
-/// If that carve-out ever lands, this test is the one that must change, and it
-/// should change to assert acceptance rather than being deleted, so the
-/// boundary stays described either way.
+/// This locks the refined boundary: V055 rejects disagreement between lanes,
+/// not harmless exits that every lane reaches together.
 #[test]
-fn even_a_uniform_exit_after_the_barrier_is_refused_today() {
+fn unconditional_exit_after_barrier_is_accepted() {
     let mut program = dce_program();
     edit_loop_body(&mut program, |body| body.push(Node::Return));
     assert_eq!(
         v055_count(&program),
-        1,
-        "V055 is conservative by design: it refuses any exit after the last \
-         barrier, including this uniform one; messages were {:?}",
+        0,
+        "uniform unconditional exit must be accepted: {:?}",
         messages(&program)
     );
+}
+
+fn pack_words(words: &[u32]) -> vyre_reference::value::Value {
+    vyre_reference::value::Value::from(vyre_primitives::wire::pack_u32_slice(words))
+}
+
+fn decode_words(value: &vyre_reference::value::Value) -> Vec<u32> {
+    value
+        .to_bytes()
+        .chunks_exact(4)
+        .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("four-byte u32 output")))
+        .collect()
+}
+
+fn execute_single_node_dce(reversed: bool) -> Vec<Vec<u32>> {
+    let program = build_dce_bfs_program(ProgramGraphShape::new(1, 0), 8);
+    let inputs = vec![
+        pack_words(&[0]),
+        pack_words(&[0, 0]),
+        pack_words(&[0]),
+        pack_words(&[0]),
+        pack_words(&[0]),
+        pack_words(&[1]),
+        pack_words(&[0]),
+        pack_words(&[0]),
+        pack_words(&[0]),
+    ];
+    let outputs = if reversed {
+        vyre_reference::reference_eval_lane_reversed(&program, &inputs)
+    } else {
+        vyre_reference::reference_eval(&program, &inputs)
+    }
+    .expect("Fix: the reference interpreter must execute the DCE fixpoint");
+
+    ["frontier_out", "changed", "converged"]
+        .iter()
+        .map(|name| {
+            let index = vyre_reference::output_index(&program, name)
+                .unwrap_or_else(|| panic!("Fix: DCE output `{name}` must remain declared"));
+            decode_words(&outputs[index])
+        })
+        .collect()
+}
+
+/// Removing the trailing barrier must preserve the production fixpoint result.
+///
+/// A one-node closure converges on its first pass. Forward and reversed lane
+/// schedules must both keep the seeded frontier, report no change, and publish
+/// convergence. This executes the real emitted Program rather than only
+/// inspecting its validation shape.
+#[test]
+fn barrier_elision_preserves_exact_dce_fixpoint_execution() {
+    let expected = vec![vec![1], vec![0], vec![1]];
+    assert_eq!(execute_single_node_dce(false), expected);
+    assert_eq!(execute_single_node_dce(true), expected);
 }

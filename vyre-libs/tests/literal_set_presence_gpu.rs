@@ -3,7 +3,7 @@
 //! 1. CORRECTNESS (the soundness gate): the GPU presence bitmap must mark EXACTLY
 //!    the set of pattern ids the CPU reference scan reports, no missed pattern
 //!    (recall) and no fabricated pattern (precision). Runs on whatever the wgpu
-//!    backend resolves to (the RTX 5090 here); skips cleanly if no GPU.
+//!    backend resolves to; missing GPU configuration fails loudly.
 //! 2. THROUGHPUT: on a match-DENSE haystack (the production phase-1 regime, ~1 hit per
 //!    few dozen bytes), compare the match-triple `scan` (atomic-append per hit +
 //!    big readback) against `scan_presence` (one idempotent atomic-OR bit per hit,
@@ -13,8 +13,8 @@
 //! Run:
 //!   cargo test -p vyre-libs --test literal_set_presence_gpu --release -- --nocapture
 
-use vyre_driver_wgpu::WgpuBackend;
 use vyre::scan::GpuLiteralSet;
+use vyre_driver_wgpu as _;
 
 /// Dense, consumer-scale literal set: short high-frequency anchors that fire all over
 /// source text, plus realistic credential prefixes.
@@ -68,13 +68,6 @@ fn presence_bit(bitmap: &[u32], pattern_id: u32) -> bool {
 
 #[test]
 fn presence_bitmap_matches_reference_pattern_set_and_is_faster_dense() {
-    let backend = match WgpuBackend::shared() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("no wgpu backend ({e}); skipping GPU presence test");
-            return;
-        }
-    };
     let matcher = GpuLiteralSet::compile(LITERALS);
     let n_patterns = LITERALS.len() as u32;
 
@@ -82,10 +75,10 @@ fn presence_bitmap_matches_reference_pattern_set_and_is_faster_dense() {
     let probe = dense_haystack(64 * 1024);
     let mut expected = [false; 64];
     for m in matcher.reference_scan(&probe) {
-        expected[m.pattern_id as usize] = true;
+        expected[m.tag as usize] = true;
     }
     let bitmap = matcher
-        .scan_presence(backend.as_ref(), &probe)
+        .scan_presence("wgpu", &probe)
         .expect("gpu presence scan");
     for pid in 0..n_patterns {
         let got = presence_bit(&bitmap, pid);
@@ -113,19 +106,19 @@ fn presence_bitmap_matches_reference_pattern_set_and_is_faster_dense() {
     let max_matches: u32 = 4_000_000;
 
     // Warm up shader compile / first-dispatch init.
-    let _ = matcher.scan(backend.as_ref(), &big[..4096], 64);
-    let _ = matcher.scan_presence(backend.as_ref(), &big[..4096]);
+    let _ = matcher.scan("wgpu", &big[..4096], 64);
+    let _ = matcher.scan_presence("wgpu", &big[..4096]);
 
     let t = std::time::Instant::now();
     let triples = matcher
-        .scan(backend.as_ref(), &big, max_matches)
+        .scan("wgpu", &big, max_matches)
         .expect("gpu triple scan");
     let scan_ms = t.elapsed().as_secs_f64() * 1000.0;
     let scan_mbps = mb / (scan_ms / 1e3);
 
     let t = std::time::Instant::now();
     let presence = matcher
-        .scan_presence(backend.as_ref(), &big)
+        .scan_presence("wgpu", &big)
         .expect("gpu presence scan");
     let presence_ms = t.elapsed().as_secs_f64() * 1000.0;
     let presence_mbps = mb / (presence_ms / 1e3);

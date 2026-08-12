@@ -6,7 +6,10 @@
 #![cfg(all(feature = "math-linalg", feature = "nn-attention", feature = "nn-norm",))]
 
 use vyre_libs::math::linalg::{Matmul, MatmulTiled};
-use vyre_libs::nn::{Attention, LayerNorm, Softmax};
+use vyre_libs::nn::{
+    attention::{Attention, Softmax},
+    norm::LayerNorm,
+};
 use vyre_libs::tensor_ref::{TensorRef, TensorRefError};
 
 #[test]

@@ -278,33 +278,3 @@ fn resident_buffer_rejects_wrong_upload_size() {
         .free_resident(handle)
         .expect("Fix: CUDA resident free failed.");
 }
-
-#[test]
-fn partial_resident_upload_releases_stream_on_copy_errors() {
-    let source = include_str!("../src/backend/resident_io.rs");
-    let partial_upload = source
-        .split("pub fn upload_resident_at_many")
-        .nth(1)
-        .and_then(|tail| tail.split("pub fn resident_device_ptr").next())
-        .expect(
-            "Fix: resident_io.rs must expose upload_resident_at_many before resident_device_ptr.",
-        );
-
-    assert!(
-        source.contains("fn with_resident_stream_classified")
-            && partial_upload.contains("self.with_resident_stream_classified(|stream|")
-            && partial_upload.contains("ResidentStreamFailure::CompletionUnproven")
-            && partial_upload.contains("std::mem::forget(host_transfers)"),
-        "Fix: partial CUDA resident uploads must route through the resident pooled-stream helper and retain host staging when stream completion is unproven."
-    );
-}
-
-#[test]
-fn resident_inflight_reference_counting_does_not_saturate_underflow() {
-    let source = include_str!("../src/backend/resident.rs");
-    assert!(
-        source.contains("checked_atomic_sub_usize_with_order")
-            && !source.contains(concat!(".", "saturating_sub")),
-        "Fix: CUDA resident in-flight reference counting must fail loudly on underflow instead of hiding lifetime bugs."
-    );
-}

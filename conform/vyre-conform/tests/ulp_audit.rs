@@ -34,7 +34,7 @@ type FixtureFn = fn() -> FixtureCases;
 
 const TRANSCENDENTAL_F32_ULP_BUDGET: u32 = 128;
 
-#[path = "__split/ulp_audit_input_plan.rs"]
+#[path = "contract_cases/ulp_audit_input_plan.rs"]
 mod ulp_audit_input_plan;
 
 pub(crate) use ulp_audit_input_plan::*;
@@ -301,15 +301,15 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
     value.is_finite() && value.abs() > f32::MIN_POSITIVE && value.abs() < f32::MAX
 }
 
-fn build_registered_backend() -> &'static vyre::BackendRegistration {
+fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
     force_link_backend_inventory();
     let selected = std::env::var("VYRE_BACKEND")
         .ok()
         .filter(|value| !value.trim().is_empty());
-    vyre::backend::registered_backends()
+    vyre_driver::backend::registered_backends()
         .iter()
         .find(|registration| {
-            vyre::backend::backend_dispatches(registration.id)
+            vyre_driver::backend::backend_dispatches(registration.id)
                 && selected
                     .as_deref()
                     .is_none_or(|backend| registration.id == backend)
@@ -330,7 +330,7 @@ fn force_link_backend_inventory() {
 // ULP audit dispatches every registered op through a real dispatch-capable
 // backend. Missing concrete GPU drivers must fail loudly instead of compiling
 // this module out.
-mod ulp_audit_part1 {
+mod ulp_audit_release_per_op_f32_ulp_audit {
 
-    include!("__split/ulp_audit_part1.rs");
+    include!("contract_cases/ulp_audit__release_per_op_f32_ulp_audit.rs");
 }

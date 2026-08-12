@@ -31,15 +31,15 @@ fn cpu_ref(src: &[u32], indices: &[u32], dst_len: usize) -> Vec<u32> {
 }
 
 adversarial_binary_vec_usize_cases! {
-    test_reduce_scatter_adv_0: vec![0u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-0: Exact bit output mismatch";
-    test_reduce_scatter_adv_1: vec![0u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-1: Exact bit output mismatch";
-    test_reduce_scatter_adv_2: vec![0u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-2: Exact bit output mismatch";
-    test_reduce_scatter_adv_3: vec![0u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-3: Exact bit output mismatch";
-    test_reduce_scatter_adv_4: vec![0u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-4: Exact bit output mismatch";
-    test_reduce_scatter_adv_5: vec![0u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-5: Exact bit output mismatch";
-    test_reduce_scatter_adv_6: vec![0u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-6: Exact bit output mismatch";
-    test_reduce_scatter_adv_7: vec![0u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-7: Exact bit output mismatch";
-    test_reduce_scatter_adv_8: vec![0u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-8: Exact bit output mismatch";
+    test_reduce_scatter_adv_0: vec![0u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-0: Exact bit output mismatch";
+    test_reduce_scatter_adv_1: vec![0u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-1: Exact bit output mismatch";
+    test_reduce_scatter_adv_2: vec![0u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-2: Exact bit output mismatch";
+    test_reduce_scatter_adv_3: vec![0u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-3: Exact bit output mismatch";
+    test_reduce_scatter_adv_4: vec![0u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-4: Exact bit output mismatch";
+    test_reduce_scatter_adv_5: vec![0u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-5: Exact bit output mismatch";
+    test_reduce_scatter_adv_6: vec![0u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-6: Exact bit output mismatch";
+    test_reduce_scatter_adv_7: vec![0u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-7: Exact bit output mismatch";
+    test_reduce_scatter_adv_8: vec![0u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-8: Exact bit output mismatch";
     test_reduce_scatter_adv_9: vec![0u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-9: Exact bit output mismatch";
     test_reduce_scatter_adv_10: vec![0u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-10: Exact bit output mismatch";
     test_reduce_scatter_adv_11: vec![0u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-11: Exact bit output mismatch";
@@ -76,15 +76,15 @@ adversarial_binary_vec_usize_cases! {
     test_reduce_scatter_adv_42: vec![0u32; 0], vec![2143289344u32; 1024], 1024usize => vec![0; 1024], "FINDING-ADV-REDUCE-SCATTER-42: Exact bit output mismatch";
     test_reduce_scatter_adv_43: vec![0u32; 0], vec![2143289344u32; 1024], 1024usize => vec![0; 1024], "FINDING-ADV-REDUCE-SCATTER-43: Exact bit output mismatch";
     test_reduce_scatter_adv_44: vec![0u32; 0], vec![2143289344u32; 1024], 1024usize => vec![0; 1024], "FINDING-ADV-REDUCE-SCATTER-44: Exact bit output mismatch";
-    test_reduce_scatter_adv_45: vec![1u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-45: Exact bit output mismatch";
-    test_reduce_scatter_adv_46: vec![1u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-46: Exact bit output mismatch";
-    test_reduce_scatter_adv_47: vec![1u32; 0], vec![0u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-47: Exact bit output mismatch";
-    test_reduce_scatter_adv_48: vec![1u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-48: Exact bit output mismatch";
-    test_reduce_scatter_adv_49: vec![1u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-49: Exact bit output mismatch";
-    test_reduce_scatter_adv_50: vec![1u32; 0], vec![4294967295u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-50: Exact bit output mismatch";
-    test_reduce_scatter_adv_51: vec![1u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-51: Exact bit output mismatch";
-    test_reduce_scatter_adv_52: vec![1u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-52: Exact bit output mismatch";
-    test_reduce_scatter_adv_53: vec![1u32; 0], vec![2143289344u32; 0], 0usize => vec![], "FINDING-ADV-REDUCE-SCATTER-53: Exact bit output mismatch";
+    test_reduce_scatter_adv_45: vec![1u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-45: Exact bit output mismatch";
+    test_reduce_scatter_adv_46: vec![1u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-46: Exact bit output mismatch";
+    test_reduce_scatter_adv_47: vec![1u32; 0], vec![0u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-47: Exact bit output mismatch";
+    test_reduce_scatter_adv_48: vec![1u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-48: Exact bit output mismatch";
+    test_reduce_scatter_adv_49: vec![1u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-49: Exact bit output mismatch";
+    test_reduce_scatter_adv_50: vec![1u32; 0], vec![4294967295u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-50: Exact bit output mismatch";
+    test_reduce_scatter_adv_51: vec![1u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-51: Exact bit output mismatch";
+    test_reduce_scatter_adv_52: vec![1u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-52: Exact bit output mismatch";
+    test_reduce_scatter_adv_53: vec![1u32; 0], vec![2143289344u32; 0], 0usize => Vec::<u32>::new(), "FINDING-ADV-REDUCE-SCATTER-53: Exact bit output mismatch";
     test_reduce_scatter_adv_54: vec![1u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-54: Exact bit output mismatch";
     test_reduce_scatter_adv_55: vec![1u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-55: Exact bit output mismatch";
     test_reduce_scatter_adv_56: vec![1u32; 0], vec![0u32; 1], 1usize => vec![0], "FINDING-ADV-REDUCE-SCATTER-56: Exact bit output mismatch";

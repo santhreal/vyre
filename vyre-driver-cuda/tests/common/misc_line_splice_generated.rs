@@ -1,5 +1,5 @@
 use crate::common::{bytes_u32, with_live_backend};
-use vyre::DispatchConfig;
+use vyre_driver::DispatchConfig;
 use vyre_primitives::parsing::line_splice_classify::{
     line_splice_classify_dispatch_grid, line_splice_classify_u8, reference_line_splice_classify,
 };

@@ -2,10 +2,9 @@
 
 #![cfg(feature = "matching")]
 #![allow(deprecated)]
-use vyre_foundation::match_result::Match;
-use vyre::scan::{
-    shannon_entropy_bits_per_byte, try_reference_post_process, GpuLiteralSet, Pipeline,
-    PostProcessedMatch,
+use vyre_foundation::match_result::ByteRange;
+use vyre_libs::scan::{
+    shannon_entropy_bits_per_byte, try_reference_post_process, PostProcessError,
 };
 
 #[test]
@@ -17,7 +16,7 @@ fn empty_matches_yields_empty_output() {
 
 #[test]
 fn invalid_match_range_is_an_error_not_silent_drop() {
-    let matches = [Match::new(0, 0, 100)];
+    let matches = [ByteRange::new(0, 0, 100)];
     let error = try_reference_post_process(&matches, b"hi")
         .expect_err("Fix: corrupt hit ranges must surface a contract error");
     let message = error.to_string();
@@ -29,13 +28,10 @@ fn invalid_match_range_is_an_error_not_silent_drop() {
 
 #[test]
 fn corrupt_match_range_uses_result_error_contract() {
-    let matches = [Match::new(0, 0, 100)];
+    let matches = [ByteRange::new(0, 0, 100)];
     let error = try_reference_post_process(&matches, b"hi")
         .expect_err("Fix: corrupt hit ranges must surface a Result error");
-    assert!(matches!(
-        error,
-        vyre::scan::PostProcessError::InvalidRange { .. }
-    ));
+    assert!(matches!(error, PostProcessError::InvalidRange { .. }));
 }
 
 #[test]
@@ -57,9 +53,9 @@ fn entropy_eight_for_uniform_byte_distribution() {
 #[test]
 fn dedup_collapses_same_pid_overlap_in_post_process() {
     let matches = [
-        Match::new(0, 0, 5),
-        Match::new(0, 3, 7),
-        Match::new(1, 10, 12),
+        ByteRange::new(0, 0, 5),
+        ByteRange::new(0, 3, 7),
+        ByteRange::new(1, 10, 12),
     ];
     let haystack = b"abcdefghijkl";
     let out = try_reference_post_process(&matches, haystack)
@@ -77,7 +73,7 @@ fn dedup_collapses_same_pid_overlap_in_post_process() {
 #[test]
 fn confidence_increases_with_high_entropy_long_input() {
     let high_input: Vec<u8> = (0..16).collect();
-    let m_long = Match::new(0, 0, 16);
+    let m_long = ByteRange::new(0, 0, 16);
     let out = try_reference_post_process(&[m_long], &high_input)
         .expect("Fix: high-entropy fixture range must be valid");
     assert!(
@@ -86,7 +82,7 @@ fn confidence_increases_with_high_entropy_long_input() {
     );
 
     let low_input = b"aaaa";
-    let m_short = Match::new(0, 0, 4);
+    let m_short = ByteRange::new(0, 0, 4);
     let out_low = try_reference_post_process(&[m_short], low_input)
         .expect("Fix: low-entropy fixture range must be valid");
     assert!((out_low[0].confidence - 0.0).abs() < 1e-6);
@@ -95,9 +91,9 @@ fn confidence_increases_with_high_entropy_long_input() {
 #[test]
 fn output_is_sorted_by_pid_then_start_then_end() {
     let matches = [
-        Match::new(2, 5, 7),
-        Match::new(0, 1, 4),
-        Match::new(1, 0, 3),
+        ByteRange::new(2, 5, 7),
+        ByteRange::new(0, 1, 4),
+        ByteRange::new(1, 0, 3),
     ];
     let haystack = b"abcdefghij";
     let out = try_reference_post_process(&matches, haystack)
@@ -108,33 +104,4 @@ fn output_is_sorted_by_pid_then_start_then_end() {
             "Fix: post_process output must be sorted by (pid, start, end)"
         );
     }
-}
-
-#[test]
-fn pipeline_with_literal_set_reference_scan_processed() {
-    let engine = GpuLiteralSet::compile(&[b"AKIA".as_slice()]);
-    let pipe = Pipeline::new(engine);
-    let processed = pipe.reference_scan_processed(b"foo AKIA bar AKIA");
-    assert_eq!(processed.len(), 2);
-    for m in &processed {
-        assert_eq!(m.pattern_id, 0);
-        assert_eq!(m.end - m.start, 4);
-    }
-}
-
-#[test]
-fn pipeline_post_process_is_swappable() {
-    fn passthrough(
-        _: &[Match],
-        _: &[u8],
-    ) -> Result<Vec<PostProcessedMatch>, vyre::scan::PostProcessError> {
-        Ok(Vec::new())
-    }
-    let pipe_default = Pipeline::new(GpuLiteralSet::compile(&[b"x".as_slice()]));
-    let pipe_passthru =
-        Pipeline::with_post_process(GpuLiteralSet::compile(&[b"x".as_slice()]), passthrough);
-    let a = pipe_default.reference_scan_processed(b"xyx");
-    let b = pipe_passthru.reference_scan_processed(b"xyx");
-    assert!(!a.is_empty(), "Fix: default post_process must keep matches");
-    assert!(b.is_empty(), "Fix: custom post_process must be honoured");
 }

@@ -24,13 +24,11 @@ pub mod wire;
 /// the wire format and persistent cache layers.
 pub mod output_set;
 
-/// Reusable on-wire envelope: magic + version + length-prefixed
-/// sections / word arrays. Higher-layer types (`CompiledDfa` in
-/// vyre-primitives, `GpuLiteralSet` / `RulePipeline` in vyre-libs,
-/// downstream consumer-side caches compose this primitive
-/// instead of re-implementing magic / version / truncation handling.
-/// One implementation, one set of typed errors, one suite of round-trip
-/// tests  -  every consumer adopts it and its fixes propagate.
+/// Reusable on-wire envelope for magic, version, length-prefixed sections,
+/// and word arrays. Higher-layer types such as `CompiledDfa` in
+/// `vyre-primitives`, `GpuLiteralSet` in `vyre-libs`, and scan databases in
+/// `vyre-scan` compose this primitive instead of reimplementing framing,
+/// version, and truncation handling.
 pub mod envelope;
 pub use envelope::{EnvelopeError, WireReader, WireWriter};
 

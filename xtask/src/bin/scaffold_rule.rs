@@ -1,8 +1,8 @@
-//! Scaffold a new vyre Tier-B rule TOML at `rules/<category>/<name>.toml`.
+//! Scaffold one launch-rule contract and its truth-test directories.
 //!
-//! Run via `cargo xtaskbin scaffold_rule -- <category> <name>`.
-//! The binary writes a starter file that already conforms to
-//! `rules/SCHEMA.md` so the rule loader accepts it on first parse.
+//! Run via `cargo xtaskbin scaffold_rule -- <slug>`.
+//! The command writes a contract and positive, negative, evasion, cross-file,
+//! CVE replay, property, differential, and end-to-end test placeholders.
 
 use std::fs;
 use std::path::Path;
@@ -26,12 +26,59 @@ fn write_file(path: &Path, contents: &str) {
     }
 }
 
+fn print_help() {
+    println!("Scaffold one launch-rule contract and truth-test suite.");
+    println!();
+    println!("Usage: scaffold_rule <slug>");
+    println!();
+    println!("Arguments:");
+    println!("  <slug>  launch-rule directory name");
+    println!();
+    println!("Exit codes:");
+    println!("  0  scaffold created");
+    println!("  1  input or filesystem failure");
+    println!("  2  command-line arguments are invalid");
+}
+
+fn is_valid_slug(slug: &str) -> bool {
+    let bytes = slug.as_bytes();
+    !bytes.is_empty()
+        && bytes.first().is_some_and(u8::is_ascii_alphanumeric)
+        && bytes.last().is_some_and(u8::is_ascii_alphanumeric)
+        && bytes
+            .iter()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let slug = match args.next() {
-        Some(slug) if !slug.trim().is_empty() => slug,
-        _ => fatal("expected rule slug; pass one launch-rule slug"),
+        Some(arg) if matches!(arg.as_str(), "-h" | "--help") => {
+            if let Some(extra) = args.next() {
+                eprintln!(
+                    "Fix: unexpected argument `{extra}` after `--help`. Use `scaffold_rule --help`."
+                );
+                std::process::exit(2);
+            }
+            print_help();
+            return;
+        }
+        Some(slug) if is_valid_slug(&slug) => slug,
+        Some(slug) => {
+            eprintln!(
+                "Fix: invalid rule slug `{slug}`. Use lowercase letters, digits, and interior hyphens."
+            );
+            std::process::exit(2);
+        }
+        None => {
+            eprintln!("Fix: expected rule slug. Use `scaffold_rule --help`.");
+            std::process::exit(2);
+        }
     };
+    if let Some(extra) = args.next() {
+        eprintln!("Fix: unexpected argument `{extra}`. Use `scaffold_rule --help`.");
+        std::process::exit(2);
+    }
 
     let launch_dir = Path::new("../../../../../rules/launch").join(&slug);
     create_dir(&launch_dir);

@@ -1,8 +1,8 @@
 //! WGPU parity coverage for the shared literal-set matcher.
 
 #![allow(deprecated)]
-use vyre::scan::literal_set::{GpuLiteralSet, Match};
-use vyre_driver_wgpu::WgpuBackend;
+use vyre::scan::literal_set::{ByteRange, GpuLiteralSet};
+use vyre_driver_wgpu as _;
 
 #[test]
 fn literal_set_parity_abc() {
@@ -12,10 +12,9 @@ fn literal_set_parity_abc() {
 
     let reference_matches = engine.reference_scan(haystack);
     assert_eq!(reference_matches.len(), 2);
-    assert_eq!(reference_matches[0], Match::new(0, 1, 4));
-    assert_eq!(reference_matches[1], Match::new(1, 2, 4));
+    assert_eq!(reference_matches[0], ByteRange::new(0, 1, 4));
+    assert_eq!(reference_matches[1], ByteRange::new(1, 2, 4));
 
-    let backend = WgpuBackend::new().expect("Fix: literal_set parity requires a live GPU");
-    let gpu_matches = engine.scan(&backend, haystack, 10_000).unwrap();
+    let gpu_matches = engine.scan("wgpu", haystack, 10_000).unwrap();
     assert_eq!(gpu_matches, reference_matches);
 }

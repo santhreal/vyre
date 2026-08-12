@@ -27,7 +27,9 @@ fn entry(id: &'static str) -> &'static OpEntry {
 
 fn assert_gpu_matches_fixture(id: &'static str) {
     let entry = entry(id);
-    let program = (entry.build)();
+    let program = entry
+        .program()
+        .unwrap_or_else(|| panic!("Fix: fixture-bearing operation `{id}` must provide a program"));
     let config = dispatch_config_for_fixture(&program);
     let inputs = (entry.test_inputs.expect("Fix: test_inputs required"))();
     let expected = (entry

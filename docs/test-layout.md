@@ -1,5 +1,7 @@
 # Test layout convention
 
+Applies to Vyre 0.7.2.
+
 Tests in the vyre workspace live in exactly one of three places.
 
 ## Unit tests
@@ -8,7 +10,7 @@ Inside the source file they test, in a `#[cfg(test)] mod tests` block.
 One module per file. Import `super::*`. No external crate deps.
 
 ```rust
-// vyre-core/src/ir/validate/typecheck.rs
+// vyre-foundation/src/validate/typecheck.rs
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -22,13 +24,12 @@ setup, and assert the postcondition directly.
 
 ## Integration tests
 
-Under `<crate>/tests/`. One file per feature area, mirroring the source
-module tree. A top-level module file (`vyre-core/tests/ops.rs`) declares the
-subtree via `mod ops { mod primitive { … } }`.
+Under `<crate>/tests/`. Use one integration-test file per observable feature
+area. The file exercises the crate through its public boundary.
 
 ```
-vyre-core/tests/ops.rs                       # mirror root for src/ops/
-vyre-core/tests/ops/primitive/math/test_add.rs
+vyre/tests/artifact_workflow.rs
+vyre-runtime/tests/artifact_admission_contract.rs
 ```
 
 Integration tests prove the **contract of a module from outside the
@@ -37,8 +38,8 @@ GPU, and they encode golden-vector / KAT-style assertions.
 
 ## Adversarial / property / fuzz
 
-- Adversarial (`tests/adversarial/…`): hand-written corner cases designed
-  to fail the engine. Every op category ought to have one.
+- Adversarial (`<crate>/tests/<behavior>.rs`): hand-written boundary cases
+  designed to fail the broken behavior. Each affected contract needs one.
 - Property (`proptest`): random inputs, invariants as assertions. Live
   alongside the unit/integration tests that own the function under test.
 - Fuzz (`<crate>/fuzz/`): `cargo-fuzz` targets for wire-format and other
@@ -51,10 +52,10 @@ entries in that crate's `Cargo.toml`. Bench baselines are committed at
 ## What NOT to do
 
 - Don't mix unit and integration tests in `tests/`. `tests/` is external.
-- Don't invent new top-level test locations. If you need a new area, add
-  a `mod` line to the existing mirror file (e.g. `vyre-core/tests/ops.rs`).
-- Don't rely on `[[test]]` entries in `Cargo.toml` unless the test needs
-  a bespoke entrypoint. The mirror-module approach keeps all
-  discoverability in one place.
+- Don't invent new top-level test locations. Add the test to the owning
+  crate's `tests/` directory unless an existing inline test must change with
+  the contract.
+- Don't add `[[test]]` entries in `Cargo.toml` unless the test needs a bespoke
+  entrypoint.
 
 Covers ARCH-019 and NEW-TEST-001 scope expectations.

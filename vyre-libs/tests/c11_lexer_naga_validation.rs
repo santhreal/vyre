@@ -14,7 +14,7 @@ fn c11_lexer_naga_validates() {
         "out_counts",
         256,
     );
-    let lk = vyre_lower::lower_for_emit(&prog).expect("c11_lexer must lower to KernelDescriptor");
+    let lk = vyre_lower::lower_verified(&prog).expect("c11_lexer must lower to KernelDescriptor");
     let module = vyre_emit_naga::emit(&lk.descriptor).expect("c11_lexer must emit to Naga module");
     let res = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),

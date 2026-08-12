@@ -95,26 +95,6 @@ fn dense_matvec_ir_overwrites_dirty_output_words() {
     );
 }
 
-#[test]
-fn dense_matvec_source_contracts_stay_gpu_oriented() {
-    let source = include_str!("../src/bitset/four_russians.rs");
-    for required in [
-        DENSE_MATVEC_OP_ID,
-        "frontier_words_for_byte_tiles",
-        "dense_matvec_byte_lut",
-        "four_russians_dense_matvec_byte_lut",
-        "dense_matvec_cpu_ref",
-        "Expr::rem",
-        "Expr::shr",
-        "Expr::bitor",
-    ] {
-        assert!(
-            source.contains(required),
-            "Fix: dense Four-Russians primitive must retain required implementation marker `{required}`."
-        );
-    }
-}
-
 fn generated_columns(tile_count: u32, dst_words: u32, seed: u32) -> Vec<u32> {
     let len = tile_count as usize * BYTE_TILE_WIDTH as usize * dst_words as usize;
     (0..len)
