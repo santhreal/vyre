@@ -55,3 +55,38 @@ fn workgroup_scratch_remains_internal_to_single_program_graph_nodes() {
         .to_wire()
         .expect("host-visible graph boundary must encode");
 }
+
+/// WHY: target compilation resolves every lowered binding through the node ABI.
+/// A single-Program graph must therefore record invocation/retained buffers as
+/// inputs and caller-visible buffers as outputs, not only create unconnected values.
+#[test]
+fn single_program_graph_connects_every_host_visible_buffer_to_the_node_abi() {
+    let program = Program::from_raw_parts(
+        vec![
+            BufferDecl::read("input", 0, DataType::U32).with_count(4),
+            BufferDecl::read_write("state", 1, DataType::U32).with_count(4),
+            BufferDecl::output("result", 2, DataType::U32).with_count(4),
+            BufferDecl::workgroup("scratch", 4, DataType::U32),
+        ],
+        [4, 1, 1],
+        Vec::new(),
+    );
+
+    let graph = ProgramGraph::from_program("main", program).expect("program graph must validate");
+    let node = &graph.nodes()[0];
+    assert_eq!(
+        node.inputs
+            .iter()
+            .map(|input| input.buffer.as_str())
+            .collect::<Vec<_>>(),
+        ["input", "state"]
+    );
+    assert_eq!(
+        node.output_ports
+            .iter()
+            .map(|output| output.buffer.as_str())
+            .collect::<Vec<_>>(),
+        ["result"]
+    );
+    assert_eq!(node.outputs.len(), 1);
+}

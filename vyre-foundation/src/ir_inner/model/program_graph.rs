@@ -230,29 +230,41 @@ impl ProgramGraph {
         program: Program,
     ) -> Result<Self, ProgramGraphError> {
         let mut graph = Self::new();
+        let mut inputs = Vec::new();
+        let mut outputs = Vec::new();
         for buffer in program.buffers() {
             if buffer.access() == BufferAccess::Workgroup {
                 continue;
             }
-            graph.add_external_value(
-                buffer.name(),
-                ValueContract {
-                    dtype: buffer.element(),
-                    shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
-                    access: buffer.access(),
-                    lifetime: if buffer.is_output() {
-                        ValueLifetime::Output
-                    } else {
-                        match buffer.access() {
-                            BufferAccess::WriteOnly => ValueLifetime::Output,
-                            BufferAccess::ReadWrite => ValueLifetime::Retained,
-                            _ => ValueLifetime::Invocation,
-                        }
-                    },
+            let contract = ValueContract {
+                dtype: buffer.element(),
+                shape: vec![ShapeDim::Known(u64::from(buffer.count()))],
+                access: buffer.access(),
+                lifetime: if buffer.is_output() || buffer.access() == BufferAccess::WriteOnly {
+                    ValueLifetime::Output
+                } else if buffer.access() == BufferAccess::ReadWrite {
+                    ValueLifetime::Retained
+                } else {
+                    ValueLifetime::Invocation
                 },
-            )?;
+            };
+            if contract.lifetime == ValueLifetime::Output {
+                outputs.push(GraphOutput {
+                    buffer: buffer.name().to_string(),
+                    name: buffer.name().to_string(),
+                    contract,
+                    retained_successor_of: None,
+                });
+            } else {
+                let value = graph.add_external_value(buffer.name(), contract.clone())?;
+                inputs.push(GraphInput {
+                    buffer: buffer.name().to_string(),
+                    value,
+                    contract,
+                });
+            }
         }
-        graph.add_node(node_name, program, Vec::new(), Vec::new())?;
+        graph.add_node(node_name, program, inputs, outputs)?;
         Ok(graph)
     }
 

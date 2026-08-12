@@ -299,6 +299,11 @@ pub(crate) fn dispatch_registered(
     config: &DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    if registration.reference_oracle {
+        return registration
+            .acquire()?
+            .dispatch_borrowed(program, inputs, config);
+    }
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     session
@@ -313,6 +318,11 @@ pub(crate) fn dispatch_registered_timed(
     config: &DispatchConfig,
 ) -> Result<TimedDispatchResult, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    if registration.reference_oracle {
+        return registration
+            .acquire()?
+            .dispatch_borrowed_timed(program, inputs, config);
+    }
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     session
@@ -321,25 +331,42 @@ pub(crate) fn dispatch_registered_timed(
 }
 
 pub(crate) struct ArtifactPendingDispatch {
-    session: ScanArtifactSession,
-    submission: Box<dyn Submission>,
+    state: ArtifactPendingState,
+}
+
+enum ArtifactPendingState {
+    Artifact {
+        session: ScanArtifactSession,
+        submission: Box<dyn Submission>,
+    },
+    Reference(Vec<Vec<u8>>),
 }
 
 impl ArtifactPendingDispatch {
     #[must_use]
     pub(crate) fn is_ready(&self) -> bool {
-        self.submission.is_ready()
+        match &self.state {
+            ArtifactPendingState::Artifact { submission, .. } => submission.is_ready(),
+            ArtifactPendingState::Reference(_) => true,
+        }
     }
 
     pub(crate) fn await_result(self) -> Result<Vec<Vec<u8>>, BackendError> {
-        let completion = self
-            .submission
-            .wait()
-            .map_err(|error| BackendError::new(error.to_string()))?;
-        self.session
-            .session
-            .ordered_outputs(&completion)
-            .map_err(|error| BackendError::new(error.to_string()))
+        match self.state {
+            ArtifactPendingState::Artifact {
+                session,
+                submission,
+            } => {
+                let completion = submission
+                    .wait()
+                    .map_err(|error| BackendError::new(error.to_string()))?;
+                session
+                    .session
+                    .ordered_outputs(&completion)
+                    .map_err(|error| BackendError::new(error.to_string()))
+            }
+            ArtifactPendingState::Reference(outputs) => Ok(outputs),
+        }
     }
 }
 
@@ -350,6 +377,12 @@ pub(crate) fn dispatch_registered_async(
     config: &DispatchConfig,
 ) -> Result<ArtifactPendingDispatch, BackendError> {
     let registration = vyre_driver::backend::backend_registration(backend_id)?;
+    if registration.reference_oracle {
+        let outputs = registration.acquire()?.dispatch(program, inputs, config)?;
+        return Ok(ArtifactPendingDispatch {
+            state: ArtifactPendingState::Reference(outputs),
+        });
+    }
     let session = ScanArtifactSession::compile(program, registration)
         .map_err(|error| BackendError::new(error.to_string()))?;
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
@@ -363,7 +396,9 @@ pub(crate) fn dispatch_registered_async(
         .submit(bindings)
         .map_err(|error| BackendError::new(error.to_string()))?;
     Ok(ArtifactPendingDispatch {
-        session,
-        submission,
+        state: ArtifactPendingState::Artifact {
+            session,
+            submission,
+        },
     })
 }
