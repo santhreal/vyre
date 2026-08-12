@@ -32,6 +32,9 @@ use vyre_foundation::ir::{BufferAccess, Expr, Ident, Node, Program};
 /// hoisted to sibling positions immediately before their enclosing
 /// Loop.
 pub fn apply_licm(program: &Program) -> Program {
+    if !program.stats().has_node_loop() {
+        return program.clone();
+    }
     // Names of buffers declared `ReadOnly`  -  Loads from these can
     // be hoisted because no Store inside the program writes to them.
     let read_only: FxHashSet<Ident> = program

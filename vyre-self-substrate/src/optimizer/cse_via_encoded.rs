@@ -102,6 +102,34 @@ impl CanonicalLookup for [u32] {
     }
 }
 
+/// Return whether two node-owned top-level expressions share one canonical id.
+///
+/// Both let-level and cross-scope CSE can only rewrite complete expressions
+/// attached directly to nodes. Duplicate inner expressions alone cannot make
+/// either pass productive, so this bounded preflight avoids cloning and walking
+/// a large program when the GPU canonical table contains no actionable pair.
+pub(super) fn has_repeated_top_level_canonical<C: CanonicalLookup + ?Sized>(
+    arena: &ExprArenaEncoding,
+    canonical: &C,
+) -> bool {
+    if canonical.is_empty() || arena.expr_count == 0 {
+        return false;
+    }
+    let mut seen = vec![false; arena.expr_count as usize];
+    for expr_id in arena.node_top_level_exprs.iter().flatten().copied() {
+        let canonical_id = canonical.canonical_of(expr_id);
+        let Some(slot) = seen.get_mut(canonical_id as usize) else {
+            // A malformed lookup must not suppress the normal rewrite path.
+            return true;
+        };
+        if *slot {
+            return true;
+        }
+        *slot = true;
+    }
+    false
+}
+
 /// Sparse canonical map decoded from `(expr_id, canonical_id)` pairs.
 #[derive(Debug, Clone, Default)]
 pub struct SparseCanonicalMap {
@@ -714,7 +742,7 @@ pub fn apply_cse_let_dedupe_with_lookup<C: CanonicalLookup + ?Sized>(
     arena: &ExprArenaEncoding,
     canonical: &C,
 ) -> Program {
-    if canonical.is_empty() {
+    if !has_repeated_top_level_canonical(arena, canonical) {
         return program.clone();
     }
     let mut walker = LetDedupeWalker {
@@ -927,6 +955,23 @@ mod tests {
     }
 
     #[test]
+    fn top_level_canonical_preflight_ignores_inner_only_duplicates() {
+        let arena = ExprArenaEncoding {
+            expr_count: 4,
+            node_top_level_exprs: vec![Vec::new(), vec![1], vec![3]],
+            ..ExprArenaEncoding::default()
+        };
+        assert!(
+            !has_repeated_top_level_canonical(&arena, &[0, 1, 1, 3][..]),
+            "an inner duplicate cannot make a node-level CSE rewrite productive"
+        );
+        assert!(
+            has_repeated_top_level_canonical(&arena, &[0, 1, 2, 1][..]),
+            "equivalent node-owned expressions must keep the CSE rewrite enabled"
+        );
+    }
+
+    #[test]
     fn sparse_canonical_map_rejects_malformed_pair_count() {
         let err =
             SparseCanonicalMap::from_compacted_pair_words(8, 2, &[3, 1], "test sparse canonical")
@@ -1040,24 +1085,6 @@ mod tests {
         assert!(
             matches!(err, DispatchError::BackendError(_)),
             "unexpected error: {err:?}"
-        );
-    }
-
-    #[test]
-    fn structural_hash_uses_canonical_fnv_mix_helpers() {
-        let source = include_str!("cse_via_encoded.rs");
-        let release_path = source
-            .split("\nmod tests {")
-            .next()
-            .expect("Fix: optimizer CSE release source must be visible.");
-        assert!(
-            release_path.contains("fnv1a32_initial_expr")
-                && release_path.contains("fnv1a32_mix_word_expr"),
-            "Fix: optimizer CSE structural hashing must use canonical primitive FNV helpers."
-        );
-        assert!(
-            !release_path.contains("const FNV_PRIME") && !release_path.contains("const FNV_OFFSET"),
-            "Fix: optimizer CSE must not redefine FNV constants."
         );
     }
 

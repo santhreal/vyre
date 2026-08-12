@@ -18,7 +18,7 @@ use std::sync::Arc;
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 
-use super::cse_via_encoded::CanonicalLookup;
+use super::cse_via_encoded::{has_repeated_top_level_canonical, CanonicalLookup};
 use super::expr_arena::ExprArenaEncoding;
 use super::expr_no_atomic;
 
@@ -40,7 +40,10 @@ pub fn apply_cross_scope_cse_with_lookup<C: CanonicalLookup + ?Sized>(
     arena: &ExprArenaEncoding,
     canonical: &C,
 ) -> Program {
-    if canonical.is_empty() || arena.expr_count == 0 {
+    if program.stats().node_count < 2 {
+        return program.clone();
+    }
+    if !has_repeated_top_level_canonical(arena, canonical) {
         return program.clone();
     }
     let body: Vec<Node> = match program.entry() {
