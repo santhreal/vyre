@@ -1,11 +1,8 @@
 # Optimization architecture
 
-Last verified: 2026-08-04
-
-This guide describes optimization placement for Vyre 0.7.2. The canonical
-control plane is [`optimization/README.md`](optimization/README.md). The root
-`BACKLOG.md` is the only execution queue. Older plans and benchmark reports are
-evidence, not ownership authorities.
+This guide defines optimization placement for Vyre 0.7.2. The canonical
+control-plane contract is [`optimization/README.md`](optimization/README.md).
+Benchmark reports are evidence, not ownership authorities.
 
 ## Two layers
 
@@ -124,14 +121,15 @@ command regenerates it.
 
 Use these sources in order:
 
-1. Root `BACKLOG.md` for active work.
-2. [`optimization/README.md`](optimization/README.md) for control-plane rules.
-3. [`optimization/OWNERSHIP.toml`](optimization/OWNERSHIP.toml) for lanes.
-4. [`optimization/OP_MATRIX.toml`](optimization/OP_MATRIX.toml) for operation
+1. [`optimization/README.md`](optimization/README.md) for the optimization
+   control-plane contract.
+2. [`optimization/OWNERSHIP.toml`](optimization/OWNERSHIP.toml) for ownership
+   boundaries.
+3. [`optimization/OP_MATRIX.toml`](optimization/OP_MATRIX.toml) for operation
    support.
-5. [`optimization/BENCH_TARGETS.toml`](optimization/BENCH_TARGETS.toml) for
+4. [`optimization/BENCH_TARGETS.toml`](optimization/BENCH_TARGETS.toml) for
    benchmark targets.
-6. [`CRATE_GRAPH.md`](CRATE_GRAPH.md) and
+5. [`CRATE_GRAPH.md`](CRATE_GRAPH.md) and
    [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml) for package placement.
 
 Generated artifacts are projections of these authorities. They do not create a

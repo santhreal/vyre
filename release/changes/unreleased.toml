@@ -258,3 +258,8 @@ text = "The macro crate now exports only the production-used AST registry and se
 id = "owner-local-error-contracts"
 category = "Changed"
 text = "Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead of a cross-domain error sink. Reference interpretation, backend execution, WGPU device selection, and runtime framing return owner-local typed failures."
+
+[[fragments]]
+id = "documentation-and-dependency-authority"
+category = "Changed"
+text = "Documentation pages now declare audience, owner, authority, kind, and generated/manual ownership. Crate dependency records declare purpose, features, target conditions, visibility, and destination seam, and optimizer pass reference pages are generated from the live pass registry."

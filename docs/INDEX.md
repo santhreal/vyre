@@ -3,16 +3,25 @@
 
 Source: [`docs/DOCS.toml`](DOCS.toml).
 
-## Authority
+Each active page declares its audience, owner, authority source, kind, and
+generation mode. Generated pages also declare the generator. Superseded and
+archived pages remain lifecycle evidence and are excluded from navigation.
 
-- Architecture: [`ARCHITECTURE.md`](ARCHITECTURE.md).
-- Crate boundaries: [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml).
-- Optimization control: [`optimization/README.md`](optimization/README.md).
-- Documentation lifecycle: [`DOCS.toml`](DOCS.toml).
-- Navigation: [`SUMMARY.md`](SUMMARY.md), generated from `DOCS.toml`.
+## Documentation owners
 
-`current` pages are normative. `generated` pages are projections of the named source.
-`superseded` and `archived` pages are historical and do not appear in navigation.
+| Owner | Authority |
+| --- | --- |
+| `architecture` | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| `benchmark` | [`PERF.md`](PERF.md) |
+| `docs-governance` | [`DOCUMENTATION_GOVERNANCE.md`](DOCUMENTATION_GOVERNANCE.md) |
+| `frontend` | [`../vyre-frontend-c/src/lib.rs`](../vyre-frontend-c/src/lib.rs) |
+| `historical` | [`DOCS.toml`](DOCS.toml) |
+| `operation-registry` | [`../vyre-foundation/src/operation.rs`](../vyre-foundation/src/operation.rs) |
+| `optimization` | [`optimization/README.md`](optimization/README.md) |
+| `public-facade` | [`../vyre/src/lib.rs`](../vyre/src/lib.rs) |
+| `release-tooling` | [`../scripts/release_docs.py`](../scripts/release_docs.py) |
+| `runtime` | [`../vyre-runtime/src/lib.rs`](../vyre-runtime/src/lib.rs) |
+| `testing` | [`testing/TESTING.toml`](testing/TESTING.toml) |
 
 ## Cargo-derived workspace facts
 
@@ -22,176 +31,177 @@ Source: [`docs/DOCS.toml`](DOCS.toml).
 
 ## Lifecycle counts
 
-- current: 41.
+- current: 42.
 - generated: 71.
 - superseded: 34.
 - archived: 18.
 
 ## Pages
 
-| Status | Class | Page | Source |
-| --- | --- | --- | --- |
-| `current` | `architecture` | `ARCHITECTURE.md` | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| `generated` | `projection` | `CLI.md` | [CLI.toml](CLI.toml) |
-| `superseded` | `history` | `CONVENTIONS.md` | [CONVENTIONS.md](CONVENTIONS.md) |
-| `superseded` | `history` | `CPU_GPU_CONVERGENCE.md` | [CPU_GPU_CONVERGENCE.md](CPU_GPU_CONVERGENCE.md) |
-| `generated` | `projection` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) |
-| `current` | `guide` | `DOCUMENTATION_COVERAGE.md` | [DOCUMENTATION_COVERAGE.md](DOCUMENTATION_COVERAGE.md) |
-| `current` | `governance` | `DOCUMENTATION_GOVERNANCE.md` | [DOCUMENTATION_GOVERNANCE.md](DOCUMENTATION_GOVERNANCE.md) |
-| `current` | `guide` | `ERROR_SURFACE.md` | [ERROR_SURFACE.md](ERROR_SURFACE.md) |
-| `superseded` | `history` | `GATE_CLOSURE.md` | [GATE_CLOSURE.md](GATE_CLOSURE.md) |
-| `superseded` | `history` | `HOT_PATH_PROOFS.md` | [HOT_PATH_PROOFS.md](HOT_PATH_PROOFS.md) |
-| `generated` | `projection` | `INDEX.md` | [DOCS.toml](DOCS.toml) |
-| `archived` | `history` | `LAW7_ORGANIZATION.md` | [LAW7_ORGANIZATION.md](LAW7_ORGANIZATION.md) |
-| `archived` | `history` | `MATH_FRONTIER.md` | [MATH_FRONTIER.md](MATH_FRONTIER.md) |
-| `superseded` | `history` | `MATH_PRIMITIVES_PLACEMENT.md` | [MATH_PRIMITIVES_PLACEMENT.md](MATH_PRIMITIVES_PLACEMENT.md) |
-| `superseded` | `history` | `MIGRATION.md` | [MIGRATION.md](MIGRATION.md) |
-| `superseded` | `history` | `OPS.md` | [OPS.md](OPS.md) |
-| `current` | `guide` | `OPTIMIZATION_ARCHITECTURE.md` | [OPTIMIZATION_ARCHITECTURE.md](OPTIMIZATION_ARCHITECTURE.md) |
-| `generated` | `projection` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) |
-| `current` | `guide` | `PERF.md` | [PERF.md](PERF.md) |
-| `superseded` | `history` | `PER_OP_SURFACE.md` | [PER_OP_SURFACE.md](PER_OP_SURFACE.md) |
-| `archived` | `history` | `PREDICATE_EXPR_DUALITY.md` | [PREDICATE_EXPR_DUALITY.md](PREDICATE_EXPR_DUALITY.md) |
-| `superseded` | `history` | `PRIMITIVES.md` | [PRIMITIVES.md](PRIMITIVES.md) |
-| `superseded` | `history` | `PUBLISH_GATE.md` | [PUBLISH_GATE.md](PUBLISH_GATE.md) |
-| `superseded` | `history` | `RECURSION_THESIS.md` | [RECURSION_THESIS.md](RECURSION_THESIS.md) |
-| `current` | `release` | `RELEASE.md` | [RELEASE.md](RELEASE.md) |
-| `superseded` | `history` | `RELEASE_1_0_GATE.md` | [RELEASE_1_0_GATE.md](RELEASE_1_0_GATE.md) |
-| `generated` | `projection` | `RELEASE_CHECKLIST.md` | [../scripts/release_docs.py](../scripts/release_docs.py) |
-| `superseded` | `history` | `RELEASE_ENGINEERING.md` | [RELEASE_ENGINEERING.md](RELEASE_ENGINEERING.md) |
-| `current` | `guide` | `RUNTIME_PIPELINE.md` | [RUNTIME_PIPELINE.md](RUNTIME_PIPELINE.md) |
-| `archived` | `history` | `SUBSTRATE_RFCS.md` | [SUBSTRATE_RFCS.md](SUBSTRATE_RFCS.md) |
-| `superseded` | `history` | `TESTING_PROGRAM.md` | [TESTING_PROGRAM.md](TESTING_PROGRAM.md) |
-| `current` | `guide` | `THESIS.md` | [THESIS.md](THESIS.md) |
-| `superseded` | `history` | `VISION.md` | [VISION.md](VISION.md) |
-| `archived` | `history` | `archive/HEURISTIC_TO_MATH_TRACKER.md` | [archive/HEURISTIC_TO_MATH_TRACKER.md](archive/HEURISTIC_TO_MATH_TRACKER.md) |
-| `archived` | `history` | `archive/INNOVATION_SWEEP.md` | [archive/INNOVATION_SWEEP.md](archive/INNOVATION_SWEEP.md) |
-| `archived` | `history` | `archive/JULES_PRIMITIVE_MANIFEST.md` | [archive/JULES_PRIMITIVE_MANIFEST.md](archive/JULES_PRIMITIVE_MANIFEST.md) |
-| `archived` | `history` | `archive/MICRO_FLAW_LOG.md` | [archive/MICRO_FLAW_LOG.md](archive/MICRO_FLAW_LOG.md) |
-| `archived` | `history` | `archive/MIGRATION_0.6_TO_0.7.md` | [archive/MIGRATION_0.6_TO_0.7.md](archive/MIGRATION_0.6_TO_0.7.md) |
-| `archived` | `history` | `archive/NAGA_CRITICAL_HOLES.md` | [archive/NAGA_CRITICAL_HOLES.md](archive/NAGA_CRITICAL_HOLES.md) |
-| `archived` | `history` | `archive/README.md` | [archive/README.md](archive/README.md) |
-| `archived` | `history` | `archive/UX_SWEEP.md` | [archive/UX_SWEEP.md](archive/UX_SWEEP.md) |
-| `archived` | `history` | `archive/vision-2026-04-27-essay.md` | [archive/vision-2026-04-27-essay.md](archive/vision-2026-04-27-essay.md) |
-| `generated` | `projection` | `catalog/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/bitset.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/core.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/decode.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/fixpoint.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/geom.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/graph.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/hardware.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/hash.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/io.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/label.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/logical.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/matching.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/math.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/mem.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/nn.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/opt.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/optim.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/parsing.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/predicate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/quant.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/reduce.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/representation.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/scan.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/security.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/substrate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/text.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/vfs.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `catalog/visual.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `current` | `guide` | `code-style.md` | [code-style.md](code-style.md) |
-| `current` | `guide` | `consumer-integration.md` | [consumer-integration.md](consumer-integration.md) |
-| `current` | `guide` | `consumer-showcase.md` | [consumer-showcase.md](consumer-showcase.md) |
-| `superseded` | `history` | `dialect-cookbook.md` | [dialect-cookbook.md](dialect-cookbook.md) |
-| `current` | `guide` | `error-codes.md` | [error-codes.md](error-codes.md) |
-| `current` | `guide` | `faq.md` | [faq.md](faq.md) |
-| `superseded` | `history` | `frozen-traits/AlgebraicLaw.md` | [frozen-traits/AlgebraicLaw.md](frozen-traits/AlgebraicLaw.md) |
-| `superseded` | `history` | `frozen-traits/EnforceGate.md` | [frozen-traits/EnforceGate.md](frozen-traits/EnforceGate.md) |
-| `superseded` | `history` | `frozen-traits/ExprVisitor.md` | [frozen-traits/ExprVisitor.md](frozen-traits/ExprVisitor.md) |
-| `superseded` | `history` | `frozen-traits/Lowerable.md` | [frozen-traits/Lowerable.md](frozen-traits/Lowerable.md) |
-| `superseded` | `history` | `frozen-traits/MutationClass.md` | [frozen-traits/MutationClass.md](frozen-traits/MutationClass.md) |
-| `current` | `guide` | `frozen-traits/README.md` | [frozen-traits/README.md](frozen-traits/README.md) |
-| `superseded` | `history` | `frozen-traits/VyreBackend.md` | [frozen-traits/VyreBackend.md](frozen-traits/VyreBackend.md) |
-| `generated` | `projection` | `generated/OP_INVENTORY.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `generated` | `projection` | `generated/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) |
-| `current` | `guide` | `inventory-contract.md` | [inventory-contract.md](inventory-contract.md) |
-| `current` | `guide` | `ir-semantics.md` | [ir-semantics.md](ir-semantics.md) |
-| `archived` | `history` | `legacy/README.md` | [legacy/README.md](legacy/README.md) |
-| `superseded` | `history` | `lego-block-rule.md` | [lego-block-rule.md](lego-block-rule.md) |
-| `superseded` | `history` | `library-tiers.md` | [library-tiers.md](library-tiers.md) |
-| `current` | `guide` | `lower-vs-emit.md` | [lower-vs-emit.md](lower-vs-emit.md) |
-| `current` | `guide` | `megakernel-wiring.md` | [megakernel-wiring.md](megakernel-wiring.md) |
-| `current` | `guide` | `memory-model.md` | [memory-model.md](memory-model.md) |
-| `archived` | `history` | `migration-vyre-ops-to-intrinsics.md` | [migration-vyre-ops-to-intrinsics.md](migration-vyre-ops-to-intrinsics.md) |
-| `current` | `guide` | `observability.md` | [observability.md](observability.md) |
-| `superseded` | `history` | `occ.md` | [occ.md](occ.md) |
-| `current` | `guide` | `op-naming.md` | [op-naming.md](op-naming.md) |
-| `current` | `guide` | `ops-catalog.md` | [ops-catalog.md](ops-catalog.md) |
-| `superseded` | `history` | `optimization/LEGACY_DOCS.md` | [optimization/LEGACY_DOCS.md](optimization/LEGACY_DOCS.md) |
-| `current` | `optimization` | `optimization/README.md` | [optimization/README.md](optimization/README.md) |
-| `current` | `optimization` | `optimization/START_HERE.md` | [optimization/START_HERE.md](optimization/START_HERE.md) |
-| `current` | `optimization` | `optimization/TAXONOMY.md` | [optimization/TAXONOMY.md](optimization/TAXONOMY.md) |
-| `superseded` | `history` | `parity/three_substrate.md` | [parity/three_substrate.md](parity/three_substrate.md) |
-| `superseded` | `history` | `parsing-and-frontends.md` | [parsing-and-frontends.md](parsing-and-frontends.md) |
-| `superseded` | `history` | `primitives-tier.md` | [primitives-tier.md](primitives-tier.md) |
-| `current` | `guide` | `reference-interpreter-witness-limits.md` | [reference-interpreter-witness-limits.md](reference-interpreter-witness-limits.md) |
-| `current` | `guide` | `region-chain.md` | [region-chain.md](region-chain.md) |
-| `superseded` | `history` | `release/v0.4.1.md` | [release/v0.4.1.md](release/v0.4.1.md) |
-| `archived` | `history` | `release/v0.4.2.md` | [release/v0.4.2.md](release/v0.4.2.md) |
-| `archived` | `history` | `release/v0.7.0.md` | [release/v0.7.0.md](release/v0.7.0.md) |
-| `archived` | `history` | `release/v0.7.1.md` | [release/v0.7.1.md](release/v0.7.1.md) |
-| `generated` | `projection` | `release/v0.7.2.md` | [../scripts/release_docs.py](../scripts/release_docs.py) |
-| `current` | `guide` | `rfcs/0001-region-inline-pass.md` | [rfcs/0001-region-inline-pass.md](rfcs/0001-region-inline-pass.md) |
-| `current` | `guide` | `rfcs/0002-autodiff-ir-transform.md` | [rfcs/0002-autodiff-ir-transform.md](rfcs/0002-autodiff-ir-transform.md) |
-| `current` | `guide` | `rfcs/0003-datatype-quantized.md` | [rfcs/0003-datatype-quantized.md](rfcs/0003-datatype-quantized.md) |
-| `current` | `guide` | `rfcs/0004-collective-ops.md` | [rfcs/0004-collective-ops.md](rfcs/0004-collective-ops.md) |
-| `superseded` | `history` | `rfcs/0005-persistent-megakernel.md` | [rfcs/0005-persistent-megakernel.md](rfcs/0005-persistent-megakernel.md) |
-| `superseded` | `history` | `santh-standard.md` | [santh-standard.md](santh-standard.md) |
-| `current` | `guide` | `scanning-a-corpus-the-right-way.md` | [scanning-a-corpus-the-right-way.md](scanning-a-corpus-the-right-way.md) |
-| `current` | `guide` | `semver-policy.md` | [semver-policy.md](semver-policy.md) |
-| `superseded` | `history` | `stability.md` | [stability.md](stability.md) |
-| `current` | `guide` | `support.md` | [support.md](support.md) |
-| `current` | `guide` | `targets.md` | [targets.md](targets.md) |
-| `current` | `guide` | `test-layout.md` | [test-layout.md](test-layout.md) |
-| `generated` | `projection` | `testing/vyre-aot.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-bench.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-conform-spec.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-conform.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-debug.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver-cuda.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver-metal.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver-reference.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver-spirv.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver-wgpu.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-driver.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-emit-metal.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-emit-naga.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-emit-ptx.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-emit-spirv.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-foundation.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-frontend-c.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-frontend-rust.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-grammar-gen.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-intrinsics.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-libs.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-lints.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-lower.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-macros.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-megakernel.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-primitives.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-reference.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-runtime.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-scan.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-self-substrate.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-spec.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre-test-support.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/vyre.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `projection` | `testing/xtask.md` | [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `current` | `guide` | `threat-model.md` | [threat-model.md](threat-model.md) |
-| `current` | `guide` | `trust-model.md` | [trust-model.md](trust-model.md) |
-| `current` | `guide` | `vyre-libs-features.md` | [vyre-libs-features.md](vyre-libs-features.md) |
-| `superseded` | `history` | `wire-format-0.6-reservations.md` | [wire-format-0.6-reservations.md](wire-format-0.6-reservations.md) |
-| `current` | `guide` | `wire-format.md` | [wire-format.md](wire-format.md) |
+| Status | Audience | Owner | Kind | Page | Authority | Generation |
+| --- | --- | --- | --- | --- | --- | --- |
+| `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
+| `generated` | `user` | `public-facade` | `guide` | `CLI.md` | [CLI.toml](CLI.toml) | generated: [../scripts/cli_docs.py](../scripts/cli_docs.py) |
+| `superseded` | `contributor` | `historical` | `history` | `CONVENTIONS.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `CPU_GPU_CONVERGENCE.md` | self | manual |
+| `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
+| `current` | `contributor` | `docs-governance` | `governance` | `DOCUMENTATION_COVERAGE.md` | self | manual |
+| `current` | `contributor` | `docs-governance` | `governance` | `DOCUMENTATION_GOVERNANCE.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `ERROR_SURFACE.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `GATE_CLOSURE.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `HOT_PATH_PROOFS.md` | self | manual |
+| `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../scripts/docs_manifest.py](../scripts/docs_manifest.py) |
+| `archived` | `contributor` | `historical` | `history` | `LAW7_ORGANIZATION.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `MATH_FRONTIER.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `MATH_PRIMITIVES_PLACEMENT.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `MIGRATION.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `OPS.md` | self | manual |
+| `current` | `extension` | `optimization` | `optimization` | `OPTIMIZATION_ARCHITECTURE.md` | self | manual |
+| `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
+| `current` | `release` | `benchmark` | `release` | `PERF.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `PER_OP_SURFACE.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `PREDICATE_EXPR_DUALITY.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `PRIMITIVES.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `PUBLISH_GATE.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `RECURSION_THESIS.md` | self | manual |
+| `current` | `release` | `release-tooling` | `release` | `RELEASE.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `RELEASE_1_0_GATE.md` | self | manual |
+| `generated` | `release` | `release-tooling` | `release` | `RELEASE_CHECKLIST.md` | [../release/release-train.toml](../release/release-train.toml) | generated: [../scripts/release_docs.py](../scripts/release_docs.py) |
+| `superseded` | `contributor` | `historical` | `history` | `RELEASE_ENGINEERING.md` | self | manual |
+| `current` | `extension` | `runtime` | `lifecycle` | `RUNTIME_PIPELINE.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `SUBSTRATE_RFCS.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `TESTING_PROGRAM.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `THESIS.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `VISION.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/HEURISTIC_TO_MATH_TRACKER.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/INNOVATION_SWEEP.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/JULES_PRIMITIVE_MANIFEST.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/MICRO_FLAW_LOG.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/MIGRATION_0.6_TO_0.7.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/NAGA_CRITICAL_HOLES.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/README.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/UX_SWEEP.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `archive/vision-2026-04-27-essay.md` | self | manual |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/bitset.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/core.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/decode.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/fixpoint.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/geom.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/graph.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hardware.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hash.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/io.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/label.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/logical.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/matching.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/math.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/mem.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/nn.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/opt.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/optim.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/parsing.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/predicate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/quant.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/reduce.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/representation.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/scan.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/security.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/substrate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/text.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/vfs.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/visual.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `current` | `user` | `public-facade` | `guide` | `code-style.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `consumer-integration.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `consumer-showcase.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `dialect-cookbook.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `error-codes.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `faq.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/AlgebraicLaw.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/EnforceGate.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/ExprVisitor.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/Lowerable.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/MutationClass.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `frozen-traits/README.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/VyreBackend.md` | self | manual |
+| `generated` | `extension` | `operation-registry` | `reference` | `generated/OP_INVENTORY.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/list_ops.rs](../xtask/src/list_ops.rs) |
+| `current` | `extension` | `operation-registry` | `reference` | `generated/README.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `inventory-contract.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `ir-semantics.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `legacy/README.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `lego-block-rule.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `library-tiers.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `lower-vs-emit.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `megakernel-wiring.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `memory-model.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `migration-vyre-ops-to-intrinsics.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `observability.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `occ.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `op-naming.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `ops-catalog.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `optimization/LEGACY_DOCS.md` | self | manual |
+| `generated` | `extension` | `optimization` | `reference` | `optimization/PASSES.md` | [../vyre-foundation/src/optimizer.rs](../vyre-foundation/src/optimizer.rs) | generated: [../xtask/src/optimization_docs.rs](../xtask/src/optimization_docs.rs) |
+| `current` | `contributor` | `optimization` | `optimization` | `optimization/README.md` | self | manual |
+| `current` | `contributor` | `optimization` | `optimization` | `optimization/START_HERE.md` | self | manual |
+| `current` | `contributor` | `optimization` | `optimization` | `optimization/TAXONOMY.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `parity/three_substrate.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `parsing-and-frontends.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `primitives-tier.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `reference-interpreter-witness-limits.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `region-chain.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `release/v0.4.1.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `release/v0.4.2.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `release/v0.7.0.md` | self | manual |
+| `archived` | `contributor` | `historical` | `history` | `release/v0.7.1.md` | self | manual |
+| `generated` | `release` | `release-tooling` | `release` | `release/v0.7.2.md` | [../release/release-train.toml](../release/release-train.toml) | generated: [../scripts/release_docs.py](../scripts/release_docs.py) |
+| `current` | `user` | `public-facade` | `guide` | `rfcs/0001-region-inline-pass.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `rfcs/0002-autodiff-ir-transform.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `rfcs/0003-datatype-quantized.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `rfcs/0004-collective-ops.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `rfcs/0005-persistent-megakernel.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `santh-standard.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `scanning-a-corpus-the-right-way.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `semver-policy.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `stability.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `support.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `targets.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `test-layout.md` | self | manual |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-conform.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-debug.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-cuda.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver-wgpu.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-driver.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-metal.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-naga.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-ptx.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-foundation.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-frontend-c.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-frontend-rust.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-grammar-gen.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-intrinsics.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-libs.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lints.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-lower.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-macros.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-megakernel.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-primitives.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-runtime.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-scan.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-self-substrate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-test-support.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/xtask.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `current` | `user` | `public-facade` | `guide` | `threat-model.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `trust-model.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `vyre-libs-features.md` | self | manual |
+| `superseded` | `contributor` | `historical` | `history` | `wire-format-0.6-reservations.md` | self | manual |
+| `current` | `user` | `public-facade` | `guide` | `wire-format.md` | self | manual |

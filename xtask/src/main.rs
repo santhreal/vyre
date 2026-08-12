@@ -37,6 +37,7 @@ mod metadata_matrix;
 mod op_matrix;
 mod operation_schema;
 mod optimization_corpus;
+mod optimization_docs;
 mod optimization_matrix;
 mod output_arg;
 mod ownership;
@@ -95,6 +96,7 @@ fn print_help() {
            optimization-matrix [--output PATH] Generate release optimization integration evidence\n\
            package-readiness [--output PATH]  Generate pre-publish package order evidence\n\
            optimization-corpus [--output PATH]  Generate release optimization corpus manifest\n\
+           optimization-docs [--output PATH] [--check] Generate/check the source-owned optimizer pass reference\n\
            platform-boundary                  Fail on consumer names in platform crate docs/comments\n\
            version-matrix [--output PATH]      Generate Vyre manifest version matrix\n\
            catalog [--out DIR] [--check]       Emit one markdown table per subsystem under docs/catalog; --check gates drift\n\
@@ -145,6 +147,7 @@ fn main() {
         "optimization-matrix" => optimization_matrix::run(&args),
         "package-readiness" => package_readiness::run(&args),
         "optimization-corpus" => optimization_corpus::run(&args),
+        "optimization-docs" => optimization_docs::run(&args),
         "platform-boundary" => platform_boundary::run(&args),
         "catalog" => catalog::run(&args),
         "release-gate" => release_gate::run(&args),

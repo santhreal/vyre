@@ -9,12 +9,13 @@ not prove that its claims match the current code or release train.
 
 | Surface | Authority | Gate | What the result proves |
 | --- | --- | --- | --- |
-| Navigation and lifecycle | [`DOCS.toml`](DOCS.toml) | `python3 scripts/docs_manifest.py --check` | Every Markdown page has one lifecycle row, every active page is reachable once, inactive pages are excluded, and generated pages name one source. |
-| Crate ownership | Cargo metadata and [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml) | `python3 scripts/crate_ownership.py --check` | Every workspace package has one owner and allowed production dependency set. |
+| Navigation and authority | [`DOCS.toml`](DOCS.toml) | `python3 scripts/docs_manifest.py --check` | Every Markdown page has one lifecycle, audience, owner, authority, kind, and generation record; active pages are reachable once; inactive pages are excluded; generated pages name an existing input and generator; public/extension pages reject internal execution-process leakage. |
+| Crate ownership | Cargo metadata and [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml) | `python3 scripts/crate_ownership.py --check` | Every workspace package has one owner; every production dependency declares purpose, features, target conditions, visibility, and the destination seam; generated ownership views match Cargo. |
 | Crate testing guides | Cargo targets plus [`testing/TESTING.toml`](testing/TESTING.toml) | `python3 scripts/testing_guides.py --check` | Every workspace package has current commands, hardware requirements, evidence outputs, skip rules, and failure semantics. |
 | Public API snapshots | Publishable workspace manifests | `bash scripts/check_public_api_snapshot.sh` | Snapshot files exactly match the publishable package set. |
 | Markdown links | Active Markdown pages | `bash scripts/check_docs_links.sh` | Active Markdown link targets exist and are publishable. |
 | Path-like references | Active Markdown pages | `python3 scripts/check_docs_references.py` | Explicit repository paths used as inputs exist and are publishable. |
+| Documentation/API parity | Public API snapshots, rustdoc exports, and owner records | `cargo test -p xtask --test release_docs` | New public lifecycle and extension surfaces fail until their owner documents and generated projections are current. |
 
 These gates measure different facts. A clean link gate does not prove a support
 claim, and a current API snapshot does not prove that an example executes.

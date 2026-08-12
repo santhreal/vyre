@@ -91,6 +91,10 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 - Foundation now exposes IR-specific `IrError` and `IrResult` contracts instead
   of a cross-domain error sink. Reference interpretation, backend execution,
   WGPU device selection, and runtime framing return owner-local typed failures.
+- Documentation pages now declare audience, owner, authority, kind, and
+  generated/manual ownership. Crate dependency records declare purpose,
+  features, target conditions, visibility, and destination seam, and optimizer
+  pass reference pages are generated from the live pass registry.
 
 ### Removed
 

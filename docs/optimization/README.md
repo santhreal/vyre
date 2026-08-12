@@ -2,35 +2,28 @@
 
 Applies to Vyre 0.7.2.
 
-This directory defines the canonical contracts for performance work in Vyre.
-Older optimization plans, audits, release notes, and internals are evidence.
-They do not assign work.
+This directory defines the maintained architecture, placement, proof, and
+benchmark contracts for optimization work.
 
-The goal is swarm-safe optimization: thousands of agents can improve the
-codebase without duplicating work, moving code into the wrong layer, or
-shipping superficial patches.
-
-Start with [`START_HERE.md`](START_HERE.md). Use
-[`LEGACY_DOCS.md`](LEGACY_DOCS.md) when you find an older plan or audit. The
-only executable queue is the maintainer's local root `BACKLOG.md`. This
-directory owns the public patch contract, ownership map, coverage matrix, and
-benchmark targets.
+Start with [`START_HERE.md`](START_HERE.md). The generated
+[`PASSES.md`](PASSES.md) lists every source-registered semantic pass and
+supplemental rule. [`LEGACY_DOCS.md`](LEGACY_DOCS.md) classifies retained
+historical material.
 
 ## Precedence
 
-For optimization, performance, backend consolidation, and op-placement work:
+Use these authorities in order:
 
-1. The root `BACKLOG.md` defines active work.
-2. `docs/optimization/README.md` defines the optimization control plane.
-3. `docs/optimization/OWNERSHIP.toml` defines write ownership and lanes.
-4. The patch contract in this document defines what a change must prove.
-5. `docs/optimization/TAXONOMY.md` defines accepted optimization classes.
-6. `docs/optimization/OP_MATRIX.toml` defines op and backend coverage.
-7. `docs/optimization/BENCH_TARGETS.toml` defines benchmark targets and baseline classes.
-8. Other docs and audits are reference material only.
+1. `docs/optimization/README.md` defines the two-layer contract and patch proof.
+2. `docs/optimization/PASSES.md` projects the live semantic pass registry.
+3. `docs/optimization/OWNERSHIP.toml` defines write ownership.
+4. `docs/optimization/TAXONOMY.md` defines accepted optimization classes.
+5. `docs/optimization/OP_MATRIX.toml` defines operation and backend coverage.
+6. `docs/optimization/BENCH_TARGETS.toml` defines benchmark targets and baseline
+   classes.
 
-When another document conflicts with this directory, correct it. Migrate any
-executable item into the root backlog and delete the parallel plan.
+Correct a conflicting document and its generated projections in the same
+change.
 
 ## Non-negotiable architecture
 
@@ -70,26 +63,6 @@ single backend.
 | Primitive reusable ops | `vyre-primitives/src/` or `vyre-intrinsics/src/` | Must meet tier rules and matrix entry. |
 | Benchmark harness and targets | `vyre-bench/` plus `docs/optimization/BENCH_TARGETS.toml` | Targets must identify baseline class. |
 
-## Swarm lanes
-
-Agents claim one lane from `OWNERSHIP.toml` and stay inside its write set unless
-the main integrator explicitly expands scope.
-
-Required lanes:
-
-- `coordination`: canonical backlog, lane boundaries, and enforcement scripts.
-- `foundation_optimizer`: IR rewrites, fact graph, canonicalization, pass timing.
-- `foundation_wire`: canonical bytes, fingerprints, serialization allocation behavior.
-- `driver_shared`: backend-neutral launch, binding, validation, cache, residency.
-- `driver_cuda`: PTX lowering, CUDA residency, streams, events, module cache.
-- `driver_wgpu`: naga/WGSL lowering, wgpu buffer/readback/pipeline behavior.
-- `driver_spirv`: SPIR-V lowering and experimental parity boundaries.
-- `runtime_megakernel`: persistent runtime queue, scheduler, IO, resident protocol.
-- `bench_harness`: measurement API, baselines, reporting, regression math.
-- `op_matrix`: op coverage, tier placement, parity tracking.
-
-Do not create new lanes casually. If a task does not fit, update
-`OWNERSHIP.toml` first.
 
 ## Required proof for an optimization patch
 
@@ -122,9 +95,9 @@ Op-specific files belong by tier:
 - backend lowering: owning driver crate only
 - runtime scheduling/protocol: `vyre-runtime`
 
-## Deduplication audit workflow
+## Composition admission checks
 
-Run both semantic audits before introducing an operation or extracting a
+Run both structural checks before introducing an operation or extracting a
 reusable primitive:
 
 ```bash
@@ -140,7 +113,7 @@ centralization, not duplicate implementations.
 
 `lego-audit` treats registered child regions as composition evidence. A Tier 3
 operation with at least 20 nodes must place at least 25% of those nodes under a
-registered child, unless the audit classifies it as a reviewed pure-IR leaf.
+registered child, unless the checker classifies it as a reviewed pure-IR leaf.
 The two-caller primitive promotion rule is an adoption advisory. It counts real
 operation-to-primitive edges only. Synthetic catalog wrappers, generated
 aliases, and fixture consumers are hard failures and never satisfy coverage.

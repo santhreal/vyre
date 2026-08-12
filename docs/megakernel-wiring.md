@@ -1,13 +1,10 @@
 # Megakernel wiring
 
-Last verified: 2026-08-09
 
 This guide is the living ownership map for every surface named "megakernel" in
 Vyre 0.7.2. The word is overloaded on purpose across four stages. Collapsing
 them into one crate is a boundary failure.
 
-The 2026-04-21 Phase 0 snapshot is historical evidence only. It no longer
-defines source paths, open gates, or ownership.
 
 ## Four concepts, four owners
 

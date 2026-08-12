@@ -3,23 +3,69 @@
 
 - [Documentation authority and lifecycle](INDEX.md)
 
+# Documentation authority
+
+- [Documentation Governance](DOCUMENTATION_GOVERNANCE.md)
+- [Documentation coverage](DOCUMENTATION_COVERAGE.md)
+
 # Architecture and ownership
 
 - [Vyre Crate Graph](CRATE_GRAPH.md)
 - [Vyre Crate Ownership](OWNERSHIP.md)
 - [Vyre architecture](ARCHITECTURE.md)
 
-# Frozen Traits
+# Lifecycle and extension contracts
 
-- [Frozen trait snapshots](frozen-traits/README.md)
+- [Runtime pipeline](RUNTIME_PIPELINE.md)
 
-# Generated reference
+# Optimization
+
+- [Optimization Taxonomy](optimization/TAXONOMY.md)
+- [Optimization architecture](OPTIMIZATION_ARCHITECTURE.md)
+- [Optimizer pass reference](optimization/PASSES.md)
+- [Start Here for Optimization Work](optimization/START_HERE.md)
+- [Vyre optimization control plane](optimization/README.md)
+
+# User workflows
 
 - [Command-line interfaces](CLI.md)
+- [Downstream analyzer integration](consumer-integration.md)
+- [Error Surface Contract](ERROR_SURFACE.md)
+- [Frozen trait snapshots](frozen-traits/README.md)
+- [Getting Support](support.md)
+- [Linked Registration Contract](inventory-contract.md)
+- [Lowering vs emission ownership](lower-vs-emit.md)
+- [Megakernel wiring](megakernel-wiring.md)
+- [Named external integration](consumer-showcase.md)
+- [Operation catalog](ops-catalog.md)
+- [RFC 0001  -  Region inline pass](rfcs/0001-region-inline-pass.md)
+- [RFC 0002  -  Reverse-mode autodiff as an IR transform](rfcs/0002-autodiff-ir-transform.md)
+- [RFC 0003  -  DataType::Quantized](rfcs/0003-datatype-quantized.md)
+- [RFC 0004  -  Collective ops (AllReduce, AllGather, ReduceScatter)](rfcs/0004-collective-ops.md)
+- [Region chain  -  the compositional back-pointer invariant](region-chain.md)
+- [Scanning a corpus the right way](scanning-a-corpus-the-right-way.md)
+- [Test layout convention](test-layout.md)
+- [Trust Model](trust-model.md)
+- [Vyre Code Style](code-style.md)
+- [Vyre FAQ](faq.md)
+- [Vyre Targets](targets.md)
+- [Vyre Thesis](THESIS.md)
+- [What the reference interpreter can and cannot witness](reference-interpreter-witness-limits.md)
+- [vyre Error Codes](error-codes.md)
+- [vyre IR statement semantics](ir-semantics.md)
+- [vyre Memory Model](memory-model.md)
+- [vyre Semver Policy](semver-policy.md)
+- [vyre Wire Format (VIR0)](wire-format.md)
+- [vyre observability](observability.md)
+- [vyre threat model](threat-model.md)
+- [vyre-libs Feature Matrix](vyre-libs-features.md)
+- [vyre-libs op naming](op-naming.md)
+
+# API and operation reference
+
 - [Generated operation documentation](generated/README.md)
 - [Vyre operation catalog](catalog/README.md)
 - [Vyre operation inventory](generated/OP_INVENTORY.md)
-- [Vyre release checklist](RELEASE_CHECKLIST.md)
 - [`bitset` operations](catalog/bitset.md)
 - [`core` operations](catalog/core.md)
 - [`decode` operations](catalog/decode.md)
@@ -49,59 +95,7 @@
 - [`vfs` operations](catalog/vfs.md)
 - [`visual` operations](catalog/visual.md)
 
-# Guides and reference
-
-- [Build Performance and Optimization](PERF.md)
-- [Documentation Governance](DOCUMENTATION_GOVERNANCE.md)
-- [Documentation coverage](DOCUMENTATION_COVERAGE.md)
-- [Downstream analyzer integration](consumer-integration.md)
-- [Error Surface Contract](ERROR_SURFACE.md)
-- [Getting Support](support.md)
-- [Linked Registration Contract](inventory-contract.md)
-- [Lowering vs emission ownership](lower-vs-emit.md)
-- [Megakernel wiring](megakernel-wiring.md)
-- [Named external integration](consumer-showcase.md)
-- [Operation catalog](ops-catalog.md)
-- [Optimization architecture](OPTIMIZATION_ARCHITECTURE.md)
-- [Region chain  -  the compositional back-pointer invariant](region-chain.md)
-- [Runtime pipeline](RUNTIME_PIPELINE.md)
-- [Scanning a corpus the right way](scanning-a-corpus-the-right-way.md)
-- [Test layout convention](test-layout.md)
-- [Trust Model](trust-model.md)
-- [Vyre Code Style](code-style.md)
-- [Vyre FAQ](faq.md)
-- [Vyre Thesis](THESIS.md)
-- [Vyre release process](RELEASE.md)
-- [What the reference interpreter can and cannot witness](reference-interpreter-witness-limits.md)
-- [vyre Error Codes](error-codes.md)
-- [vyre IR statement semantics](ir-semantics.md)
-- [vyre Memory Model](memory-model.md)
-- [vyre Semver Policy](semver-policy.md)
-- [vyre Targets](targets.md)
-- [vyre Wire Format (VIR0)](wire-format.md)
-- [vyre observability](observability.md)
-- [vyre threat model](threat-model.md)
-- [vyre-libs Feature Matrix](vyre-libs-features.md)
-- [vyre-libs op naming](op-naming.md)
-
-# Optimization
-
-- [Optimization Taxonomy](optimization/TAXONOMY.md)
-- [Start Here for Optimization Work](optimization/START_HERE.md)
-- [Vyre optimization control plane](optimization/README.md)
-
-# Release
-
-- [Vyre 0.7.2 release notes](release/v0.7.2.md)
-
-# Rfcs
-
-- [RFC 0001  -  Region inline pass](rfcs/0001-region-inline-pass.md)
-- [RFC 0002  -  Reverse-mode autodiff as an IR transform](rfcs/0002-autodiff-ir-transform.md)
-- [RFC 0003  -  DataType::Quantized](rfcs/0003-datatype-quantized.md)
-- [RFC 0004  -  Collective ops (AllReduce, AllGather, ReduceScatter)](rfcs/0004-collective-ops.md)
-
-# Testing
+# Testing and conformance
 
 - [Testing `vyre-aot`](testing/vyre-aot.md)
 - [Testing `vyre-bench`](testing/vyre-bench.md)
@@ -137,3 +131,10 @@
 - [Testing `vyre-test-support`](testing/vyre-test-support.md)
 - [Testing `vyre`](testing/vyre.md)
 - [Testing `xtask`](testing/xtask.md)
+
+# Performance and release
+
+- [Build Performance and Optimization](PERF.md)
+- [Vyre 0.7.2 release notes](release/v0.7.2.md)
+- [Vyre release checklist](RELEASE_CHECKLIST.md)
+- [Vyre release process](RELEASE.md)
