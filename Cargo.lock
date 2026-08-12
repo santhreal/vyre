@@ -3878,9 +3878,6 @@ dependencies = [
  "smallvec",
  "thiserror 2.0.19",
  "toml",
- "vyre-driver",
- "vyre-driver-cuda",
- "vyre-driver-reference",
  "vyre-foundation",
  "vyre-test-support",
 ]

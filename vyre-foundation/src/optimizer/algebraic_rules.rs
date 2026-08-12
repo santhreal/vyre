@@ -177,13 +177,12 @@ pub enum IdentityReplacement {
 
 /// Decide a substitution-only binary identity/absorber rewrite.
 ///
-/// Returns which existing operand should replace the `BinOp` result. This function
-/// never asks callers to synthesize a new literal, so it is safe for descriptor
-/// passes that only rewrite result-id references.
+/// Returns which existing operand should replace the `BinOp` result. The
+/// semantic optimizer uses this substitution without synthesizing a literal.
 #[must_use]
 #[expect(
     clippy::too_many_lines,
-    reason = "binary identity legality table stays contiguous so Program and lowered descriptor rewrites share one auditable contract"
+    reason = "the binary identity legality table stays contiguous as one auditable semantic contract"
 )]
 pub fn binop_identity_replacement(
     op: BinOp,

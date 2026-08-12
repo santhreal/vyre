@@ -31,6 +31,8 @@ fn is_invocation_id_expr(expr: &crate::ir::Expr) -> bool {
     )
 }
 
+/// Deterministic semantic optimizer corpus used by release evidence.
+pub mod corpus;
 /// Cost certificates for cost-monotone-down pass enforcement.
 /// `CostCertificate::for_program` reads cached `ProgramStats`; the optimizer
 /// post-condition gate compares pre/post and refuses cost-up rewrites that
@@ -61,8 +63,7 @@ pub mod program_shape_facts;
 /// by P-1.0-V3.2).
 pub mod shape_facts;
 
-/// Shared algebraic rewrite legality rules consumed by both Program-IR passes
-/// and lowered KernelDescriptor rewrites.
+/// Shared algebraic rewrite legality rules consumed by semantic `Program` passes.
 pub mod algebraic_rules;
 pub mod dsl;
 /// Equality-saturation engine substrate: minimal EGraph, rewrite families,

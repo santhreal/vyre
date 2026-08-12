@@ -221,61 +221,26 @@ pub(crate) fn run(args: &[String]) {
     let wrote_optimization_manifest =
         should_write_optimization_manifest(&config, workload_failures.is_empty());
     if wrote_optimization_manifest {
-        run_named_benchmark_if_needed(
-            &workspace_root,
-            "lower.rewrites.impact.corpus",
-            &config.backend,
-            "release/evidence/optimization/lower-rewrite-impact-before-after.json",
-            config.measured_samples,
-            config.sample_timeout_secs,
-            config.reuse_existing,
-        );
-        copy_artifact(
-            &workspace_root,
-            "release/evidence/optimization/lower-rewrite-impact-before-after.json",
-            "release/evidence/optimization/pass-family-benchmarks.json",
-        );
-        run_named_benchmark_if_needed(
-            &workspace_root,
-            "foundation.optimizer.impact",
-            &config.backend,
-            "release/evidence/optimization/optimizer-impact-cuda.json",
-            config.measured_samples,
-            config.sample_timeout_secs,
-            config.reuse_existing,
-        );
-        run_named_benchmark_if_needed(
-            &workspace_root,
-            "cuda.ptx.patterns.release.corpus",
-            &config.backend,
-            "release/evidence/benchmarks/cuda-ptx-patterns.json",
-            config.measured_samples,
-            config.sample_timeout_secs,
-            config.reuse_existing,
-        );
-        run_named_benchmark_if_needed(
-            &workspace_root,
-            "lower.egraph_saturation",
-            &config.backend,
-            "release/evidence/optimization/egraph-before-after.json",
-            config.measured_samples,
-            config.sample_timeout_secs,
-            config.reuse_existing,
-        );
-        copy_artifact(
-            &workspace_root,
-            "release/evidence/optimization/egraph-before-after.json",
-            "release/evidence/benchmarks/egraph-before-after.json",
-        );
-        run_named_benchmark_if_needed(
-            &workspace_root,
-            "lower.alias_aware_optimizations",
-            &config.backend,
-            "release/evidence/benchmarks/alias-aware-before-after.json",
-            config.measured_samples,
-            config.sample_timeout_secs,
-            config.reuse_existing,
-        );
+        if !config.refresh_suites_only {
+            run_named_benchmark_if_needed(
+                &workspace_root,
+                "foundation.optimizer.impact",
+                &config.backend,
+                "release/evidence/optimization/optimizer-impact-cuda.json",
+                config.measured_samples,
+                config.sample_timeout_secs,
+                config.reuse_existing,
+            );
+            run_named_benchmark_if_needed(
+                &workspace_root,
+                "cuda.ptx.patterns.release.corpus",
+                &config.backend,
+                "release/evidence/benchmarks/cuda-ptx-patterns.json",
+                config.measured_samples,
+                config.sample_timeout_secs,
+                config.reuse_existing,
+            );
+        }
         run_command(
             &workspace_root,
             &[
@@ -337,7 +302,6 @@ fn should_write_optimization_manifest(config: &Config, workload_failures_empty: 
     workload_failures_empty
         && config.backend == "cuda"
         && config.only.is_none()
-        && !config.refresh_suites_only
         && !config.workload_suite_only
 }
 

@@ -16,9 +16,9 @@ pub(crate) fn check_release_bench_targets(
         }
     };
     let target_count = text.matches("[[target]]").count();
-    if target_count < 17 {
+    if target_count < 15 {
         failures.push(format!(
-            "requirement `{}` benchmark target table contains {target_count} target(s); needs at least 17 including release workloads and optimization-proof targets",
+            "requirement `{}` benchmark target table contains {target_count} target(s); needs at least 15 including release workloads and the canonical semantic optimizer target",
             requirement.id
         ));
     }
@@ -34,9 +34,7 @@ pub(crate) fn check_release_bench_targets(
         "release.workload.callgraph_reachability",
         "release.workload.c_ast_traversal",
         "release.workload.megakernel_stream",
-        "release.workload.egraph_saturation",
         "release.workload.conformance_sparse_readback",
-        "release.optimization.lower_rewrite_impact",
         "release.optimization.foundation_optimizer_impact",
     ] {
         if !text.contains(required) {

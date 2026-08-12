@@ -178,7 +178,6 @@ mod tests {
     use super::*;
     use vyre_foundation::ir::{Expr, Node};
     use vyre_lower::lower_verified;
-    use vyre_lower::rewrites::matmul_promote;
 
     #[test]
     fn matmul_mma_fragment_builds_four_fma_nodes() {
@@ -262,60 +261,6 @@ mod tests {
             count += count_fma_in_body(child);
         }
         count
-    }
-
-    #[test]
-    fn matmul_mma_fragment_promotes_to_matrix_mma() {
-        let program = vyre_foundation::ir::Program::wrapped(
-            vec![],
-            [1, 1, 1],
-            vec![
-                Node::let_bind("a0", Expr::f32(1.0)),
-                Node::let_bind("a1", Expr::f32(2.0)),
-                Node::let_bind("a2", Expr::f32(3.0)),
-                Node::let_bind("a3", Expr::f32(4.0)),
-                Node::let_bind("b0", Expr::f32(5.0)),
-                Node::let_bind("b1", Expr::f32(6.0)),
-                Node::let_bind("c0", Expr::f32(7.0)),
-                Node::let_bind("c1", Expr::f32(8.0)),
-                Node::let_bind("c2", Expr::f32(9.0)),
-                Node::let_bind("c3", Expr::f32(10.0)),
-            ]
-            .into_iter()
-            .chain(matmul_mma_fragment(
-                Expr::var("a0"),
-                Expr::var("a1"),
-                Expr::var("a2"),
-                Expr::var("a3"),
-                Expr::var("b0"),
-                Expr::var("b1"),
-                Expr::var("c0"),
-                Expr::var("c1"),
-                Expr::var("c2"),
-                Expr::var("c3"),
-            ))
-            .collect(),
-        );
-
-        let desc = lower_verified(&program)
-            .map(|lowered| lowered.descriptor)
-            .expect("Fix: MMA fragment must lower cleanly.");
-        let promoted = matmul_promote(&desc);
-        assert!(
-            has_matrix_mma(&promoted.body),
-            "promoted descriptor must contain a MatrixMma op"
-        );
-    }
-
-    fn has_matrix_mma(body: &vyre_lower::KernelBody) -> bool {
-        if body
-            .ops
-            .iter()
-            .any(|op| matches!(op.kind, vyre_lower::KernelOpKind::MatrixMma { .. }))
-        {
-            return true;
-        }
-        body.child_bodies.iter().any(has_matrix_mma)
     }
 
     #[test]

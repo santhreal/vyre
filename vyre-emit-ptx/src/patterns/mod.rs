@@ -39,19 +39,6 @@ pub fn audit(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditRepo
     }
 }
 
-/// Like [`audit`] but runs the standard rewrite pipeline first.
-/// Shows what PTX-specific patterns still apply AFTER the
-/// substrate-neutral optimization stack has run. A non-empty
-/// post-optimization audit tells you the PTX layer is the only path
-/// to recover the remaining perf  -  e.g., a vec_load_fusion candidate
-/// that survives means scalar `ld.global.u32` instructions will be
-/// emitted unless the PTX emit-side rewrite is taught to fuse.
-#[must_use]
-pub fn audit_optimized(desc: &KernelDescriptor, target: ComputeCapability) -> PtxAuditReport {
-    let optimized = vyre_lower::rewrites::run_all(desc);
-    audit(&optimized, target)
-}
-
 /// Combined PTX-pattern report. One `pub` field per shipped pattern.
 /// Callers can drill into individual reports for details, or use
 /// `total_candidates()` for a single-number "is anything actionable"
@@ -300,23 +287,6 @@ mod tests {
         let s = r.format_short();
         assert!(s.contains("k (ptx sm_8_0)"));
         assert!(s.contains("0 candidates"));
-    }
-
-    #[test]
-    fn audit_optimized_runs_and_returns_report() {
-        let desc = KernelDescriptor {
-            id: "ao".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        let r = audit_optimized(&desc, ComputeCapability::SM_70);
-        assert_eq!(r.kernel_id, "ao");
-        assert_eq!(r.total_candidates(), 0);
     }
 
     #[test]

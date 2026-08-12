@@ -1,70 +1,46 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "required_min_cases": 4096,
-  "generated_cases": 12288,
-  "verified_cases": 12288,
-  "optimized_cases": 9216,
-  "dataflow_analysis_cases": 1024,
-  "dataflow_analysis_optimized_cases": 1024,
+  "generated_cases": 4096,
+  "verified_cases": 4096,
+  "optimized_cases": 4096,
   "non_converged_cases": 0,
-  "total_ops_before": 48640,
-  "total_ops_after": 27136,
+  "total_nodes_before": 11776,
+  "total_nodes_after": 9216,
+  "pass_instance_count": 212992,
+  "changed_pass_instances": 12864,
   "families": [
     {
-      "family": "A13-coalesce-fixture",
-      "cases": 768
-    },
-    {
-      "family": "A14-shared-mem-promote-fixture",
-      "cases": 256
-    },
-    {
-      "family": "A15-bank-conflict-fixture",
-      "cases": 256
-    },
-    {
-      "family": "A16-vec-pack-fixture",
-      "cases": 256
-    },
-    {
-      "family": "algebraic",
-      "cases": 2304
+      "family": "canonicalization",
+      "cases": 512
     },
     {
       "family": "control-flow",
-      "cases": 256
+      "cases": 512
     },
     {
-      "family": "egraph",
-      "cases": 1792
+      "family": "dead-code",
+      "cases": 512
     },
     {
-      "family": "external-dataflow-dse",
-      "cases": 256
+      "family": "fusion-cse",
+      "cases": 512
     },
     {
-      "family": "external-dataflow-licm",
-      "cases": 256
+      "family": "loop-transform",
+      "cases": 512
     },
     {
-      "family": "external-dataflow-loop-fission",
-      "cases": 256
+      "family": "memory-dataflow",
+      "cases": 512
     },
     {
-      "family": "external-dataflow-loop-fusion",
-      "cases": 256
+      "family": "scalar-algebra",
+      "cases": 512
     },
     {
-      "family": "memory-layout",
-      "cases": 2560
-    },
-    {
-      "family": "predicate",
-      "cases": 1792
-    },
-    {
-      "family": "vector-layout",
-      "cases": 1024
+      "family": "strength-reduction",
+      "cases": 512
     }
   ],
   "blockers": []

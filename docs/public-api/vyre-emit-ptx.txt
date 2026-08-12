@@ -37,7 +37,6 @@ pub fn vyre_emit_ptx::patterns::PtxAuditReport::merge(&mut self, other: vyre_emi
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::total_candidates(&self) -> usize
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::zero() -> Self
 pub fn vyre_emit_ptx::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::PtxAuditReport
-pub fn vyre_emit_ptx::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::PtxAuditReport
 pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::long_chain_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::longest_chain(&self) -> u32
 pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::schedule_latency_pressure(&self) -> u32

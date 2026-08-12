@@ -11,16 +11,28 @@ const ELEMENTWISE_CASE_ID: &str = "foundation.elementwise.add.1m";
 
 #[test]
 fn test_cross_backend_elementwise() {
+    vyre_bench::link_benchmark_backend_registrations();
     let registry = vyre_bench::registry::collect_all();
 
-    // Get the list of dispatch-capable backends
+    // Only registrations with the complete artifact compiler/materializer route
+    // can satisfy this production-path benchmark contract.
     let backends: Vec<&str> = vyre_driver::backend::registered_backends_by_precedence_slice()
         .expect("valid backend registry")
         .iter()
-        .filter(|reg| {
-            vyre_driver::backend::backend_dispatches(reg.id).expect("valid backend registry")
+        .filter(|registration| {
+            if !vyre_driver::backend::backend_dispatches(registration.id)
+                .expect("valid backend registry")
+                || registration.reference_oracle
+                || registration.target_compiler.is_none()
+                || registration.materializer.is_none()
+            {
+                return false;
+            }
+            registration
+                .acquire()
+                .is_ok_and(|backend| backend.supports_resident_dispatch())
         })
-        .map(|reg| reg.id)
+        .map(|registration| registration.id)
         .collect();
 
     if backends.is_empty() {

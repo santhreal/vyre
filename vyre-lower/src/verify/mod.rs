@@ -26,11 +26,9 @@
 //!
 //! ## Wiring
 //!
-//! Useful as a debug-time check after every rewrite pass. Not yet
-//! wired into `run_all` because the established invariant is "every
-//! rewrite preserves verify()"  -  wire when the user asks. Direct
-//! callers (rewrite tests, fuzz harnesses) can call `verify()` to
-//! turn quiet bugs into loud ones.
+//! [`crate::lower_verified`] and [`crate::verify_descriptor`] invoke this
+//! verifier before emitter handoff. Tests and fuzzers call `verify()` directly
+//! to turn malformed descriptors into structured failures.
 
 use rustc_hash::FxHashSet;
 use serde::{Deserialize, Serialize};
@@ -954,40 +952,6 @@ mod tests {
         };
 
         assert_eq!(verify(&desc), Ok(()));
-    }
-
-    #[test]
-    fn run_all_output_verifies() {
-        // Full pipeline output must satisfy verify(). This is the
-        // critical regression gate  -  any rewrite that produces an
-        // invalid descriptor will fail this test.
-        let desc = empty_desc(
-            vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![1, 0],
-                    result: Some(3),
-                },
-            ],
-            vec![LiteralValue::U32(0), LiteralValue::U32(99)],
-        );
-        let optimized = crate::rewrites::run_all(&desc);
-        assert_eq!(verify(&optimized), Ok(()));
     }
 
     #[test]

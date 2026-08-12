@@ -53,18 +53,12 @@ pub(crate) fn expected_artifacts_for_command(command: &str) -> &'static [&'stati
             "release/evidence/optimization/optimization-corpus.json",
             "release/evidence/optimization/optimization-corpus-contracts.json",
             "release/evidence/optimization/optimization-family-manifest.json",
-            "release/evidence/optimization/optimization-analysis-fixtures.json",
             "release/evidence/optimization/optimization-case-manifest.json",
+            "release/evidence/optimization/optimizer-pass-manifest.json",
         ],
-        "optimization-matrix" => &[
-            "release/evidence/optimization/optimization-integration-matrix.json",
-            "release/evidence/optimization/alias-aware-dse.json",
-            "release/evidence/optimization/alias-aware-stlf.json",
-            "release/evidence/optimization/alias-aware-licm.json",
-            "release/evidence/optimization/alias-aware-fusion-fission.json",
-            "release/evidence/optimization/egraph-saturation-matrix.json",
-            "release/evidence/optimization/egraph-semantic-contracts.json",
-        ],
+        "optimization-matrix" => {
+            &["release/evidence/optimization/optimization-integration-matrix.json"]
+        }
         "whats-similar" => &[REGISTERED_OP_DUPLICATES_ARTIFACT],
         "lego-audit" => &[LEGO_AUDIT_DUPLICATES_ARTIFACT],
         "release-evidence" => RELEASE_EVIDENCE_EXPECTED_ARTIFACTS,

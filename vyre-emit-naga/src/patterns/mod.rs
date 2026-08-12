@@ -25,20 +25,6 @@ pub fn audit(desc: &KernelDescriptor) -> NagaAuditReport {
     }
 }
 
-/// Like [`audit`] but runs the standard rewrite pipeline first.
-/// Shows what naga-specific patterns still apply AFTER the
-/// substrate-neutral optimization stack has already run.
-///
-/// Useful diagnostic: a non-empty post-optimization audit tells you
-/// the substrate-specific layer (e.g. vec_pack fusion) is leaving
-/// real performance on the table that no amount of substrate-neutral
-/// rewriting will reach.
-#[must_use]
-pub fn audit_optimized(desc: &KernelDescriptor) -> NagaAuditReport {
-    let optimized = vyre_lower::rewrites::run_all(desc);
-    audit(&optimized)
-}
-
 /// Combined naga-pattern report.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NagaAuditReport {
@@ -181,57 +167,6 @@ mod audit_tests {
         let s = r.format_short();
         assert!(s.contains("k (naga)"));
         assert!(s.contains("0 candidates"));
-    }
-
-    #[test]
-    fn audit_optimized_drops_dead_arithmetic_findings() {
-        // A kernel with dead arithmetic that the rewrite stack will
-        // remove. After run_all, the post-optimization audit should
-        // report no candidates from those vanished ops.
-        use vyre_foundation::ir::BinOp;
-        let desc = KernelDescriptor {
-            id: "dead".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(BinOp::Add),
-                        operands: vec![1, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(99)],
-            },
-        };
-        let r = audit_optimized(&desc);
-        // Just confirm it doesn't panic and returns the kernel_id.
-        assert_eq!(r.kernel_id, "dead");
     }
 
     #[test]

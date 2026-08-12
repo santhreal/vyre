@@ -23,7 +23,6 @@ CASE_REPRESENTATIVE[throughput]="foundation.dfa_match.256k"
 CASE_REPRESENTATIVE[latency]="runtime.megakernel.dispatch.256"
 CASE_REPRESENTATIVE[memory]="primitives.graph.frontier_step.1m"
 CASE_REPRESENTATIVE[optimizer]="foundation.optimizer.impact"
-CASE_REPRESENTATIVE[lowering]="lower.rewrites.impact.corpus"
 CASE_REPRESENTATIVE[runtime_queueing]="runtime.megakernel.condition.64k"
 
 errors=()
@@ -47,10 +46,10 @@ if (( ${#errors[@]} > 0 )); then
     done
     echo >&2
     echo "Fix: every dimension (throughput / latency / memory / compile_cache /" >&2
-    echo "optimizer / lowering / runtime_queueing) must have executable" >&2
-    echo "meta-harness evidence or a named driver contract." >&2
+    echo "optimizer / runtime_queueing) must have executable meta-harness" >&2
+    echo "evidence or a named driver contract." >&2
     exit 1
 fi
 
-echo "deep-bench-coverage gate: all 7 dimensions covered by vyre-bench registry evidence."
+echo "deep-bench-coverage gate: all 6 dimensions covered by vyre-bench registry evidence."
 exit 0

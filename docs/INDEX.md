@@ -27,7 +27,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 ## Cargo-derived workspace facts
 
 - Workspace packages: 34.
-- Shipped library, binary, and example targets: 73.
+- Shipped library, binary, and example targets: 72.
 - Source: `cargo metadata --no-deps --format-version 1`.
 
 ## Lifecycle counts

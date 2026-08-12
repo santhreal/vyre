@@ -24,12 +24,13 @@ pub(super) fn run_semantic_requirement_checks(
     failures: &mut Vec<String>,
 ) {
     match requirement.id.as_str() {
-        "alias-aware-upgrades" => optimization_integration::check(requirement, base_dir, failures),
+        "semantic-optimizer-registration" => {
+            optimization_integration::check(requirement, base_dir, failures)
+        }
         "conformance-hard-gate" => conformance_hard_gate::check(requirement, base_dir, failures),
         "cpu-only-100x-proof" => cpu_only_100x_proof::check(requirement, base_dir, failures),
         "crate-metadata" => crate_metadata::check(requirement, base_dir, failures),
         "cuda-first-path" => cuda_first_path::check(requirement, base_dir, failures),
-        "egraph-saturation" => optimization_integration::check(requirement, base_dir, failures),
         "public-launch" => public_launch::check(requirement, base_dir, mode, failures),
         "megakernel-default" => megakernel_default::check(requirement, base_dir, failures),
         "optimization-benchmark-proof" => {

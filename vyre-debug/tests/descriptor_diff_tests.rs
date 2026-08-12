@@ -1,6 +1,5 @@
 //! Test: descriptor diff tests.
-use vyre_debug::descriptor_diff::{bisect_rewrites, diff_descriptors};
-use vyre_debug::fixtures::loop_carry_smoke;
+use vyre_debug::descriptor_diff::diff_descriptors;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 fn minimal_program() -> Program {
@@ -52,12 +51,4 @@ fn diff_descriptors_after_descriptor_dce_removes_ops() {
     // op_count_delta should have a negative entry for the root path []
     let delta = diff.op_count_delta.get(&vec![]).copied().unwrap_or(0);
     assert!(delta < 0, "Expected negative delta, got {}", delta);
-}
-
-#[test]
-fn bisect_rewrites_clean_program_no_failure() {
-    let p = loop_carry_smoke();
-    let res = bisect_rewrites(&p).unwrap();
-    assert!(res.first_failing_rewrite.is_none());
-    assert_eq!(res.rewrite_history.len(), 18);
 }

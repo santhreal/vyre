@@ -395,8 +395,8 @@ required_commands = [
 ]
 
 [lane.compiler_optimizer]
-purpose = "Compiler optimizer seam: IR passes, descriptor rewrites, encoded optimizer relations, pass traces, specialization cost models, and emitter validation phases."
-layer = "Compiler optimizer seam"
+purpose = "Compiler optimization seam: semantic Program passes, verified representation lowering, read-only descriptor analyses, pass traces, specialization cost models, and concrete emitter strategy."
+layer = "Layer 1 semantic optimizer, verified lowering, and Layer 2 target strategy"
 write = [
   "vyre-foundation/src/optimizer/**",
   "vyre-foundation/src/transform/**",

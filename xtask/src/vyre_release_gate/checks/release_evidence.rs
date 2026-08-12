@@ -39,21 +39,13 @@ const REQUIRED_GENERATORS: &[(&str, &[&str])] = &[
             "optimization-corpus.json",
             "optimization-corpus-contracts.json",
             "optimization-family-manifest.json",
-            "optimization-analysis-fixtures.json",
             "optimization-case-manifest.json",
+            "optimizer-pass-manifest.json",
         ],
     ),
     (
         "optimization-matrix",
-        &[
-            "optimization-integration-matrix.json",
-            "alias-aware-dse.json",
-            "alias-aware-stlf.json",
-            "alias-aware-licm.json",
-            "alias-aware-fusion-fission.json",
-            "egraph-saturation-matrix.json",
-            "egraph-semantic-contracts.json",
-        ],
+        &["optimization-integration-matrix.json"],
     ),
 ];
 

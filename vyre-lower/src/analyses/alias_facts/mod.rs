@@ -1,9 +1,8 @@
 //! External alias and points-to facts for lowering legality.
 //!
-//! This module is the substrate-neutral boundary between Dataflow
-//! analyses and Vyre descriptor rewrites. Passes use [`AliasFactSet`]
-//! instead of ad-hoc structural alias guesses when external facts are
-//! available.
+//! This module is the substrate-neutral boundary for read-only descriptor
+//! legality analysis. Consumers use [`AliasFactSet`] instead of ad hoc
+//! structural alias guesses when external facts are available.
 
 use std::collections::BTreeSet;
 

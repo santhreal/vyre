@@ -84,14 +84,30 @@ fn every_benchmark_feature_guard_is_declared() {
         .cloned()
         .collect::<BTreeSet<_>>();
 
-    let mut guarded = BTreeSet::new();
+    let mut used = BTreeSet::new();
     for path in rust_files(&root.join("src")) {
         let source = fs::read_to_string(&path).expect("read Rust source");
-        guarded.extend(feature_names_in_source(&source).expect("parse Rust source"));
+        used.extend(feature_names_in_source(&source).expect("parse Rust source"));
+    }
+    for target in manifest
+        .get("bin")
+        .and_then(toml::Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        used.extend(
+            target
+                .get("required-features")
+                .and_then(toml::Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(toml::Value::as_str)
+                .map(str::to_owned),
+        );
     }
 
     assert_eq!(
-        guarded, declared,
+        used, declared,
         "source guards and Cargo features diverged"
     );
 }

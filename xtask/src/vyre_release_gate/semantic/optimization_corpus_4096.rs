@@ -6,43 +6,31 @@ use super::super::checks::*;
 use super::super::types::Requirement;
 
 pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut Vec<String>) {
+    const REQUIRED_FAMILIES: [&str; 8] = [
+        "scalar-algebra",
+        "strength-reduction",
+        "fusion-cse",
+        "dead-code",
+        "memory-dataflow",
+        "loop-transform",
+        "control-flow",
+        "canonicalization",
+    ];
+
     let Some(corpus) =
         first_json_evidence(requirement, base_dir, "optimization-corpus.json", failures)
     else {
         return;
     };
-    let generated = corpus
-        .get("generated_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let verified = corpus
-        .get("verified_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let optimized = corpus
-        .get("optimized_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let dataflow_analysis_cases = corpus
-        .get("dataflow_analysis_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let dataflow_analysis_optimized = corpus
-        .get("dataflow_analysis_optimized_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0);
-    let non_converged = corpus
-        .get("non_converged_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(u64::MAX);
-    let blockers = corpus
-        .get("blockers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(usize::MAX, Vec::len);
-    let required = corpus
-        .get("required_min_cases")
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(4_096);
+    let generated = u64_field(&corpus, "generated_cases", 0);
+    let verified = u64_field(&corpus, "verified_cases", 0);
+    let optimized = u64_field(&corpus, "optimized_cases", 0);
+    let non_converged = u64_field(&corpus, "non_converged_cases", u64::MAX);
+    let pass_instances = u64_field(&corpus, "pass_instance_count", 0);
+    let changed_pass_instances = u64_field(&corpus, "changed_pass_instances", 0);
+    let required = u64_field(&corpus, "required_min_cases", 4_096);
+    let blockers = array_len(&corpus, "blockers");
+
     if required < 4_096 {
         failures.push(format!(
             "requirement `optimization-corpus-4096` required_min_cases={required}; release floor is 4096"
@@ -50,29 +38,22 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     }
     if generated < required || generated < 4_096 {
         failures.push(format!(
-            "requirement `optimization-corpus-4096` generated {generated} cases; needs at least {required} and never below 4096"
+            "requirement `optimization-corpus-4096` generated {generated} semantic Program cases; needs at least {required} and never below 4096"
         ));
     }
     if verified != generated {
         failures.push(format!(
-            "requirement `optimization-corpus-4096` verified {verified}/{generated} generated descriptors before legacy rewrite coverage"
+            "requirement `optimization-corpus-4096` verified {verified}/{generated} generated semantic Programs"
         ));
     }
-    if optimized == 0 {
-        failures.push(
-            "requirement `optimization-corpus-4096` reports zero optimized cases; corpus is not proving rewrite coverage"
-                .to_string(),
-        );
-    }
-    if dataflow_analysis_cases == 0 {
-        failures.push(
-            "requirement `optimization-corpus-4096` reports zero dataflow-analysis-aware cases"
-                .to_string(),
-        );
-    }
-    if dataflow_analysis_optimized < dataflow_analysis_cases {
+    if optimized == 0 || changed_pass_instances == 0 {
         failures.push(format!(
-            "requirement `optimization-corpus-4096` optimized {dataflow_analysis_optimized}/{dataflow_analysis_cases} dataflow-analysis-aware cases"
+            "requirement `optimization-corpus-4096` reports {optimized} optimized cases and {changed_pass_instances} changed pass instances; the corpus is not proving live semantic optimizer execution"
+        ));
+    }
+    if pass_instances < generated {
+        failures.push(format!(
+            "requirement `optimization-corpus-4096` reports {pass_instances} pass instances for {generated} cases"
         ));
     }
     if non_converged != 0 || blockers != 0 {
@@ -80,14 +61,16 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "requirement `optimization-corpus-4096` reports {non_converged} non-converged case(s) and {blockers} blocker(s)"
         ));
     }
+
     for suffix in [
         "optimization-corpus-contracts.json",
         "optimization-family-manifest.json",
-        "optimization-analysis-fixtures.json",
         "optimization-case-manifest.json",
+        "optimizer-pass-manifest.json",
     ] {
         check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
     }
+
     if let Some(family_manifest) = first_json_evidence(
         requirement,
         base_dir,
@@ -99,28 +82,20 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             .and_then(serde_json::Value::as_array)
             .cloned()
             .unwrap_or_default();
-        if families.len() < 14 {
+        let declared_required = u64_field(&family_manifest, "required_family_count", 0);
+        let missing_required = array_len(&family_manifest, "missing_required_families");
+        if families.len() != REQUIRED_FAMILIES.len()
+            || declared_required != REQUIRED_FAMILIES.len() as u64
+        {
             failures.push(format!(
-                "requirement `optimization-corpus-4096` family manifest lists {} optimization families; needs at least 14 required release families",
-                families.len()
+                "requirement `optimization-corpus-4096` family manifest has {} row(s) and declares {declared_required}; needs exactly {} source-owned semantic families",
+                families.len(),
+                REQUIRED_FAMILIES.len()
             ));
         }
-        let declared_required = family_manifest
-            .get("required_family_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        if declared_required < 14 {
-            failures.push(format!(
-                "requirement `optimization-corpus-4096` family manifest declares {declared_required} required optimization families; needs all 14 release families"
-            ));
-        }
-        let missing_required = family_manifest
-            .get("missing_required_families")
-            .and_then(serde_json::Value::as_array)
-            .map_or(usize::MAX, Vec::len);
         if missing_required != 0 {
             failures.push(format!(
-                "requirement `optimization-corpus-4096` family manifest reports {missing_required} missing required optimization family/families"
+                "requirement `optimization-corpus-4096` family manifest reports {missing_required} missing required semantic family/families"
             ));
         }
         check_duplicate_rows(
@@ -130,100 +105,42 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "family manifest has duplicate family rows",
             failures,
         );
-        for required in [
-            "algebraic",
-            "predicate",
-            "egraph",
-            "memory-layout",
-            "control-flow",
-            "vector-layout",
-            "A13-coalesce-fixture",
-            "A14-shared-mem-promote-fixture",
-            "A15-bank-conflict-fixture",
-            "A16-vec-pack-fixture",
-            "external-dataflow-dse",
-            "external-dataflow-loop-fusion",
-            "external-dataflow-loop-fission",
-            "external-dataflow-licm",
-        ] {
-            let required_cases = families
+        for required_family in REQUIRED_FAMILIES {
+            let cases = families
                 .iter()
                 .find(|family| {
-                    family.get("family").and_then(serde_json::Value::as_str) == Some(required)
+                    family.get("family").and_then(serde_json::Value::as_str)
+                        == Some(required_family)
                 })
                 .and_then(|family| family.get("cases").and_then(serde_json::Value::as_u64))
                 .unwrap_or(0);
-            if required_cases < 128 {
+            if cases < 512 {
                 failures.push(format!(
-                    "requirement `optimization-corpus-4096` required family `{required}` has {required_cases} generated case(s), needs at least 128"
-                ));
-            }
-        }
-        for family in &families {
-            let name = family
-                .get("family")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or("<unknown>");
-            if family
-                .get("family")
-                .and_then(serde_json::Value::as_str)
-                .is_none_or(str::is_empty)
-                || family
-                    .get("cases")
-                    .and_then(serde_json::Value::as_u64)
-                    .unwrap_or(0)
-                    == 0
-            {
-                failures.push(format!(
-                    "requirement `optimization-corpus-4096` family manifest contains invalid family `{name}`"
+                    "requirement `optimization-corpus-4096` required semantic family `{required_family}` has {cases} generated case(s), needs at least 512"
                 ));
             }
         }
     }
-    if let Some(fixture_manifest) = first_json_evidence(
-        requirement,
-        base_dir,
-        "optimization-analysis-fixtures.json",
-        failures,
-    ) {
-        check_optimization_analysis_fixture_manifest(&fixture_manifest, failures);
-    }
+
     if let Some(case_manifest) = first_json_evidence(
         requirement,
         base_dir,
         "optimization-case-manifest.json",
         failures,
     ) {
-        let pass_instances = case_manifest
-            .get("pass_instance_count")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let unique_case_ids = case_manifest
-            .get("unique_case_ids")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        let manifest_generated = case_manifest
-            .get("generated_cases")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
+        let unique_case_ids = u64_field(&case_manifest, "unique_case_ids", 0);
+        let manifest_generated = u64_field(&case_manifest, "generated_cases", 0);
         let entries = case_manifest
             .get("entries")
             .and_then(serde_json::Value::as_array)
             .cloned()
             .unwrap_or_default();
-        if pass_instances != generated || manifest_generated != generated {
+        if manifest_generated != generated
+            || unique_case_ids != generated
+            || entries.len() as u64 != generated
+        {
             failures.push(format!(
-                "requirement `optimization-corpus-4096` case manifest pass_instance_count={pass_instances}, generated_cases={manifest_generated}, corpus generated_cases={generated}"
-            ));
-        }
-        if pass_instances < 4_096 || unique_case_ids != pass_instances {
-            failures.push(format!(
-                "requirement `optimization-corpus-4096` case manifest has {pass_instances} pass instance(s) and {unique_case_ids} unique id(s); needs >=4096 unique pass instances"
-            ));
-        }
-        if entries.len() as u64 != pass_instances {
-            failures.push(format!(
-                "requirement `optimization-corpus-4096` case manifest lists {} entrie(s), pass_instance_count is {pass_instances}",
+                "requirement `optimization-corpus-4096` case manifest generated={manifest_generated}, unique={unique_case_ids}, entries={}, corpus generated={generated}",
                 entries.len()
             ));
         }
@@ -234,22 +151,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             "case manifest has duplicate entry ids",
             failures,
         );
-        for field in [
-            "cases_with_child_bodies",
-            "cases_with_bindings",
-            "cases_with_literals",
-        ] {
-            if case_manifest
-                .get(field)
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(0)
-                == 0
-            {
-                failures.push(format!(
-                    "requirement `optimization-corpus-4096` case manifest `{field}` must be nonzero"
-                ));
-            }
-        }
         let malformed_entries = entries
             .iter()
             .filter(|entry| {
@@ -261,19 +162,95 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                         .get("family")
                         .and_then(serde_json::Value::as_str)
                         .is_none_or(str::is_empty)
+                    || u64_field(entry, "node_count", 0) == 0
+                    || u64_field(entry, "instruction_count", 0) == 0
                     || entry
-                        .get("total_ops")
-                        .and_then(serde_json::Value::as_u64)
-                        .unwrap_or(0)
-                        == 0
+                        .get("program_fingerprint")
+                        .and_then(serde_json::Value::as_str)
+                        .is_none_or(|fingerprint| fingerprint.len() != 64)
             })
             .count();
         if malformed_entries != 0 {
             failures.push(format!(
-                "requirement `optimization-corpus-4096` case manifest contains {malformed_entries} malformed generated pass instance(s)"
+                "requirement `optimization-corpus-4096` case manifest contains {malformed_entries} malformed semantic Program case(s)"
             ));
         }
     }
+
+    if let Some(pass_manifest) = first_json_evidence(
+        requirement,
+        base_dir,
+        "optimizer-pass-manifest.json",
+        failures,
+    ) {
+        let executable_passes = u64_field(&pass_manifest, "executable_passes", 0);
+        let catalog_entries = u64_field(&pass_manifest, "catalog_entries", 0);
+        let entries = pass_manifest
+            .get("entries")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if executable_passes == 0
+            || catalog_entries < executable_passes
+            || entries.len() as u64 != catalog_entries
+        {
+            failures.push(format!(
+                "requirement `optimization-corpus-4096` optimizer pass manifest executable={executable_passes}, catalog={catalog_entries}, entries={}",
+                entries.len()
+            ));
+        }
+        check_duplicate_rows(
+            &pass_manifest,
+            "entries",
+            "id",
+            "optimizer pass manifest has duplicate ids",
+            failures,
+        );
+        let malformed_entries = entries
+            .iter()
+            .filter(|entry| {
+                [
+                    "id",
+                    "kind",
+                    "owner",
+                    "phase",
+                    "boundary",
+                    "invariant",
+                    "termination",
+                    "proof",
+                ]
+                .iter()
+                .any(|field| {
+                    entry
+                        .get(*field)
+                        .and_then(serde_json::Value::as_str)
+                        .is_none_or(str::is_empty)
+                }) || entry
+                    .get("benchmark")
+                    .and_then(serde_json::Value::as_str)
+                    .is_none_or(str::is_empty)
+            })
+            .count();
+        if malformed_entries != 0 {
+            failures.push(format!(
+                "requirement `optimization-corpus-4096` optimizer pass manifest contains {malformed_entries} row(s) without live ownership, proof invariant, or benchmark/non-benchmark disposition"
+            ));
+        }
+    }
+}
+
+fn u64_field(value: &serde_json::Value, field: &str, default: u64) -> u64 {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(default)
+}
+
+fn array_len(value: &serde_json::Value, field: &str) -> usize {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_array)
+        .map_or(usize::MAX, Vec::len)
 }
 
 fn check_duplicate_rows(
@@ -300,63 +277,88 @@ mod tests {
     #[test]
     fn optimization_corpus_gate_rejects_duplicate_family_rows() {
         let family_manifest = serde_json::json!({
-            "required_family_count": 14,
+            "required_family_count": 8,
             "missing_required_families": [],
             "families": [
-                {"family": "algebraic", "cases": 128},
-                {"family": "algebraic", "cases": 128}
+                {"family": "scalar-algebra", "cases": 512},
+                {"family": "scalar-algebra", "cases": 512}
             ],
             "blockers": []
         });
-        let case_manifest = serde_json::json!({"blockers": []});
-        let failures = run_optimization_corpus_gate_with_manifests(family_manifest, case_manifest);
+        let failures = run_optimization_corpus_gate_with_manifests(
+            family_manifest,
+            valid_case_manifest(),
+            valid_pass_manifest(),
+        );
 
         assert!(
             failures
                 .iter()
-                .any(|failure| failure.contains("duplicate family rows: algebraic")),
+                .any(|failure| failure.contains("duplicate family rows: scalar-algebra")),
             "Fix: optimization corpus gate must reject duplicate family manifest rows; failures={failures:?}"
         );
     }
 
     #[test]
     fn optimization_corpus_gate_rejects_duplicate_case_entry_ids() {
-        let family_manifest = serde_json::json!({"blockers": []});
-        let case_manifest = serde_json::json!({
-            "pass_instance_count": 4096,
-            "generated_cases": 4096,
-            "unique_case_ids": 4096,
-            "duplicate_case_ids": [],
-            "entries": [
-                {
-                    "id": "optimization.algebraic.0001",
-                    "family": "algebraic",
-                    "total_ops": 3
-                },
-                {
-                    "id": "optimization.algebraic.0001",
-                    "family": "predicate",
-                    "total_ops": 5
-                }
-            ],
-            "cases_with_child_bodies": 1,
-            "cases_with_bindings": 1,
-            "cases_with_literals": 1,
-            "blockers": []
-        });
-        let failures = run_optimization_corpus_gate_with_manifests(family_manifest, case_manifest);
+        let mut case_manifest = valid_case_manifest();
+        case_manifest["entries"] = serde_json::json!([
+            {
+                "id": "foundation.optimizer.scalar-algebra.0001",
+                "family": "scalar-algebra",
+                "node_count": 1,
+                "instruction_count": 3,
+                "memory_op_count": 1,
+                "control_flow_count": 0,
+                "program_fingerprint": "0".repeat(64)
+            },
+            {
+                "id": "foundation.optimizer.scalar-algebra.0001",
+                "family": "strength-reduction",
+                "node_count": 1,
+                "instruction_count": 5,
+                "memory_op_count": 1,
+                "control_flow_count": 0,
+                "program_fingerprint": "1".repeat(64)
+            }
+        ]);
+        let failures = run_optimization_corpus_gate_with_manifests(
+            valid_family_manifest(),
+            case_manifest,
+            valid_pass_manifest(),
+        );
 
         assert!(
             failures.iter().any(|failure| {
-                failure.contains("duplicate entry ids: optimization.algebraic.0001")
+                failure
+                    .contains("duplicate entry ids: foundation.optimizer.scalar-algebra.0001")
             }),
-            "Fix: optimization corpus gate must reject duplicate case manifest entry ids even when unique_case_ids and duplicate_case_ids claim clean evidence; failures={failures:?}"
+            "Fix: optimization corpus gate must reject duplicate semantic Program case ids; failures={failures:?}"
+        );
+    }
+
+    #[test]
+    fn optimization_corpus_gate_rejects_pass_rows_without_benchmark_disposition() {
+        let mut pass_manifest = valid_pass_manifest();
+        pass_manifest["entries"][0]["benchmark"] = serde_json::json!("");
+        let failures = run_optimization_corpus_gate_with_manifests(
+            valid_family_manifest(),
+            valid_case_manifest(),
+            pass_manifest,
+        );
+
+        assert!(
+            failures
+                .iter()
+                .any(|failure| failure.contains("benchmark/non-benchmark disposition")),
+            "Fix: every optimizer pass row needs a benchmark or reviewed non-benchmark disposition; failures={failures:?}"
         );
     }
 
     fn run_optimization_corpus_gate_with_manifests(
         family_manifest: serde_json::Value,
         case_manifest: serde_json::Value,
+        pass_manifest: serde_json::Value,
     ) -> Vec<String> {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temp workspace for optimization corpus gate test.");
@@ -368,33 +370,25 @@ mod tests {
                 "generated_cases": 4096,
                 "verified_cases": 4096,
                 "optimized_cases": 4096,
-                "dataflow_analysis_cases": 1,
-                "dataflow_analysis_optimized_cases": 1,
                 "non_converged_cases": 0,
+                "pass_instance_count": 8192,
+                "changed_pass_instances": 4096,
                 "blockers": []
             })
             .to_string(),
         )
         .expect("Fix: write optimization corpus gate fixture.");
-        std::fs::write(
-            base_dir.join("optimization-family-manifest.json"),
-            family_manifest.to_string(),
-        )
-        .expect("Fix: write optimization family manifest fixture.");
-        std::fs::write(
-            base_dir.join("optimization-case-manifest.json"),
-            case_manifest.to_string(),
-        )
-        .expect("Fix: write optimization case manifest fixture.");
-        for suffix in [
-            "optimization-corpus-contracts.json",
-            "optimization-analysis-fixtures.json",
+        for (name, value) in [
+            ("optimization-family-manifest.json", family_manifest),
+            ("optimization-case-manifest.json", case_manifest),
+            ("optimizer-pass-manifest.json", pass_manifest),
+            (
+                "optimization-corpus-contracts.json",
+                serde_json::json!({"blockers": []}),
+            ),
         ] {
-            std::fs::write(
-                base_dir.join(suffix),
-                serde_json::json!({"blockers": []}).to_string(),
-            )
-            .expect("Fix: write auxiliary optimization corpus gate fixture.");
+            std::fs::write(base_dir.join(name), value.to_string())
+                .expect("Fix: write optimization corpus gate fixture.");
         }
         let requirement = Requirement {
             id: "optimization-corpus-4096".to_string(),
@@ -404,8 +398,8 @@ mod tests {
                 "optimization-corpus.json",
                 "optimization-corpus-contracts.json",
                 "optimization-family-manifest.json",
-                "optimization-analysis-fixtures.json",
                 "optimization-case-manifest.json",
+                "optimizer-pass-manifest.json",
             ]
             .into_iter()
             .map(str::to_string)
@@ -417,5 +411,62 @@ mod tests {
         check(&requirement, base_dir, &mut failures);
 
         failures
+    }
+
+    fn valid_family_manifest() -> serde_json::Value {
+        serde_json::json!({
+            "required_family_count": 8,
+            "missing_required_families": [],
+            "families": [
+                {"family": "scalar-algebra", "cases": 512},
+                {"family": "strength-reduction", "cases": 512},
+                {"family": "fusion-cse", "cases": 512},
+                {"family": "dead-code", "cases": 512},
+                {"family": "memory-dataflow", "cases": 512},
+                {"family": "loop-transform", "cases": 512},
+                {"family": "control-flow", "cases": 512},
+                {"family": "canonicalization", "cases": 512}
+            ],
+            "blockers": []
+        })
+    }
+
+    fn valid_case_manifest() -> serde_json::Value {
+        let entries = (0..4096)
+            .map(|index| {
+                serde_json::json!({
+                    "id": format!("foundation.optimizer.case.{index:04}"),
+                    "family": "scalar-algebra",
+                    "node_count": 1,
+                    "instruction_count": 3,
+                    "memory_op_count": 1,
+                    "control_flow_count": 0,
+                    "program_fingerprint": "0".repeat(64)
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "generated_cases": 4096,
+            "unique_case_ids": 4096,
+            "entries": entries,
+            "blockers": []
+        })
+    }
+
+    fn valid_pass_manifest() -> serde_json::Value {
+        serde_json::json!({
+            "executable_passes": 1,
+            "catalog_entries": 1,
+            "entries": [{
+                "id": "const-fold",
+                "kind": "executable-pass",
+                "owner": "vyre-foundation",
+                "phase": "Canonicalize",
+                "boundary": "Program",
+                "invariant": "semantic equivalence",
+                "benchmark": "reviewed-non-benchmark: correctness-only"
+            }],
+            "blockers": []
+        })
     }
 }

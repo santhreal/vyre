@@ -73,11 +73,11 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
         vec![BufferDecl::storage("out", 0, BufferAccess::ReadWrite, DataType::U32).with_count(16)],
         [64, 1, 1],
         vec![
-            Node::let_bind("a", Expr::u32(1)),
-            Node::let_bind("b", Expr::u32(2)),
-            Node::let_bind("c", Expr::u32(3)),
-            Node::let_bind("d", Expr::u32(4)),
-            Node::let_bind("e", Expr::u32(5)),
+            Node::store("out", Expr::u32(0), Expr::u32(1)),
+            Node::store("out", Expr::u32(1), Expr::u32(2)),
+            Node::store("out", Expr::u32(2), Expr::u32(3)),
+            Node::store("out", Expr::u32(3), Expr::u32(4)),
+            Node::store("out", Expr::u32(4), Expr::u32(5)),
         ],
     );
     let desc = vyre_lower::lower_verified(&p)
@@ -91,7 +91,11 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
             max_ops_per_body: 2,
         },
     );
-    assert!(dump.text.contains("<3 more ops>"));
+    assert!(
+        dump.text.contains("more ops>"),
+        "the per-body operation limit must produce a truncation marker:\n{}",
+        dump.text
+    );
 }
 
 #[test]

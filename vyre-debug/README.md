@@ -50,7 +50,7 @@ This section is generated from `docs/CLI.toml` and executable help output.
 ./cargo_full run -p vyre-debug --bin vyre-dbg -- --help
 ```
 
-Commands: `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear`.
+Commands: `artifact-report`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear`.
 
 Hardware: Descriptor analysis is device independent. Emission and replay requirements depend on the selected artifact and backend.
 

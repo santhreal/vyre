@@ -64,10 +64,8 @@ assert_eq!(module.entry_points[0].name, "main");
   vec2/vec3/vec4 lowering.
 - `pipeline_prewarm`: pipeline cache hints.
 
-Run `patterns::audit(&desc)` for a unified `NagaAuditReport` covering
-all per-kernel patterns. Run `patterns::audit_optimized(&desc)` to
-audit the post-`run_all` form: answers "what naga-specific
-optimizations remain after the standard rewrite pipeline?".
+Run `patterns::audit(&desc)` for a unified read-only `NagaAuditReport` covering
+all per-kernel target-strategy opportunities.
 
 These are diagnostic: they report candidates and do not transform the
 emitted module. Bind-group reuse is NOT here; it ships as a real

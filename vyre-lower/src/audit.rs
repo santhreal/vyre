@@ -1,8 +1,4 @@
 //! Combined performance audit for vyre kernels.
-//!
-//! Source-of-truth: `PERF_ROADMAP_2026-05-01.md` section B.3 +
-//! `SEPARATION_AUDIT_2026-05-01.md` section S3.
-//!
 //! One entry point runs every substrate-neutral analysis on a
 //! `KernelDescriptor` and returns a unified `PerfAuditReport` with
 //! sub-reports + a single `waste_score` aggregate + a list of
@@ -136,18 +132,6 @@ pub fn audit_with_histogram(
     desc: &KernelDescriptor,
 ) -> (PerfAuditReport, crate::analyses::OpHistogram) {
     (audit(desc), crate::analyses::op_histogram::analyze(desc))
-}
-
-/// Like [`audit`] but runs the standard rewrite pipeline first.
-///
-/// Tells callers: "what substrate-neutral perf issues REMAIN after
-/// the optimization stack already ran?" Mirrors the
-/// emitter-level `audit_optimized` functions; every layer offers the
-/// same diagnostic question at its level.
-#[must_use]
-pub fn audit_optimized(desc: &KernelDescriptor) -> PerfAuditReport {
-    let optimized = crate::rewrites::run_all(desc);
-    audit(&optimized)
 }
 
 /// Run every substrate-neutral analysis and return the unified report.
@@ -688,29 +672,5 @@ mod tests {
         assert_eq!(report.kernel_id, "k");
         assert_eq!(hist.literal, 2);
         assert_eq!(hist.total(), 2);
-    }
-
-    #[test]
-    fn audit_optimized_runs_pipeline_first_and_returns_report() {
-        use crate::{
-            BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-        };
-        let desc = KernelDescriptor {
-            id: "audit_opt".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![],
-                literals: vec![crate::LiteralValue::U32(7)],
-            },
-        };
-        let r = audit_optimized(&desc);
-        // Just confirm it doesn't panic and returns a populated report.
-        assert_eq!(r.kernel_id, "audit_opt");
     }
 }

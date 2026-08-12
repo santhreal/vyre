@@ -44,7 +44,7 @@ pub mod wgsl;
 pub use artifact_report::{ArtifactReport, TargetPayloadReport};
 pub use carriers::{carrier_summary, find_uncarriered_assigns, CarrierSummary, UncarrieredAssign};
 pub use dangling::{find_dangling_refs, DanglingRef};
-pub use descriptor_diff::{bisect_rewrites, diff_descriptors, DescriptorDiff, RewriteBisectResult};
+pub use descriptor_diff::{diff_descriptors, DescriptorDiff};
 pub use descriptor_dump::{dump_descriptor, DescriptorDump, DescriptorDumpOptions};
 pub use naga_dump::{dump_naga_module, NagaDump};
 pub use naga_trace::{

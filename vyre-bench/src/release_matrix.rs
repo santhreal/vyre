@@ -47,6 +47,7 @@ pub struct ReleaseWorkloadFamilyReport {
     pub release_plan_workload: u8,
     pub required: bool,
     pub dispatch_policy: &'static str,
+    pub requires_cpu_sota_baseline: bool,
     pub non_megakernel_justification: Option<&'static str>,
     pub matched_cases: Vec<String>,
     pub evidence_artifact: String,
@@ -71,6 +72,7 @@ struct ReleaseWorkloadFamily {
     all_terms: &'static [&'static str],
     bench_target_id: &'static str,
     dispatch_policy: &'static str,
+    requires_cpu_sota_baseline: bool,
     non_megakernel_justification: Option<&'static str>,
 }
 
@@ -90,6 +92,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         any_terms: &["release.condition_eval", "conditions.yara_like"],
         all_terms: &["condition"],
         bench_target_id: "release.workload.condition_eval",
+        requires_cpu_sota_baseline: true,
         dispatch_policy: "megakernel",
         non_megakernel_justification: None,
     },
@@ -101,6 +104,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         any_terms: &["release.string_bitmap_scatter"],
         all_terms: &["string", "bitmap"],
         bench_target_id: "release.workload.string_bitmap_scatter",
+        requires_cpu_sota_baseline: true,
         dispatch_policy: "megakernel",
         non_megakernel_justification: None,
     },
@@ -113,6 +117,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["release.offset_count_aggregation"],
         bench_target_id: "release.workload.offset_count_aggregation",
         dispatch_policy: "megakernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: None,
     },
     ReleaseWorkloadFamily {
@@ -125,6 +130,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         bench_target_id: "release.workload.pe_metadata",
         dispatch_policy: "megakernel",
         non_megakernel_justification: None,
+        requires_cpu_sota_baseline: true,
     },
     ReleaseWorkloadFamily {
         id: "entropy-window",
@@ -135,6 +141,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["release.entropy_window"],
         bench_target_id: "release.workload.entropy_window",
         dispatch_policy: "megakernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: None,
     },
     ReleaseWorkloadFamily {
@@ -146,6 +153,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["quantifier", "condition"],
         bench_target_id: "release.workload.for_any_all_n",
         dispatch_policy: "megakernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: None,
     },
     ReleaseWorkloadFamily {
@@ -157,6 +165,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["alias"],
         bench_target_id: "release.workload.alias_reaching_def",
         dispatch_policy: "specialized-dataflow-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: alias-aware reaching-definition workloads use sparse relation kernels with fixpoint convergence rather than independent condition-slot dispatch",
         ),
@@ -170,6 +179,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["ifds", "witness"],
         bench_target_id: "release.workload.ifds_witness",
         dispatch_policy: "specialized-dataflow-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: IFDS witness extraction uses frontier/fact-table scheduling and predecessor reconstruction that need dataflow-specific kernels",
         ),
@@ -183,6 +193,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["release.c_ast_traversal"],
         bench_target_id: "release.workload.c_ast_traversal",
         dispatch_policy: "specialized-parser-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
         ),
@@ -196,19 +207,21 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["megakernel", "queue"],
         bench_target_id: "release.workload.megakernel_stream",
         dispatch_policy: "megakernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: None,
     },
     ReleaseWorkloadFamily {
-        id: "egraph-saturation",
-        title: "E-graph rewrite saturation and optimization impact",
+        id: "semantic-optimizer-impact",
+        title: "Canonical semantic optimizer impact",
         release_plan_workload: 11,
         required: true,
-        any_terms: &["release.egraph_saturation", "egraph", "egglog", "lower.rewrites", "optimizer.impact"],
+        any_terms: &["foundation.optimizer.impact", "optimizer"],
         all_terms: &[],
-        bench_target_id: "release.workload.egraph_saturation",
-        dispatch_policy: "bounded-saturation-kernel",
+        bench_target_id: "release.optimization.foundation_optimizer_impact",
+        dispatch_policy: "canonical-program-optimizer",
+        requires_cpu_sota_baseline: false,
         non_megakernel_justification: Some(
-            "architectural: e-graph saturation is a bounded rewrite worklist with fuel and equivalence-class state, so it uses saturation-specific kernels",
+            "architectural: semantic optimization executes before verified lowering and target materialization",
         ),
     },
     ReleaseWorkloadFamily {
@@ -220,6 +233,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["sparse"],
         bench_target_id: "release.workload.conformance_sparse_readback",
         dispatch_policy: "megakernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: None,
     },
     ReleaseWorkloadFamily {
@@ -231,6 +245,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["reachability"],
         bench_target_id: "release.workload.callgraph_reachability",
         dispatch_policy: "specialized-graph-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: callgraph reachability is frontier graph traversal with convergence state, not independent rule-condition slot evaluation",
         ),
@@ -244,6 +259,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["resident", "dataflow"],
         bench_target_id: "release.workload.compound_fused_filter",
         dispatch_policy: "resident-fused-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: compound filtering fuses independent matching, dataflow, score, and taint-class predicates into one resident pass without condition-slot queue orchestration",
         ),
@@ -257,6 +273,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["resident", "scheduler"],
         bench_target_id: "release.workload.adaptive_routing",
         dispatch_policy: "resident-routing-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: adaptive routing is GPU-side scheduling metadata generation rather than execution of a queued rule opcode stream",
         ),
@@ -270,6 +287,7 @@ const RELEASE_WORKLOADS: &[ReleaseWorkloadFamily] = &[
         all_terms: &["resident", "inference"],
         bench_target_id: "release.workload.quantized_linear",
         dispatch_policy: "resident-fused-kernel",
+        requires_cpu_sota_baseline: true,
         non_megakernel_justification: Some(
             "architectural: grouped INT4 linear fuses packed weight decode, scale/zero-point sidecars, and accumulation in one inference kernel instead of queueing scalar condition opcodes",
         ),
@@ -362,6 +380,7 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
             ));
         }
         if family.required
+            && family.requires_cpu_sota_baseline
             && !family.matched_cases.is_empty()
             && family.cpu_sota_contracts.is_empty()
         {
@@ -371,6 +390,7 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
             ));
         }
         if family.required
+            && family.requires_cpu_sota_baseline
             && !family.matched_cases.is_empty()
             && family.fair_cpu_sota_baseline_count == 0
         {
@@ -621,6 +641,7 @@ fn build_family_report(
         release_plan_workload: family.release_plan_workload,
         required: family.required,
         dispatch_policy: family.dispatch_policy,
+        requires_cpu_sota_baseline: family.requires_cpu_sota_baseline,
         non_megakernel_justification: family.non_megakernel_justification,
         matched_cases,
         evidence_artifact,

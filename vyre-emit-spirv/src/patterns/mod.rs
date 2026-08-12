@@ -23,17 +23,6 @@ pub fn audit(desc: &KernelDescriptor) -> SpirvAuditReport {
     }
 }
 
-/// Like [`audit`] but runs the standard rewrite pipeline first.
-/// The workgroup-size validation produces the same result either way
-/// (the rewrite stack doesn't change `dispatch.workgroup_size`), but
-/// the subgroup capability detection may report fewer required caps
-/// after dead-code elimination strips unused subgroup ops.
-#[must_use]
-pub fn audit_optimized(desc: &KernelDescriptor) -> SpirvAuditReport {
-    let optimized = vyre_lower::rewrites::run_all(desc);
-    audit(&optimized)
-}
-
 /// Combined SPIR-V-pattern report.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SpirvAuditReport {
@@ -228,26 +217,6 @@ mod audit_tests {
         let s = r.format_short();
         assert!(s.contains("k (spirv)"));
         assert!(s.contains("0 findings"));
-    }
-
-    #[test]
-    fn audit_optimized_returns_same_workgroup_as_audit() {
-        // The rewrite stack doesn't change dispatch.workgroup_size,
-        // so workgroup_validation should match between audit and
-        // audit_optimized.
-        let desc = KernelDescriptor {
-            id: "wg".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(2048, 1, 1), // intentionally over baseline
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
-        let raw = audit(&desc);
-        let optimized = audit_optimized(&desc);
-        assert_eq!(raw.workgroup_validation, optimized.workgroup_validation);
     }
 
     #[test]

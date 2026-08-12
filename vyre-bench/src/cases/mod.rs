@@ -41,7 +41,6 @@ fn generated_u32_triplet(
 }
 pub mod adaptive_routing;
 pub mod adversarial;
-pub mod alias_aware_optimizations;
 pub mod attention;
 pub mod bigint;
 pub mod binary_search;
@@ -55,7 +54,6 @@ pub mod crypto;
 pub mod cuda_ptx_patterns;
 pub mod dataflow_irregular;
 pub mod dfa_match;
-pub mod egraph_saturation;
 pub mod elementwise;
 pub mod gather;
 pub(crate) mod gpu_case;
@@ -70,7 +68,6 @@ pub mod literal_set_cold_start;
 pub mod literal_set_decode_heavy;
 pub mod literal_set_paged_corpus;
 pub mod literal_set_vs_cpu;
-pub mod lower_rewrite_impact;
 pub mod matmul;
 pub mod megakernel_condition;
 pub mod megakernel_latency;

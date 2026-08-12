@@ -578,6 +578,7 @@ pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_IDENTITY_ELIM_
 pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_EIGHT: &str
 pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_FOUR: &str
 pub const vyre_foundation::optimizer::algebraic_rules::REWRITE_ID_STRENGTH_REDUCE_MUL_POW2_TWO: &str
+pub const vyre_foundation::optimizer::corpus::RELEASE_MIN_OPTIMIZATION_CASES: usize
 pub const vyre_foundation::optimizer::eqsat::DEFAULT_EXTRACTION_ITER_BUDGET: usize
 pub const vyre_foundation::optimizer::passes::cleanup::region_inline_engine::DEFAULT_INLINE_THRESHOLD: usize
 pub const vyre_foundation::optimizer::passes::loops::loop_strip_mine::DEFAULT_STRIP_MINE_TILE: u32
@@ -1318,6 +1319,8 @@ pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_numeric_ze
 pub fn vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::is_true(self) -> bool
 pub fn vyre_foundation::optimizer::algebraic_rules::binop_identity_replacement(op: vyre_spec::bin_op::BinOp, lhs_same_as_rhs: bool, lhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>, rhs_lit: core::option::Option<vyre_foundation::optimizer::algebraic_rules::ScalarLiteral>) -> core::option::Option<vyre_foundation::optimizer::algebraic_rules::IdentityReplacement>
 pub fn vyre_foundation::optimizer::algebraic_rules::strength_reduce_power_of_two_shift(value: u32) -> core::option::Option<u32>
+pub fn vyre_foundation::optimizer::corpus::generate_release_corpus() -> alloc::vec::Vec<vyre_foundation::optimizer::corpus::OptimizationCorpusCase>
+pub fn vyre_foundation::optimizer::corpus::manifest_for(cases: &[vyre_foundation::optimizer::corpus::OptimizationCorpusCase]) -> vyre_foundation::optimizer::corpus::OptimizationCorpusManifest
 pub fn vyre_foundation::optimizer::cost::CostCertificate::dimensions_increased_over(&self, other: &Self) -> alloc::vec::Vec<&'static str>
 pub fn vyre_foundation::optimizer::cost::CostCertificate::dominates_or_equal(&self, other: &Self) -> bool
 pub fn vyre_foundation::optimizer::cost::CostCertificate::estimate_for_adapter(&self, caps: &vyre_foundation::optimizer::ctx::AdapterCaps) -> vyre_foundation::optimizer::cost::DeviceCostEstimate
@@ -2384,6 +2387,7 @@ pub fn vyre_foundation::validate::validation_error::ValidationCode::as_str(&self
 pub fn vyre_foundation::validate::validation_error::ValidationCode::deserialize<D>(deserializer: D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 pub fn vyre_foundation::validate::validation_error::ValidationCode::fmt(&self, output: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_foundation::validate::validation_error::ValidationCode::phase(&self) -> core::option::Option<vyre_foundation::validate::validation_error::ValidationPhase>
+pub fn vyre_foundation::validate::validation_error::ValidationCode::registered() -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = (&'static str, vyre_foundation::validate::validation_error::ValidationPhase)> + core::clone::Clone
 pub fn vyre_foundation::validate::validation_error::ValidationError::cause(&self) -> &str
 pub fn vyre_foundation::validate::validation_error::ValidationError::code(&self) -> &vyre_foundation::validate::validation_error::ValidationCode
 pub fn vyre_foundation::validate::validation_error::ValidationError::corrective_action(&self) -> &str
@@ -2592,6 +2596,7 @@ pub mod vyre_foundation::opaque_payload::endian
 pub mod vyre_foundation::operation
 pub mod vyre_foundation::optimizer
 pub mod vyre_foundation::optimizer::algebraic_rules
+pub mod vyre_foundation::optimizer::corpus
 pub mod vyre_foundation::optimizer::cost
 pub mod vyre_foundation::optimizer::ctx
 pub mod vyre_foundation::optimizer::derived_order
@@ -2905,6 +2910,9 @@ pub struct vyre_foundation::optimizer::RewriteBatchItem
 pub struct vyre_foundation::optimizer::RewriteBatchPlan
 pub struct vyre_foundation::optimizer::RewriteCandidate
 pub struct vyre_foundation::optimizer::algebraic_rules::ArithmeticRewriteProofContract
+pub struct vyre_foundation::optimizer::corpus::OptimizationCorpusCase
+pub struct vyre_foundation::optimizer::corpus::OptimizationCorpusManifest
+pub struct vyre_foundation::optimizer::corpus::OptimizationFamilyCount
 pub struct vyre_foundation::optimizer::cost::DeviceCostEstimate
 pub struct vyre_foundation::optimizer::ctx::AdapterCaps
 pub struct vyre_foundation::optimizer::ctx::AnalysisCache
@@ -4577,6 +4585,23 @@ pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::Bool(bool)
 pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::F32(f32)
 pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::I32(i32)
 pub vyre_foundation::optimizer::algebraic_rules::ScalarLiteral::U32(u32)
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusCase::family: alloc::string::String
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusCase::id: alloc::string::String
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusCase::program: vyre_foundation::ir::Program
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::blockers: alloc::vec::Vec<alloc::string::String>
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::changed_pass_instances: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::families: alloc::vec::Vec<vyre_foundation::optimizer::corpus::OptimizationFamilyCount>
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::generated_cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::non_converged_cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::optimized_cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::pass_instance_count: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::required_min_cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::schema_version: u32
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::total_nodes_after: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::total_nodes_before: usize
+pub vyre_foundation::optimizer::corpus::OptimizationCorpusManifest::verified_cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationFamilyCount::cases: usize
+pub vyre_foundation::optimizer::corpus::OptimizationFamilyCount::family: alloc::string::String
 pub vyre_foundation::optimizer::cost::CostCertificate::atomic_op_count: u64
 pub vyre_foundation::optimizer::cost::CostCertificate::control_flow_count: u64
 pub vyre_foundation::optimizer::cost::CostCertificate::divergence_score: u64

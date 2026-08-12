@@ -15,7 +15,6 @@ post-processing pass.
 - `find_dangling_refs` / `FindDangling`  -  vyre-side dangling SSA refs
 - `find_uncarriered_assigns` / `FindUncarriered`  -  Assigns inside loops not tagged
 - `carrier_summary` / `CarrierSummary`  -  vyre-IR carrier analysis
-- `bisect_rewrites` / `BisectRewrites`  -  find which rewrite pass breaks a descriptor
 - `diff_descriptors` / `DiffDescriptors`  -  diff two descriptors
 - `get_program`  -  hard-coded synthetic Programs (c11_lexer + a few others)
 

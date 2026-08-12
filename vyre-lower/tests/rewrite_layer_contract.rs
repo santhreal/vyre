@@ -96,31 +96,11 @@ fn foundation_program_optimizer_does_not_depend_on_lowered_descriptors() {
 }
 
 #[test]
-fn descriptor_rewrite_cleanup_names_are_layer_prefixed() {
-    let mod_rs = workspace_root().join("vyre-lower/src/rewrites/mod.rs");
-    let text = read(&mod_rs);
-
-    for name in ["const_fold", "cse", "dce"] {
-        assert!(
-            !text.contains(&format!("pub mod {name};")),
-            "lowered descriptor cleanup must not expose an unprefixed `{name}` module"
-        );
-        assert!(
-            !text.contains(&format!("pub use {name}::{name};")),
-            "lowered descriptor cleanup must not re-export an unprefixed `{name}` function"
-        );
-    }
-
-    for name in ["descriptor_const_fold", "descriptor_cse", "descriptor_dce"] {
-        assert!(
-            text.contains(&format!("pub mod {name};")),
-            "missing descriptor-prefixed rewrite module `{name}`"
-        );
-        assert!(
-            text.contains(&format!("pub use {name}::{name};")),
-            "missing descriptor-prefixed rewrite re-export `{name}`"
-        );
-    }
+fn descriptor_lowering_has_no_semantic_rewrite_module() {
+    assert!(
+        !workspace_root().join("vyre-lower/src/rewrites").exists(),
+        "verified lowering must not contain a semantic descriptor rewrite layer"
+    );
 }
 
 #[test]

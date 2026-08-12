@@ -2579,23 +2579,8 @@ pub(crate) fn benchmark_before_after_semantic_win(
         return false;
     };
     match case_id {
-        "lower.rewrites.impact.corpus" => {
-            metric_p50_f64(metrics.get("lower_ops_eliminated")).is_some_and(|value| value > 0.0)
-                || metric_p50_f64(metrics.get("lower_optimized_issue_score"))
-                    .zip(metric_p50_f64(metrics.get("lower_baseline_issue_score")))
-                    .is_some_and(|(optimized, baseline)| optimized < baseline)
-        }
         "foundation.optimizer.impact" => metric_p50_f64(metrics.get("optimizer_nodes_eliminated"))
             .is_some_and(|value| value > 0.0),
-        "lower.egraph_saturation" => {
-            metric_p50_f64(metrics.get("egraph_applied_rewrites")).is_some_and(|value| value > 0.0)
-                && metric_p50_f64(metrics.get("egraph_output_ops"))
-                    .zip(metric_p50_f64(metrics.get("egraph_baseline_ops_after")))
-                    .is_some_and(|(output, baseline)| output < baseline)
-        }
-        "lower.alias_aware_optimizations" => {
-            metric_p50_f64(metrics.get("alias_pass_wins")).is_some_and(|value| value >= 5.0)
-        }
         _ => false,
     }
 }

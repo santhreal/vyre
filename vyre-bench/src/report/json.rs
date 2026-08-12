@@ -340,10 +340,8 @@ pub const LOWER_FULL_REPORT_ARTIFACT_KIND: &str = "vyre.lower.full_report.json";
 struct LowerFullReportArtifact<'a> {
     kind: &'static str,
     descriptor_id: &'a str,
-    verify_input_status: &'static str,
-    verify_output_status: &'static str,
+    verify_status: &'static str,
     histogram: &'a vyre_lower::analyses::op_histogram::OpHistogram,
-    rewrite_stats: &'a vyre_lower::rewrites::OptimizationStats,
     fix_text: &'a str,
     full_report: &'a vyre_lower::FullReport,
 }
@@ -354,10 +352,8 @@ pub fn lower_full_report_artifact(
     serde_json::to_string(&LowerFullReportArtifact {
         kind: LOWER_FULL_REPORT_ARTIFACT_KIND,
         descriptor_id: &report.descriptor_id,
-        verify_input_status: report.verify_input_status(),
-        verify_output_status: report.verify_output_status(),
+        verify_status: report.verify_status(),
         histogram: &report.histogram,
-        rewrite_stats: &report.stats,
         fix_text: &report.fix_text,
         full_report: report,
     })
@@ -684,10 +680,8 @@ mod tests {
 
         assert!(artifact.contains("\"kind\":\"vyre.lower.full_report.json\""));
         assert!(artifact.contains("\"descriptor_id\":\"bench_bad\""));
-        assert!(artifact.contains("\"verify_input_status\":\"FAIL\""));
-        assert!(artifact.contains("\"verify_output_status\":\"SKIPPED\""));
+        assert!(artifact.contains("\"verify_status\":\"FAIL\""));
         assert!(artifact.contains("\"histogram\""));
-        assert!(artifact.contains("\"rewrite_stats\""));
         assert!(artifact.contains("\"full_report\""));
         assert!(
             artifact.contains("\"fix_text\":\"Fix:"),

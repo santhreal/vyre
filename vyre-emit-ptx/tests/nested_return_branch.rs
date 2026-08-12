@@ -233,13 +233,12 @@ fn a_return_under_a_uniform_trip_count_still_emits() {
     );
 }
 
-/// A top-level `Return` emits a branch too.
+/// A top-level `Return` emits a branch and prevents later operations.
 ///
-/// The old arm dropped this one as well, so any op after a top-level `Return`
-/// executed. That is a wrong-answer bug rather than a slow one, because the
-/// skipped work is not required to be idempotent.
+/// Verified lowering may discard operations proven unreachable after the
+/// return. If it preserves one, the emitted exit branch must precede it.
 #[test]
-fn a_top_level_return_emits_a_branch_before_later_ops() {
+fn a_top_level_return_prevents_later_ops() {
     let text = emit(&program(vec![
         Node::Return,
         Node::store("state", Expr::gid_x(), Expr::u32(7)),
@@ -249,11 +248,10 @@ fn a_top_level_return_emits_a_branch_before_later_ops() {
     let branch = *exit_branches(&text)
         .first()
         .expect("a top-level Return must emit an unconditional branch");
-    let store = text
-        .find("st.global")
-        .expect("the unreachable store is still emitted");
-    assert!(
-        branch < store,
-        "the branch must precede the op it makes unreachable:\n{text}"
-    );
+    if let Some(store) = text.find("st.global") {
+        assert!(
+            branch < store,
+            "the branch must precede any preserved unreachable op:\n{text}"
+        );
+    }
 }

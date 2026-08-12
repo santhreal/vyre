@@ -5,9 +5,8 @@ use std::io::Read;
 use std::path::Path;
 use std::process::exit;
 use vyre_debug::{
-    bisect_rewrites, carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl,
-    find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke, ArtifactReport,
-    DescriptorDumpOptions,
+    carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl, find_dangling_refs,
+    find_uncarriered_assigns, fixtures::loop_carry_smoke, ArtifactReport, DescriptorDumpOptions,
 };
 use vyre_foundation::ir::Expr;
 use vyre_foundation::ir::Program;
@@ -63,12 +62,6 @@ enum Commands {
         num_tokens: Option<usize>,
         #[arg(long)]
         json: bool,
-    },
-    BisectRewrites {
-        #[arg(long)]
-        prog: String,
-        #[arg(long)]
-        num_tokens: Option<usize>,
     },
     DiffDescriptors {
         #[arg(long)]
@@ -341,29 +334,6 @@ fn main() {
                 println!("{:?}", summary);
             }
             exit(0); // This command is informational
-        }
-        Commands::BisectRewrites { prog, num_tokens } => {
-            let p = match get_program(&prog, num_tokens) {
-                Ok(p) => p,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    exit(3);
-                }
-            };
-            match bisect_rewrites(&p) {
-                Ok(res) => {
-                    println!("{:?}", res.first_failing_rewrite);
-                    if res.first_failing_rewrite.is_none() {
-                        exit(0);
-                    } else {
-                        exit(1);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Bisect failed: {:?}", e);
-                    exit(2);
-                }
-            }
         }
         Commands::DiffDescriptors { prog_a, prog_b } => {
             let p_a = match get_program(&prog_a, None) {

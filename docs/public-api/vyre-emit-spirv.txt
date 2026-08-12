@@ -16,7 +16,6 @@ pub fn vyre_emit_spirv::patterns::SpirvAuditReport::requires_action(&self) -> bo
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::total_findings(&self) -> usize
 pub fn vyre_emit_spirv::patterns::SpirvAuditReport::zero() -> Self
 pub fn vyre_emit_spirv::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::SpirvAuditReport
-pub fn vyre_emit_spirv::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::SpirvAuditReport
 pub fn vyre_emit_spirv::patterns::subgroup_capabilities::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_spirv::patterns::subgroup_capabilities::SubgroupCapabilityReport
 pub fn vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::invocations(&self) -> u32
 pub fn vyre_emit_spirv::patterns::workgroup_size_validation::ValidationReport::ok(&self) -> bool

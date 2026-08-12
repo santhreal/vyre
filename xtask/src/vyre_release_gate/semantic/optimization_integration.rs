@@ -27,19 +27,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
             check_before_after_benchmark_report(
                 requirement,
                 base_dir,
-                "lower-rewrite-impact-before-after.json",
-                failures,
-            );
-            check_before_after_benchmark_report(
-                requirement,
-                base_dir,
                 "optimizer-impact-cuda.json",
-                failures,
-            );
-            check_before_after_benchmark_report(
-                requirement,
-                base_dir,
-                "pass-family-benchmarks.json",
                 failures,
             );
             check_json_evidence_has_no_blockers(
@@ -90,12 +78,7 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                             .to_string(),
                     );
                 }
-                for required_case in [
-                    "lower.rewrites.impact.corpus",
-                    "foundation.optimizer.impact",
-                    "lower.egraph_saturation",
-                    "lower.alias_aware_optimizations",
-                ] {
+                for required_case in ["foundation.optimizer.impact"] {
                     if !cases.iter().any(|case| {
                         case.get("case_id").and_then(serde_json::Value::as_str)
                             == Some(required_case)
@@ -261,108 +244,62 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
                 }
             }
         }
-        "egraph-saturation" => {
-            check_json_evidence_has_no_blockers(
+        "semantic-optimizer-registration" => {
+            check_optimizer_catalog_families(
                 requirement,
-                base_dir,
-                "egraph-saturation-matrix.json",
+                &matrix,
+                &[
+                    "const_fold",
+                    "canonicalize",
+                    "memory.dead_store_elim",
+                    "memory.store_to_load_forward",
+                    "loop.licm",
+                    "loop.fusion",
+                    "loop.fission",
+                ],
                 failures,
             );
-            check_marker_evidence_has_markers(
-                requirement,
-                base_dir,
-                "egraph-saturation-matrix.json",
-                failures,
-            );
-            check_json_evidence_has_no_blockers(
-                requirement,
-                base_dir,
-                "egraph-semantic-contracts.json",
-                failures,
-            );
-            check_marker_evidence_has_markers(
-                requirement,
-                base_dir,
-                "egraph-semantic-contracts.json",
-                failures,
-            );
-            check_before_after_benchmark_report(
-                requirement,
-                base_dir,
-                "egraph-before-after.json",
-                failures,
-            );
-            if let Some(report) =
-                first_json_evidence(requirement, base_dir, "egraph-before-after.json", failures)
-            {
-                require_case_metric_positive(
-                    requirement,
-                    "egraph-before-after.json",
-                    &report,
-                    "egraph_equality_classes",
-                    failures,
-                );
-                require_case_metric_positive(
-                    requirement,
-                    "egraph-before-after.json",
-                    &report,
-                    "egraph_bitwise_case_count",
-                    failures,
-                );
-                require_case_metric_positive(
-                    requirement,
-                    "egraph-before-after.json",
-                    &report,
-                    "egraph_boolean_case_count",
-                    failures,
-                );
-                require_case_metric_positive(
-                    requirement,
-                    "egraph-before-after.json",
-                    &report,
-                    "egraph_applied_rewrites",
-                    failures,
-                );
-            }
-        }
-        "alias-aware-upgrades" => {
-            for suffix in [
-                "alias-aware-dse.json",
-                "alias-aware-stlf.json",
-                "alias-aware-licm.json",
-                "alias-aware-fusion-fission.json",
-            ] {
-                check_json_evidence_has_no_blockers(requirement, base_dir, suffix, failures);
-                check_marker_evidence_has_markers(requirement, base_dir, suffix, failures);
-            }
-            check_before_after_benchmark_report(
-                requirement,
-                base_dir,
-                "alias-aware-before-after.json",
-                failures,
-            );
-            if let Some(report) = first_json_evidence(
-                requirement,
-                base_dir,
-                "alias-aware-before-after.json",
-                failures,
-            ) {
-                for metric in [
-                    "alias_pass_wins",
-                    "alias_fact_count",
-                    "alias_cross_binding_fact_count",
-                    "reaching_def_fact_count",
-                ] {
-                    require_case_metric_positive(
-                        requirement,
-                        "alias-aware-before-after.json",
-                        &report,
-                        metric,
-                        failures,
-                    );
-                }
-            }
         }
         _ => {}
+    }
+}
+
+fn check_optimizer_catalog_families(
+    requirement: &Requirement,
+    matrix: &serde_json::Value,
+    required_ids: &[&str],
+    failures: &mut Vec<String>,
+) {
+    let entries = matrix
+        .get("entries")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    for required_id in required_ids {
+        let found = entries.iter().any(|entry| {
+            entry.get("id").and_then(serde_json::Value::as_str) == Some(required_id)
+                && entry
+                    .get("owner")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|owner| owner.starts_with("vyre-foundation"))
+                && entry.get("input").and_then(serde_json::Value::as_str)
+                    == Some("vyre-foundation Program")
+                && entry.get("output").and_then(serde_json::Value::as_str)
+                    == Some("semantically equivalent vyre-foundation Program")
+                && entry
+                    .get("proof")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|proof| !proof.is_empty())
+                && entry
+                    .get("benchmark")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|benchmark| !benchmark.is_empty())
+        });
+        if !found {
+            failures.push(format!(
+                "requirement `{}` source-owned optimizer matrix is missing complete semantic registration `{required_id}`",
+                requirement.id
+            ));
+        }
     }
 }

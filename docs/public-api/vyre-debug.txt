@@ -18,12 +18,10 @@ pub enum vyre_debug::scan_explain::ScanExplainExactnessClass
 pub enum vyre_debug::scan_explain::ScanFactorRole
 pub fn vyre_debug::artifact_report::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_debug::artifact_report::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
-pub fn vyre_debug::bisect_rewrites(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::descriptor_diff::RewriteBisectResult, alloc::string::String>
 pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
 pub fn vyre_debug::carriers::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
 pub fn vyre_debug::carriers::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::core::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
 pub fn vyre_debug::dangling::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::descriptor_diff::bisect_rewrites(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::descriptor_diff::RewriteBisectResult, alloc::string::String>
 pub fn vyre_debug::descriptor_diff::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
 pub fn vyre_debug::descriptor_dump::DescriptorDumpOptions::default() -> Self
 pub fn vyre_debug::descriptor_dump::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
@@ -70,7 +68,6 @@ pub struct vyre_debug::DescriptorDump
 pub struct vyre_debug::DescriptorDumpOptions
 pub struct vyre_debug::FailureTrace
 pub struct vyre_debug::NagaDump
-pub struct vyre_debug::RewriteBisectResult
 pub struct vyre_debug::ScanExplainEngine
 pub struct vyre_debug::ScanExplainFactor
 pub struct vyre_debug::ScanExplainRejectedEngine
@@ -85,7 +82,6 @@ pub struct vyre_debug::carriers::CarrierSummary
 pub struct vyre_debug::carriers::UncarrieredAssign
 pub struct vyre_debug::dangling::DanglingRef
 pub struct vyre_debug::descriptor_diff::DescriptorDiff
-pub struct vyre_debug::descriptor_diff::RewriteBisectResult
 pub struct vyre_debug::descriptor_dump::DescriptorDump
 pub struct vyre_debug::descriptor_dump::DescriptorDumpOptions
 pub struct vyre_debug::naga_dump::NagaDump
@@ -130,9 +126,6 @@ pub vyre_debug::DescriptorDumpOptions::show_literals: bool
 pub vyre_debug::DescriptorDumpOptions::show_result_ids: bool
 pub vyre_debug::FailureTrace::text: alloc::string::String
 pub vyre_debug::NagaDump::text: alloc::string::String
-pub vyre_debug::RewriteBisectResult::first_failing_rewrite: core::option::Option<alloc::string::String>
-pub vyre_debug::RewriteBisectResult::rewrite_history: alloc::vec::Vec<(alloc::string::String, vyre_debug::descriptor_diff::DescriptorDiff)>
-pub vyre_debug::RewriteBisectResult::verify_errors: alloc::vec::Vec<alloc::string::String>
 pub vyre_debug::ScanExplainEngine::reason: alloc::string::String
 pub vyre_debug::ScanExplainEngine::strategy: vyre_lower::descriptor::DescriptorIntentStrategy
 pub vyre_debug::ScanExplainError::MissingArtifactLinks
@@ -220,9 +213,6 @@ pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_added: alloc::vec::Vec
 pub vyre_debug::descriptor_diff::DescriptorDiff::bindings_dropped: alloc::vec::Vec<u32>
 pub vyre_debug::descriptor_diff::DescriptorDiff::op_count_delta: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, i64>
 pub vyre_debug::descriptor_diff::DescriptorDiff::root_shape_changed: bool
-pub vyre_debug::descriptor_diff::RewriteBisectResult::first_failing_rewrite: core::option::Option<alloc::string::String>
-pub vyre_debug::descriptor_diff::RewriteBisectResult::rewrite_history: alloc::vec::Vec<(alloc::string::String, vyre_debug::descriptor_diff::DescriptorDiff)>
-pub vyre_debug::descriptor_diff::RewriteBisectResult::verify_errors: alloc::vec::Vec<alloc::string::String>
 pub vyre_debug::descriptor_dump::DescriptorDump::op_counts_by_path: alloc::collections::btree::map::BTreeMap<alloc::vec::Vec<usize>, usize>
 pub vyre_debug::descriptor_dump::DescriptorDump::text: alloc::string::String
 pub vyre_debug::descriptor_dump::DescriptorDumpOptions::max_ops_per_body: usize

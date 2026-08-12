@@ -16,7 +16,7 @@ rebuild every binary, execute every help route, and reject drift.
 | `xtask` | `vyre_new_op` | internal | `new-op` | [`xtask/README.md`](../xtask/README.md) |
 | `xtask` | `xtask` | internal | `abstraction-gate`, `backend-matrix`, `bench-crossback`, `bench-release`, `catalog`, `check-cat-a`, `check-tier-deps`, `compile`, `conformance-matrix`, `dep-drift`, `docs-check`, `feature-matrix`, `gate1`, `heuristic-audit`, `hot-path-scan`, `hygiene-matrix`, `launch-state`, `lego-audit`, `lego-quick`, `list-ops`, `metadata-matrix`, `op-matrix`, `operation-schema`, `optimization-corpus`, `optimization-docs`, `optimization-matrix`, `package-readiness`, `platform-boundary`, `primitive-admission-gate`, `print-composition`, `release-benchmarks`, `release-conformance`, `release-evidence`, `release-gate`, `release-workload-matrix`, `shrink`, `trace-f32`, `verify-rewrite-proofs`, `version-matrix`, `vyre-release-gate`, `whats-similar` | [`xtask/README.md`](../xtask/README.md) |
 | `vyre-bench` | `vyre-bench` | internal | `compare`, `dashboard`, `evolve-server`, `explain`, `list`, `release-matrix`, `run`, `snapshot-diff`, `validate-benchmark-bundle`, `validate-comparison`, `validate-report` | [`vyre-bench/README.md`](../vyre-bench/README.md) |
-| `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `bisect-rewrites`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
+| `vyre-debug` | `vyre-dbg` | public | `artifact-report`, `carrier-summary`, `diff-descriptors`, `diff-emit`, `dump-descriptor`, `dump-wgsl`, `emit-replay`, `failure-trace`, `find-dangling`, `find-uncarriered`, `pipeline-cache-clear` | [`vyre-debug/README.md`](../vyre-debug/README.md) |
 | `vyre-lints` | `vyre-lints` | public | none | [`vyre-lints/README.md`](../vyre-lints/README.md) |
 
 ## `vyre-grammar-gen`
@@ -395,7 +395,6 @@ Commands:
   find-dangling         
   find-uncarriered      
   carrier-summary       
-  bisect-rewrites       
   diff-descriptors      
   failure-trace         
   emit-replay           
@@ -415,17 +414,6 @@ Usage: vyre-dbg artifact-report --envelope <ENVELOPE>
 Options:
       --envelope <ENVELOPE>  
   -h, --help                 Print help
-```
-
-### `bisect-rewrites` help
-
-```text
-Usage: vyre-dbg bisect-rewrites [OPTIONS] --prog <PROG>
-
-Options:
-      --prog <PROG>              
-      --num-tokens <NUM_TOKENS>  
-  -h, --help                     Print help
 ```
 
 ### `carrier-summary` help

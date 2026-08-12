@@ -294,19 +294,12 @@ fn descriptor_generator_produces_valid_id_wiring() {
 }
 
 #[test]
-fn rewrites_pipeline_handles_random_descriptors_without_panic() {
-    use vyre_lower::rewrites::run_all;
+fn descriptor_verification_handles_random_descriptors_without_panic() {
     for seed in 500..550u64 {
         let desc = gen_descriptor(seed, 15);
-        // Should never panic.
-        let rewritten = run_all(&desc);
-        // Sanity: rewrite output op count is not greater than input.
-        assert!(
-            rewritten.body.ops.len() <= desc.body.ops.len(),
-            "rewrites grew op count for seed {seed:#x}: {} → {}",
-            desc.body.ops.len(),
-            rewritten.body.ops.len()
-        );
+        let verified = vyre_lower::verify_descriptor(&desc)
+            .unwrap_or_else(|error| panic!("descriptor seed {seed:#x} failed: {error:?}"));
+        assert_eq!(vyre_lower::verify(&verified), Ok(()));
     }
 }
 

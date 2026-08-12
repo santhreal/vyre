@@ -345,6 +345,10 @@ impl VyreBackend for GridSyncSplitBackend {
         self.inner.supports_indirect_dispatch()
     }
 
+    fn supports_resident_dispatch(&self) -> bool {
+        self.inner.supports_resident_dispatch()
+    }
+
     fn supports_speculation(&self) -> bool {
         self.inner.supports_speculation()
     }

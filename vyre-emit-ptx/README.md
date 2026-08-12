@@ -69,13 +69,10 @@ assert!(ptx.contains(".visible .entry"));
 - `vec_load_fusion`: adjacent `LoadGlobal`+1 chains → `ld.global.v2/v4`.
 - `vec_store_fusion`: adjacent `StoreGlobal`+1 chains → `st.global.v2/v4`.
 
-Run `patterns::audit(&desc, target)` for a unified `PtxAuditReport`
-covering all 6 patterns. Run `patterns::audit_optimized(&desc, target)`
-to audit the post-`run_all` form: answers "what PTX-specific
-optimizations remain after the standard pipeline?".
+Run `patterns::audit(&desc, target)` for a unified read-only `PtxAuditReport`
+covering all six target-strategy pattern families.
 
-These complement the substrate-neutral analyses + rewrites in
-`vyre-lower`.
+These complement the read-only substrate-neutral analyses in `vyre-lower`.
 
 ## Compute capabilities
 

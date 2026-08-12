@@ -13,7 +13,7 @@ pub(crate) fn validate_and_analyze(
     })?;
     let descriptor = lowered.descriptor;
     let neutral = vyre_lower::audit::audit(&descriptor);
-    let concrete = vyre_emit_naga::patterns::audit_optimized(&descriptor);
+    let concrete = vyre_emit_naga::patterns::audit(&descriptor);
     tracing::trace!(
         target: "vyre_driver_wgpu::descriptor",
         kernel = %descriptor.id,

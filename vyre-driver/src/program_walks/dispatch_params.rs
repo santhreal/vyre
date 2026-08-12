@@ -11,9 +11,17 @@ pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
 }
 
 /// Derive the dispatch element count from a binding plan and Program body.
+///
+/// Atomics and subgroup collectives execute over the logical input span even
+/// when they compact into a smaller output. Using the compact output length
+/// would suppress participating lanes before the atomic or collective runs.
 #[must_use]
 pub fn dispatch_element_count_for_program(program: &Program, bindings: &[Binding]) -> u32 {
-    dispatch_element_count_inner(bindings, program_contains_atomic(program))
+    let capabilities = vyre_foundation::program_caps::scan(program);
+    dispatch_element_count_inner(
+        bindings,
+        program_contains_atomic(program) || capabilities.subgroup_ops,
+    )
 }
 
 fn dispatch_element_count_inner(bindings: &[Binding], force_full_span: bool) -> u32 {
@@ -180,6 +188,33 @@ mod tests {
             input_index: Some(0),
             output_index: None,
         }
+    }
+
+    /// Subgroup collectives require every logical input lane to participate.
+    /// A compact bitmap output cannot define the launch span because the
+    /// ballot needs all 32 lanes before lane zero writes one output word.
+    #[test]
+    fn subgroup_collective_dispatch_uses_full_input_span() {
+        let mut output = binding(0, 16);
+        output.role = BindingRole::Output;
+        output.output_index = Some(0);
+        output.input_index = None;
+        let input = binding(1, 512);
+        let program = vyre_foundation::ir::Program::wrapped(
+            Vec::new(),
+            [256, 1, 1],
+            vec![vyre_foundation::ir::Node::let_bind(
+                "mask",
+                vyre_foundation::ir::Expr::subgroup_ballot(
+                    vyre_foundation::ir::Expr::bool(true),
+                ),
+            )],
+        );
+
+        assert_eq!(
+            dispatch_element_count_for_program(&program, &[output, input]),
+            512
+        );
     }
 
     #[test]

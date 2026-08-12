@@ -65,52 +65,33 @@ evidence = [
   "evidence/optimization/optimization-corpus.json",
   "evidence/optimization/optimization-corpus-contracts.json",
   "evidence/optimization/optimization-family-manifest.json",
-  "evidence/optimization/optimization-analysis-fixtures.json",
   "evidence/optimization/optimization-case-manifest.json",
+  "evidence/optimization/optimizer-pass-manifest.json",
 ]
 
 [[requirements]]
 id = "optimization-benchmark-proof"
-title = "Optimization families have before/after benchmark evidence"
+title = "Canonical semantic optimizer has before/after benchmark evidence"
 status = "closed"
-minimum_evidence = 8
+minimum_evidence = 5
 evidence = [
   "cargo_full run --bin xtask -- measurement-gate --strict",
-  "evidence/optimization/lower-rewrite-impact-before-after.json",
   "evidence/optimization/optimization-integration-matrix.json",
   "evidence/optimization/optimizer-impact-cuda.json",
-  "evidence/optimization/pass-family-benchmarks.json",
   "evidence/optimization/pass-family-benchmark-manifest.json",
-  "evidence/benchmarks/release-workload-matrix.json",
   "evidence/docs/optimization-proof.md",
 ]
 
 
 [[requirements]]
-id = "alias-aware-upgrades"
-title = "Alias-aware DSE, store-to-load forwarding, LICM, fusion, and fission upgrades are implemented and proved"
+id = "semantic-optimizer-registration"
+title = "Semantic optimizer registrations and supplemental rules are source-owned and proved"
 status = "closed"
-minimum_evidence = 5
+minimum_evidence = 3
 evidence = [
-  "evidence/optimization/alias-aware-dse.json",
   "evidence/optimization/optimization-integration-matrix.json",
-  "evidence/optimization/alias-aware-stlf.json",
-  "evidence/optimization/alias-aware-licm.json",
-  "evidence/optimization/alias-aware-fusion-fission.json",
-  "evidence/benchmarks/alias-aware-before-after.json",
-]
-
-[[requirements]]
-id = "egraph-saturation"
-title = "Bounded e-graph or egglog-family saturation replaces hand rewrites where it wins"
-status = "closed"
-minimum_evidence = 4
-evidence = [
-  "evidence/optimization/egraph-saturation-matrix.json",
-  "evidence/optimization/optimization-integration-matrix.json",
-  "evidence/optimization/egraph-semantic-contracts.json",
-  "evidence/benchmarks/egraph-before-after.json",
-  "evidence/docs/egraph-saturation.md",
+  "evidence/optimization/optimizer-pass-manifest.json",
+  "evidence/optimization/optimizer-impact-cuda.json",
 ]
 
 [[requirements]]
@@ -131,7 +112,7 @@ evidence = [
   "evidence/benchmarks/workload-08-ifds-witness.json",
   "evidence/benchmarks/workload-09-c-ast-traversal.json",
   "evidence/benchmarks/workload-10-megakernel-queued-batches.json",
-  "evidence/benchmarks/workload-11-egraph-saturation.json",
+  "evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
   "evidence/benchmarks/workload-12-sparse-output-compaction.json",
   "evidence/benchmarks/workload-13-callgraph-reachability.json",
 ]

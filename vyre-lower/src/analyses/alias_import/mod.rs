@@ -1,9 +1,8 @@
-//! Alias-fact import boundary for descriptor rewrites.
+//! Alias-fact import boundary for descriptor analysis.
 //!
-//! Vyre's rewrite legality checks consume substrate-neutral alias facts.
-//! This module gives external dataflow integrations an explicit API surface
-//! while preserving the canonical fact representation used by the existing
-//! passes.
+//! External dataflow integrations provide substrate-neutral alias facts through
+//! this explicit API. Semantic optimization consumes facts on `Program` in
+//! `vyre-foundation`.
 
 pub use crate::analyses::alias_facts::{AliasFactSet, NoAliasFact};
 

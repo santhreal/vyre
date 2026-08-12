@@ -1,13 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "required_min_cases": 4096,
-  "generated_cases": 12288,
-  "verified_cases": 12288,
-  "optimized_cases": 9216,
-  "dataflow_analysis_cases": 1024,
-  "dataflow_analysis_optimized_cases": 1024,
+  "generated_cases": 4096,
+  "verified_cases": 4096,
+  "optimized_cases": 4096,
   "non_converged_cases": 0,
-  "total_ops_before": 48640,
-  "total_ops_after": 27136,
+  "total_nodes_before": 11776,
+  "total_nodes_after": 9216,
+  "pass_instance_count": 212992,
+  "changed_pass_instances": 12864,
   "blockers": []
 }

@@ -21,7 +21,6 @@ pub fn vyre_emit_naga::patterns::NagaAuditReport::merge(&mut self, other: vyre_e
 pub fn vyre_emit_naga::patterns::NagaAuditReport::total_candidates(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::zero() -> Self
 pub fn vyre_emit_naga::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::NagaAuditReport
-pub fn vyre_emit_naga::patterns::audit_optimized(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::NagaAuditReport
 pub fn vyre_emit_naga::patterns::pipeline_prewarm::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint
 pub fn vyre_emit_naga::patterns::vec_pack::analysis::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
 pub fn vyre_emit_naga::patterns::vec_pack::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::vec_pack::plan::PackingPlan

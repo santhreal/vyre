@@ -1,6 +1,6 @@
 # vyre-lower
 
-Verified lowering, descriptor cleanup, analysis, and verification for
+Verified representation lowering, read-only analysis, and verification for
 Vyre's substrate-neutral `KernelDescriptor` IR.
 
 This crate sits between vyre's frontend (which produces a high-level
@@ -9,12 +9,12 @@ This crate sits between vyre's frontend (which produces a high-level
 
 - The `KernelDescriptor` IR: a flat, SSA-shaped, structured-control-
   flow program that every emitter consumes verbatim.
-- Lower-IR cleanup after semantic optimization and descriptor construction.
-- 11 analyses that report on the IR (coalescing, bank conflicts,
-  shared-mem promotion candidates, def-use chains, etc.).
-- A structural verifier (`verify`) that catches dangling refs,
-  duplicate result-ids, and out-of-range pool/child-body indices.
-- Performance instrumentation (`OptimizationStats`).
+- Bounded representation canonicalization after semantic optimization and
+  descriptor construction.
+- Read-only analyses that report on the IR (coalescing, bank conflicts,
+  shared-memory candidates, def-use chains, and related shape facts).
+- A structural verifier (`verify`) that catches dangling refs, duplicate
+  result-ids, and out-of-range pool or child-body indices.
 
 Production `Program` callers use `lower_verified`. Pure emitters consume the
 verified descriptor without running another rewrite pipeline.
@@ -84,53 +84,10 @@ are SSA result-id refs, some are literal-pool indices, some are
 binding slot ids, some are child-body indices.
 
 **Per-body id space.** Each `KernelBody` has its own SSA id space.
-Result-ids in a child body do NOT exist in the parent body's id
-space. Rewrites that move ops across bodies must respect this: see
-the LICM module for the consequence of getting it wrong.
+Result ids in a child body do not exist in the parent body's id space.
+`verify_descriptor` performs one bounded dependency-ordering walk for pure
+same-body producers. Semantic optimization remains in `vyre-foundation`.
 
-## Rewrite pipeline
-
-`run_all` applies these passes in order, then iterates to fixed
-point (up to 4 iterations):
-
-1. **strength_reduce**: `Mul/Div/Mod` by power-of-2 → shift/and.
-2. **const_fold**: folds compile-time-constant arithmetic. Coverage:
-   - `BinOp(Lit, Lit)` → single `Lit` (full BinOp×Type matrix:
-     U32/I32/F32/Bool × all 22 BinOp variants including comparisons,
-     bitwise, wrapping arithmetic).
-   - `UnOp(Lit)` → single `Lit` (10 unary ops: BitNot, Negate,
-     LogicalNot, Popcount, Clz, Ctz, ReverseBits, Abs, Floor, Ceil,
-     Round, Trunc, Sqrt, Cos, Sin).
-   - `Cast(Lit)` → typed `Lit` (int↔int, int↔float, bool→int,
-     same-type; float→int only when finite + in range).
-   - `Fma(Lit, Lit, Lit)` → single `Lit` (F32 only, finite-result).
-3. **identity_elim**: `Add(x, 0)`, `Mul(x, 1)`, etc. → `x`;
-   `Mul(x, 0)`, `BitAnd(x, 0)` → `0`; `Select(Lit_bool, then, else)` →
-   then or else (bool-cond folding).
-4. **branch_collapse**: `If(Lit_bool, ...)` → selected arm inlined.
-5. **loop_unroll**: small constant-bound loops (≤ 4 iterations).
-6. **licm**: currently a no-op (see module docs).
-7. **load_forwarding**: store-to-load and load-to-load forwarding
-   with per-slot aliasing rules.
-8. **dce**: drops result-producing ops with no users.
-9. **dead_store**: drops stores whose value is overwritten before
-   any observation.
-10. **dce** (again): cleans up what dead_store orphaned.
-11. **canonicalize**: sorts commutative-op operands so CSE catches
-    `Add(a, b) == Add(b, a)`.
-12. **cse**: merges structurally-equivalent ops.
-13. **drop_unused_bindings**: strips binding slots no surviving op
-    references.
-14. **drop_unused_literals**: strips pool entries no Literal op
-    references (const_fold + identity_elim leave plenty of orphans).
-15. **drop_unused_child_bodies**: strips child bodies orphaned by
-    branch_collapse / loop_unroll inlining.
-
-Each pass is total (no `Result`, returns input on no-op), preserves
-semantic equivalence, and is individually idempotent. The wrapping
-fixed-point loop catches inter-pass dependencies (e.g., CSE merging
-two index ops exposes a dead_store opportunity that dead_store
-missed in the first pass).
 
 ## Analyses
 
@@ -150,13 +107,10 @@ missed in the first pass).
 - `common_subexpr`: equivalence groups for CSE.
 - `def_use`: full def-use chains with per-body `UseSite`s.
 
-Each returns a serializable report. Run `audit::audit(desc)` for a
-unified `PerfAuditReport` with prioritized recommendations, or
-`audit::audit_optimized(desc)` to audit the post-`run_all` form
-(answers "what perf issues remain after the standard pipeline?").
-The same `audit` + `audit_optimized` pair is mirrored in
-`vyre_emit_naga::patterns`, `vyre_emit_ptx::patterns`, and
-`vyre_emit_spirv::patterns` for substrate-specific concerns.
+Each analysis returns a serializable report. Run `audit::audit(desc)` for a
+unified read-only `PerfAuditReport` with prioritized recommendations.
+Emitter-specific `patterns::audit` functions report concrete target-strategy
+opportunities without mutating the descriptor.
 
 ## Verifier
 
@@ -170,12 +124,9 @@ The same `audit` + `audit_optimized` pair is mirrored in
 - Per-kind minimum operand counts.
 
 Errors are collected so one call reports every violation.
-`lower_verified` verifies both the initial descriptor and the post-cleanup
-descriptor before any pure target emitter receives it.
-
-The 1000-descriptor fuzz harness at `tests/rewrite_soundness_fuzz.rs`
-is the regression gate: every shape in the corpus must produce a
-descriptor that verifies after `run_all`.
+`lower_verified` verifies both the initial descriptor and the descriptor after
+bounded representation canonicalization before any pure target emitter
+receives it.
 
 ## See also
 

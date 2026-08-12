@@ -538,31 +538,6 @@ mod tests {
     }
 
     #[test]
-    fn release_a16_fixture_cases_trigger_vec_pack_analysis() {
-        let cases = crate::optimization_corpus::generate_release_corpus();
-        let a16_cases = cases
-            .iter()
-            .filter(|case| case.family == "A16-vec-pack-fixture")
-            .collect::<Vec<_>>();
-        assert_eq!(a16_cases.len(), 256);
-
-        let mut total_chains = 0usize;
-        let mut total_ops_eliminated = 0u32;
-        for case in a16_cases {
-            let report = analyze(&case.descriptor);
-            assert!(
-                report.has_chains(),
-                "case `{}` produced no vec-pack chain",
-                case.id
-            );
-            total_chains += report.chains.len();
-            total_ops_eliminated = total_ops_eliminated.saturating_add(report.total_ops_eliminated);
-        }
-        assert_eq!(total_chains, 256);
-        assert_eq!(total_ops_eliminated, 768);
-    }
-
-    #[test]
     fn singleton_computed_index_is_not_chainable() {
         let body = KernelBody {
             ops: vec![

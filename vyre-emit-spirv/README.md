@@ -76,10 +76,8 @@ assert_eq!(words[0], SPIRV_MAGIC);
   against `VULKAN_BASELINE` (or a custom `DeviceLimits` profile).
   Catches per-dim overflow, product overflow, zero-dim violations.
 
-Run `patterns::audit(&desc)` for a unified `SpirvAuditReport` with
-both patterns. Run `patterns::audit_optimized(&desc)` to audit the
-post-`run_all` form (subgroup capability detection may report fewer
-required caps after dead-code elimination).
+Run `patterns::audit(&desc)` for a unified read-only `SpirvAuditReport` with
+both target-strategy pattern families.
 
 ## Validation
 

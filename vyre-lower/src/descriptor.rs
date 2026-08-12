@@ -536,12 +536,10 @@ impl IntentAnnotatedDescriptor {
         })
     }
 
-    /// Preserve descriptor intent through a rewrite while revalidating any
-    /// referenced binding slots or result ids against the rewritten descriptor.
+    /// Preserve descriptor intent through representation canonicalization while
+    /// revalidating referenced binding slots or result ids.
     ///
-    /// This is the neutral seam VX-337 needs: descriptor rewrites transform
-    /// descriptor shape, while scan decomposition intent remains attached until
-    /// the rewrite actually invalidates one of its declared references.
+    /// Semantic rewrites occur on `Program` before descriptor construction.
     ///
     /// # Errors
     ///

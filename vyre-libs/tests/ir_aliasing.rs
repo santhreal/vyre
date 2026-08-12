@@ -93,7 +93,9 @@ fn duplicate_self_exclusive_parser_regions_fail_validation() {
     let combined = combine_programs(&[parser_a, parser_b]);
 
     let errors = validate(&combined);
-    assert!(errors
-        .iter()
-        .any(|error| { error.message.contains("marked non-composable with itself") }));
+    assert!(errors.iter().any(|error| {
+        error
+            .message()
+            .contains("marked non-composable with itself")
+    }));
 }

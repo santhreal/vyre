@@ -149,20 +149,14 @@ pub(crate) fn check_readme_contract(
     }
 }
 pub(crate) const REQUIRED_BENCHMARKED_OPTIMIZATION_FAMILIES: &[&str] = &[
-    "algebraic",
-    "predicate",
-    "egraph",
-    "memory-layout",
+    "scalar-algebra",
+    "strength-reduction",
+    "fusion-cse",
+    "dead-code",
+    "memory-dataflow",
+    "loop-transform",
     "control-flow",
-    "vector-layout",
-    "A13-coalesce-fixture",
-    "A14-shared-mem-promote-fixture",
-    "A15-bank-conflict-fixture",
-    "A16-vec-pack-fixture",
-    "external-dataflow-dse",
-    "external-dataflow-loop-fusion",
-    "external-dataflow-loop-fission",
-    "external-dataflow-licm",
+    "canonicalization",
 ];
 pub(crate) fn check_before_after_benchmark_report(
     requirement: &Requirement,
@@ -287,15 +281,8 @@ pub(crate) fn check_before_after_benchmark_report(
         if let Some(metrics) = metrics {
             let wall_p50 = active_gpu_metric_p50(metrics);
             let baseline_p50 = metric_p50(metrics.get("baseline_wall_ns"));
-            let egraph_quality_win = suffix == "egraph-before-after.json"
-                && metric_p50(metrics.get("egraph_output_ops"))
-                    .zip(metric_p50(metrics.get("egraph_baseline_ops_after")))
-                    .is_some_and(|(output, baseline)| output < baseline)
-                && metric_p50(metrics.get("egraph_applied_rewrites"))
-                    .is_some_and(|rewrites| rewrites > 0.0);
             match (wall_p50, baseline_p50) {
                 (Some(wall), Some(baseline)) if wall < baseline => {}
-                (Some(_), Some(_)) if egraph_quality_win => {}
                 (Some(_), Some(_)) if before_after_semantic_win(id, metrics) => {}
                 (Some(wall), Some(baseline)) => failures.push(format!(
                     "requirement `{}` benchmark `{suffix}` case `{id}` did not improve p50 wall time: wall={wall:.2}, baseline={baseline:.2}",
@@ -440,52 +427,6 @@ pub(crate) fn check_json_evidence_has_no_blockers(
         failures,
     );
 }
-pub(crate) fn check_marker_evidence_has_markers(
-    requirement: &Requirement,
-    base_dir: &Path,
-    suffix: &str,
-    failures: &mut Vec<String>,
-) {
-    let Some(report) = first_json_evidence(requirement, base_dir, suffix, failures) else {
-        return;
-    };
-    let markers = report
-        .get("markers")
-        .and_then(serde_json::Value::as_array)
-        .map_or(0, Vec::len);
-    if markers == 0 {
-        failures.push(format!(
-            "requirement `{}` marker evidence `{suffix}` contains zero markers",
-            requirement.id
-        ));
-    }
-    for required in required_marker_ids_for_suffix(suffix) {
-        if !report
-            .get("markers")
-            .and_then(serde_json::Value::as_array)
-            .is_some_and(|markers| {
-                markers.iter().any(|marker| {
-                    marker.get("id").and_then(serde_json::Value::as_str) == Some(required)
-                })
-            })
-        {
-            failures.push(format!(
-                "requirement `{}` marker evidence `{suffix}` is missing required marker `{required}`",
-                requirement.id
-            ));
-        }
-    }
-    let source_matrix = report
-        .get("source_matrix")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("");
-    if !source_matrix.ends_with("optimization-integration-matrix.json") {
-        failures.push(format!(
-            "requirement `{}` marker evidence `{suffix}` does not reference optimization-integration-matrix.json",
-            requirement.id
-        ));
-    }
-}
 
 #[cfg(test)]
 mod optimization_evidence_tests {
@@ -496,14 +437,14 @@ mod optimization_evidence_tests {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for before/after blocker gate test.");
         std::fs::write(
-            dir.path().join("alias-aware-before-after.json"),
+            dir.path().join("optimizer-impact-cuda.json"),
             serde_json::to_string_pretty(&serde_json::json!({
                 "blockers": ["before/after benchmark reused stale CUDA baseline"],
                 "selected_backend": "cuda",
                 "summary": {"failed": 0},
                 "cases": [
                     {
-                        "id": "lower.alias_aware_optimizations",
+                        "id": "foundation.optimizer.impact",
                         "backend_id": "cuda",
                         "status": "pass",
                         "metrics": {
@@ -520,7 +461,7 @@ mod optimization_evidence_tests {
             id: "optimization-integration".to_string(),
             title: "optimization integration".to_string(),
             status: "required".to_string(),
-            evidence: vec!["alias-aware-before-after.json".to_string()],
+            evidence: vec!["optimizer-impact-cuda.json".to_string()],
             minimum_evidence: 0,
         };
         let mut failures = Vec::new();
@@ -528,13 +469,13 @@ mod optimization_evidence_tests {
         check_before_after_benchmark_report(
             &requirement,
             dir.path(),
-            "alias-aware-before-after.json",
+            "optimizer-impact-cuda.json",
             &mut failures,
         );
 
         assert!(
             failures.iter().any(|failure| failure.contains(
-                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` reports 1 blocker(s)"
+                "requirement `optimization-integration` benchmark `optimizer-impact-cuda.json` reports 1 blocker(s)"
             )),
             "Fix: before/after benchmark release gate must reject explicit benchmark blockers; failures={failures:?}"
         );
@@ -577,13 +518,13 @@ mod optimization_evidence_tests {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for duplicate before/after case gate test.");
         std::fs::write(
-            dir.path().join("alias-aware-before-after.json"),
+            dir.path().join("optimizer-impact-cuda.json"),
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "cuda",
                 "summary": {"total_cases": 2, "passed": 2, "failed": 0},
                 "cases": [
                     {
-                        "id": "lower.alias_aware_optimizations",
+                        "id": "foundation.optimizer.impact",
                         "backend_id": "cuda",
                         "status": "pass",
                         "metrics": {
@@ -592,7 +533,7 @@ mod optimization_evidence_tests {
                         }
                     },
                     {
-                        "id": "lower.alias_aware_optimizations",
+                        "id": "foundation.optimizer.impact",
                         "backend_id": "cuda",
                         "status": "pass",
                         "metrics": {
@@ -609,7 +550,7 @@ mod optimization_evidence_tests {
             id: "optimization-integration".to_string(),
             title: "optimization integration".to_string(),
             status: "required".to_string(),
-            evidence: vec!["alias-aware-before-after.json".to_string()],
+            evidence: vec!["optimizer-impact-cuda.json".to_string()],
             minimum_evidence: 0,
         };
         let mut failures = Vec::new();
@@ -617,13 +558,13 @@ mod optimization_evidence_tests {
         check_before_after_benchmark_report(
             &requirement,
             dir.path(),
-            "alias-aware-before-after.json",
+            "optimizer-impact-cuda.json",
             &mut failures,
         );
 
         assert!(
             failures.iter().any(|failure| failure.contains(
-                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` has 2 cases with id `lower.alias_aware_optimizations`"
+                "requirement `optimization-integration` benchmark `optimizer-impact-cuda.json` has 2 cases with id `foundation.optimizer.impact`"
             )),
             "Fix: before/after benchmark gate must reject duplicate case ids before duplicate rows can prove optimization coverage; failures={failures:?}"
         );
@@ -634,19 +575,19 @@ mod optimization_evidence_tests {
         let dir = tempfile::TempDir::new()
             .expect("Fix: create temporary workspace for before/after provenance gate test.");
         std::fs::write(
-            dir.path().join("alias-aware-before-after.json"),
+            dir.path().join("optimizer-impact-cuda.json"),
             serde_json::to_string_pretty(&serde_json::json!({
                 "selected_backend": "cuda",
                 "environment": {"host_cpu_model": "test cpu"},
                 "summary": {"total_cases": 1, "passed": 1, "failed": 0, "cache_hit_rate": null},
                 "cases": [
                     {
-                        "id": "lower.alias_aware_optimizations",
+                        "id": "foundation.optimizer.impact",
                         "backend_id": "cuda",
                         "status": "pass",
-                        "dataset_fingerprint": "sha256:alias-aware-corpus",
+                        "dataset_fingerprint": "sha256:semantic-optimizer-corpus",
                         "correctness": {"oracle": "before-after-equivalence"},
-                        "optimization_passes": ["alias-aware-optimizations"],
+                        "optimization_passes": ["foundation-optimizer"],
                         "contract": {
                             "baselines": [
                                 {
@@ -674,7 +615,7 @@ mod optimization_evidence_tests {
             id: "optimization-integration".to_string(),
             title: "optimization integration".to_string(),
             status: "required".to_string(),
-            evidence: vec!["alias-aware-before-after.json".to_string()],
+            evidence: vec!["optimizer-impact-cuda.json".to_string()],
             minimum_evidence: 0,
         };
         let mut failures = Vec::new();
@@ -682,13 +623,13 @@ mod optimization_evidence_tests {
         check_before_after_benchmark_report(
             &requirement,
             dir.path(),
-            "alias-aware-before-after.json",
+            "optimizer-impact-cuda.json",
             &mut failures,
         );
 
         assert!(
             failures.iter().any(|failure| failure.contains(
-                "requirement `optimization-integration` benchmark `alias-aware-before-after.json` must include source_fingerprint provenance"
+                "requirement `optimization-integration` benchmark `optimizer-impact-cuda.json` must include source_fingerprint provenance"
             )),
             "Fix: before/after benchmark gate must reject timing evidence without source provenance; failures={failures:?}"
         );

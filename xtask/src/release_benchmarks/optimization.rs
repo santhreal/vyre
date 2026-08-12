@@ -322,33 +322,9 @@ pub(super) fn optimization_semantic_win(
         return false;
     };
     match case_id {
-        "lower.rewrites.impact.corpus" => {
-            suite_metric_percentile(metrics.get("lower_ops_eliminated"), "p50")
-                .is_some_and(|value| value > 0)
-                || suite_metric_percentile(metrics.get("lower_optimized_issue_score"), "p50")
-                    .zip(suite_metric_percentile(
-                        metrics.get("lower_baseline_issue_score"),
-                        "p50",
-                    ))
-                    .is_some_and(|(optimized, baseline)| optimized < baseline)
-        }
         "foundation.optimizer.impact" => {
             suite_metric_percentile(metrics.get("optimizer_nodes_eliminated"), "p50")
                 .is_some_and(|value| value > 0)
-        }
-        "lower.egraph_saturation" => {
-            suite_metric_percentile(metrics.get("egraph_applied_rewrites"), "p50")
-                .is_some_and(|value| value > 0)
-                && suite_metric_percentile(metrics.get("egraph_output_ops"), "p50")
-                    .zip(suite_metric_percentile(
-                        metrics.get("egraph_baseline_ops_after"),
-                        "p50",
-                    ))
-                    .is_some_and(|(output, baseline)| output < baseline)
-        }
-        "lower.alias_aware_optimizations" => {
-            suite_metric_percentile(metrics.get("alias_pass_wins"), "p50")
-                .is_some_and(|value| value >= 5)
         }
         _ => false,
     }
@@ -491,121 +467,35 @@ pub(super) fn write_release_axes(workspace_root: &Path) {
 }
 
 pub(super) fn write_optimization_benchmark_manifest(workspace_root: &Path, backend: &str) {
-    let specs = [
-        (
-            "lower.rewrites.impact.corpus",
-            "release/evidence/optimization/lower-rewrite-impact-before-after.json",
-            vec![
-                "memory-layout",
-                "control-flow",
-                "vector-layout",
-                "A13-coalesce-fixture",
-                "A14-shared-mem-promote-fixture",
-                "A15-bank-conflict-fixture",
-                "A16-vec-pack-fixture",
-            ],
-            vec![
-                "lower_ops_before",
-                "lower_ops_after",
-                "lower_ops_eliminated",
-                "lower_coalesce_problematic_before",
-                "lower_shared_candidates_before",
-                "lower_bank_critical_before",
-                "lower_vec_pack_chains_before",
-                "lower_vec_pack_ops_eliminable_before",
-            ],
-            vec![
-                "lower_ops_before",
-                "lower_ops_eliminated",
-                "lower_coalesce_problematic_before",
-                "lower_shared_candidates_before",
-                "lower_bank_critical_before",
-                "lower_vec_pack_chains_before",
-                "lower_vec_pack_ops_eliminable_before",
-            ],
-        ),
-        (
-            "foundation.optimizer.impact",
-            "release/evidence/optimization/optimizer-impact-cuda.json",
-            vec!["algebraic", "predicate"],
-            vec![
-                "optimizer_input_nodes",
-                "optimizer_output_nodes",
-                "optimizer_nodes_eliminated",
-            ],
-            vec!["optimizer_input_nodes", "optimizer_output_nodes"],
-        ),
-        (
-            "lower.egraph_saturation",
-            "release/evidence/optimization/egraph-before-after.json",
-            vec!["egraph"],
-            vec![
-                "egraph_case_count",
-                "egraph_bitwise_case_count",
-                "egraph_boolean_case_count",
-                "egraph_equality_classes",
-                "egraph_applied_rewrites",
-            ],
-            vec![
-                "egraph_case_count",
-                "egraph_bitwise_case_count",
-                "egraph_boolean_case_count",
-                "egraph_equality_classes",
-                "egraph_applied_rewrites",
-            ],
-        ),
-        (
-            "lower.alias_aware_optimizations",
-            "release/evidence/benchmarks/alias-aware-before-after.json",
-            vec![
-                "external-dataflow-dse",
-                "external-dataflow-loop-fusion",
-                "external-dataflow-loop-fission",
-                "external-dataflow-licm",
-            ],
-            vec![
-                "alias_pass_wins",
-                "alias_fact_count",
-                "alias_cross_binding_fact_count",
-                "reaching_def_fact_count",
-                "alias_total_ops_after",
-                "conservative_total_ops_after",
-                "alias_dse_store_count",
-                "conservative_dse_store_count",
-                "alias_stlf_final_value_id",
-                "conservative_stlf_final_value_id",
-                "alias_licm_loop_loads",
-                "conservative_licm_loop_loads",
-                "alias_fusion_loop_count",
-                "conservative_fusion_loop_count",
-                "alias_fission_loop_count",
-                "conservative_fission_loop_count",
-                "benchmark_repeats",
-            ],
-            vec![
-                "alias_pass_wins",
-                "alias_fact_count",
-                "alias_cross_binding_fact_count",
-                "reaching_def_fact_count",
-                "benchmark_repeats",
-            ],
-        ),
-    ];
+    let specs = [(
+        "foundation.optimizer.impact",
+        "release/evidence/optimization/optimizer-impact-cuda.json",
+        vec![
+            "scalar-algebra",
+            "strength-reduction",
+            "fusion-cse",
+            "dead-code",
+            "memory-dataflow",
+            "loop-transform",
+            "control-flow",
+            "canonicalization",
+        ],
+        vec![
+            "optimizer_input_nodes",
+            "optimizer_output_nodes",
+            "optimizer_nodes_eliminated",
+        ],
+        vec!["optimizer_input_nodes", "optimizer_output_nodes"],
+    )];
     let required_pass_families = vec![
-        "algebraic",
-        "predicate",
-        "egraph",
-        "memory-layout",
+        "scalar-algebra",
+        "strength-reduction",
+        "fusion-cse",
+        "dead-code",
+        "memory-dataflow",
+        "loop-transform",
         "control-flow",
-        "vector-layout",
-        "A13-coalesce-fixture",
-        "A14-shared-mem-promote-fixture",
-        "A15-bank-conflict-fixture",
-        "A16-vec-pack-fixture",
-        "external-dataflow-dse",
-        "external-dataflow-loop-fusion",
-        "external-dataflow-loop-fission",
-        "external-dataflow-licm",
+        "canonicalization",
     ];
     let required_case_count = specs.len();
     let mut blockers = Vec::new();

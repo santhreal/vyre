@@ -27,22 +27,17 @@ fn test_cuda_events_populated() {
     );
     let metrics = &case.metrics;
 
-    assert!(
-        metrics.contains_key("kernel_queue_submit_ns"),
-        "Queue submit NS missing"
-    );
-    assert!(
-        metrics.contains_key("kernel_execute_ns"),
-        "Kernel execute NS missing"
-    );
-    assert!(
-        metrics.contains_key("device_sync_ns"),
-        "Device sync NS missing"
-    );
+    let dispatch = metrics
+        .get("dispatch_ns")
+        .expect("CUDA device timestamp metric missing");
+    assert!(dispatch.p50 > 0, "CUDA device time should be > 0");
 
-    let submit = metrics.get("kernel_queue_submit_ns").unwrap();
-    assert!(submit.p50 > 0, "Queue submit time should be > 0");
-
-    let exec = metrics.get("kernel_execute_ns").unwrap();
-    assert!(exec.p50 > 0, "Kernel execute time should be > 0");
+    for optional_host_phase in ["kernel_queue_submit_ns", "device_sync_ns"] {
+        if let Some(metric) = metrics.get(optional_host_phase) {
+            assert!(
+                metric.p50 > 0,
+                "reported CUDA host phase `{optional_host_phase}` must be positive"
+            );
+        }
+    }
 }

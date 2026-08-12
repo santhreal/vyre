@@ -182,8 +182,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Lower rewrite optimization evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case lower.rewrites.impact.corpus --format json --measured-samples 30
+      - name: Semantic optimizer evidence
+        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --format json --backend cuda --measured-samples 30
       - name: CUDA PTX pattern evidence
         run: ./cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
       - name: Megakernel condition evidence

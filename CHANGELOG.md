@@ -96,6 +96,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   features, target conditions, visibility, and destination seam, and optimizer
   pass reference pages are generated from the live pass registry.
 
+- Semantic optimization now has one foundation-owned `Program` scheduler before
+  verified representation lowering. Descriptor rewrite engines, rewrite
+  bisection, duplicate optimizer benchmarks, and post-lowering semantic
+  optimization APIs are gone. The 4,096-case semantic corpus and generated pass
+  reference derive from the live foundation registry.
+
 - Program validation failures now preserve stable typed rule codes, owning
   phases, program locations, causes, corrective actions, and retry classes
   through serialization, diagnostics, execution planning, backend admission,

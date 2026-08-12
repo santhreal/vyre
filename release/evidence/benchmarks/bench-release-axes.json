@@ -16,12 +16,29 @@
     "release/evidence/benchmarks/workload-08-ifds-witness.json",
     "release/evidence/benchmarks/workload-09-c-ast-traversal.json",
     "release/evidence/benchmarks/workload-10-megakernel-queued-batches.json",
-    "release/evidence/benchmarks/workload-11-egraph-saturation.json",
     "release/evidence/benchmarks/workload-12-sparse-output-compaction.json",
     "release/evidence/benchmarks/workload-13-callgraph-reachability.json",
     "release/evidence/benchmarks/workload-14-compound-fused-filter.json",
     "release/evidence/benchmarks/workload-15-adaptive-routing.json",
     "release/evidence/benchmarks/workload-16-quantized-linear.json"
   ],
-  "blockers": []
+  "blockers": [
+    "failed to read CUDA release axis artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json`: No such file or directory (os error 2)",
+    "cuda-release-suite artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` is absent from bench-release-axes source_artifacts",
+    "source_artifact `release/evidence/benchmarks/workload-01-condition-eval.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-05-entropy-window.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-08-ifds-witness.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`",
+    "source_artifact `release/evidence/benchmarks/workload-16-quantized-linear.json` source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:9e7a338d63aa7883f115eacb2bdf057f541578feaa93a8459d34d9fe9dfc52ed`"
+  ]
 }

@@ -1,15 +1,9 @@
-//! Substrate-aware-but-backend-agnostic analyses on `KernelDescriptor`.
+//! Read-only, backend-neutral analyses on `KernelDescriptor`.
 //!
-//! Source-of-truth: `SEPARATION_AUDIT_2026-05-01.md` section S3 +
-//! `PERF_ROADMAP_2026-05-01.md` section B.3.
-//!
-//! Each analysis here operates on a `KernelDescriptor` post-lowering
-//! and pre-emission. Any rewrite they produce is consumed by every
-//! emitter, so analyses that work this layer pay off across all
-//! substrates with one implementation.
-//!
-//! Substrate-specific emission patterns live in their respective
-//! emitter crates instead.
+//! These analyses run after verified lowering and before emission. They report
+//! descriptor facts and candidate target strategies without changing program
+//! semantics or descriptor structure. Concrete emission strategy lives in the
+//! owning emitter or driver.
 
 pub mod access_kind;
 pub mod alias_facts;

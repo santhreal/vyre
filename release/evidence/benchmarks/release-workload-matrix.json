@@ -23,12 +23,11 @@
     "ifds-witness",
     "c-ast-traversal",
     "megakernel-queued-batches",
-    "egraph-saturation",
     "sparse-output-compaction"
   ],
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
-  "release_suite_case_count": 27,
+  "release_suite_case_count": 23,
   "cpu_sota_contract_count": 32,
   "cpu_sota_100x_contract_count": 14,
   "cpu_sota_100x_contract_cases": [
@@ -47,12 +46,11 @@
     "runtime.megakernel.condition.64k",
     "sparse.compaction.count.1m"
   ],
-  "cpu_sota_100x_family_count": 11,
+  "cpu_sota_100x_family_count": 10,
   "cpu_sota_100x_families": [
     "alias-reaching-def",
     "c-ast-traversal",
     "condition-eval",
-    "egraph-saturation",
     "entropy-window",
     "ifds-witness",
     "megakernel-queued-batches",
@@ -68,6 +66,7 @@
       "release_plan_workload": 1,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
@@ -130,6 +129,7 @@
       "release_plan_workload": 2,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "release.string_bitmap_scatter.1m"
@@ -165,6 +165,7 @@
       "release_plan_workload": 3,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "release.offset_count_aggregation.1m"
@@ -200,6 +201,7 @@
       "release_plan_workload": 4,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "metadata.condition.filesize_header.1m"
@@ -233,6 +235,7 @@
       "release_plan_workload": 5,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "release.entropy_window.1m"
@@ -268,6 +271,7 @@
       "release_plan_workload": 6,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "release.quantified_condition_loops.1m"
@@ -303,9 +307,9 @@
       "release_plan_workload": 7,
       "required": true,
       "dispatch_policy": "specialized-dataflow-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: alias-aware reaching-definition workloads use sparse relation kernels with fixpoint convergence rather than independent condition-slot dispatch",
       "matched_cases": [
-        "lower.alias_aware_optimizations",
         "release.alias_reaching_def.1m"
       ],
       "evidence_artifact": "release/evidence/benchmarks/workload-07-alias-reaching-def.json",
@@ -339,6 +343,7 @@
       "release_plan_workload": 8,
       "required": true,
       "dispatch_policy": "specialized-dataflow-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: IFDS witness extraction uses frontier/fact-table scheduling and predecessor reconstruction that need dataflow-specific kernels",
       "matched_cases": [
         "dataflow.ifds.skewed.closure.1m",
@@ -378,6 +383,7 @@
       "release_plan_workload": 9,
       "required": true,
       "dispatch_policy": "specialized-parser-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: C AST traversal consumes parser-owned AST buffers with table/stream access patterns that remain outside the condition megakernel for this release",
       "matched_cases": [
         "release.c_ast_traversal.1m"
@@ -413,6 +419,7 @@
       "release_plan_workload": 10,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "release.megakernel_queue.1m",
@@ -448,42 +455,29 @@
       "max_cpu_sota_min_speedup_x": 100.0
     },
     {
-      "id": "egraph-saturation",
-      "title": "E-graph rewrite saturation and optimization impact",
+      "id": "semantic-optimizer-impact",
+      "title": "Canonical semantic optimizer impact",
       "release_plan_workload": 11,
       "required": true,
-      "dispatch_policy": "bounded-saturation-kernel",
-      "non_megakernel_justification": "architectural: e-graph saturation is a bounded rewrite worklist with fuel and equivalence-class state, so it uses saturation-specific kernels",
+      "dispatch_policy": "canonical-program-optimizer",
+      "requires_cpu_sota_baseline": false,
+      "non_megakernel_justification": "architectural: semantic optimization executes before verified lowering and target materialization",
       "matched_cases": [
-        "foundation.optimizer.impact",
-        "lower.egraph_saturation",
-        "lower.rewrites.impact.corpus",
-        "release.egraph_saturation.1m"
+        "foundation.optimizer.impact"
       ],
-      "evidence_artifact": "release/evidence/benchmarks/workload-11-egraph-saturation.json",
-      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case release.egraph_saturation.1m --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-egraph-saturation.json",
+      "evidence_artifact": "release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
+      "benchmark_command": "cargo_full run -p vyre-bench -- run --suite release --case foundation.optimizer.impact --backend cuda --enforce-budgets --output release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json",
       "bench_target_ids": [
-        "release.workload.egraph_saturation"
+        "release.optimization.foundation_optimizer_impact"
       ],
-      "cpu_sota_contracts": [
-        "release.egraph_saturation.1m => egg/egraph CPU saturation baseline with equivalent rewrite set 100x"
-      ],
-      "cpu_sota_100x_cases": [
-        "release.egraph_saturation.1m"
-      ],
-      "cpu_sota_baseline_names": [
-        "egg/egraph CPU saturation baseline with equivalent rewrite set"
-      ],
-      "cpu_sota_baseline_crates": [
-        "vyre-lower"
-      ],
-      "cpu_sota_backend_ids": [
-        "cuda",
-        "wgpu"
-      ],
-      "fair_cpu_sota_baseline_count": 1,
+      "cpu_sota_contracts": [],
+      "cpu_sota_100x_cases": [],
+      "cpu_sota_baseline_names": [],
+      "cpu_sota_baseline_crates": [],
+      "cpu_sota_backend_ids": [],
+      "fair_cpu_sota_baseline_count": 0,
       "reproducible_cuda_command": true,
-      "max_cpu_sota_min_speedup_x": 100.0
+      "max_cpu_sota_min_speedup_x": null
     },
     {
       "id": "sparse-output-compaction",
@@ -491,6 +485,7 @@
       "release_plan_workload": 12,
       "required": true,
       "dispatch_policy": "megakernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": null,
       "matched_cases": [
         "conditions.yara_like.batch.16x64k",
@@ -530,6 +525,7 @@
       "release_plan_workload": 13,
       "required": true,
       "dispatch_policy": "specialized-graph-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: callgraph reachability is frontier graph traversal with convergence state, not independent rule-condition slot evaluation",
       "matched_cases": [
         "callgraph.reachability.step.262k",
@@ -565,6 +561,7 @@
       "release_plan_workload": 14,
       "required": false,
       "dispatch_policy": "resident-fused-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: compound filtering fuses independent matching, dataflow, score, and taint-class predicates into one resident pass without condition-slot queue orchestration",
       "matched_cases": [
         "compound.pipeline.fused_filter.1m",
@@ -601,6 +598,7 @@
       "release_plan_workload": 15,
       "required": false,
       "dispatch_policy": "resident-routing-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: adaptive routing is GPU-side scheduling metadata generation rather than execution of a queued rule opcode stream",
       "matched_cases": [
         "foundation.reduce.sum.crossover",
@@ -637,6 +635,7 @@
       "release_plan_workload": 16,
       "required": false,
       "dispatch_policy": "resident-fused-kernel",
+      "requires_cpu_sota_baseline": true,
       "non_megakernel_justification": "architectural: grouped INT4 linear fuses packed weight decode, scale/zero-point sidecars, and accumulation in one inference kernel instead of queueing scalar condition opcodes",
       "matched_cases": [
         "nn.linear_4bit_affine_grouped.1m"

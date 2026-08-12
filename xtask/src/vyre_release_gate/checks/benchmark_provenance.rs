@@ -502,12 +502,7 @@ pub(crate) fn json_has_nonempty_string_any(value: &serde_json::Value, fields: &[
 }
 
 const LAUNCH_COUNT_METRICS: &[&str] = &["kernel_launches", "launch_count", "launches"];
-const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &[
-    "cuda.ptx.patterns.release.corpus",
-    "lower.rewrites.impact.corpus",
-    "lower.egraph_saturation",
-    "lower.alias_aware_optimizations",
-];
+const NON_DISPATCH_PROOF_CASE_IDS: &[&str] = &["cuda.ptx.patterns.release.corpus"];
 
 fn is_non_dispatch_proof_case(case_id: &str) -> bool {
     NON_DISPATCH_PROOF_CASE_IDS.contains(&case_id)

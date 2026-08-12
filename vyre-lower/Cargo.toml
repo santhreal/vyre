@@ -30,13 +30,3 @@ im = { workspace = true }
 vyre-test-support.workspace = true
 serde_json = { workspace = true }
 toml = { workspace = true }
-# Backend differential gate for the rewrite passes. A rewrite that changes
-# program semantics is only observable by running the SAME program on two
-# independent executors and comparing outputs element by element, so the
-# reference interpreter and the real CUDA driver are both test-only deps
-# here. Both depend on vyre-lower; a dev-dependency cycle is fine because
-# Cargo compiles dev-deps only for the crate under test, never for its
-# dependents (vyre-driver-cuda documents the same arrangement in reverse).
-vyre-driver = { path = "../vyre-driver" }
-vyre-driver-reference = { path = "../vyre-driver-reference" }
-vyre-driver-cuda = { path = "../vyre-driver-cuda" }

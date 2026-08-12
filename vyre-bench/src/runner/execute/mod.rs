@@ -154,7 +154,7 @@ pub fn execute_suite(
                 failed += 1;
                 cases_report.push(case_failure(
                     case,
-                    None,
+                    Some(preferred_backend.id().to_string()),
                     format!("Artifact materializer error: {error}"),
                     case.performance_contract(),
                 ));

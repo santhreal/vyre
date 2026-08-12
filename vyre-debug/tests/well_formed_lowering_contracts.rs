@@ -12,8 +12,8 @@
 //! contracts naturally land alongside.
 
 use vyre_debug::{
-    bisect_rewrites, carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl,
-    dump_wgsl_with_lines, find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke,
+    carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl, dump_wgsl_with_lines,
+    find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke,
     DescriptorDumpOptions,
 };
 use vyre_lower::lower_verified;
@@ -160,28 +160,5 @@ fn wgsl_dump_with_lines_attaches_a_line_index() {
         line_count > 3,
         "WGSL with-lines dump only {} lines; that can't be a real shader",
         line_count
-    );
-}
-
-#[test]
-fn bisect_rewrites_terminates_on_smoke_fixture() {
-    let program = loop_carry_smoke();
-    // bisect_rewrites is the rewrite-bisection harness used to find a
-    // minimal failing transform. On a passing program it must
-    // *terminate* (no infinite loop, no crash) and return an Ok result.
-    // We don't assert on the exact RewriteBisectResult shape - that's
-    // a behavior contract, not a structural one - only that it
-    // completes within a reasonable wall-clock budget.
-    let start = std::time::Instant::now();
-    let result = bisect_rewrites(&program);
-    let elapsed = start.elapsed();
-    assert!(
-        result.is_ok(),
-        "bisect_rewrites errored on smoke: {result:?}"
-    );
-    assert!(
-        elapsed.as_secs() < 30,
-        "bisect_rewrites took {}s on smoke; suspiciously slow",
-        elapsed.as_secs()
     );
 }

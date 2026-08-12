@@ -1,7 +1,6 @@
-//! Reaching-definition import boundary for descriptor rewrites.
+//! Reaching-definition import boundary for descriptor analysis.
 //!
-//! External dataflow facts enter lowered descriptor optimization through
-//! the same reaching-definition representation used by the rewrite pipeline.
+//! This API normalizes external facts for read-only lower-IR inspection.
 
 pub use crate::analyses::reaching_def_facts::{
     import_descriptor_reaching_defs, resolve_copy_alias, ReachingDefFactSet,

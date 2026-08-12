@@ -23,7 +23,7 @@ impl Autotune {
         if wg[1] != 1 || wg[2] != 1 {
             return PassAnalysis::SKIP;
         }
-        if program.buffers().is_empty() {
+        if program.buffers().is_empty() || crate::program_caps::scan(program).subgroup_ops {
             return PassAnalysis::SKIP;
         }
         PassAnalysis::RUN
@@ -255,6 +255,30 @@ mod tests {
             PassAnalysis::SKIP => {}
             other => panic!("expected SKIP for multi-dim workgroup, got {other:?}"),
         }
+    }
+
+    /// Subgroup collectives encode participation in the declared workgroup
+    /// shape. Retuning that shape changes ballot/reduction semantics even when
+    /// ordinary buffer bounds remain valid.
+    #[test]
+    fn analyze_skips_subgroup_collective_workgroup_tuning() {
+        let program = Program::wrapped(
+            vec![BufferDecl::output("out", 0, DataType::U32).with_count(16)],
+            [256, 1, 1],
+            vec![Node::let_bind(
+                "mask",
+                Expr::subgroup_ballot(Expr::bool(true)),
+            )],
+        );
+
+        let pass = Autotune;
+        let analysis = crate::optimizer::ProgramPass::analyze(&pass, &program);
+        assert_eq!(analysis, PassAnalysis::SKIP);
+        let optimized = match analysis {
+            PassAnalysis::SKIP => program,
+            _ => crate::optimizer::ProgramPass::transform(&pass, program).program,
+        };
+        assert_eq!(optimized.workgroup_size(), [256, 1, 1]);
     }
 
     #[test]
