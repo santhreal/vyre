@@ -1,15 +1,13 @@
-//! P4.3  -  content-addressed pipeline cache.
+//! Content-addressed neutral-artifact cache.
 //!
-//! Every compiled `Program` has a stable fingerprint =
-//! `blake3(canonicalize(program).to_wire())`. The fingerprint
-//! becomes the cache key: two authors who write the same
-//! computation via different spellings share cached target binaries /
-//! native-backend artifacts, skipping recompilation.
+//! [`PipelineFingerprint`] derives directly from the authenticated neutral
+//! [`vyre_megakernel::Artifact`] identity. Dispatch inputs, target payloads,
+//! device generations, and runtime policy do not enter this layer's key.
+//! Persisted blobs use a versioned, digest-bound frame and stale versions miss
+//! rather than being served.
 //!
-//! The cache is deliberately composable at this layer. Hot paths use
-//! [`InMemoryPipelineCache`], persistent process-restart reuse uses
-//! [`DiskCache`], and callers that want both compose them with
-//! [`LayeredPipelineCache`].
+//! Hot paths use [`InMemoryPipelineCache`], process-restart reuse uses
+//! [`DiskCache`], and callers compose them through [`LayeredPipelineCache`].
 
 #![allow(clippy::missing_const_for_thread_local, clippy::explicit_auto_deref)]
 

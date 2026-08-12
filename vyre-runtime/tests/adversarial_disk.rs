@@ -13,7 +13,7 @@
 //!   - Symlinks in the cache root are never followed (anti-traversal).
 //!   - Concurrent `put` + `get` interleaving is race-free.
 //!   - `LayeredPipelineCache` routes writes to layer-0 and reads fall through.
-//!   - `RemoteCache` is feature-gated; this file compiles without `remote`.
+//!   - `RemoteCache` is feature-gated; this file compiles without `remote-cache`.
 
 #![forbid(unsafe_code)]
 
@@ -404,17 +404,15 @@ fn layered_cache_disk_over_memory_fallthrough_and_put_routing() {
 // 7. RemoteCache feature-gated compilation & layered behaviour
 // ---------------------------------------------------------------------------
 
-/// Verify that the crate and this test file compile without the `remote`
-/// feature.  All `RemoteCache`-dependent code is behind
-/// `#[cfg(feature = "remote")]`.
+/// Verify that the crate and this test file compile without the `remote-cache`
+/// feature. All `RemoteCache`-dependent code is feature-gated.
 #[test]
-fn compiles_without_remote_feature() {
-    // Compilation itself is the test  -  the test binary builds iff
-    // the default feature set + this file don't reference `remote`.
-    let _ = InMemoryPipelineCache::new();
+fn compiles_without_remote_cache_feature() {
+    // Compilation itself is the test: the default test target must not
+    // reference the feature-gated RemoteCache type.
 }
 
-#[cfg(feature = "remote")]
+#[cfg(feature = "remote-cache")]
 #[test]
 fn remote_cache_in_layered_cache_put_and_get() {
     let dir = TempDir::new().unwrap();

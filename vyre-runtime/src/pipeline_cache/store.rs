@@ -8,9 +8,9 @@ use super::fingerprint::PipelineFingerprint;
 use super::metrics::PipelineCacheMetrics;
 
 /// Trait for persistent pipeline-cache backends. [`super::DiskCache`] and
-/// `super::RemoteCache` (when the `remote` feature is enabled) ship
-/// disk- and network-backed implementations; tests here use the
-/// in-memory [`super::InMemoryPipelineCache`].
+/// `super::RemoteCache` (when the `remote-cache` feature is enabled) ship
+/// disk- and network-backed implementations; tests here use the in-memory
+/// [`super::InMemoryPipelineCache`].
 pub trait PipelineCacheStore: Send + Sync {
     /// Look up a cached artifact for this fingerprint.
     ///

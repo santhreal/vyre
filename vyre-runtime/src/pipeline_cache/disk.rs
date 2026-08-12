@@ -1,7 +1,8 @@
-//! Disk-backed pipeline cache. Writes one file per fingerprint under
-//! `<root>/<hex>.bin` with a blake3 footer that the reader verifies
-//! before returning the payload (covers torn writes, bit-rot, and
-//! deliberate tampering).
+//! Disk-backed neutral-artifact cache.
+//!
+//! Each fingerprint maps to one versioned, digest-bound file under
+//! `<root>/<hex>.bin`. Readers reject stale schemas, torn writes, bit rot, and
+//! tampering before returning payload bytes.
 
 use std::fs::{self, File};
 use std::io::Read;
@@ -45,15 +46,19 @@ pub struct DiskCacheDurabilityReport {
 static DISK_CACHE_TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 // On-disk layout:
-//   <payload bytes..>  <32-byte blake3 footer>
-// Total file size = payload.len() + 32. Get verifies the footer
-// before returning the payload; mismatches or truncated files
-// return None so the caller recompiles. Covers torn writes +
-// bit-rot + deliberate tampering.
+//   "VPC0"  <u16 little-endian schema>  <payload bytes..>  <32-byte blake3 footer>
+// The checksum covers the versioned header and payload. Readers reject stale
+// schema versions before returning bytes, so persisted entries cannot revive an
+// earlier cache contract.
+pub(super) const PIPELINE_CACHE_SCHEMA_VERSION: u16 = 1;
+const PIPELINE_CACHE_MAGIC: &[u8; 4] = b"VPC0";
+const PIPELINE_CACHE_HEADER_LEN: usize = 6;
+const PIPELINE_CACHE_HEADER_LEN_U64: u64 = 6;
 pub(super) const CHECKSUM_LEN: usize = 32;
 pub(super) const CHECKSUM_LEN_U64: u64 = 32;
 pub(super) const MAX_PIPELINE_BLOB_BYTES: u64 = 64 * 1024 * 1024;
-pub(super) const MAX_ENCODED_PIPELINE_BLOB_BYTES: u64 = MAX_PIPELINE_BLOB_BYTES + CHECKSUM_LEN_U64;
+pub(super) const MAX_ENCODED_PIPELINE_BLOB_BYTES: u64 =
+    MAX_PIPELINE_BLOB_BYTES + PIPELINE_CACHE_HEADER_LEN_U64 + CHECKSUM_LEN_U64;
 
 impl DiskCache {
     /// Construct a cache rooted at `root`. Creates the directory if
@@ -167,15 +172,15 @@ impl PipelineCacheStore for DiskCache {
         final_name.push_str(".bin");
         let final_path = self.root.join(&final_name);
 
-        // Write payload + blake3 footer in one shot and install by rename so
-        // readers see either the prior complete file or the new complete file.
-        // Durability is batched through `flush`; fsyncing every insertion
-        // turns steady-state cache population into a storage latency bottleneck.
+        // Write the versioned header, payload, and digest footer, then install by
+        // rename so readers see either the prior complete file or the new
+        // complete file. Durability is batched through `flush`; fsyncing every
+        // insertion turns steady-state cache population into a storage latency
+        // bottleneck.
         let write_rename = || -> io::Result<()> {
-            let checksum = ::blake3::hash(&artifact);
+            let encoded = encode_cache_blob(&artifact);
             let mut f = File::create(&tmp_path)?;
-            f.write_all(&artifact)?;
-            f.write_all(checksum.as_bytes())?;
+            f.write_all(&encoded)?;
             drop(f);
             // FINDING-CACHE-1: if the final path is a symlink, unlink it
             // first so rename replaces the symlink (not its target).
@@ -314,7 +319,7 @@ pub enum DiskCacheError {
     Io(#[from] io::Error),
 }
 
-#[cfg_attr(not(any(test, feature = "remote")), allow(dead_code))]
+#[cfg_attr(not(any(test, feature = "remote-cache")), allow(dead_code))]
 pub(super) fn read_verified_cache_blob(mut reader: impl Read) -> Option<Vec<u8>> {
     read_verified_cache_blob_with_capacity(&mut reader, 0)
 }
@@ -335,20 +340,37 @@ fn read_verified_cache_blob_with_capacity(
 
 pub(super) fn verify_cache_blob(mut bytes: Vec<u8>) -> Option<Vec<u8>> {
     let byte_len = u64::try_from(bytes.len()).ok()?;
-    if byte_len > MAX_ENCODED_PIPELINE_BLOB_BYTES || bytes.len() < CHECKSUM_LEN {
+    if byte_len > MAX_ENCODED_PIPELINE_BLOB_BYTES
+        || bytes.len() < PIPELINE_CACHE_HEADER_LEN + CHECKSUM_LEN
+    {
         return None;
     }
-    let payload_len = bytes.len() - CHECKSUM_LEN;
+    let signed_len = bytes.len() - CHECKSUM_LEN;
+    let (signed, footer) = bytes.split_at(signed_len);
+    let expected = ::blake3::hash(signed);
+    if footer != expected.as_bytes()
+        || signed.get(..4)? != PIPELINE_CACHE_MAGIC
+        || u16::from_le_bytes(signed.get(4..6)?.try_into().ok()?) != PIPELINE_CACHE_SCHEMA_VERSION
+    {
+        return None;
+    }
+    let payload_len = signed_len.checked_sub(PIPELINE_CACHE_HEADER_LEN)?;
     if u64::try_from(payload_len).ok()? > MAX_PIPELINE_BLOB_BYTES {
         return None;
     }
-    let (payload, footer) = bytes.split_at(payload_len);
-    let expected = ::blake3::hash(payload);
-    if footer != expected.as_bytes() {
-        return None;
-    }
-    bytes.truncate(payload_len);
+    bytes.truncate(signed_len);
+    bytes.drain(..PIPELINE_CACHE_HEADER_LEN);
     Some(bytes)
+}
+
+fn encode_cache_blob(payload: &[u8]) -> Vec<u8> {
+    let mut encoded = Vec::with_capacity(PIPELINE_CACHE_HEADER_LEN + payload.len() + CHECKSUM_LEN);
+    encoded.extend_from_slice(PIPELINE_CACHE_MAGIC);
+    encoded.extend_from_slice(&PIPELINE_CACHE_SCHEMA_VERSION.to_le_bytes());
+    encoded.extend_from_slice(payload);
+    let checksum = ::blake3::hash(&encoded);
+    encoded.extend_from_slice(checksum.as_bytes());
+    encoded
 }
 
 fn append_u64_decimal(out: &mut String, mut value: u64) {
@@ -416,10 +438,9 @@ mod tests {
     }
 
     #[test]
-    fn cache_blob_verifier_accepts_checksum_footer() {
+    fn cache_blob_verifier_accepts_current_versioned_frame() {
         let payload = b"compiled-artifact".to_vec();
-        let mut encoded = payload.clone();
-        encoded.extend_from_slice(::blake3::hash(&payload).as_bytes());
+        let encoded = encode_cache_blob(&payload);
 
         assert_eq!(verify_cache_blob(encoded), Some(payload));
     }
@@ -427,12 +448,29 @@ mod tests {
     #[test]
     fn cache_blob_verifier_rejects_corrupted_footer() {
         let payload = b"compiled-artifact".to_vec();
-        let mut encoded = payload;
-        encoded.extend_from_slice(&[0xA5; CHECKSUM_LEN]);
+        let mut encoded = encode_cache_blob(&payload);
+        let footer_start = encoded.len() - CHECKSUM_LEN;
+        encoded[footer_start..].fill(0xA5);
 
         assert!(
             verify_cache_blob(encoded).is_none(),
             "Fix: disk and remote cache readers must reject artifacts whose checksum footer does not match"
+        );
+    }
+
+    /// WHY: persisted cache framing must reject a stale schema even when its
+    /// digest is internally valid, or old cache semantics can survive upgrades.
+    #[test]
+    fn cache_blob_verifier_rejects_stale_schema_version() {
+        let mut encoded = encode_cache_blob(b"compiled-artifact");
+        encoded[4..6].copy_from_slice(&0_u16.to_le_bytes());
+        let footer_start = encoded.len() - CHECKSUM_LEN;
+        let digest = ::blake3::hash(&encoded[..footer_start]);
+        encoded[footer_start..].copy_from_slice(digest.as_bytes());
+
+        assert!(
+            verify_cache_blob(encoded).is_none(),
+            "Fix: stale persisted pipeline-cache schemas must miss and recompile"
         );
     }
 
