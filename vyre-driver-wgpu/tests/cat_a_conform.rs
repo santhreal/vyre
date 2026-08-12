@@ -5,8 +5,9 @@ use std::sync::OnceLock;
 use vyre::ir::{BufferAccess, Program};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_libs::fixture_catalog::{all_entries, fp_contract};
+use vyre_libs::operation_catalog::all_entries;
 
 fn backend() -> &'static WgpuBackend {
     static BACKEND: OnceLock<WgpuBackend> = OnceLock::new();
@@ -58,7 +59,7 @@ fn assert_gpu_matches_fixture(id: &'static str) {
             .unwrap_or_else(|error| {
                 panic!("Fix: 5090 dispatch failed for {id} case {case_index}: {error}")
             });
-        let tolerance = fp_contract::effective_tolerance(entry.id, &program);
+        let tolerance = fp_parity::effective_tolerance(entry.id, &program);
         assert_outputs_match(&entry, tolerance, &outputs, expected_outputs, case_index);
     }
 }

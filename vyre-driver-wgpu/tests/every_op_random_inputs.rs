@@ -13,8 +13,9 @@ use std::sync::OnceLock;
 use proptest::test_runner::{Config, TestRunner};
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::fp_parity;
 use vyre_foundation::optimizer::optimize;
-use vyre_libs::fixture_catalog::{all_entries, fp_contract};
+use vyre_libs::operation_catalog::all_entries;
 use vyre_reference::value::Value;
 
 mod common;
@@ -172,7 +173,7 @@ fn every_op_random_input_stress() {
                 }
             };
 
-            let tolerance = fp_contract::effective_tolerance(entry.id, &program);
+            let tolerance = fp_parity::effective_tolerance(entry.id, &program);
             if let Err(msg) = compare_outputs(
                 entry.id,
                 &program,

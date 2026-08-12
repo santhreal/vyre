@@ -176,8 +176,8 @@ fn gqa_to_fft_grid_sync_preserves_intermediate_lanes() {
         .expect("registered optimizer must converge");
     let optimized_reference = run_reference(a.id, b.id, &optimized, &inputs);
     let elements = output_elements(&composition.program);
-    let tolerance = fp_contract::effective_tolerance(a.id, &composition.program)
-        .max(fp_contract::effective_tolerance(b.id, &composition.program));
+    let tolerance = fp_parity::effective_tolerance(a.id, &composition.program)
+        .max(fp_parity::effective_tolerance(b.id, &composition.program));
 
     assert_outputs_equal(
         a.id,
@@ -324,8 +324,8 @@ fn fft_to_cross_entropy_uses_largest_output_for_dispatch_grid() {
     );
     let reference = run_reference(fft.id, cross_entropy.id, &composition.program, &inputs);
     let gpu = run_gpu(&composition.program, &inputs).expect("multi-output WGPU dispatch");
-    let tolerance = fp_contract::effective_tolerance(fft.id, &composition.program).max(
-        fp_contract::effective_tolerance(cross_entropy.id, &composition.program),
+    let tolerance = fp_parity::effective_tolerance(fft.id, &composition.program).max(
+        fp_parity::effective_tolerance(cross_entropy.id, &composition.program),
     );
 
     assert_outputs_equal(
@@ -699,8 +699,8 @@ proptest! {
             }
         };
 
-        let tolerance = fp_contract::effective_tolerance(a.id, composed)
-            .max(fp_contract::effective_tolerance(b.id, composed));
+        let tolerance = fp_parity::effective_tolerance(a.id, composed)
+            .max(fp_parity::effective_tolerance(b.id, composed));
         assert_outputs_equal(
             a.id,
             b.id,
@@ -784,8 +784,8 @@ proptest! {
                                 a.id, b.id
                             )
                         });
-                        let tolerance = fp_contract::effective_tolerance(a.id, composed)
-                            .max(fp_contract::effective_tolerance(b.id, composed));
+                        let tolerance = fp_parity::effective_tolerance(a.id, composed)
+                            .max(fp_parity::effective_tolerance(b.id, composed));
                         assert_outputs_equal(
                             a.id,
                             b.id,

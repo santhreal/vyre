@@ -9,9 +9,9 @@ use std::collections::BTreeMap;
 use tempfile::TempDir;
 use vyre_driver::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
+use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_libs::fixture_catalog::fp_contract;
 use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 
 const HELPER_FLAG: &str = "VYRE_PIPELINE_CACHE_HELPER_OUT";
@@ -58,7 +58,7 @@ fn compile_case(case: &SemanticOperation) -> (Duration, Vec<Vec<u8>>) {
             .into_iter()
             .next()
             .expect("Fix: expected-output fixture must contain one case");
-        let tolerance = fp_contract::effective_tolerance(case.id, &program);
+        let tolerance = fp_parity::effective_tolerance(case.id, &program);
         assert_outputs_within_tolerance(case.id, tolerance, &expected, &output);
     }
     (compile_time, output)
@@ -167,7 +167,7 @@ fn read_helper_result(root: &Path) -> (Duration, Vec<Vec<u8>>) {
 }
 
 fn helper_case(case_id: &str) -> SemanticOperation {
-    vyre_libs::fixture_catalog::all_entries()
+    vyre_libs::operation_catalog::all_entries()
         .find(|entry| entry.id == case_id)
         .unwrap_or_else(|| panic!("Fix: no harness fixture registered for `{case_id}`"))
 }
