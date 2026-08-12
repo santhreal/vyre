@@ -63,7 +63,7 @@ fn release_matrix_commands_prefer_canonical_release_workload_cases() {
         ("alias-reaching-def", "release.alias_reaching_def.1m"),
         ("ifds-witness", "release.ifds_witness.1m"),
         ("c-ast-traversal", "release.c_ast_traversal.1m"),
-        ("egraph-saturation", "release.egraph_saturation.1m"),
+        ("semantic-optimizer-impact", "foundation.optimizer.impact"),
         ("sparse-output-compaction", "sparse.compaction.count.1m"),
         (
             "metadata-conditions",

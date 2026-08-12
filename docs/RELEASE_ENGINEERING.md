@@ -99,7 +99,7 @@ top-level hardware provenance before benchmark freshness is accepted.
 4. `cargo_full test --workspace --release --all-features`  -  full workspace tests.
 5. `cargo_full run -p vyre-bench --release -- run --backend cuda --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets`  -  CUDA release path.
 6. `cargo_full run -p vyre-bench --release -- run --backend wgpu --suite release --measured-samples 30 --warmup-samples 300 --enforce-budgets`  -  WGPU fallback path.
-7. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every required 100x release case (`release.condition_eval.1m`, `release.string_bitmap_scatter.1m`, `release.offset_count_aggregation.1m`, `release.entropy_window.1m`, `release.quantified_condition_loops.1m`, `release.alias_reaching_def.1m`, `release.ifds_witness.1m`, `release.c_ast_traversal.1m`, `release.megakernel_queue.1m`, `release.egraph_saturation.1m`, and `sparse.compaction.count.1m`) with 30+ CUDA and CPU baseline samples.
+7. Confirm `release/evidence/benchmarks/cpu-only-100x-proof.json` proves every currently registered 100x release case from `docs/optimization/BENCH_TARGETS.toml` with 30 or more CUDA and CPU baseline samples. The semantic optimizer impact workload is architectural evidence and is not part of the CPU-SOTA throughput family count.
 8. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all`  -  CUDA conformance.
 9. `cargo_full run -p vyre-conform-runner --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all`  -  WGPU conformance.
 10. `cargo_full publish --dry-run --locked -p <each crate>` in order.

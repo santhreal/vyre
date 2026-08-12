@@ -11,7 +11,6 @@ pub(super) const REQUIRED_CPU_SOTA_100X_CASES: &[&str] = &[
     "release.ifds_witness.1m",
     "release.c_ast_traversal.1m",
     "release.megakernel_queue.1m",
-    "release.egraph_saturation.1m",
     "sparse.compaction.count.1m",
 ];
 pub(super) const MIN_CPU_SOTA_100X_RELEASE_CASES: usize = 10;

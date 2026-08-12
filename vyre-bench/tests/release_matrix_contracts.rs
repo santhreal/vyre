@@ -174,7 +174,7 @@ fn release_matrix_contains_current_required_family_ids() {
         "ifds-witness",
         "c-ast-traversal",
         "megakernel-queued-batches",
-        "egraph-saturation",
+        "semantic-optimizer-impact",
         "sparse-output-compaction",
         "callgraph-reachability",
     ];
@@ -191,11 +191,11 @@ fn release_matrix_contains_current_required_family_ids() {
             "Fix: release matrix family `{family_id}` has no active release case."
         );
         assert!(
-            family
-                .bench_target_ids
-                .iter()
-                .all(|target| target.starts_with("release.workload.")),
-            "Fix: release matrix family `{family_id}` must map to canonical release benchmark target ids."
+            family.bench_target_ids.iter().all(|target| {
+                target.starts_with("release.workload.")
+                    || target.starts_with("release.optimization.")
+            }),
+            "Fix: release matrix family `{family_id}` must map to canonical workload or optimization benchmark target ids."
         );
     }
 }

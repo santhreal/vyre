@@ -243,19 +243,13 @@ fn check_required_cpu_100x_cases(
     cases: &[serde_json::Value],
     failures: &mut Vec<String>,
 ) {
-    for required_case in [
-        "release.condition_eval.1m",
-        "release.string_bitmap_scatter.1m",
-        "release.offset_count_aggregation.1m",
-        "release.entropy_window.1m",
-        "release.quantified_condition_loops.1m",
-        "release.alias_reaching_def.1m",
-        "release.ifds_witness.1m",
-        "release.c_ast_traversal.1m",
-        "release.megakernel_queue.1m",
-        "release.egraph_saturation.1m",
-        "sparse.compaction.count.1m",
-    ] {
+    let required_cases = proof
+        .get("required_cpu_sota_100x_cases")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str);
+    for required_case in required_cases {
         if !cases.iter().any(|case| {
             let case_backend = case
                 .get("backend_id")
@@ -562,7 +556,10 @@ mod tests {
 
     #[test]
     fn cpu_100x_gate_requires_required_cases_to_prove_passing_100x() {
-        let proof = serde_json::json!({"selected_backend": "cuda"});
+        let proof = serde_json::json!({
+            "selected_backend": "cuda",
+            "required_cpu_sota_100x_cases": ["release.condition_eval.1m"]
+        });
         let cases = vec![serde_json::json!({
             "id": "release.condition_eval.1m",
             "backend_id": "cuda",

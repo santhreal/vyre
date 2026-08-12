@@ -2,7 +2,7 @@
   "schema_version": 1,
   "selected_backend": "cuda",
   "source_suite": "release/evidence/benchmarks/cuda-release-suite.json",
-  "source_fingerprint": "git:af0cdacc30b9be79dda3abc385057bc2ac2a917d:dirty=true:worktree=4f902d7ef557e36be27ce4e0a15f590b4331a51a5a21e770822f092a66d90a18",
+  "source_fingerprint": "git:99c0fe0962d3730ca9191c3ff13f82705388245a:dirty=true:worktree=2b3d2ff0a107fc1c2a2e06383e24ca476f0151e519010b741bb214d355399ad2",
   "source_tree_fingerprint": "source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425",
   "source_artifact_count": 16,
   "source_artifacts": [
@@ -874,6 +874,7 @@
     }
   ],
   "blockers": [
-    "frontier leaderboard source artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json` is unreadable: No such file or directory (os error 2)"
+    "frontier leaderboard source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match aggregate `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425`",
+    "frontier leaderboard source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match aggregate `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425`"
   ]
 }
