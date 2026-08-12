@@ -41,9 +41,7 @@ All validation codes below use diagnostic stage `validate` and retry class
 | `V012` | Unsupported cast between two DataTypes | Use a supported casts.md conversion or rewrite the expression before validation. |
 | `V013` | Bytes load/store on buffer without `bytes_extraction = true` | Use a typed buffer (U32/I32/F32/…), or declare the buffer with `.with_bytes_extraction(true)` when the op is a bytes-extraction op like `decode.base64`. |
 | `V014` | Atomic on buffer with non-u32 element type | Atomics only support U32 elements, so retype the buffer. |
-| `V015` | Loop bound expression has wrong type (expected `u32`) | Ensure `from` and `to` are U32. |
 | `V016` | Unknown op id in `Expr::Call` | Use a registered op id or add the op to core::ops::*. |
-| `V017` | Call depth exceeds `DEFAULT_MAX_CALL_DEPTH` | Reduce call nesting or eliminate mutually recursive operations. |
 | `V018` | Program nesting depth exceeds `DEFAULT_MAX_NESTING_DEPTH` | Flatten nested If/Loop/Block structures or split the program before lowering. |
 | `V019` | Program has more than `DEFAULT_MAX_NODE_COUNT` nodes | Split the program into smaller kernels or run an optimization pass before lowering. |
 | `V020` | Call to non-inlinable op | Lower this op through its dedicated backend path or rewrite the caller with explicit IR. |
