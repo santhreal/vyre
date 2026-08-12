@@ -9,7 +9,7 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | [`decode`](decode.md) | 9 |
 | [`fixpoint`](fixpoint.md) | 2 |
 | [`geom`](geom.md) | 2 |
-| [`graph`](graph.md) | 24 |
+| [`graph`](graph.md) | 25 |
 | [`hardware`](hardware.md) | 9 |
 | [`hash`](hash.md) | 15 |
 | [`io`](io.md) | 2 |

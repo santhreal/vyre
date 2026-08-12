@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 367,
+  "operation_count": 368,
   "tier_counts": {
     "intrinsic": 9,
     "libs": 204,
-    "primitive": 149,
+    "primitive": 150,
     "runtime": 5
   },
   "category_counts": {
@@ -14,7 +14,7 @@
     "decode": 9,
     "fixpoint": 2,
     "geom": 2,
-    "graph": 24,
+    "graph": 25,
     "hardware": 9,
     "hash": 15,
     "io": 2,
@@ -19755,33 +19755,6 @@
         "buffers": [
           {
             "binding": 0,
-            "name": "fin",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 1,
-            "name": "san",
-            "access": "ReadOnly",
-            "memory": "Readonly",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 2,
-            "name": "__sanitized_by_clean__fin",
-            "access": "ReadWrite",
-            "memory": "Global",
-            "element": "U32",
-            "count": 1,
-            "pipeline_live_out": false
-          },
-          {
-            "binding": 3,
             "name": "pg_nodes",
             "access": "ReadOnly",
             "memory": "Readonly",
@@ -19790,7 +19763,7 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 4,
+            "binding": 1,
             "name": "pg_edge_offsets",
             "access": "ReadOnly",
             "memory": "Readonly",
@@ -19799,7 +19772,7 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 5,
+            "binding": 2,
             "name": "pg_edge_targets",
             "access": "ReadOnly",
             "memory": "Readonly",
@@ -19808,7 +19781,7 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 6,
+            "binding": 3,
             "name": "pg_edge_kind_mask",
             "access": "ReadOnly",
             "memory": "Readonly",
@@ -19817,7 +19790,7 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 7,
+            "binding": 4,
             "name": "pg_node_tags",
             "access": "ReadOnly",
             "memory": "Readonly",
@@ -19826,7 +19799,25 @@
             "pipeline_live_out": false
           },
           {
-            "binding": 8,
+            "binding": 5,
+            "name": "fin",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 6,
+            "name": "san",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 7,
             "name": "fout",
             "access": "ReadWrite",
             "memory": "Global",
@@ -19887,17 +19878,7 @@
         },
         {
           "depth": 1,
-          "operation": "inline::vyre-libs::security::sanitized_by",
-          "registered": false
-        },
-        {
-          "depth": 2,
-          "operation": "vyre-primitives::bitset::and_not",
-          "registered": true
-        },
-        {
-          "depth": 2,
-          "operation": "vyre-primitives::graph::csr_forward_traverse",
+          "operation": "vyre-primitives::graph::csr_forward_traverse_excluding",
           "registered": true
         }
       ]
@@ -24776,6 +24757,139 @@
         {
           "depth": 0,
           "operation": "vyre-primitives::graph::csr_forward_traverse",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-primitives::graph::csr_forward_traverse_excluding",
+      "tier": "primitive",
+      "category": "graph",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "pg_nodes",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "pg_edge_offsets",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 5,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 2,
+            "name": "pg_edge_targets",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 3,
+            "name": "pg_edge_kind_mask",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 4,
+            "name": "pg_node_tags",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 5,
+            "name": "fin",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 6,
+            "name": "excluded",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 7,
+            "name": "fout",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 1,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "graph",
+        "inventory-registry"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-primitives/tests/integration.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-primitives::graph::csr_forward_traverse_excluding",
           "registered": true
         }
       ]
