@@ -303,14 +303,16 @@ impl RegionEvidencePipeline {
             crate::artifact_session::dispatch_registered(&program, backend_id, &inputs, &config)?;
         let count_bytes = dispatch_io::try_output_bytes(&outputs, 0, "extract match count")?;
         let count = dispatch_io::try_read_u32_prefix(count_bytes, "extract match count")?;
-        if count > max_matches {
-            return Err(BackendError::new(format!(
-                "RegionEvidencePipeline::scan extracted {count} matches but the buffer caps {max_matches}; \
-                 matches were dropped. Fix: raise max_matches or shard the haystack (fail closed, no partial set)."
-            )));
-        }
         let match_bytes = dispatch_io::try_output_bytes(&outputs, 1, "extract matches")?;
-        let mut positions: Vec<_> = dispatch_io::try_unpack_match_triples(match_bytes, count)?
+        let mut decoded = Vec::new();
+        dispatch_io::try_unpack_match_triples_capped_into(
+            match_bytes,
+            count,
+            max_matches,
+            "RegionEvidencePipeline::scan",
+            &mut decoded,
+        )?;
+        let mut positions: Vec<_> = decoded
             .into_iter()
             .filter(|m| self.position_mask.get(m.tag as usize).copied().unwrap_or(0) != 0)
             .collect();
@@ -411,15 +413,13 @@ impl RegionEvidencePipeline {
             dispatch_io::try_output_bytes(&outputs, 1, "fused match count")?,
             "fused match count",
         )?;
-        if count > max_matches {
-            return Err(BackendError::new(format!(
-                "RegionEvidencePipeline::scan_fused extracted {count} matches but the buffer caps {max_matches}; \
-                 matches were dropped. Fix: raise max_matches or shard the haystack (fail closed, no partial set)."
-            )));
-        }
-        let mut positions = dispatch_io::try_unpack_match_triples(
+        let mut positions = Vec::new();
+        dispatch_io::try_unpack_match_triples_capped_into(
             dispatch_io::try_output_bytes(&outputs, 2, "fused matches")?,
             count,
+            max_matches,
+            "RegionEvidencePipeline::scan_fused",
+            &mut positions,
         )?;
         positions.sort_unstable_by_key(|m| (m.start, m.end, m.tag));
         positions.dedup();
