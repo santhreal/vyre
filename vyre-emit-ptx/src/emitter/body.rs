@@ -81,7 +81,7 @@ impl BodyCtx<'_> {
                 idx += 1;
                 continue;
             }
-            if let Some(chain) = self.collect_vec_store_chain(body, &facts, idx)? {
+            if let Some(chain) = self.collect_vec_store_chain(body, &facts, &skip, idx)? {
                 self.emit_vec_store_chain(body, &chain)
                     .map_err(|error| emit_context_error(error, body, idx))?;
                 for &op_idx in chain.iter().skip(1) {

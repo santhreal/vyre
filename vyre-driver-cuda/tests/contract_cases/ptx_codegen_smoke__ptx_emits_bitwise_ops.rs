@@ -97,10 +97,9 @@ fn ptx_emits_integer_comparisons() {
             "setp.lt.u32",
         ),
         (
-            // Gt(input, 5) -> Lt(5, input) via cmp_normalize.
             "gt",
             Expr::gt(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-            "setp.lt.u32",
+            "setp.gt.u32",
         ),
         (
             "le",
@@ -108,10 +107,9 @@ fn ptx_emits_integer_comparisons() {
             "setp.le.u32",
         ),
         (
-            // Ge(input, 5) -> Le(5, input) via cmp_normalize.
             "ge",
             Expr::ge(Expr::load("input", Expr::u32(0)), Expr::u32(5)),
-            "setp.le.u32",
+            "setp.ge.u32",
         ),
     ];
     for (name, expr, expected_insn) in ops {

@@ -46,6 +46,13 @@ impl BodyCtx<'_> {
                 if is_vector_load_op(&next.kind) {
                     break;
                 }
+                if matches!(next.kind, KernelOpKind::StoreGlobal) {
+                    let (store_slot, _, _) = read_store_operands(next)?;
+                    if store_slot != slot {
+                        next_idx += 1;
+                        continue;
+                    }
+                }
                 if is_scheduling_fence(next) || !is_schedulable_pure_op(next) {
                     break;
                 }
@@ -75,6 +82,7 @@ impl BodyCtx<'_> {
         &self,
         body: &KernelBody,
         facts: &EmitFacts,
+        skipped: &[bool],
         start_idx: usize,
     ) -> Result<Option<VectorChain>, EmitError> {
         let op = &body.ops[start_idx];
@@ -95,6 +103,10 @@ impl BodyCtx<'_> {
             let mut next_idx = scan_idx;
             let mut skipped_pure_ops: SmallVec<[usize; 4]> = SmallVec::new();
             while next_idx < body.ops.len() {
+                if skipped.get(next_idx).copied().unwrap_or(false) {
+                    next_idx += 1;
+                    continue;
+                }
                 let next = &body.ops[next_idx];
                 if matches!(next.kind, KernelOpKind::StoreGlobal) {
                     break;
