@@ -64,7 +64,6 @@ canonical artifact value IDs.
 | `vyre::ArtifactSession` | `vyre-runtime` | Authenticated admission, materialization, submission, and recovery |
 | `vyre::PersistentExecutor` | `vyre-runtime` | Retained artifact-backed resident queue execution |
 | `vyre::BindingSet` | `vyre-driver` | Typed resource bindings keyed by artifact value identity |
-| `vyre::cpu_references` | `vyre-foundation` | Explicit reference and conformance semantics |
 
 Concrete drivers own target compilation, device acquisition, native
 materialization, and submission. The facade does not select a concrete backend
@@ -72,8 +71,9 @@ or lower directly to target text.
 
 ## Conformance
 
-Pair vyre with `vyre-reference` and backend KAT parity tests for a binary
-verdict on backend correctness.
+Pair `vyre` with `vyre-reference` and backend KAT parity tests for a binary
+verdict on backend correctness. Reference execution is an explicit oracle, not
+a production fallback.
 
 ## The book
 
@@ -97,7 +97,7 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 ### Boundaries
 
 The `public-facade` owner maintains this `facade` crate at `vyre`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-scan`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

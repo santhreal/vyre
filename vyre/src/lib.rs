@@ -96,20 +96,6 @@ pub use vyre_foundation::ir;
 /// Public API re-export.
 pub use vyre_spec::soundness;
 
-// Layer 1 and Layer 2 operation specifications live in vyre-libs.
-// The crate root remains the single stable import surface for consumers.
-
-/// Wire-format CPU-reference byte ABI contract.
-/// Public API re-export.
-#[cfg(any(test, feature = "cpu-parity"))]
-pub use vyre_foundation::cpu_op;
-/// Substrate-neutral memory ordering model.
-/// Public API re-export.
-pub use vyre_foundation::memory_model;
-/// Substrate-neutral memory ordering type.
-/// Public API re-export.
-pub use vyre_foundation::MemoryOrdering;
-
 /// Whole-program compiler request, artifact, payload, and target-facet APIs.
 pub use vyre_megakernel as compiler;
 
@@ -128,32 +114,13 @@ pub use vyre_runtime::{
 /// Canonical scan compilation, session, paging, residency, and readback owner.
 pub use vyre_scan as scan;
 
-/// Substrate-neutral execution planning for performance and accuracy tracks.
-/// Public API re-export.
-pub use vyre_foundation::execution_plan;
-
-/// Structured, machine-readable diagnostics.
-/// Public API re-export.
-pub use vyre_driver::diagnostics;
-
-/// Re-export of the native scan match result type from the foundation crate.
-/// Public API re-export.
-/// Public API re-export.
+/// Domain-neutral tagged byte-range contract.
 pub use vyre_foundation::match_result;
-
-// Previously: pub mod bytecode  -  a 637-LOC stack-machine VM publicly
-// re-exported from core. Deleted 2026-04-17. The NFA scan micro-interpreter
-// that carried the remaining bytecode was deleted 2026-04-19. Rule evaluators
-// compose ops in vyre IR directly. No interpreter surface remains in core.
 
 pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, Submission};
 
-/// Re-export of the core IR program type and validation entry point.
-///
-/// `Program` is the frozen IR container. `validate` is the function that
-/// checks a program for structural and semantic correctness before it is
-/// handed to a backend.
-pub use ir::{validate, InterpCtx, NodeId, NodeStorage, OpId, Program, Value};
+/// Canonical frontend IR program and validation entry point.
+pub use ir::{validate, Program};
 
 /// Domain-neutral tagged byte range shared by scan and source-processing products.
 pub use vyre_foundation::match_result::ByteRange;
