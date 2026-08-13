@@ -4,6 +4,7 @@ use vyre_foundation::match_result::ByteRange;
 
 use super::metrics::ScanAcStats;
 use super::{MATCH_TRIPLE_WORDS, PATTERNS};
+use crate::cases::mix32;
 
 pub(super) fn pattern_lengths() -> Result<Vec<u32>, BenchError> {
     PATTERNS
@@ -187,10 +188,3 @@ pub(super) fn with_matches_readback_range(
     Ok(program.with_rewritten_buffers(buffers))
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}

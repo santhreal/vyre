@@ -7,6 +7,7 @@ use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, classic_ac_scan_counts,
 };
 use vyre_primitives::wire::pack_u32_slice;
+use crate::cases::mix32;
 
 #[test]
 fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {
@@ -336,10 +337,3 @@ fn generated_noise_haystack(case: u32, len: usize) -> Vec<u8> {
     haystack
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}

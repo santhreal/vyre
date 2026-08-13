@@ -1,6 +1,7 @@
 //! Shared deterministic topology and sparse-queue sizing for irregular graph benchmarks.
 
 use crate::api::case::BenchError;
+use crate::cases::mix32;
 
 /// Return the shared heavy-tailed degree used by IFDS and CSR fixtures.
 pub(crate) fn skewed_degree(source: u32, ugly_hub_degree: u32) -> u32 {
@@ -46,11 +47,3 @@ pub(crate) fn sparse_queue_capacity(
     })
 }
 
-/// Mix one source index for deterministic fixture construction.
-pub(crate) fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}

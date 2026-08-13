@@ -300,13 +300,13 @@ enum SyntheticPattern {
     EgraphSaturation,
 }
 
-#[path = "release_workloads/families.rs"]
-mod release_workload_families;
-use release_workload_families::{
+mod families;
+use families::{
     release_macro_workloads, release_macro_workloads_for_family, ALIAS_REACHING_DEF,
     CONDITION_EVAL_BATCH, C_AST_TRAVERSAL, EGRAPH_SATURATION, ENTROPY_WINDOW, IFDS_WITNESS,
     MEGAKERNEL_QUEUE, OFFSET_COUNT_AGGREGATION, QUANTIFIED_LOOPS, STRING_BITMAP_SCATTER,
 };
+use super::byte_pack::gb_per_second;
 
 const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
     crate::api::suite::SuiteKind::Release,
@@ -2895,13 +2895,6 @@ fn encode_u32_words(words: &[u32]) -> Vec<u8> {
         bytes.extend_from_slice(&word.to_le_bytes());
     }
     bytes
-}
-
-fn gb_per_second(bytes: u64, ns: u64) -> f64 {
-    if ns == 0 {
-        return 0.0;
-    }
-    bytes as f64 / ns as f64
 }
 
 fn release_macro_workload(id: &str) -> Option<&'static SyntheticCountWorkload> {

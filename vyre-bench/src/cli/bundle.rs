@@ -1,8 +1,8 @@
-use super::cli_compare::{
+use super::compare::{
     build_comparison_artifact, parse_comparison_artifact, validate_comparison_expectations,
     ComparisonArtifact, ComparisonCase,
 };
-use super::cli_report_io::{parse_report, read_report_bounded, validate_report_expectations};
+use super::report_io::{parse_report, read_report_bounded, validate_report_expectations};
 use crate::report::json::ReportSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

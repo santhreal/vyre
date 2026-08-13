@@ -7,33 +7,26 @@ use crate::api::suite::SuiteKind;
 use crate::report::json::ReportSchema;
 use crate::runner::{execute_suite, RunConfig};
 
-#[path = "cli/bundle.rs"]
-mod cli_bundle;
-#[path = "cli/compare.rs"]
-mod cli_compare;
-#[path = "cli/dashboard.rs"]
-mod cli_dashboard;
-#[path = "cli/evolve_server.rs"]
-mod cli_evolve_server;
-#[path = "cli/registry.rs"]
-mod cli_registry;
-#[path = "cli/report_io.rs"]
-mod cli_report_io;
-#[path = "cli/run.rs"]
-mod cli_run;
+mod bundle;
+mod compare;
+mod dashboard;
+mod evolve_server;
+mod registry;
+mod report_io;
+mod run;
 #[cfg(not(test))]
-use cli_bundle::validate_benchmark_bundle;
+use bundle::validate_benchmark_bundle;
 #[cfg(test)]
-use cli_bundle::*;
+use bundle::*;
 #[cfg(test)]
-use cli_compare::{build_comparison_artifact, write_comparison_artifact};
-use cli_compare::{compare_reports, load_comparison_artifact, validate_comparison_expectations};
-use cli_dashboard::generate_dashboard;
+use compare::{build_comparison_artifact, write_comparison_artifact};
+use compare::{compare_reports, load_comparison_artifact, validate_comparison_expectations};
+use dashboard::generate_dashboard;
 #[cfg(test)]
-use cli_dashboard::{generate_index_html, generate_scorecard_md};
-use cli_registry::{explain_case, list_cases};
-use cli_report_io::{load_report, validate_report_expectations};
-use cli_run::{execute_run_matrix, write_run_reports};
+use dashboard::{generate_index_html, generate_scorecard_md};
+use registry::{explain_case, list_cases};
+use report_io::{load_report, validate_report_expectations};
+use run::{execute_run_matrix, write_run_reports};
 
 #[derive(Parser)]
 #[command(name = "vyre-bench")]
@@ -283,7 +276,7 @@ where
                 crate::release_matrix::enforce_release_matrix(&matrix)?;
             }
         }
-        Commands::EvolveServer => cli_evolve_server::run_evolve_server()?,
+        Commands::EvolveServer => evolve_server::run_evolve_server()?,
     }
     Ok(())
 }

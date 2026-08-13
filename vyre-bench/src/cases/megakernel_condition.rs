@@ -14,6 +14,10 @@ use vyre_runtime::resident_work_queue::protocol::{
     ARG0_WORD, OPCODE_WORD, PRIORITY_WORD, STATUS_WORD, TENANT_WORD,
 };
 use vyre_runtime::resident_work_queue::{self, control, slot, OpcodeHandler, SLOT_WORDS};
+use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
+
+/// Names this case's buffers in word codec errors.
+const WORD_CONTEXT: &str = "megakernel condition output";
 
 pub struct MegakernelCondition;
 
@@ -292,29 +296,13 @@ fn condition_ring(slot_count: u32, expected_fired: &mut u32) -> Result<Vec<u8>, 
             })?;
         }
         let base = slot_index.saturating_mul(SLOT_WORDS);
-        write_word(&mut ring, base.saturating_add(STATUS_WORD), slot::PUBLISHED)?;
-        write_word(
-            &mut ring,
-            base.saturating_add(OPCODE_WORD),
-            CONDITION_OPCODE,
-        )?;
-        write_word(&mut ring, base.saturating_add(TENANT_WORD), 0)?;
-        write_word(
-            &mut ring,
-            base.saturating_add(PRIORITY_WORD),
-            slot::PRIORITY_NORMAL,
-        )?;
-        write_word(&mut ring, base.saturating_add(ARG0_WORD), flags)?;
-        write_word(
-            &mut ring,
-            base.saturating_add(ARG0_WORD + 1),
-            count | (threshold << 16),
-        )?;
-        write_word(
-            &mut ring,
-            base.saturating_add(ARG0_WORD + 2),
-            offset | (limit << 16),
-        )?;
+        write_word(&mut ring, base.saturating_add(STATUS_WORD), slot::PUBLISHED, WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(OPCODE_WORD), CONDITION_OPCODE, WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(TENANT_WORD), 0, WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(PRIORITY_WORD), slot::PRIORITY_NORMAL, WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(ARG0_WORD), flags, WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(ARG0_WORD + 1), count | (threshold << 16), WORD_CONTEXT)?;
+        write_word(&mut ring, base.saturating_add(ARG0_WORD + 2), offset | (limit << 16), WORD_CONTEXT)?;
     }
     Ok(ring)
 }
@@ -390,8 +378,8 @@ fn simulate_condition_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchE
         })
         .sum::<u32>();
 
-    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT)?;
-    write_word(&mut control, CONDITION_FIRED_WORD, fired)?;
+    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
+    write_word(&mut control, CONDITION_FIRED_WORD, fired, WORD_CONTEXT)?;
     Ok(vec![control, Vec::new(), Vec::new(), Vec::new()])
 }
 
@@ -412,13 +400,13 @@ fn verify_condition_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchErr
             outputs.len()
         )));
     }
-    let done_count = read_word(&outputs[0], control::DONE_COUNT)?;
+    let done_count = read_word(&outputs[0], control::DONE_COUNT, WORD_CONTEXT)?;
     if done_count != SLOT_COUNT {
         return Err(BenchError::CorrectnessViolation(format!(
             "megakernel condition DONE_COUNT was {done_count}, expected {SLOT_COUNT}"
         )));
     }
-    let fired = read_word(&outputs[0], CONDITION_FIRED_WORD)?;
+    let fired = read_word(&outputs[0], CONDITION_FIRED_WORD, WORD_CONTEXT)?;
     if fired == 0 {
         return Err(BenchError::CorrectnessViolation(
             "megakernel condition opcode produced zero fired predicates".to_string(),
@@ -435,66 +423,9 @@ fn verify_condition_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchErr
     Ok(Correctness::Exact)
 }
 
-fn gb_per_second(bytes: u64, nanos: u64) -> f64 {
-    if nanos == 0 {
-        return 0.0;
-    }
-    bytes as f64 / nanos as f64
-}
 
-fn rate_per_second_x1000(units: u64, nanos: u64) -> u64 {
-    if nanos == 0 {
-        return 0;
-    }
-    ((u128::from(units) * 1_000_000_000_000u128) / u128::from(nanos)).min(u128::from(u64::MAX))
-        as u64
-}
 
-fn read_word(bytes: &[u8], word_index: u32) -> Result<u32, BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::CorrectnessViolation(
-                "megakernel condition word index overflowed usize".to_string(),
-            )
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::CorrectnessViolation(
-            "megakernel condition word byte range overflowed usize".to_string(),
-        )
-    })?;
-    let bytes = bytes.get(offset..end).ok_or_else(|| {
-        BenchError::CorrectnessViolation(format!(
-            "megakernel condition word {word_index} is outside output buffer"
-        ))
-    })?;
-    vyre_primitives::wire::read_u32_le_word(bytes, 0, "megakernel condition output")
-        .map_err(BenchError::CorrectnessViolation)
-}
 
-fn write_word(bytes: &mut [u8], word_index: u32, value: u32) -> Result<(), BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::ExecutionFailed(
-                "megakernel condition word index overflowed usize".to_string(),
-            )
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::ExecutionFailed(
-            "megakernel condition word byte range overflowed usize".to_string(),
-        )
-    })?;
-    let slot = bytes.get_mut(offset..end).ok_or_else(|| {
-        BenchError::ExecutionFailed(format!(
-            "megakernel condition word {word_index} is outside output buffer"
-        ))
-    })?;
-    slot.copy_from_slice(&value.to_le_bytes());
-    Ok(())
-}
 
 inventory::submit! {
     &MegakernelCondition as &'static dyn BenchCase

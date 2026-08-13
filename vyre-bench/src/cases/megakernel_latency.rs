@@ -13,6 +13,10 @@ use vyre_driver::speculation_substrate::SpeculationVerdict;
 use vyre_runtime::resident_work_queue::{
     self, control, slot, PairedSpeculationSample, PairedSpeculationWindow, SLOT_WORDS, STATUS_WORD,
 };
+use super::byte_pack::{gb_per_second, rate_per_second_x1000, read_word, write_word};
+
+/// Names this case's buffers in word codec errors.
+const WORD_CONTEXT: &str = "megakernel latency output";
 
 pub struct MegakernelLatency;
 
@@ -337,58 +341,9 @@ fn published_ring(slot_count: u32) -> Result<Vec<u8>, BenchError> {
     Ok(ring)
 }
 
-fn gb_per_second(bytes: u64, nanos: u64) -> f64 {
-    if nanos == 0 {
-        return 0.0;
-    }
-    bytes as f64 / nanos as f64
-}
 
-fn rate_per_second_x1000(units: u64, nanos: u64) -> u64 {
-    if nanos == 0 {
-        return 0;
-    }
-    ((u128::from(units) * 1_000_000_000_000u128) / u128::from(nanos)).min(u128::from(u64::MAX))
-        as u64
-}
 
-fn read_word(bytes: &[u8], word_index: u32) -> Result<u32, BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::CorrectnessViolation("megakernel word index overflowed usize".to_string())
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::CorrectnessViolation("megakernel word byte range overflowed usize".to_string())
-    })?;
-    let bytes = bytes.get(offset..end).ok_or_else(|| {
-        BenchError::CorrectnessViolation(format!(
-            "megakernel word {word_index} is outside output buffer"
-        ))
-    })?;
-    vyre_primitives::wire::read_u32_le_word(bytes, 0, "megakernel latency output")
-        .map_err(BenchError::CorrectnessViolation)
-}
 
-fn write_word(bytes: &mut [u8], word_index: u32, value: u32) -> Result<(), BenchError> {
-    let offset = usize::try_from(word_index)
-        .ok()
-        .and_then(|word| word.checked_mul(4))
-        .ok_or_else(|| {
-            BenchError::ExecutionFailed("megakernel word index overflowed usize".to_string())
-        })?;
-    let end = offset.checked_add(4).ok_or_else(|| {
-        BenchError::ExecutionFailed("megakernel word byte range overflowed usize".to_string())
-    })?;
-    let slot = bytes.get_mut(offset..end).ok_or_else(|| {
-        BenchError::ExecutionFailed(format!(
-            "megakernel word {word_index} is outside output buffer"
-        ))
-    })?;
-    slot.copy_from_slice(&value.to_le_bytes());
-    Ok(())
-}
 
 fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, BenchError> {
     if inputs.len() != 4 {
@@ -402,16 +357,12 @@ fn simulate_sharded_once_outputs(inputs: &[Vec<u8>]) -> Result<Vec<Vec<u8>>, Ben
     let debug = inputs[2].clone();
     let io = inputs[3].clone();
 
-    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT)?;
-    write_word(&mut control, control::METRICS_BASE, SLOT_COUNT)?;
+    write_word(&mut control, control::DONE_COUNT, SLOT_COUNT, WORD_CONTEXT)?;
+    write_word(&mut control, control::METRICS_BASE, SLOT_COUNT, WORD_CONTEXT)?;
     for slot_index in 0..SLOT_COUNT {
-        write_word(
-            &mut ring,
-            slot_index
-                .saturating_mul(SLOT_WORDS)
-                .saturating_add(STATUS_WORD),
-            slot::DONE,
-        )?;
+        write_word(&mut ring, slot_index
+            .saturating_mul(SLOT_WORDS)
+            .saturating_add(STATUS_WORD), slot::DONE, WORD_CONTEXT)?;
     }
     Ok(vec![control, ring, debug, io])
 }
@@ -423,19 +374,16 @@ fn verify_megakernel_outputs(outputs: &[Vec<u8>]) -> Result<Correctness, BenchEr
             outputs.len()
         )));
     }
-    let done_count = read_word(&outputs[0], control::DONE_COUNT)?;
+    let done_count = read_word(&outputs[0], control::DONE_COUNT, WORD_CONTEXT)?;
     if done_count != SLOT_COUNT {
         return Err(BenchError::CorrectnessViolation(format!(
             "megakernel DONE_COUNT was {done_count}, expected {SLOT_COUNT}"
         )));
     }
     for slot_index in 0..SLOT_COUNT {
-        let status = read_word(
-            &outputs[1],
-            slot_index
-                .saturating_mul(SLOT_WORDS)
-                .saturating_add(STATUS_WORD),
-        )?;
+        let status = read_word(&outputs[1], slot_index
+            .saturating_mul(SLOT_WORDS)
+            .saturating_add(STATUS_WORD), WORD_CONTEXT)?;
         if status != slot::DONE {
             return Err(BenchError::CorrectnessViolation(format!(
                 "megakernel slot {slot_index} status was {status}, expected DONE"

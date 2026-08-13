@@ -24,6 +24,19 @@ fn scaled_ratio_x1000(numerator: u64, denominator: u64) -> u64 {
     }
     (u128::from(numerator) * 1000 / u128::from(denominator)).min(u128::from(u64::MAX)) as u64
 }
+
+/// The bench-wide 32-bit mixer.
+///
+/// Every case that needs a reproducible pseudo-random stream generates it from
+/// this function, so a fixture built by one case and a fixture built by another
+/// are comparable. It is `const` so fixtures can be evaluated at compile time.
+pub(crate) const fn mix32(mut value: u32) -> u32 {
+    value ^= value >> 16;
+    value = value.wrapping_mul(0x7FEB_352D);
+    value ^= value >> 15;
+    value = value.wrapping_mul(0x846C_A68B);
+    value ^ (value >> 16)
+}
 fn generated_u32_triplet(
     count: u32,
     mut generate: impl FnMut(u32) -> (u32, u32, u32),
@@ -46,7 +59,10 @@ pub mod bigint;
 pub mod binary_search;
 pub(crate) mod byte_pack;
 pub mod c_parser;
+#[cfg(test)]
+mod clone_family_guard;
 pub mod compound_pipeline;
+pub(crate) mod conditional;
 pub mod conditional_batch;
 pub mod conditional_eval;
 pub mod cpu_baselines;
@@ -59,6 +75,7 @@ pub mod gather;
 pub(crate) mod gpu_case;
 pub mod graph_frontier;
 pub mod hashtable;
+pub(crate) mod harness;
 pub mod histogram;
 pub mod interpreter;
 pub mod lexer_transition;
@@ -81,3 +98,4 @@ pub(crate) mod skewed_graph;
 pub mod stencil;
 pub mod synthetic;
 pub mod transpose;
+pub(crate) mod triplet_pass;

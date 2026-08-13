@@ -26,21 +26,11 @@ use super::support::{
     CSR_NODE_COUNT, SUITES,
 };
 
-#[path = "queue_sequence.rs"]
-mod queue_sequence;
+mod sequence;
 
-use queue_sequence::{dispatch_host_queue_sequence, dispatch_resident_queue_sequence};
+use sequence::{dispatch_host_queue_sequence, dispatch_resident_queue_sequence};
+use crate::cases::queue_stage::{QUEUE_RESET_GRID};
 
-pub(super) const QUEUE_FRONTIER_IN_INDEX: usize = 0;
-pub(super) const QUEUE_ACTIVE_QUEUE_INDEX: usize = 1;
-pub(super) const QUEUE_LEN_INDEX: usize = 2;
-pub(super) const QUEUE_EDGE_OFFSETS_INDEX: usize = 3;
-pub(super) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
-pub(super) const QUEUE_EDGE_KIND_INDEX: usize = 5;
-pub(super) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
-pub(super) const QUEUE_HIGH_QUEUE_INDEX: usize = 7;
-pub(super) const QUEUE_HIGH_LEN_INDEX: usize = 8;
-pub(super) const QUEUE_RESET_GRID: [u32; 3] = [1, 1, 1];
 pub(super) const GRAPH_QUEUE_ROW_STRIDED_MIN_DEGREE: u32 =
     CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE
         .saturating_mul(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);

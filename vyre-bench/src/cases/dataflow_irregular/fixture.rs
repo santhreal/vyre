@@ -1,5 +1,6 @@
 use crate::api::case::BenchError;
-use crate::cases::skewed_graph::{mix32, skewed_degree as shared_skewed_degree, skewed_target};
+use crate::cases::mix32;
+use crate::cases::skewed_graph::{skewed_degree as shared_skewed_degree, skewed_target};
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
 use vyre_primitives::predicate::edge_kind;
 

@@ -4,6 +4,7 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
+use crate::cases::mix32;
 
 mod lexer;
 mod lexer_batch;
@@ -238,13 +239,6 @@ fn rust_range_inputs() -> Vec<i32> {
         .collect()
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846c_a68b);
-    value ^ (value >> 16)
-}
 
 fn i32s_to_bytes(values: &[i32]) -> Vec<u8> {
     values
