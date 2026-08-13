@@ -3,8 +3,6 @@ impl core::cmp::Eq for vyre_lower::descriptor::KernelDescriptor
 impl core::cmp::Eq for vyre_lower::descriptor::KernelOp
 impl core::cmp::Eq for vyre_lower::descriptor::KernelOpKind
 impl core::cmp::Eq for vyre_lower::descriptor::LiteralValue
-impl core::convert::From<vyre_lower::descriptor_builder::KernelBodyBuilder> for vyre_lower::descriptor::KernelBody
-impl core::convert::From<vyre_lower::descriptor_builder::KernelDescriptorBuilder> for vyre_lower::descriptor::KernelDescriptor
 impl core::error::Error for vyre_lower::LowerVerifiedError
 impl core::error::Error for vyre_lower::descriptor::DescriptorIntentError
 impl core::fmt::Display for vyre_lower::FullReport
@@ -49,9 +47,6 @@ impl vyre_lower::descriptor::KernelDescriptor
 impl vyre_lower::descriptor::KernelOp
 impl vyre_lower::descriptor::MemoryClass
 impl vyre_lower::descriptor::ScanConstructIntentMapping
-impl vyre_lower::descriptor_builder::KernelBodyBuilder
-impl vyre_lower::descriptor_builder::KernelDescriptorBuilder
-impl vyre_lower::descriptor_builder::SlotCount for vyre_lower::descriptor::BindingSlot
 impl vyre_lower::target::SubgroupCapabilities
 impl<'a> core::iter::traits::iterator::Iterator for vyre_lower::descriptor::KernelOpsIter<'a>
 impl<Candidate> vyre_lower::analyses::candidate_plan::CandidatePlan<Candidate>
@@ -244,7 +239,6 @@ pub fn vyre_lower::audit::PerfAuditReport::top_recommendation(&self) -> core::op
 pub fn vyre_lower::audit::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::audit::PerfAuditReport
 pub fn vyre_lower::audit::audit_with_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::audit::PerfAuditReport, vyre_lower::analyses::op_histogram::OpHistogram)
 pub fn vyre_lower::audit_with_histogram(desc: &vyre_lower::descriptor::KernelDescriptor) -> (vyre_lower::audit::PerfAuditReport, vyre_lower::analyses::op_histogram::OpHistogram)
-pub fn vyre_lower::descriptor::BindingSlot::with_count(self, count: u32) -> Self
 pub fn vyre_lower::descriptor::BindingVisibility::is_readable(self) -> bool
 pub fn vyre_lower::descriptor::BindingVisibility::is_writable(self) -> bool
 pub fn vyre_lower::descriptor::DescriptorIntentError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -253,13 +247,11 @@ pub fn vyre_lower::descriptor::DescriptorIntentSet::validate_for_descriptor(&sel
 pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::evidence(&self) -> core::result::Result<vyre_lower::descriptor::DescriptorIntentEvidence, vyre_lower::descriptor::DescriptorIntentError>
 pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::preserve_intents_after_rewrite(self, descriptor: vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<Self, vyre_lower::descriptor::DescriptorIntentError>
 pub fn vyre_lower::descriptor::IntentAnnotatedDescriptor::try_new(descriptor: vyre_lower::descriptor::KernelDescriptor, intents: vyre_lower::descriptor::DescriptorIntentSet) -> core::result::Result<Self, vyre_lower::descriptor::DescriptorIntentError>
-pub fn vyre_lower::descriptor::KernelBody::from(builder: vyre_lower::descriptor_builder::KernelBodyBuilder) -> Self
 pub fn vyre_lower::descriptor::KernelBody::hash<H: core::hash::Hasher>(&self, state: &mut H)
 pub fn vyre_lower::descriptor::KernelDescriptor::body_at(&self, path: &[usize]) -> core::option::Option<&vyre_lower::descriptor::KernelBody>
 pub fn vyre_lower::descriptor::KernelDescriptor::body_count(&self) -> usize
 pub fn vyre_lower::descriptor::KernelDescriptor::dispatch_total_threads(&self) -> u32
 pub fn vyre_lower::descriptor::KernelDescriptor::find_op_by_id(&self, id: u32) -> core::option::Option<&vyre_lower::descriptor::KernelOp>
-pub fn vyre_lower::descriptor::KernelDescriptor::from(builder: vyre_lower::descriptor_builder::KernelDescriptorBuilder) -> Self
 pub fn vyre_lower::descriptor::KernelDescriptor::has_side_effects(&self) -> bool
 pub fn vyre_lower::descriptor::KernelDescriptor::hash<H: core::hash::Hasher>(&self, state: &mut H)
 pub fn vyre_lower::descriptor::KernelDescriptor::is_empty(&self) -> bool
@@ -281,30 +273,6 @@ pub fn vyre_lower::descriptor::MemoryClass::is_writable(self) -> bool
 pub fn vyre_lower::descriptor::ScanConstructIntentMapping::includes_class(self, class: vyre_lower::descriptor::ScanConstructIntentClass) -> bool
 pub fn vyre_lower::descriptor::ScanConstructIntentMapping::requires_verifier_fragment(self) -> bool
 pub fn vyre_lower::descriptor::scan_construct_intent_mapping(construct_id: &str) -> core::option::Option<&'static vyre_lower::descriptor::ScanConstructIntentMapping>
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::build(self) -> vyre_lower::descriptor::KernelBody
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::child(self, child: impl core::convert::Into<vyre_lower::descriptor::KernelBody>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::children<B: core::convert::Into<vyre_lower::descriptor::KernelBody>>(self, children: impl core::iter::traits::collect::IntoIterator<Item = B>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::literal(self, value: vyre_lower::descriptor::LiteralValue) -> Self
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::literals(self, values: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::descriptor::LiteralValue>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::op(self, op: vyre_lower::descriptor::KernelOp) -> Self
-pub fn vyre_lower::descriptor_builder::KernelBodyBuilder::ops(self, ops: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::descriptor::KernelOp>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::body(self, body: impl core::convert::Into<vyre_lower::descriptor::KernelBody>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::build(self) -> vyre_lower::descriptor::KernelDescriptor
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::dispatch(self, x: u32, y: u32, z: u32) -> Self
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::ops(self, ops: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::descriptor::KernelOp>) -> Self
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::slot(self, slot: vyre_lower::descriptor::BindingSlot) -> Self
-pub fn vyre_lower::descriptor_builder::KernelDescriptorBuilder::slots(self, slots: impl core::iter::traits::collect::IntoIterator<Item = vyre_lower::descriptor::BindingSlot>) -> Self
-pub fn vyre_lower::descriptor_builder::SlotCount::with_count(self, count: u32) -> Self
-pub fn vyre_lower::descriptor_builder::body() -> vyre_lower::descriptor_builder::KernelBodyBuilder
-pub fn vyre_lower::descriptor_builder::descriptor(id: &str) -> vyre_lower::descriptor_builder::KernelDescriptorBuilder
-pub fn vyre_lower::descriptor_builder::effect(kind: vyre_lower::descriptor::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>) -> vyre_lower::descriptor::KernelOp
-pub fn vyre_lower::descriptor_builder::global_ro(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::descriptor::BindingSlot
-pub fn vyre_lower::descriptor_builder::global_rw(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::descriptor::BindingSlot
-pub fn vyre_lower::descriptor_builder::global_wo(index: u32, element_type: vyre_spec::data_type::DataType, name: &str) -> vyre_lower::descriptor::BindingSlot
-pub fn vyre_lower::descriptor_builder::lit(pool_index: u32, result: u32) -> vyre_lower::descriptor::KernelOp
-pub fn vyre_lower::descriptor_builder::op(kind: vyre_lower::descriptor::KernelOpKind, operands: impl core::convert::Into<alloc::vec::Vec<u32>>, result: u32) -> vyre_lower::descriptor::KernelOp
-pub fn vyre_lower::descriptor_builder::shared_rw(index: u32, element_type: vyre_spec::data_type::DataType, count: u32, name: &str) -> vyre_lower::descriptor::BindingSlot
-pub fn vyre_lower::descriptor_builder::slot(index: u32, element_type: vyre_spec::data_type::DataType, memory_class: vyre_lower::descriptor::MemoryClass, visibility: vyre_lower::descriptor::BindingVisibility, name: &str) -> vyre_lower::descriptor::BindingSlot
 pub fn vyre_lower::emit_adversarial_corpus::case_by_id(id: &str) -> core::option::Option<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::corpus() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
@@ -369,7 +337,6 @@ pub mod vyre_lower::analyses::workgroup_uniform::analysis
 pub mod vyre_lower::analyses::workgroup_uniform::report
 pub mod vyre_lower::audit
 pub mod vyre_lower::descriptor
-pub mod vyre_lower::descriptor_builder
 pub mod vyre_lower::emit_adversarial_corpus
 pub mod vyre_lower::error
 pub mod vyre_lower::operand_semantics
@@ -470,15 +437,12 @@ pub struct vyre_lower::descriptor::KernelOpsIter<'a>
 pub struct vyre_lower::descriptor::OpaqueExprData
 pub struct vyre_lower::descriptor::OpaqueNodeData
 pub struct vyre_lower::descriptor::ScanConstructIntentMapping
-pub struct vyre_lower::descriptor_builder::KernelBodyBuilder
-pub struct vyre_lower::descriptor_builder::KernelDescriptorBuilder
 pub struct vyre_lower::emit_adversarial_corpus::EmitAdversarialCase
 pub struct vyre_lower::target::EmissionTargetCapabilities
 pub struct vyre_lower::target::SubgroupCapabilities
 pub struct vyre_lower::target::WorkgroupLimits
 pub struct vyre_lower::verify::VerifyError
 pub trait vyre_lower::analyses::structured_walk::StructuredVisitor<'a>
-pub trait vyre_lower::descriptor_builder::SlotCount
 pub trait vyre_lower::pattern_audit::PatternAudit
 pub type vyre_lower::VerifyResult = core::result::Result<(), alloc::vec::Vec<vyre_lower::verify::VerifyError>>
 pub type vyre_lower::analyses::LayoutTransformPlan = vyre_lower::analyses::candidate_plan::CandidatePlan<vyre_lower::analyses::layout_aos_to_soa::plan::LayoutCandidate>

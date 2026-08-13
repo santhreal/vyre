@@ -18,6 +18,11 @@ workspace = true
 name = "vyre_lower"
 path = "src/lib.rs"
 
+[features]
+# Fixture builders for kernel descriptors, used only by emitter tests. Off by
+# default so a published build does not carry test scaffolding.
+test-fixtures = []
+
 [dependencies]
 vyre-foundation = { workspace = true }
 serde = { workspace = true }

@@ -26,6 +26,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 vyre-foundation.workspace = true
 # integration tests/benches assert against these crates' public APIs

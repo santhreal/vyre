@@ -31,6 +31,7 @@ blake3 = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+vyre-lower = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support.workspace = true
 # integration tests/benches assert against these crates' public APIs.
 # `c-parser` is required by carrier_scope_regression::dump_c11_lexer_naga, which

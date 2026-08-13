@@ -33,6 +33,9 @@ pub mod analyses;
 pub mod audit;
 mod canonicalize;
 pub mod descriptor;
+/// Fixture builders for kernel descriptors. Every consumer is a test, so this
+/// is not part of the shipped surface: enable `test-fixtures` to reach it.
+#[cfg(any(test, feature = "test-fixtures"))]
 pub mod descriptor_builder;
 pub mod emit_adversarial_corpus;
 pub mod error;

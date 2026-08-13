@@ -112,6 +112,11 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Removed
 
+- `vyre-lower::descriptor_builder` is no longer part of the published surface.
+  It builds kernel-descriptor fixtures and every one of its 42 consumers is a
+  test in one of the four emitter crates, so it now sits behind the
+  `test-fixtures` feature that those crates enable as a dev-dependency. A
+  published build no longer carries test scaffolding.
 - Self-substrate no longer publishes source-text validators for deleted
   C-frontend test files or parser release artifacts. Diagnostic and
   preprocessing conformance now belongs to the live frontend and conformance
