@@ -29,7 +29,7 @@ pub mod sema;
 
 /// Unified error type for the Rust frontend, one variant per pipeline stage.
 ///
-/// Error messages follow the `vyre-frontend-c` convention:
+/// Error messages follow the C frontend convention:
 /// `"description. Fix: suggestion."`
 #[derive(Debug, Clone, Error)]
 pub enum RustFrontendError {

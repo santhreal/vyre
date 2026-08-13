@@ -21,7 +21,7 @@ USAGE
         --pr-tree /path/to/pr/worktree \\
         --pr-ref  HEAD \\
         --baseline-ref origin/main \\
-        --new-tests-glob 'vyre-frontend-c/tests/divergence/*.rs' \\
+        --new-tests-glob 'vyre-libs/tests/divergence/*.rs' \\
         --baseline-bench-report /tmp/bench-main.json \\
         --pr-bench-report /tmp/bench-pr.json \\
         --max-bench-regression 0.05
@@ -265,7 +265,7 @@ def lint_diff_for_hardcodes(pr_tree: Path, baseline_ref: str, pr_ref: str) -> li
         if status == "A" and (path.endswith(".c") or path.endswith(".h")) \
                 and "tests/" in path:
             new_fixtures.append(path)
-        if "vyre-libs/src/parsing/c/" in path or "vyre-frontend-c/src/" in path:
+        if "vyre-libs/src/parsing/" in path:
             kernel_files.append(path)
     # Read kernel-file diff hunks; for each new fixture, scan for shared
     # string literals.
@@ -531,7 +531,7 @@ def main(argv: list[str]) -> int:
     g.add_argument("--pr-ref", default="HEAD")
     g.add_argument("--baseline-ref", default="origin/main")
     g.add_argument("--new-tests-glob",
-                   default="vyre-frontend-c/tests/divergence/*.rs")
+                   default="vyre-libs/tests/divergence/*.rs")
     g.add_argument("--baseline-bench-report",
                    help="Baseline JSON benchmark report with wall_ns samples")
     g.add_argument("--pr-bench-report",

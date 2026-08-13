@@ -54,7 +54,6 @@ package_verify_passed = ["a@1.2.3"]
 
 [versions]
 vyre = "1.2.3"
-vyre_frontend_c = "1.2.3"
 
 [tags]
 vyre_rc = "vyre-v1.2.3-rc.1"

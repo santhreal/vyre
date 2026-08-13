@@ -61,10 +61,9 @@ pub mod gpu_include_parse;
 /// inline the same logic into the `#if` expression evaluator.
 pub mod gpu_int_literal_scan;
 /// GPU-resident preprocessor pipeline orchestration. Phase 18 of the
-/// v0.4 plan: composes every kernel above into the host-side flow that
-/// `vyre-frontend-c::tu_host` calls. Lives here (not in
-/// vyre-frontend-c) so the unit/roundtrip tests don't have to drag in
-/// the wgpu/vyre-debug dev-dep stack.
+/// Composes every kernel above into the host-side translation-unit flow.
+/// Lives beside the kernels so the unit/roundtrip tests do not have to
+/// drag in the wgpu/vyre-debug dev-dep stack.
 pub mod gpu_pipeline;
 mod gpu_source_bytes;
 /// GPU `#undef` row parser. Per `TOK_PREPROC` token of kind

@@ -3474,7 +3474,7 @@ mod tests {
                 ),
                 (
                     "release.c_ast_traversal.1m",
-                    "vyre-frontend-c",
+                    "vyre-libs",
                     ReleaseMacroFamily::Parser,
                     3,
                 ),

@@ -23,7 +23,6 @@ Nothing above 500 LOC without a split.
 Per tier boundary:
 
 - `vyre-driver/README.md` (F-ORG-61)
-- `vyre-frontend-c/README.md` (F-ORG-62)
 - `vyre-intrinsics/README.md` (F-ORG-63)
 - `external_ir_extension/README.md` (F-ORG-64)
 - `vyre-conform-*/README.md` (F-ORG-65/66/67/92)

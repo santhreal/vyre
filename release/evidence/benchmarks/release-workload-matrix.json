@@ -403,7 +403,7 @@
         "tree-sitter/libclang-class CPU AST traversal baseline"
       ],
       "cpu_sota_baseline_crates": [
-        "vyre-frontend-c"
+        "vyre-libs"
       ],
       "cpu_sota_backend_ids": [
         "cuda",

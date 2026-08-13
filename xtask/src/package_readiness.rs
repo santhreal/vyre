@@ -18,7 +18,6 @@ struct PackageReadiness {
     schema_version: u32,
     release_train: ReleaseTrain,
     publish_order: Vec<PublishStep>,
-    non_publish_release_surfaces: Vec<ReleaseSurface>,
     package_verify_passed: Vec<&'static str>,
     observed_package_failures: Vec<ObservedPackageFailure>,
     missing_metadata_packages: Vec<String>,
@@ -40,14 +39,6 @@ struct PublishStep {
     package: &'static str,
     version: &'static str,
     manifest: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-struct ReleaseSurface {
-    package: &'static str,
-    version: &'static str,
-    surface: &'static str,
-    reason: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -321,18 +312,12 @@ pub(crate) fn run(args: &[String]) {
     });
 
     let readiness = PackageReadiness {
-        schema_version: 2,
+        schema_version: 3,
         release_train: ReleaseTrain {
             vyre: release_train::vyre_version(),
             cuda_release_path: true,
         },
         publish_order,
-        non_publish_release_surfaces: vec![ReleaseSurface {
-            package: "vyre-frontend-c",
-            version: release_train::vyre_frontend_c_version(),
-            surface: "c-frontend",
-            reason: "C frontend library release surface, intentionally not published as a standalone crate",
-        }],
         package_verify_passed: release_train::package_verify_passed(),
         observed_package_failures: vec![
             // The versions come from the release train: these two failures are inherent to

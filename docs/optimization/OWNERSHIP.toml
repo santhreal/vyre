@@ -228,11 +228,9 @@ layer = "Frontend research seam"
 write = [
   "vyre-foundation/src/vast.rs",
   "vyre-libs/src/parsing/**",
-  "vyre-frontend-c/src/**",
   "vyre-frontend-rust/src/**",
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
-  "examples/c_source_to_ir/**",
   "docs/ARCHITECTURE.md",
 ]
 avoid = [
@@ -242,7 +240,7 @@ avoid = [
 ]
 required_commands = [
   "cargo_full test -p vyre-libs parsing",
-  "cargo_full check -p vyre-frontend-c -p vyre-frontend-rust",
+  "cargo_full check -p vyre-frontend-rust",
 ]
 
 [lane.scan_static]

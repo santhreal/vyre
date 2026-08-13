@@ -150,7 +150,7 @@ def bootstrap() -> None:
         ("architecture", "ARCHITECTURE.md"),
         ("benchmark", "PERF.md"),
         ("docs-governance", "DOCUMENTATION_GOVERNANCE.md"),
-        ("frontend", "../vyre-frontend-c/src/lib.rs"),
+        ("frontend", "../vyre-frontend-rust/src/lib.rs"),
         ("historical", "DOCS.toml"),
         ("operation-registry", "../vyre-foundation/src/operation.rs"),
         ("optimization", "optimization/README.md"),

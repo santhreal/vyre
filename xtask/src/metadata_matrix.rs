@@ -12,7 +12,6 @@ struct MetadataMatrix {
     schema_version: u32,
     publishable_package_count: usize,
     vyre_package_count: usize,
-    non_publishable_release_surface_count: usize,
     internal_tooling_count: usize,
     root_patch_section_count: usize,
     required_release_surfaces: Vec<&'static str>,
@@ -39,11 +38,15 @@ struct PackageMetadata {
     blockers: Vec<String>,
 }
 
+/// A crate the release train must find in the metadata matrix.
+///
+/// Every required surface is a publishable crate. The workspace used to keep
+/// one release surface that was deliberately not published; that crate left
+/// the workspace, so the category has no members and no spelling here.
 #[derive(Debug, Clone, Copy)]
 struct RequiredReleaseSurface {
     name: &'static str,
     expected_version: &'static str,
-    release_kind: Option<&'static str>,
     release_surface: &'static str,
 }
 
@@ -55,26 +58,17 @@ fn required_release_surfaces() -> Vec<RequiredReleaseSurface> {
         RequiredReleaseSurface {
             name: "vyre",
             expected_version: release_train::vyre_version(),
-            release_kind: Some("publishable-crate"),
             release_surface: "vyre-engine",
         },
         RequiredReleaseSurface {
             name: "vyre-driver-cuda",
             expected_version: release_train::vyre_version(),
-            release_kind: Some("publishable-crate"),
             release_surface: "cuda-backend",
         },
         RequiredReleaseSurface {
             name: "vyre-driver-wgpu",
             expected_version: release_train::vyre_version(),
-            release_kind: Some("publishable-crate"),
             release_surface: "wgpu-backend",
-        },
-        RequiredReleaseSurface {
-            name: "vyre-frontend-c",
-            expected_version: release_train::vyre_frontend_c_version(),
-            release_kind: Some("non-publishable-release-surface"),
-            release_surface: "c-frontend",
         },
     ]
 }
@@ -141,15 +135,10 @@ pub(crate) fn run(args: &[String]) {
         .iter()
         .filter(|package| package.release_kind == "internal-tooling")
         .count();
-    let non_publishable_release_surface_count = packages
-        .iter()
-        .filter(|package| package.release_kind == "non-publishable-release-surface")
-        .count();
     let matrix = MetadataMatrix {
-        schema_version: 2,
+        schema_version: 3,
         publishable_package_count,
         vyre_package_count,
-        non_publishable_release_surface_count,
         internal_tooling_count,
         root_patch_section_count,
         required_release_surfaces,
@@ -284,8 +273,6 @@ fn parse_package(
     let expected_version = expected_version(&name, release_group, release_kind);
     let publish_policy = if release_kind == "internal-tooling" {
         "publish=false allowed for release tooling that is not a crates.io artifact"
-    } else if release_kind == "non-publishable-release-surface" {
-        "publish=false allowed for release-surface crates intentionally kept out of crates.io"
     } else {
         "publishable release crate"
     };
@@ -374,9 +361,7 @@ fn missing_required_release_surfaces(packages: &[PackageMetadata]) -> Vec<String
                     && package.version.as_deref() == Some(required.expected_version)
                     && package.release_surface == required.release_surface
                     && package.readme.as_deref() == Some("README.md")
-                    && required
-                        .release_kind
-                        .is_none_or(|release_kind| package.release_kind == release_kind)
+                    && package.release_kind == "publishable-crate"
             });
             (!present).then(|| {
                 format!(
@@ -417,8 +402,8 @@ fn workspace_string_if_requested(
 }
 
 fn release_kind(name: &str, publish: Option<bool>) -> &'static str {
-    if let Some(required) = required_release_surface(name) {
-        return required.release_kind.unwrap_or("publishable-crate");
+    if required_release_surface(name).is_some() {
+        return "publishable-crate";
     }
     if matches!(
         name,
@@ -451,7 +436,6 @@ fn release_surface(name: &str, _release_group: &str, release_kind: &str) -> &'st
         "vyre" => "vyre-engine",
         "vyre-driver-cuda" => "cuda-backend",
         "vyre-driver-wgpu" => "wgpu-backend",
-        "vyre-frontend-c" => "c-frontend",
         _ if release_kind == "internal-tooling" => "internal-tooling",
         _ => "vyre-crate",
     }

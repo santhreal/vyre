@@ -1,5 +1,6 @@
 # Megakernel wiring
 
+Last verified: 2026-08-12
 
 This guide is the living ownership map for every surface named "megakernel" in
 Vyre 0.7.2. The word is overloaded on purpose across four stages. Collapsing
@@ -106,7 +107,6 @@ This is not the runtime planner and not the artifact compiler.
 | `vyre-driver-cuda/src/megakernel_*.rs` | Live | Keep as **thin telemetry adapters** over driver policy (`CudaX` aliases + sample mapping). Device-local caches/gates may stay CUDA-owned. No second topology policy. |
 | Portable wgpu driver | **No megakernel planner** | There is no second wgpu megakernel planner. Protocol, lifecycle planning, and queue encoding live under `vyre-runtime/src/megakernel/` only. Do not recreate a driver-local planner. |
 | `vyre-self-substrate` matroid / `scheduling/megakernel_schedule` | Live | Self-hosted algorithm implementations on Vyre primitives. Call into them from one stage owner; do not fork a fifth public fusion API. |
-| `vyre-frontend-c::{megakernel_workspace, sparse_lexer_megakernel}` | Live product | Consumers of the persistent model. Not owners of protocol or artifact schema. |
 | benches / conform / xtask | Evidence | Must import protocol and artifact types from the owners above. |
 
 ## Fusion and subset selection (do not merge blindly)

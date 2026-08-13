@@ -110,7 +110,7 @@ pub(super) static C_AST_TRAVERSAL: SyntheticCountWorkload = SyntheticCountWorklo
     name: "Release C AST Traversal 1M",
     description: "C AST node motif predicate traversal over parser-produced node buffers",
     tags: &["c", "ast", "parser"],
-    owner_crate: "vyre-frontend-c",
+    owner_crate: "vyre-libs",
     primitive: "C AST traversal and motif predicates",
     baseline: "tree-sitter/libclang-class CPU AST traversal baseline",
     metric_name: "ast_nodes",

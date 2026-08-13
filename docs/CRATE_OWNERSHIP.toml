@@ -1247,24 +1247,6 @@ boundary = "private"
 seam = "specification"
 
 [[crate]]
-package = "vyre-frontend-c"
-path = "vyre-frontend-c"
-owner = "c-frontend"
-layer = "frontend"
-responsibility = "Parse C input and lower supported language constructs into typed Vyre programs."
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "foundation-ir"
-
-[[crate]]
 package = "vyre-frontend-rust"
 path = "vyre-frontend-rust"
 owner = "rust-frontend"
@@ -1387,17 +1369,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-frontend-c"
-purpose = "C source lowering"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "c-frontend"
 
 [[crate.dependency]]
 package = "vyre-frontend-rust"

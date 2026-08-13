@@ -27,7 +27,6 @@ vyre-lower = { workspace = true }
 vyre-emit-ptx = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-frontend-rust = { workspace = true }
-vyre-frontend-c = { path = "../vyre-frontend-c" }
 blake3 = { workspace = true }
 
 aho-corasick = { workspace = true }

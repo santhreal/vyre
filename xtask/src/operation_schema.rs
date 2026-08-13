@@ -16,6 +16,15 @@ use crate::conformance_matrix::read_conformance_required_op_matrix;
 const DEFAULT_OUTPUT: &str = "docs/generated/OP_SCHEMA.json";
 const MAX_SCHEMA_BYTES: u64 = 16_777_216;
 
+/// Wire version of `docs/generated/OP_SCHEMA.json`.
+///
+/// `scripts/architecture_docs.py` reads the same file and pins the same
+/// number. It cannot import this constant, so
+/// `the_python_contract_pins_the_same_operation_schema_version` fails when the
+/// two drift; that drift shipped once already, with the generator on 3 and the
+/// script still demanding 2.
+pub(crate) const SCHEMA_VERSION: u32 = 3;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct OperationSchema {
     pub(crate) schema_version: u32,
@@ -426,7 +435,7 @@ pub(crate) fn build() -> Result<OperationSchema, Vec<String>> {
         *category_counts.entry(record.category.clone()).or_insert(0) += 1;
     }
     let schema = OperationSchema {
-        schema_version: 3,
+        schema_version: SCHEMA_VERSION,
         authority: "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows".to_string(),
         operation_count: records.len(),
         tier_counts,
@@ -448,9 +457,9 @@ pub(crate) fn validate_schema(
     expected: Option<&OperationSchema>,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
-    if schema.schema_version != 3 {
+    if schema.schema_version != SCHEMA_VERSION {
         errors.push(format!(
-            "operation schema version must be 3, found {}",
+            "operation schema version must be {SCHEMA_VERSION}, found {}",
             schema.schema_version
         ));
     }
@@ -801,4 +810,36 @@ fn read_text_bounded(path: &Path) -> io::Result<String> {
     let mut text = String::new();
     file.take(MAX_SCHEMA_BYTES + 1).read_to_string(&mut text)?;
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SCHEMA_VERSION;
+
+    /// The op-schema wire version is spelled in two languages: this crate
+    /// generates the file, and `scripts/architecture_docs.py` re-checks it.
+    /// They drifted once, generator on 3 against a script still demanding 2,
+    /// and nothing went red. This fails the moment they disagree again.
+    #[test]
+    fn the_python_contract_pins_the_same_operation_schema_version() {
+        let script = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .expect("Fix: xtask must remain under the workspace root")
+                .join("scripts/architecture_docs.py"),
+        )
+        .expect("Fix: scripts/architecture_docs.py must be readable");
+
+        let expected = format!("OPERATION_SCHEMA_VERSION = {SCHEMA_VERSION}");
+        assert!(
+            script.contains(&expected),
+            "scripts/architecture_docs.py must declare `{expected}`; \
+             bump it in the same change as SCHEMA_VERSION"
+        );
+        assert!(
+            script.contains("!= OPERATION_SCHEMA_VERSION"),
+            "scripts/architecture_docs.py must compare against \
+             OPERATION_SCHEMA_VERSION, not a second literal"
+        );
+    }
 }

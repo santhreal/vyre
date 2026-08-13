@@ -39,6 +39,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --all-features
 | `test` | `nested_return_branch` | `vyre-emit-ptx/tests/nested_return_branch.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nested_return_branch` |
 | `test` | `nvrtc_compile_gate` | `vyre-emit-ptx/tests/nvrtc_compile_gate.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test nvrtc_compile_gate` |
 | `test` | `regression_emit_fixes` | `vyre-emit-ptx/tests/regression_emit_fixes.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test regression_emit_fixes` |
+| `test` | `shared_branch_walk_equality` | `vyre-emit-ptx/tests/shared_branch_walk_equality.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-emit-ptx --test shared_branch_walk_equality` |
 
 ## Test classes
 

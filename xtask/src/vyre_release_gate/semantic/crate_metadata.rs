@@ -33,10 +33,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
     for (field, label) in [
         ("publishable_package_count", "publishable package"),
         ("vyre_package_count", "Vyre package"),
-        (
-            "non_publishable_release_surface_count",
-            "non-publishable release-surface package",
-        ),
     ] {
         if matrix
             .get(field)
@@ -59,27 +55,6 @@ pub(super) fn check(requirement: &Requirement, base_dir: &Path, failures: &mut V
         ));
     }
     if let Some(entries) = matrix.get("packages").and_then(serde_json::Value::as_array) {
-        if !entries.iter().any(|entry| {
-            entry.get("name").and_then(serde_json::Value::as_str) == Some("vyre-frontend-c")
-                && entry.get("version").and_then(serde_json::Value::as_str)
-                    == Some(crate::release_train::vyre_frontend_c_version())
-                && entry.get("readme").and_then(serde_json::Value::as_str) == Some("README.md")
-                && entry
-                    .get("release_kind")
-                    .and_then(serde_json::Value::as_str)
-                    == Some("non-publishable-release-surface")
-                && entry
-                    .get("release_surface")
-                    .and_then(serde_json::Value::as_str)
-                    == Some("c-frontend")
-        }) {
-            failures.push(
-                format!(
-                    "requirement `crate-metadata` matrix must include vyre-frontend-c {} as a c-frontend non-publishable release surface with README metadata",
-                    crate::release_train::vyre_frontend_c_version()
-                ),
-            );
-        }
         for (package_name, backend_surface) in [
             ("vyre-driver-cuda", "cuda-backend"),
             ("vyre-driver-wgpu", "wgpu-backend"),

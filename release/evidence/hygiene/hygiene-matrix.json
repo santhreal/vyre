@@ -44,11 +44,11 @@
     },
     {
       "pattern": "documented_panic_contract",
-      "count": 76
+      "count": 77
     },
     {
       "pattern": "expect_call",
-      "count": 22
+      "count": 25
     },
     {
       "pattern": "panic_macro",
@@ -94,7 +94,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 17
+      "count": 22
     },
     {
       "owner_lane": "coordination",
@@ -174,7 +174,7 @@
       "risk": "informational",
       "hot_path": false,
       "release_blocker": false,
-      "count": 16
+      "count": 15
     },
     {
       "owner_lane": "nn_math",
@@ -266,7 +266,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 2
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -275,7 +275,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 10
+      "count": 14
     },
     {
       "owner_lane": "coordination",
@@ -429,15 +429,6 @@
       "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 15
-    },
-    {
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 1
     },
     {
       "owner_lane": "nn_math",
@@ -765,16 +756,6 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-frontend-c/src/pipeline.rs",
-      "line": 533,
-      "pattern": "expect_call",
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "release_blocker": false
-    },
-    {
       "path": "structure-gate/src/lib.rs",
       "line": 4,
       "pattern": "raw_workspace_cargo",
@@ -786,7 +767,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 168,
+      "line": 175,
       "pattern": "expect_call",
       "owner_lane": "coordination",
       "surface": "production",
@@ -796,7 +777,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 372,
+      "line": 404,
       "pattern": "unbounded_read",
       "owner_lane": "coordination",
       "surface": "production",
@@ -806,7 +787,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 373,
+      "line": 405,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "production",
@@ -816,7 +797,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 375,
+      "line": 407,
       "pattern": "panic_macro",
       "owner_lane": "coordination",
       "surface": "production",
@@ -826,7 +807,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 419,
+      "line": 451,
       "pattern": "unbounded_read",
       "owner_lane": "coordination",
       "surface": "production",
@@ -836,7 +817,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 651,
+      "line": 798,
       "pattern": "unbounded_read",
       "owner_lane": "coordination",
       "surface": "production",
@@ -846,7 +827,7 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 818,
+      "line": 997,
       "pattern": "source_inspection_test",
       "owner_lane": "coordination",
       "surface": "production",
@@ -895,10 +876,10 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges.rs",
-      "line": 598,
+      "path": "vyre-libs/src/graph/ast_walk.rs",
+      "line": 47,
       "pattern": "documented_panic_contract",
-      "owner_lane": "scan_static",
+      "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -906,7 +887,7 @@
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/suffix3.rs",
-      "line": 750,
+      "line": 737,
       "pattern": "documented_panic_contract",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -915,8 +896,18 @@
       "release_blocker": false
     },
     {
-      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter.rs",
-      "line": 202,
+      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/mod.rs",
+      "line": 175,
+      "pattern": "documented_panic_contract",
+      "owner_lane": "scan_static",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
+      "line": 795,
       "pattern": "documented_panic_contract",
       "owner_lane": "scan_static",
       "surface": "production",
@@ -1026,7 +1017,7 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 298,
+      "line": 265,
       "pattern": "documented_panic_contract",
       "owner_lane": "frontend_parsing",
       "surface": "production",
@@ -1036,7 +1027,7 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 371,
+      "line": 338,
       "pattern": "documented_panic_contract",
       "owner_lane": "frontend_parsing",
       "surface": "production",
@@ -1046,7 +1037,7 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 510,
+      "line": 477,
       "pattern": "documented_panic_contract",
       "owner_lane": "frontend_parsing",
       "surface": "production",
@@ -1089,6 +1080,46 @@
       "line": 77,
       "pattern": "documented_panic_contract",
       "owner_lane": "frontend_parsing",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 79,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 83,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 86,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "informational",
+      "hot_path": false,
+      "release_blocker": false
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 89,
+      "pattern": "expect_call",
+      "owner_lane": "coordination",
       "surface": "production",
       "risk": "informational",
       "hot_path": false,
@@ -2076,12 +2107,6 @@
       "text": "b.build_with_match_kind(MatchKind::LeftmostFirst).expect("
     },
     {
-      "path": "vyre-frontend-c/src/pipeline.rs",
-      "line": 533,
-      "pattern": "expect_call",
-      "text": ".expect(\"source was validated as UTF-8 before syntax traversal\")"
-    },
-    {
       "path": "structure-gate/src/lib.rs",
       "line": 4,
       "pattern": "raw_workspace_cargo",
@@ -2089,43 +2114,43 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 168,
+      "line": 175,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: xtask must live under the vyre workspace root.\")"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 372,
+      "line": 404,
       "pattern": "unbounded_read",
       "text": "let text = fs::read_to_string(&manifest)"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 373,
+      "line": 405,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 375,
+      "line": 407,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 419,
+      "line": 451,
       "pattern": "unbounded_read",
       "text": "let Ok(text) = fs::read_to_string(&path) else {"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 651,
+      "line": 798,
       "pattern": "unbounded_read",
       "text": "let Ok(text) = fs::read_to_string(&path) else {"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 818,
+      "line": 997,
       "pattern": "source_inspection_test",
       "text": "test `a_product_crate_on_the_roster_is_rejected` inspects Rust source text. Fix: assert behavior, lifecycle ownership, generated registry ownership, or emitted artifacts instead."
     },
@@ -2154,20 +2179,26 @@
       "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
     },
     {
-      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges.rs",
-      "line": 598,
+      "path": "vyre-libs/src/graph/ast_walk.rs",
+      "line": 47,
       "pattern": "documented_panic_contract",
-      "text": "panic!("
+      "text": ".unwrap_or_else(|error| panic!(\"{error}\")),"
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/suffix3.rs",
-      "line": 750,
+      "line": 737,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
     {
-      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter.rs",
-      "line": 202,
+      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/prefilter/mod.rs",
+      "line": 175,
+      "pattern": "documented_panic_contract",
+      "text": "panic!("
+    },
+    {
+      "path": "vyre-libs/src/scan/classic_ac/bounded_ranges/mod.rs",
+      "line": 795,
       "pattern": "documented_panic_contract",
       "text": "panic!("
     },
@@ -2233,19 +2264,19 @@
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 298,
+      "line": 265,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 371,
+      "line": 338,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
     {
       "path": "vyre-libs/src/parsing/c/parse/vast/typedef_ann/annotate.rs",
-      "line": 510,
+      "line": 477,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"precomputed-context annotation requires the visible-type side table\");"
     },
@@ -2272,6 +2303,30 @@
       "line": 77,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"truncated VAST: node_count * row stride overflowed usize\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 79,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: cols * cell_width overflows u32\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 83,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: rows * cell_height overflows u32\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 86,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: the surface pixel count overflows u32\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/cell_grid/mod.rs",
+      "line": 89,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: cols * rows overflows u32\");"
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular.rs",
@@ -2851,6 +2906,6 @@
     }
   ],
   "blockers": [
-    "6 release-blocking source hygiene finding(s) remain; 132 total finding(s) preserved in classification output"
+    "6 release-blocking source hygiene finding(s) remain; 136 total finding(s) preserved in classification output"
   ]
 }

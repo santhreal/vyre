@@ -97,7 +97,7 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 ### Boundaries
 
 The `public-facade` owner maintains this `facade` crate at `vyre`.
-Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-scan`, `vyre-spec`.
+Its allowed internal production dependencies are: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-spec`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

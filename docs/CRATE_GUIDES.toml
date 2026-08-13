@@ -226,7 +226,7 @@ owner = 'release-tooling'
 layer = 'tooling'
 owned = 'Generate evidence and enforce repository, release, documentation, and architecture contracts.'
 non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = ['vyre', 'vyre-bench', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-metal', 'vyre-foundation', 'vyre-frontend-c', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-spec']
+allowed_dependencies = ['vyre', 'vyre-bench', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-metal', 'vyre-foundation', 'vyre-intrinsics', 'vyre-libs', 'vyre-lints', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-spec']
 profile = 'tooling'
 
 [package.vyre-runtime]
@@ -267,17 +267,6 @@ non_owned = 'Live device execution, runtime protocol mutation.'
 allowed_dependencies = ['vyre-driver', 'vyre-foundation', 'vyre-megakernel', 'vyre-primitives', 'vyre-spec']
 profile = 'packaging'
 
-[package.vyre-frontend-c]
-landing_status = 'beta'
-release_status = 'This crate is a beta C frontend surface in the {vyre_version} workspace. It is not published as a standalone crate in this release.'
-path = 'vyre-frontend-c'
-owner = 'c-frontend'
-layer = 'frontend'
-owned = 'Parse C input and lower supported language constructs into typed Vyre programs.'
-non_owned = 'Backend selection, runtime admission, product library ownership.'
-allowed_dependencies = ['vyre-foundation']
-profile = 'frontend'
-
 [package.vyre-frontend-rust]
 landing_status = 'beta'
 release_status = 'This crate is a beta Rust frontend surface in the {vyre_version} workspace. It is not published as a standalone crate in this release.'
@@ -296,7 +285,7 @@ owner = 'benchmarks'
 layer = 'tooling'
 owned = 'Own reproducible workload benchmarks, comparisons, budgets, and raw benchmark evidence.'
 non_owned = 'Production library semantics, device drivers as libraries.'
-allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-c', 'vyre-frontend-rust', 'vyre-intrinsics', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
+allowed_dependencies = ['vyre', 'vyre-driver', 'vyre-driver-cuda', 'vyre-driver-metal', 'vyre-driver-reference', 'vyre-driver-spirv', 'vyre-driver-wgpu', 'vyre-emit-ptx', 'vyre-foundation', 'vyre-frontend-rust', 'vyre-intrinsics', 'vyre-libs', 'vyre-lower', 'vyre-primitives', 'vyre-reference', 'vyre-runtime', 'vyre-spec']
 profile = 'tooling'
 
 [package.vyre-lints]

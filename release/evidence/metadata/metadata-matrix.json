@@ -1,15 +1,13 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "publishable_package_count": 27,
-  "vyre_package_count": 28,
-  "non_publishable_release_surface_count": 1,
+  "vyre_package_count": 27,
   "internal_tooling_count": 10,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
     "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-    "vyre-frontend-c"
+    "vyre-driver-wgpu"
   ],
   "missing_required_release_surfaces": [],
   "packages": [
@@ -331,22 +329,6 @@
       "release_surface": "internal-tooling",
       "expected_version": null,
       "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
-      "blockers": []
-    },
-    {
-      "name": "vyre-frontend-c",
-      "manifest": "vyre-frontend-c/Cargo.toml",
-      "version": "0.7.2",
-      "description": "Backend-neutral C source ingestion and typed Vyre IR construction.",
-      "license": "MIT OR Apache-2.0",
-      "readme": "README.md",
-      "repository": "https://github.com/santhreal/vyre",
-      "publish": false,
-      "release_kind": "non-publishable-release-surface",
-      "release_group": "vyre",
-      "release_surface": "c-frontend",
-      "expected_version": "0.7.2",
-      "publish_policy": "publish=false allowed for release-surface crates intentionally kept out of crates.io",
       "blockers": []
     },
     {

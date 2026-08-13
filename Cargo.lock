@@ -3431,7 +3431,6 @@ dependencies = [
  "vyre-emit-ptx",
  "vyre-emit-spirv",
  "vyre-foundation",
- "vyre-frontend-c",
  "vyre-frontend-rust",
  "vyre-intrinsics",
  "vyre-libs",
@@ -3591,7 +3590,6 @@ dependencies = [
  "inventory",
  "vyre-driver",
  "vyre-foundation",
- "vyre-frontend-c",
  "vyre-reference",
 ]
 
@@ -3761,16 +3759,6 @@ dependencies = [
  "vyre-reference",
  "vyre-spec",
  "vyre-test-support",
-]
-
-[[package]]
-name = "vyre-frontend-c"
-version = "0.7.2"
-dependencies = [
- "thiserror 2.0.19",
- "tree-sitter",
- "tree-sitter-c",
- "vyre-foundation",
 ]
 
 [[package]]

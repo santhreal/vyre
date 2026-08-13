@@ -407,7 +407,6 @@ fn hygiene_intake_summary(classes: &[HygieneFindingClass]) -> Vec<HygieneIntakeS
 fn hygiene_owner_lane_for_path(path: &str) -> &'static str {
     let normalized = path.replace('\\', "/");
     if normalized.contains("/libs/performance/matching/vyre/vyre-grammar-gen/")
-        || normalized.contains("/vyre-frontend-c/")
         || normalized.contains("/vyre-frontend-rust/")
         || normalized.contains("/vyre-libs/src/parsing/")
         || normalized.contains("/vyre-primitives/src/parsing/")
@@ -1282,7 +1281,6 @@ fn scan_release_docs(
         vyre_root.join("docs/testing/TESTING.toml"),
         vyre_root.join("conform/README.md"),
         vyre_root.join("vyre-bench/README.md"),
-        vyre_root.join("vyre-frontend-c/README.md"),
     ] {
         if doc.is_file() {
             scan_doc_file(&doc, scanned_files, findings);

@@ -1,5 +1,7 @@
 # Optimization architecture
 
+Last verified: 2026-08-12
+
 This guide defines optimization placement for Vyre 0.7.2. The canonical
 control-plane contract is [`optimization/README.md`](optimization/README.md).
 Benchmark reports are evidence, not ownership authorities.

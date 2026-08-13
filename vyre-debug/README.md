@@ -76,7 +76,7 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 ### Boundaries
 
 The `debugging` owner maintains this `tooling` crate at `vyre-debug`.
-Its allowed internal production dependencies are: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-scan`.
+Its allowed internal production dependencies are: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

@@ -11,7 +11,6 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         .collect::<BTreeSet<_>>();
 
     for required_id in [
-        "frontend.c.parser.linux_driver_pipeline",
         "frontend.rust.lexer.batch_ir_execute",
         "frontend.rust.lexer.ir_execute",
         "frontend.rust.range_loop.ir_execute",

@@ -83,7 +83,6 @@ C parser, VAST, program graph, or object sections:
 
 ```bash
 CARGO_BUILD_JOBS=1 cargo test -p vyre-libs --features c-parser --test c11_parser_integration --test c11_build_vast_nodes --test c_lower_ast_to_pg_nodes --test c_lower_ast_to_pg_nodes_gpu_parity --test c11_sema_scope
-CARGO_BUILD_JOBS=1 cargo test -p vyre-frontend-c --lib --test c11_pipeline_sections
 ```
 
 Repository discipline, CI, review metadata, or community files:

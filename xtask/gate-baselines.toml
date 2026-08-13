@@ -45,7 +45,7 @@ output_lines = 1
 [[gate]]
 name = "gate1"
 status = "red"
-output_lines = 396
+output_lines = 397
 owner = "Collapse C1-C5: the single failure is vyre-primitives::math::tensor_train_decompose at loops=21 nodes=79 composed=0%, a Category A composition sitting in the Category C crate; it clears when the op moves to vyre-libs"
 
 [[gate]]
@@ -108,7 +108,7 @@ output_lines = 5
 [[gate]]
 name = "vyre-release-gate"
 status = "red"
-output_lines = 251
+output_lines = 252
 owner = "release-evidence workflow: the blockers are stale benchmark source_tree_fingerprint values, which only a GPU host can regenerate"
 
 [[gate]]

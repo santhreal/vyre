@@ -72,7 +72,7 @@
       "id": "release.c_ast_traversal.1m",
       "workload_fingerprint": "program:3b2ce5d1de8c86232b8775bc949dcd3686d4f50e06ca9d9733afeb4cbcbb8fe6",
       "name": "Release C AST Traversal 1M",
-      "owner_crate": "vyre-frontend-c",
+      "owner_crate": "vyre-libs",
       "workload_class": "Macro",
       "tags": [
         "c",
@@ -97,7 +97,7 @@
         "baselines": [
           {
             "name": "tree-sitter/libclang-class CPU AST traversal baseline",
-            "crate_name": "vyre-frontend-c",
+            "crate_name": "vyre-libs",
             "class": "CpuSota",
             "min_speedup_x": 100.0,
             "backend_ids": [

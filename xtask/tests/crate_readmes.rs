@@ -64,7 +64,7 @@ fn write_fixture(root: &Path, readme: Option<&str>, include_profile: bool) {
     .expect("Fix: fixture crate guide metadata must be writable");
     fs::write(
         root.join("release/release-train.toml"),
-        "[versions]\nvyre = \"0.7.9\"\nvyre_frontend_c = \"0.7.9\"\n",
+        "[versions]\nvyre = \"0.7.9\"\n",
     )
     .expect("Fix: fixture release train must be writable");
 }

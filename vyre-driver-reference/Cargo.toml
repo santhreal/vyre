@@ -19,9 +19,6 @@ vyre-foundation.workspace = true
 vyre-reference.workspace = true
 inventory.workspace = true
 
-[dev-dependencies]
-vyre-frontend-c = { path = "../vyre-frontend-c" }
-
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

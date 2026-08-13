@@ -1,7 +1,7 @@
 //! Contracts for the `_into` and `_min_words_into` variants of
 //! `wire::pack_u32_slice`. These primitives replaced the inlined
 //! `pack_u32_le_bytes_into` / `pack_u32_le_bytes_min_words_into`
-//! duplicates that were sitting in five `vyre-frontend-c` files; the
+//! duplicates that were sitting in five C-frontend host files; the
 //! tests below lock the exact contracts those call sites depended
 //! on so a future re-divergence is caught immediately.
 

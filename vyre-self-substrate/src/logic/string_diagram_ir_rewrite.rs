@@ -31,8 +31,8 @@
 //!    these are checked by hand in each pass.
 //! 2. **Adjoint pairs as duality**: backward-pass synthesis (gradient
 //!    computation) is the dagger-functor in compact closed
-//!    categories. Once the IR is a string diagram, `vyre-frontend-c` can
-//!    derive backward-pass kernels for free.
+//!    categories. Once the IR is a string diagram, a source frontend
+//!    can derive backward-pass kernels for free.
 //! 3. **Equational rewriting**: the ZX calculus has 7 rewrite rules
 //!    that are complete for monoidal-category equivalence. Vyre's
 //!    optimizer reduces from ~30 hand-curated passes to 7

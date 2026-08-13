@@ -1,5 +1,5 @@
 //! Cross-crate compatibility: vyre-libs encodes with
-//! `vyre_primitives::wire`, vyre-libs (mirroring a vyre-frontend-c
+//! `vyre_primitives::wire`, vyre-libs (mirroring an out-of-crate
 //! consumer) decodes the same bytes. Asserts the wire format is
 //! crate-boundary stable - independent re-implementations would
 //! show up here as divergent output.

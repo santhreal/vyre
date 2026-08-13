@@ -31,7 +31,7 @@
 //! value that a genuine one token statement also produces, so a consumer could
 //! not tell a truncated scan from a real short statement. The defect was
 //! reachable from the shipping C frontend, through
-//! `vyre-frontend-c/src/pipeline/statement_bounds.rs`, so a real C source file
+//! `vyre-libs/src/parsing/c/statement_bounds`, so a real C source file
 //! with a long initializer or a wide expression parsed wrong with no error
 //! anywhere.
 //!

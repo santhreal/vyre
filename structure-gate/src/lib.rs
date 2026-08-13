@@ -62,7 +62,6 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-emit-ptx",
     "vyre-emit-spirv",
     "vyre-foundation",
-    "vyre-frontend-c",
     "vyre-frontend-rust",
     "vyre-grammar-gen",
     "vyre-libs",
@@ -84,7 +83,13 @@ const ALLOWED_MEMBERS: &[&str] = &[
 ];
 
 /// Source languages and the single crate that owns each frontend.
-const FRONTEND_OWNERS: &[(&str, &str)] = &[("c", "vyre-frontend-c"), ("rust", "vyre-frontend-rust")];
+///
+/// A source frontend is a pile of Category A compositions: it parses with
+/// vyre operations, so `vyre-libs` owns it like any other composition. A
+/// separate CPU pipeline over the same language is the second frontend this
+/// rule exists to reject. The tree-sitter C shell that used to be one left
+/// the workspace as its own product rather than growing here.
+const FRONTEND_OWNERS: &[(&str, &str)] = &[("c", "vyre-libs"), ("rust", "vyre-frontend-rust")];
 
 /// One registered operation, as read from source text.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -320,18 +325,43 @@ pub fn substrate_home_failures(paths: &[String]) -> Vec<String> {
 }
 
 /// Reject two crates owning a frontend for one source language.
+///
+/// A frontend announces itself two ways: a language-named stage directory
+/// (`.../c/lex/`), or a crate name that says so (`vyre-frontend-c`). Keying
+/// only on the directory missed a flat crate whose whole job was the second
+/// frontend, which is the shape this rule exists to catch.
 pub fn frontend_owner_failures(paths: &[(String, String)]) -> Vec<String> {
     let mut failures = Vec::new();
     for (language, owner) in FRONTEND_OWNERS {
         for (found_crate, path) in paths {
-            if path_names_language(path, language) && found_crate != owner {
+            if found_crate == owner {
+                continue;
+            }
+            if crate_declares_frontend(found_crate, language) {
+                failures.push(format!(
+                    "`{found_crate}` is a second {language} frontend crate; {owner} owns the {language} frontend"
+                ));
+            } else if path_names_language(path, language) {
                 failures.push(format!(
                     "`{path}` puts a {language} frontend in {found_crate}; {owner} owns the {language} frontend"
                 ));
             }
         }
     }
+    failures.sort();
+    failures.dedup();
     failures
+}
+
+/// True when a crate name declares itself the frontend for `language`.
+fn crate_declares_frontend(crate_name: &str, language: &str) -> bool {
+    let mut names_frontend = false;
+    let mut names_language = false;
+    for token in crate_name.split(['-', '_']) {
+        names_frontend |= token.eq_ignore_ascii_case("frontend");
+        names_language |= token.eq_ignore_ascii_case(language);
+    }
+    names_frontend && names_language
 }
 
 /// Names of the admission helpers `vyre-driver` owns for every backend.
@@ -724,10 +754,21 @@ fn scan_substrate_paths(root: &Path, members: &[String]) -> Vec<String> {
     paths
 }
 
+/// Collect every frontend stage the workspace exposes.
+///
+/// A language-named stage directory is one signal; a crate whose name says it
+/// is a frontend is the other, and it is emitted even when the crate keeps a
+/// flat layout with no `lex/` or `preprocess/` directory at all.
 fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)> {
     let mut paths = Vec::new();
     for member in members {
         let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
+        if FRONTEND_OWNERS
+            .iter()
+            .any(|(language, _)| crate_declares_frontend(&crate_name, language))
+        {
+            paths.push((crate_name.clone(), member.clone()));
+        }
         for path in source_files(root, member) {
             let rel = relative(root, &path);
             if rel.contains("/lex/") || rel.contains("/preprocess/") {
@@ -910,14 +951,46 @@ mod tests {
     }
 
     #[test]
-    fn a_second_c_frontend_is_rejected() {
+    fn a_second_c_frontend_crate_is_rejected_by_its_name() {
+        // vyre-libs owns the C frontend because it is built from Category A
+        // compositions. The tree-sitter shell crate that was the second one
+        // kept a flat layout with no lex/ directory, so only its name gave it
+        // away. It has left the workspace; the rule keeps a replacement out.
         let failures = frontend_owner_failures(&[
-            ("vyre-frontend-c".to_string(), "vyre-frontend-c/src/lex/lexer.rs".to_string()),
             ("vyre-libs".to_string(), "vyre-libs/src/parsing/c/lex/keyword.rs".to_string()),
+            ("vyre-frontend-c".to_string(), "vyre-frontend-c".to_string()),
         ]);
 
         assert_eq!(failures.len(), 1, "{failures:?}");
-        assert!(failures[0].contains("vyre-libs"));
+        assert!(
+            failures[0].contains("`vyre-frontend-c` is a second c frontend crate"),
+            "{failures:?}"
+        );
+    }
+
+    #[test]
+    fn a_language_stage_directory_outside_the_owner_is_rejected() {
+        // The other signal: the crate name says nothing, but it holds a
+        // language-named lexer stage that belongs to the owning crate.
+        let failures = frontend_owner_failures(&[(
+            "vyre-driver-wgpu".to_string(),
+            "vyre-driver-wgpu/src/parsing/c/lex/keyword.rs".to_string(),
+        )]);
+
+        assert_eq!(failures.len(), 1, "{failures:?}");
+        assert!(failures[0].contains("puts a c frontend in vyre-driver-wgpu"), "{failures:?}");
+    }
+
+    #[test]
+    fn the_declared_owner_of_a_language_is_accepted() {
+        // Control: naming a frontend is only a failure for a non-owner, and
+        // the rust owner is a crate whose own name declares the language.
+        let failures = frontend_owner_failures(&[
+            ("vyre-frontend-rust".to_string(), "vyre-frontend-rust".to_string()),
+            ("vyre-libs".to_string(), "vyre-libs/src/parsing/c/lex/keyword.rs".to_string()),
+        ]);
+
+        assert!(failures.is_empty(), "{failures:?}");
     }
 
     #[test]

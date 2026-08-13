@@ -44,7 +44,7 @@ dispatch route. Metal is active on supported Apple targets. See
 
 | Boundary | Current owner | Responsibility |
 | --- | --- | --- |
-| Public facade | `vyre` | Canonical graph compilation, artifact sessions, scan products, feature-gated target selection. |
+| Public facade | `vyre` | Canonical graph compilation, artifact sessions, feature-gated target selection. |
 | Stable contracts | `vyre-spec` | Frozen cross-engine analysis, soundness, and interchange schemas. |
 | IR, registry, optimizer | `vyre-foundation` | `Program`, `ProgramGraph`, validation, serialization, semantic operation identity, diagnostics, backend-neutral optimization passes. |
 | Hardware operations | `vyre-intrinsics` | Category C operation builders. Folding into `vyre-primitives`; see the target structure below. |
@@ -55,9 +55,8 @@ dispatch route. Metal is active on supported Apple targets. See
 | Backend contracts | `vyre-driver` | Backend-neutral target compiler, materializer, device, binding, submission, completion, capability contracts. |
 | Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Target compilers, materializers, devices; admit authenticated payloads; submit typed work. |
 | Runtime | `vyre-runtime` | Compilation orchestration, admission, artifact sessions, recovery, persistence, residency, scheduling, readback. |
-| Scan product | `vyre-scan` | Scan database framing, sessions, paging, residency, execution, readback. |
 | Artifact packaging | `vyre-aot` | Package validated artifacts without owning artifact identity or live dispatch. |
-| Frontends | `vyre-frontend-c`, `vyre-frontend-rust` | Lower source-language subsets into backend-neutral `Program` or `ProgramGraph` values. |
+| Frontends | `vyre-frontend-rust` | Lower source-language subsets into backend-neutral `Program` or `ProgramGraph` values. |
 | Conformance | `vyre-conform`, `vyre-conform-spec` | Execute canonical artifact routes; own frozen conformance schemas. |
 
 Domain logic does not import a CLI, transport, or concrete backend.
@@ -89,7 +88,8 @@ Every registered operation is one of two categories. There is no third.
 authority. One registration owns the operation ID, version, tier,
 signature, neutral builder, fixtures, laws, tolerance, derived effects,
 and capability keys. `generated/OP_SCHEMA.json` and the catalog are
-projections, not second identities. `docs/lego-block-rule.md` owns the
+projections, not second identities. Libraries, drivers, and products
+do not own shadow operation identities. `docs/lego-block-rule.md` owns the
 composition policy: discovery before invention, the two-caller
 criterion, Gate 1, and the promotion patch contract.
 

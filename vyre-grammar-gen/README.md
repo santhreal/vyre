@@ -106,7 +106,7 @@ no Santh-internal crates - keeping the dependency cone narrow.
 
 See also:
 
-- `../docs/ARCHITECTURE.md` - workspace boundaries; `../vyre-frontend-c/README.md` - C frontend architecture and the
+- `../docs/ARCHITECTURE.md` - workspace boundaries and the
   "frontends on CPU, vyre Programs on GPU" partition.
 - `../vyre-libs/src/parsing/` - consumer implementation (feature `c-parser`).
 

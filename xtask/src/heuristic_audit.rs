@@ -28,7 +28,6 @@ const CRATES: &[&str] = &[
     "vyre-runtime",
     "vyre-libs",
     "vyre-aot",
-    "vyre-frontend-c",
     "vyre-spec",
 ];
 

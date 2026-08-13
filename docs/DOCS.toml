@@ -19,7 +19,7 @@ authority = "DOCUMENTATION_GOVERNANCE.md"
 
 [[owner]]
 id = "frontend"
-authority = "../vyre-frontend-c/src/lib.rs"
+authority = "../vyre-frontend-rust/src/lib.rs"
 
 [[owner]]
 id = "foundation"
@@ -1456,19 +1456,6 @@ nav = true
 [[page]]
 path = "testing/vyre-foundation.md"
 title = "Testing `vyre-foundation`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
-path = "testing/vyre-frontend-c.md"
-title = "Testing `vyre-frontend-c`"
 status = "generated"
 audience = "contributor"
 owner = "testing"

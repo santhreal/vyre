@@ -18,7 +18,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 2
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -27,7 +27,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 10
+      "count": 14
     },
     {
       "owner_lane": "coordination",
@@ -181,15 +181,6 @@
       "pattern": "documented_panic_contract",
       "release_blocker": false,
       "count": 15
-    },
-    {
-      "owner_lane": "frontend_parsing",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "expect_call",
-      "release_blocker": false,
-      "count": 1
     },
     {
       "owner_lane": "nn_math",

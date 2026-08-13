@@ -107,11 +107,6 @@ commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p xtask", "CARGO_BUILD_JOBS=1
 hardware = "Most policy tests are host-only. Commands that generate backend evidence inherit the hardware contract of the selected backend and must fail on an unavailable requested device."
 evidence_outputs = ["release/evidence/", "Generated documentation and matrices named by each command", "Command status and exact semantic blocker diagnostics"]
 
-[package.vyre-frontend-c]
-commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-c --all-features"]
-hardware = "Parser and lowering tests are host-capable. End-to-end backend execution requires the explicitly selected device and fails if that backend cannot initialize."
-evidence_outputs = ["release/evidence/parser/", "Command status, exact diagnostics, and generated-program parity assertions"]
-
 [package.vyre-frontend-rust]
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-frontend-rust --all-features"]
 hardware = "Host parser and lowering tests require no accelerator. Feature-selected backend execution requires its physical device and reports acquisition failure."

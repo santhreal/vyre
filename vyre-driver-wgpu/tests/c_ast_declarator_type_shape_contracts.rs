@@ -36,7 +36,7 @@ fn paired(len: usize, pairs: &[(usize, usize)]) -> Vec<u32> {
 /// token `t` writes its record at slot `t * record_words` and every unoccupied
 /// slot is zeroed, so `out_counts[0]` is the array CAPACITY
 /// (`num_tokens * record_words`), not a match count. Compaction is a separate
-/// downstream stage (`compact_sparse_record_stream` in `vyre-frontend-c`), which
+/// downstream stage, which
 /// is why these tests decode by walking slots and skipping the empty ones, the
 /// same way `vyre-libs/tests/c11_function_extractor_contracts.rs` does.
 ///

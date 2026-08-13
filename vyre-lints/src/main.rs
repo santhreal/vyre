@@ -295,7 +295,6 @@ fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
         "vyre-driver/src",
         "vyre-driver-cuda/src",
         "vyre-driver-wgpu/src",
-        "vyre-frontend-c/src",
         "vyre-libs/src",
         "vyre-lower/src",
         "vyre-runtime/src",

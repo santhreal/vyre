@@ -125,7 +125,7 @@ pub(crate) fn run(args: &[String]) {
     let mut blockers = Vec::new();
     blockers.extend(collection_blockers);
     for krate in &crates {
-        if !krate.publishable && krate.package != "vyre-frontend-c" {
+        if !krate.publishable {
             continue;
         }
         match krate.release_group {
@@ -394,7 +394,6 @@ fn release_doc_paths(vyre_root: &Path) -> Vec<PathBuf> {
         vyre_root.join("docs/RELEASE_CHECKLIST.md"),
         current_release_notes_path(vyre_root),
         vyre_root.join("README.md"),
-        vyre_root.join("vyre-frontend-c/README.md"),
         vyre_root.join("release/evidence/docs/release-notes.md"),
         vyre_root.join("release/evidence/docs/release-notes-version-story.md"),
     ]
@@ -827,7 +826,7 @@ mod tests {
         for line in [
             format!("- Vyre release: `{version}`"),
             format!(
-                "- Required version-matrix packages: `vyre@{version}`, `vyre-driver-cuda@{version}`, `vyre-driver-wgpu@{version}`, and `vyre-frontend-c@{version}`."
+                "- Required version-matrix packages: `vyre@{version}`, `vyre-driver-cuda@{version}`, and `vyre-driver-wgpu@{version}`."
             ),
         ] {
             assert_eq!(

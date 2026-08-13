@@ -14,7 +14,7 @@ fn scan_fixture(source: &str) -> Vec<vyre_lints::Violation> {
 #[test]
 fn flags_reference_eval_in_production_source() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -61,7 +61,6 @@ fn cli_default_production_roots_are_vyre_owned_only() {
         "vyre-driver/src",
         "vyre-driver-cuda/src",
         "vyre-driver-wgpu/src",
-        "vyre-frontend-c/src",
         "vyre-libs/src",
         "vyre-lower/src",
         "vyre-runtime/src",
@@ -92,7 +91,7 @@ fn cli_default_production_roots_are_vyre_owned_only() {
 #[test]
 fn permits_reference_eval_inside_cfg_test_module() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -108,7 +107,7 @@ fn permits_reference_eval_inside_cfg_test_module() {
 #[test]
 fn permits_cfg_test_module_with_intervening_attributes() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("vyre-frontend-c/src");
+    let src = dir.path().join("vyre-libs/src");
     fs::create_dir_all(&src).expect("create src");
     fs::write(
         src.join("dispatch.rs"),
@@ -124,7 +123,7 @@ fn permits_cfg_test_module_with_intervening_attributes() {
 #[test]
 fn permits_reference_eval_under_tests_directory() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let tests = dir.path().join("vyre-frontend-c/tests");
+    let tests = dir.path().join("vyre-libs/tests");
     fs::create_dir_all(&tests).expect("create tests");
     fs::write(
         tests.join("oracle.rs"),

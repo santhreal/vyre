@@ -22,8 +22,7 @@
   "required_release_packages": [
     "vyre@0.7.2",
     "vyre-driver-cuda@0.7.2",
-    "vyre-driver-wgpu@0.7.2",
-    "vyre-frontend-c@0.7.2"
+    "vyre-driver-wgpu@0.7.2"
   ],
   "missing_required_release_packages": [],
   "crates": [
@@ -152,13 +151,6 @@
       "manifest": "vyre-foundation/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
-    },
-    {
-      "package": "vyre-frontend-c",
-      "version": "0.7.2",
-      "manifest": "vyre-frontend-c/Cargo.toml",
-      "release_group": "vyre",
-      "publishable": false
     },
     {
       "package": "vyre-frontend-rust",
@@ -374,13 +366,6 @@
     },
     {
       "manifest": "Cargo.toml",
-      "dependency": "vyre-frontend-c",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "manifest": "Cargo.toml",
       "dependency": "vyre-frontend-rust",
       "version": "0.7.2",
       "expected": "0.7.2",
@@ -573,13 +558,6 @@
     {
       "lockfile": "Cargo.lock",
       "package": "vyre-foundation",
-      "version": "0.7.2",
-      "expected": "0.7.2",
-      "release_group": "vyre"
-    },
-    {
-      "lockfile": "Cargo.lock",
-      "package": "vyre-frontend-c",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

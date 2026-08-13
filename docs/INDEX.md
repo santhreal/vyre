@@ -15,7 +15,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `benchmark` | [`PERF.md`](PERF.md) |
 | `docs-governance` | [`DOCUMENTATION_GOVERNANCE.md`](DOCUMENTATION_GOVERNANCE.md) |
 | `foundation` | [`../vyre-foundation/src/lib.rs`](../vyre-foundation/src/lib.rs) |
-| `frontend` | [`../vyre-frontend-c/src/lib.rs`](../vyre-frontend-c/src/lib.rs) |
+| `frontend` | [`../vyre-frontend-rust/src/lib.rs`](../vyre-frontend-rust/src/lib.rs) |
 | `historical` | [`DOCS.toml`](DOCS.toml) |
 | `operation-registry` | [`../vyre-foundation/src/operation.rs`](../vyre-foundation/src/operation.rs) |
 | `optimization` | [`optimization/README.md`](optimization/README.md) |
@@ -27,14 +27,14 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 
 ## Cargo-derived workspace facts
 
-- Workspace packages: 35.
-- Shipped library, binary, and example targets: 72.
+- Workspace packages: 34.
+- Shipped library, binary, and example targets: 71.
 - Source: `cargo metadata --no-deps --format-version 1`.
 
 ## Lifecycle counts
 
 - current: 43.
-- generated: 71.
+- generated: 70.
 - superseded: 3.
 - archived: 18.
 
@@ -155,7 +155,6 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-ptx.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-emit-spirv.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-foundation.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
-| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-frontend-c.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-frontend-rust.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-grammar-gen.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-intrinsics.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |

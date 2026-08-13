@@ -17,9 +17,15 @@ The crate lives at `vyre-lower`. The `lowering` owner maintains its
 CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower
 ```
 
+```console
+CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-lower --all-features
+```
+
 ## Feature sets
 
-This crate declares no Cargo features.
+- Default feature members: None
+- Available manifest features: `test-fixtures`
+- Use the all-features command above to compile every declared feature together.
 
 ## Cargo targets
 

@@ -137,7 +137,7 @@ the manual `eprintln!("[publish]…")` step I'm doing now.
 
 ### 5. Capture-on-failure for vyrec
 
-`vyrec` (or `vyre-frontend-c::api::compile`) honors
+The C compile path honors
 `VYRE_CAPTURE_FAILED_DESCRIPTOR=/path/dir`. On dispatch failure of
 any kernel, serialize the in-flight `KernelDescriptor` (or `Program`
 + `descriptor_for`) to `<dir>/<kernel-name>.kdesc.bin` and the
@@ -238,8 +238,8 @@ serves stale WGSL across vyrec rebuilds and made me chase phantom
   bind-result log. Suggest `OnceCell<Mutex<Vec<BindResultEntry>>>`
   guarded by `cfg(feature = "bind-result-log")` or env var
   `VYRE_BIND_RESULT_LOG=/path/file` activated at module init.
-- Capture-on-failure: vyrec invocation path runs through
-  `vyre_frontend_c::api::compile`. Easiest hook is
+- Capture-on-failure: the C compile path runs through
+  `vyre_libs::parsing::c`. Easiest hook is
   `vyre-driver-wgpu`'s `compile_compute_pipeline_with_layout`
   (already has `dump_wgsl_if_requested`); add a
   `dump_kdesc_if_requested` sibling driven by

@@ -112,6 +112,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Removed
 
+- The `vyre-frontend-c` crate has left this workspace. A C compiler is not a
+  Vyre component, and the C parsing, semantic, and lowering operations Vyre
+  actually uses are Category A compositions already owned by `vyre-libs`. The
+  departed crate was the separate tree-sitter CPU pipeline over the same
+  language. It now lives on its own as `c-frontend` with a path dependency on
+  `vyre-foundation`, and is parked until Vyre is mature enough to take a source
+  frontend as a product. The `c_source_to_ir` example, the three
+  `frontend.c.parser.*` benchmark cases, and the reference-driver
+  `c_frontend_ir_execution` test went with it; the C AST traversal release
+  workload stays and is now attributed to `vyre-libs`, which owns its compute.
 - `vyre-lower::descriptor_builder` is no longer part of the published surface.
   It builds kernel-descriptor fixtures and every one of its 42 consumers is a
   test in one of the four emitter crates, so it now sits behind the

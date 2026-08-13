@@ -112,7 +112,6 @@
 - [Testing `vyre-emit-ptx`](testing/vyre-emit-ptx.md)
 - [Testing `vyre-emit-spirv`](testing/vyre-emit-spirv.md)
 - [Testing `vyre-foundation`](testing/vyre-foundation.md)
-- [Testing `vyre-frontend-c`](testing/vyre-frontend-c.md)
 - [Testing `vyre-frontend-rust`](testing/vyre-frontend-rust.md)
 - [Testing `vyre-grammar-gen`](testing/vyre-grammar-gen.md)
 - [Testing `vyre-intrinsics`](testing/vyre-intrinsics.md)

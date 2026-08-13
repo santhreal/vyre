@@ -1,6 +1,6 @@
 //! GPU-resident preprocessor pipeline orchestration.
 //!
-//! Replaces the CPU helpers in `vyre-frontend-c::tu_host` with a chain
+//! Replaces the CPU translation-unit host helpers with a chain
 //! of GPU dispatches. Host-side responsibilities are limited to:
 //!
 //! - File I/O initiation (`fs::read`)  -  the kernel-mode VFS work that

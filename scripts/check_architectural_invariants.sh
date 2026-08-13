@@ -30,7 +30,6 @@ FORBIDDEN_DEPS=(
   "vyre-driver-spirv"
   "vyre-runtime"
   "vyre-aot"
-  "vyre-frontend-c"
   "wgpu"
   "naga"
 )

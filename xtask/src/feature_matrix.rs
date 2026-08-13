@@ -32,7 +32,6 @@ const REQUIRED_RELEASE_PACKAGES: &[&str] = &[
     "vyre",
     "vyre-driver-cuda",
     "vyre-driver-wgpu",
-    "vyre-frontend-c",
 ];
 
 pub(crate) fn run(args: &[String]) {

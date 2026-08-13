@@ -39,7 +39,7 @@ fn multiple_object_like_macros_expand_in_same_stream() {
 fn function_like_macro_shape_emits_replacement_then_argument_tokens() {
     // This primitive runs after macro-definition parsing has already converted
     // each macro body to replacement-token rows; argument substitution belongs
-    // to the host macro parser contracts in `vyre-frontend-c/tests/tu_host_preprocessor.rs`.
+    // to the host macro parser contracts.
     // Here we assert the lower-level replacement splice stays source-ordered.
     let mut fixture = MacroFixture::empty();
     fixture.insert(

@@ -28,7 +28,6 @@ This crate declares no Cargo features.
 | `example` | `vyre_driver_reference_release_surface` | `vyre-driver-reference/examples/vyre_driver_reference_release_surface.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --example vyre_driver_reference_release_surface` |
 | `lib` | `vyre_driver_reference` | `vyre-driver-reference/src/lib.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference` |
 | `test` | `backend_registration` | `vyre-driver-reference/tests/backend_registration.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test backend_registration` |
-| `test` | `c_frontend_ir_execution` | `vyre-driver-reference/tests/c_frontend_ir_execution.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test c_frontend_ir_execution` |
 | `test` | `generated_boundary_matrix` | `vyre-driver-reference/tests/generated_boundary_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test generated_boundary_matrix` |
 | `test` | `parity_suite` | `vyre-driver-reference/tests/parity_suite.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-reference --test parity_suite` |
 

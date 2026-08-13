@@ -36,7 +36,6 @@ members = [
     "vyre-libs",
     "vyre-intrinsics",
     "vyre-aot",
-    "vyre-frontend-c",
     "vyre-frontend-rust",
     "vyre-bench",
     "vyre-lints",
@@ -224,7 +223,6 @@ vyre-emit-naga = { version = "0.7.2", path = "vyre-emit-naga" }
 vyre-emit-ptx = { version = "0.7.2", path = "vyre-emit-ptx" }
 vyre-emit-spirv = { version = "0.7.2", path = "vyre-emit-spirv" }
 vyre-emit-metal = { version = "0.7.2", path = "vyre-emit-metal" }
-vyre-frontend-c = { version = "0.7.2", path = "vyre-frontend-c" }
 vyre-frontend-rust = { version = "0.7.2", path = "vyre-frontend-rust" }
 vyre-lints = { version = "0.7.2", path = "vyre-lints" }
 vyre-debug = { version = "0.7.2", path = "vyre-debug" }

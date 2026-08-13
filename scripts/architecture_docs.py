@@ -22,6 +22,13 @@ RFC = Path("docs/rfcs/0005-persistent-megakernel.md")
 MANIFEST = Path("docs/DOCS.toml")
 
 
+# Wire version of docs/generated/OP_SCHEMA.json. xtask owns the generator
+# (xtask/src/operation_schema.rs SCHEMA_VERSION) and pins the same number;
+# its test the_python_contract_pins_the_same_operation_schema_version fails
+# when this line drifts from it.
+OPERATION_SCHEMA_VERSION = 3
+
+
 class ContractError(Exception):
     """Architecture prose disagrees with a live authority."""
 
@@ -113,7 +120,7 @@ def validate(root: Path) -> None:
     operations = operation_schema.get("operations")
     tier_counts = operation_schema.get("tier_counts")
     if (
-        operation_schema.get("schema_version") != 2
+        operation_schema.get("schema_version") != OPERATION_SCHEMA_VERSION
         or not isinstance(operations, list)
         or not isinstance(tier_counts, dict)
         or operation_schema.get("operation_count") != len(operations)
@@ -200,7 +207,7 @@ def validate(root: Path) -> None:
         architecture,
         [
             "generated/OP_SCHEMA.json",
-            "vyre-foundation::operation_registry",
+            "vyre-foundation::operation::OperationRegistry",
             "do not own shadow operation identities",
             "Cross-program composition",
             "vyre-megakernel",

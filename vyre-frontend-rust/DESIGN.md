@@ -17,19 +17,21 @@ The substrate cannot depend on the driver. Keeping semantics and lowering in
 the substrate (as the C frontend does) keeps typed Rust analysis reusable by
 any consumer and lets `vyre-frontend-core` be extracted symmetrically later.
 
-## Conventions (shared with `vyre-frontend-c`)
+## Conventions (shared with the C frontend)
 
-We follow the C frontend's conventions to prevent divergence:
+The C frontend's semantics and lowering live in `vyre-libs::parsing::c`. Its
+CPU driver crate left this workspace, so only the substrate rows below still
+have a C counterpart to mirror; the driver rows are this crate's own contract.
 
 | Convention | C frontend | Rust frontend |
 |---|---|---|
-| API module | `api/mod.rs` + `api/entrypoints.rs` | `api/mod.rs` + `api/entrypoints.rs` |
-| Pipeline stages | One duty per file under `pipeline/` | `pipeline/lexer_dispatch.rs`, etc. |
-| Pipeline orchestrator | `pipeline.rs` wires stages | `pipeline.rs` wires stages |
 | Semantics + lowering | `vyre-libs::parsing::c::{sema,lower}` | `vyre-libs::parsing::rust::{sema,lower}` |
+| API module | no counterpart | `api/mod.rs` + `api/entrypoints.rs` |
+| Pipeline stages | no counterpart | One duty per file under `pipeline/` |
+| Pipeline orchestrator | no counterpart | `pipeline.rs` wires stages |
 | Error messages | `"description. Fix: suggestion."` | matched in `RustFrontendError` |
-| Object format | `VYRECOB2` sections | stub; must converge before v0.1.0 |
-| Oracle/parity | `api/parity.rs` with `ParityFact` | `tests/oracle_support` + `tests/lexer_oracle.rs`; `rustc_lexer` is a dev-dependency |
+| Object format | no counterpart | stub; must converge before v0.1.0 |
+| Oracle/parity | no counterpart | `tests/oracle_support` + `tests/lexer_oracle.rs`; `rustc_lexer` is a dev-dependency |
 
 ## Extraction Points
 

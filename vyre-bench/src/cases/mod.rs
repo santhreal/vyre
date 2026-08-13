@@ -45,7 +45,6 @@ pub mod attention;
 pub mod bigint;
 pub mod binary_search;
 pub(crate) mod byte_pack;
-pub mod c_parser;
 pub mod compound_pipeline;
 pub mod conditional_batch;
 pub mod conditional_eval;

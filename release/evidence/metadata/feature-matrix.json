@@ -3,8 +3,7 @@
   "required_release_packages": [
     "vyre",
     "vyre-driver-cuda",
-    "vyre-driver-wgpu",
-    "vyre-frontend-c"
+    "vyre-driver-wgpu"
   ],
   "missing_required_release_packages": [],
   "packages": [
@@ -270,17 +269,6 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-frontend-c",
-      "manifest": "vyre-frontend-c/Cargo.toml",
-      "feature_count": 0,
-      "has_default_feature": false,
-      "default_feature_members": [],
-      "features": [],
-      "malformed_features": [],
-      "unresolved_feature_members": [],
-      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
-    },
-    {
       "name": "vyre-frontend-rust",
       "manifest": "vyre-frontend-rust/Cargo.toml",
       "feature_count": 0,
@@ -408,10 +396,12 @@
     {
       "name": "vyre-lower",
       "manifest": "vyre-lower/Cargo.toml",
-      "feature_count": 0,
+      "feature_count": 1,
       "has_default_feature": false,
       "default_feature_members": [],
-      "features": [],
+      "features": [
+        "test-fixtures"
+      ],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
@@ -583,5 +573,7 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     }
   ],
-  "blockers": []
+  "blockers": [
+    "vyre-lower defines 1 feature(s) but no explicit default feature policy"
+  ]
 }

@@ -6,7 +6,7 @@ together, then regenerate this file.
 
 ## Workspace dependency graph
 
-The workspace contains 35 crates. An arrow points from a crate to
+The workspace contains 34 crates. An arrow points from a crate to
 an internal normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
@@ -29,35 +29,34 @@ graph TD
   C15["vyre-emit-ptx"]
   C16["vyre-emit-spirv"]
   C17["vyre-foundation"]
-  C18["vyre-frontend-c"]
-  C19["vyre-frontend-rust"]
-  C20["vyre-grammar-gen"]
-  C21["vyre-intrinsics"]
-  C22["vyre-libs"]
-  C23["vyre-lints"]
-  C24["vyre-lower"]
-  C25["vyre-macros"]
-  C26["vyre-megakernel"]
-  C27["vyre-primitives"]
-  C28["vyre-reference"]
-  C29["vyre-runtime"]
-  C30["vyre-safetensors"]
-  C31["vyre-self-substrate"]
-  C32["vyre-spec"]
-  C33["vyre-test-support"]
-  C34["xtask"]
+  C18["vyre-frontend-rust"]
+  C19["vyre-grammar-gen"]
+  C20["vyre-intrinsics"]
+  C21["vyre-libs"]
+  C22["vyre-lints"]
+  C23["vyre-lower"]
+  C24["vyre-macros"]
+  C25["vyre-megakernel"]
+  C26["vyre-primitives"]
+  C27["vyre-reference"]
+  C28["vyre-runtime"]
+  C29["vyre-safetensors"]
+  C30["vyre-self-substrate"]
+  C31["vyre-spec"]
+  C32["vyre-test-support"]
+  C33["xtask"]
   C1 --> C7
   C1 --> C8
   C1 --> C12
   C1 --> C17
-  C1 --> C26
-  C1 --> C29
-  C1 --> C32
+  C1 --> C25
+  C1 --> C28
+  C1 --> C31
   C2 --> C7
   C2 --> C17
+  C2 --> C25
   C2 --> C26
-  C2 --> C27
-  C2 --> C32
+  C2 --> C31
   C3 --> C1
   C3 --> C7
   C3 --> C8
@@ -68,14 +67,13 @@ graph TD
   C3 --> C15
   C3 --> C17
   C3 --> C18
-  C3 --> C19
+  C3 --> C20
   C3 --> C21
-  C3 --> C22
-  C3 --> C24
+  C3 --> C23
+  C3 --> C26
   C3 --> C27
   C3 --> C28
-  C3 --> C29
-  C3 --> C32
+  C3 --> C31
   C4 --> C1
   C4 --> C5
   C4 --> C7
@@ -84,102 +82,101 @@ graph TD
   C4 --> C10
   C4 --> C12
   C4 --> C17
+  C4 --> C20
   C4 --> C21
-  C4 --> C22
+  C4 --> C25
   C4 --> C26
   C4 --> C27
   C4 --> C28
-  C4 --> C29
-  C4 --> C32
-  C5 --> C32
+  C4 --> C31
+  C5 --> C31
   C6 --> C1
   C6 --> C14
   C6 --> C17
-  C6 --> C22
-  C6 --> C24
-  C6 --> C27
+  C6 --> C21
+  C6 --> C23
+  C6 --> C26
   C7 --> C17
+  C7 --> C24
   C7 --> C25
-  C7 --> C26
+  C7 --> C30
   C7 --> C31
-  C7 --> C32
   C8 --> C7
   C8 --> C15
   C8 --> C17
-  C8 --> C24
-  C8 --> C26
+  C8 --> C23
+  C8 --> C25
+  C8 --> C30
   C8 --> C31
-  C8 --> C32
   C9 --> C7
   C9 --> C13
   C9 --> C17
-  C9 --> C24
-  C9 --> C26
+  C9 --> C23
+  C9 --> C25
   C10 --> C7
   C10 --> C17
-  C10 --> C28
+  C10 --> C27
   C11 --> C7
   C11 --> C16
   C11 --> C17
-  C11 --> C24
-  C11 --> C26
-  C11 --> C32
+  C11 --> C23
+  C11 --> C25
+  C11 --> C31
   C12 --> C7
   C12 --> C14
   C12 --> C17
-  C12 --> C24
-  C12 --> C26
+  C12 --> C23
+  C12 --> C25
+  C12 --> C30
   C12 --> C31
-  C12 --> C32
   C13 --> C14
   C13 --> C17
-  C13 --> C24
+  C13 --> C23
   C14 --> C17
-  C14 --> C24
+  C14 --> C23
   C15 --> C17
-  C15 --> C24
+  C15 --> C23
   C16 --> C14
-  C16 --> C24
-  C17 --> C25
-  C17 --> C32
+  C16 --> C23
+  C17 --> C24
+  C17 --> C31
   C18 --> C17
-  C19 --> C17
+  C20 --> C17
+  C20 --> C26
   C21 --> C17
-  C21 --> C27
-  C22 --> C17
-  C22 --> C27
-  C22 --> C32
-  C24 --> C17
+  C21 --> C26
+  C21 --> C31
+  C23 --> C17
+  C25 --> C17
+  C25 --> C23
   C26 --> C17
-  C26 --> C24
+  C26 --> C31
   C27 --> C17
-  C27 --> C32
+  C27 --> C26
+  C27 --> C31
+  C28 --> C7
   C28 --> C17
-  C28 --> C27
-  C28 --> C32
-  C29 --> C7
-  C29 --> C17
-  C29 --> C26
-  C29 --> C31
-  C31 --> C17
-  C31 --> C27
-  C34 --> C1
-  C34 --> C3
-  C34 --> C7
-  C34 --> C8
-  C34 --> C10
-  C34 --> C11
-  C34 --> C12
-  C34 --> C13
-  C34 --> C17
-  C34 --> C21
-  C34 --> C22
-  C34 --> C23
-  C34 --> C24
-  C34 --> C26
-  C34 --> C27
-  C34 --> C28
-  C34 --> C32
+  C28 --> C25
+  C28 --> C30
+  C30 --> C17
+  C30 --> C26
+  C33 --> C1
+  C33 --> C3
+  C33 --> C7
+  C33 --> C8
+  C33 --> C10
+  C33 --> C11
+  C33 --> C12
+  C33 --> C13
+  C33 --> C17
+  C33 --> C20
+  C33 --> C21
+  C33 --> C22
+  C33 --> C23
+  C33 --> C25
+  C33 --> C26
+  C33 --> C27
+  C33 --> C31
 ```
 
 ## Dependency contracts
@@ -207,7 +204,6 @@ graph TD
 | `vyre-bench` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `false` | `true` | `private` | `portable-driver` |
 | `vyre-bench` | `vyre-emit-ptx` | primary binary backend text emission | None | `always` | `normal` | `false` | `true` | `private` | `primary-binary-emitter` |
 | `vyre-bench` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre-bench` | `vyre-frontend-c` | C source lowering | None | `always` | `normal` | `false` | `true` | `private` | `c-frontend` |
 | `vyre-bench` | `vyre-frontend-rust` | Rust source lowering | None | `always` | `normal` | `false` | `true` | `private` | `rust-frontend` |
 | `vyre-bench` | `vyre-intrinsics` | hardware-mapped intrinsic builders | None | `always` | `normal` | `false` | `true` | `private` | `hardware-intrinsics` |
 | `vyre-bench` | `vyre-libs` | product operation builders | `c-parser`, `nn-linear-4bit` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
@@ -282,7 +278,6 @@ graph TD
 | `vyre-emit-spirv` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-foundation` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-foundation` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `public` | `specification` |
-| `vyre-frontend-c` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-frontend-rust` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre-intrinsics` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-intrinsics` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |

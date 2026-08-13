@@ -120,7 +120,7 @@ fn crate_tier(member_path: &str) -> u32 {
         "vyre-intrinsics" => 20,
         "vyre-primitives" => 25,
         "vyre-self-substrate" => 28,
-        "vyre-libs" | "vyre-frontend-c" => 30,
+        "vyre-libs" => 30,
         "vyre-reference" | "vyre-lower" | "vyre-emit-naga" | "vyre-emit-ptx"
         | "vyre-emit-spirv" => 35,
         "vyre-conform-spec" | "vyre-conform" => 35,

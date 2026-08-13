@@ -54,7 +54,7 @@ fn write_fixture(root: &Path) {
     write_json(
         &root.join("docs/generated/OP_SCHEMA.json"),
         &json!({
-            "schema_version": 2,
+            "schema_version": 3,
             "operation_count": 4,
             "tier_counts": {"intrinsic": 1, "primitive": 1, "libs": 1, "runtime": 1},
             "operations": [
@@ -81,7 +81,7 @@ fn write_fixture(root: &Path) {
         root.join("docs/ARCHITECTURE.md"),
         current_header(
             "Architecture",
-            "Use generated/OP_SCHEMA.json. The semantic authority is vyre-foundation::operation_registry; derived catalogs do not own shadow operation identities. Evidence selects CUDA as the preferred backend. Cross-program composition target. vyre-megakernel emits Artifact envelopes. Persistent protocol lives in vyre-runtime/src/megakernel/. The older bytecode interpreter design is superseded.",
+            "Use generated/OP_SCHEMA.json. The semantic authority is vyre-foundation::operation::OperationRegistry; derived catalogs do not own shadow operation identities. Evidence selects CUDA as the preferred backend. Cross-program composition target. vyre-megakernel emits Artifact envelopes. Persistent protocol lives in vyre-runtime/src/megakernel/. The older bytecode interpreter design is superseded.",
         ),
     )
     .unwrap();
@@ -211,11 +211,11 @@ fn missing_semantic_operation_registry_fails_closed() {
     let path = temp.path().join("docs/ARCHITECTURE.md");
     let text = fs::read_to_string(&path)
         .unwrap()
-        .replace("vyre-foundation::operation_registry", "runtime registry");
+        .replace("vyre-foundation::operation::OperationRegistry", "runtime registry");
     fs::write(&path, text).unwrap();
     let output = run_checker(temp.path());
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("operation_registry"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("operation::OperationRegistry"));
 }
 
 /// A preferred backend without an executable row must not support an architecture claim.

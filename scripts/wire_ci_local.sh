@@ -36,7 +36,6 @@ log "clippy, wire crates (--no-deps keeps the gate scoped to our code)"
 log "check, wire and consumers"
 "$CARGO_RUNNER" check -p vyre-primitives
 "$CARGO_RUNNER" check -p vyre-libs
-"$CARGO_RUNNER" check -p vyre-frontend-c
 "$CARGO_RUNNER" check -p vyre-intrinsics
 "$CARGO_RUNNER" check -p vyre-self-substrate
 "$CARGO_RUNNER" check -p vyre-bench

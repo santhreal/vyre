@@ -17,7 +17,6 @@ struct ReleaseTrainData {
 #[derive(Debug, Deserialize)]
 struct Versions {
     vyre: String,
-    vyre_frontend_c: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -37,10 +36,6 @@ fn data() -> &'static ReleaseTrainData {
 
 pub(crate) fn vyre_version() -> &'static str {
     data().versions.vyre.as_str()
-}
-
-pub(crate) fn vyre_frontend_c_version() -> &'static str {
-    data().versions.vyre_frontend_c.as_str()
 }
 
 pub(crate) fn vyre_rc_tag() -> &'static str {
@@ -91,12 +86,11 @@ pub(crate) fn package_verify_passed() -> Vec<&'static str> {
         .collect()
 }
 
-pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'static str); 4] {
+pub(crate) fn required_release_packages() -> [(&'static str, &'static str, &'static str); 3] {
     [
         ("vyre", vyre_version(), "vyre"),
         ("vyre-driver-cuda", vyre_version(), "vyre"),
         ("vyre-driver-wgpu", vyre_version(), "vyre"),
-        ("vyre-frontend-c", vyre_frontend_c_version(), "vyre"),
     ]
 }
 
