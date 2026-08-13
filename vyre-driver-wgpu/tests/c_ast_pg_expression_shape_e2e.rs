@@ -1,7 +1,9 @@
-//! Generated wrapper test crate for c ast pg expression shape e2e.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Expression shape from C source through property-graph lowering, covering designators, nested
+//! conditionals, and labelled switch bodies.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_pg_expression_shape_e2e__bytes.rs");
-include!("contract_cases/c_ast_pg_expression_shape_e2e__compound_literal_designators_and_nested_conditional_lower_to_pg.rs");
+#[path = "c_ast_pg_expression_shape_e2e/bytes.rs"]
+mod bytes;
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_pg_expression_shape_e2e/expression_and_statement_rows.rs"]
+mod expression_and_statement_rows;

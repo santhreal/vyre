@@ -1,7 +1,9 @@
-//! Generated wrapper test crate for c ast pg lowering deep contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Semantic categories, roles, and edges the deep property-graph lowering must assign, checked
+//! against a GPU oracle.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_pg_lowering_deep_contracts__classify.rs");
-include!("contract_cases/c_ast_pg_lowering_deep_contracts__function_definition_has_declaration_category.rs");
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_pg_lowering_deep_contracts/classify.rs"]
+mod classify;
+#[path = "c_ast_pg_lowering_deep_contracts/semantic_categories_roles_and_edges.rs"]
+mod semantic_categories_roles_and_edges;

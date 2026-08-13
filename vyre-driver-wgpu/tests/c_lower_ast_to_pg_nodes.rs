@@ -478,20 +478,13 @@ fn adversarial_vast_cases() -> Vec<Vec<u8>> {
     }
     cases
 }
-mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_registration_is_witnessed {
-    include!(
-        "contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_registration_is_witnessed.rs"
-    );
-}
-mod c_lower_ast_to_pg_nodes_c11_vast_reference_feeds_program_graph_node_lowering {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__c11_vast_reference_feeds_program_graph_node_lowering.rs");
-}
-mod c_lower_ast_to_pg_nodes_typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes.rs");
-}
-mod c_lower_ast_to_pg_nodes_gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph.rs");
-}
-mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_has_zero_ulp_tolerance {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_has_zero_ulp_tolerance.rs");
-}
+#[path = "c_lower_ast_to_pg_nodes/adversarial_fixtures_and_gpu_dispatch.rs"]
+mod adversarial_fixtures_and_gpu_dispatch;
+#[path = "c_lower_ast_to_pg_nodes/declarator_and_function_pointer_prototypes.rs"]
+mod declarator_and_function_pointer_prototypes;
+#[path = "c_lower_ast_to_pg_nodes/registration_parity_and_tree_links.rs"]
+mod registration_parity_and_tree_links;
+#[path = "c_lower_ast_to_pg_nodes/stress_fixture_wgsl_and_certificate.rs"]
+mod stress_fixture_wgsl_and_certificate;
+#[path = "c_lower_ast_to_pg_nodes/typed_vast_lowering.rs"]
+mod typed_vast_lowering;

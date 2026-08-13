@@ -1,8 +1,10 @@
-//! Generated wrapper test crate for c ast expression operator ambiguity contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Operators that are both unary and binary, and the cast versus parenthesized expression
+//! classification that separates them.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_expression_operator_ambiguity_contracts__bytes.rs");
-include!("contract_cases/c_ast_expression_operator_ambiguity_contracts__plus_binary_is_binary_and_unary_is_unary.rs");
+#[path = "c_ast_expression_operator_ambiguity_contracts/bytes.rs"]
+mod bytes;
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_expression_operator_ambiguity_contracts/unary_binary_and_cast_classification.rs"]
+mod unary_binary_and_cast_classification;

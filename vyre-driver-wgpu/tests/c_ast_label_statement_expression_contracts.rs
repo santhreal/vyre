@@ -375,10 +375,7 @@ fn fixture_statement_expression_with_label_and_goto() -> Fixture {
 // Tests – CPU reference contracts (labels)
 // ---------------------------------------------------------------------------
 
-mod c_ast_label_statement_expression_contracts_cpu_multiple_consecutive_labels_classify {
-
-    include!("contract_cases/c_ast_label_statement_expression_contracts__cpu_multiple_consecutive_labels_classify.rs");
-}
-mod c_ast_label_statement_expression_contracts_pg_lower_preserves_gnu_statement_expr_kinds {
-    include!("contract_cases/c_ast_label_statement_expression_contracts__pg_lower_preserves_gnu_statement_expr_kinds.rs");
-}
+#[path = "c_ast_label_statement_expression_contracts/cpu_pg_and_gpu_parity.rs"]
+mod cpu_pg_and_gpu_parity;
+#[path = "c_ast_label_statement_expression_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

@@ -1,9 +1,9 @@
-//! Generated wrapper test crate for c11 parser typedef contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Typedef name resolution in the C11 parser: cast versus expression, shadowing, struct tags, and
+//! declarator contexts, on CPU and GPU.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c11_parser_typedef_contracts__assert_kind.rs");
-include!(
-    "contract_cases/c11_parser_typedef_contracts__pg_lower_preserves_typedef_cast_vs_expr_kinds.rs"
-);
+#[path = "c11_parser_typedef_contracts/assert_kind.rs"]
+mod assert_kind;
+mod c_ast_gpu_parity_support;
+#[path = "c11_parser_typedef_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

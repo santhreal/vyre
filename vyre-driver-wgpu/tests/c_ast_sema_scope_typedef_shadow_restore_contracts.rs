@@ -1,4 +1,5 @@
-//! Contract tests for typedef shadowing and restoration across nested scopes.
+//! Typedef shadowing and scope restoration in C semantic analysis, across disjoint blocks,
+//! parameters, K&R parameters, for loops, and nested chains.
 //!
 //! Asserts standard C11 semantics:
 //!   * typedef names live in the ordinary identifier namespace
@@ -143,13 +144,9 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Scope-tree contract tests
 // ---------------------------------------------------------------------------
 
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids {
-
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids.rs");
-}
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_annotation_multiple_typedefs_same_name_in_disjoint_blocks {
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__annotation_multiple_typedefs_same_name_in_disjoint_blocks.rs");
-}
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_gpu_parity_annotation_deep_shadow_chain {
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__gpu_parity_annotation_deep_shadow_chain.rs");
-}
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/annotation_and_gpu_parity.rs"]
+mod annotation_and_gpu_parity;
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/gpu_parity.rs"]
+mod gpu_parity;
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/scope_tree_and_annotation.rs"]
+mod scope_tree_and_annotation;

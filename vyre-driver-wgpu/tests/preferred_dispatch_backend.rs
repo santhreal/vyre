@@ -3,12 +3,8 @@
 #![allow(deprecated)]
 use vyre_driver_wgpu::WgpuBackend;
 
-mod preferred_dispatch_contract {
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../tests/support/preferred_dispatch_backend_contract.rs"
-    ));
-}
+#[path = "../../tests/support/preferred_dispatch_backend_contract.rs"]
+mod preferred_dispatch_contract;
 use preferred_dispatch_contract::{
     assert_backend_registry_metadata, assert_preferred_dispatch_selects,
 };

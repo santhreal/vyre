@@ -1,17 +1,13 @@
 //! End-to-end C parser coverage for expression-shape gaps.
 
 #![cfg(feature = "c-parser")]
-mod fixtures {
-    include!("c_ast_expression_shape_gaps_e2e/fixtures.rs");
-}
+#[path = "c_ast_expression_shape_gaps_e2e/fixtures.rs"]
+mod fixtures;
 #[allow(deprecated)]
-mod gpu_parity {
-    include!("c_ast_expression_shape_gaps_e2e/gpu_parity.rs");
-}
-mod kind_shape {
-    include!("c_ast_expression_shape_gaps_e2e/kind_shape.rs");
-}
+#[path = "c_ast_expression_shape_gaps_e2e/gpu_parity.rs"]
+mod gpu_parity;
+#[path = "c_ast_expression_shape_gaps_e2e/kind_shape.rs"]
+mod kind_shape;
 #[allow(deprecated)]
-mod support {
-    include!("c_ast_expression_shape_gaps_e2e/support.rs");
-}
+#[path = "c_ast_expression_shape_gaps_e2e/support.rs"]
+mod support;

@@ -1,9 +1,9 @@
-//! Generated wrapper test crate for c ast kernel grade construct shape.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! AST node shape and CPU/GPU parity for the constructs kernel sources rely on: nested declarators,
+//! asm with attributes, control flow, typedef shadowing, and statement expressions.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_kernel_grade_construct_shape__classify.rs");
-include!(
-    "contract_cases/c_ast_kernel_grade_construct_shape__nested_declarator_parity_and_shape.rs"
-);
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_kernel_grade_construct_shape/classify.rs"]
+mod classify;
+#[path = "c_ast_kernel_grade_construct_shape/kernel_construct_parity_and_shape.rs"]
+mod kernel_construct_parity_and_shape;

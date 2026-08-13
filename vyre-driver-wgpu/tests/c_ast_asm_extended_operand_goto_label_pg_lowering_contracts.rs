@@ -1,7 +1,9 @@
-//! Generated wrapper test crate for c ast asm extended operand goto label pg lowering contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Property-graph lowering of GNU extended asm: symbolic operand names, earlyclobber, clobber
+//! lists, and asm goto labels.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts__classify.rs");
-include!("contract_cases/c_ast_asm_extended_operand_goto_label_pg_lowering_contracts__pg_lower_preserves_asm_symbolic_names_and_earlyclobber.rs");
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts/classify.rs"]
+mod classify;
+#[path = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

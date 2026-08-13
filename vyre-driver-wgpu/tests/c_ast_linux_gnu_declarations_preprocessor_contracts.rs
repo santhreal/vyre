@@ -161,19 +161,31 @@ fn fixture_typedef_shadowed_by_auto_type() -> Fixture {
         FixtureToken::new("}", TOK_RBRACE),
     ])
 }
-// Flat include of all parts so cross-part fixture references resolve
-// in a single scope (per-part `mod {...}` wrappers broke this).
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_typedef_shadowed_by_auto_type_variable.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_enum_tag_forward_declaration.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_attribute_on_struct_definition_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_attribute_on_function_pointer_typedef.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_typeof_unqual_simple_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_alignas_on_variable_stays_raw_and_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_nested_designated_init_complex_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_bitfield_mixed_with_attribute_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_flexible_array_member_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_signal_function.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_statement_expr_with_asm_in_init_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_macro_shaped_declaration_list_head_classifies.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__cpu_nested_conditional_preproc_mask_contract.rs");
-include!("contract_cases/c_ast_linux_gnu_declarations_preprocessor_contracts__gpu_parity_nested_conditional_preproc_stream.rs");
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_alignas_on_variable_stays_raw_and_classifies.rs"]
+mod cpu_alignas_on_variable_stays_raw_and_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_bitfield_mixed_with_attribute_classifies.rs"]
+mod cpu_bitfield_mixed_with_attribute_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_enum_tag_forward_declaration.rs"]
+mod cpu_enum_tag_forward_declaration;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_flexible_array_member_classifies.rs"]
+mod cpu_flexible_array_member_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_macro_shaped_declaration_list_head_classifies.rs"]
+mod cpu_macro_shaped_declaration_list_head_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_nested_designated_init_complex_classifies.rs"]
+mod cpu_nested_designated_init_complex_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_reference_and_gpu_parity.rs"]
+mod cpu_reference_and_gpu_parity;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_reference_and_pg_lowering.rs"]
+mod cpu_reference_and_pg_lowering;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_statement_expr_with_asm_in_init_classifies.rs"]
+mod cpu_statement_expr_with_asm_in_init_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_typedef_shadowed_by_auto_type_variable.rs"]
+mod cpu_typedef_shadowed_by_auto_type_variable;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/cpu_typeof_unqual_simple_classifies.rs"]
+mod cpu_typeof_unqual_simple_classifies;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/gpu_parity.rs"]
+mod gpu_parity;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/gpu_parity_attribute_on_function_pointer_typedef.rs"]
+mod gpu_parity_attribute_on_function_pointer_typedef;
+#[path = "c_ast_linux_gnu_declarations_preprocessor_contracts/gpu_parity_signal_function.rs"]
+mod gpu_parity_signal_function;

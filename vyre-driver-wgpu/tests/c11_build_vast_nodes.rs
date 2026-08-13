@@ -481,18 +481,13 @@ fn assert_expr_shape_row(
     assert_eq!(word_at(rows, row + 6), second, "second[{idx}]");
     assert_eq!(word_at(rows, row + 7), third, "third[{idx}]");
 }
-mod c11_build_vast_nodes_cpu_reference_builds_delimiter_tree_for_function_body {
-    include!("contract_cases/c11_build_vast_nodes__cpu_reference_builds_delimiter_tree_for_function_body.rs");
-}
-mod c11_build_vast_nodes_cpu_reference_classifies_c_expression_operators_as_first_class_vast_nodes {
-    include!("contract_cases/c11_build_vast_nodes__cpu_reference_classifies_c_expression_operators_as_first_class_vast_nodes.rs");
-}
-mod c11_build_vast_nodes_cpu_reference_classifies_hostile_cast_vs_declaration_patterns {
-    include!("contract_cases/c11_build_vast_nodes__cpu_reference_classifies_hostile_cast_vs_declaration_patterns.rs");
-}
-mod c11_build_vast_nodes_gpu_parity_classifies_gnu_attribute_and_inline_asm_nodes {
-    include!("contract_cases/c11_build_vast_nodes__gpu_parity_classifies_gnu_attribute_and_inline_asm_nodes.rs");
-}
-mod c11_build_vast_nodes_gpu_parity_classifies_c_declarators_initializers_and_fields {
-    include!("contract_cases/c11_build_vast_nodes__gpu_parity_classifies_c_declarators_initializers_and_fields.rs");
-}
+#[path = "c11_build_vast_nodes/cpu_delimiter_tree_and_statement_keywords.rs"]
+mod cpu_delimiter_tree_and_statement_keywords;
+#[path = "c11_build_vast_nodes/cpu_expression_operators_and_declarators.rs"]
+mod cpu_expression_operators_and_declarators;
+#[path = "c11_build_vast_nodes/cpu_hostile_casts_and_qualified_declarators.rs"]
+mod cpu_hostile_casts_and_qualified_declarators;
+#[path = "c11_build_vast_nodes/gpu_declarators_and_anonymous_aggregates.rs"]
+mod gpu_declarators_and_anonymous_aggregates;
+#[path = "c11_build_vast_nodes/gpu_gnu_attributes_statements_and_operators.rs"]
+mod gpu_gnu_attributes_statements_and_operators;

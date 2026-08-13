@@ -144,10 +144,7 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Cast vs declaration contexts
 // ---------------------------------------------------------------------------
 
-mod c_ast_sema_scope_cast_decl_redecl_field_contracts_classifier_typedef_in_cast_is_cast_expr {
-
-    include!("contract_cases/c_ast_sema_scope_cast_decl_redecl_field_contracts__classifier_typedef_in_cast_is_cast_expr.rs");
-}
-mod c_ast_sema_scope_cast_decl_redecl_field_contracts_scope_tree_struct_field_not_classified_as_declaration {
-    include!("contract_cases/c_ast_sema_scope_cast_decl_redecl_field_contracts__scope_tree_struct_field_not_classified_as_declaration.rs");
-}
+#[path = "c_ast_sema_scope_cast_decl_redecl_field_contracts/classifier_and_redeclaration_scopes.rs"]
+mod classifier_and_redeclaration_scopes;
+#[path = "c_ast_sema_scope_cast_decl_redecl_field_contracts/struct_fields_and_gpu_parity.rs"]
+mod struct_fields_and_gpu_parity;
