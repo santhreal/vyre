@@ -336,6 +336,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --all-features
 | `test` | `syntax_motif_frontier_compiler` | `vyre-primitives/tests/syntax_motif_frontier_compiler.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test syntax_motif_frontier_compiler` |
 | `test` | `tensor_scc_value_parity` | `vyre-primitives/tests/tensor_scc_value_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_scc_value_parity` |
 | `test` | `tensor_train_contract_signed_parity` | `vyre-primitives/tests/tensor_train_contract_signed_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_train_contract_signed_parity` |
+| `test` | `tensor_train_decompose_eigen_contract` | `vyre-primitives/tests/tensor_train_decompose_eigen_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_train_decompose_eigen_contract` |
 | `test` | `tensor_train_decompose_step_parity` | `vyre-primitives/tests/tensor_train_decompose_step_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tensor_train_decompose_step_parity` |
 | `test` | `text_char_class_support` | `vyre-primitives/tests/text_char_class_support.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test text_char_class_support` |
 | `test` | `tfn_scalar_mix_signed_parity` | `vyre-primitives/tests/tfn_scalar_mix_signed_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-primitives --test tfn_scalar_mix_signed_parity` |

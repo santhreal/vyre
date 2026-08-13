@@ -15,7 +15,7 @@
 //! eigenvector bases.
 
 use std::sync::Arc;
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Op id.
@@ -54,8 +54,9 @@ pub fn jacobi_sweeps(n: u32) -> u32 {
 /// to sign, so without that the same input can produce `v` or `-v` depending on rounding,
 /// and no consumer of this body can be pinned by an exact fixture.
 ///
-/// Reused by [`symmetric_eigen_jacobi`] and (later) the tensor-train SVD step so the rotation policy
-/// lives in ONE place.
+/// Emitted by exactly two callers: [`symmetric_eigen_jacobi`] (standalone Program) and
+/// [`crate::math::tensor_train_decompose::tensor_train_decompose_step`] (via
+/// [`jacobi_eigen_region`]), so the rotation policy lives in ONE place.
 #[must_use]
 pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32) -> Vec<Node> {
     let sweeps = jacobi_sweeps(n);
@@ -408,6 +409,32 @@ pub fn jacobi_eigen_body(a: &str, eigenvectors: &str, eigenvalues: &str, n: u32)
     ));
 
     nodes
+}
+
+/// Emit [`jacobi_eigen_body`] as a child region of `parent_op_id`.
+///
+/// The nodes are exactly the body; the `Node::Region` around them records the composition
+/// edge required by `docs/region-chain.md` invariant 2: a body built by calling another
+/// operation's builder carries that operation's generator and a `source_region` naming the
+/// caller. Splicing the body in bare (which is what `tensor_train_decompose_step` used to do)
+/// leaves the IR indistinguishable from a hand-rolled eigensolve, so `print-composition`, the
+/// region-inline debug trace, and the Gate 1 composed fraction all report the caller as a
+/// monolith and no audit can tell that the two callers share one spelling.
+#[must_use]
+pub fn jacobi_eigen_region(
+    parent_op_id: &str,
+    a: &str,
+    eigenvectors: &str,
+    eigenvalues: &str,
+    n: u32,
+) -> Node {
+    Node::Region {
+        generator: Ident::from(OP_ID),
+        source_region: Some(GeneratorRef {
+            name: parent_op_id.to_string(),
+        }),
+        body: Arc::new(jacobi_eigen_body(a, eigenvectors, eigenvalues, n)),
+    }
 }
 
 /// Build a standalone symmetric-eigendecomposition Program.
