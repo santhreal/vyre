@@ -1,21 +1,8 @@
-#[non_exhaustive] pub struct vyre_debug::ScanExplainReport
-#[non_exhaustive] pub struct vyre_debug::scan_explain::ScanExplainReport
 impl core::default::Default for vyre_debug::descriptor_dump::DescriptorDumpOptions
-impl core::error::Error for vyre_debug::scan_explain::ScanExplainError
-impl core::fmt::Display for vyre_debug::scan_explain::ScanExplainError
 impl vyre_debug::artifact_report::ArtifactReport
 impl vyre_debug::naga_dump::NagaDump
-impl vyre_debug::scan_explain::ScanExplainReport
-pub const vyre_debug::SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32
-pub const vyre_debug::scan_explain::SCAN_EXPLAIN_REPORT_SCHEMA_VERSION: u32
 pub enum vyre_debug::BindResultLogError
-pub enum vyre_debug::ScanExplainError
-pub enum vyre_debug::ScanExplainExactnessClass
-pub enum vyre_debug::ScanFactorRole
 pub enum vyre_debug::naga_trace::BindResultLogError
-pub enum vyre_debug::scan_explain::ScanExplainError
-pub enum vyre_debug::scan_explain::ScanExplainExactnessClass
-pub enum vyre_debug::scan_explain::ScanFactorRole
 pub fn vyre_debug::artifact_report::ArtifactReport::from_bytes(bytes: &[u8]) -> core::result::Result<Self, vyre_megakernel::CompileError>
 pub fn vyre_debug::artifact_report::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
 pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
@@ -41,10 +28,6 @@ pub fn vyre_debug::naga_dump::dump_naga_module(module: &naga::ir::Module) -> vyr
 pub fn vyre_debug::naga_trace::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::scan_explain::ScanExplainError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_debug::scan_explain::ScanExplainReport::is_complete(&self) -> bool
-pub fn vyre_debug::scan_explain::scan_explain_report(pattern_set_id: impl core::convert::Into<alloc::string::String>, extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>, descriptor: &vyre_lower::descriptor::IntentAnnotatedDescriptor, scan_database: &vyre_scan::database::header::ScanDatabaseHeader, baseline_id: impl core::convert::Into<alloc::string::String>, artifact_links: alloc::vec::Vec<alloc::string::String>) -> core::result::Result<vyre_debug::scan_explain::ScanExplainReport, vyre_debug::scan_explain::ScanExplainError>
-pub fn vyre_debug::scan_explain_report(pattern_set_id: impl core::convert::Into<alloc::string::String>, extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>, descriptor: &vyre_lower::descriptor::IntentAnnotatedDescriptor, scan_database: &vyre_scan::database::header::ScanDatabaseHeader, baseline_id: impl core::convert::Into<alloc::string::String>, artifact_links: alloc::vec::Vec<alloc::string::String>) -> core::result::Result<vyre_debug::scan_explain::ScanExplainReport, vyre_debug::scan_explain::ScanExplainError>
 pub fn vyre_debug::source_walker::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::core::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
 pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
@@ -57,7 +40,6 @@ pub mod vyre_debug::descriptor_dump
 pub mod vyre_debug::fixtures
 pub mod vyre_debug::naga_dump
 pub mod vyre_debug::naga_trace
-pub mod vyre_debug::scan_explain
 pub mod vyre_debug::source_walker
 pub mod vyre_debug::wgsl
 pub struct vyre_debug::ArtifactReport
@@ -68,11 +50,6 @@ pub struct vyre_debug::DescriptorDump
 pub struct vyre_debug::DescriptorDumpOptions
 pub struct vyre_debug::FailureTrace
 pub struct vyre_debug::NagaDump
-pub struct vyre_debug::ScanExplainEngine
-pub struct vyre_debug::ScanExplainFactor
-pub struct vyre_debug::ScanExplainRejectedEngine
-pub struct vyre_debug::ScanExplainRouteEvidence
-pub struct vyre_debug::ScanExplainVerifierFragment
 pub struct vyre_debug::TargetPayloadReport
 pub struct vyre_debug::UncarrieredAssign
 pub struct vyre_debug::WgslDump
@@ -86,11 +63,6 @@ pub struct vyre_debug::descriptor_dump::DescriptorDump
 pub struct vyre_debug::descriptor_dump::DescriptorDumpOptions
 pub struct vyre_debug::naga_dump::NagaDump
 pub struct vyre_debug::naga_trace::FailureTrace
-pub struct vyre_debug::scan_explain::ScanExplainEngine
-pub struct vyre_debug::scan_explain::ScanExplainFactor
-pub struct vyre_debug::scan_explain::ScanExplainRejectedEngine
-pub struct vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub struct vyre_debug::scan_explain::ScanExplainVerifierFragment
 pub struct vyre_debug::wgsl::WgslDump
 pub vyre_debug::ArtifactReport::abi: vyre_megakernel::ArtifactAbi
 pub vyre_debug::ArtifactReport::artifact: alloc::string::String
@@ -126,49 +98,6 @@ pub vyre_debug::DescriptorDumpOptions::show_literals: bool
 pub vyre_debug::DescriptorDumpOptions::show_result_ids: bool
 pub vyre_debug::FailureTrace::text: alloc::string::String
 pub vyre_debug::NagaDump::text: alloc::string::String
-pub vyre_debug::ScanExplainEngine::reason: alloc::string::String
-pub vyre_debug::ScanExplainEngine::strategy: vyre_lower::descriptor::DescriptorIntentStrategy
-pub vyre_debug::ScanExplainError::MissingArtifactLinks
-pub vyre_debug::ScanExplainError::MissingBaselineId
-pub vyre_debug::ScanExplainError::MissingDescriptorIntents
-pub vyre_debug::ScanExplainError::MissingFactors
-pub vyre_debug::ScanExplainError::MissingPatternSetId
-pub vyre_debug::ScanExplainError::MissingScanDatabase
-pub vyre_debug::ScanExplainExactnessClass::Exact
-pub vyre_debug::ScanExplainExactnessClass::PrefilterVerified
-pub vyre_debug::ScanExplainExactnessClass::Unsupported
-pub vyre_debug::ScanExplainExactnessClass::VerifierRequired
-pub vyre_debug::ScanExplainFactor::bytes: alloc::vec::Vec<u8>
-pub vyre_debug::ScanExplainFactor::digest: u64
-pub vyre_debug::ScanExplainFactor::pattern_index: u32
-pub vyre_debug::ScanExplainFactor::role: vyre_debug::scan_explain::ScanFactorRole
-pub vyre_debug::ScanExplainRejectedEngine::engine_id: alloc::string::String
-pub vyre_debug::ScanExplainRejectedEngine::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::ScanExplainRejectedEngine::pattern_index: u32
-pub vyre_debug::ScanExplainRejectedEngine::reason: alloc::string::String
-pub vyre_debug::ScanExplainReport::artifact_links: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::ScanExplainReport::baseline_id: alloc::string::String
-pub vyre_debug::ScanExplainReport::extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>
-pub vyre_debug::ScanExplainReport::pattern_set_id: alloc::string::String
-pub vyre_debug::ScanExplainReport::rejected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainRejectedEngine>
-pub vyre_debug::ScanExplainReport::route_evidence: vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub vyre_debug::ScanExplainReport::schema_version: u32
-pub vyre_debug::ScanExplainReport::selected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainEngine>
-pub vyre_debug::ScanExplainReport::streaming_state_bytes: u64
-pub vyre_debug::ScanExplainReport::table_bytes: u64
-pub vyre_debug::ScanExplainReport::unsupported_features: alloc::vec::Vec<vyre_scan::database::header::UnsupportedScanFeature>
-pub vyre_debug::ScanExplainReport::verifier_fragments: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainVerifierFragment>
-pub vyre_debug::ScanExplainRouteEvidence::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::ScanExplainRouteEvidence::literal_selectivity_basis: alloc::string::String
-pub vyre_debug::ScanExplainRouteEvidence::verifier_cost_estimate_bytes: u64
-pub vyre_debug::ScanExplainVerifierFragment::bytes: u64
-pub vyre_debug::ScanExplainVerifierFragment::digest: u64
-pub vyre_debug::ScanExplainVerifierFragment::source: alloc::string::String
-pub vyre_debug::ScanFactorRole::Infix
-pub vyre_debug::ScanFactorRole::Literal
-pub vyre_debug::ScanFactorRole::Outfix
-pub vyre_debug::ScanFactorRole::Prefix
-pub vyre_debug::ScanFactorRole::Suffix
 pub vyre_debug::TargetPayloadReport::bytes: usize
 pub vyre_debug::TargetPayloadReport::digest: alloc::string::String
 pub vyre_debug::TargetPayloadReport::entries: usize
@@ -223,48 +152,5 @@ pub vyre_debug::naga_trace::BindResultLogError::Open(std::io::error::Error)
 pub vyre_debug::naga_trace::BindResultLogError::Parse(usize, serde_json::error::Error)
 pub vyre_debug::naga_trace::BindResultLogError::Read(std::io::error::Error)
 pub vyre_debug::naga_trace::FailureTrace::text: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainEngine::reason: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainEngine::strategy: vyre_lower::descriptor::DescriptorIntentStrategy
-pub vyre_debug::scan_explain::ScanExplainError::MissingArtifactLinks
-pub vyre_debug::scan_explain::ScanExplainError::MissingBaselineId
-pub vyre_debug::scan_explain::ScanExplainError::MissingDescriptorIntents
-pub vyre_debug::scan_explain::ScanExplainError::MissingFactors
-pub vyre_debug::scan_explain::ScanExplainError::MissingPatternSetId
-pub vyre_debug::scan_explain::ScanExplainError::MissingScanDatabase
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::Exact
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::PrefilterVerified
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::Unsupported
-pub vyre_debug::scan_explain::ScanExplainExactnessClass::VerifierRequired
-pub vyre_debug::scan_explain::ScanExplainFactor::bytes: alloc::vec::Vec<u8>
-pub vyre_debug::scan_explain::ScanExplainFactor::digest: u64
-pub vyre_debug::scan_explain::ScanExplainFactor::pattern_index: u32
-pub vyre_debug::scan_explain::ScanExplainFactor::role: vyre_debug::scan_explain::ScanFactorRole
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::engine_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::pattern_index: u32
-pub vyre_debug::scan_explain::ScanExplainRejectedEngine::reason: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::artifact_links: alloc::vec::Vec<alloc::string::String>
-pub vyre_debug::scan_explain::ScanExplainReport::baseline_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::extracted_factors: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainFactor>
-pub vyre_debug::scan_explain::ScanExplainReport::pattern_set_id: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainReport::rejected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainRejectedEngine>
-pub vyre_debug::scan_explain::ScanExplainReport::route_evidence: vyre_debug::scan_explain::ScanExplainRouteEvidence
-pub vyre_debug::scan_explain::ScanExplainReport::schema_version: u32
-pub vyre_debug::scan_explain::ScanExplainReport::selected_engines: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainEngine>
-pub vyre_debug::scan_explain::ScanExplainReport::streaming_state_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainReport::table_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainReport::unsupported_features: alloc::vec::Vec<vyre_scan::database::header::UnsupportedScanFeature>
-pub vyre_debug::scan_explain::ScanExplainReport::verifier_fragments: alloc::vec::Vec<vyre_debug::scan_explain::ScanExplainVerifierFragment>
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::exactness_class: vyre_debug::scan_explain::ScanExplainExactnessClass
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::literal_selectivity_basis: alloc::string::String
-pub vyre_debug::scan_explain::ScanExplainRouteEvidence::verifier_cost_estimate_bytes: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::bytes: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::digest: u64
-pub vyre_debug::scan_explain::ScanExplainVerifierFragment::source: alloc::string::String
-pub vyre_debug::scan_explain::ScanFactorRole::Infix
-pub vyre_debug::scan_explain::ScanFactorRole::Literal
-pub vyre_debug::scan_explain::ScanFactorRole::Outfix
-pub vyre_debug::scan_explain::ScanFactorRole::Prefix
-pub vyre_debug::scan_explain::ScanFactorRole::Suffix
 pub vyre_debug::wgsl::WgslDump::text: alloc::string::String
 pub vyre_debug::wgsl::WgslDump::variable_lines: alloc::collections::btree::map::BTreeMap<alloc::string::String, usize>

@@ -9,6 +9,7 @@ impl vyre_emit_ptx::patterns::ldmatrix_cp_async::AsyncCopyPlan
 impl vyre_emit_ptx::patterns::predicated_execution::PredicationPlan
 impl vyre_emit_ptx::patterns::tensor_core_fragment::FragmentTile
 impl vyre_emit_ptx::patterns::tensor_core_fragment::TensorCorePlan
+impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_ptx::patterns::PtxAuditReport
 pub const fn vyre_emit_ptx::ComputeCapability::supports_async_copy(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_ldmatrix(&self) -> bool
 pub const fn vyre_emit_ptx::ComputeCapability::supports_wmma_bf16(&self) -> bool
@@ -19,6 +20,7 @@ pub const vyre_emit_ptx::ComputeCapability::SM_80: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_86: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_89: Self
 pub const vyre_emit_ptx::ComputeCapability::SM_90: Self
+pub const vyre_emit_ptx::patterns::PtxAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_ptx::patterns::instruction_scheduling::LONG_CHAIN_THRESHOLD: u32
 pub const vyre_emit_ptx::patterns::predicated_execution::PREDICATION_OP_THRESHOLD: u32
 pub enum vyre_emit_ptx::EmitError
@@ -29,12 +31,16 @@ pub fn vyre_emit_ptx::PtxEmitOptions::for_target(target: vyre_emit_ptx::ComputeC
 pub fn vyre_emit_ptx::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
 pub fn vyre_emit_ptx::emit_with_options(desc: &vyre_lower::descriptor::KernelDescriptor, options: vyre_emit_ptx::PtxEmitOptions) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
 pub fn vyre_emit_ptx::emit_with_target(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> core::result::Result<alloc::string::String, vyre_emit_ptx::EmitError>
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::format_short(&self) -> alloc::string::String
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::has_any(&self) -> bool
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::is_clean(&self) -> bool
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::kernel_id(&self) -> &str
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::merge(&mut self, other: vyre_emit_ptx::patterns::PtxAuditReport)
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::total_candidates(&self) -> usize
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::write_breakdown(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
+pub fn vyre_emit_ptx::patterns::PtxAuditReport::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_ptx::patterns::PtxAuditReport::zero() -> Self
 pub fn vyre_emit_ptx::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor, target: vyre_emit_ptx::ComputeCapability) -> vyre_emit_ptx::patterns::PtxAuditReport
 pub fn vyre_emit_ptx::patterns::instruction_scheduling::SchedulingHints::long_chain_count(&self) -> usize

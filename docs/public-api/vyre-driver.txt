@@ -28,7 +28,10 @@ impl core::convert::From<alloc::vec::Vec<u8>> for vyre_driver::Resource
 impl core::convert::From<vyre_driver::ResidentHandle> for vyre_driver::Resource
 impl core::convert::From<vyre_driver::device_profile::DeviceProfile> for vyre_foundation::optimizer::ctx::AdapterCaps
 impl core::convert::From<vyre_driver::device_profile::DeviceProfile> for vyre_foundation::validate::options::BackendCapabilities
+impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::convert::From<vyre_driver::megakernel_barrier::MegakernelBarrierPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
+impl core::convert::From<vyre_driver::megakernel_execution::MegakernelMemoryError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
+impl core::convert::From<vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError> for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::default::Default for vyre_driver::Resource
 impl core::default::Default for vyre_driver::arm_independence::ArmBindingSummary
 impl core::default::Default for vyre_driver::device_profile::DeviceProfile
@@ -47,6 +50,7 @@ impl core::error::Error for vyre_driver::device_work_queue::DeviceWorkQueueError
 impl core::error::Error for vyre_driver::launch_fusion::LaunchFusionError
 impl core::error::Error for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 impl core::error::Error for vyre_driver::megakernel_execution::MegakernelMemoryError
+impl core::error::Error for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::error::Error for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl core::error::Error for vyre_driver::multi_query_execution::MultiQueryExecutionError
 impl core::error::Error for vyre_driver::persistent::QueueFull
@@ -65,6 +69,7 @@ impl core::fmt::Display for vyre_driver::device_work_queue::DeviceWorkQueueError
 impl core::fmt::Display for vyre_driver::launch_fusion::LaunchFusionError
 impl core::fmt::Display for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 impl core::fmt::Display for vyre_driver::megakernel_execution::MegakernelMemoryError
+impl core::fmt::Display for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl core::fmt::Display for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl core::fmt::Display for vyre_driver::multi_query_execution::MultiQueryExecutionError
 impl core::fmt::Display for vyre_driver::persistent::QueueFull
@@ -92,6 +97,7 @@ impl vyre_driver::TailMaskPolicy
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::benchmark_pass_selection::BenchmarkPassSelectionError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::device_diagnostic_aggregation::DiagnosticAggregationError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
+impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 impl vyre_driver::accounting::ArithmeticOverflow for vyre_driver::result_compaction::ResultCompactionError
 impl vyre_driver::aot::AotLauncherFiles
@@ -126,6 +132,8 @@ impl vyre_driver::graph_capture::ScanGraphCaptureEditKind
 impl vyre_driver::launch::LaunchPlan
 impl vyre_driver::launch_fusion::LaunchFusionScratch
 impl vyre_driver::megakernel_barrier::MegakernelBarrierScratch
+impl vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
+impl vyre_driver::megakernel_execution::MegakernelExecutionPlanner for vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner
 impl vyre_driver::megakernel_execution::MegakernelTopologyDecision
 impl vyre_driver::multi_query_execution::MultiQueryExecutionScratch
 impl vyre_driver::numeric::BackendNumericPolicy
@@ -254,6 +262,8 @@ pub const vyre_driver::extraction_cost::HOT_PATH_COST_SCALE_BPS: u32
 pub const vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE: f32
 pub const vyre_driver::extraction_cost::TENSOR_CORE_COST_SCALE_BPS: u32
 pub const vyre_driver::graph_capture::SCAN_GRAPH_CAPTURE_EDIT_SCHEMA_VERSION: u32
+pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_CAPABLE: Self
+pub const vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::FUSION_INCAPABLE: Self
 pub const vyre_driver::numeric::BASIS_POINTS_DENOMINATOR: u32
 pub const vyre_driver::pipeline::CURRENT_PIPELINE_CACHE_KEY_VERSION: u32
 pub const vyre_driver::pipeline::DEFAULT_1D_WORKGROUP_SIZE: [u32; 3]
@@ -322,6 +332,7 @@ pub enum vyre_driver::launch_fusion::LaunchFusionError
 pub enum vyre_driver::megakernel_barrier::MegakernelBarrierPlanError
 pub enum vyre_driver::megakernel_execution::MegakernelExecutionTopology
 pub enum vyre_driver::megakernel_execution::MegakernelMemoryError
+pub enum vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError
 pub enum vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError
 pub enum vyre_driver::multi_query_execution::MultiQueryExecutionError
 pub enum vyre_driver::ordering::DensePermutationDefect
@@ -831,6 +842,10 @@ pub fn vyre_driver::launch_fusion::LaunchFusionScratch::new() -> Self
 pub fn vyre_driver::launch_fusion::LaunchFusionScratch::try_with_capacity(stage_count: usize) -> core::result::Result<Self, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
 pub fn vyre_driver::launch_fusion::plan_launch_fusion_with_scratch(stages: &[vyre_driver::launch_fusion::LaunchFusionStage], max_group_bytes: u64, scratch: &mut vyre_driver::launch_fusion::LaunchFusionScratch) -> core::result::Result<vyre_driver::launch_fusion::LaunchFusionPlan, vyre_driver::launch_fusion::LaunchFusionError>
+pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::Artifact, payload: &vyre_megakernel::envelope::TargetPayload, target: vyre_driver::materialize::MaterializerTarget<'_>) -> core::result::Result<alloc::vec::Vec<vyre_driver::materialize::AdmittedModule>, vyre_driver::BackendError>
+pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::invalid_module(reason: &str) -> vyre_driver::BackendError
+pub fn vyre_driver::materialize::project_resources(artifact: &vyre_megakernel::Artifact) -> vyre_driver::materialize::ResourceProjection
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierScratch::dependency_capacity(&self) -> usize
@@ -838,16 +853,27 @@ pub fn vyre_driver::megakernel_barrier::MegakernelBarrierScratch::try_with_capac
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierScratch::wave_capacity(&self) -> usize
 pub fn vyre_driver::megakernel_barrier::plan_megakernel_barriers(wave_count: usize, dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency]) -> core::result::Result<vyre_driver::megakernel_barrier::MegakernelBarrierPlan, vyre_driver::megakernel_barrier::MegakernelBarrierPlanError>
 pub fn vyre_driver::megakernel_barrier::plan_megakernel_barriers_with_scratch(wave_count: usize, dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver::megakernel_barrier::MegakernelBarrierPlan, vyre_driver::megakernel_barrier::MegakernelBarrierPlanError>
+pub fn vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::admissible_fusion_pressure(self, fusion_pressure: f64) -> f64
+pub fn vyre_driver::megakernel_execution::MegakernelExecutionPlanner::plan_execution(&mut self, request: vyre_driver::megakernel_execution::MegakernelExecutionRequest) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver::megakernel_execution::MegakernelMemoryError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::megakernel_execution::MegakernelTopologyDecision::stable_explanation(&self) -> alloc::string::String
-pub fn vyre_driver::megakernel_execution::plan_megakernel_execution(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, frontier_bytes: u64, scratch_bytes: u64, output_bytes: u64, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner::plan_execution(&mut self, request: vyre_driver::megakernel_execution::MegakernelExecutionRequest) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver::megakernel_execution::megakernel_resident_graph_bytes(graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64) -> core::result::Result<u64, vyre_driver::megakernel_execution::MegakernelMemoryError>
+pub fn vyre_driver::megakernel_execution::plan_megakernel_execution(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, frontier_bytes: u64, scratch_bytes: u64, output_bytes: u64, budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelExecutionPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
 pub fn vyre_driver::megakernel_execution::plan_megakernel_memory_budget(topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, frontier_bytes: u64, scratch_bytes: u64, output_bytes: u64, budget_bytes: u64) -> core::result::Result<vyre_driver::megakernel_execution::MegakernelMemoryPlan, vyre_driver::megakernel_execution::MegakernelMemoryError>
-pub fn vyre_driver::megakernel_execution::select_megakernel_topology(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
-pub fn vyre_driver::megakernel_execution::select_megakernel_topology_stable(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub fn vyre_driver::megakernel_execution::select_megakernel_topology(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub fn vyre_driver::megakernel_execution::select_megakernel_topology_stable(sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, memory: vyre_driver::megakernel_execution::MegakernelMemoryBudget, launch_overhead_ns: f64, fusion_pressure: f64, previous_topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::arithmetic_overflow(field: &'static str) -> Self
+pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::from(error: vyre_driver::megakernel_barrier::MegakernelBarrierPlanError) -> Self
+pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::from(error: vyre_driver::megakernel_execution::MegakernelMemoryError) -> Self
+pub fn vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::from(error: vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError) -> Self
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError::from(error: vyre_driver::megakernel_barrier::MegakernelBarrierPlanError) -> Self
 pub fn vyre_driver::megakernel_frontier::megakernel_frontier_fused_wave_budget_bytes(wave: vyre_driver::megakernel_frontier::MegakernelFrontierWave) -> core::result::Result<u64, vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError>
+pub fn vyre_driver::megakernel_frontier::plan_megakernel_frontier_execution(planner: &mut impl vyre_driver::megakernel_execution::MegakernelExecutionPlanner, sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities) -> core::result::Result<vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan, vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError>
+pub fn vyre_driver::megakernel_frontier::plan_megakernel_frontier_execution_with_scratch(planner: &mut impl vyre_driver::megakernel_execution::MegakernelExecutionPlanner, sample: vyre_driver::megakernel_execution::MegakernelExecutionSample, graph: vyre_driver::megakernel_execution::MegakernelGraphShape, bytes_per_node: u64, bytes_per_edge: u64, waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], budget_bytes: u64, launch_overhead_ns: f64, fusion_pressure: f64, capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities, scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan, vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError>
 pub fn vyre_driver::megakernel_frontier::plan_megakernel_frontier_memory_with_scratch(waves: &[vyre_driver::megakernel_frontier::MegakernelFrontierWave], dependencies: &[vyre_driver::megakernel_barrier::MegakernelWaveDependency], resident_graph_bytes: u64, budget_bytes: u64, readback_bytes: u64, scratch: &mut vyre_driver::megakernel_barrier::MegakernelBarrierScratch) -> core::result::Result<vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan, vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlanError>
 pub fn vyre_driver::multi_query_execution::MultiQueryExecutionError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::multi_query_execution::MultiQueryExecutionScratch::group_index_capacity(&self) -> usize
@@ -1250,6 +1276,7 @@ pub mod vyre_driver::grid_sync
 pub mod vyre_driver::input_identity
 pub mod vyre_driver::launch
 pub mod vyre_driver::launch_fusion
+pub mod vyre_driver::materialize
 pub mod vyre_driver::megakernel_barrier
 pub mod vyre_driver::megakernel_execution
 pub mod vyre_driver::megakernel_frontier
@@ -1404,16 +1431,23 @@ pub struct vyre_driver::launch_fusion::LaunchFusionGroup
 pub struct vyre_driver::launch_fusion::LaunchFusionPlan
 pub struct vyre_driver::launch_fusion::LaunchFusionScratch
 pub struct vyre_driver::launch_fusion::LaunchFusionStage
+pub struct vyre_driver::materialize::AdmittedModule
+pub struct vyre_driver::materialize::MaterializerTarget<'a>
+pub struct vyre_driver::materialize::ResourceProjection
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierGroup
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierPlan
 pub struct vyre_driver::megakernel_barrier::MegakernelBarrierScratch
 pub struct vyre_driver::megakernel_barrier::MegakernelWaveDependency
+pub struct vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
 pub struct vyre_driver::megakernel_execution::MegakernelExecutionPlan
+pub struct vyre_driver::megakernel_execution::MegakernelExecutionRequest
 pub struct vyre_driver::megakernel_execution::MegakernelExecutionSample
 pub struct vyre_driver::megakernel_execution::MegakernelGraphShape
 pub struct vyre_driver::megakernel_execution::MegakernelMemoryBudget
 pub struct vyre_driver::megakernel_execution::MegakernelMemoryPlan
 pub struct vyre_driver::megakernel_execution::MegakernelTopologyDecision
+pub struct vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner
+pub struct vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan
 pub struct vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan
 pub struct vyre_driver::megakernel_frontier::MegakernelFrontierWave
 pub struct vyre_driver::multi_query_execution::MultiQuery
@@ -1529,6 +1563,7 @@ pub trait vyre_driver::backend::TypedDispatchExt: vyre_driver::VyreBackend
 pub trait vyre_driver::backend::VyreBackend: private::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_driver::backend::lowering::LowerableOp: core::marker::Send + core::marker::Sync + 'static
 pub trait vyre_driver::backend::lowering::TargetGenCtx
+pub trait vyre_driver::megakernel_execution::MegakernelExecutionPlanner
 pub trait vyre_driver::observability::BackendObservabilityProvider
 pub trait vyre_driver::registry::EnforceGate: vyre_driver::registry::enforce::private::Sealed + core::marker::Send + core::marker::Sync
 pub trait vyre_driver::registry::enforce::EnforceGate: vyre_driver::registry::enforce::private::Sealed + core::marker::Send + core::marker::Sync
@@ -2329,6 +2364,15 @@ pub vyre_driver::launch_fusion::LaunchFusionStage::layout_hash: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::output_bytes: u64
 pub vyre_driver::launch_fusion::LaunchFusionStage::requires_host_materialization: bool
 pub vyre_driver::launch_fusion::LaunchFusionStage::scratch_bytes: u64
+pub vyre_driver::materialize::AdmittedModule::config: vyre_driver::DispatchConfig
+pub vyre_driver::materialize::AdmittedModule::image: vyre_megakernel::target::TargetModuleImage
+pub vyre_driver::materialize::AdmittedModule::program: alloc::sync::Arc<vyre_foundation::ir_inner::model::program::core::Program>
+pub vyre_driver::materialize::MaterializerTarget::backend_id: &'a str
+pub vyre_driver::materialize::MaterializerTarget::format: &'a vyre_megakernel::envelope::TargetPayloadFormat
+pub vyre_driver::materialize::MaterializerTarget::profile: &'a vyre_megakernel::envelope::TargetProfile
+pub vyre_driver::materialize::ResourceProjection::outputs: alloc::collections::btree::set::BTreeSet<vyre_megakernel::ArtifactValueId>
+pub vyre_driver::materialize::ResourceProjection::retained: alloc::collections::btree::set::BTreeSet<vyre_megakernel::ArtifactValueId>
+pub vyre_driver::materialize::ResourceProjection::values: alloc::collections::btree::map::BTreeMap<alloc::string::String, vyre_megakernel::ArtifactValueId>
 pub vyre_driver::megakernel_barrier::MegakernelBarrierGroup::waves: alloc::vec::Vec<usize>
 pub vyre_driver::megakernel_barrier::MegakernelBarrierPlan::global_barriers: usize
 pub vyre_driver::megakernel_barrier::MegakernelBarrierPlan::groups: alloc::vec::Vec<vyre_driver::megakernel_barrier::MegakernelBarrierGroup>
@@ -2348,9 +2392,21 @@ pub vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::StorageReserveF
 pub vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::StorageReserveFailed::requested: usize
 pub vyre_driver::megakernel_barrier::MegakernelWaveDependency::after: usize
 pub vyre_driver::megakernel_barrier::MegakernelWaveDependency::before: usize
+pub vyre_driver::megakernel_execution::MegakernelDeviceCapabilities::supports_device_wide_barrier: bool
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::downgraded_to_sparse: bool
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::memory: vyre_driver::megakernel_execution::MegakernelMemoryPlan
 pub vyre_driver::megakernel_execution::MegakernelExecutionPlan::topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::budget_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::bytes_per_edge: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::bytes_per_node: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::capabilities: vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::frontier_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::fusion_pressure: f64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::graph: vyre_driver::megakernel_execution::MegakernelGraphShape
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::launch_overhead_ns: f64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::output_bytes: u64
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::sample: vyre_driver::megakernel_execution::MegakernelExecutionSample
+pub vyre_driver::megakernel_execution::MegakernelExecutionRequest::scratch_bytes: u64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::dispatch_cost_ns: f64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::frontier_density: f64
 pub vyre_driver::megakernel_execution::MegakernelExecutionSample::readback_bytes: u64
@@ -2383,6 +2439,25 @@ pub vyre_driver::megakernel_execution::MegakernelTopologyDecision::average_degre
 pub vyre_driver::megakernel_execution::MegakernelTopologyDecision::launch_pressure_bps: u32
 pub vyre_driver::megakernel_execution::MegakernelTopologyDecision::memory_pressure_bps: u32
 pub vyre_driver::megakernel_execution::MegakernelTopologyDecision::topology: vyre_driver::megakernel_execution::MegakernelExecutionTopology
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::amortized_readback_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::barriers: vyre_driver::megakernel_barrier::MegakernelBarrierPlan
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::execution: vyre_driver::megakernel_execution::MegakernelExecutionPlan
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::max_group_width: usize
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::peak_frontier_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::peak_output_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlan::peak_scratch_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::Barrier(vyre_driver::megakernel_barrier::MegakernelBarrierPlanError)
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::ByteCountOverflow
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::ByteCountOverflow::field: &'static str
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::GroupOverBudget
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::GroupOverBudget::budget_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::GroupOverBudget::field: &'static str
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::GroupOverBudget::required_bytes: u64
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::Memory(vyre_driver::megakernel_execution::MegakernelMemoryError)
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::StorageReserveFailed
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::StorageReserveFailed::field: &'static str
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::StorageReserveFailed::message: alloc::string::String
+pub vyre_driver::megakernel_frontier::MegakernelFrontierExecutionPlanError::StorageReserveFailed::requested: usize
 pub vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan::amortized_readback_bytes: u64
 pub vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan::barriers: vyre_driver::megakernel_barrier::MegakernelBarrierPlan
 pub vyre_driver::megakernel_frontier::MegakernelFrontierMemoryPlan::max_group_width: usize

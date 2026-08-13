@@ -3,7 +3,9 @@ impl vyre_emit_naga::patterns::NagaAuditReport
 impl vyre_emit_naga::patterns::vec_pack::plan::PackGroup
 impl vyre_emit_naga::patterns::vec_pack::plan::PackKind
 impl vyre_emit_naga::patterns::vec_pack::plan::PackingPlan
+impl vyre_lower::pattern_audit::PatternAudit for vyre_emit_naga::patterns::NagaAuditReport
 pub const fn vyre_emit_naga::patterns::vec_pack::plan::PackKind::lane_count(&self) -> u32
+pub const vyre_emit_naga::patterns::NagaAuditReport::FINDING_NOUN: &'static str
 pub const vyre_emit_naga::patterns::pipeline_prewarm::PREWARM_OP_THRESHOLD: u32
 pub const vyre_emit_naga::program::TRAP_SIDECAR_NAME: &str
 pub const vyre_emit_naga::program::TRAP_SIDECAR_WORDS: u32
@@ -13,12 +15,16 @@ pub enum vyre_emit_naga::patterns::vec_pack::plan::PackKind
 pub fn vyre_emit_naga::emit(desc: &vyre_lower::descriptor::KernelDescriptor) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
 pub fn vyre_emit_naga::emit_many(descs: &[vyre_lower::descriptor::KernelDescriptor]) -> alloc::vec::Vec<core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>>
 pub fn vyre_emit_naga::emit_with_capabilities(desc: &vyre_lower::descriptor::KernelDescriptor, target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_emit_naga::EmitError>
+pub fn vyre_emit_naga::patterns::NagaAuditReport::finding_count(&self) -> usize
 pub fn vyre_emit_naga::patterns::NagaAuditReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::format_short(&self) -> alloc::string::String
 pub fn vyre_emit_naga::patterns::NagaAuditReport::has_any(&self) -> bool
 pub fn vyre_emit_naga::patterns::NagaAuditReport::is_clean(&self) -> bool
+pub fn vyre_emit_naga::patterns::NagaAuditReport::kernel_id(&self) -> &str
 pub fn vyre_emit_naga::patterns::NagaAuditReport::merge(&mut self, other: vyre_emit_naga::patterns::NagaAuditReport)
 pub fn vyre_emit_naga::patterns::NagaAuditReport::total_candidates(&self) -> usize
+pub fn vyre_emit_naga::patterns::NagaAuditReport::write_breakdown(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
+pub fn vyre_emit_naga::patterns::NagaAuditReport::write_target_tag(&self, out: &mut dyn core::fmt::Write) -> core::fmt::Result
 pub fn vyre_emit_naga::patterns::NagaAuditReport::zero() -> Self
 pub fn vyre_emit_naga::patterns::audit(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::NagaAuditReport
 pub fn vyre_emit_naga::patterns::pipeline_prewarm::analyze(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_emit_naga::patterns::pipeline_prewarm::PrewarmHint

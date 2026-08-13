@@ -81,6 +81,15 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 
 ### Changed
 
+- Public API snapshots for `vyre-debug`, `vyre-driver`, `vyre-driver-cuda`,
+  `vyre-emit-naga`, `vyre-emit-ptx`, `vyre-emit-spirv`, and `vyre-libs` now
+  match their live surfaces. `vyre-debug` drops the `scan_explain` report,
+  error, exactness, and factor-role types that left with the scan product.
+  `vyre-libs` folds `graph::ast_walk_preorder` and `graph::ast_walk_postorder`
+  into one `graph::ast_walk` module and publishes `scan::pack_haystack_u32`.
+  The emitters and drivers publish the megakernel frontier plan error, the
+  neutral execution planner, and device capability constants that had shipped
+  without a snapshot refresh.
 - The standalone `vyre-harness` package is gone. Semantic operation identity,
   tier classification, and registration now live in `vyre-foundation`; library
   fixture views live in `vyre-libs`; conformance execution and parity policy

@@ -171,12 +171,18 @@ pub fn vyre_libs::decode::ziftsieve_gpu(input: &str, output: &str, seq_literal_s
 pub fn vyre_libs::descriptor::BufferDescriptor::new(name: alloc::string::String, access: vyre_spec::buffer_access::BufferAccess, dtype: vyre_spec::data_type::DataType, count: u32) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::from_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> Self
 pub fn vyre_libs::descriptor::ProgramDescriptor::new(buffer_count: usize, workgroup_size: [u32; 3], buffers: alloc::vec::Vec<vyre_libs::descriptor::BufferDescriptor>, rw_bytes_lower_bound: usize, entry_node_count: usize) -> Self
+pub fn vyre_libs::graph::ast_walk(order: vyre_primitives::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::ast_walk::ast_walk(order: vyre_primitives::graph::vast_tree_walk::VastWalkOrder, nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::ast_walk::ast_walk_postorder(out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::ast_walk::ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::ast_walk::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::ast_walk::pack_branching_fixture() -> alloc::vec::Vec<u8>
+pub fn vyre_libs::graph::ast_walk::pack_spine_fixture(node_count: u32) -> (alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)
 pub fn vyre_libs::graph::ast_walk_postorder(out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_libs::graph::ast_walk_postorder::ast_walk_postorder(out: &str, node_count: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_libs::graph::ast_walk_postorder::ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::graph::ast_walk_postorder_nodes(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::graph::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_libs::graph::ast_walk_preorder::ast_walk_preorder(nodes: &str, out: &str, node_count: u32, out_cap: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::graph::pack_branching_fixture() -> alloc::vec::Vec<u8>
+pub fn vyre_libs::graph::pack_spine_fixture(node_count: u32) -> (alloc::vec::Vec<u8>, alloc::vec::Vec<u8>)
 pub fn vyre_libs::hash::adler32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::hash::adler32::adler32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::hash::blake3_compress(chaining_in: &str, message: &str, params: &str, chaining_out: &str) -> vyre_foundation::ir_inner::model::program::core::Program
@@ -530,6 +536,7 @@ pub fn vyre_libs::scan::hit_buffer::emit_hit(rule_id: &str, file_id: &str, span_
 pub fn vyre_libs::scan::hit_buffer::emit_hit_then_compact(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::scan::hit_buffer::emit_hit_then_compact_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_foundation::execution_plan::fusion::FusionError>
 pub fn vyre_libs::scan::hit_buffer::emit_hit_with_layout(rule_id: &str, file_id: &str, span_start: &str, span_len: &str, out_hits: &str, out_cursor: &str, lane_count: u32, max_hits: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_libs::scan::pack_haystack_u32(bytes: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_libs::scan::post_process::PostProcessError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_libs::scan::post_process::reference_post_process(matches: &[vyre_foundation::match_result::ByteRange], haystack: &[u8]) -> alloc::vec::Vec<vyre_libs::scan::post_process::PostProcessedMatch>
 pub fn vyre_libs::scan::post_process::shannon_entropy_bits_per_byte(bytes: &[u8]) -> f32
@@ -566,8 +573,7 @@ pub mod vyre_libs::decode::streaming
 pub mod vyre_libs::decode::ziftsieve
 pub mod vyre_libs::descriptor
 pub mod vyre_libs::graph
-pub mod vyre_libs::graph::ast_walk_postorder
-pub mod vyre_libs::graph::ast_walk_preorder
+pub mod vyre_libs::graph::ast_walk
 pub mod vyre_libs::hash
 pub mod vyre_libs::hash::adler32
 pub mod vyre_libs::hash::blake3_compress
@@ -714,6 +720,8 @@ pub use vyre_libs::decode::hex_decode_table
 pub use vyre_libs::decode::ziftsieve::ZiftsieveExtract
 pub use vyre_libs::decode::ziftsieve::ziftsieve_reference_extract_literals
 pub use vyre_libs::decode::ziftsieve_reference_extract_literals
+pub use vyre_libs::graph::VastWalkOrder
+pub use vyre_libs::graph::ast_walk::VastWalkOrder
 pub use vyre_libs::operation_catalog::reparent_program_children
 pub use vyre_libs::operation_catalog::tag_program
 pub use vyre_libs::operation_catalog::wrap
