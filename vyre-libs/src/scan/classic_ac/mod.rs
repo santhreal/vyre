@@ -61,14 +61,12 @@ pub use count_program::{
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
-/// THE Aho-Corasick walk lives in [`bounded_ranges`]. Re-exported here so the
-/// scan-level builders that walk the same tables from outside this module
-/// (`regex_anchored_window`, `regex_region_admission`, `fused_region_evidence`)
-/// reach the one owner instead of respelling the step.
-pub(in crate::scan) use bounded_ranges::{
-    ac_advance_state_node, ac_output_span_nodes, ac_transition_step_nodes,
-    classic_ac_dfa_buffer_decls, region_search_prologue_nodes, AcInputBindings,
-};
+/// THE Aho-Corasick walk lives in [`bounded_ranges`]. Only the state-advance
+/// step is re-exported, for `dfa::aho_corasick`; every other scan-level
+/// builder reaches `bounded_ranges` directly rather than through a second
+/// path.
+pub(in crate::scan) use bounded_ranges::ac_advance_state_node;
+use bounded_ranges::ac_output_span_nodes;
 
 /// A classic AC automaton with precomputed flat output links.
 ///
