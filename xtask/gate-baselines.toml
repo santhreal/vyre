@@ -9,8 +9,8 @@
 [[gate]]
 name = "abstraction-gate"
 status = "red"
-output_lines = 34
-owner = "unassigned"
+output_lines = 31
+owner = "Collapse C1-C5: findings span vyre-libs parsing/security/nn and vyre-primitives graph/math, and clear only once every op sits in its category owner"
 
 [[gate]]
 name = "catalog"
@@ -46,7 +46,7 @@ output_lines = 1
 name = "gate1"
 status = "red"
 output_lines = 396
-owner = "unassigned"
+owner = "Collapse C1-C5: the single failure is vyre-primitives::math::tensor_train_decompose at loops=21 nodes=79 composed=0%, a Category A composition sitting in the Category C crate; it clears when the op moves to vyre-libs"
 
 [[gate]]
 name = "heuristic-audit"
@@ -56,13 +56,13 @@ output_lines = 6
 [[gate]]
 name = "hot-path-scan"
 status = "green"
-output_lines = 182
+output_lines = 175
 
 [[gate]]
 name = "hygiene-matrix"
 status = "red"
 output_lines = 1
-owner = "unassigned"
+owner = "PR-26: 6 release-blocking source hygiene findings, 4 on the coordination production surface and 2 on the security dataflow test surface"
 
 [[gate]]
 name = "lego-audit"
@@ -72,8 +72,8 @@ output_lines = 47
 [[gate]]
 name = "lego-quick"
 status = "red"
-output_lines = 13390
-owner = "unassigned"
+output_lines = 12740
+owner = "Collapse C1-C5: every finding is a raw-ir op in vyre-libs that must become a composition over primitives"
 
 [[gate]]
 name = "list-ops"
@@ -109,7 +109,7 @@ output_lines = 5
 name = "vyre-release-gate"
 status = "red"
 output_lines = 251
-owner = "unassigned"
+owner = "release-evidence workflow: the blockers are stale benchmark source_tree_fingerprint values, which only a GPU host can regenerate"
 
 [[gate]]
 name = "whats-similar"

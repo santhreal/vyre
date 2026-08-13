@@ -131,6 +131,15 @@ fn workflow_invocations(root: &Path) -> Vec<String> {
     found
 }
 
+/// An owner has to name something a reader can go and look at. The baseline
+/// writer emits `unassigned` for a newly red gate, which satisfies "a value is
+/// present" while carrying none of the meaning, so the placeholders it and its
+/// predecessors produce are rejected by name.
+fn is_real_owner(owner: &str) -> bool {
+    const PLACEHOLDERS: [&str; 5] = ["unassigned", "unknown", "none", "tbd", "todo"];
+    !owner.is_empty() && !PLACEHOLDERS.contains(&owner.to_ascii_lowercase().as_str())
+}
+
 /// Reject a registry, baseline and workflow set that do not agree.
 ///
 /// This is the meta-check. It is what makes an unwired gate impossible rather
@@ -158,7 +167,8 @@ fn wiring_failures(root: &Path, baselines: &[Baseline]) -> Vec<String> {
             )),
             Some(_) => {}
         }
-        if pin.status == "red" && pin.owner.is_none() {
+        let owner = pin.owner.as_deref().map(str::trim).unwrap_or("");
+        if pin.status == "red" && !is_real_owner(owner) {
             failures.push(format!(
                 "gate `{}` is pinned red with no owner; name the PR that clears it",
                 pin.name
@@ -347,6 +357,32 @@ mod tests {
                 .iter()
                 .any(|failure| failure.contains("pinned red with no owner")),
             "got {failures:?}"
+        );
+    }
+
+    /// WHY: the baseline writer stamps `unassigned` on every newly red gate, so
+    /// a check that only tests for presence is satisfied by the placeholder it
+    /// just wrote and never asks anyone to own anything. Every placeholder the
+    /// writer or a human reaches for has to be rejected by name, in any case.
+    #[test]
+    fn a_red_pin_owned_by_a_placeholder_is_a_failure() {
+        for placeholder in ["unassigned", "UNASSIGNED", "unknown", "none", "tbd", "todo", "  "] {
+            let failures =
+                wiring_failures(&workspace_root(), &[pin("gate1", "red", Some(placeholder))]);
+            assert!(
+                failures
+                    .iter()
+                    .any(|failure| failure.contains("pinned red with no owner")),
+                "placeholder owner {placeholder:?} must not satisfy the meta-check, got {failures:?}"
+            );
+        }
+
+        let failures = wiring_failures(&workspace_root(), &[pin("gate1", "red", Some("PR-26"))]);
+        assert!(
+            !failures
+                .iter()
+                .any(|failure| failure.contains("pinned red with no owner")),
+            "a named owner must satisfy the meta-check, got {failures:?}"
         );
     }
 
