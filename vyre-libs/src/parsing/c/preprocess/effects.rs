@@ -1,7 +1,7 @@
 //! Side-effect metadata for preprocessor directives.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::lex::tokens::TOK_PREPROC;
+use crate::parsing::c::preprocess::directive_scan::for_each_directive_row;
 use crate::parsing::c::lex::tokens::{
     TOK_PP_EFFECT_ERROR_DIAGNOSTIC, TOK_PP_EFFECT_IDENT, TOK_PP_EFFECT_INCLUDE,
     TOK_PP_EFFECT_INCLUDE_NEXT, TOK_PP_EFFECT_LINE, TOK_PP_EFFECT_PRAGMA,
@@ -10,12 +10,8 @@ use crate::parsing::c::lex::tokens::{
     TOK_PP_EFFECT_PRAGMA_DIAGNOSTIC_WARNING, TOK_PP_EFFECT_PRAGMA_ONCE, TOK_PP_EFFECT_SCCS,
     TOK_PP_EFFECT_WARNING_DIAGNOSTIC,
 };
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::preprocess::c_logical_directive_len;
-use crate::parsing::c::preprocess::{
-    c_directive_payload, c_translation_phase_line_splice, try_classify_preprocessor_directive,
-    CPreprocessorDirectiveKind, CPreprocessorError,
-};
+use crate::parsing::c::preprocess::directive_scan::{skip_horizontal_ws, ScannedDirective};
+use crate::parsing::c::preprocess::{CPreprocessorDirectiveKind, CPreprocessorError};
 
 /// Stable side-effect kind emitted for directives with frontend-visible state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -113,17 +109,11 @@ pub fn classify_c_preprocessor_side_effect(
     row: &[u8],
     directive_offset: usize,
 ) -> Result<Option<CPreprocessorSideEffect>, CPreprocessorError> {
-    let spliced = c_translation_phase_line_splice(row);
-    let directive = try_classify_preprocessor_directive(&spliced.bytes).map_err(|mut err| {
-        err.offset = directive_offset + spliced.original_offset(err.offset);
-        err
-    })?;
-    let payload = c_directive_payload(&spliced.bytes, directive).map_err(|mut err| {
-        err.offset = directive_offset + spliced.original_offset(err.offset);
-        err
-    })?;
-    let payload_start = directive_offset + spliced.original_offset(directive.payload_start);
-    let payload_end = directive_offset + spliced.original_offset(directive.logical_end);
+    let scan = ScannedDirective::classify(row, directive_offset)?;
+    let directive = scan.directive;
+    let payload = scan.payload()?;
+    let payload_start = scan.source_offset(directive.payload_start);
+    let payload_end = scan.source_offset(directive.logical_end);
     let payload_len = payload_end.saturating_sub(payload_start);
 
     let (kind, detail_rel, detail_len) = match directive.kind {
@@ -139,9 +129,8 @@ pub fn classify_c_preprocessor_side_effect(
         ),
         CPreprocessorDirectiveKind::Pragma => {
             classify_pragma_payload(payload).map_err(|mut err| {
-                err.offset = directive_offset
-                    + spliced.original_offset(directive.payload_start + err.offset);
-                err
+                err.offset += directive.payload_start;
+                scan.remap(err)
             })?
         }
         CPreprocessorDirectiveKind::Error => (
@@ -176,8 +165,7 @@ pub fn classify_c_preprocessor_side_effect(
         kind,
         payload_start,
         payload_len,
-        detail_start: directive_offset
-            + spliced.original_offset(directive.payload_start + detail_rel),
+        detail_start: scan.source_offset(directive.payload_start + detail_rel),
         detail_len,
     }))
 }
@@ -195,13 +183,6 @@ pub fn reference_c_preprocessor_side_effect_metadata(
     tok_lens: &[u32],
     source: &[u8],
 ) -> Result<CPreprocessorSideEffectMetadata, CPreprocessorError> {
-    if tok_types.len() != tok_starts.len() || tok_types.len() != tok_lens.len() {
-        return Err(CPreprocessorError {
-            offset: tok_types.len().min(tok_starts.len()).min(tok_lens.len()),
-            message: "Fix: token type/start/length streams must have identical lengths",
-        });
-    }
-
     let mut metadata = CPreprocessorSideEffectMetadata {
         kinds: vec![0; tok_types.len()],
         payload_starts: vec![0; tok_types.len()],
@@ -209,64 +190,28 @@ pub fn reference_c_preprocessor_side_effect_metadata(
         detail_starts: vec![0; tok_types.len()],
         detail_lens: vec![0; tok_types.len()],
     };
-    for (idx, ((tok_type, start), len)) in
-        tok_types.iter().zip(tok_starts).zip(tok_lens).enumerate()
-    {
-        if *tok_type != TOK_PREPROC {
-            continue;
-        }
-        let start = usize::try_from(*start).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token start does not fit host usize",
-        })?;
-        let len = usize::try_from(*len).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token length does not fit host usize",
-        })?;
-        let token_end = start.checked_add(len).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: token span overflows source address space",
-        })?;
-        let logical_len = c_logical_directive_len(source, start);
-        if logical_len > len {
-            return Err(CPreprocessorError {
-                offset: start + len,
-                message:
-                    "Fix: TOK_PREPROC span must include the full phase-2 spliced directive row",
-            });
-        }
-        if token_end > source.len() {
-            return Err(CPreprocessorError {
-                offset: start,
-                message: "Fix: preprocessor token span must be inside the source buffer",
-            });
-        }
-        let logical_end = start.checked_add(logical_len).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: directive logical span overflows source address space",
-        })?;
-        let row = source.get(start..logical_end).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: preprocessor token span must be inside the source buffer",
-        })?;
-        if let Some(effect) = classify_c_preprocessor_side_effect(row, start)? {
-            metadata.kinds[idx] = effect.kind.token_id();
-            metadata.payload_starts[idx] = checked_u32(
-                effect.payload_start,
-                "Fix: payload offset exceeds u32 metadata",
-            )?;
-            metadata.payload_lens[idx] = checked_u32(
-                effect.payload_len,
-                "Fix: payload length exceeds u32 metadata",
-            )?;
-            metadata.detail_starts[idx] = checked_u32(
-                effect.detail_start,
-                "Fix: detail offset exceeds u32 metadata",
-            )?;
-            metadata.detail_lens[idx] =
-                checked_u32(effect.detail_len, "Fix: detail length exceeds u32 metadata")?;
-        }
-    }
+    for_each_directive_row(tok_types, tok_starts, tok_lens, source, |row| {
+        let Some(effect) = classify_c_preprocessor_side_effect(row.bytes, row.start)? else {
+            return Ok(());
+        };
+        let idx = row.index;
+        metadata.kinds[idx] = effect.kind.token_id();
+        metadata.payload_starts[idx] = checked_u32(
+            effect.payload_start,
+            "Fix: payload offset exceeds u32 metadata",
+        )?;
+        metadata.payload_lens[idx] = checked_u32(
+            effect.payload_len,
+            "Fix: payload length exceeds u32 metadata",
+        )?;
+        metadata.detail_starts[idx] = checked_u32(
+            effect.detail_start,
+            "Fix: detail offset exceeds u32 metadata",
+        )?;
+        metadata.detail_lens[idx] =
+            checked_u32(effect.detail_len, "Fix: detail length exceeds u32 metadata")?;
+        Ok(())
+    })?;
     Ok(metadata)
 }
 
@@ -366,13 +311,6 @@ fn payload_trimmed_len(payload: &[u8]) -> usize {
         end -= 1;
     }
     end.saturating_sub(start)
-}
-
-fn skip_horizontal_ws(bytes: &[u8], mut index: usize) -> usize {
-    while matches!(bytes.get(index), Some(b' ' | b'\t' | b'\x0b' | b'\x0c')) {
-        index += 1;
-    }
-    index
 }
 
 fn checked_u32(value: usize, message: &'static str) -> Result<u32, CPreprocessorError> {

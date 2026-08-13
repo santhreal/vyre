@@ -1,13 +1,15 @@
 //! C11 preprocessor passes.
 
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::lex::tokens::TOK_PREPROC;
 use crate::parsing::c::lex::tokens::{
     TOK_PP_DEFINE, TOK_PP_ELIF, TOK_PP_ELIFDEF, TOK_PP_ELIFNDEF, TOK_PP_ELSE, TOK_PP_EMBED,
     TOK_PP_ENDIF, TOK_PP_ERROR, TOK_PP_IDENT, TOK_PP_IF, TOK_PP_IFDEF, TOK_PP_IFNDEF,
     TOK_PP_IMPORT, TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT, TOK_PP_LINE, TOK_PP_NULL, TOK_PP_PRAGMA,
     TOK_PP_SCCS, TOK_PP_UNDEF, TOK_PP_WARNING,
 };
+
+/// Shared CPU directive-row walk and per-row splice/classify/payload scan.
+mod directive_scan;
+use directive_scan::ScannedDirective;
 
 /// Preprocessor side-effect metadata.
 pub mod effects;
@@ -24,8 +26,6 @@ mod gpu_char_constant_scan_tests;
 /// Composes with `gpu_line_splice_classify` via mask-AND for the
 /// pre-lex byte filter.
 pub mod gpu_comment_strip_mask;
-#[cfg(test)]
-mod gpu_comment_strip_mask_tests;
 #[cfg(test)]
 mod gpu_conditional_value_tests;
 /// GPU `#define` row parser. Phase 17b.6: per `TOK_PREPROC` token of
@@ -329,7 +329,7 @@ pub fn try_classify_preprocessor_directive(
 fn classify_phase2_preprocessor_directive(
     line: &[u8],
 ) -> Result<CPreprocessorDirective, CPreprocessorError> {
-    let mut index = skip_horizontal_ws(line, 0);
+    let mut index = skip_ws_and_comments(line, 0);
     if line.get(index).copied() != Some(b'#') {
         return Err(CPreprocessorError {
             offset: index,
@@ -338,7 +338,7 @@ fn classify_phase2_preprocessor_directive(
     }
 
     index += 1;
-    index = skip_horizontal_ws(line, index);
+    index = skip_ws_and_comments(line, index);
     if index >= line.len() {
         return Ok(CPreprocessorDirective {
             kind: CPreprocessorDirectiveKind::Null,
@@ -387,7 +387,7 @@ fn classify_phase2_preprocessor_directive(
         kind,
         keyword_start,
         keyword_len: keyword.len(),
-        payload_start: skip_horizontal_ws(line, index),
+        payload_start: skip_ws_and_comments(line, index),
         logical_end: line.len(),
     })
 }
@@ -410,72 +410,17 @@ pub fn reference_c_preprocessor_directive_metadata(
     source: &[u8],
     defined_macros: &[&[u8]],
 ) -> Result<(Vec<u32>, Vec<u32>), CPreprocessorError> {
-    if tok_types.len() != tok_starts.len() || tok_types.len() != tok_lens.len() {
-        return Err(CPreprocessorError {
-            offset: tok_types.len().min(tok_starts.len()).min(tok_lens.len()),
-            message: "Fix: token type/start/length streams must have identical lengths",
-        });
-    }
-
     let mut directive_kinds = vec![0; tok_types.len()];
     let mut directive_values = vec![0; tok_types.len()];
-    for (idx, ((tok_type, start), len)) in
-        tok_types.iter().zip(tok_starts).zip(tok_lens).enumerate()
-    {
-        if *tok_type != TOK_PREPROC {
-            continue;
-        }
-        let start = usize::try_from(*start).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token start does not fit host usize",
-        })?;
-        let len = usize::try_from(*len).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token length does not fit host usize",
-        })?;
-        let token_end = start.checked_add(len).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: token span overflows source address space",
-        })?;
-        let physical_logical_len = c_logical_directive_len(source, start);
-        if physical_logical_len > len {
-            return Err(CPreprocessorError {
-                offset: start + len,
-                message:
-                    "Fix: TOK_PREPROC span must include the full phase-2 spliced directive row",
-            });
-        }
-        let logical_end = start
-            .checked_add(physical_logical_len)
-            .ok_or(CPreprocessorError {
-                offset: start,
-                message: "Fix: directive logical span overflows source address space",
-            })?;
-        if token_end > source.len() {
-            return Err(CPreprocessorError {
-                offset: start,
-                message: "Fix: preprocessor token span must be inside the source buffer",
-            });
-        }
-        let row = source.get(start..logical_end).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: preprocessor token span must be inside the source buffer",
-        })?;
-        let spliced = c_translation_phase_line_splice(row);
-        let directive =
-            classify_phase2_preprocessor_directive(&spliced.bytes).map_err(|mut err| {
-                err.offset = start + spliced.original_offset(err.offset);
-                err
-            })?;
-        directive_kinds[idx] = directive.kind.token_id();
-        directive_values[idx] =
-            conditional_directive_value(&spliced.bytes, directive, defined_macros)
-                .map_err(|mut err| {
-                    err.offset = start + spliced.original_offset(err.offset);
-                    err
-                })?
+    directive_scan::for_each_directive_row(tok_types, tok_starts, tok_lens, source, |row| {
+        let scan = ScannedDirective::classify(row.bytes, row.start)?;
+        directive_kinds[row.index] = scan.directive.kind.token_id();
+        directive_values[row.index] =
+            conditional_directive_value(&scan.spliced.bytes, scan.directive, defined_macros)
+                .map_err(|err| scan.remap(err))?
                 .unwrap_or(0);
-    }
+        Ok(())
+    })?;
     Ok((directive_kinds, directive_values))
 }
 
@@ -512,7 +457,7 @@ pub use expr_parser::is_reserved_preprocessor_identifier;
 use expr_parser::PreprocessorExprParser;
 
 pub(super) fn first_payload_ident(payload: &[u8]) -> Option<&[u8]> {
-    let mut index = skip_horizontal_ws(payload, 0);
+    let mut index = skip_ws_and_comments(payload, 0);
     let start = index;
     if !payload.get(index).copied().is_some_and(is_c_ident_start) {
         return None;
@@ -533,8 +478,13 @@ pub(super) fn macro_is_defined(defined_macros: &[&[u8]], name: &[u8]) -> bool {
     defined_macros.iter().any(|candidate| *candidate == name)
 }
 
+/// Skip horizontal whitespace and comments in a directive line.
+///
+/// Directive classification runs before the comment-strip stage, so a comment
+/// here is still literal bytes and counts as whitespace. Payload scanning runs
+/// after that stage and uses [`directive_scan::skip_horizontal_ws`] instead.
 #[inline]
-pub(super) fn skip_horizontal_ws(bytes: &[u8], mut index: usize) -> usize {
+pub(super) fn skip_ws_and_comments(bytes: &[u8], mut index: usize) -> usize {
     loop {
         match bytes.get(index).copied() {
             Some(b' ' | b'\t' | b'\x0b' | b'\x0c') => index += 1,

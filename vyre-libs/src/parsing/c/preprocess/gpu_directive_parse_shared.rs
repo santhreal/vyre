@@ -1,5 +1,6 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+pub(super) use super::gpu_source_bytes::source_buffer_element;
 pub(super) use super::gpu_source_bytes::SourceByteLayout as DirectiveSourceLayout;
 
 pub(super) const DIRECTIVE_PARSE_WORKGROUP_SIZE: u32 = 256;
@@ -198,13 +199,21 @@ pub(super) fn push_ws_skip_from_expr(
     ));
 }
 
-pub(super) fn push_hash_and_keyword_start(
+/// Leading horizontal-whitespace run, `#`, and the byte index of that `#`.
+///
+/// `prefix` names the byte and whitespace-flag bindings this stage leaves in
+/// scope. Consumers bind them in their own namespace: the classifier reads
+/// `s_*`, the payload evaluators read `hs_*`. The scan itself is the same
+/// straight-line chain either way, capped at [`MAX_DIRECTIVE_WS_PREFIX`]
+/// leading whitespace bytes.
+pub(super) fn push_hash_scan(
     parse: &mut Vec<Node>,
     source_layout: DirectiveSourceLayout,
+    prefix: &str,
 ) {
     for p in 0..=MAX_DIRECTIVE_WS_PREFIX {
         parse.push(Node::let_bind(
-            format!("hs_{p}"),
+            format!("{prefix}_{p}"),
             safe_source_byte_expr(
                 source_layout,
                 Expr::add(Expr::var("tok_start"), Expr::u32(p)),
@@ -213,18 +222,25 @@ pub(super) fn push_hash_and_keyword_start(
     }
     for p in 0..=MAX_DIRECTIVE_WS_PREFIX {
         parse.push(Node::let_bind(
-            format!("hs_ws_{p}"),
-            horizontal_ws_flag(Expr::var(format!("hs_{p}"))),
+            format!("{prefix}_ws_{p}"),
+            horizontal_ws_flag(Expr::var(format!("{prefix}_{p}"))),
         ));
     }
     parse.push(Node::let_bind(
         "hash_off",
-        hash_offset_expr("hs", MAX_DIRECTIVE_WS_PREFIX),
+        hash_offset_expr(prefix, MAX_DIRECTIVE_WS_PREFIX),
     ));
     parse.push(Node::let_bind(
         "hash_idx",
         Expr::add(Expr::var("tok_start"), Expr::var("hash_off")),
     ));
+}
+
+/// Whether [`push_hash_scan`] found a `#` inside the leading-whitespace cap.
+///
+/// Consumers place this where their own let-chain wants it, which is why it is
+/// a stage rather than part of [`push_hash_scan`].
+pub(super) fn push_found_hash(parse: &mut Vec<Node>) {
     parse.push(Node::let_bind(
         "found_hash",
         Expr::select(
@@ -236,14 +252,34 @@ pub(super) fn push_hash_and_keyword_start(
             Expr::u32(0),
         ),
     ));
+}
+
+/// Whitespace run between `#` and the directive keyword, leaving `kw_start`
+/// at the first keyword byte.
+pub(super) fn push_keyword_start(
+    parse: &mut Vec<Node>,
+    source_layout: DirectiveSourceLayout,
+    prefix: &str,
+) {
     push_ws_skip_from_expr(
         parse,
         source_layout,
-        "kp",
+        prefix,
         Expr::add(Expr::var("hash_idx"), Expr::u32(1)),
         "kw_skip",
         "kw_start",
     );
+}
+
+/// The payload builders' composition of the scan: hash, found-hash flag, then
+/// keyword start.
+pub(super) fn push_hash_and_keyword_start(
+    parse: &mut Vec<Node>,
+    source_layout: DirectiveSourceLayout,
+) {
+    push_hash_scan(parse, source_layout, "hs");
+    push_found_hash(parse);
+    push_keyword_start(parse, source_layout, "kp");
 }
 
 pub(super) fn push_keyword_end(parse: &mut Vec<Node>, keyword_len: Expr) {
@@ -251,6 +287,53 @@ pub(super) fn push_keyword_end(parse: &mut Vec<Node>, keyword_len: Expr) {
         "post_kw",
         Expr::add(Expr::var("kw_start"), keyword_len),
     ));
+}
+
+/// Keyword bytes `k_0..=k_count` plus their ident-continue flags. The extra
+/// trailing byte is the sentinel that keeps `define` from matching `defined`.
+pub(super) fn push_keyword_bytes(
+    parse: &mut Vec<Node>,
+    source_layout: DirectiveSourceLayout,
+    count: u32,
+) {
+    for i in 0..=count {
+        parse.push(Node::let_bind(
+            format!("k_{i}"),
+            safe_source_byte_expr(
+                source_layout,
+                Expr::add(Expr::var("kw_start"), Expr::u32(i)),
+            ),
+        ));
+    }
+    for i in 0..=count {
+        parse.push(Node::let_bind(
+            format!("k_is_continue_{i}"),
+            c_ident_continue_flag(Expr::var(format!("k_{i}"))),
+        ));
+    }
+}
+
+/// `1` when the bytes [`push_keyword_bytes`] read spell `expected` and the
+/// next byte is not an ident-continue byte, else `0`.
+pub(super) fn keyword_match_expr(expected: &[u32]) -> Expr {
+    let mut all_eq = Expr::u32(1);
+    for (i, byte) in expected.iter().copied().enumerate() {
+        let eq_byte = Expr::select(
+            Expr::eq(Expr::var(format!("k_{i}")), Expr::u32(byte)),
+            Expr::u32(1),
+            Expr::u32(0),
+        );
+        all_eq = Expr::bitand(all_eq, eq_byte);
+    }
+    let next_not_ident = Expr::select(
+        Expr::eq(
+            Expr::var(format!("k_is_continue_{}", expected.len())),
+            Expr::u32(0),
+        ),
+        Expr::u32(1),
+        Expr::u32(0),
+    );
+    Expr::bitand(all_eq, next_not_ident)
 }
 
 pub(super) fn push_c_identifier_span(

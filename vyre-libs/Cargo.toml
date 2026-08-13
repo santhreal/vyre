@@ -359,3 +359,8 @@ required-features = ["c-parser"]
 name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c_preprocess_dedup_guard"
+path = "tests/c_preprocess_dedup_guard.rs"
+required-features = ["c-parser"]

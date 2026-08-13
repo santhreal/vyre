@@ -77,6 +77,10 @@ use super::gpu_if_expression_abi::{
     BINDING_MACRO_OFFSETS, BINDING_MACRO_VALUES, BINDING_SOURCE, BINDING_TOK_LENS,
     BINDING_TOK_STARTS, OP_ID, STACK_DEPTH,
 };
+use super::gpu_directive_parse_shared::{
+    push_directive_row_bounds, push_hash_and_keyword_start, push_keyword_end,
+    push_ws_skip_from_expr,
+};
 use super::gpu_source_bytes::{
     safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
     SourceByteLayout,
@@ -155,15 +159,12 @@ fn gpu_if_expression_with_byte_layouts(
 
             // Only if/elif tokens get evaluated by THIS kernel.
             let mut evaluate: Vec<Node> = Vec::new();
-            evaluate.push(Node::let_bind("tok_start", Expr::load("tok_starts", t.clone())));
-            evaluate.push(Node::let_bind("tok_len", Expr::load("tok_lens", t.clone())));
-            evaluate.push(Node::let_bind(
-                "tok_end",
-                Expr::add(Expr::var("tok_start"), Expr::var("tok_len")),
-            ));
-            // Step past leading whitespace, `#`, optional whitespace,
-            // and the keyword (`if` = 2, `elif` = 4). After this
-            // `scan_pos` points at the first byte of the payload.
+            // The directive-line scan is the shared one: row bounds, leading
+            // whitespace and `#`, whitespace before the keyword, the keyword,
+            // whitespace before the payload. `scan_pos` then starts at the
+            // first payload byte and the shunting-yard loop takes over.
+            push_directive_row_bounds(&mut evaluate);
+            push_hash_and_keyword_start(&mut evaluate, source_layout);
             evaluate.push(Node::let_bind(
                 "keyword_len",
                 Expr::select(
@@ -172,63 +173,16 @@ fn gpu_if_expression_with_byte_layouts(
                     Expr::u32(4),
                 ),
             ));
-            evaluate.push(Node::let_bind("scan_pos", Expr::var("tok_start")));
-            for step in &["pre_hash", "pre_kw", "pre_payload"] {
-                let done = format!("ws_done_{step}");
-                evaluate.push(Node::let_bind(&done, Expr::u32(0)));
-                evaluate.push(Node::loop_for(
-                    &format!("ws_{step}"),
-                    Expr::u32(0),
-                    Expr::var("tok_len"),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var(&done), Expr::u32(0)),
-                        vec![
-                            Node::let_bind("wb", safe_load_src(Expr::var("scan_pos"))),
-                            Node::let_bind(
-                                "wb_ws",
-                                Expr::select(
-                                    Expr::or(
-                                        Expr::or(
-                                            Expr::eq(Expr::var("wb"), Expr::u32(b' ' as u32)),
-                                            Expr::eq(Expr::var("wb"), Expr::u32(b'\t' as u32)),
-                                        ),
-                                        Expr::or(
-                                            Expr::eq(Expr::var("wb"), Expr::u32(0x0B)),
-                                            Expr::eq(Expr::var("wb"), Expr::u32(0x0C)),
-                                        ),
-                                    ),
-                                    Expr::u32(1),
-                                    Expr::u32(0),
-                                ),
-                            ),
-                            Node::if_then_else(
-                                Expr::eq(Expr::var("wb_ws"), Expr::u32(1)),
-                                vec![Node::assign(
-                                    "scan_pos",
-                                    Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                                )],
-                                vec![Node::assign(&done, Expr::u32(1))],
-                            ),
-                        ],
-                    )],
-                ));
-                if *step == "pre_hash" {
-                    // Step past the `#`.
-                    evaluate.push(Node::if_then(
-                        Expr::eq(safe_load_src(Expr::var("scan_pos")), Expr::u32(b'#' as u32)),
-                        vec![Node::assign(
-                            "scan_pos",
-                            Expr::add(Expr::var("scan_pos"), Expr::u32(1)),
-                        )],
-                    ));
-                } else if *step == "pre_kw" {
-                    // Step past keyword bytes.
-                    evaluate.push(Node::assign(
-                        "scan_pos",
-                        Expr::add(Expr::var("scan_pos"), Expr::var("keyword_len")),
-                    ));
-                }
-            }
+            push_keyword_end(&mut evaluate, Expr::var("keyword_len"));
+            push_ws_skip_from_expr(
+                &mut evaluate,
+                source_layout,
+                "ip",
+                Expr::var("post_kw"),
+                "payload_skip",
+                "payload_start",
+            );
+            evaluate.push(Node::let_bind("scan_pos", Expr::var("payload_start")));
 
             // ---------- Initialise stacks ----------
             evaluate.push(Node::let_bind("vsp", Expr::u32(0)));
@@ -1649,10 +1603,18 @@ fn gpu_if_expression_with_byte_layouts(
                 ),
                 {
                     let mut gated = evaluate;
-                    gated.push(Node::store(
-                        "directive_values",
-                        t.clone(),
-                        Expr::var("expr_value_out"),
+                    // Commit only when the scan actually found `#` inside the
+                    // leading-whitespace cap. Past the cap `hash_idx` is a
+                    // wrapped address and every offset derived from it is
+                    // meaningless, so the row gets the failsafe 0 instead. The
+                    // sibling `gpu_ifdef_value` gates the same way.
+                    gated.push(Node::if_then(
+                        Expr::eq(Expr::var("found_hash"), Expr::u32(1)),
+                        vec![Node::store(
+                            "directive_values",
+                            t.clone(),
+                            Expr::var("expr_value_out"),
+                        )],
                     ));
                     gated
                 },

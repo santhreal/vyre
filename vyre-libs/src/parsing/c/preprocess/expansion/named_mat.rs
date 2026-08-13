@@ -2,8 +2,7 @@
 
 #![allow(missing_docs)] // Internal macro-expansion helpers are documented at the owning module boundary.
 use crate::parsing::c::preprocess::materialization::*;
-use crate::region::wrap_anonymous;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use super::fnlike_mat::*;
 use super::helpers::*;
@@ -43,130 +42,102 @@ pub fn opt_named_macro_expansion_materialized(
     max_out_tokens: u32,
     max_out_source_bytes: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
     let tok_buffer_count = max_input_tokens.max(1);
     let out_buffer_count = max_out_tokens.max(1);
     let out_source_count = max_out_source_bytes.max(1);
 
-    let mut process_current = emit_named_macro_scan_prefix(NamedMacroScanSpec {
-        in_tok_types,
-        in_tok_starts,
-        in_tok_lens,
-        source_words,
-        source_layout: MacroByteLayout::RawU8,
-        macro_name_hashes,
-        macro_name_starts,
-        macro_name_lens,
-        macro_name_words,
-        macro_name_layout: MacroByteLayout::RawU8,
-        macro_vals,
-        macro_kinds,
-        macro_param_counts,
-        source_len: source_len.clone(),
-        decode_variadic_param_count: true,
+    let process_current = emit_named_macro_dispatch(NamedMacroDispatchSpec {
+        scan: NamedMacroScanSpec {
+            in_tok_types,
+            in_tok_starts,
+            in_tok_lens,
+            source_words,
+            source_layout: MacroByteLayout::RawU8,
+            macro_name_hashes,
+            macro_name_starts,
+            macro_name_lens,
+            macro_name_words,
+            macro_name_layout: MacroByteLayout::RawU8,
+            macro_vals,
+            macro_kinds,
+            macro_param_counts,
+            source_len: source_len.clone(),
+            decode_variadic_param_count: true,
+        },
+        macro_sizes,
+        num_tokens: num_tokens.clone(),
+        unknown_passthrough: emit_materialized_output_token(
+            "passthrough",
+            Expr::var("named_tok"),
+            source_words,
+            MacroByteLayout::RawU8,
+            Expr::load(in_tok_starts, Expr::var("named_i")),
+            Expr::load(in_tok_lens, Expr::var("named_i")),
+            source_len.clone(),
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_source_words,
+            max_out_tokens,
+            max_out_source_bytes,
+            "passthrough-token-source-span-out-of-bounds",
+        ),
+        object_like: emit_materialized_object_like_replacement(
+            macro_vals,
+            macro_replacement_params,
+            macro_replacement_starts,
+            macro_replacement_lens,
+            macro_replacement_words,
+            MacroByteLayout::RawU8,
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_source_words,
+            macro_replacement_source_len.clone(),
+            max_out_tokens,
+            max_out_source_bytes,
+        ),
+        function_name_passthrough: emit_materialized_output_token(
+            "function_name_passthrough",
+            Expr::var("named_tok"),
+            source_words,
+            MacroByteLayout::RawU8,
+            Expr::load(in_tok_starts, Expr::var("named_i")),
+            Expr::load(in_tok_lens, Expr::var("named_i")),
+            source_len.clone(),
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_source_words,
+            max_out_tokens,
+            max_out_source_bytes,
+            "function-name-passthrough-source-span-out-of-bounds",
+        ),
+        function_like: emit_materialized_function_like_replacement(MaterializedFunctionLikeSpec {
+            in_tok_types,
+            in_tok_starts,
+            in_tok_lens,
+            source_words,
+            source_layout: MacroByteLayout::RawU8,
+            macro_vals,
+            macro_replacement_params,
+            macro_replacement_starts,
+            macro_replacement_lens,
+            macro_replacement_words,
+            macro_replacement_layout: MacroByteLayout::RawU8,
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_source_words,
+            macro_arg_starts: "macro_arg_starts",
+            macro_arg_ends: "macro_arg_ends",
+            num_tokens: num_tokens.clone(),
+            source_len: source_len.clone(),
+            macro_replacement_source_len: macro_replacement_source_len.clone(),
+            max_out_tokens,
+            max_out_source_bytes,
+        }),
     });
-    process_current.push(Node::if_then_else(
-        Expr::eq(Expr::var("named_macro_slot"), Expr::u32(EMPTY_MACRO_SLOT)),
-        {
-            let mut passthrough = emit_materialized_output_token(
-                "passthrough",
-                Expr::var("named_tok"),
-                source_words,
-                MacroByteLayout::RawU8,
-                Expr::load(in_tok_starts, Expr::var("named_i")),
-                Expr::load(in_tok_lens, Expr::var("named_i")),
-                source_len.clone(),
-                out_tok_types,
-                out_tok_starts,
-                out_tok_lens,
-                out_source_words,
-                max_out_tokens,
-                max_out_source_bytes,
-                "passthrough-token-source-span-out-of-bounds",
-            );
-            passthrough.push(Node::assign(
-                "named_i",
-                Expr::add(Expr::var("named_i"), Expr::u32(1)),
-            ));
-            passthrough
-        },
-        {
-            let mut expanded =
-                emit_named_replacement_prelude(macro_sizes, in_tok_types, num_tokens.clone());
-            expanded.push(Node::if_then_else(
-                Expr::eq(
-                    Expr::var("named_macro_kind"),
-                    Expr::u32(C_MACRO_KIND_OBJECT_LIKE),
-                ),
-                emit_materialized_object_like_replacement(
-                    macro_vals,
-                    macro_replacement_params,
-                    macro_replacement_starts,
-                    macro_replacement_lens,
-                    macro_replacement_words,
-                    MacroByteLayout::RawU8,
-                    out_tok_types,
-                    out_tok_starts,
-                    out_tok_lens,
-                    out_source_words,
-                    macro_replacement_source_len.clone(),
-                    max_out_tokens,
-                    max_out_source_bytes,
-                ),
-                vec![Node::if_then_else(
-                    Expr::eq(Expr::var("named_has_open_paren"), Expr::u32(0)),
-                    {
-                        let mut passthrough = emit_materialized_output_token(
-                            "function_name_passthrough",
-                            Expr::var("named_tok"),
-                            source_words,
-                            MacroByteLayout::RawU8,
-                            Expr::load(in_tok_starts, Expr::var("named_i")),
-                            Expr::load(in_tok_lens, Expr::var("named_i")),
-                            source_len.clone(),
-                            out_tok_types,
-                            out_tok_starts,
-                            out_tok_lens,
-                            out_source_words,
-                            max_out_tokens,
-                            max_out_source_bytes,
-                            "function-name-passthrough-source-span-out-of-bounds",
-                        );
-                        passthrough.push(Node::assign(
-                            "named_i",
-                            Expr::add(Expr::var("named_i"), Expr::u32(1)),
-                        ));
-                        passthrough
-                    },
-                    emit_materialized_function_like_replacement(
-                        in_tok_types,
-                        in_tok_starts,
-                        in_tok_lens,
-                        source_words,
-                        MacroByteLayout::RawU8,
-                        macro_vals,
-                        macro_replacement_params,
-                        macro_replacement_starts,
-                        macro_replacement_lens,
-                        macro_replacement_words,
-                        MacroByteLayout::RawU8,
-                        out_tok_types,
-                        out_tok_starts,
-                        out_tok_lens,
-                        out_source_words,
-                        "macro_arg_starts",
-                        "macro_arg_ends",
-                        num_tokens.clone(),
-                        source_len.clone(),
-                        macro_replacement_source_len.clone(),
-                        max_out_tokens,
-                        max_out_source_bytes,
-                    ),
-                )],
-            ));
-            expanded
-        },
-    ));
 
     Program::wrapped(
         vec![
@@ -257,32 +228,13 @@ pub fn opt_named_macro_expansion_materialized(
                 .with_count(tok_buffer_count),
         ],
         [1, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::parsing::opt_named_macro_expansion_materialized",
-            vec![Node::if_then(
-                Expr::eq(t, Expr::u32(0)),
-                vec![
-                    Node::let_bind("named_i", Expr::u32(0)),
-                    Node::let_bind("named_out_idx", Expr::u32(0)),
-                    Node::let_bind("named_source_out_idx", Expr::u32(0)),
-                    Node::loop_for(
-                        "named_cursor",
-                        Expr::u32(0),
-                        num_tokens,
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("named_cursor"), Expr::var("named_i")),
-                            process_current,
-                        )],
-                    ),
-                    Node::store(out_tok_counts, Expr::u32(0), Expr::var("named_out_idx")),
-                    Node::store(
-                        out_source_counts,
-                        Expr::u32(C_MACRO_SOURCE_COUNT_BYTES),
-                        Expr::var("named_source_out_idx"),
-                    ),
-                ],
-            )],
-        )],
+        vec![emit_named_expansion_driver(NamedExpansionDriverSpec {
+            op_id: "vyre-libs::parsing::opt_named_macro_expansion_materialized",
+            body: process_current,
+            num_tokens,
+            out_tok_counts,
+            out_source_counts: Some(out_source_counts),
+        })],
     )
     .with_entry_op_id("vyre-libs::parsing::opt_named_macro_expansion_materialized_v6")
     .with_non_composable_with_self(true)
