@@ -27,6 +27,7 @@ use super::super::metrics::{ifds_queue_baseline_metric_points, ifds_queue_metric
 use super::{
     ifds_queue_traverse_logical_lanes, ifds_queue_traverse_plan, ifds_sparse_queue_capacity,
 };
+use crate::cases::queue_stage::{QUEUE_RESET_GRID};
 
 pub(in crate::cases::dataflow_irregular) const QUEUE_MATERIALIZE_SUITES: &[SuiteKind] = &[
     SuiteKind::Smoke,
@@ -35,52 +36,6 @@ pub(in crate::cases::dataflow_irregular) const QUEUE_MATERIALIZE_SUITES: &[Suite
     SuiteKind::Honest,
 ];
 
-pub(in crate::cases::dataflow_irregular) const QUEUE_FRONTIER_IN_INDEX: usize = 0;
-pub(in crate::cases::dataflow_irregular) const QUEUE_ACTIVE_QUEUE_INDEX: usize = 1;
-pub(in crate::cases::dataflow_irregular) const QUEUE_LEN_INDEX: usize = 2;
-pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_OFFSETS_INDEX: usize = 3;
-pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_TARGETS_INDEX: usize = 4;
-pub(in crate::cases::dataflow_irregular) const QUEUE_EDGE_KIND_INDEX: usize = 5;
-pub(in crate::cases::dataflow_irregular) const QUEUE_FRONTIER_OUT_INDEX: usize = 6;
-pub(in crate::cases::dataflow_irregular) const QUEUE_HIGH_QUEUE_INDEX: usize = 7;
-pub(in crate::cases::dataflow_irregular) const QUEUE_HIGH_LEN_INDEX: usize = 8;
-pub(in crate::cases::dataflow_irregular) const QUEUE_RESET_RESOURCE_INDICES: [usize; 1] =
-    [QUEUE_LEN_INDEX];
-pub(in crate::cases::dataflow_irregular) const QUEUE_HIGH_RESET_RESOURCE_INDICES: [usize; 1] =
-    [QUEUE_HIGH_LEN_INDEX];
-pub(in crate::cases::dataflow_irregular) const QUEUE_BUILD_RESOURCE_INDICES: [usize; 4] = [
-    QUEUE_FRONTIER_IN_INDEX,
-    QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_LEN_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX,
-];
-pub(in crate::cases::dataflow_irregular) const QUEUE_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
-    QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_LEN_INDEX,
-    QUEUE_EDGE_OFFSETS_INDEX,
-    QUEUE_EDGE_TARGETS_INDEX,
-    QUEUE_EDGE_KIND_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX,
-];
-pub(in crate::cases::dataflow_irregular) const QUEUE_SPLIT_LOW_RESOURCE_INDICES: [usize; 8] = [
-    QUEUE_ACTIVE_QUEUE_INDEX,
-    QUEUE_LEN_INDEX,
-    QUEUE_EDGE_OFFSETS_INDEX,
-    QUEUE_EDGE_TARGETS_INDEX,
-    QUEUE_EDGE_KIND_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX,
-    QUEUE_HIGH_QUEUE_INDEX,
-    QUEUE_HIGH_LEN_INDEX,
-];
-pub(in crate::cases::dataflow_irregular) const QUEUE_HIGH_TRAVERSE_RESOURCE_INDICES: [usize; 6] = [
-    QUEUE_HIGH_QUEUE_INDEX,
-    QUEUE_HIGH_LEN_INDEX,
-    QUEUE_EDGE_OFFSETS_INDEX,
-    QUEUE_EDGE_TARGETS_INDEX,
-    QUEUE_EDGE_KIND_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX,
-];
-pub(in crate::cases::dataflow_irregular) const QUEUE_RESET_GRID: [u32; 3] = [1, 1, 1];
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueuePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,

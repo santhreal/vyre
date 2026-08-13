@@ -1,4 +1,4 @@
-use super::cli_report_io::read_report_bounded;
+use super::report_io::read_report_bounded;
 use crate::report::json::ReportSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

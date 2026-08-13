@@ -1,7 +1,6 @@
 //! Metric-key plumbing: small key/value helpers used by `collect.rs` and
 //! `report.rs` to look up metrics by stable name.
 
-#[path = "metric_keys/graph.rs"]
 mod graph;
 
 pub(super) fn rate_per_second_x1000(units: u64, wall_ns: u64, scale: u64) -> u64 {

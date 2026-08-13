@@ -1,12 +1,13 @@
 use super::super::fixture::{ifds_active_high_degree_sources, ifds_queue_inputs};
 use super::super::queue::{
     ifds_queue_should_use_split_high_degree, ifds_queue_traverse_logical_lanes,
-    ifds_sparse_queue_capacity, QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_HIGH_QUEUE_INDEX,
-};
+    ifds_sparse_queue_capacity, };
 use super::*;
 use vyre_primitives::graph::csr_queue_split::{
     csr_queue_split_mixed_logical_lanes, CSR_QUEUE_SPLIT_HIGH_DEGREE_THRESHOLD,
 };
+use crate::cases::mix32;
+use crate::cases::queue_stage::{QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_HIGH_QUEUE_INDEX};
 
 #[test]
 fn generated_ifds_queue_split_targets_only_active_hub_rows() {
@@ -113,10 +114,3 @@ fn generated_word_queue_materializer_launches_frontier_words_not_nodes() {
     );
 }
 
-fn mix32(mut value: u32) -> u32 {
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7FEB_352D);
-    value ^= value >> 15;
-    value = value.wrapping_mul(0x846C_A68B);
-    value ^ (value >> 16)
-}

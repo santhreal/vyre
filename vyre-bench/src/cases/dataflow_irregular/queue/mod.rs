@@ -30,19 +30,11 @@ mod materialize;
 pub(super) use closure::{
     ifds_queue_closure_delta_lanes_per_source, ifds_queue_closure_inputs,
     ifds_queue_closure_reset_program, ifds_skewed_queue_closure_oracle,
-    prepare_ifds_skewed_queue_closure, QUEUE_CLOSURE_ACCUMULATOR_INDEX,
-    QUEUE_CLOSURE_EDGE_KIND_INDEX, QUEUE_CLOSURE_EDGE_OFFSETS_INDEX,
-    QUEUE_CLOSURE_EDGE_TARGETS_INDEX, QUEUE_CLOSURE_LEN_A_INDEX, QUEUE_CLOSURE_LEN_B_INDEX,
-    QUEUE_CLOSURE_QUEUE_A_INDEX, QUEUE_CLOSURE_QUEUE_B_INDEX, QUEUE_CLOSURE_SEED_FRONTIER_INDEX,
-    QUEUE_CLOSURE_SEED_LEN_INDEX, QUEUE_CLOSURE_SEED_QUEUE_INDEX,
-};
+    prepare_ifds_skewed_queue_closure, };
 #[cfg(test)]
 pub(super) use materialize::{
     ifds_queue_materialize_sequence_fingerprint, ifds_queue_should_use_split_high_degree,
-    prepare_ifds_skewed_queue_materialize_step, QUEUE_ACTIVE_QUEUE_INDEX, QUEUE_FRONTIER_IN_INDEX,
-    QUEUE_FRONTIER_OUT_INDEX, QUEUE_HIGH_LEN_INDEX, QUEUE_HIGH_QUEUE_INDEX, QUEUE_LEN_INDEX,
-    QUEUE_RESET_GRID,
-};
+    prepare_ifds_skewed_queue_materialize_step, };
 
 pub(super) const ACTIVE_QUEUE_ACTIVE_QUEUE_INDEX: usize = 0;
 pub(super) const ACTIVE_QUEUE_LEN_INDEX: usize = 1;

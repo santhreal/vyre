@@ -1,9 +1,10 @@
 use crate::api::case::BenchError;
 use crate::api::suite::SuiteKind;
 use crate::cases::skewed_graph::{
-    mix32, skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
+    skewed_degree as shared_skewed_degree, skewed_target, sparse_queue_capacity,
 };
 use vyre_primitives::bitset::frontier::materialize_frontier_queue_exact_count_into;
+use crate::cases::mix32;
 
 pub(super) const CSR_NODE_COUNT: u32 = 1_048_576;
 pub(super) const CSR_ALLOW_MASK: u32 = 0b0111;

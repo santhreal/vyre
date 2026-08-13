@@ -106,102 +106,11 @@ pub fn kernel_time_table_json(report: &ReportSchema) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::case::Correctness;
-    use crate::api::metric::MetricStats;
-    use crate::probes::environment::EnvironmentData;
-    use crate::report::{CaseReport, ReportSchema, ReportSummary};
-    use std::collections::BTreeMap;
-
-    fn stat(p50: u64, p99: u64) -> MetricStats {
-        MetricStats {
-            min: p50,
-            p50,
-            p90: p50,
-            p95: p50,
-            p99,
-            p999: p99,
-            p9999: p99,
-            max: p99,
-            mean: p50 as f64,
-            stddev: 0.0,
-            samples: 30,
-            determinism_cv: None,
-        }
-    }
-
-    fn case(id: &str, stages: &[(&str, u64, u64)]) -> CaseReport {
-        let mut metrics = BTreeMap::new();
-        for (k, p50, p99) in stages {
-            metrics.insert((*k).to_string(), stat(*p50, *p99));
-        }
-        CaseReport {
-            id: id.to_string(),
-            workload_fingerprint: format!("bench-case:{id}"),
-            name: id.to_string(),
-            owner_crate: "vyre-bench-test".to_string(),
-            workload_class: "Micro".to_string(),
-            tags: Vec::new(),
-            backend_id: Some("test".to_string()),
-            device_signature: Some("device-profile-v1:test".to_string()),
-            held_out_corpus_id: Some(format!("heldout:bench-case:{id}")),
-            needs_gpu: false,
-            min_vram_bytes: None,
-            min_input_bytes: None,
-            required_features: Vec::new(),
-            status: "ok".to_string(),
-            wall_ns: None,
-            correctness: Correctness::Exact,
-            contract: None,
-            performance: None,
-            metrics,
-            optimization_passes_applied: Vec::new(),
-            artifacts: Vec::new(),
-        }
-    }
-
-    fn schema(cases: Vec<CaseReport>) -> ReportSchema {
-        ReportSchema {
-            schema: "vyre-bench/v1".to_string(),
-            run_id: "test".to_string(),
-            suite: "kernel_time_test".to_string(),
-            selected_backend: Some("test".to_string()),
-            backend_profile: None,
-            git: BTreeMap::new(),
-            source_fingerprint: "test-source".to_string(),
-            source_tree_fingerprint: "test-source-tree".to_string(),
-            environment: EnvironmentData {
-                os: "test".to_string(),
-                architecture: "x86_64".to_string(),
-                cpu_model: Some("test-cpu".to_string()),
-                cpu_cores: 1,
-                has_gpu: true,
-                gpu_devices: vec![crate::probes::environment::GpuDeviceInfo {
-                    name: "NVIDIA GeForce RTX 5090".to_string(),
-                    driver_version: "test-driver".to_string(),
-                    memory_total_mib: Some(32_768),
-                    compute_capability_major: Some(12),
-                    compute_capability_minor: Some(0),
-                }],
-                nvidia_driver_version: Some("test-driver".to_string()),
-                nvidia_cuda_version: Some("test-cuda".to_string()),
-                features: vec!["gpu.nvidia_smi".to_string()],
-            },
-            features: Vec::new(),
-            cases,
-            summary: ReportSummary {
-                total_cases: 0,
-                passed: 0,
-                failed: 0,
-                total_time_ns: 0,
-                cache_hit_rate: None,
-            },
-            blockers: Vec::new(),
-        }
-    }
+    use crate::report::fixture::{case, schema};
 
     #[test]
     fn multi_case_table() {
-        let report = schema(vec![
+        let report = schema("kernel_time_test", vec![
             case(
                 "op_a",
                 &[
@@ -222,7 +131,7 @@ mod tests {
 
     #[test]
     fn single_case_table() {
-        let report = schema(vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
+        let report = schema("kernel_time_test", vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(lines.len(), 2);
@@ -231,7 +140,7 @@ mod tests {
 
     #[test]
     fn missing_kernel_execute_emits_explicit_missing_fields() {
-        let report = schema(vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
+        let report = schema("kernel_time_test", vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(
@@ -244,7 +153,7 @@ mod tests {
 
     #[test]
     fn empty_report_only_header() {
-        let report = schema(vec![]);
+        let report = schema("kernel_time_test", vec![]);
         let table = kernel_time_table(&report);
         let lines: Vec<&str> = table.lines().collect();
         assert_eq!(lines.len(), 1, "only header for empty report");
@@ -252,7 +161,7 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_multi_case() {
-        let report = schema(vec![
+        let report = schema("kernel_time_test", vec![
             case(
                 "op_a",
                 &[
@@ -280,7 +189,7 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_single_case() {
-        let report = schema(vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
+        let report = schema("kernel_time_test", vec![case("single", &[("kernel_execute_ns", 999, 1500)])]);
         let out = kernel_time_table_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -290,7 +199,7 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_missing_kernel_execute_emits_nulls() {
-        let report = schema(vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
+        let report = schema("kernel_time_test", vec![case("no_kernel", &[("optimize_ns", 100, 200)])]);
         let out = kernel_time_table_json(&report);
         let parsed: serde_json::Value = serde_json::from_str(&out).unwrap();
         let arr = parsed.as_array().unwrap();
@@ -302,7 +211,7 @@ mod tests {
 
     #[test]
     fn kernel_time_table_json_empty_report() {
-        let report = schema(vec![]);
+        let report = schema("kernel_time_test", vec![]);
         let out = kernel_time_table_json(&report);
         assert_eq!(out, "[]");
     }

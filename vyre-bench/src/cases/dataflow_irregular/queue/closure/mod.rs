@@ -22,11 +22,10 @@ use super::super::fixture::{
 use super::ifds_queue_should_use_row_strided;
 
 mod metrics;
-mod sequence;
 mod support;
 
 use metrics::{queue_closure_baseline_metric_points, queue_closure_metric_points};
-use sequence::dispatch_resident_queue_closure_sequence;
+use crate::cases::queue_stage::{QueueClosureSequenceRun, ResidentQueueClosureSpec};
 #[cfg(not(test))]
 use support::ifds_skewed_queue_closure_oracle;
 #[cfg(test)]
@@ -44,17 +43,6 @@ const QUEUE_CLOSURE_SUITES: &[SuiteKind] = &[
 ];
 const QUEUE_CLOSURE_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_FRONTIER_INDEX: usize = 0;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_QUEUE_INDEX: usize = 1;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_SEED_LEN_INDEX: usize = 2;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_A_INDEX: usize = 3;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_A_INDEX: usize = 4;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_QUEUE_B_INDEX: usize = 5;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_LEN_B_INDEX: usize = 6;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_OFFSETS_INDEX: usize = 7;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_TARGETS_INDEX: usize = 8;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_EDGE_KIND_INDEX: usize = 9;
-pub(in crate::cases::dataflow_irregular) const QUEUE_CLOSURE_ACCUMULATOR_INDEX: usize = 10;
 
 pub(in crate::cases::dataflow_irregular) struct DataflowIfdsSkewedQueueClosurePrepared {
     pub(in crate::cases::dataflow_irregular) reset_program: Program,
@@ -342,4 +330,27 @@ pub(in crate::cases::dataflow_irregular) fn prepare_ifds_skewed_queue_closure(
 
 inventory::submit! {
     &DataflowIfdsSkewedQueueClosure as &'static dyn BenchCase
+}
+
+fn dispatch_resident_queue_closure_sequence(
+    ctx: &BenchContext,
+    prepared: &DataflowIfdsSkewedQueueClosurePrepared,
+    resident: &ResidentInputSet,
+) -> Result<QueueClosureSequenceRun, BenchError> {
+    crate::cases::queue_stage::dispatch_resident_queue_closure_sequence(
+        ctx,
+        ResidentQueueClosureSpec {
+            reset_program: &prepared.reset_program,
+            clear_len_program: &prepared.clear_len_program,
+            delta_program: &prepared.delta_program,
+            frontier_words: prepared.stats.frontier_words,
+            seed_queue_len: prepared.seed_queue_len,
+            baseline_output_len: prepared.baseline_output.len(),
+            closure_iterations: prepared.closure_iterations,
+            delta_grid: prepared.delta_grid,
+            workgroup: QUEUE_CLOSURE_WORKGROUP_SIZE,
+            context: "IFDS queue closure",
+        },
+        resident,
+    )
 }
