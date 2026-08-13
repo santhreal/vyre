@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
   "authority": "canonical OperationRegistration records joined with reference-owned ReferenceFacet and concrete-driver target facets, built Programs and signatures, Cargo manifests, algebraic-law inventories, and docs/optimization/OP_MATRIX.toml backend rows",
-  "operation_count": 368,
+  "operation_count": 369,
   "tier_counts": {
     "intrinsic": 9,
-    "libs": 204,
+    "libs": 205,
     "primitive": 150,
     "runtime": 5
   },
@@ -34,7 +34,7 @@
     "substrate": 2,
     "text": 6,
     "vfs": 1,
-    "visual": 9
+    "visual": 10
   },
   "operations": [
     {
@@ -21090,6 +21090,89 @@
         {
           "depth": 0,
           "operation": "vyre-libs::visual::box_shadow",
+          "registered": true
+        }
+      ]
+    },
+    {
+      "id": "vyre-libs::visual::cell_grid",
+      "tier": "libs",
+      "category": "visual",
+      "signature": {
+        "kind": "program_buffers",
+        "buffers": [
+          {
+            "binding": 0,
+            "name": "cells",
+            "access": "ReadOnly",
+            "memory": "Readonly",
+            "element": "U32",
+            "count": 4,
+            "pipeline_live_out": false
+          },
+          {
+            "binding": 1,
+            "name": "out",
+            "access": "ReadWrite",
+            "memory": "Global",
+            "element": "U32",
+            "count": 16,
+            "pipeline_live_out": false
+          }
+        ],
+        "inputs": [],
+        "outputs": [],
+        "attributes": [],
+        "bytes_extraction": false
+      },
+      "features": [
+        "visual"
+      ],
+      "oracle": {
+        "reference_eval": true,
+        "flat_reference_facet": false,
+        "fixture_inputs": true,
+        "expected_output": true,
+        "tolerance_ulp": 0
+      },
+      "backend_support": {
+        "cuda": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "reference": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        },
+        "wgpu": {
+          "status": "supported",
+          "test_paths": [
+            "vyre-libs/tests/universal_harness.rs",
+            "conform/vyre-conform/tests/op_matrix_truth.rs"
+          ]
+        }
+      },
+      "target_facets": [
+        "cuda",
+        "spirv",
+        "wgpu"
+      ],
+      "laws": [],
+      "composition_chain": [
+        {
+          "depth": 0,
+          "operation": "vyre-libs::visual::cell_grid",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "vyre-primitives::visual::packed_rgba_map",
           "registered": true
         }
       ]
