@@ -17,6 +17,7 @@
 //! - `composite`  -  IR expressions only (alpha arithmetic)
 //! - `gradient`  -  IR expressions only (dot product + lerp)
 //! - `downsample`  -  IR expressions only (box filter = average of 4)
+//! - `cell_grid`  -  IR expressions only (constant div/mul index arithmetic)
 //! - `glass`  -  composes blur + filter_chain (hero composition)
 
 use vyre_foundation::ir::Expr;
@@ -24,6 +25,8 @@ use vyre_foundation::ir::Expr;
 /// Two-pass separable Gaussian blur (composes `math::conv1d`).
 pub mod blur;
 pub(crate) mod byte_helpers;
+/// Character-cell grid expansion for terminal and text surfaces.
+pub mod cell_grid;
 /// Porter-Duff alpha compositing.
 pub mod composite;
 /// 2× box-filter downsample for half-resolution blur.
@@ -41,6 +44,7 @@ pub mod upsample;
 
 // Re-exports for the public API surface.
 pub use blur::{gaussian_blur_2pass, GaussianBlurStages};
+pub use cell_grid::{cell_grid_fill, GridShape};
 pub use composite::alpha_over;
 pub use downsample::downsample_2x;
 pub use filter_chain::filter_chain;

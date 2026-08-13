@@ -12,4 +12,5 @@
 mod tests {
     include!("contract_cases/visual_compositions__program_has_correct_buffers.rs");
     include!("contract_cases/visual_compositions__default_params.rs");
+    include!("contract_cases/visual_compositions__cell_grid.rs");
 }
