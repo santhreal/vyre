@@ -5,16 +5,18 @@
 //! (mul / add / shl) AND at least one operand is reachable from
 //! `@http_input_family` AND there is no dominating overflow check.
 
-use std::sync::Arc;
+use vyre_foundation::ir::Program;
+use vyre_primitives::bitset::and::bitset_and;
+use vyre_primitives::bitset::and_not::bitset_and_not;
+use vyre_primitives::bitset::bitset_words;
 
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_primitives::graph::csr_forward_traverse::bitset_words;
+use crate::security::flow_composition::fuse_security_flow;
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::integer_overflow_arith";
 
-/// Build an overflow-check Program: arith_set AND attacker_reach
-/// AND NOT overflow_check_dominates.
+/// Build an overflow-check Program: `arith_set AND attacker_reach`
+/// lands in `intermediate`, then that set minus
+/// `overflow_check_dominates` lands in `out`.
 #[must_use]
 pub fn integer_overflow_arith(
     node_count: u32,
@@ -25,49 +27,13 @@ pub fn integer_overflow_arith(
     out: &str,
 ) -> Program {
     let words = bitset_words(node_count);
-    let t = Expr::InvocationId { axis: 0 };
-    let attacker_arith = Expr::bitand(
-        Expr::load(arith_set, t.clone()),
-        Expr::load(attacker_reach, t.clone()),
-    );
-    let body = vec![
-        Node::let_bind("attacker_arith", attacker_arith),
-        Node::store(intermediate, t.clone(), Expr::var("attacker_arith")),
-        Node::store(
-            out,
-            t.clone(),
-            Expr::bitand(
-                Expr::var("attacker_arith"),
-                Expr::bitnot(Expr::load(overflow_check_dominates, t.clone())),
-            ),
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(arith_set, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(attacker_reach, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(
-                overflow_check_dominates,
-                2,
-                BufferAccess::ReadOnly,
-                DataType::U32,
-            )
-            .with_count(words),
-            BufferDecl::storage(intermediate, 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::output(out, 4, DataType::U32).with_count(words),
+    fuse_security_flow(
+        OP_ID,
+        &[
+            bitset_and(arith_set, attacker_reach, intermediate, words),
+            bitset_and_not(intermediate, overflow_check_dominates, out, words),
         ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(OP_ID),
-            source_region: None,
-            body: Arc::new(vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(words)),
-                body,
-            )]),
-        }],
+        out,
     )
 }
 

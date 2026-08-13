@@ -38,7 +38,9 @@ use vyre_spec::soundness::{validate_dynamic_pipeline, PrecisionContract};
 
 #[cfg(test)]
 use crate::security::flow_composition::sanitized_dataflow_hit_cpu_ref;
-use crate::security::flow_composition::sanitized_dataflow_hit_program;
+use crate::security::flow_composition::{
+    security_flow_program, SanitizerProjection, SecurityFlowOptions, SinkProjection,
+};
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to_with_sanitizer";
 /// Stable primitive id for a converged sanitizer-gated source-to-sink fixpoint.
@@ -203,18 +205,22 @@ pub fn flows_to_with_sanitizer(
     hits_buf: &str,
     out_scalar_buf: &str,
 ) -> Program {
-    sanitized_dataflow_hit_program(
+    security_flow_program(SecurityFlowOptions::sanitized_hit(
         OP_ID,
         shape,
         source_buf,
-        sink_buf,
-        sanitizer_buf,
-        clean_buf,
         reach_buf,
-        alive_buf,
-        hits_buf,
-        out_scalar_buf,
-    )
+        SanitizerProjection {
+            sanitizer: sanitizer_buf,
+            clean: clean_buf,
+            alive: alive_buf,
+        },
+        SinkProjection {
+            sink: sink_buf,
+            hits: hits_buf,
+            out_scalar: out_scalar_buf,
+        },
+    ))
 }
 
 /// CPU oracle: full one-step semantic for differential testing

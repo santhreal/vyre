@@ -19,7 +19,10 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 use vyre_primitives::predicate::edge_kind;
 
-use crate::security::flow_composition::dataflow_reach_program;
+use crate::security::flow_composition::{
+    forward_reach_fixture_expected, forward_reach_fixture_inputs, security_flow_program,
+    FlowPredicate, SecurityFlowOptions, FLOW_MAX_ITERATIONS,
+};
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::flows_to";
 
@@ -65,12 +68,13 @@ pub const ALIAS_PROPAGATION_MASK: u32 =
 /// receives the union of nodes reachable in one more dataflow hop.
 #[must_use]
 pub fn flows_to(shape: ProgramGraphShape, frontier_in: &str, frontier_out: &str) -> Program {
-    crate::security::assert_security_inputs(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
-        shape.node_count,
-        &[("frontier_in", frontier_in), ("frontier_out", frontier_out)],
-    );
-    dataflow_reach_program(OP_ID, shape, frontier_in, frontier_out, FLOWS_TO_MASK)
+        shape,
+        FlowPredicate::forward(FLOWS_TO_MASK),
+        frontier_in,
+        frontier_out,
+    ))
 }
 
 /// Build one forward-traversal step along ALIAS-only edges.
@@ -83,65 +87,29 @@ pub fn flows_to_alias_only(
     frontier_in: &str,
     frontier_out: &str,
 ) -> Program {
-    dataflow_reach_program(
+    security_flow_program(SecurityFlowOptions::reach(
         OP_ID,
         shape,
+        FlowPredicate::forward(ALIAS_PROPAGATION_MASK),
         frontier_in,
         frontier_out,
-        ALIAS_PROPAGATION_MASK,
+    ))
+}
+
+inventory::submit! {
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || flows_to(ProgramGraphShape::new(4, 3), "fin", "fout"),
+        Some(forward_reach_fixture_inputs),
+        Some(forward_reach_fixture_expected),
     )
+    .with_category("security")
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| flows_to(ProgramGraphShape::new(4, 3), "fin", "fout")),
-        test_inputs: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // Linear chain 0 → 1 → 2 → 3. Starting frontier {0}.
-            // `fout` starts as the accumulator frontier so the
-            // convergence lens monotonically grows {0,1,2,3}.
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets: 0→{1}, 1→{2}, 2→{3}, 3→{}
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask  -  all dataflow
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // fin = {0}
-                to_bytes(&[0b0001]),              // fout accumulator seed = {0}
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
-            // One forward-reach step from {0}: the step writes {1}
-            // into the accumulator. A no-op that leaves fout at {0}
-            // fails this oracle.
-            vec![vec![to_bytes(&[0b0011])]]
-        }),
-        category: Some("security"),
-    }
-}
-
-inventory::submit! {
-    // AUDIT_2026-04-24 F-FT-03: max_iterations raised from 64 to
-    // 4096 so deep call graphs (Linux kernel-scale code) don't hit
-    // a silent truncation ceiling during the closure. The fixpoint
-    // driver aborts early whenever the frontier stops growing, so
-    // a higher ceiling costs nothing on small graphs; the only
-    // case where this matters is a pathologically deep reachability
-    // walk, where the old 64-step cap was producing false negatives.
     crate::operation_catalog::ConvergenceContract {
         op_id: OP_ID,
-        max_iterations: 4096,
+        max_iterations: FLOW_MAX_ITERATIONS,
     }
 }
 

@@ -1,16 +1,19 @@
 //! `taint_pollution`  -  "did taint reach a label-tagged node?"
 //!
-//! The CodeQL `globalAllowingExtras` shape compressed to one
-//! Region. Composes a one-step BFS with intersection against a
-//! family-tagged node set, then any-reduce.
+//! The CodeQL `globalAllowingExtras` shape compressed to one Region. Same
+//! reach-then-intersect-then-any-reduce composition as
+//! [`crate::security::flows_to_to_sink::flows_to_to_sink`]; the sink predicate
+//! is a family-tagged node set rather than a sink-tagged one.
 
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
-use vyre_primitives::predicate::edge_kind;
 
-use crate::security::flow_composition::dataflow_hit_program;
 #[cfg(test)]
-use crate::security::flows_to::FLOWS_TO_MASK;
+use crate::security::flow_composition::dataflow_hit_cpu_ref;
+use crate::security::flow_composition::{
+    dataflow_hit_fixture_expected, dataflow_hit_fixture_inputs, security_flow_program,
+    SecurityFlowOptions, SinkProjection,
+};
 
 pub(crate) const OP_ID: &str = "vyre-libs::security::taint_pollution";
 
@@ -25,34 +28,17 @@ pub fn taint_pollution(
     hits_buf: &str,
     out_scalar: &str,
 ) -> Program {
-    dataflow_hit_program(
-        OP_ID, shape, source_buf, label_set, reach_buf, hits_buf, out_scalar,
-    )
-}
-
-/// CPU oracle.
-#[must_use]
-#[cfg(test)]
-pub(crate) fn cpu_ref(
-    node_count: u32,
-    edge_offsets: &[u32],
-    edge_targets: &[u32],
-    edge_kind_mask: &[u32],
-    source: &[u32],
-    label_set: &[u32],
-) -> u32 {
-    use vyre_primitives::bitset::and::cpu_ref as and_ref;
-    use vyre_primitives::graph::csr_forward_traverse::cpu_ref as fwd_ref;
-    let reach = fwd_ref(
-        node_count,
-        edge_offsets,
-        edge_targets,
-        edge_kind_mask,
-        source,
-        FLOWS_TO_MASK,
-    );
-    let hits = and_ref(&reach, label_set);
-    u32::from(hits.iter().any(|w| *w != 0))
+    security_flow_program(SecurityFlowOptions::hit(
+        OP_ID,
+        shape,
+        source_buf,
+        reach_buf,
+        SinkProjection {
+            sink: label_set,
+            hits: hits_buf,
+            out_scalar,
+        },
+    ))
 }
 
 /// Soundness marker for [`taint_pollution`].
@@ -64,43 +50,13 @@ impl vyre_spec::soundness::SoundnessTagged for TaintPollution {
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar")),
-        test_inputs: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![
-                to_bytes(&[0, 0, 0, 0]),          // pg_nodes
-                to_bytes(&[0, 1, 2, 3, 3]),       // pg_edge_offsets
-                to_bytes(&[1, 2, 3]),             // pg_edge_targets
-                to_bytes(&[
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                    edge_kind::ASSIGNMENT,
-                ]),                               // pg_edge_kind_mask
-                to_bytes(&[0, 0, 0, 0]),          // pg_node_tags
-                to_bytes(&[0b0001]),              // source = {0}
-                to_bytes(&[0b0001]),              // reach = {0}
-                to_bytes(&[0b0010]),              // label_set = {1}
-                to_bytes(&[0b0000]),              // hits
-                to_bytes(&[0b0000]),              // out_scalar
-            ]]
-        }),
-        expected_output: Some(|| {
-            let to_bytes = vyre_primitives::wire::pack_u32_slice;
-            vec![vec![
-                to_bytes(&[0b0011]),              // reach = {0,1}
-                to_bytes(&[0b0010]),              // hits = {1}
-                to_bytes(&[0b0001]),              // out_scalar = 1
-            ]]
-        }),
-        category: Some("security"),
-    }
+    vyre_foundation::operation::OperationRegistration::library(
+        OP_ID,
+        || taint_pollution(ProgramGraphShape::new(4, 3), "source", "label_set", "reach", "hits", "out_scalar"),
+        Some(dataflow_hit_fixture_inputs),
+        Some(dataflow_hit_fixture_expected),
+    )
+    .with_category("security")
 }
 
 #[cfg(test)]
@@ -114,7 +70,10 @@ mod tests {
         let off = vec![0u32, 1, 1];
         let tgt = vec![1u32];
         let msk = vec![edge_kind::ASSIGNMENT];
-        assert_eq!(cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0b10]), 1);
+        assert_eq!(
+            dataflow_hit_cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0b10]),
+            1
+        );
     }
 
     #[test]
@@ -122,7 +81,7 @@ mod tests {
         let off = vec![0u32, 1, 1];
         let tgt = vec![1u32];
         let msk = vec![edge_kind::ASSIGNMENT];
-        assert_eq!(cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0]), 0);
+        assert_eq!(dataflow_hit_cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0]), 0);
     }
 
     #[test]
@@ -130,7 +89,10 @@ mod tests {
         let off = vec![0u32, 1, 1];
         let tgt = vec![1u32];
         let msk = vec![edge_kind::ASSIGNMENT];
-        assert_eq!(cpu_ref(2, &off, &tgt, &msk, &[0], &[0xFFFF]), 0);
+        assert_eq!(
+            dataflow_hit_cpu_ref(2, &off, &tgt, &msk, &[0], &[0xFFFF]),
+            0
+        );
     }
 
     #[test]
@@ -139,6 +101,9 @@ mod tests {
         let off = vec![0u32, 1, 1];
         let tgt = vec![1u32];
         let msk = vec![edge_kind::ASSIGNMENT];
-        assert_eq!(cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0b01]), 0);
+        assert_eq!(
+            dataflow_hit_cpu_ref(2, &off, &tgt, &msk, &[0b01], &[0b01]),
+            0
+        );
     }
 }

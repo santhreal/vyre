@@ -529,3 +529,11 @@ required-features = ["nn-attention", "nn-norm"]
 name = "workgroup_cooperative_tiling"
 path = "tests/workgroup_cooperative_tiling.rs"
 required-features = ["nn-attention", "nn-norm"]
+
+# Step 0 guard for the security flow-skeleton clone family. Registered with
+# `required-features` so a package-scoped run without `security` skips it
+# instead of compiling a `#![cfg]`-emptied file to a vacuous pass.
+[[test]]
+name = "security_flow_skeleton_family_guard"
+path = "tests/security_flow_skeleton_family_guard.rs"
+required-features = ["security"]
