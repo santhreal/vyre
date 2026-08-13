@@ -1,3 +1,4 @@
+#[cfg(not(feature = "gpu"))]
 use super::*;
 
 #[cfg(not(feature = "gpu"))]

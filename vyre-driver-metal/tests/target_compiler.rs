@@ -8,7 +8,9 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+use vyre_megakernel::TargetModuleBundle;
 
 fn artifact() -> vyre_megakernel::Artifact {
     let program = Program::wrapped(
