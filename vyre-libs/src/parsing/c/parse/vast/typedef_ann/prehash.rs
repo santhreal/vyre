@@ -45,59 +45,26 @@ pub(super) fn c11_prehash_vast_identifiers_impl(
     let t = Expr::InvocationId { axis: 0 };
     let base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
 
-    let mut loop_body = vec![
-        Node::let_bind("raw_kind", Expr::load(vast_nodes, base.clone())),
-        Node::let_bind(
-            "tok_start",
-            Expr::load(vast_nodes, Expr::add(base.clone(), Expr::u32(5))),
-        ),
-        Node::let_bind(
-            "tok_len",
-            Expr::load(vast_nodes, Expr::add(base.clone(), Expr::u32(6))),
-        ),
-        Node::let_bind(
-            "name_hash",
-            Expr::load(
-                vast_nodes,
-                Expr::add(base.clone(), Expr::u32(VAST_TYPEDEF_SYMBOL_FIELD)),
-            ),
-        ),
-        Node::if_then(
-            Expr::eq(Expr::var("raw_kind"), Expr::u32(TOK_IDENTIFIER)),
-            vec![
-                Node::assign("name_hash", Expr::u32(0x811c9dc5)),
-                Node::loop_for(
-                    "hash_i",
-                    Expr::u32(0),
-                    Expr::var("tok_len"),
-                    vec![Node::if_then(
-                        Expr::lt(
-                            Expr::add(Expr::var("tok_start"), Expr::var("hash_i")),
-                            haystack_len.clone(),
-                        ),
-                        vec![
-                            Node::let_bind(
-                                "hash_byte",
-                                load_source_byte(
-                                    haystack,
-                                    Expr::add(Expr::var("tok_start"), Expr::var("hash_i")),
-                                    packed_haystack,
-                                ),
-                            ),
-                            Node::assign(
-                                "name_hash",
-                                Expr::bitxor(Expr::var("name_hash"), Expr::var("hash_byte")),
-                            ),
-                            Node::assign(
-                                "name_hash",
-                                Expr::mul(Expr::var("name_hash"), Expr::u32(0x01000193)),
-                            ),
-                        ],
-                    )],
-                ),
-            ],
-        ),
-    ];
+    let row = IdentifierRowHash {
+        vast_nodes,
+        haystack,
+        haystack_len: &haystack_len,
+        row_base: base.clone(),
+        packed_haystack,
+        names: IdentifierRowHashNames {
+            start: "tok_start",
+            len: "tok_len",
+            hash: "name_hash",
+            cursor: "hash_i",
+            byte: "hash_byte",
+        },
+    };
+
+    let mut loop_body = vec![Node::let_bind("raw_kind", Expr::load(vast_nodes, base.clone()))];
+    loop_body.extend(row.nodes(Expr::eq(
+        Expr::var("raw_kind"),
+        Expr::u32(TOK_IDENTIFIER),
+    )));
 
     for field in 0..VAST_NODE_STRIDE_U32 {
         let value = if field == VAST_TYPEDEF_SYMBOL_FIELD {

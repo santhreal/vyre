@@ -529,3 +529,8 @@ required-features = ["nn-attention", "nn-norm"]
 name = "workgroup_cooperative_tiling"
 path = "tests/workgroup_cooperative_tiling.rs"
 required-features = ["nn-attention", "nn-norm"]
+
+[[test]]
+name = "parsing_walker_clone_family"
+path = "tests/parsing_walker_clone_family.rs"
+required-features = ["parsing"]

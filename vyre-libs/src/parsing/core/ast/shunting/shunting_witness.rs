@@ -1,8 +1,18 @@
+//! The one registration and fixture set for the shunting-yard AST builder.
+//!
+//! This file used to carry a second `inventory::submit!` for `OP_ID` that was
+//! never compiled: `shunting.rs` declared only `emit` and `operator`, so the
+//! module was orphaned and its copy of the fixtures drifted. It built the
+//! unbounded `ast_shunting_yard` instead of the capacity-bounded builder and
+//! expected empty scratch buffers back. The compiled registration in
+//! `shunting.rs` is the one kept here.
+
 use crate::parsing::c::lex::tokens::TOK_IDENTIFIER;
 use crate::parsing::core::ast::node::AST_VAR;
 use vyre_foundation::ir::Expr;
+use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
-use super::{ast_shunting_yard, pack_u32, MAX_TOK_SCAN, OP_ID};
+use super::{MAX_TOK_SCAN, OP_ID, ast_shunting_yard_with_capacity};
 
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration {
@@ -12,10 +22,11 @@ inventory::submit! {
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
         id: OP_ID,
-        build: Some(|| ast_shunting_yard(
+        build: Some(|| ast_shunting_yard_with_capacity(
             "tok_types", "statements", Expr::u32(100),
             "out_ast_nodes", "out_ast_count", "out_statement_roots",
-            "scratch_val_stack", "scratch_op_stack"
+            "scratch_val_stack", "scratch_op_stack",
+            MAX_TOK_SCAN, 100
         )),
         test_inputs: Some(|| vec![vec![
             shunting_token_fixture(),
@@ -52,7 +63,7 @@ fn shunting_expected_output() -> Vec<Vec<Vec<u8>>> {
         pack_u32(&ast_nodes),
         pack_u32(&[4]),
         pack_u32(&roots),
-        Vec::new(),
-        Vec::new(),
+        vec![0u8; 6_400 * 4],
+        vec![0u8; 6_400 * 4],
     ]]
 }

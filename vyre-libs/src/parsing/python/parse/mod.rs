@@ -6,6 +6,8 @@ pub mod calls;
 pub mod decorators;
 /// Python declaration/span extractor.
 pub mod structure;
+/// The one Python token-stream AST walk every extractor projects from.
+mod walk;
 
 use crate::parsing::python::INVALID_POS;
 use vyre_foundation::ir::{Expr, Node};
