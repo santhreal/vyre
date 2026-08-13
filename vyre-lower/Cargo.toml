@@ -19,6 +19,8 @@ name = "vyre_lower"
 path = "src/lib.rs"
 
 [features]
+default = []
+
 # Fixture builders for kernel descriptors, used only by emitter tests. Off by
 # default so a published build does not carry test scaffolding.
 test-fixtures = []

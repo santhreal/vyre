@@ -396,10 +396,11 @@
     {
       "name": "vyre-lower",
       "manifest": "vyre-lower/Cargo.toml",
-      "feature_count": 1,
-      "has_default_feature": false,
+      "feature_count": 2,
+      "has_default_feature": true,
       "default_feature_members": [],
       "features": [
+        "default",
         "test-fixtures"
       ],
       "malformed_features": [],
@@ -573,7 +574,5 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     }
   ],
-  "blockers": [
-    "vyre-lower defines 1 feature(s) but no explicit default feature policy"
-  ]
+  "blockers": []
 }
