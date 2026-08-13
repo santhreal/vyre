@@ -46,8 +46,8 @@ require_grep 'inventory::collect!\(BackendPrecedence\);' "$inventory_file" \
     "BackendPrecedence must be an inventory collection in $inventory_file"
 require_grep 'inventory::collect!\(BackendCapability\);' "$inventory_file" \
     "BackendCapability must be an inventory collection in $inventory_file"
-require_grep 'OnceLock<Box<\[\&'"'"'static BackendRegistration\]>>' "$inventory_file" \
-    "registered_backends must freeze inventory into a process-wide OnceLock slice"
+require_grep 'LazyLock<Result<BackendRegistry, BackendError>>' "$inventory_file" \
+    "registered_backends must freeze inventory through one fallible process-wide registry"
 require_grep 'inventory::iter::<BackendRegistration>' "$inventory_file" \
     "registered_backends must be populated from inventory::iter::<BackendRegistration>"
 require_grep 'registered_backends_by_precedence_slice' "$acquire_file" \
@@ -61,7 +61,7 @@ if rg -n '"(cuda|wgpu|spirv|metal|dxil)"' vyre-driver/src/backend/registry >/tmp
 fi
 rm -f /tmp/vyre-backend-hardcoded-ids.txt
 
-for crate in vyre-driver-cuda vyre-driver-wgpu vyre-driver-spirv vyre-driver-reference; do
+for crate in vyre-driver-cuda vyre-driver-wgpu vyre-driver-metal vyre-driver-spirv vyre-driver-reference; do
     if [[ ! -f "$crate/Cargo.toml" ]]; then
         fail "$crate/Cargo.toml missing"
         continue

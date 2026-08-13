@@ -9,19 +9,10 @@ fn prove_merges_live_gpu_certificate_shards() {
     let selected_backend = selected_backend_override();
 
     for (shard, path) in [("0/64", &shard_a), ("1/64", &shard_b)] {
-        let mut command = Command::new("cargo");
-        command.env("VYRE_CONFORM_PROOF_WORKERS", "16").args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--features",
-            "gpu",
-            "--quiet",
-            "--",
-            "prove",
-            "--shard",
-            shard,
-        ]);
+        let mut command = Command::new(conform_binary());
+        command
+            .env("VYRE_CONFORM_PROOF_WORKERS", "16")
+            .args(["prove", "--shard", shard]);
         if let Some(backend) = selected_backend.as_deref() {
             command.args(["--backend", backend]);
         }
@@ -29,29 +20,20 @@ fn prove_merges_live_gpu_certificate_shards() {
             .arg("--out")
             .arg(path)
             .status()
-            .expect("Fix: cargo must be available in PATH");
+            .expect("Fix: the built vyre-conform binary must launch");
         assert!(
             status.success(),
             "Fix: live GPU proof shard {shard} must emit a signed certificate."
         );
     }
 
-    let status = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--no-default-features",
-            "--quiet",
-            "--",
-            "merge",
-            "--out",
-        ])
+    let status = Command::new(conform_binary())
+        .args(["merge", "--out"])
         .arg(&merged)
         .arg(&shard_a)
         .arg(&shard_b)
         .status()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         status.success(),
         "Fix: merge must accept live signed GPU proof shards."
@@ -111,23 +93,11 @@ fn prove_merges_live_gpu_certificate_shards() {
 #[test]
 fn plan_emits_deterministic_shard_manifest_without_dispatch() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
-    let status = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--features",
-            "gpu",
-            "--quiet",
-            "--",
-            "plan",
-            "--shard",
-            "0/64",
-            "--out",
-        ])
+    let status = Command::new(conform_binary())
+        .args(["plan", "--shard", "0/64", "--out"])
         .arg(out.path())
         .status()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         status.success(),
         "Fix: proof planning must not acquire or dispatch a backend; it should only emit the selected executable shard manifest."

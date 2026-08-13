@@ -930,32 +930,6 @@ mod tests {
 
     #[test]
     fn program_facts_build_exposes_fallible_reservation_path() {
-        let production = include_str!("program_soa.rs")
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: ProgramFacts production section should precede tests");
-
-        assert!(
-            production.contains("pub fn try_build"),
-            "Fix: ProgramFacts must expose a fallible build path for release optimizers."
-        );
-        assert!(
-            production.contains("reserve_program_fact_columns"),
-            "Fix: ProgramFacts column storage should reserve through one shared helper."
-        );
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: ProgramFacts production code must not use infallible Vec capacity constructors."
-        );
-        assert!(
-            !production.contains(".expect("),
-            "Fix: ProgramFacts production compatibility builders must not panic on allocation pressure."
-        );
-        assert!(
-            !production.contains("with_capacity_and_hasher"),
-            "Fix: ProgramFacts production indexes must not use infallible hash-map capacity constructors."
-        );
-
         let facts = ProgramFacts::try_build(&program(vec![Node::let_bind("x", Expr::u32(1))]))
             .expect("Fix: small ProgramFacts build should reserve successfully");
         assert_eq!(facts.let_sites_of("x").len(), 1);

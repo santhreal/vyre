@@ -192,21 +192,4 @@ mod tests {
             SpeculationVerdict::Adopt
         );
     }
-
-    #[test]
-    fn speculation_policy_source_uses_exact_widened_arithmetic() {
-        let source = include_str!("speculation_substrate.rs");
-
-        assert!(
-            !source.contains(concat!("saturating", "_add"))
-                && !source.contains(concat!("saturating", "_mul")),
-            "Fix: speculation adoption policy must use widened exact arithmetic, not saturating math that can hide release-path cost corruption."
-        );
-        assert!(
-            source.contains("u128::from(obs.speculative_mean_ns)")
-                && source.contains("u128::from(obs.baseline_mean_ns)")
-                && source.contains("crate::numeric::ratio_basis_points_u64_wide"),
-            "Fix: speculation adoption policy must compute effective cost and savings in widened integer space."
-        );
-    }
 }

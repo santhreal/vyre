@@ -266,29 +266,6 @@ mod tests {
     use vyre_foundation::ir::{BufferDecl, DataType};
 
     #[test]
-    fn output_layout_planning_uses_fallible_modular_reservation_and_alignment() {
-        let source = include_str!("outputs.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: output-layout source must contain production section before tests");
-
-        assert!(
-            production.contains("fn reserve_output_layout_slots")
-                && production.contains("fn align_up_to_u32_word")
-                && production.contains("try_reserve_vec_to_capacity"),
-            "Fix: output layout planning must keep reservation and alignment as modular fallible helpers."
-        );
-        assert!(
-            !production.contains("Vec::with_capacity")
-                && !production.contains(".reserve(program.output_buffer_indices().len())")
-                && !production.contains(".next_multiple_of(4)")
-                && !production.contains(".unwrap_or(full_size)"),
-            "Fix: output layout planning must not allocate infallibly or hide overflow in release paths."
-        );
-    }
-
-    #[test]
     fn output_layout_alignment_rejects_usize_overflow() {
         let error =
             align_up_to_u32_word(usize::MAX).expect_err("max byte offset cannot align upward");

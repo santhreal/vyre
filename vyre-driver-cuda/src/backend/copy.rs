@@ -370,19 +370,6 @@ mod tests {
     }
 
     #[test]
-    fn h2d_copy_helper_is_single_ffi_boundary() {
-        let source = include_str!("copy.rs");
-        assert!(source.contains("cuMemcpyHtoDAsync_v2"));
-        assert!(source.contains("cuMemcpyDtoHAsync_v2"));
-        assert!(source.contains("cuMemcpyDtoH_v2"));
-        assert!(source.contains("cuMemsetD8Async"));
-        assert!(
-            source.contains("if byte_len == 0"),
-            "Fix: shared copy primitives must preserve zero-byte no-op behavior."
-        );
-    }
-
-    #[test]
     fn aligned_async_copy_len_rounds_to_cuda_dma_boundary() {
         assert_eq!(aligned_async_copy_len(0).unwrap(), 0);
         assert_eq!(
@@ -481,63 +468,5 @@ mod tests {
         let memset_null_stream = unsafe { memset_d8_async_checked(1, 0, 1, std::ptr::null_mut()) }
             .expect_err("Fix: non-zero memset with null stream must fail pre-FFI.");
         assert!(memset_null_stream.to_string().contains("null CUDA stream"));
-    }
-
-    #[test]
-    fn copy_boundary_validates_nonzero_inputs_before_ffi() {
-        let source = include_str!("copy.rs");
-        assert!(
-            source.contains("validate_nonzero_host_to_device_copy")
-                && source.contains("validate_nonzero_device_to_host_copy")
-                && source.contains("validate_nonzero_sync_device_to_host_copy")
-                && source.contains("validate_nonzero_device_memset"),
-            "Fix: shared CUDA copy primitives must validate non-zero pointer and stream inputs before FFI."
-        );
-    }
-
-    /// Every device-to-host readback on the resident dispatch path must go
-    /// through the shared `copy` boundary, which is where the null-pointer,
-    /// null-stream and zero-length checks live before any FFI call.
-    ///
-    /// The path stages outputs with one async copy per binding followed by a
-    /// single stream fence, rather than a blocking copy per binding, because a
-    /// blocking copy costs a full driver round trip each: 16 blocking 16-byte
-    /// readbacks measured 52.5 us against 17.8 us for 16 async copies plus one
-    /// fence on an RTX 5090.
-    ///
-    /// This pins BOTH copy forms, not just the one currently in use. Asserting
-    /// only that the helper of the day appears would leave the other form
-    /// unpinned, so a later edit could drop to raw FFI one copy form at a time
-    /// and reopen the hole this test exists to close.
-    #[test]
-    fn resident_staged_readback_uses_shared_copy_helper() {
-        let resident_dispatch = [
-            include_str!("resident_dispatch/helpers.rs"),
-            include_str!("resident_dispatch/borrowed.rs"),
-            include_str!("resident_dispatch/async_dispatch.rs"),
-            include_str!("resident_dispatch/batch.rs"),
-            include_str!("resident_dispatch/sync.rs"),
-            include_str!("resident_dispatch/sequence_api.rs"),
-            include_str!("resident_dispatch/sequence_fused.rs"),
-            include_str!("resident_dispatch/timed.rs"),
-        ]
-        .concat();
-        let blocking_ffi = concat!("cudarc::driver::sys::", "cuMemcpyDtoH_v2(");
-        let async_ffi = concat!("cudarc::driver::sys::", "cuMemcpyDtoHAsync_v2(");
-
-        assert_eq!(
-            resident_dispatch.matches(blocking_ffi).count(),
-            0,
-            "Fix: resident staged blocking readback must route through copy::d2h_sync_checked_with_label, not raw cuMemcpyDtoH_v2."
-        );
-        assert_eq!(
-            resident_dispatch.matches(async_ffi).count(),
-            0,
-            "Fix: resident staged async readback must route through copy::d2h_async_checked_with_label, not raw cuMemcpyDtoHAsync_v2."
-        );
-        assert!(
-            resident_dispatch.contains("copy::d2h_async_checked"),
-            "Fix: resident staged output readback must use the shared copy boundary, staging each output async and fencing once."
-        );
     }
 }

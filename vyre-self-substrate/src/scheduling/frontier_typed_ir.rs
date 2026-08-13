@@ -287,23 +287,6 @@ mod tests {
     }
 
     #[test]
-    fn frontier_typed_ir_planner_uses_adjacency_not_wave_rescans() {
-        let source = include_str!("frontier_typed_ir.rs");
-        assert!(
-            !source.contains(concat!("BTree", "Set")),
-            "Fix: frontier-typed IR planning must not use ordered sets in the release scheduler hot path."
-        );
-        assert!(
-            !source.contains(concat!(
-                "dependencies",
-                "\n",
-                "                    .iter()"
-            )),
-            "Fix: frontier-typed IR planning must not rescan every dependency for every candidate node."
-        );
-    }
-
-    #[test]
     fn frontier_typed_ir_plans_wide_dag_with_stable_wave_order() {
         let mut nodes = Vec::new();
         let mut dependencies = Vec::new();

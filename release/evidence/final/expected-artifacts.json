@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "command_count": 15,
-  "artifact_count": 40,
+  "artifact_count": 34,
   "commands": [
     {
       "generator_command": "xtask docs-check",
@@ -140,8 +140,8 @@
         "release/evidence/optimization/optimization-corpus.json",
         "release/evidence/optimization/optimization-corpus-contracts.json",
         "release/evidence/optimization/optimization-family-manifest.json",
-        "release/evidence/optimization/optimization-analysis-fixtures.json",
-        "release/evidence/optimization/optimization-case-manifest.json"
+        "release/evidence/optimization/optimization-case-manifest.json",
+        "release/evidence/optimization/optimizer-pass-manifest.json"
       ],
       "artifact_contracts": []
     },
@@ -150,13 +150,7 @@
       "command_mode": "spawned",
       "required": true,
       "expected_artifacts": [
-        "release/evidence/optimization/optimization-integration-matrix.json",
-        "release/evidence/optimization/alias-aware-dse.json",
-        "release/evidence/optimization/alias-aware-stlf.json",
-        "release/evidence/optimization/alias-aware-licm.json",
-        "release/evidence/optimization/alias-aware-fusion-fission.json",
-        "release/evidence/optimization/egraph-saturation-matrix.json",
-        "release/evidence/optimization/egraph-semantic-contracts.json"
+        "release/evidence/optimization/optimization-integration-matrix.json"
       ],
       "artifact_contracts": []
     },

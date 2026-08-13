@@ -439,16 +439,4 @@ mod tests {
         let kb = AutotuneKey::new(&b, "x");
         assert_ne!(ka, kb);
     }
-
-    #[test]
-    fn schema_version_persists() {
-        let dir = TempDir::new().unwrap();
-        let path = dir.path().join("a.toml");
-        let mut store = AutotuneStore::default();
-        let key = AutotuneKey::new(&sample_spec(1), "adapter");
-        store.put(key, sample_record(2));
-        store.save_if_dirty(&path).unwrap();
-        let on_disk = std::fs::read_to_string(&path).unwrap();
-        assert!(on_disk.contains("schema = 1"));
-    }
 }

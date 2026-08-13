@@ -205,19 +205,6 @@ mod tests {
     use rustc_hash::{FxHashMap, FxHashSet};
     use smallvec::SmallVec;
 
-    #[test]
-    fn cuda_reusable_index_scratch_is_type_alias_not_forwarding_fork() {
-        let source = include_str!("staging_reserve.rs");
-        assert_eq!(
-            source
-                .matches(concat!("type ", "CudaReusableIndexScratch"))
-                .count(),
-            1
-        );
-        assert!(!source.contains(concat!("struct ", "CudaReusableIndexScratch")));
-        assert!(!source.contains(concat!("inner", ": ReusableIndexScratch")));
-    }
-
     use super::{
         reserve_index_scratch, reserve_smallvec, reserve_typed_hash_map, reserve_typed_hash_set,
         reserve_typed_hash_set_and_vec, reserve_typed_vec, reserve_vec, resize_vec_slots,

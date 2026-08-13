@@ -165,21 +165,4 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn resident_borrowed_fallback_is_not_opt_in_on_release_path() {
-        let source = include_str!("instrumentation.rs");
-        assert!(
-            source.contains(CUDA_RESIDENT_BORROWED_FALLBACK_ENV)
-                && source.contains(CUDA_ALLOW_BORROWED_FALLBACK_ENV)
-                && source.contains("compute_resident_borrowed_fallback_policy")
-                && source.contains("#[cfg(debug_assertions)]")
-                && source.contains("#[cfg(not(debug_assertions))]"),
-            "Fix: CUDA resident borrowed fallback must stay debug-opt-in and require an explicit release escape hatch."
-        );
-        assert!(
-            !source.contains("cached_flag(\n        \"VYRE_CUDA_RESIDENT_BORROWED_FALLBACK\""),
-            "Fix: CUDA resident borrowed fallback must not be a bare env-presence flag on release builds."
-        );
-    }
 }

@@ -192,21 +192,4 @@ mod tests {
             other => panic!("expected PersistentKernel; got {:?}", other),
         }
     }
-
-    #[test]
-    fn persistent_policy_source_uses_exact_widened_arithmetic() {
-        let source = include_str!("persistent_kernel_policy.rs");
-
-        assert!(
-            !source.contains(concat!("saturating", "_mul"))
-                && !source.contains(concat!("saturating", "_sub")),
-            "Fix: persistent-kernel policy must use exact widened arithmetic, not saturating launch-cost math."
-        );
-        assert!(
-            source.contains("u128::from(inputs.batch_size)")
-                && source.contains("u128::from(inputs.per_launch_overhead_ns)")
-                && source.contains("standard_overhead - persistent_setup_overhead_ns"),
-            "Fix: persistent-kernel savings must stay widened through the verdict."
-        );
-    }
 }

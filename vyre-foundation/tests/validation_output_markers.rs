@@ -16,7 +16,7 @@ fn zero_output_buffers_passes() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V022")),
+        !errors.iter().any(|e| e.code().as_str() == "V022"),
         "zero output buffers must not trigger V022, got: {:?}",
         errors
     );
@@ -31,7 +31,7 @@ fn single_output_buffer_passes() {
     );
     let errors = validate(&program);
     assert!(
-        !errors.iter().any(|e| e.message().contains("V022")),
+        !errors.iter().any(|e| e.code().as_str() == "V022"),
         "single output buffer must not trigger V022, got: {:?}",
         errors
     );
@@ -49,7 +49,7 @@ fn two_output_buffers_fails_with_v022() {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e.message().contains("V022")),
+        errors.iter().any(|e| e.code().as_str() == "V022"),
         "two output buffers must trigger V022, got: {:?}",
         errors
     );
@@ -68,7 +68,7 @@ fn three_output_buffers_fails_with_v022() {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e.message().contains("V022")),
+        errors.iter().any(|e| e.code().as_str() == "V022"),
         "three output buffers must trigger V022, got: {:?}",
         errors
     );

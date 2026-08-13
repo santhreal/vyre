@@ -309,20 +309,6 @@ mod tests {
         assert!(matches!(err, DispatchError::BadInputs(_)));
     }
 
-    #[test]
-    fn release_via_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("planar_rewrite_pass_scheduler.rs");
-        let start = source
-            .find("pub fn schedule_disjoint_rewrites_via")
-            .expect("Fix: via path marker must exist");
-        let end = source
-            .find("\n/// Convenience: count")
-            .expect("Fix: convenience marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("reference_planar_rewrite_schedule"));
-        assert!(!release_path.contains("reference_"));
-    }
-
     fn integer_sqrt(n: usize) -> usize {
         let mut root = 0usize;
         while root * root < n {

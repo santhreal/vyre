@@ -193,12 +193,12 @@ text = "Command-line documentation now inventories and executes all 12 workspace
 [[fragments]]
 id = "bounded-sharded-safetensors-ingestion"
 category = "Added"
-text = "The runtime now reads bounded safetensors headers and sharded indexes without reading tensor payloads, confines shard paths to the checkpoint root, rejects duplicate or unmapped tensors, validates caller-supplied dtype and shape requirements, and streams complete shards against an exact trusted BLAKE3 set before returning an immutable checkpoint identity."
+text = "The vyre-safetensors adapter reads bounded safetensors headers and sharded indexes without reading tensor payloads, confines shard paths to the checkpoint root, rejects duplicate or unmapped tensors, validates caller-supplied dtype and shape requirements, and streams complete shards against an exact trusted BLAKE3 set before returning an immutable checkpoint identity."
 
 [[fragments]]
-id = "model-residency-lifecycle"
+id = "resource-residency-lifecycle"
 category = "Added"
-text = "The runtime now owns immutable model weights, reusable compiled pipelines, and mutable per-sequence state through one budgeted residency boundary. Cold and warm admission, rollback, cancellation, generation-checked reset, completion, eviction, and manager destruction release resources without exposing stale state."
+text = "The runtime now owns immutable resources, reusable artifact instances, and mutable leased state through one budgeted residency boundary. Cold and warm admission, rollback, cancellation, generation-checked reset, completion, eviction, and manager destruction release resources without exposing stale state."
 
 [[fragments]]
 id = "typed-program-graph-wire"
@@ -263,3 +263,14 @@ text = "Foundation now exposes IR-specific `IrError` and `IrResult` contracts in
 id = "documentation-and-dependency-authority"
 category = "Changed"
 text = "Documentation pages now declare audience, owner, authority, kind, and generated/manual ownership. Crate dependency records declare purpose, features, target conditions, visibility, and destination seam, and optimizer pass reference pages are generated from the live pass registry."
+
+
+[[fragments]]
+id = "semantic-parity-fixture-projection"
+category = "Changed"
+text = "Floating-point parity now uses one foundation-owned comparison contract for semantic operation witnesses, including each operation's declared tolerance. The library operation catalog distinguishes the complete semantic inventory from its deterministic executable-fixture projection."
+
+[[fragments]]
+id = "callable-typedef-conformance"
+category = "Changed"
+text = "C typedef row phases remain canonical callable operations. The operation matrix marks them as inlined callees whose execution coverage belongs to fixture-backed parent operations."

@@ -678,24 +678,6 @@ mod tests {
     }
 
     #[test]
-    fn speculation_source_uses_exact_arithmetic_for_report_and_race_policy() {
-        let source = include_str!("speculate.rs");
-
-        assert!(
-            !source.contains(concat!("saturating", "_add"))
-                && !source.contains(concat!("saturating", "_sub"))
-                && !source.contains(concat!("saturating", "_mul")),
-            "Fix: speculation report, hysteresis, and race timing policy must use exact widened arithmetic rather than saturating release-path counters."
-        );
-        assert!(
-            source.contains("u64::from(self.committed_tiles) + u64::from(self.rolled_back_tiles)")
-                && source.contains("u128::from(self.conservative_compile_ns)")
-                && source.contains("u128::from(self.speculative_compile_ns)"),
-            "Fix: speculation policy must widen before tile-count and timing arithmetic."
-        );
-    }
-
-    #[test]
     fn adaptive_speculator_starts_enabled_at_threshold_seed() {
         let s = AdaptiveSpeculator::new(15);
         assert!(s.should_speculate());

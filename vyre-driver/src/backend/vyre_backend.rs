@@ -1293,40 +1293,4 @@ mod tests {
         assert_eq!(u64::from_le_bytes(output[8..16].try_into().unwrap()), 4);
         assert_eq!(u64::from_le_bytes(output[16..24].try_into().unwrap()), 8);
     }
-
-    #[test]
-    fn default_dispatch_paths_use_shared_fallible_staging_and_checked_timing() {
-        let backend_source = include_str!("vyre_backend.rs");
-        let compiled_source = include_str!("compiled_pipeline.rs");
-        let module_source = include_str!("../backend.rs");
-
-        assert!(
-            module_source.contains("fn clone_borrowed_inputs_for_dispatch")
-                && module_source.contains("fn reserve_batch_output_slots")
-                && module_source.contains("fn checked_elapsed_wall_ns"),
-            "Fix: backend defaults must share one fallible staging and checked timing contract."
-        );
-        for source in [backend_source, compiled_source] {
-            let production = source
-                .split("#[cfg(test)]")
-                .next()
-                .expect("Fix: backend source must contain production section before tests");
-            assert!(
-                production.contains("clone_borrowed_inputs_for_dispatch")
-                    && production.contains("checked_elapsed_wall_ns")
-                    && !production.contains(".as_nanos() as u64")
-                    && !production.contains("inputs.iter().map(|input| (*input).to_vec()).collect()"),
-                "Fix: inherited backend dispatch defaults must avoid infallible borrowed-input collection and lossy wall timing."
-            );
-        }
-        let compiled_production = compiled_source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: compiled pipeline source must contain production section before tests");
-        assert!(
-            compiled_production.contains("reserved_batch_output_slots")
-                && !compiled_production.contains("Vec::with_capacity(batches.len())"),
-            "Fix: compiled-pipeline batch defaults must construct output slots through shared fallible staging."
-        );
-    }
 }

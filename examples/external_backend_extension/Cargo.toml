@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-vyre = "0.4.2"
+vyre = "0.7.2"
 
 [workspace]
 

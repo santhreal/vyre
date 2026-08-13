@@ -261,28 +261,6 @@ mod tests {
     }
 
     #[test]
-    fn extraction_cost_release_path_uses_integer_scaling() {
-        let source = include_str!("extraction_cost.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: extraction-cost production source must precede tests");
-
-        assert!(
-            production.contains("scale_cost_basis_points")
-                && production.contains("compose_scale_basis_points")
-                && production.contains("crate::numeric::"),
-            "Fix: extraction cost scaling must use deterministic integer basis-point arithmetic."
-        );
-        assert!(
-            !production.contains("base as f32")
-                && !production.contains("scaled.round()")
-                && !production.contains("scale *= tensor_scale"),
-            "Fix: extraction cost release path must not use lossy float scaling."
-        );
-    }
-
-    #[test]
     fn deterministic_for_identical_profiles() {
         let p1 = DeviceProfile::conservative("a");
         let p2 = DeviceProfile::conservative("b");

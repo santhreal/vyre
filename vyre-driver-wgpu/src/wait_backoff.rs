@@ -92,25 +92,4 @@ mod tests {
 
         assert_eq!(backoff.idle_polls, u32::MAX);
     }
-
-    #[test]
-    fn adaptive_wait_backoff_source_has_no_release_path_panic_arithmetic() {
-        let source = include_str!("wait_backoff.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: wait backoff production source must precede tests");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else(")
-                && !production.contains(".checked_shl("),
-            "Fix: WGPU adaptive wait backoff must bound extreme polling state instead of aborting."
-        );
-        assert!(
-            production.contains("bounded_poll_increment")
-                && production.contains("checked_park_duration")
-                && production.contains("self.max_shift.min(31)"),
-            "Fix: WGPU adaptive wait backoff must explicitly bound counter, duration, and shift growth."
-        );
-    }
 }

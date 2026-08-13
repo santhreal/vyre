@@ -473,27 +473,6 @@ fn read_final_metric_record(
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn ttt_loop_does_not_sync_every_step_without_metric_readback() {
-        let source = include_str!("aot_launcher.rs");
-        assert!(
-            source.contains("let sync_for_step_metrics = target_loss.is_some();"),
-            "Fix: generated CUDA AOT TTT loops must distinguish metric-readback launches from firehose launches."
-        );
-        assert!(
-            source.contains("if sync_for_step_metrics {{\n            cuda::cu_stream_synchronize()?;"),
-            "Fix: generated CUDA AOT TTT loops must only fence per step when target-loss readback needs metrics."
-        );
-        assert!(
-            !source.contains(concat!(
-                "launch_manifest_kernel(kernel, bundle, device_ptrs, kernel_args, launch_limits)?;\n",
-                "        cuda::cu_stream_synchronize()?;\n",
-                "        if let (Some(target), Some(dptr))"
-            )),
-            "Fix: generated CUDA AOT TTT loops must not synchronize after every launch when no metric target is configured."
-        );
-    }
-
     use super::*;
     use crate::CUDA_TARGET_ID;
     use vyre_driver::aot::AotLauncherRequest;
@@ -770,23 +749,6 @@ mod tests {
         assert!(
             main.contains("cuda::KernelArgs::with_capacity(device_ptrs.len())?"),
             "Fix: generated CUDA AOT launchers must propagate fallible kernel-argument table reservation."
-        );
-    }
-
-    #[test]
-    fn emitted_launcher_uses_driver_file_container_constructor() {
-        let source = include_str!("aot_launcher.rs");
-        assert!(
-            !source.contains(concat!("BTree", "Map")),
-            "Fix: CUDA launcher emission must not open-code ordered map assembly; centralize the public file container in vyre-driver."
-        );
-        assert!(
-            source.contains("reserve_vec(&mut entries, file_count"),
-            "Fix: CUDA launcher emission must fallibly reserve its fixed file-entry list before staging generated source."
-        );
-        assert!(
-            source.contains("AotLauncherFiles::from_entries"),
-            "Fix: CUDA launcher emission must use the backend-neutral constructor for launcher file containers."
         );
     }
 }

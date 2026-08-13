@@ -409,7 +409,6 @@ fn via_rejects_extra_outputs() {
 }
 
 #[test]
-
 fn via_rejects_trailing_frontier_bytes() {
     let dispatcher = DominatorDispatcher {
         outputs: vec![vec![0, 0, 0, 0, 1]],
@@ -432,37 +431,4 @@ fn via_rejects_trailing_frontier_bytes() {
         matches!(err, DispatchError::BackendError(_)),
         "unexpected error: {err:?}"
     );
-}
-
-#[test]
-fn release_via_path_does_not_call_cpu_or_local_saturating_helpers() {
-    let source = include_str!("../dispatch.rs");
-    let start = source
-        .find("pub fn compute_dominance_frontier_via")
-        .expect("Fix: via path marker must exist");
-    let end = source
-        .find("dispatch_single_u32_output_from_prepared_into(")
-        .expect("Fix: dispatch bridge marker must exist");
-    let release_path = &source[start..end];
-    assert!(!release_path.contains("reference_dominator_frontier"));
-    assert!(!release_path.contains("reference_"));
-    assert!(!release_path.contains("saturating_mul"));
-    assert!(!release_path.contains("fill_"));
-}
-
-#[test]
-fn release_via_path_uses_lazy_primitive_launch_plan() {
-    let source = include_str!("../dispatch.rs");
-    let start = source
-        .find("pub fn compute_dominance_frontier_via_with_scratch_into")
-        .expect("Fix: via path marker must exist");
-    let end = source
-        .find("dispatch_single_u32_output_from_prepared_into(")
-        .expect("Fix: dispatch bridge marker must exist");
-    let release_path = &source[start..end];
-
-    assert!(release_path.contains("plan_dominator_frontier_launch"));
-    assert!(release_path.contains("program_cache.get_or_try_insert_with("));
-    assert!(!release_path.contains("plan_dominator_frontier_dispatch"));
-    assert!(!release_path.contains("plan.program().clone()"));
 }

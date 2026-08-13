@@ -3,7 +3,7 @@
   "publishable_package_count": 27,
   "vyre_package_count": 28,
   "non_publishable_release_surface_count": 1,
-  "internal_tooling_count": 9,
+  "internal_tooling_count": 10,
   "root_patch_section_count": 0,
   "required_release_surfaces": [
     "vyre",
@@ -13,6 +13,22 @@
   ],
   "missing_required_release_surfaces": [],
   "packages": [
+    {
+      "name": "structure-gate",
+      "manifest": "structure-gate/Cargo.toml",
+      "version": "0.1.0",
+      "description": "Workspace structural gate: crate roster, one identity per operation, one home per concept.",
+      "license": "MIT OR Apache-2.0",
+      "readme": null,
+      "repository": "https://github.com/santhreal/vyre",
+      "publish": false,
+      "release_kind": "internal-tooling",
+      "release_group": "internal-tooling",
+      "release_surface": "internal-tooling",
+      "expected_version": null,
+      "publish_policy": "publish=false allowed for release tooling that is not a crates.io artifact",
+      "blockers": []
+    },
     {
       "name": "vyre",
       "manifest": "vyre/Cargo.toml",
@@ -526,10 +542,10 @@
       "blockers": []
     },
     {
-      "name": "vyre-scan",
-      "manifest": "vyre-scan/Cargo.toml",
+      "name": "vyre-safetensors",
+      "manifest": "vyre-safetensors/Cargo.toml",
       "version": "0.7.2",
-      "description": "Canonical scan program compilation, artifact sessions, paging, residency, and readback for Vyre",
+      "description": "Bounded safetensors metadata and shard identity adapter for Vyre",
       "license": "MIT OR Apache-2.0",
       "readme": "README.md",
       "repository": "https://github.com/santhreal/vyre",

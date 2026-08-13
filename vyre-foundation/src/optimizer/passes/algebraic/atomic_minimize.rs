@@ -495,7 +495,6 @@ fn scan_expr_for_identity(expr: &Expr, found: &mut bool) {
     }
 }
 
-
 fn push_expr_child<'a>(stack: &mut SmallVec<[&'a Expr; 32]>, child: &'a Expr) {
     stack.push(child);
 }
@@ -766,7 +765,6 @@ mod tests {
             Expr::Atomic { .. }
         ));
     }
-
 
     #[test]
     fn compare_exchange_not_eligible() {

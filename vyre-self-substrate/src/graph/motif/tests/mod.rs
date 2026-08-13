@@ -344,17 +344,3 @@ fn via_rejects_malformed_csr_before_dispatch() {
         .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
 }
-
-#[test]
-fn via_uses_primitive_static_input_key_and_witness_validation() {
-    let root_source = include_str!("../mod.rs");
-    let dispatch_source = include_str!("../dispatch.rs");
-
-    assert!(root_source.contains("MotifStaticInputKey"));
-    assert!(!root_source.contains("U32SliceFingerprint"));
-    assert!(
-        dispatch_source.contains(".static_input_key(edge_offsets, edge_targets, edge_kind_mask)")
-    );
-    assert!(dispatch_source.contains("validate_motif_witness"));
-    assert!(!dispatch_source.contains("fingerprint_u32_slice"));
-}

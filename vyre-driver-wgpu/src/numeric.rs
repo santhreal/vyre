@@ -11,19 +11,14 @@ pub(crate) const WGPU_NUMERIC: BackendNumericPolicy = BackendNumericPolicy::new(
 mod tests {
     use super::*;
 
-    const SOURCE: &str = include_str!("numeric.rs");
-
     #[test]
-    fn wgpu_numeric_module_is_policy_binding_not_helper_fork() {
+    fn wgpu_numeric_policy_binds_the_backend_identity() {
         assert_eq!(WGPU_NUMERIC.backend(), "WGPU");
-        assert!(
-            SOURCE.contains("BackendNumericPolicy::new(\"WGPU\")"),
-            "WGPU numeric ownership must stay in vyre-driver::numeric"
-        );
-        let forbidden_wrapper = concat!("pub(crate) ", "fn");
-        assert!(
-            !SOURCE.contains(forbidden_wrapper),
-            "WGPU must not reintroduce per-helper numeric wrappers"
+        assert_eq!(
+            WGPU_NUMERIC
+                .usize_to_u64(17, "numeric policy fixture")
+                .expect("Fix: WGPU numeric policy must preserve valid host counts."),
+            17
         );
     }
 }

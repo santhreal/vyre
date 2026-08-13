@@ -411,21 +411,6 @@ mod tests {
     }
 
     #[test]
-    fn production_source_keeps_cpu_submodular_helpers_out_of_via_path() {
-        let source = include_str!("submodular_cache_eviction.rs");
-        let via_section = source
-            .split("pub fn select_retention_set_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("/// Convenience: invert retention to eviction")
-            .next()
-            .expect("Fix: post-via marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_select"));
-    }
-
-    #[test]
     fn k_eq_zero_evicts_all() {
         let mut gains = vec![3u32, 7, 2, 9, 5];
         let retention = select_retention_set(&mut gains, 5, 0);

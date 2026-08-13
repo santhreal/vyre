@@ -62,7 +62,8 @@ fn collective_nodes_require_explicit_backend_capability() {
     assert!(
         errors
             .iter()
-            .any(|error| error.message().contains("V046: distributed collective nodes require backend collective support")),
+            .any(|error| error.code().as_str() == "V046"
+                && error.message().contains("distributed collective nodes require backend collective support")),
         "Fix: collectives must not silently validate on scalar or single-device backends: {errors:?}"
     );
 }

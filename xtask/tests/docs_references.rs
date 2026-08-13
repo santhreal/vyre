@@ -194,9 +194,9 @@ fn source_line_selectors_resolve_the_underlying_file() {
     assert!(output.status.success(), "{}", stderr(&output));
 }
 
-/// Prevents retained superseded prose from becoming an executable input contract after the index redirects readers.
+/// Prevents superseded prose from becoming an executable input contract.
 #[test]
-fn superseded_index_documents_are_not_scanned() {
+fn superseded_manifest_documents_are_not_scanned() {
     let root = fixture();
     fs::write(
         root.path().join("docs/old.md"),
@@ -204,10 +204,8 @@ fn superseded_index_documents_are_not_scanned() {
     )
     .unwrap();
     fs::write(
-        root.path().join("docs/INDEX.md"),
-        "| Status | Last verified | Modified | Document |\n\
-         |---|---:|---:|---|\n\
-         | `superseded` | 2026-08-04 | 2026-08-04 | [docs/old.md](old.md) |\n",
+        root.path().join("docs/DOCS.toml"),
+        "[[page]]\npath = \"old.md\"\nstatus = \"superseded\"\n",
     )
     .unwrap();
 

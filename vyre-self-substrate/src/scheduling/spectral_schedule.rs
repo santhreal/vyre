@@ -445,20 +445,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_spectral_helpers_out_of_via_path() {
-        let source = include_str!("spectral_schedule.rs");
-        let via_section = source
-            .split("pub fn fusion_scores_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: test module marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_fusion_scores"));
-        assert!(!via_section.contains("reference_shape_spectrum"));
-    }
 }

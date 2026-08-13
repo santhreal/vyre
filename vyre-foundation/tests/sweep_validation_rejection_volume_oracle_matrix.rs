@@ -33,7 +33,7 @@ fn sweep_validation_rejection_volume_oracle_matrix() {
             )]);
             let errors = validate(&program);
             assert!(
-                errors.iter().any(|e| e.message().contains("V044")),
+                errors.iter().any(|e| e.code().as_str() == "V044"),
                 "Fix: div-by-zero volume case {idx}: {errors:?}"
             );
         }

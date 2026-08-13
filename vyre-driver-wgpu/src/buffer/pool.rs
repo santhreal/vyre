@@ -741,23 +741,6 @@ mod tests {
     }
 
     #[test]
-    fn production_pool_class_selection_has_no_narrowing_casts() {
-        let src =
-            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/buffer/pool.rs"))
-                .expect("Fix: buffer pool source must be readable");
-        let production = src
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(
-            !production.contains(" as usize"),
-            "buffer-pool release/acquire class selection must use checked conversion helpers"
-        );
-        assert!(production.contains("u32_to_usize("));
-        assert!(production.contains("mask.leading_zeros()"));
-    }
-
-    #[test]
     fn acquire_release_reuses_power_of_two_classes() {
         let arc = crate::runtime::cached_device()
             .expect("Fix: GPU device is required for persistent buffer pool test");

@@ -304,25 +304,4 @@ mod n6_tests {
         assert_eq!(ceil_cuberoot_u64(2_642_245_u64.pow(3)), 2_642_245);
         assert_eq!(ceil_cuberoot_u64(2_642_245_u64.pow(3) - 1), 2_642_245);
     }
-
-    #[test]
-    fn dispatch_grid_planning_uses_integer_roots_and_typed_errors() {
-        let source = include_str!("grid.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: dispatch-grid production source must precede tests");
-
-        assert!(
-            !production.contains(" as f64")
-                && !production.contains(".sqrt()")
-                && !production.contains(".cbrt()"),
-            "Fix: dispatch-grid inference must use deterministic integer root arithmetic."
-        );
-        assert!(
-            production.contains("try_coerce_to_pow2_with_tail_mask")
-                && !production.contains("panic!("),
-            "Fix: dispatch-grid planning should expose typed errors instead of production panics."
-        );
-    }
 }

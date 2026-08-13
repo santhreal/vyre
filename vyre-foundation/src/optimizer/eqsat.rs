@@ -1802,40 +1802,4 @@ mod tests {
         assert_eq!(best, Arith::Const(3));
         assert_eq!(cost, 1);
     }
-
-    #[test]
-    fn eqsat_production_uses_fallible_staging_and_checked_ids() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/optimizer/eqsat.rs"
-        ))
-        .expect("Fix: eqsat source must be readable");
-        let production = src
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: unit-test oracle precondition - production section must exist");
-        assert!(
-            !production.contains("unwrap_or(u32::MAX)"),
-            "class ids must never saturate to a poisoned sentinel"
-        );
-        assert!(
-            !production.contains("Vec::with_capacity("),
-            "optimizer staging must use fallible reservations"
-        );
-        assert!(
-            !production.contains("with_capacity_and_hasher("),
-            "hashcons staging must use fallible reservations"
-        );
-        assert!(
-            !production.contains(" as usize"),
-            "EClassId indexing must go through checked conversion helpers"
-        );
-        assert!(production.contains("try_with_capacity"));
-        assert!(production.contains("try_saturate"));
-        assert!(production.contains("try_extract_best"));
-        assert!(
-            !production.contains(".expect("),
-            "legacy egraph compatibility APIs must not panic in production; callers that need hard errors use try_*"
-        );
-    }
 }

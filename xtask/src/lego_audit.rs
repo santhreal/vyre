@@ -383,7 +383,7 @@ fn fingerprint_node(node: &Node, out: &mut Vec<u8>) {
             out.push(0xFF);
         }
         Node::Barrier {
-            ordering: vyre::memory_model::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
         } => out.push(0x08),
         Node::Region {
             source_region,
@@ -679,6 +679,7 @@ fn is_declared_tier3_leaf(id: &str) -> bool {
             | "vyre-libs::parsing::c_keyword"
             | "vyre-libs::math::reduce_variance"
             | "vyre-libs::parsing::c11_annotate_typedef_names"
+            | "vyre-libs::parsing::c11_annotate_typedef_names_packed_haystack"
             | "vyre-libs::nn::softmax_top_k"
             | "vyre-libs::nn::flash_attention"
             | "vyre-libs::nn::linear_4bit_affine_grouped"

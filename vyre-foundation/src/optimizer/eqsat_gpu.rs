@@ -1139,27 +1139,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn gpu_snapshot_builders_use_fallible_u32_conversion_not_saturation() {
-        let source = include_str!("eqsat_gpu.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: production eqsat_gpu section must exist");
-        assert!(
-            source.contains("pub fn try_build")
-                && source.contains("pub fn try_from_egraph_with")
-                && source.contains("snapshot.op_ids.try_intern")
-                && source.contains("u32::try_from(value).map_err")
-                && !source.contains(concat!("unwrap_or", "(u32::MAX)")),
-            "Fix: GPU e-graph snapshots must reject oversized u32 ABI fields instead of saturating them to u32::MAX."
-        );
-        assert!(
-            !production.contains(".expect("),
-            "Fix: GPU e-graph snapshot production paths must return structured errors instead of panicking."
-        );
-    }
-
     /// `rows_by_eclass` groups multi-row e-classes.
     #[test]
     fn rows_by_eclass_groups_correctly() {

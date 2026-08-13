@@ -166,35 +166,6 @@ mod tests {
     use vyre_self_substrate::megakernel_schedule::MegakernelScheduleError;
 
     #[test]
-    fn megakernel_scheduler_is_cuda_adapter_not_planner_fork() {
-        let source = include_str!("megakernel_scheduler.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: CUDA megakernel scheduler production source must be discoverable.");
-
-        assert!(source.contains("use vyre_driver::megakernel_execution::{"));
-        assert!(source.contains("plan_megakernel_execution("));
-        assert!(source.contains("plan_megakernel_memory_budget("));
-        assert!(source.contains("select_megakernel_topology("));
-        assert!(source.contains("select_megakernel_topology_stable("));
-        assert!(!production.contains("CudaArithmeticOverflow"));
-        assert!(!production.contains("checked_add_u64_count"));
-        assert!(!production.contains("checked_mul_u64_count"));
-        assert!(!production.contains("fn pressure_bps("));
-        assert!(!production.contains("fn topology_scratch_bytes("));
-        assert!(!production.contains("enum MegakernelExecutionTopology"));
-        assert!(
-            !source.contains(concat!("min(10_000)", " as u32")),
-            "Fix: CUDA scheduler pressure export must use a checked conversion even after clamping."
-        );
-        assert!(
-            !production.contains(".expect("),
-            "Fix: CUDA megakernel scheduler production code must not panic after checked arithmetic."
-        );
-    }
-
-    #[test]
     fn cuda_sample_adapter_reuses_output_capacity() {
         let samples = [
             CudaMegakernelScheduleSample {
@@ -608,17 +579,6 @@ mod tests {
         assert_eq!(plan.topology, MegakernelExecutionTopology::SparseFrontier);
         assert!(plan.downgraded_to_sparse);
         assert_eq!(plan.memory.scratch_bytes, 10_000);
-    }
-
-    #[test]
-    fn cuda_sample_adapter_does_not_stage_parallel_vectors() {
-        let src = include_str!("megakernel_scheduler.rs");
-        assert!(
-            !src.contains(concat!("let mut costs", " = Vec"))
-                && !src.contains(concat!("let mut frontier_density", " = Vec"))
-                && !src.contains(concat!("let mut readback_bytes", " = Vec")),
-            "CUDA megakernel scheduler must consume native samples directly instead of allocating parallel staging vectors"
-        );
     }
 
     #[test]

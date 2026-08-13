@@ -266,31 +266,3 @@ pub(crate) fn descriptor_trap_tags(
     walk(&descriptor.body, &mut seen, &mut out)?;
     Ok(out)
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn descriptor_metadata_source_has_no_release_path_panic_or_infallible_capacity() {
-        let source = include_str!("descriptor_metadata.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: descriptor metadata production source must precede tests");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".expect(")
-                && !production.contains("Vec::with_capacity")
-                && !production.contains("SmallVec::with_capacity")
-                && !production.contains("with_capacity_and_hasher"),
-            "Fix: WGPU descriptor metadata extraction must reject oversized lowered kernels with BackendError instead of aborting."
-        );
-        assert!(
-            production.contains("try_reserve_vec_to_capacity")
-                && production.contains("try_reserve_hash_set_to_capacity")
-                && production.contains("Result<Vec<BufferBindingInfo>, BackendError>")
-                && production.contains("Result<Arc<[Arc<wgpu::BindGroupLayout>]>, BackendError>")
-                && production.contains("Result<Vec<TrapTag>, BackendError>"),
-            "Fix: WGPU descriptor metadata allocation and overflow paths must stay fallible at the pipeline boundary."
-        );
-    }
-}

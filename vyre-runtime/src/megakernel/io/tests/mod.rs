@@ -377,30 +377,6 @@ fn complete_io_request_only_mutates_status_word() {
 }
 
 #[test]
-fn io_module_avoids_byte_width_atomic_types() {
-    // Check every production I/O source slice (tests excluded) so byte-width
-    // atomics cannot hide in runtime megakernel queue code.
-    let prod_files = [
-        include_str!("../mod.rs"),
-        include_str!("../queue.rs"),
-        include_str!("../poll.rs"),
-        include_str!("../complete.rs"),
-        include_str!("../encode.rs"),
-        include_str!("../helpers.rs"),
-    ];
-    for src in prod_files {
-        assert!(
-            !src.contains("AtomicU8") && !src.contains("AtomicI8"),
-            "byte-width atomics are forbidden for io_queue protocol words"
-        );
-        assert!(
-            !src.contains("AtomicU16") && !src.contains("AtomicI16"),
-            "sub-word atomics are forbidden for io_queue protocol words"
-        );
-    }
-}
-
-#[test]
 fn submit_dma_read_publishes_read_request() {
     let mut queue = ResidentIoQueue::new(4).unwrap();
     queue.submit_dma_read(2, 10, 20, 4096, 99).unwrap();

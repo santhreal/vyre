@@ -5,7 +5,6 @@ use std::sync::Mutex;
 use vyre_foundation::ir::Program;
 
 mod reference_closure_tests;
-mod release_path_tests;
 
 struct BidirDispatcher {
     outputs: Vec<Vec<u8>>,
@@ -459,7 +458,6 @@ fn closure_zero_iters_validates_and_returns_seed_without_program_or_dispatch() {
 }
 
 #[test]
-
 fn closure_empty_graph_validates_and_returns_empty_without_program_or_dispatch() {
     struct NoDispatch;
 

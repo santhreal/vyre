@@ -427,17 +427,3 @@ fn via_rejects_mismatched_edge_arrays() {
     .expect_err("mismatched edge arrays must be rejected");
     assert!(matches!(err, DispatchError::BadInputs(_)));
 }
-
-#[test]
-fn release_via_path_does_not_call_cpu_or_local_saturating_helpers() {
-    let source = include_str!("../dispatch.rs");
-    let start = source
-        .find("pub fn bfs_expand_via")
-        .expect("Fix: via path marker must exist");
-    let release_path = &source[start..];
-    assert!(!release_path.contains("reference_persistent_bfs"));
-    assert!(!release_path.contains("reference_"));
-    assert!(!release_path.contains("cpu_ref"));
-    assert!(!release_path.contains("saturating_mul"));
-    assert!(!release_path.contains("fill_"));
-}

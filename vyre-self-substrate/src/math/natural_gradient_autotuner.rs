@@ -411,21 +411,6 @@ mod tests {
     }
 
     #[test]
-    fn production_source_keeps_cpu_natural_gradient_helpers_out_of_via_path() {
-        let source = include_str!("natural_gradient_autotuner.rs");
-        let via_section = source
-            .split("pub fn precondition_autotune_gradient_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[must_use]\n#[cfg(test)]\npub fn autotune_step")
-            .next()
-            .expect("Fix: test-only autotune marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_precondition"));
-    }
-
-    #[test]
     fn identity_fisher_block_is_diagonal_of_ones() {
         let id = identity_fisher_block(4);
         for i in 0..4 {

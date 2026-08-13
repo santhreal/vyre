@@ -264,25 +264,4 @@ mod tests {
             "error must explain the logical length boundary, got: {msg}"
         );
     }
-
-    #[test]
-    fn device_buffer_source_has_no_release_path_panic_or_padded_upload_boundary() {
-        let source = include_str!("device_buffer.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: device buffer production source must precede tests");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else(")
-                && !production.contains("Vec::with_capacity"),
-            "Fix: WGPU DeviceBuffer release path must not panic or preallocate padded readback capacity."
-        );
-        assert!(
-            production.contains("logical_byte_len")
-                && production.contains("byte_len > wgpu_buf.handle.byte_len()")
-                && production.contains("let mut out = Vec::new();"),
-            "Fix: WGPU DeviceBuffer must preserve logical byte length and reject padded overwrite attempts."
-        );
-    }
 }

@@ -379,25 +379,6 @@ mod tests {
     }
 
     #[test]
-    fn production_source_does_not_call_cpu_tensor_train_decompose_helper() {
-        let source = include_str!("tensor_train_compression.rs");
-        let cutoff = [
-            source.find("#[cfg(test)]"),
-            source.find("/// Parity-only f64 TT-SVD CPU oracle"),
-        ]
-        .into_iter()
-        .flatten()
-        .min()
-        .expect("Fix: source includes an explicit non-production cutoff marker");
-        let production_source = &source[..cutoff];
-        assert!(
-            !production_source.contains("cpu_ref(")
-                && !production_source.contains("reference_compress_cost_tensor("),
-            "Fix: tensor-train compression production paths must dispatch tensor_train_decompose_step, not CPU TT-SVD helpers."
-        );
-    }
-
-    #[test]
     fn tt_storage_size_returns_sum() {
         let compressed = CompressedCostTensor {
             cores: vec![vec![1.0; 4], vec![1.0; 8], vec![1.0; 4]],

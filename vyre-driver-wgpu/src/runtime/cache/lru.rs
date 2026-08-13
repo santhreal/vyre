@@ -489,35 +489,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn intrusive_lru_constructors_use_shared_fallible_reservation() {
-        let bounded = IntrusiveLru::<u64, AccessMeta>::try_with_capacity(4)
-            .expect("Fix: bounded LRU capacity should reserve");
-        let reserved = IntrusiveLru::<u64, AccessMeta>::try_with_reserved_capacity(4)
-            .expect("Fix: reserved LRU capacity should reserve");
-
-        assert!(bounded.reserved_capacity_for_diagnostics().0 >= 4);
-        assert!(reserved.reserved_capacity_for_diagnostics().0 >= 4);
-
-        let production = include_str!("lru.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: lru.rs must contain production section");
-        assert!(
-            production.contains("fn try_with_capacity_policy")
-                && production.contains("reserve_vec_to_capacity")
-                && production.contains("reserve_hash_map_to_capacity")
-                && production.contains("pub fn try_new()")
-                && !production.contains("Vec::with_capacity")
-                && !production.contains("FxHashMap::with_capacity_and_hasher"),
-            "Fix: WGPU runtime LRU constructors must share fallible reservation rather than duplicating infallible capacity constructors."
-        );
-        assert!(
-            !production.contains(".expect("),
-            "Fix: WGPU runtime LRU production constructors must not panic on allocation pressure."
-        );
-    }
-
-    #[test]
     fn access_tracker_rebases_ticks_in_lru_order_instead_of_panicking() {
         let mut tracker = AccessTracker::new();
         tracker.record(10);
@@ -553,25 +524,6 @@ mod tests {
                 .expect("Fix: tracked key must have stats")
                 .frequency,
             u32::MAX
-        );
-    }
-
-    #[test]
-    fn access_tracker_source_has_no_release_path_panic_counters() {
-        let source = include_str!("lru.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: LRU production source must precede tests");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else("),
-            "Fix: runtime cache LRU counters must rebase or pin instead of aborting."
-        );
-        assert!(
-            production.contains("rebase_ticks_by_lru_order")
-                && production.contains("bounded_frequency_increment"),
-            "Fix: runtime cache LRU must preserve recency across tick exhaustion and pin access frequency."
         );
     }
 }

@@ -3,7 +3,7 @@
 //! `Diagnostic` must always carry a `Fix:` hint, support human and
 //! JSON rendering, and serialize without panic.
 
-use vyre::diagnostics::{Diagnostic, OpLocation};
+use vyre_foundation::diagnostics::{Diagnostic, OpLocation};
 
 #[test]
 fn diagnostic_error_has_fix_hint() {

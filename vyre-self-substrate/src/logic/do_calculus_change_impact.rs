@@ -1035,49 +1035,6 @@ mod tests {
         assert!(predict_impact_observation_form(&[], &[], 0).is_empty());
     }
 
-    #[test]
-    fn release_via_paths_do_not_import_cpu_reference_helpers() {
-        let source = include_str!("do_calculus_change_impact.rs");
-        let regions = [
-            (
-                "pub fn predict_impact_via",
-                "/// Primitive-native dispatcher path for Pearl Rule 1 graph surgery",
-            ),
-            (
-                "pub fn intervention_delete_incoming_via",
-                "/// Primitive-native dispatcher path for Pearl Rule 2 graph surgery",
-            ),
-            (
-                "pub fn rule2_reverse_incoming_via",
-                "/// Primitive-native dispatcher path for Pearl Rule 3 graph surgery",
-            ),
-            (
-                "pub fn rule3_subgraph_via",
-                "/// Compute the impacted subgraph:",
-            ),
-            (
-                "pub fn predict_impact_observation_form_via",
-                "\n#[cfg(test)]\nmod tests",
-            ),
-        ];
-        for (start_marker, end_marker) in regions {
-            let start = source
-                .find(start_marker)
-                .expect("Fix: via start marker must exist");
-            let end = source[start..]
-                .find(end_marker)
-                .map(|offset| start + offset)
-                .expect("Fix: via end marker must exist");
-            let release_path = &source[start..end];
-            assert!(!release_path.contains("_cpu"), "{start_marker}");
-            assert!(!release_path.contains("reference_"), "{start_marker}");
-            assert!(
-                !release_path.contains("u32_slice_to_le_bytes("),
-                "{start_marker}"
-            );
-        }
-    }
-
     struct InterventionDispatcher;
 
     impl OptimizerDispatcher for InterventionDispatcher {

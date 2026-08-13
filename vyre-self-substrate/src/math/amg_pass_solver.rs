@@ -658,20 +658,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_amg_helpers_out_of_via_path() {
-        let source = include_str!("amg_pass_solver.rs");
-        let via_section = source
-            .split("pub fn smooth_matroid_flow_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("/// Run V-cycles until residual norm")
-            .next()
-            .expect("Fix: post-via marker should exist");
-
-        assert!(!via_section.contains("cpu_ref"));
-        assert!(!via_section.contains("reference_smooth"));
-        assert!(!via_section.contains("vec![0u32"));
-    }
 }

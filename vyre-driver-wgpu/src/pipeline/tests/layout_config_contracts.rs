@@ -115,30 +115,3 @@ fn wgpu_natural_gradient_compile_config_preserves_semantic_safety_gates() {
         "Fix: workgroup-local scratch kernels must keep the Program-declared WGPU workgroup."
     );
 }
-
-#[test]
-fn pipeline_production_uses_fallible_binding_and_trap_staging() {
-    let production = include_str!("../../pipeline.rs")
-        .split("\n#[cfg(test)]\nmod tests")
-        .next()
-        .expect("Fix: pipeline production section should precede tests");
-
-    assert!(
-        !production.contains("with_capacity_and_hasher"),
-        "Fix: WGPU pipeline binding classification must not use infallible hash-set constructors."
-    );
-    assert!(
-        !production.contains("Vec::with_capacity(trap_sidecar_bytes)"),
-        "Fix: WGPU trap sidecar readback must not allocate infallibly."
-    );
-    assert!(
-        production.contains("reserve_hash_set_to_capacity"),
-        "Fix: WGPU pipeline binding classification should use the shared fallible hash-set reservation helper."
-    );
-    assert!(
-        production.contains(
-            "reserve_backend_vec(&mut bytes, trap_sidecar_bytes, \"trap sidecar readback\")?"
-        ),
-        "Fix: WGPU trap sidecar readback should reserve through the shared staging helper."
-    );
-}

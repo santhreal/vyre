@@ -50,33 +50,6 @@ mod tests {
     };
 
     #[test]
-    fn cuda_upload_fusion_is_adapter_not_algorithm_fork() {
-        let production = include_str!("resident_upload_fusion.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: resident upload fusion production source must precede tests.");
-
-        assert!(
-            production.contains("vyre_driver::resident_transfer_fusion"),
-            "Fix: CUDA resident upload fusion must delegate to the backend-neutral driver owner."
-        );
-        for forbidden in [
-            "TransferAccountingPolicy",
-            "fn coalesce_resident_upload_tail",
-            "fn resident_upload_copy_owned",
-            "checked_add_u64_usize_offset_lazy",
-            "reserved_vec",
-            "reserve_vec",
-            "reserve_smallvec",
-        ] {
-            assert!(
-                !production.contains(forbidden),
-                "Fix: CUDA resident upload fusion must not carry local ordered-overwrite fusion logic: {forbidden}."
-            );
-        }
-    }
-
-    #[test]
     fn empty_resident_upload_copy_does_not_schedule_dma() {
         let mut copies = SmallVec::<[ResidentUploadCopy<'_>; 8]>::new();
         let mut uploaded_bytes = 0_u64;

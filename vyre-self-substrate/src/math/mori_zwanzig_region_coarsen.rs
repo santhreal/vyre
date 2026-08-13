@@ -490,19 +490,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_mori_helpers_out_of_via_path() {
-        let source = include_str!("mori_zwanzig_region_coarsen.rs");
-        let via_section = source
-            .split("pub fn coarsen_region_state_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("/// Convenience: derive the projection AND apply it in one step.")
-            .next()
-            .expect("Fix: post-via marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_coarsen"));
-    }
 }

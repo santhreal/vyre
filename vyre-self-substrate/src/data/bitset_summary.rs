@@ -330,20 +330,4 @@ mod tests {
         assert_eq!(total_set_bits_via(&PopcountDispatcher, &input).unwrap(), 32);
         assert!((saturation_ratio_via(&PopcountDispatcher, &input).unwrap() - 0.5).abs() < 1e-9);
     }
-
-    #[test]
-    fn production_source_keeps_cpu_bitset_helpers_out_of_via_path() {
-        let source = include_str!("bitset_summary.rs");
-        let via_section = source
-            .split("pub fn per_word_popcount_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: test module marker should exist");
-
-        assert!(!via_section.contains("primitive_popcount"));
-        assert!(!via_section.contains("cpu_ref"));
-        assert!(!via_section.contains("saturating_add"));
-    }
 }

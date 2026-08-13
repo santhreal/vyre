@@ -60,7 +60,7 @@ fn program_with_two_output_buffers_is_rejected() {
     );
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e.message().contains("V022")),
+        errors.iter().any(|e| e.code().as_str() == "V022"),
         "program with two output buffers must be rejected with V022, got: {:?}",
         errors
     );

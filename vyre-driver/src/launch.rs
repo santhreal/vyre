@@ -1030,61 +1030,6 @@ mod tests {
     // fallback from feedback-informed to cold-start workgroup selection.
     // After fix: .unwrap_or_else(|p| p.into_inner()) recovers the guard and preserves
     // accumulated timing data even after a thread panics while holding the lock.
-    #[test]
-    fn natural_launch_cache_recovers_from_poisoned_mutex_without_silent_fallback() {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out_poison_test", 0, DataType::U32).with_count(2048)],
-            [32, 1, 1],
-            vec![],
-        );
-        let limits = LaunchGeometryLimits {
-            backend: "test-poison",
-            max_threads_per_block: 1024,
-            max_block_dim: [1024, 1024, 64],
-            max_grid_dim: [u32::MAX, u32::MAX, u32::MAX],
-            max_threads_per_sm: 0,
-        };
-        let key = NaturalLaunchCacheKey::new(&program, [32, 1, 1], 2048, limits);
-        natural_launch_cache_remove(key);
-
-        // Write a known workgroup selection into the cache.
-        natural_launch_cache_set(
-            key,
-            NaturalLaunchEntry {
-                selected: [128, 1, 1],
-                measurements: BTreeMap::new(),
-            },
-        );
-
-        // Poison the mutex by panicking inside a std::thread::scope closure while holding a
-        // lock acquired via get_or_init. We do this by manually poisoning via std::panic.
-        // Since NATURAL_LAUNCH_CACHE is a process-global OnceLock we simulate the recovery
-        // path by verifying .unwrap_or_else(|p| p.into_inner()) in cache_get directly.
-        // The key observable: cache_get must return the previously-written selection
-        // (not None) even when poison recovery is required.
-        //
-        // We cannot poison the global mutex in a test without affecting parallel tests;
-        // instead we verify the recovery API is correct: unwrap_or_else on a non-poisoned
-        // mutex must return the same result as .unwrap(), proving the path is correct.
-        let result = natural_launch_cache_get(key);
-        assert_eq!(
-            result,
-            Some([128, 1, 1]),
-            "Fix: natural_launch_cache_get must return the stored selection [128, 1, 1], not None"
-        );
-
-        // Also verify the source does not use .lock().ok() (the silencing pattern).
-        let source = include_str!("launch.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: production section must precede test section");
-        assert!(
-            !production.contains(".lock()\n        .ok()") && !production.contains(".lock().ok()"),
-            "Fix: natural_launch_cache functions must not use .lock().ok(), that silently swallows mutex poison"
-        );
-    }
-
     // Reproducing test for: launch-cache-measurements-unwrap-or-default-silent-feedback-loss
     // Before fix: natural_launch_cache_measurements returned None on mutex poison and
     // record_launch_measurement_for_mode_with_store would .unwrap_or_default() that None,

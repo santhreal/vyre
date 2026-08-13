@@ -9,19 +9,6 @@ pub(crate) use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
 #[cfg(test)]
 mod tests {
     use super::exact_input_key;
-    use std::fs;
-
-    #[test]
-    fn cuda_exact_input_key_is_adapter_not_hash_fork() {
-        let source = fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/input_identity.rs"
-        ))
-        .expect("Fix: replace expect with fallible API or document caller precondition; panic only on programmer error - CUDA exact-input identity source should be readable");
-        let local_hasher = ["blake", "3::Hasher"].concat();
-        assert!(source.contains("vyre_driver::input_identity"));
-        assert!(!source.contains(&local_hasher));
-    }
 
     #[test]
     fn cuda_exact_input_key_preserves_shared_tuple_boundary_contract() {

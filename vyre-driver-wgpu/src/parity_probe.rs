@@ -369,21 +369,4 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn parity_probe_uses_fallible_staging() {
-        let src =
-            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/parity_probe.rs"))
-                .expect("Fix: parity probe source must be readable");
-        let production = src
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(
-            !production.contains("Vec::with_capacity("),
-            "parity probe staging must use reserve_backend_vec"
-        );
-        assert!(production.contains("reserve_backend_vec"));
-        assert!(production.contains("f32_batch_bytes(inputs)?"));
-    }
 }

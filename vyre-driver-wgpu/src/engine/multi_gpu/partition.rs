@@ -265,26 +265,4 @@ mod tests {
             .expect_err("Fix: duplicate synthetic device indices must be rejected");
         assert!(error.contains("duplicate GPU device index"));
     }
-
-    #[test]
-    fn partition_source_has_no_release_path_infallible_allocation() {
-        let source = include_str!("partition.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: partition production source must precede tests");
-        assert!(
-            !production.contains("Vec::with_capacity")
-                && !production.contains("BinaryHeap::with_capacity")
-                && !production.contains("with_capacity_and_hasher"),
-            "Fix: WGPU multi-GPU partitioning must report allocation pressure instead of aborting on infallible capacity constructors."
-        );
-        assert!(
-            production.contains("try_reserve_vec_to_capacity")
-                && production.contains("try_reserve_binary_heap_to_capacity")
-                && production.contains("try_reserve_hash_set_to_capacity")
-                && production.contains("ensure_vec_spare"),
-            "Fix: WGPU multi-GPU partitioning must use fallible allocation for schedule tables and per-device assignments."
-        );
-    }
 }

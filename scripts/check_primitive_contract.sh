@@ -13,4 +13,4 @@ if [[ "$#" -ne 0 ]]; then
     exit 2
 fi
 
-exec cargo run --quiet -p xtask --bin xtask -- primitive-admission-gate
+exec ./cargo_full run --quiet -p xtask --bin xtask -- primitive-admission-gate

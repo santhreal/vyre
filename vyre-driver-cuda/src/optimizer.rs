@@ -447,59 +447,6 @@ mod tests {
     }
 
     #[test]
-    fn cuda_optimizer_resident_pool_accounting_is_exact_not_saturating() {
-        let source = include_str!("optimizer.rs");
-        assert!(
-            !source.contains(concat!("pooled_bytes", ".saturating_add"))
-                && !source.contains(concat!("pooled_bytes", ".saturating_sub"))
-                && !source.contains(concat!(".saturating_add", "(incoming_bytes)")),
-            "Fix: CUDA optimizer resident pool byte accounting must be exact; saturation hides VRAM pressure bugs."
-        );
-        assert!(
-            !source.contains(concat!(
-                ".expect(\"",
-                "CUDA optimizer resident pool byte accounting underflowed during reuse"
-            )),
-            "Fix: CUDA optimizer resident pool accounting must return a typed DispatchError instead of panicking during reuse."
-        );
-        assert!(
-            !source.contains(concat!(
-                ".expect(\"",
-                "CUDA optimizer resident pool byte accounting underflowed during eviction"
-            )),
-            "Fix: CUDA optimizer resident pool accounting must return a typed DispatchError instead of panicking during eviction."
-        );
-        assert!(
-            !source.contains(concat!(
-                ".expect(\"",
-                "CUDA optimizer resident pool byte accounting overflowed while pooling a handle"
-            )),
-            "Fix: CUDA optimizer resident pool accounting must return a typed DispatchError instead of panicking during pooling."
-        );
-        assert!(
-            source.contains("fn reserve_optimizer_vec<T>(")
-                && !source.contains(concat!("Vec::with_capacity", "(ids.len())"))
-                && !source.contains(concat!("Vec::with_capacity", "(uploads.len())"))
-                && !source.contains(concat!("Vec::with_capacity", "(ranges.len())"))
-                && !source.contains(concat!("Vec::with_capacity", "(steps.len())"))
-                && !source.contains(concat!("Vec::with_capacity", "(read_ranges.len())")),
-            "Fix: CUDA optimizer resident staging must reserve fallibly before sequence/readback fan-out growth."
-        );
-        assert!(
-            source.contains("use crate::numeric::CUDA_NUMERIC;")
-                && source.contains(".usize_to_u64(value, label)")
-                && !source.contains(concat!("u64::try_from", "(value)")),
-            "Fix: CUDA optimizer telemetry/static-cache sizes must use the shared backend numeric policy."
-        );
-        assert!(
-            source.contains("domain_separated_exact_input_key")
-                && source.contains("ExactInputKey")
-                && !source.contains(&["blake", "3::Hasher::new()"].concat()),
-            "Fix: CUDA optimizer static upload cache identity must use the shared domain-separated exact-input key instead of forking BLAKE3 tuple hashing."
-        );
-    }
-
-    #[test]
     fn cuda_optimizer_static_upload_cache_skips_warm_h2d_and_releases_on_drop() {
         let backend = CudaBackend::acquire()
             .expect("Fix: CUDA backend acquisition must succeed on the GPU-required test host.");

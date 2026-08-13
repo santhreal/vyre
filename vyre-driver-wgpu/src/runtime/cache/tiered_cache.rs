@@ -525,24 +525,4 @@ mod tests {
         assert_eq!(cache.tiers[0].used, 0);
         assert!(cache.get(1).is_none());
     }
-
-    #[test]
-    fn tiered_cache_source_has_no_release_path_panic_accounting() {
-        let source = include_str!("tiered_cache.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: tiered cache production source must precede tests");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else("),
-            "Fix: tiered cache accounting must repair or return typed errors instead of aborting."
-        );
-        assert!(
-            production.contains("debit_tier_used")
-                && production.contains("recompute_tier_used")
-                && production.contains("repairing from live entries"),
-            "Fix: tiered cache underflow must be repaired from live entry metadata with a loud diagnostic."
-        );
-    }
 }

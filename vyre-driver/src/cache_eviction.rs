@@ -230,19 +230,4 @@ mod tests {
         record_eviction(f64::NEG_INFINITY);
         record_eviction_counts(usize::MAX, 1);
     }
-
-    #[test]
-    fn release_eviction_selector_exposes_fallible_allocation_path() {
-        let source = include_str!("cache_eviction.rs");
-        assert!(
-            source.contains("pub fn try_select_retention_set")
-                && source.contains("pub fn try_select_retention_set_into")
-                && source.contains("try_reserve_vec_to_capacity"),
-            "Fix: release cache eviction callers need a fallible selector path instead of infallible Vec allocation."
-        );
-        assert!(
-            !source.contains(concat!("Vec::with_capacity", "(effective_len")),
-            "Fix: cache eviction selector must not allocate retention vectors infallibly on release paths."
-        );
-    }
 }

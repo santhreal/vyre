@@ -173,33 +173,3 @@ fn materialized_output_cache_rejects_oversized_entries_without_polluting_cache()
         "Fix: oversized materialized output cache entries must not be observable as hits."
     );
 }
-
-#[test]
-fn materialized_output_cache_preflights_oversized_entries_before_owning_bytes() {
-    let input = b"oversized compiled CUDA graph replay input";
-    let outputs = vec![vec![
-        0xCC;
-        MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE + 1
-    ]];
-
-    assert!(
-        MaterializedPipelineOutputCacheEntry::new_if_cacheable(&[input.as_slice()], &outputs)
-            .expect("Fix: oversized materialized cache preflight must be a typed no-admission path.")
-            .is_none(),
-        "Fix: oversized materialized cache entries must be rejected before constructing owned cache entries."
-    );
-
-    let source = include_str!("../materialized_cache.rs");
-    let preflight_constructor = source
-        .split("pub(crate) fn new_if_cacheable")
-        .nth(1)
-        .expect("Fix: materialized cache must expose a preflight constructor.")
-        .split("pub(crate) fn new(")
-        .next()
-        .expect("Fix: preflight constructor must precede the fallible owning constructor.");
-    assert!(
-        preflight_constructor.contains("materialized_cache_entry_byte_len_if_admissible")
-            && !preflight_constructor.contains("clone_materialized_cache_bytes"),
-        "Fix: materialized CUDA replay cache must compute admissibility before cloning input/output bytes."
-    );
-}

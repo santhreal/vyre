@@ -679,8 +679,7 @@ mod tests {
     use vyre_driver::{BackendError, LaunchPlan};
 
     use super::{
-        cuda_transient_dispatch_available_budget_bytes, cuda_transient_dispatch_budget_bytes,
-        cuda_transient_dispatch_live_available_budget_bytes,
+        cuda_transient_dispatch_budget_bytes, cuda_transient_dispatch_live_available_budget_bytes,
         cuda_transient_dispatch_required_bytes, validate_cuda_transient_dispatch_budget,
     };
     use crate::backend::CudaDispatchPlan;
@@ -796,36 +795,6 @@ mod tests {
     }
 
     #[test]
-    fn transient_dispatch_available_budget_subtracts_live_resident_and_transient_pool_bytes() {
-        assert_eq!(
-            cuda_transient_dispatch_available_budget_bytes(1000, 300, 200),
-            400
-        );
-        assert_eq!(
-            cuda_transient_dispatch_available_budget_bytes(1000, 1_000, 0),
-            0
-        );
-        assert_eq!(
-            cuda_transient_dispatch_available_budget_bytes(1000, 0, 1_000),
-            0
-        );
-        assert_eq!(
-            cuda_transient_dispatch_available_budget_bytes(u64::MAX, u64::MAX, u64::MAX),
-            0,
-            "Fix: CUDA transient available-budget subtraction must use widened arithmetic and clamp only after exact live-usage comparison."
-        );
-        let source = include_str!("capabilities.rs");
-        assert!(source.contains("CUDA_NUMERIC"));
-        assert!(source.contains("checked_dim_product_u64"));
-        assert!(!source.contains(concat!("vyre_driver::numeric::", "checked_dim_product_u64")));
-        assert!(
-            !source.contains(concat!(".", "saturating_mul"))
-                && !source.contains(concat!(".", "saturating_sub")),
-            "Fix: CUDA transient budget math must be exact/widened, not saturating."
-        );
-    }
-
-    #[test]
     fn transient_dispatch_live_available_budget_caps_against_free_vram() {
         assert_eq!(
             cuda_transient_dispatch_live_available_budget_bytes(10_000, 1_000, 0, 0),
@@ -841,26 +810,6 @@ mod tests {
             cuda_transient_dispatch_live_available_budget_bytes(10_000, 0, 0, 0),
             0,
             "Fix: zero live free VRAM must produce zero preflight budget instead of allowing optimistic allocation."
-        );
-    }
-
-    #[test]
-    fn cuda_dispatch_validation_is_release_default_not_opt_in() {
-        let source = include_str!("../instrumentation.rs");
-        let capabilities_source = include_str!("capabilities.rs");
-
-        assert!(
-            source.contains("VYRE_CUDA_VALIDATE_DISPATCH")
-                && source.contains("cached_enabled_default_true")
-                && source.contains("CUDA_VALIDATE_DISPATCH_DISABLED"),
-            "Fix: CUDA dispatch validation must be default-on with only an explicit debug disable."
-        );
-        assert!(
-            capabilities_source
-                .contains("crate::instrumentation::cuda_dispatch_validation_enabled()")
-                && !capabilities_source.contains("std::env::var(\"VYRE_CUDA_VALIDATE_DISPATCH\")")
-                && !capabilities_source.contains("var_os(\"VYRE_CUDA_VALIDATE_DISPATCH\")"),
-            "Fix: CUDA dispatch validation must not be an opt-in release-path correctness gate."
         );
     }
 

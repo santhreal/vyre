@@ -1,38 +1,16 @@
 use super::helpers::{
-    borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-    stage_resident_fill_payload, validate_dense_resident_input_indices,
-    validate_dense_resident_output_indices,
+    prepare_resident_sequence_fills, stage_resident_fill_payload,
+    validate_dense_resident_input_indices, validate_dense_resident_output_indices,
 };
-
-fn resident_dispatch_production_source() -> String {
-    [
-        include_str!("../helpers.rs"),
-        include_str!("../borrowed.rs"),
-        include_str!("../async_dispatch.rs"),
-        include_str!("../batch.rs"),
-        include_str!("../sync.rs"),
-        include_str!("../sequence_api.rs"),
-        include_str!("../sequence_fused.rs"),
-        include_str!("../timed.rs"),
-    ]
-    .iter()
-    .map(|s| s.split("#[cfg(test)]").next().unwrap_or(""))
-    .collect::<Vec<_>>()
-    .join("\n")
-}
 
 #[cfg(test)]
 #[allow(clippy::module_inception)]
 mod tests {
-    #[path = "source_contracts.rs"]
-    mod source_contracts;
-
     use super::super::async_dispatch::resident_output_clear_for_readback;
     use super::super::borrowed::order_resident_fallback_inputs_by_logical_index;
     use super::{
-        borrow_resident_sequence_output_slots, prepare_resident_sequence_fills,
-        stage_resident_fill_payload, validate_dense_resident_input_indices,
-        validate_dense_resident_output_indices,
+        prepare_resident_sequence_fills, stage_resident_fill_payload,
+        validate_dense_resident_input_indices, validate_dense_resident_output_indices,
     };
     use crate::backend::output_range::CudaOutputReadback;
     use crate::backend::resident::CudaResidentBuffer;

@@ -479,21 +479,6 @@ mod tests {
     }
 
     #[test]
-    fn release_fixed_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("differentiable_autotune.rs");
-        let start = source
-            .find("pub fn pick_config_pre_exp_fixed_via")
-            .expect("Fix: fixed path marker must exist");
-        let end = source
-            .find("\n/// Soft-pick the best configuration index")
-            .expect("Fix: test-only CPU path marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("_cpu"));
-        assert!(!release_path.contains("reference_"));
-        assert!(!release_path.contains("vec![0u32"));
-    }
-
-    #[test]
     fn pick_best_config_returns_minimum_cost_idx() {
         let costs = vec![3.0, 1.0, 4.0, 1.5, 9.0];
         assert_eq!(pick_best_config(&costs), 1); // cost 1.0

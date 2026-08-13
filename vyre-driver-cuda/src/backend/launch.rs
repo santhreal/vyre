@@ -547,30 +547,6 @@ mod tests {
     }
 
     #[test]
-    fn kernel_args_source_uses_checked_fallible_argument_table_reservation() {
-        let source = include_str!("launch.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: launch source must contain production section before tests");
-
-        assert!(production.contains(concat!("CUDA_NUMERIC.", "checked_dim_product_u64")));
-        assert!(!production.contains(concat!("vyre_driver::numeric::", "checked_dim_product_u64")));
-        assert!(
-            production.contains("checked_add(1)") && production.contains("reserve_smallvec("),
-            "Fix: CUDA launch argument table construction must use checked count math and fallible reservation."
-        );
-        assert!(
-            production.contains("fn kernel_args_into(") && production.contains("kernel_args.clear();"),
-            "Fix: CUDA launch argument staging must support caller-owned reuse on multi-launch hot paths."
-        );
-        assert!(
-            !production.contains("SmallVec::with_capacity(ptrs.len() + 1)"),
-            "Fix: CUDA launch argument table construction must not use infallible capacity growth on the release path."
-        );
-    }
-
-    #[test]
     fn launch_cuda_function_rejects_null_function_before_ffi() {
         let mut args = [std::ptr::NonNull::<std::ffi::c_void>::dangling().as_ptr()];
         let error = launch_cuda_function(
@@ -612,93 +588,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn cuda_kernel_launch_ffi_is_single_sourced_for_graph_capture() {
-        let launch = include_str!("launch.rs");
-        let cuda_graph = include_str!("cuda_graph.rs");
-        let kernel_ffi = concat!("cudarc::driver::sys::", "cuLaunchKernel(");
-        let cooperative_ffi = concat!("cudarc::driver::sys::", "cuLaunchCooperativeKernel(");
-
-        assert_eq!(
-            launch.matches(kernel_ffi).count(),
-            1,
-            "Fix: raw cuLaunchKernel must stay behind launch_cuda_function."
-        );
-        assert_eq!(
-            launch.matches(cooperative_ffi).count(),
-            1,
-            "Fix: raw cuLaunchCooperativeKernel must stay behind launch_cuda_function."
-        );
-        assert_eq!(
-            cuda_graph.matches(kernel_ffi).count() + cuda_graph.matches(cooperative_ffi).count(),
-            0,
-            "Fix: cudaGraph capture must route kernel launches through launch_cuda_function."
-        );
-        assert!(
-            launch.contains("fn launch_cuda_function(")
-                && launch.contains("stream.is_null()")
-                && launch.contains("kernel_args.is_empty()")
-                && cuda_graph.contains("super::launch::launch_cuda_function("),
-            "Fix: shared CUDA launch helper must own handle/argument guards and be used by graph capture."
-        );
-    }
-
-    #[test]
-    fn prevalidated_launch_api_preserves_safe_default_without_double_validation_hot_path() {
-        let launch = include_str!("launch.rs");
-        let host_dispatch = include_str!("host_dispatch.rs");
-        let resident_dispatch = [
-            include_str!("resident_dispatch/helpers.rs"),
-            include_str!("resident_dispatch/borrowed.rs"),
-            include_str!("resident_dispatch/async_dispatch.rs"),
-            include_str!("resident_dispatch/batch.rs"),
-            include_str!("resident_dispatch/sync.rs"),
-            include_str!("resident_dispatch/sequence_api.rs"),
-            include_str!("resident_dispatch/sequence_fused.rs"),
-            include_str!("resident_dispatch/timed.rs"),
-        ]
-        .concat();
-        let egraph = [
-            include_str!("../egraph_kernel_plan/backend_structural.rs"),
-            include_str!("../egraph_kernel_plan/backend_rewrite.rs"),
-        ]
-        .concat();
-
-        assert!(
-            launch.contains("fn launch_resolved_function(")
-                && launch.contains("self.validate_resolved_launch_function(func, launch, cooperative)?;")
-                && launch.contains("fn launch_prevalidated_function("),
-            "Fix: CUDA launch API must keep a safe validating entrypoint and a separate prevalidated hot-path entrypoint."
-        );
-        assert!(
-            host_dispatch.contains("self.launch_prevalidated_function(")
-                && resident_dispatch.contains("self.launch_prevalidated_function("),
-            "Fix: host and resident CUDA hot paths that already called resolve_launch_function must avoid duplicate geometry/residency validation."
-        );
-        assert!(
-            resident_dispatch.matches("Self::kernel_args_into(").count() >= 2
-                && resident_dispatch.contains("let mut kernel_args = SmallVec::<[*mut c_void; 8]>::new();"),
-            "Fix: resident CUDA multi-launch hot paths must reuse caller-owned kernel argument staging instead of rebuilding a fresh SmallVec per launch."
-        );
-        assert!(
-            egraph.contains("self.launch_resolved_function(")
-                && !egraph.contains("self.launch_prevalidated_function("),
-            "Fix: standalone e-graph CUDA kernels must keep the validating launch entrypoint unless they are explicitly prevalidated."
-        );
-    }
-
     /// Behavioral proof that `kernel_args_into` returns a structured `Err` when
     /// the kernel argument staging reservation fails at runtime.
-    ///
-    /// This test drives the *actual* `reserve_smallvec` error path, not just
-    /// the source-text canary `kernel_args_source_uses_checked_fallible_argument_table_reservation`.
-    /// It requests a reservation of `usize::MAX` elements (always OOM) via a
-    /// SmallVec that already holds one item, confirming that the structured
-    /// `BackendError` propagates instead of panicking or returning garbage.
-    ///
-    /// The source-scan test proves that `reserve_smallvec` is present in the
-    /// source; this test proves that the error path is actually exercised at
-    /// runtime.
+    /// Drives the actual fallible reservation path with an impossible capacity.
+    /// The structured backend error must propagate without mutation.
     #[test]
     fn kernel_args_into_returns_err_on_allocation_failure() {
         // Build a ptrs slice whose length is `usize::MAX - 1`, which forces

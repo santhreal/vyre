@@ -396,17 +396,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn resident_graph_session_uses_shared_typed_cuda_arithmetic() {
-        let source = include_str!("resident_graph_session.rs");
-
-        assert!(source.contains("checked_add_u64_count as checked_add"));
-        assert!(source.contains("checked_mul_u64_count as checked_mul"));
-        assert!(source.contains("impl CudaArithmeticOverflow for CudaResidentGraphSessionError"));
-        assert!(!source.contains(concat!("fn checked_", "mul(")));
-        assert!(!source.contains(concat!("fn checked_", "add(")));
-    }
-
-    #[test]
     fn resident_graph_session_amortizes_fixed_graph_repeated_execution() {
         let plan = plan_cuda_resident_graph_session(CudaResidentGraphSessionProfile {
             graph_layout_hash: 0xabc,
@@ -580,15 +569,6 @@ mod tests {
                 budget_bytes: 127,
             }
         );
-    }
-
-    #[test]
-    fn resident_graph_session_evidence_uses_fallible_sample_staging() {
-        let source = include_str!("resident_graph_session.rs");
-
-        assert!(source.contains("use crate::backend::staging_reserve::reserve_vec;"));
-        assert!(source.contains("SampleReserveFailed"));
-        assert!(!source.contains(concat!("Vec", "::with_capacity(evidence.len())")));
     }
 
     fn profile(

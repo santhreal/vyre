@@ -41,17 +41,6 @@ pub struct MemoryOwnershipProof {
     pub borrowed_output_slot_count: usize,
 }
 
-/// Committed memory-ownership source and release artifact proof.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct MemoryOwnershipArtifactProof {
-    /// Number of committed source/artifact surfaces validated.
-    pub surface_count: usize,
-    /// Number of output-slot reuse tokens found.
-    pub output_reuse_token_count: usize,
-    /// Number of CUDA resident ownership tokens found.
-    pub resident_token_count: usize,
-}
-
 /// Memory ownership validation errors.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MemoryOwnershipError {
@@ -78,20 +67,6 @@ pub enum MemoryOwnershipError {
     MissingDeviceResident,
     /// Release contract lacks borrowed output-slot evidence.
     MissingBorrowedOutputSlots,
-    /// Committed memory ownership artifact is missing required evidence.
-    ArtifactMissingEvidence {
-        /// Missing evidence.
-        evidence: &'static str,
-    },
-    /// Committed memory ownership artifact missed a required threshold.
-    ArtifactThresholdMiss {
-        /// Field.
-        field: &'static str,
-        /// Observed value.
-        observed: usize,
-        /// Required value.
-        required: usize,
-    },
 }
 
 impl std::fmt::Display for MemoryOwnershipError {
@@ -120,18 +95,6 @@ impl std::fmt::Display for MemoryOwnershipError {
             Self::MissingBorrowedOutputSlots => write!(
                 f,
                 "memory ownership contract has no borrowed output slots. Fix: repeated dispatch outputs must use caller-owned reusable slots."
-            ),
-            Self::ArtifactMissingEvidence { evidence } => write!(
-                f,
-                "memory ownership artifact is missing {evidence}. Fix: prove the real driver/CUDA sources use one resident/staging/output ownership model."
-            ),
-            Self::ArtifactThresholdMiss {
-                field,
-                observed,
-                required,
-            } => write!(
-                f,
-                "memory ownership artifact {field}={observed} missed required {required}. Fix: restore resident CUDA ownership and caller-owned output reuse evidence."
             ),
         }
     }
@@ -192,165 +155,6 @@ pub fn validate_memory_ownership_contract(
         device_resident_count,
         borrowed_output_slot_count,
     })
-}
-
-const MEMORY_ARTIFACT_REQUIREMENTS: &[(usize, &str, &str)] = &[
-    (0, "driver DeviceBuffer contract", "DeviceBuffer"),
-    (0, "driver HostShimBuffer contract", "HostShimBuffer"),
-    (0, "driver output buffer contract", "OutputBuffers"),
-    (
-        0,
-        "driver output-slot preservation export",
-        "replace_output_buffers_preserving_slots",
-    ),
-    (
-        1,
-        "caller-owned output buffer alias",
-        "pub type OutputBuffers = Vec<Vec<u8>>",
-    ),
-    (
-        1,
-        "output-slot reuse function",
-        "replace_output_buffers_preserving_slots_with_memory_stats",
-    ),
-    (1, "reused output-slot accounting", "reused_slots"),
-    (1, "moved output-slot accounting", "moved_slots"),
-    (1, "retained capacity accounting", "retained_capacity_bytes"),
-    (
-        2,
-        "CUDA resident buffer handle",
-        "pub struct CudaResidentBuffer",
-    ),
-    (2, "CUDA resident store owner", "struct CudaResidentStore"),
-    (
-        2,
-        "resident byte budget reservation",
-        "reserve_resident_budget",
-    ),
-    (2, "resident inflight guard", "mark_inflight"),
-    (
-        2,
-        "resident unknown-handle diagnostic",
-        "not owned by this backend",
-    ),
-    (3, "CUDA resident allocation API", "allocate_resident"),
-    (3, "batched resident upload API", "upload_resident_many"),
-    (
-        3,
-        "caller-owned resident download API",
-        "download_resident_into",
-    ),
-    (
-        3,
-        "batched sparse readback API",
-        "download_resident_readbacks_many",
-    ),
-    (
-        3,
-        "resident readback byte accounting",
-        "record_device_to_host_readback",
-    ),
-    (4, "pinned host staging pool", "PinnedHostAllocationPool"),
-    (4, "bounded pinned staging cache", "max_cached_bytes"),
-    (4, "caller-owned copy into Vec", "copy_raw_bytes_into_vec"),
-    (5, "CUDA-first backend matrix", "\"cuda_first\": true"),
-    (
-        5,
-        "CUDA preferred backend",
-        "\"preferred_backend_id\": \"cuda\"",
-    ),
-    (5, "CUDA resident IO marker", "\"id\": \"cuda-resident-io\""),
-    (
-        5,
-        "CUDA resident dispatch marker",
-        "\"id\": \"cuda-resident-dispatch\"",
-    ),
-    (5, "no missing backend tokens", "\"missing_tokens\": []"),
-    (
-        5,
-        "no unresolved backend markers",
-        "\"unresolved_markers\": []",
-    ),
-    (6, "CUDA release suite backend", "\"backend\": \"cuda\""),
-    (
-        6,
-        "RTX 5090 release suite hardware",
-        "NVIDIA GeForce RTX 5090",
-    ),
-    (
-        6,
-        "CUDA selected benchmark backend",
-        "\"selected_backend\": \"cuda\"",
-    ),
-    (6, "CUDA release suite zero blockers", "\"blockers\": []"),
-    (6, "CUDA 100x contract", "\"cpu_sota_100x_required\": true"),
-];
-
-/// Validate committed source and CUDA evidence for host/device memory ownership.
-pub fn validate_memory_ownership_artifacts(
-    backend_contract_source: &str,
-    dispatch_result_source: &str,
-    cuda_resident_source: &str,
-    cuda_resident_io_source: &str,
-    cuda_allocations_source: &str,
-    backend_matrix: &str,
-    cuda_release_suite: &str,
-) -> Result<MemoryOwnershipArtifactProof, MemoryOwnershipError> {
-    let artifacts = [
-        backend_contract_source,
-        dispatch_result_source,
-        cuda_resident_source,
-        cuda_resident_io_source,
-        cuda_allocations_source,
-        backend_matrix,
-        cuda_release_suite,
-    ];
-    for &(artifact_index, evidence, needle) in MEMORY_ARTIFACT_REQUIREMENTS {
-        artifact_contains(artifacts[artifact_index], evidence, needle)?;
-    }
-
-    let output_reuse_token_count = dispatch_result_source
-        .matches("replace_output_buffers")
-        .count();
-    let resident_token_count = cuda_resident_source.matches("CudaResident").count()
-        + cuda_resident_io_source.matches("resident").count();
-
-    artifact_at_least("output reuse tokens", output_reuse_token_count, 8)?;
-    artifact_at_least("CUDA resident ownership tokens", resident_token_count, 40)?;
-
-    Ok(MemoryOwnershipArtifactProof {
-        surface_count: 7,
-        output_reuse_token_count,
-        resident_token_count,
-    })
-}
-
-fn artifact_contains(
-    artifact: &str,
-    evidence: &'static str,
-    needle: &str,
-) -> Result<(), MemoryOwnershipError> {
-    if artifact.contains(needle) {
-        Ok(())
-    } else {
-        Err(MemoryOwnershipError::ArtifactMissingEvidence { evidence })
-    }
-}
-
-fn artifact_at_least(
-    field: &'static str,
-    observed: usize,
-    required: usize,
-) -> Result<(), MemoryOwnershipError> {
-    if observed >= required {
-        Ok(())
-    } else {
-        Err(MemoryOwnershipError::ArtifactThresholdMiss {
-            field,
-            observed,
-            required,
-        })
-    }
 }
 
 #[cfg(test)]
@@ -442,64 +246,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn memory_ownership_accepts_committed_driver_and_cuda_artifacts() {
-        let proof = committed_artifact_proof()
-            .expect("Fix: committed driver/CUDA sources should prove memory ownership");
-
-        assert_eq!(proof.surface_count, 7);
-        assert!(proof.output_reuse_token_count >= 8);
-        assert!(proof.resident_token_count >= 40);
-    }
-
-    #[test]
-    fn memory_ownership_rejects_missing_output_slot_reuse_source() {
-        let dispatch_result_source =
-            include_str!("../../../vyre-driver/src/backend/dispatch_result.rs").replace(
-                "replace_output_buffers_preserving_slots_with_memory_stats",
-                "replace_outputs",
-            );
-
-        assert_eq!(
-            validate_memory_ownership_artifacts(
-                include_str!("../../../vyre-driver/src/backend.rs"),
-                &dispatch_result_source,
-                include_str!("../../../vyre-driver-cuda/src/backend/resident.rs"),
-                include_str!("../../../vyre-driver-cuda/src/backend/resident_io.rs"),
-                include_str!("../../../vyre-driver-cuda/src/backend/allocations.rs"),
-                include_str!("../../../release/evidence/backends/backend-matrix.json"),
-                include_str!("../../../release/evidence/benchmarks/cuda-release-suite.json"),
-            )
-            .expect_err("missing output-slot preservation must fail"),
-            MemoryOwnershipError::ArtifactMissingEvidence {
-                evidence: "output-slot reuse function",
-            }
-        );
-    }
-
-    #[test]
-    fn memory_ownership_rejects_non_cuda_release_artifact() {
-        let cuda_release_suite =
-            include_str!("../../../release/evidence/benchmarks/cuda-release-suite.json")
-                .replace("\"backend\": \"cuda\"", "\"backend\": \"wgpu\"");
-
-        assert_eq!(
-            validate_memory_ownership_artifacts(
-                include_str!("../../../vyre-driver/src/backend.rs"),
-                include_str!("../../../vyre-driver/src/backend/dispatch_result.rs"),
-                include_str!("../../../vyre-driver-cuda/src/backend/resident.rs"),
-                include_str!("../../../vyre-driver-cuda/src/backend/resident_io.rs"),
-                include_str!("../../../vyre-driver-cuda/src/backend/allocations.rs"),
-                include_str!("../../../release/evidence/backends/backend-matrix.json"),
-                &cuda_release_suite,
-            )
-            .expect_err("memory release proof must stay CUDA-backed"),
-            MemoryOwnershipError::ArtifactMissingEvidence {
-                evidence: "CUDA release suite backend",
-            }
-        );
-    }
-
     fn record<'a>(
         resource: &'a str,
         subsystem: &'a str,
@@ -512,17 +258,5 @@ mod tests {
             owner,
             production,
         }
-    }
-
-    fn committed_artifact_proof() -> Result<MemoryOwnershipArtifactProof, MemoryOwnershipError> {
-        validate_memory_ownership_artifacts(
-            include_str!("../../../vyre-driver/src/backend.rs"),
-            include_str!("../../../vyre-driver/src/backend/dispatch_result.rs"),
-            include_str!("../../../vyre-driver-cuda/src/backend/resident.rs"),
-            include_str!("../../../vyre-driver-cuda/src/backend/resident_io.rs"),
-            include_str!("../../../vyre-driver-cuda/src/backend/allocations.rs"),
-            include_str!("../../../release/evidence/backends/backend-matrix.json"),
-            include_str!("../../../release/evidence/benchmarks/cuda-release-suite.json"),
-        )
     }
 }

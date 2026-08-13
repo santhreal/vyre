@@ -294,22 +294,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn device_work_queue_uses_shared_driver_numeric_policy() {
-        let source = include_str!("device_work_queue.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: device work-queue source must contain production section");
-
-        assert!(source.contains("BackendNumericPolicy::new"));
-        assert!(source.contains("DEVICE_WORK_QUEUE_NUMERIC"));
-        assert!(source.contains("checked_ceil_div_u64"));
-        assert!(production.contains("fn checked_mul("));
-        assert!(production.contains("fn checked_add("));
-        assert!(!production.contains("CudaArithmeticOverflow"));
-    }
-
-    #[test]
     fn device_work_queue_plans_final_only_resident_execution() {
         let plan = plan_device_work_queue(DeviceWorkQueueProfile {
             initial_items: 256,
@@ -472,16 +456,6 @@ mod tests {
         assert_eq!(
             plan.initial_occupancy_bps, 10_000,
             "Fix: device work-queue occupancy must not use saturating u64 multiplication before division; full queues must report 10000 bps even near u64::MAX."
-        );
-    }
-
-    #[test]
-    fn device_work_queue_occupancy_uses_shared_numeric_helper() {
-        let source = include_str!("device_work_queue.rs");
-
-        assert!(
-            source.contains(concat!("DEVICE_WORK_QUEUE_NUMERIC.", "ratio_basis_points_u64")),
-            "Fix: device work-queue occupancy must use the shared driver numeric ratio helper instead of a backend-local basis-point formula."
         );
     }
 

@@ -405,21 +405,6 @@ mod tests {
         assert!(err.to_string().contains("requires sorted residuals"));
     }
 
-    #[test]
-    fn production_source_keeps_cpu_cost_model_helpers_out_of_via_path() {
-        let source = include_str!("cost_model.rs");
-        let via_section = source
-            .split("pub fn predict_runtime_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: test module marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_predict_runtime"));
-    }
-
     struct CostModelDispatcher;
 
     impl OptimizerDispatcher for CostModelDispatcher {

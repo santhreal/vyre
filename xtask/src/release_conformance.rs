@@ -331,11 +331,8 @@ fn run_backend_conformance(
     }
 }
 
-// `OpMatrixCatalog` and its reader live in `conformance_matrix`. This module
-// used to carry a second copy that drifted: the catalog gained an
-// `inlined_callee` opt-out there and kept requiring those ops here, so the
-// release conformance run reported five missing ids the matrix no longer
-// asked for. One owner, one reader.
+// `OpMatrixCatalog` and its reader live in `conformance_matrix`: one owner, one
+// reader, so a second copy here cannot drift from the matrix again.
 use crate::conformance_matrix::read_conformance_required_op_matrix;
 
 struct ParsedPairs {

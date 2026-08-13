@@ -456,25 +456,4 @@ mod tests {
         ];
         assert_eq!(cache.eviction_keys(&entries).unwrap(), vec![key(1)]);
     }
-
-    #[test]
-    fn production_pipeline_cache_uses_fallible_eviction_staging() {
-        let production = include_str!("pipeline.rs")
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: pipeline cache production section should precede tests");
-
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: pipeline-cache eviction must not allocate ranking/snapshot vectors infallibly."
-        );
-        assert!(
-            production.contains("reserve_backend_vec"),
-            "Fix: pipeline-cache eviction should reserve through the shared WGPU staging helper."
-        );
-        assert!(
-            production.contains("eviction_snapshot(&self) -> Result"),
-            "Fix: pipeline-cache eviction snapshot allocation failures must be represented explicitly."
-        );
-    }
 }

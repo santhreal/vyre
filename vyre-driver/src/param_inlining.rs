@@ -276,13 +276,4 @@ mod tests {
             ParamInliningDecision::UniformBuffer
         );
     }
-
-    #[test]
-    fn source_has_no_saturating_padding_math() {
-        let source = include_str!("param_inlining.rs");
-        assert!(
-            !source.contains(concat!(".", "saturating_add")),
-            "param inlining cannot silently clamp launch-param padding"
-        );
-    }
 }

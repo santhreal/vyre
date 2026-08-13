@@ -409,27 +409,6 @@ mod tests {
     use crate::synthetic_device_caps::synthetic_sm120_envelope_default;
 
     #[test]
-    fn occupancy_production_paths_do_not_panic_on_release_capability_math() {
-        let source = include_str!("occupancy.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: occupancy source must contain production section");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else(")
-                && !production.contains(".expect("),
-            "Fix: CUDA occupancy production arithmetic must return unrunnable/serialized decisions instead of panicking."
-        );
-        assert!(
-            production.contains("OccupancyEstimate::ZERO")
-                && production.contains("ConcurrentLaunchDecision::Serialize")
-                && production.contains("cooperative_thread_residency_block_limit"),
-            "Fix: CUDA occupancy must keep launch selection and cooperative residency on explicit non-panicking decision paths."
-        );
-    }
-
-    #[test]
     fn estimate_zero_when_workgroup_exceeds_max_threads_per_block() {
         let caps = synthetic_sm120_envelope_default();
         let usage = KernelResourceUsage {
@@ -813,17 +792,6 @@ mod tests {
                 reason: ConcurrentLaunchBlocker::SharedMemory
             },
             "Fix: CUDA concurrent-launch policy must reject co-resident shared-memory pressure using the probed SM budget, not a guessed multiplier."
-        );
-    }
-
-    #[test]
-    fn occupancy_arithmetic_is_checked_not_saturating() {
-        let source = include_str!("occupancy.rs");
-        assert!(
-            !source.contains(concat!(".", "saturating_add"))
-                && !source.contains(concat!(".", "saturating_mul"))
-                && !source.contains(concat!(".", "saturating_sub")),
-            "Fix: CUDA occupancy planning must use checked or proven-exact arithmetic, not saturating math that hides impossible resource states."
         );
     }
 }

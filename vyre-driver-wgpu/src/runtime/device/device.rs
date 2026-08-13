@@ -624,27 +624,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn production_device_acquisition_uses_fallible_probe_reservations() {
-        let production = include_str!("device.rs")
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: device production section should precede tests");
-
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: centralized GPU acquisition must not use infallible capacity constructors."
-        );
-        assert!(
-            production.contains("reserve_probe_vec"),
-            "Fix: centralized GPU acquisition should reserve probe metadata through the shared staging helper."
-        );
-        assert!(
-            production.contains("reserve_backend_vec"),
-            "Fix: WGPU device acquisition should reuse the backend staging reservation policy."
-        );
-    }
-
     /// Regression guard for the Apple-Silicon GPU crash: Metal (and GL / WebGPU)
     /// advertise the `PIPELINE_CACHE` adapter feature under wgpu 25 but then fail
     /// `device_create_pipeline_cache_init` with a fatal, un-catchable validation

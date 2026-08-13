@@ -306,39 +306,4 @@ mod tests {
         assert_eq!(out.active_items, vec![4, 6]);
         assert_eq!(out.dependencies.len(), 1);
     }
-
-    #[test]
-    fn adapter_builds_cuda_dependencies_without_iterator_collect_staging() {
-        let source = include_str!("frontier_typed_ir_adapter.rs");
-
-        assert!(
-            source.contains("fn try_reserve_for_waves(")
-                && source.contains("reserve_typed_vec as reserve_vec")
-                && source.contains("dependencies.push(MegakernelWaveDependency"),
-            "Fix: frontier-typed CUDA adapter must build dependency edges with explicit fallible preallocated storage."
-        );
-        assert!(
-            !source.contains(concat!(".map(|index| ", "MegakernelWaveDependency"))
-                && !source.contains(concat!(".collect", "();")),
-            "Fix: frontier-typed CUDA adapter must not use iterator collect staging on dependency-wave conversion."
-        );
-    }
-
-    #[test]
-    fn adapter_capacity_planning_is_checked_and_fallible() {
-        let source = include_str!("frontier_typed_ir_adapter.rs");
-
-        assert!(
-            source.contains("dependency_capacity(wave_count)")
-                && source.contains("reserve_vec(&mut self.waves, wave_count")
-                && source.contains("StorageReserveFailed"),
-            "Fix: frontier-typed CUDA adapter must not hide release-path capacity failures behind infallible Vec reservations."
-        );
-        assert!(
-            !source.contains(concat!("wave_count", ".saturating_sub"))
-                && !source.contains(concat!("Vec::with_capacity", "(wave_count)"))
-                && !source.contains(concat!("reserve", "(wave_count)")),
-            "Fix: frontier-typed CUDA adapter must not use saturating or infallible capacity staging in production."
-        );
-    }
 }

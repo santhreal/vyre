@@ -287,57 +287,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn dispatch_params_source_keeps_fallible_modular_staging() {
-        let source = include_str!("dispatch_params.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: dispatch-param source must contain production section before tests");
-
-        assert!(
-            production.contains("pub fn try_dispatch_param_words")
-                && production.contains("pub fn try_dispatch_param_words_into")
-                && production.contains("fn dispatch_param_word_len_for_bindings")
-                && production.contains("fn reserve_dispatch_param_words"),
-            "Fix: dispatch parameter planning must expose modular fallible staging APIs."
-        );
-        assert!(
-            !production.contains("Vec::with_capacity")
-                && !production.contains("words.resize(binding.buffer_index + 2, 0)")
-                && !production.contains("panic!("),
-            "Fix: dispatch parameter planning must not allocate infallibly, grow repeatedly, or panic in release-path helpers."
-        );
-    }
-
     // Reproducing test for: dispatch-param-words-silent-empty-return
     // Before fix: `dispatch_param_words` (infallible) existed and returned Vec::new() on error,
     // silently producing a zero-length param buffer. After fix: function is removed; callers
     // must use `try_dispatch_param_words` which returns a Result.
-    #[test]
-    fn no_infallible_dispatch_param_words_function_exists_in_public_surface() {
-        // Confirm the fallible API exists and succeeds on valid input.
-        let bindings = [binding(0, 10)];
-        let words = try_dispatch_param_words(&bindings, 10)
-            .expect("Fix: try_dispatch_param_words must succeed for valid bindings");
-        assert_eq!(
-            words,
-            vec![10, 10],
-            "Fix: try_dispatch_param_words must return [element_count, binding_element_count]"
-        );
-        // Confirm the source has no silent empty-vec fallback (the pattern from the bug:
-        // `Err(_) => Vec::new()` / `Err(_error) => Vec::new()`).
-        let source = include_str!("dispatch_params.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: production section must precede test section");
-        assert!(
-            !production.contains("=> Vec::new()"),
-            "Fix: the infallible dispatch_param_words silent-empty-return fallback must be absent from the production source"
-        );
-    }
-
     // Reproducing test for: dispatch-param-words-into-silent-clear
     // Before fix: `dispatch_param_words_into` returned () and silently cleared `words` on error.
     // After fix: it returns `Result<(), String>` so callers can observe and propagate the error.

@@ -25,7 +25,7 @@ fn overly_deep_blocks_fail_closed_with_depth_error() {
 
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|error| error.message().contains("V018")),
+        errors.iter().any(|error| error.code().as_str() == "V018"),
         "deep nested block chain must be rejected by the depth guard, got {errors:?}"
     );
 }

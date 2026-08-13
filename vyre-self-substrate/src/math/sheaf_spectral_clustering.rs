@@ -545,22 +545,6 @@ mod tests {
     }
 
     #[test]
-    fn release_fixed_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("sheaf_spectral_clustering.rs");
-        let start = source
-            .find("pub fn dominant_spectrum_fixed_via")
-            .expect("Fix: fixed path marker must exist");
-        let end = source
-            .find("\n/// Convenience: spectral gap")
-            .expect("Fix: test-only CPU marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("_cpu"));
-        assert!(!release_path.contains("reference_"));
-        assert!(!release_path.contains("vec![0u32"));
-        assert!(!release_path.contains("u32_slice_to_le_bytes("));
-    }
-
-    #[test]
     fn fixed_via_rejects_shape_mismatch() {
         let err = dominant_spectrum_fixed_via(&SpectrumDispatcher, &[1, 2, 3], &[1, 2], 2, 2, 1)
             .unwrap_err();

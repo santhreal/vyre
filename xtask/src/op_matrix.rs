@@ -112,7 +112,6 @@ struct OpRecord {
     ops: Vec<String>,
     registry_sources: Vec<String>,
     duplicate_ok: bool,
-    inlined_callee: bool,
     reference: &'static str,
     foundation_ir: &'static str,
     cuda: &'static str,
@@ -233,7 +232,6 @@ fn manual_records() -> Vec<OpRecord> {
                 "constant_division".to_string(),
             ],
             registry_sources: vec!["manual.foundation_ir".to_string()],
-            inlined_callee: false,
             duplicate_ok: false,
             reference: "not_applicable",
             foundation_ir: "supported",
@@ -255,7 +253,6 @@ fn manual_records() -> Vec<OpRecord> {
             owners: vec!["vyre-bench/src/cases/elementwise.rs".to_string()],
             ops: vec!["f32_add".to_string()],
             registry_sources: vec!["manual.bench".to_string()],
-            inlined_callee: false,
             duplicate_ok: false,
             reference: "supported",
             foundation_ir: "supported",
@@ -280,7 +277,7 @@ fn registered_records() -> Result<Vec<OpRecord>, String> {
     }
 
     ids.into_iter()
-        .map(|(id, sources)| record_for_registered_id(&id, sources, false))
+        .map(|(id, sources)| record_for_registered_id(&id, sources))
         .collect()
 }
 
@@ -302,7 +299,6 @@ fn push_registered(
 fn record_for_registered_id(
     id: &str,
     sources: BTreeSet<String>,
-    inlined_callee: bool,
 ) -> Result<OpRecord, String> {
     let tier = classify_op_id(id);
     if tier == OpTier::Unknown {
@@ -322,7 +318,6 @@ fn record_for_registered_id(
         owners: owner_paths(id, tier),
         ops: vec![id.to_string()],
         duplicate_ok: sources.len() > 1,
-        inlined_callee,
         registry_sources: sources.into_iter().collect(),
         reference: "supported",
         foundation_ir: "supported",
@@ -502,9 +497,6 @@ fn render_matrix(records: &[OpRecord]) -> String {
         push_array(&mut out, "owners", &record.owners);
         push_array(&mut out, "ops", &record.ops);
         push_array(&mut out, "registry_sources", &record.registry_sources);
-        if record.inlined_callee {
-            out.push_str("inlined_callee = true\n");
-        }
         if record.duplicate_ok {
             out.push_str("duplicate_ok = true\n");
         }

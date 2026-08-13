@@ -512,27 +512,6 @@ mod tests {
         assert!(scratch.id_capacity() >= id_capacity);
     }
 
-    #[test]
-    fn launch_fusion_staging_reserves_fallibly() {
-        let src = include_str!("launch_fusion.rs");
-
-        assert!(
-            src.contains("LaunchFusionScratch::try_with_capacity(stages.len())?")
-                && src.contains("scratch.try_reserve_ids(stages.len())?")
-                && src.contains("ReservationPolicy")
-                && src.contains("StorageReserveFailed"),
-            "Fix: launch fusion staging must use shared fallible reservations under scale pressure."
-        );
-        assert!(
-            !src.contains(concat!("FxHashSet::with_capacity", "_and_hasher"))
-                && !src.contains(concat!("Vec::with_capacity", "(stages.len())"))
-                && !src.contains(concat!("groups: vec![", "group]"))
-                && !src.contains(concat!("stage_ids: vec![", "stage.id]"))
-                && !src.contains(concat!("scratch.ids", ".reserve(stages.len())")),
-            "Fix: launch fusion release planning must not use infallible staging allocation."
-        );
-    }
-
     fn generated_stages(seed: u64) -> Vec<LaunchFusionStage> {
         let count = 1 + (seed as usize % 24);
         let mut stages = Vec::with_capacity(count);

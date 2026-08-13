@@ -62,6 +62,7 @@ packages = [
   "vyre-primitives",
   "vyre-reference",
   "vyre-runtime",
+  "vyre-safetensors",
   "vyre-scan",
   "vyre-self-substrate",
   "vyre-spec",

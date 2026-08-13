@@ -249,7 +249,7 @@ fn validation_cache_key_separates_valid_from_invalid_programs() {
         "a Bytes store without the opt-in must raise exactly one error"
     );
     assert!(
-        rejected_errors[0].message().contains("V013"),
+        rejected_errors[0].code().as_str() == "V013",
         "the error must be V013, got: {}",
         rejected_errors[0].message()
     );

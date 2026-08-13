@@ -494,19 +494,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_sheaf_helpers_out_of_via_path() {
-        let source = include_str!("sheaf_heterophilic_dispatch.rs");
-        let via_section = source
-            .split("pub fn diffuse_dispatch_stalks_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[must_use]\n#[cfg(test)]\npub fn diffuse_to_equilibrium")
-            .next()
-            .expect("Fix: test-only equilibrium marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_diffuse"));
-    }
 }

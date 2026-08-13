@@ -84,7 +84,7 @@
       "path": "vyre-emit-ptx/src/emitter/body.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 17542,
+      "source_bytes": 17549,
       "implementation_tokens": [
         "vector-load gap",
         "find_latency_filler_avoiding_results"
@@ -113,7 +113,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14789,
+      "source_bytes": 15265,
       "implementation_tokens": [
         "ld.global",
         "v4"
@@ -127,7 +127,7 @@
       "path": "vyre-emit-ptx/src/emitter/vector.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 14789,
+      "source_bytes": 15265,
       "implementation_tokens": [
         "st.global",
         "v4"
@@ -183,7 +183,7 @@
       "path": "vyre-driver-cuda/src/backend/resident_io.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 56047,
+      "source_bytes": 48205,
       "implementation_tokens": [
         "download_resident_readbacks_many",
         "upload_resident_at_many",
@@ -198,7 +198,7 @@
       "path": "vyre-driver-cuda/src/backend/cuda_graph.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 59125,
+      "source_bytes": 50300,
       "implementation_tokens": [
         "record_cuda_graph",
         "cugraph"
@@ -212,7 +212,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 76794,
+      "source_bytes": 63116,
       "implementation_tokens": [
         "function_for_ptx",
         "ptx_target_sm"
@@ -226,7 +226,7 @@
       "path": "vyre-driver-cuda/src/backend/module_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 76794,
+      "source_bytes": 63116,
       "implementation_tokens": [
         "CudaPtxSourceCache",
         "CudaPtxSourceCacheSnapshot",
@@ -244,7 +244,7 @@
       "path": "vyre-driver-cuda/src/backend/ptx_target.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 4860,
+      "source_bytes": 4015,
       "implementation_tokens": [
         "select_loadable_ptx_target_sm",
         "cumoduleloaddata"
@@ -276,7 +276,7 @@
       "path": "vyre-driver-wgpu/src/materializer.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 20787,
+      "source_bytes": 21315,
       "implementation_tokens": [
         "impl ArtifactMaterializer",
         "fn materialize",
@@ -291,7 +291,7 @@
       "path": "vyre-runtime/src/artifact_admission.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 23465,
+      "source_bytes": 23300,
       "implementation_tokens": [
         "ArtifactSession",
         "materialize"
@@ -305,7 +305,7 @@
       "path": "vyre-driver-wgpu/src/runtime/readback_ring.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 36206,
+      "source_bytes": 29343,
       "implementation_tokens": [
         "ring",
         "readback"
@@ -347,7 +347,7 @@
       "path": "vyre-driver-wgpu/src/pipeline/disk_cache.rs",
       "exists": true,
       "read_error": null,
-      "source_bytes": 24941,
+      "source_bytes": 23860,
       "implementation_tokens": [
         "cache",
         "pipeline",
@@ -493,13 +493,6 @@
       "dispatches": true,
       "acquire_ok": true,
       "acquire_error": null
-    },
-    {
-      "id": "metal",
-      "precedence": 4294967295,
-      "dispatches": false,
-      "acquire_ok": false,
-      "acquire_error": "unsupported feature `Apple Metal.framework native runtime` on backend `metal`.          Fix: check backend capability before using this feature, or select a backend that supports it."
     }
   ],
   "blockers": []

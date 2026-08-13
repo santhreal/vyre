@@ -199,22 +199,6 @@ mod tests {
     }
 
     #[test]
-    fn source_uses_exact_widened_arithmetic_not_saturation() {
-        let source = include_str!("trace_jit_policy.rs");
-
-        assert!(
-            !source.contains(concat!("saturating", "_mul"))
-                && !source.contains(concat!("saturating", "_sub")),
-            "Fix: trace-JIT speculation policy must use exact widened arithmetic, not saturating math that hides cost corruption."
-        );
-        assert!(
-            source.contains("crate::numeric::weighted_u64_by_basis_points_u128")
-                && source.contains("weighted - speculative_spec_cost_ns"),
-            "Fix: trace-JIT expected savings must stay widened through the decision."
-        );
-    }
-
-    #[test]
     fn calibration_constants_pinned() {
         assert_eq!(TRACE_JIT_HOT_SHAPE_THRESHOLD, 8);
         assert_eq!(TRACE_JIT_MIN_CONFIDENCE_BPS, 6_000);

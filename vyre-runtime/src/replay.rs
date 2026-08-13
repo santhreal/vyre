@@ -653,9 +653,11 @@ mod tests {
         let path = dir.path().join("log.vrrl");
         let mut log = RingLog::open(&path, 4)
             .expect("Fix: open fresh log; restore this invariant before continuing.");
-        let backend_error = BackendError::DispatchFailed {
-            code: Some(17),
-            message: "DeviceLost after queue submit".to_string(),
+        let backend_error = BackendError::DeviceLost {
+            backend: "fixture".to_string(),
+            device: "fixture-0".to_string(),
+            generation: 7,
+            message: "device loss after queue submit".to_string(),
         };
         let failure =
             ReplayFailureEvidence::from_backend_error(3, &backend_error, b"partial-output");

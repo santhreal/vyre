@@ -27,14 +27,32 @@
       "text": ".expect(\"source was validated as UTF-8 before syntax traversal\")"
     },
     {
+      "path": "structure-gate/src/lib.rs",
+      "line": 168,
+      "pattern": "expect_call",
+      "text": ".expect(\"Fix: xtask must live under the vyre workspace root.\")"
+    },
+    {
+      "path": "structure-gate/src/lib.rs",
+      "line": 373,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
+    },
+    {
+      "path": "structure-gate/src/lib.rs",
+      "line": 375,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
+    },
+    {
       "path": "vyre-aot/src/bundle.rs",
-      "line": 355,
+      "line": 356,
       "pattern": "expect_call",
       "text": ".expect(\"validated non-empty target resource bindings\");"
     },
     {
       "path": "vyre-aot/src/bundle.rs",
-      "line": 361,
+      "line": 362,
       "pattern": "expect_call",
       "text": ".expect(\"canonical target payload validation guarantees resource association\");"
     },
@@ -43,24 +61,6 @@
       "line": 115,
       "pattern": "documented_panic_contract",
       "text": "panic!(\"vyre-driver reduction offsets generation failed: {error}\");"
-    },
-    {
-      "path": "vyre-driver/src/registry/intrinsic_adapter.rs",
-      "line": 59,
-      "pattern": "expect_call",
-      "text": ".expect(\"canonical intrinsic registration must provide a signature\"),"
-    },
-    {
-      "path": "vyre-driver/src/registry/registry.rs",
-      "line": 224,
-      "pattern": "panic_macro",
-      "text": "panic!(\"vyre-driver registry rejected conflicting registrations: {error}\")"
-    },
-    {
-      "path": "vyre-driver/src/registry/registry.rs",
-      "line": 256,
-      "pattern": "documented_panic_contract",
-      "text": "panic!(\"vyre-driver extern registry failed verification: {errors:?}\");"
     },
     {
       "path": "vyre-libs/src/scan/classic_ac/bounded_ranges.rs",
@@ -183,12 +183,6 @@
       "text": ".expect(\"truncated VAST: node_count * row stride overflowed usize\");"
     },
     {
-      "path": "vyre-bench/src/cases/literal_set_decode_heavy.rs",
-      "line": 77,
-      "pattern": "documented_panic_contract",
-      "text": ".expect(\"PATTERNS is non-empty\");"
-    },
-    {
       "path": "vyre-self-substrate/src/scheduling/megakernel_schedule.rs",
       "line": 167,
       "pattern": "documented_panic_contract",
@@ -220,15 +214,21 @@
     },
     {
       "path": "vyre-foundation/src/diagnostics.rs",
-      "line": 366,
+      "line": 372,
       "pattern": "expect_call",
       "text": "serde_json::to_string(self).expect(\"Diagnostic serialization is infallible\")"
     },
     {
       "path": "vyre-foundation/src/operation.rs",
-      "line": 346,
+      "line": 421,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"invalid semantic operation registry: {error}\"))"
+    },
+    {
+      "path": "vyre-foundation/src/operation.rs",
+      "line": 484,
+      "pattern": "documented_panic_contract",
+      "text": "panic!(\"target identity must be non-empty and contain no surrounding whitespace\");"
     },
     {
       "path": "vyre-foundation/fuzz/fuzz_targets/program_wire.rs",
@@ -241,36 +241,6 @@
       "line": 27,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: reparsing canonical to_wire bytes must succeed; restore this invariant before continuing.\");"
-    },
-    {
-      "path": "vyre-scan/src/session.rs",
-      "line": 200,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-scan/src/literal_set.rs",
-      "line": 1860,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-scan/src/dispatch_io.rs",
-      "line": 53,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-scan/src/dispatch_io.rs",
-      "line": 317,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
-    },
-    {
-      "path": "vyre-scan/src/dispatch_io.rs",
-      "line": 362,
-      "pattern": "documented_panic_contract",
-      "text": "panic!("
     },
     {
       "path": "vyre-test-support/src/consumer_boundary.rs",
@@ -328,31 +298,31 @@
     },
     {
       "path": "vyre-megakernel/src/envelope.rs",
-      "line": 633,
+      "line": 822,
       "pattern": "expect_call",
       "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed frame slice\")) as usize;"
     },
     {
       "path": "vyre-megakernel/src/envelope.rs",
-      "line": 660,
+      "line": 849,
       "pattern": "expect_call",
       "text": ".expect(\"validated digest length\");"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 768,
+      "line": 763,
       "pattern": "expect_call",
       "text": "let body_len = u32::from_le_bytes(bytes[6..10].try_into().expect(\"fixed slice\")) as usize;"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 795,
+      "line": 790,
       "pattern": "expect_call",
       "text": ".expect(\"validated digest length\");"
     },
     {
       "path": "vyre-megakernel/src/lib.rs",
-      "line": 926,
+      "line": 921,
       "pattern": "expect_call",
       "text": ".expect(\"encoded digest length\");"
     },
@@ -406,13 +376,13 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 496,
+      "line": 506,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
     {
       "path": "vyre-reference/src/execution/hashmap/node_step.rs",
-      "line": 527,
+      "line": 537,
       "pattern": "documented_panic_contract",
       "text": ".unwrap_or_else(|_| panic!(\"reference Buffer byte lock was poisoned\"));"
     },
@@ -658,27 +628,39 @@
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 134,
+      "line": 126,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 218,
+      "line": 211,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/lens.rs",
-      "line": 300,
+      "line": 293,
       "pattern": "expect_call",
       "text": ".expect(\"Fix: conformance operation must provide a neutral builder\");"
     },
     {
       "path": "conform/vyre-conform/src/main.rs",
-      "line": 997,
+      "line": 992,
       "pattern": "expect_call",
       "text": ".expect(\"production session initialized\")"
+    },
+    {
+      "path": "xtask/src/conformance_matrix.rs",
+      "line": 193,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"));"
+    },
+    {
+      "path": "xtask/src/conformance_matrix.rs",
+      "line": 197,
+      "pattern": "panic_macro",
+      "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"))"
     }
   ],
   "release_blocking_findings": [],

@@ -118,7 +118,7 @@ pub mod scheduling;
 #[cfg(feature = "telemetry")]
 pub mod telemetry;
 
-#[cfg(all(test, feature = "all-solvers"))]
+#[cfg(all(test, feature = "data"))]
 mod test_support;
 
 #[cfg(feature = "optimizer")]

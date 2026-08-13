@@ -803,20 +803,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_matroid_helpers_out_of_via_path() {
-        let source = include_str!("matroid_exact_megakernel.rs");
-        let via_section = source
-            .split("pub fn select_optimal_subset_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[cfg(test)]\n#[must_use]\npub fn reference_select_optimal_subset")
-            .next()
-            .expect("Fix: test-only reference marker should exist");
-
-        assert!(!via_section.contains("cpu_ref"));
-        assert!(!via_section.contains("matroid_cpu_ref"));
-        assert!(!via_section.contains("reference_select"));
-    }
 }

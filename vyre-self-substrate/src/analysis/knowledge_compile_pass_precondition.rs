@@ -620,21 +620,6 @@ mod tests {
     }
 
     #[test]
-    fn release_via_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("knowledge_compile_pass_precondition.rs");
-        let start = source
-            .find("pub fn pass_applies_via")
-            .expect("Fix: via path marker must exist");
-        let end = source
-            .find("\n/// Convenience: does pass X conflict")
-            .expect("Fix: test-only CPU marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("_cpu"));
-        assert!(!release_path.contains("reference_"));
-        assert!(!release_path.contains("u32_slice_to_le_bytes("));
-    }
-
-    #[test]
     fn pass_applies_via_rejects_parent_before_child() {
         let nodes = vec![
             (LITERAL_TRUE, 0u32, 0u32),

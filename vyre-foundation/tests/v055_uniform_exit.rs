@@ -30,7 +30,7 @@ fn guarded_return(cond: Expr) -> Node {
 fn v055_messages(program: &Program) -> Vec<String> {
     validate(program)
         .iter()
-        .filter(|error| error.message().contains("V055"))
+        .filter(|error| error.code().as_str() == "V055")
         .map(|error| error.message().to_string())
         .collect()
 }

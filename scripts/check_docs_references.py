@@ -91,29 +91,24 @@ def workspace_readmes(root: Path) -> Iterable[Path]:
     ]
 
 
-def inactive_index_documents(root: Path) -> set[Path]:
-    index = root / "docs/INDEX.md"
+def inactive_manifest_documents(root: Path) -> set[Path]:
+    manifest = root / "docs/DOCS.toml"
     try:
-        lines = index.read_text(encoding="utf-8").splitlines()
-    except (OSError, UnicodeError):
+        value = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, tomllib.TOMLDecodeError):
         return set()
     inactive: set[Path] = set()
-    for line in lines:
-        columns = [column.strip() for column in line.split("|")]
-        if len(columns) < 6 or columns[1] not in {"`archived`", "`superseded`"}:
+    for page in value.get("page", []):
+        if not isinstance(page, dict) or page.get("status") not in {"archived", "superseded"}:
             continue
-        cell = columns[4]
-        match = re.search(r"\]\(([^)]+)\)", cell)
-        if match is None:
-            continue
-        target = match.group(1)
-        candidate = root / target if target.startswith("docs/") else root / "docs" / target
-        inactive.add(candidate.resolve(strict=False))
+        path = page.get("path")
+        if isinstance(path, str):
+            inactive.add((root / "docs" / path).resolve(strict=False))
     return inactive
 
 
 def public_documents(root: Path) -> list[Path]:
-    inactive = inactive_index_documents(root)
+    inactive = inactive_manifest_documents(root)
     candidates = [root / "README.md", *root.glob("docs/**/*.md"), *workspace_readmes(root)]
     documents: list[Path] = []
     for path in sorted(set(candidates)):

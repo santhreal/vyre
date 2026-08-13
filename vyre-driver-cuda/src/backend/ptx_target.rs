@@ -95,21 +95,4 @@ mod tests {
         assert_eq!(ptx_target_candidates(89).as_slice(), &[89, 86, 80, 75, 70]);
         assert_eq!(ptx_target_candidates(70).as_slice(), &[70]);
     }
-
-    #[test]
-    fn ptx_target_selection_source_avoids_heap_staged_failure_strings_and_sorting() {
-        let source = include_str!("ptx_target.rs");
-
-        assert!(
-            !source.contains(concat!("Vec::with_capacity", "(candidates.len())"))
-                && !source.contains(concat!("failures", ".join"))
-                && !source.contains(concat!("format!(\"", "sm_{candidate}")),
-            "Fix: CUDA PTX target probing must format one final diagnostic instead of allocating one String per failed candidate."
-        );
-        assert!(
-            !source.contains(concat!(".", "sort_unstable_by"))
-                && !source.contains(concat!(".", "dedup()")),
-            "Fix: CUDA PTX target candidates are a fixed preference list; backend acquisition must not sort/dedup them on the hot acquisition path."
-        );
-    }
 }

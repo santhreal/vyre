@@ -226,27 +226,3 @@ fn union_find_alias_via_empty_edges_returns_parent_without_dispatch() {
         .expect("Fix: empty union-find edge set must return parent_init");
     assert_eq!(out, vec![0, 1, 2]);
 }
-
-#[test]
-fn release_path_does_not_export_union_find_reference_oracles() {
-    let dispatch_source = include_str!("../dispatch.rs");
-    let reference_source = include_str!("../reference.rs");
-    let via_section = dispatch_source
-        .split("pub fn union_find_alias_via(")
-        .nth(1)
-        .expect("Fix: release union-find via function must exist")
-        .split("pub fn union_find_alias_via_with_scratch_into")
-        .next()
-        .expect("Fix: scratch-backed union-find function follows allocating wrapper");
-    assert!(
-        !via_section.contains("reference_union_find_alias")
-            && !via_section.contains("canonicalize_parent_to_roots"),
-        "release union-find path must not depend on host reference or canonicalization helpers"
-    );
-    assert!(
-        reference_source.contains("#[cfg(any(test, feature = \"cpu-parity\"))]\n#[must_use]\npub fn reference_union_find_alias"),
-        "union-find host reference must be compiled only for parity tests or explicit cpu-parity harnesses"
-    );
-    assert!(dispatch_source.contains("refresh_keyed_dispatch_inputs("));
-    assert!(!dispatch_source.contains("dispatch_single_u32_output_into"));
-}

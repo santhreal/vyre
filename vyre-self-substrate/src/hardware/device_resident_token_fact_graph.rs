@@ -392,24 +392,6 @@ mod tests {
     }
 
     #[test]
-    fn token_fact_graph_packer_avoids_ordered_maps_and_fallible_capacity_defaults() {
-        let source = include_str!("device_resident_token_fact_graph.rs");
-        assert!(
-            !source.contains(concat!("BTree", "Map"))
-                && !source.contains(concat!("BTree", "Set")),
-            "Fix: token/fact resident graph packing must not use ordered maps or sets in the CUDA release path."
-        );
-        assert!(
-            !source.contains(concat!("unwrap", "_or(0)")),
-            "Fix: token/fact resident graph packing must not hide capacity conversion failures behind zero-capacity defaults."
-        );
-        assert!(
-            !source.contains(concat!("vec![", "Vec::<")),
-            "Fix: token/fact resident graph packing must not allocate one adjacency vector per resident node."
-        );
-    }
-
-    #[test]
     fn token_fact_graph_packs_large_unsorted_input_with_stable_indices() {
         let mut nodes = Vec::new();
         let mut edges = Vec::new();

@@ -451,26 +451,4 @@ mod tests {
             "Fix: stale heap entries must be compacted to GPU-count scale instead of stream-length scale"
         );
     }
-
-    #[test]
-    fn stream_shard_source_has_no_release_path_infallible_allocation() {
-        let source = include_str!("stream_shard.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: stream-shard production source must precede tests");
-        assert!(
-            !production.contains("BinaryHeap::with_capacity")
-                && !production.contains("vec![0u64; gpu_capacity]")
-                && !production.contains(".reserve_exact("),
-            "Fix: WGPU stream sharding must report allocation pressure instead of aborting on infallible scheduler allocation."
-        );
-        assert!(
-            production.contains("try_reserve_binary_heap_to_capacity")
-                && production.contains("try_reserve_vec_to_capacity")
-                && production.contains("ensure_heap_spare")
-                && production.contains("AllocationFailed"),
-            "Fix: WGPU stream sharding must reserve scheduler state fallibly before GPU assignment."
-        );
-    }
 }

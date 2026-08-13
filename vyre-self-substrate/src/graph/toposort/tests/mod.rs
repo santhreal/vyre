@@ -8,16 +8,6 @@ use vyre_primitives::graph::toposort::{
 };
 
 #[test]
-fn toposort_wrappers_use_dedicated_observability_counter() {
-    let reference_source = include_str!("../reference.rs");
-    let dispatch_source = include_str!("../dispatch.rs");
-    assert!(reference_source.contains("toposort_calls"));
-    assert!(dispatch_source.contains("toposort_calls"));
-    assert!(!reference_source.contains("dataflow_fixpoint_calls"));
-    assert!(!dispatch_source.contains("dataflow_fixpoint_calls"));
-}
-
-#[test]
 fn topo_order_chain_emits_dependency_first() {
     // 0 depends on 1 depends on 2. Order should be [2, 1, 0]
     let order = reference_topo_order(3, &[(0, 1), (1, 2)]).unwrap();
@@ -309,17 +299,6 @@ fn topo_order_csr_via_reuses_static_graph_inputs_and_rezeros_work_slots() {
 }
 
 #[test]
-fn topo_order_csr_static_graph_identity_is_primitive_owned() {
-    let root_source = include_str!("../mod.rs");
-    let dispatch_source = include_str!("../dispatch.rs");
-
-    assert!(root_source.contains("ToposortCsrStaticInputKey"));
-    assert!(!root_source.contains("struct ToposortStaticInputKey"));
-    assert!(dispatch_source.contains(".static_input_key(offsets, targets)"));
-    assert!(!dispatch_source.contains("fingerprint_u32_slice"));
-}
-
-#[test]
 fn topo_order_csr_via_rejects_cycle_like_partial_output() {
     let err = topo_order_csr_via(&ToposortDispatcher, 2, &[0, 1, 2], &[1, 0]).unwrap_err();
     assert!(matches!(err, DispatchError::BackendError(_)));
@@ -348,40 +327,4 @@ fn topo_order_csr_via_uses_primitive_order_contract() {
 fn topo_order_csr_via_rejects_bad_csr() {
     let err = topo_order_csr_via(&ToposortDispatcher, 2, &[0, 2, 1], &[1]).unwrap_err();
     assert!(matches!(err, DispatchError::BadInputs(_)));
-}
-
-#[test]
-fn production_source_keeps_cpu_toposort_helpers_out_of_via_path() {
-    let source = include_str!("../dispatch.rs");
-    let via_section = source
-        .split("pub fn topo_order_csr_via")
-        .nth(1)
-        .expect("Fix: via section should exist")
-        .split("fn map_toposort_csr_error")
-        .next()
-        .expect("Fix: dispatch section should end before error mapping");
-
-    assert!(!via_section.contains("_cpu"));
-    assert!(!via_section.contains("reference_"));
-    assert!(!via_section.contains("fill_"));
-}
-
-#[test]
-fn test_dispatcher_uses_primitive_csr_oracle_not_local_kahn_clone() {
-    let source = include_str!("mod.rs");
-    let dispatcher_section = source
-        .split("struct ToposortDispatcher;")
-        .nth(1)
-        .expect("Fix: test dispatcher section should exist")
-        .split("#[test]\n    fn topo_order_csr_via_dispatches_primitive_order")
-        .next()
-        .expect("Fix: dispatcher section should end before dispatch tests");
-
-    assert!(dispatcher_section.contains("toposort_csr_into"));
-    assert!(
-            !dispatcher_section.contains("indeg")
-                && !dispatcher_section.contains("queue")
-                && !dispatcher_section.contains("while let Some"),
-            "Fix: self-substrate topological-sort tests must not maintain a second Kahn implementation; use the primitive CSR oracle."
-        );
 }

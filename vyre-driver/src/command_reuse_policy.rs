@@ -153,21 +153,4 @@ mod tests {
             other => panic!("expected RecordAndReplay; got {:?}", other),
         }
     }
-
-    #[test]
-    fn command_reuse_policy_source_uses_exact_widened_arithmetic() {
-        let source = include_str!("command_reuse_policy.rs");
-
-        assert!(
-            !source.contains(concat!("saturating", "_mul"))
-                && !source.contains(concat!("saturating", "_sub")),
-            "Fix: command-reuse policy must use exact widened arithmetic, not saturating replay-cost math."
-        );
-        assert!(
-            source.contains("u128::from(inputs.per_launch_overhead_ns)")
-                && source.contains("u128::from(inputs.repeat_count)")
-                && source.contains("total_call_savings - record_overhead_ns"),
-            "Fix: command-reuse savings must stay widened through the verdict."
-        );
-    }
 }

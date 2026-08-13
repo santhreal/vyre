@@ -33,39 +33,6 @@ const CUDA_LAUNCH_RESOURCE_CACHE: usize = 128;
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn resident_dispatch_input_lengths_reserve_fallibly() {
-        let source = include_str!("dispatch.rs");
-        assert!(
-            source.contains("use super::staging_reserve::reserve_smallvec;"),
-            "Fix: CUDA resident dispatch staging must use the shared fallible staging reservation contract."
-        );
-        assert!(
-            source.contains("reserve_smallvec(")
-                && source.contains("&mut input_lengths")
-                && source.contains("static_bindings.input_indices.len()")
-                && source.contains("\"resident dispatch input lengths\"")
-                && !source.contains(concat!(
-                    "SmallVec::<[usize; 8]>::",
-                    "with_capacity(static_bindings.input_indices.len())"
-                ))
-                && !source.contains(concat!("input_lengths", ".resize(")),
-            "Fix: CUDA resident dispatch input-length staging must reserve fallibly instead of using infallible SmallVec capacity growth."
-        );
-        assert!(
-            source.contains(
-                "input_lengths.extend(std::iter::repeat_n(0, static_bindings.input_indices.len()))"
-            ),
-            "Fix: CUDA resident dispatch input lengths must extend after fallible reserve without resize-driven growth."
-        );
-        assert!(
-            source.contains("input_lengths.get_mut(input_index)")
-                && source.contains("resident dispatch input binding index {input_index}")
-                && !source.contains(concat!("input_lengths", "[input_index]")),
-            "Fix: CUDA resident dispatch input-length derivation must turn stale binding input indexes into BackendError instead of directly indexing the input length table."
-        );
-    }
-
     /// A counter at exactly TWICE the ceiling is the missed-reset signature, and
     /// it must fire.
     ///

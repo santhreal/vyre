@@ -187,9 +187,9 @@ fn messages(program: &Program) -> Vec<String> {
 }
 
 fn v055_count(program: &Program) -> usize {
-    messages(program)
+    validate(program)
         .iter()
-        .filter(|message| message.contains("V055"))
+        .filter(|error| error.code().as_str() == "V055")
         .count()
 }
 

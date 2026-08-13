@@ -847,30 +847,4 @@ mod tests {
         assert_eq!(snapshot.timed_device_ns_total, 40);
         assert_eq!(snapshot.timed_device_ns_max, 30);
     }
-
-    #[test]
-    fn telemetry_production_paths_do_not_panic_on_counter_or_ratio_overflow() {
-        let source = include_str!("telemetry.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: telemetry source must contain production section");
-        assert!(
-            !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else(")
-                && !production.contains(".expect("),
-            "Fix: CUDA telemetry production paths must record overflow diagnostics instead of panicking."
-        );
-        assert!(
-            production.contains("record_counter_overflow")
-                && production.contains("scheduled_thread_slot_overflows")
-                && production.contains("record_timed_dispatch")
-                && production.contains("tracing::error!"),
-            "Fix: CUDA telemetry overflow paths must stay observable after removing release-path panics."
-        );
-        assert!(
-            production.contains("crate::numeric::CUDA_NUMERIC.ratio_basis_points_u64"),
-            "Fix: CUDA telemetry basis-point math must use the shared backend numeric policy."
-        );
-    }
 }

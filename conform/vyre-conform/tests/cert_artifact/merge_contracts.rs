@@ -35,22 +35,13 @@ fn merge_verifies_and_resigns_disjoint_certificate_shards() {
         ]),
     );
 
-    let status = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--no-default-features",
-            "--quiet",
-            "--",
-            "merge",
-            "--out",
-        ])
+    let status = Command::new(conform_binary())
+        .args(["merge", "--out"])
         .arg(&merged)
         .arg(&shard_a)
         .arg(&shard_b)
         .status()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         status.success(),
         "Fix: merge must accept signed disjoint shards"
@@ -114,21 +105,12 @@ fn merge_rejects_tampered_certificate_shard() {
     )
     .expect("Fix: tampered shard should be writable");
 
-    let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--no-default-features",
-            "--quiet",
-            "--",
-            "merge",
-            "--out",
-        ])
+    let output = Command::new(conform_binary())
+        .args(["merge", "--out"])
         .arg(&merged)
         .arg(&shard)
         .output()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         !output.status.success(),
         "Fix: merge must reject a shard whose signed body was tampered."

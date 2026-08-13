@@ -10,7 +10,7 @@
     },
     {
       "path": "vyre-bench/src/cases/scan_ac_irregular.rs",
-      "line": 83,
+      "line": 84,
       "pattern": "TODO",
       "text": "b\"TODO:\","
     },
@@ -22,13 +22,13 @@
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 42,
+      "line": 43,
       "pattern": "placeholder_text",
       "text": "/// `false` this field is `DataType::U32` as a placeholder; callers"
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",
-      "line": 48,
+      "line": 49,
       "pattern": "placeholder_text",
       "text": "/// placeholder; V045 assignment-type checking must be skipped."
     },
@@ -46,13 +46,13 @@
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 272,
+      "line": 257,
       "pattern": "placeholder_text",
       "text": "// the placeholder to the range it will actually read back."
     },
     {
       "path": "vyre-reference/src/execution/hashmap/mod.rs",
-      "line": 427,
+      "line": 412,
       "pattern": "placeholder_text",
       "text": "/// what a caller-supplied placeholder has to cover."
     },

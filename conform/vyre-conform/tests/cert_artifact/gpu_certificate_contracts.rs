@@ -4,29 +4,16 @@ use super::*;
 fn prove_emits_signed_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
     let selected_backend = selected_backend_override();
-    let mut command = Command::new("cargo");
-    command.env("VYRE_CONFORM_PROOF_WORKERS", "16").args([
-        "run",
-        "-p",
-        "vyre-conform",
-        "--features",
-        "gpu",
-        "--quiet",
-        "--",
-        "prove",
-    ]);
+    let mut command = Command::new(conform_binary());
+    command.env("VYRE_CONFORM_PROOF_WORKERS", "16").arg("prove");
     if let Some(backend) = selected_backend.as_deref() {
         command.args(["--backend", backend]);
     }
-    // `output()` rather than `status()`: this shells out to a second cargo
-    // invocation, so a failure here can be a build error, a missing backend, or a
-    // prove-time error, and discarding the child's streams left the assertion
-    // saying only "must succeed" with nothing to act on.
     let result = command
         .arg("--out")
         .arg(out.path())
         .output()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         result.status.success(),
         "TEST-034: `cargo run -p vyre-conform --features gpu -- prove --out <path>` must \
@@ -176,24 +163,14 @@ fn prove_emits_signed_certificate_on_gpu_build() {
 fn prove_emits_signed_cuda_release_certificate_on_gpu_build() {
     let out = tempfile::NamedTempFile::new().expect("tempfile");
     let selected_backend = selected_backend_override().unwrap_or_else(|| "cuda".to_string());
-    let result = Command::new("cargo")
+    let result = Command::new(conform_binary())
         .env("VYRE_CONFORM_PROOF_WORKERS", "16")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--features",
-            "gpu",
-            "--quiet",
-            "--",
-            "prove",
-            "--backend",
-        ])
+        .args(["prove", "--backend"])
         .arg(&selected_backend)
-        .args(["--out"])
+        .arg("--out")
         .arg(out.path())
         .output()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         result.status.success(),
         "Fix: selected GPU release backend `{selected_backend}` must produce a signed certificate \

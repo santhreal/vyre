@@ -297,20 +297,6 @@ mod tests {
     }
 
     #[test]
-    fn release_fingerprint_via_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("vsa_fingerprint.rs");
-        let start = source
-            .find("pub fn fingerprint_via")
-            .expect("Fix: via path marker must exist");
-        let end = source
-            .find("\n/// Approximate cache lookup")
-            .expect("Fix: lookup marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("_cpu"));
-        assert!(!release_path.contains("reference_"));
-    }
-
-    #[test]
     fn fingerprint_via_into_reuses_output() {
         let dispatcher = XorDispatcher;
         let kind = vec![0xDEAD_BEEFu32; 8];

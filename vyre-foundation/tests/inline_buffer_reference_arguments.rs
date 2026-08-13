@@ -422,7 +422,7 @@ fn a_buffer_reference_outside_a_call_argument_is_rejected() {
     );
     let report = vyre_foundation::validate::validate(&program);
     assert!(
-        report.iter().any(|e| e.to_string().contains("V051")),
+        report.iter().any(|e| e.code().as_str() == "V051"),
         "storing a buffer reference must raise V051, got {:?}",
         report
     );

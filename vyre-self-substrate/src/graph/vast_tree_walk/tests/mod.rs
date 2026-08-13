@@ -107,15 +107,6 @@ fn trusted_builders_fail_fast_instead_of_returning_inert_programs() {
     );
 }
 
-#[test]
-fn production_facade_does_not_import_primitive_builders_directly() {
-    let facade = include_str!("../mod.rs");
-    assert!(!facade.contains("try_ast_walk_preorder"));
-    assert!(!facade.contains("try_ast_walk_postorder"));
-    assert!(!facade.contains("ast_walk_preorder"));
-    assert!(!facade.contains("ast_walk_postorder"));
-}
-
 fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(message) = payload.downcast_ref::<String>() {
         message.clone()

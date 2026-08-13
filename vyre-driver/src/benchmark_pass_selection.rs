@@ -694,44 +694,6 @@ mod tests {
     }
 
     #[test]
-    fn benchmark_pass_selection_avoids_tree_sets_and_candidate_vector_copies() {
-        let src = include_str!("benchmark_pass_selection.rs");
-        assert!(
-            !src.contains(concat!("BTree", "Set")),
-            "Fix: benchmark pass selection should hash pass ids and sort candidate indices by value."
-        );
-        assert!(
-            !src.contains(concat!("candidates", ".to_vec()")),
-            "Fix: benchmark pass selection should not copy all candidates before value ordering."
-        );
-        assert!(
-            src.contains("BenchmarkPassSelectionScratch::try_with_capacity(candidates.len())?"),
-            "Fix: benchmark pass selection must stage scratch with fallible release-path allocation."
-        );
-        assert!(
-            src.contains("scratch.try_reserve_candidates(candidates.len())?"),
-            "Fix: caller-owned benchmark pass-selection scratch must grow through fallible reservation."
-        );
-        assert!(
-            src.contains("ReusableIndexScratch"),
-            "Fix: benchmark pass-selection duplicate detection and ordering scratch must share the paired typed fallible reservation helper."
-        );
-        assert!(
-            src.contains("StorageReserveFailed"),
-            "Fix: benchmark pass-selection allocation failures must surface as actionable planning errors."
-        );
-        assert!(
-            !src.contains(concat!("FxHashSet::with_capacity", "_and_hasher")),
-            "Fix: benchmark pass-selection scratch hash storage must not allocate infallibly."
-        );
-        assert!(
-            !src.contains(concat!("Vec::with_capacity", "(candidate_count)"))
-                && !src.contains(concat!("Vec::with_capacity", "(candidates.len())")),
-            "Fix: benchmark pass-selection scratch/result vectors must not allocate infallibly."
-        );
-    }
-
-    #[test]
     fn benchmark_pass_selection_reuses_caller_owned_candidate_scratch() {
         let mut scratch =
             BenchmarkPassSelectionScratch::try_with_capacity(64).expect("Fix: scratch capacity");

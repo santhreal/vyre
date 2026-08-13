@@ -544,26 +544,4 @@ mod tests {
         assert!(!adapter_name_contains("NVIDIA GeForce RTX 5090", "radeon"));
         assert!(adapter_name_contains("Mötley GPU", "mötley"));
     }
-
-    #[test]
-    fn production_selector_uses_fallible_probe_reservations() {
-        let production = include_str!("selector.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: selector production section should precede tests");
-
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: GPU probe paths must not use infallible capacity constructors."
-        );
-        assert!(
-            production.contains("reserve_probe_vec"),
-            "Fix: GPU probe metadata should reserve through the shared WGPU staging helper."
-        );
-        assert!(
-            !production.contains("info.name.to_lowercase()"),
-            "Fix: adapter matching must not allocate lowercase strings per adapter."
-        );
-        assert!(production.contains("adapter_name_contains"));
-    }
 }

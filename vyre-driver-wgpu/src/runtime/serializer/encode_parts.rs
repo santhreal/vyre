@@ -93,23 +93,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encode_parts_uses_fallible_exact_reservation() {
-        let production = include_str!("encode_parts.rs")
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: serializer encoder production section should precede tests");
-
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: encode_parts must not use infallible frame allocation."
-        );
-        assert!(
-            production.contains("try_reserve_exact(total)"),
-            "Fix: encode_parts should reserve the validated frame length fallibly before appending."
-        );
-    }
-
-    #[test]
     fn encode_parts_capacity_matches_validated_frame_size() {
         let parts = [b"abc".as_slice(), b"defgh".as_slice()];
         let encoded = encode_parts(&parts).expect("Fix: small frame should encode");

@@ -15,6 +15,9 @@ fn selected_backend_override() -> Option<String> {
         .ok()
         .filter(|value| !value.trim().is_empty())
 }
+fn conform_binary() -> &'static str {
+    env!("CARGO_BIN_EXE_vyre-conform")
+}
 
 fn write_signed_shard(
     path: &std::path::Path,

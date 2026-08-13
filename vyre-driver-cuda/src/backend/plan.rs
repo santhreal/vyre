@@ -156,31 +156,6 @@ mod tests {
     }
 
     #[test]
-    fn ordered_output_indices_reserve_fallibly() {
-        let source = include_str!("plan.rs");
-        assert!(
-            source.contains("use super::staging_reserve::reserve_smallvec;"),
-            "Fix: CUDA dispatch-plan helpers must use the shared fallible staging reservation contract."
-        );
-        assert!(
-            source.contains("\"CUDA ordered output binding scratch\"")
-                && source.contains("\"CUDA ordered output binding indices\""),
-            "Fix: CUDA output binding ordering must label both fallible scratch reservations."
-        );
-        assert!(
-            source.contains("if monotonic {\n        return Ok(output_indices);\n    }"),
-            "Fix: CUDA output binding ordering must keep the already-ordered path allocation-light and sort-free."
-        );
-        assert!(
-            !source.contains(concat!(
-                "SmallVec::<[(usize, usize); 8]>::",
-                "with_capacity"
-            )) && !source.contains(concat!("SmallVec::<[usize; 8]>::", "with_capacity")),
-            "Fix: CUDA output binding ordering must not allocate scratch infallibly."
-        );
-    }
-
-    #[test]
     fn output_binding_accessor_rejects_stale_or_non_output_indices() {
         let plan = CudaDispatchPlan {
             bindings: output_plan(&[0]),

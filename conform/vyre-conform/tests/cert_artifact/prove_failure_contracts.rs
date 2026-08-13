@@ -1,29 +1,20 @@
 use super::*;
 
+#[cfg(not(feature = "gpu"))]
 #[test]
 fn prove_refuses_certificate_when_backend_cannot_dispatch() {
-    // In the default build only SPIR-V (emission-only, no device) and
-    // photonic (non-dispatching hardware substrate) are linked. Neither can execute a program, so
-    // `prove` MUST refuse to emit the certificate.
+    // A no-default-features build links no dispatch-capable target. `prove`
+    // must refuse rather than emit an untested certificate.
     let out_path = std::env::temp_dir().join(format!(
         "vyre-conform-prove-refuses-{}.json",
         std::process::id()
     ));
     let _ = std::fs::remove_file(&out_path);
-    let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "vyre-conform",
-            "--no-default-features",
-            "--quiet",
-            "--",
-            "prove",
-            "--out",
-        ])
+    let output = Command::new(conform_binary())
+        .args(["prove", "--out"])
         .arg(&out_path)
         .output()
-        .expect("Fix: cargo must be available in PATH");
+        .expect("Fix: the built vyre-conform binary must launch");
     assert!(
         !output.status.success(),
         "TEST-034: prove without a dispatch-capable backend must exit non-zero; stdout={} stderr={}",

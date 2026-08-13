@@ -602,49 +602,6 @@ mod tests {
     }
 
     #[test]
-    fn diagnostic_aggregation_avoids_tree_sets_and_shard_vector_copies() {
-        let src = include_str!("device_diagnostic_aggregation.rs");
-        assert!(
-            !src.contains(concat!("BTree", "Set")),
-            "Fix: diagnostic aggregation should hash shard ids and sort compact-readback indices once."
-        );
-        assert!(
-            !src.contains(concat!("shards", ".to_vec()")),
-            "Fix: diagnostic aggregation should not copy all shard records before final compact-range ordering."
-        );
-        assert!(
-            src.contains("fn avoided_readback_bytes(")
-                && src.contains("raw_candidate_readback_bytes >= host_readback_bytes"),
-            "Fix: avoided-readback telemetry must explicitly clamp negative savings to zero after checked host/raw accounting."
-        );
-        assert!(
-            src.contains("DiagnosticAggregationScratch::try_with_capacity(shards.len())?"),
-            "Fix: diagnostic aggregation must stage scratch with fallible release-path allocation."
-        );
-        assert!(
-            src.contains("scratch.try_reserve_shards(shards.len())?"),
-            "Fix: caller-owned diagnostic aggregation scratch must grow through fallible reservation."
-        );
-        assert!(
-            src.contains("ReusableIndexScratch"),
-            "Fix: diagnostic aggregation duplicate detection and ordering scratch must share the paired typed fallible reservation helper."
-        );
-        assert!(
-            src.contains("StorageReserveFailed"),
-            "Fix: diagnostic aggregation allocation failures must surface as actionable launch-planning errors."
-        );
-        assert!(
-            !src.contains(concat!("FxHashSet::with_capacity", "_and_hasher")),
-            "Fix: diagnostic aggregation scratch hash storage must not allocate infallibly."
-        );
-        assert!(
-            !src.contains(concat!("Vec::with_capacity", "(shard_count)"))
-                && !src.contains(concat!("Vec::with_capacity", "(shards.len())")),
-            "Fix: diagnostic aggregation scratch/result vectors must not allocate infallibly."
-        );
-    }
-
-    #[test]
     fn diagnostic_aggregation_reuses_caller_owned_shard_planning_scratch() {
         let mut scratch =
             DiagnosticAggregationScratch::try_with_capacity(128).expect("Fix: scratch capacity");
@@ -731,26 +688,6 @@ mod tests {
                 assert!(plan.final_only_host_readback);
             }
         }
-    }
-
-    #[test]
-    fn diagnostic_aggregation_production_ratio_path_does_not_panic() {
-        let source = include_str!("device_diagnostic_aggregation.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: diagnostic aggregation source must contain production section");
-        assert!(
-            !production.contains(".expect(")
-                && !production.contains(concat!("panic", "!("))
-                && !production.contains(".unwrap_or_else("),
-            "Fix: diagnostic aggregation production planning must return errors or bounded telemetry instead of panicking."
-        );
-        assert_eq!(
-            diagnostic_compression_ratio_bps(u64::MAX, 1),
-            u32::MAX,
-            "Fix: diagnostic compression telemetry must remain bounded when a pathological ratio exceeds export width."
-        );
     }
 
     fn shard(

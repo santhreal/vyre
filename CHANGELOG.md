@@ -10,16 +10,17 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   dequantizes each immutable weight tile once and reuses it across independent
   resident batch rows. Release evidence measures normalized per-inference
   latency.
-- The runtime now reads bounded safetensors headers and sharded indexes without
-  reading tensor payloads, confines shard paths to the checkpoint root, rejects
-  duplicate or unmapped tensors, validates caller-supplied dtype and shape
-  requirements, and streams complete shards against an exact trusted BLAKE3 set
-  before returning an immutable checkpoint identity.
-- The runtime now owns immutable model weights, reusable compiled pipelines,
-  and mutable per-sequence state through one budgeted residency boundary. Cold
-  and warm admission, rollback, cancellation, generation-checked reset,
-  completion, eviction, and manager destruction release resources without
-  exposing stale state.
+- The vyre-safetensors adapter reads bounded safetensors headers and sharded
+  indexes without reading tensor payloads, confines shard paths to the
+  checkpoint root, rejects duplicate or unmapped tensors, validates
+  caller-supplied dtype and shape requirements, and streams complete shards
+  against an exact trusted BLAKE3 set before returning an immutable checkpoint
+  identity.
+- The runtime now owns immutable resources, reusable artifact instances, and
+  mutable leased state through one budgeted residency boundary. Cold and warm
+  admission, rollback, cancellation, generation-checked reset, completion,
+  eviction, and manager destruction release resources without exposing stale
+  state.
 - ProgramGraph now composes reusable Programs through canonical typed value
   identities, explicit consumer and output ports, symbolic or concrete shapes,
   access and lifetime contracts, and validated state transitions. Its bounded
@@ -95,37 +96,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   generated/manual ownership. Crate dependency records declare purpose,
   features, target conditions, visibility, and destination seam, and optimizer
   pass reference pages are generated from the live pass registry.
-
-- Semantic optimization now has one foundation-owned `Program` scheduler before
-  verified representation lowering. Descriptor rewrite engines, rewrite
-  bisection, duplicate optimizer benchmarks, and post-lowering semantic
-  optimization APIs are gone. The 4,096-case semantic corpus and generated pass
-  reference derive from the live foundation registry.
-
-- Program validation failures now preserve stable typed rule codes, owning
-  phases, program locations, causes, corrective actions, and retry classes
-  through serialization, diagnostics, execution planning, backend admission,
-  and reference execution.
-
-- Semantic operations now have one foundation-owned
-  `OperationRegistration` and validated `OperationRegistry`. Portable flat-byte
-  references submit `ReferenceFacet` records in `vyre-reference`; concrete
-  targets submit compiler, payload-format, materializer, semantic-support, and
-  explicit reference-oracle classification through one `BackendRegistration`.
-  Registry startup now rejects duplicate backend IDs, target IDs, operation
-  facets, and owner-local metadata instead of selecting by inventory order.
-  Production routing excludes reference oracles by this typed registration
-  field rather than matching backend-name strings. Signature-only semantic
-  operations remain cataloged but are excluded from executable conformance.
-- AOT compilation and packaging now select linked concrete targets through the
-  validated opaque `TargetId`. The closed AOT target enum, process-local
-  operation interning, fixed target lowering slots, runtime TOML dialect
-  registry, reference sentinels, and duplicate operation-definition route are
-  gone.
-- Primitive adoption now has one executable authority:
-  `primitive-admission-gate` uses the canonical operation graph and
-  `PRIMITIVE_ADMISSION.toml`. The source-token recursion scanner and its
-  duplicate allowlist are gone.
+- Floating-point parity now uses one foundation-owned comparison contract for
+  semantic operation witnesses, including each operation's declared tolerance.
+  The library operation catalog distinguishes the complete semantic inventory
+  from its deterministic executable-fixture projection.
+- C typedef row phases remain canonical callable operations. The operation
+  matrix marks them as inlined callees whose execution coverage belongs to
+  fixture-backed parent operations.
 
 ### Removed
 

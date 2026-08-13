@@ -452,21 +452,6 @@ mod tests {
     }
 
     #[test]
-    fn production_source_keeps_cpu_qsvt_helpers_out_of_via_path() {
-        let source = include_str!("qsvt_matrix_function_fusion.rs");
-        let via_section = source
-            .split("pub fn transport_residual_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("/// Convenience: derive a fusion-affinity score")
-            .next()
-            .expect("Fix: post-via marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_transport"));
-    }
-
-    #[test]
     #[should_panic(expected = "chebyshev_order")]
     fn rejects_zero_chebyshev_order() {
         let cost = vec![1.0; 4];

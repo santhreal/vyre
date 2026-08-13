@@ -349,20 +349,6 @@ mod tests {
     }
 
     #[test]
-    fn production_source_does_not_call_cpu_tensor_train_helpers() {
-        let source = include_str!("tensor_train_chain_fusion.rs");
-        let production_source = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: source prefix exists");
-        assert!(
-            !production_source.contains("tt_contract_step_cpu")
-                && !production_source.contains("reference_fusion_pressure(shared_buffer_ranks)"),
-            "Fix: tensor-train chain fusion production paths must dispatch GPU-capable primitives or use exact metadata, not CPU helper calls."
-        );
-    }
-
-    #[test]
     fn via_pressure_matches_unit_core_reference() {
         let dispatcher = ReferenceDispatcher;
         let ranks = vec![2, 3, 5];

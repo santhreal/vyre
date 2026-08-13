@@ -45,14 +45,13 @@ if find "$CRATE_DIR/src" -name '*.rs' -not -path '*/tests/*' -print0 2>/dev/null
     FAILURES=$((FAILURES + 1))
 fi
 
-# Gate 4: per-primitive contract on dataflow + security + bitset
-# + graph primitives.
+# Gate 4: registry-derived primitive adoption and reviewed exceptions.
 PRIM_GATE="$ROOT/scripts/check_primitive_contract.sh"
 if [[ -x "$PRIM_GATE" ]]; then
     case "$CRATE" in
         vyre-libs|vyre-primitives)
             if ! "$PRIM_GATE" >/dev/null 2>&1; then
-                echo "FAIL: $CRATE has primitives violating SKILL_BUILD_DATAFLOW_PRIMITIVE.md" >&2
+                echo "FAIL: $CRATE has unadopted primitives without an owner-reviewed exception" >&2
                 FAILURES=$((FAILURES + 1))
             fi
             ;;

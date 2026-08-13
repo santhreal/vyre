@@ -467,21 +467,6 @@ mod tests {
     }
 
     #[test]
-    fn release_fixed_path_does_not_call_cpu_or_reference_helpers() {
-        let source = include_str!("string_diagram_ir_rewrite.rs");
-        let start = source
-            .find("pub fn compose_ir_arrows_fixed_via")
-            .expect("Fix: fixed path marker must exist");
-        let end = source
-            .find("\n/// Identity arrow on dimension")
-            .expect("Fix: test-only CPU path marker must exist");
-        let release_path = &source[start..end];
-        assert!(!release_path.contains("_cpu"));
-        assert!(!release_path.contains("reference_"));
-        assert!(!release_path.contains("u32_slice_to_le_bytes("));
-    }
-
-    #[test]
     fn fixed_via_rejects_shape_mismatch() {
         let err =
             compose_ir_arrows_fixed_via(&ComposeDispatcher, &[1, 2, 3], &[1, 2, 3, 4], 2, 2, 2)

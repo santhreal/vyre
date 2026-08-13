@@ -81,7 +81,7 @@ fn huge_node_count_exceeds_limit() {
     assert!(
         errors.iter().any(|e| {
             let m = e.message();
-            m.contains("V019") && m.contains("node count") && m.contains("limit")
+            e.code().as_str() == "V019" && m.contains("node count") && m.contains("limit")
         }),
         "node-count error must be V019 naming 'node count' and 'limit', got: {errors:?}"
     );

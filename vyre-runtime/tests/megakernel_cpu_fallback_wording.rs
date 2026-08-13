@@ -73,22 +73,3 @@ fn batch_descriptor_errors_never_suggest_cpu_fallback() {
         .expect_err("overflow must fail");
     assert_no_cpu_wording(&err);
 }
-
-#[test]
-fn runtime_megakernel_source_contains_no_cpu_fallback_path() {
-    let paths = ["src/megakernel/mod.rs"];
-    for path in paths {
-        let src = std::fs::read_to_string(format!("{}/{path}", env!("CARGO_MANIFEST_DIR")))
-            .unwrap_or_else(|_| panic!("{path} must be readable"));
-        let prod = src.split("#[cfg(test)]").next().unwrap_or(&src);
-        let lower = prod.to_lowercase();
-        assert!(
-            !lower.contains("cpu fallback"),
-            "{path} must not contain 'cpu fallback'"
-        );
-        assert!(
-            !lower.contains("software fallback"),
-            "{path} must not contain 'software fallback'"
-        );
-    }
-}

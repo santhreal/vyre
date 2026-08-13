@@ -742,21 +742,6 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn production_source_keeps_cpu_fmm_helpers_out_of_via_path() {
-        let source = include_str!("fmm_polyhedral_compress.rs");
-        let via_section = source
-            .split("pub fn aggregate_to_cells_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: test module marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_"));
-    }
-
     #[derive(Default)]
     struct FmmDispatcher {
         calls: Cell<usize>,

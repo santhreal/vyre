@@ -555,25 +555,4 @@ mod tests {
         // cap protects callers from runaway.
         const _: () = assert!(DEFAULT_PROVENANCE_MAX_ITERATIONS >= 16);
     }
-
-    #[test]
-    fn release_path_does_not_export_host_oracles_without_cpu_parity_cfg() {
-        let source = include_str!("scallop_provenance.rs");
-        let gpu_region = source
-            .split("pub fn provenance_closure_via(")
-            .nth(1)
-            .expect("Fix: release provenance function must exist")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: tests follow release provenance functions");
-        assert!(
-            !gpu_region.contains("cpu_ref") && !gpu_region.contains("reference_provenance"),
-            "release provenance path must stay GPU-dispatch-only; host references belong behind cfg(test)"
-        );
-        assert!(
-            source.contains("#[must_use]\n#[cfg(any(test, feature = \"cpu-parity\"))]\npub fn reference_provenance_closure")
-                || source.contains("#[cfg(any(test, feature = \"cpu-parity\"))]\n#[must_use]\npub fn reference_provenance_closure"),
-            "host provenance reference must be compiled only for parity tests or explicit cpu-parity harnesses"
-        );
-    }
 }

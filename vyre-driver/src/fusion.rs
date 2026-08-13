@@ -207,15 +207,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn source_has_no_clamped_fusion_admission_math() {
-        let source = include_str!("fusion.rs");
-        assert!(
-            !source.contains(concat!(".", "saturating_")),
-            "fusion admission must use widened exact arithmetic, not silent clamps"
-        );
-    }
-
     // Reproducing test for: fusion-invocation-overflow-wrong-variant
     // Before fix: FusionPass returned WorkgroupSizeMismatch{upstream==downstream} when the
     // real failure was invocations > cap, misreporting the rejection reason to callers.

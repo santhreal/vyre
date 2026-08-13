@@ -1,16 +1,7 @@
 {
   "schema_version": 1,
-  "release_blocker_count": 0,
+  "release_blocker_count": 4,
   "intake_summary": [
-    {
-      "owner_lane": "bench_harness",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "documented_panic_contract",
-      "release_blocker": false,
-      "count": 1
-    },
     {
       "owner_lane": "bench_harness",
       "surface": "production",
@@ -27,7 +18,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 6
+      "count": 2
     },
     {
       "owner_lane": "coordination",
@@ -36,7 +27,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 9
+      "count": 10
     },
     {
       "owner_lane": "coordination",
@@ -45,7 +36,7 @@
       "hot_path": false,
       "pattern": "panic_macro",
       "release_blocker": false,
-      "count": 1
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -54,7 +45,25 @@
       "hot_path": false,
       "pattern": "raw_workspace_cargo",
       "release_blocker": false,
+      "count": 2
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": true,
       "count": 1
+    },
+    {
+      "owner_lane": "coordination",
+      "surface": "production",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "unbounded_read",
+      "release_blocker": true,
+      "count": 3
     },
     {
       "owner_lane": "coordination",
@@ -126,7 +135,7 @@
       "hot_path": false,
       "pattern": "documented_panic_contract",
       "release_blocker": false,
-      "count": 9
+      "count": 8
     },
     {
       "owner_lane": "driver_shared",
@@ -135,16 +144,7 @@
       "hot_path": false,
       "pattern": "expect_call",
       "release_blocker": false,
-      "count": 5
-    },
-    {
-      "owner_lane": "driver_shared",
-      "surface": "production",
-      "risk": "informational",
-      "hot_path": false,
-      "pattern": "panic_macro",
-      "release_blocker": false,
-      "count": 1
+      "count": 4
     },
     {
       "owner_lane": "driver_shared",
@@ -271,7 +271,18 @@
       "pattern": "placeholder_text",
       "release_blocker": false,
       "count": 1
+    },
+    {
+      "owner_lane": "testing_evidence",
+      "surface": "release_tooling",
+      "risk": "informational",
+      "hot_path": false,
+      "pattern": "panic_macro",
+      "release_blocker": false,
+      "count": 2
     }
   ],
-  "blockers": []
+  "blockers": [
+    "4 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
+  ]
 }

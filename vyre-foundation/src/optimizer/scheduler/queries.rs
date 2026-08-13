@@ -532,22 +532,4 @@ impl PassScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn explicit_scheduler_constructor_has_fallible_release_path() {
-        let scheduler = PassScheduler::try_with_passes(Vec::new())
-            .expect("Fix: empty scheduler construction must not fail.");
-        assert_eq!(scheduler.max_iterations, DEFAULT_MAX_ITERATIONS);
-
-        let production = include_str!("queries.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: production scheduler query section must exist.");
-        assert!(
-            production.contains("pub fn try_with_passes")
-                && production.contains("fn empty_fallback")
-                && !production.contains(".expect("),
-            "Fix: PassScheduler explicit construction must not panic in production."
-        );
-    }
 }

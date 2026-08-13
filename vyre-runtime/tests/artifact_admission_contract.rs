@@ -809,14 +809,11 @@ static TEST_REGISTRATION: BackendRegistration = BackendRegistration {
 fn resident_bindings_include_global_and_constant_target_resources() {
     let neutral = resident_projection_artifact();
     let payload = resident_projection_payload(&neutral);
-    let session = ArtifactSession::from_bytes(
-        &TEST_REGISTRATION,
-        &envelope_bytes(neutral, [payload]),
-    )
-    .expect("authenticated resident projection must materialize");
+    let session =
+        ArtifactSession::from_bytes(&TEST_REGISTRATION, &envelope_bytes(neutral, [payload]))
+            .expect("authenticated resident projection must materialize");
     let owner = ResidentOwner::new().expect("resident owner identity must be available");
-    let resources = [0, 1, 2]
-        .map(|id| Resource::Resident(owner.handle(id)));
+    let resources = [0, 1, 2].map(|id| Resource::Resident(owner.handle(id)));
 
     let bindings = session
         .resident_bindings(&resources)

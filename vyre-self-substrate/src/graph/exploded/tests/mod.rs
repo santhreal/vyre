@@ -301,37 +301,6 @@ fn via_with_scratch_reuses_split_dispatch_decode_and_output_storage() {
 }
 
 #[test]
-fn production_source_uses_primitive_rule_column_scratch_not_local_splitters() {
-    let source = format!(
-        "{}\n{}",
-        include_str!("../mod.rs"),
-        include_str!("../dispatch.rs")
-    );
-
-    assert!(source.contains("IfdsCsrRuleColumns"));
-    assert!(source.contains(".rule_columns"));
-    assert!(source.contains(".prepare(intra_edges, inter_edges, flow_gen, flow_kill)"));
-    assert!(!source.contains(concat!("fn split", "3_into")));
-    assert!(!source.contains(concat!("fn split", "4_into")));
-    assert!(!source.contains("split_ifds_rule_triples_into as"));
-    assert!(!source.contains("split_ifds_rule_quads_into as"));
-}
-
-#[test]
-fn production_source_uses_primitive_static_key_and_readback_validation() {
-    let source = format!(
-        "{}\n{}",
-        include_str!("../mod.rs"),
-        include_str!("../dispatch.rs")
-    );
-
-    assert!(source.contains("IfdsCsrStaticInputKey"));
-    assert!(source.contains("plan.static_input_key(rule_fingerprint)"));
-    assert!(source.contains("validate_ifds_csr_readback"));
-    assert!(!source.contains("struct IfdsCsrStaticInputKey"));
-}
-
-#[test]
 fn empty_via_path_does_not_materialize_program_or_dispatch() {
     let dispatcher = CpuOracleDispatcher::new();
     let mut scratch = IfdsCsrGpuScratch::default();

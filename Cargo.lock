@@ -2906,6 +2906,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
+name = "structure-gate"
+version = "0.1.0"
+dependencies = [
+ "toml",
+ "walkdir",
+]
+
+[[package]]
 name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3355,7 +3363,6 @@ dependencies = [
  "vyre-foundation",
  "vyre-megakernel",
  "vyre-runtime",
- "vyre-scan",
  "vyre-spec",
  "vyre-test-support",
 ]
@@ -3497,7 +3504,6 @@ dependencies = [
  "vyre-libs",
  "vyre-lower",
  "vyre-primitives",
- "vyre-scan",
  "vyre-test-support",
 ]
 
@@ -3557,7 +3563,6 @@ dependencies = [
  "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
- "vyre-scan",
  "vyre-self-substrate",
  "vyre-spec",
  "vyre-test-support",
@@ -3654,7 +3659,6 @@ dependencies = [
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
- "vyre-scan",
  "vyre-self-substrate",
  "vyre-spec",
  "vyre-test-support",
@@ -3977,28 +3981,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.19",
-]
-
-[[package]]
-name = "vyre-scan"
-version = "0.7.2"
-dependencies = [
- "bytemuck",
- "proptest",
- "serde",
- "smallvec",
- "tempfile",
- "thiserror 2.0.19",
- "tracing",
- "vyre-driver",
- "vyre-driver-reference",
- "vyre-driver-wgpu",
- "vyre-foundation",
- "vyre-libs",
- "vyre-megakernel",
- "vyre-primitives",
- "vyre-reference",
- "vyre-runtime",
 ]
 
 [[package]]

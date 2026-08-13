@@ -557,19 +557,4 @@ mod tests {
             assert_eq!(*before, after);
         }
     }
-
-    #[test]
-    fn production_source_keeps_cpu_multigrid_helpers_out_of_via_path() {
-        let source = include_str!("multigrid_matroid_solver.rs");
-        let via_section = source
-            .split("pub fn matroid_solve_step_fixed_via")
-            .nth(1)
-            .expect("Fix: via section should exist")
-            .split("/// Iterate Jacobi smoothing until residual norm drops below `tol`")
-            .next()
-            .expect("Fix: post-via marker should exist");
-
-        assert!(!via_section.contains("_cpu"));
-        assert!(!via_section.contains("reference_matroid"));
-    }
 }

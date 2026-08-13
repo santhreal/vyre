@@ -134,7 +134,7 @@ fn sweep_validation_rejection_matrix_parametric_divisors() {
                 )]);
                 let errors = validate(&program);
                 assert!(
-                    errors.iter().any(|e| e.message().contains("V044")),
+                    errors.iter().any(|e| e.code().as_str() == "V044"),
                     "div by {divisor} must fail for lhs={lhs}: {:?}",
                     errors
                 );

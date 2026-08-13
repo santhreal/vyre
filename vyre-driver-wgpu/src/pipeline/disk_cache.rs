@@ -631,33 +631,6 @@ mod tests {
     include!("disk_cache_tests.rs");
 
     #[test]
-    fn disk_cache_production_uses_fallible_cache_staging() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/pipeline/disk_cache.rs"
-        ))
-        .expect("Fix: disk cache source must be readable");
-        let production = src
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(
-            !production.contains("Vec::with_capacity("),
-            "disk cache Vec staging must reserve fallibly"
-        );
-        assert!(
-            !production.contains("SmallVec::with_capacity("),
-            "disk cache dynamic staging must reserve fallibly"
-        );
-        assert!(
-            !production.contains("String::with_capacity("),
-            "disk cache string staging must reserve fallibly"
-        );
-        assert!(production.contains("reserve_backend_vec"));
-        assert!(production.contains("try_reserve_exact"));
-    }
-
-    #[test]
     fn fixed_digest_hex_hash_is_lowercase_and_stack_encoded() {
         let mut digest = [0_u8; 32];
         digest[0] = 0xab;

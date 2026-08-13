@@ -15,7 +15,7 @@ Explore and select legal whole-ProgramGraph fusion schedules under explicit Sear
 ### Boundaries
 
 The `megakernel-compiler` owner maintains this `compiler-boundary` crate at `vyre-megakernel`.
-Its allowed internal production dependencies are: `vyre-foundation`.
+Its allowed internal production dependencies are: `vyre-foundation`, `vyre-lower`.
 Any other normal or build dependency requires an ownership-registry change.
 
 ### Minimal real example

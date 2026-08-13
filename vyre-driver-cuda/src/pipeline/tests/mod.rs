@@ -14,8 +14,8 @@ use crate::backend::CudaDispatchPlan;
 use crate::synthetic_device_caps::synthetic_sm120_envelope;
 
 use super::{
-    add_shape_bytes, cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch,
-    materialized_input_key, MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
+    cuda_compiled_pipeline_identity_key, cuda_graph_lane_count_for_batch, materialized_input_key,
+    MaterializedPipelineOutputCache, MaterializedPipelineOutputCacheEntry,
     MAX_GRAPH_CACHE_ENTRIES_PER_PIPELINE, MAX_MATERIALIZED_OUTPUT_CACHE_BYTES_PER_PIPELINE,
 };
 

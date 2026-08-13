@@ -1893,36 +1893,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn grid_sync_release_paths_use_fallible_split_storage() {
-        let source = include_str!("grid_sync.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: grid-sync production source must precede tests");
-
-        assert!(
-            production.contains("pub fn try_split_on_grid_sync")
-                && production.contains("fn reserve_grid_sync_vec")
-                && production.contains("try_reserve_vec_to_capacity"),
-            "Fix: grid-sync splitting must expose fallible segment/input/output scratch reservation."
-        );
-        assert!(
-            production.contains("let segments = try_split_on_grid_sync(program)?")
-                && !production.contains("let segments = split_on_grid_sync(program);"),
-            "Fix: production grid-sync dispatch paths must use fallible splitting, not the legacy infallible helper."
-        );
-        assert!(
-            !production.contains("Vec::with_capacity"),
-            "Fix: production grid-sync splitting must not allocate dispatch scratch infallibly."
-        );
-        assert!(
-            !production.contains(".as_nanos() as u64")
-                && !production.contains("segmented timing overflowed u64"),
-            "Fix: production grid-sync timing telemetry must return typed errors instead of truncating or panicking."
-        );
-    }
-
     /// Get the inner-segment node count for a wrapped or unwrapped Program.
     fn inner_len(program: &Program) -> usize {
         entry_sequence(program).len()

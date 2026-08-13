@@ -28,6 +28,13 @@
   "missing_required_release_packages": [],
   "crates": [
     {
+      "package": "structure-gate",
+      "version": "0.1.0",
+      "manifest": "structure-gate/Cargo.toml",
+      "release_group": "vyre",
+      "publishable": false
+    },
+    {
       "package": "vyre",
       "version": "0.7.2",
       "manifest": "vyre/Cargo.toml",
@@ -231,9 +238,9 @@
       "publishable": true
     },
     {
-      "package": "vyre-scan",
+      "package": "vyre-safetensors",
       "version": "0.7.2",
-      "manifest": "vyre-scan/Cargo.toml",
+      "manifest": "vyre-safetensors/Cargo.toml",
       "release_group": "vyre",
       "publishable": true
     },
@@ -444,7 +451,7 @@
     },
     {
       "manifest": "Cargo.toml",
-      "dependency": "vyre-scan",
+      "dependency": "vyre-safetensors",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"
@@ -656,7 +663,7 @@
     },
     {
       "lockfile": "Cargo.lock",
-      "package": "vyre-scan",
+      "package": "vyre-safetensors",
       "version": "0.7.2",
       "expected": "0.7.2",
       "release_group": "vyre"

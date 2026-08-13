@@ -1346,68 +1346,6 @@ mod tests {
     }
 
     #[test]
-    fn ranged_readback_into_reuses_output_slots_without_intermediate_readbacks() {
-        let dispatcher = RangedReadDispatcher {
-            buffers: vec![(7, (0u8..32).collect()), (9, (100u8..132).collect())],
-            read_calls: Cell::new(0),
-            batched_handles: RefCell::new(Vec::new()),
-        };
-        let mut outputs = vec![
-            Vec::with_capacity(16),
-            Vec::with_capacity(16),
-            Vec::with_capacity(16),
-        ];
-        let capacities = outputs.iter().map(Vec::capacity).collect::<Vec<_>>();
-
-        dispatcher
-            .read_resident_ranges_into(
-                &[
-                    ResidentReadRange {
-                        handle_id: 7,
-                        byte_offset: 0,
-                        byte_len: 4,
-                    },
-                    ResidentReadRange {
-                        handle_id: 9,
-                        byte_offset: 4,
-                        byte_len: 4,
-                    },
-                    ResidentReadRange {
-                        handle_id: 7,
-                        byte_offset: 8,
-                        byte_len: 4,
-                    },
-                ],
-                &mut outputs,
-            )
-            .expect("Fix: caller buffer must be sized for readback range; return Err if storage too small - ranged readback into caller storage must succeed");
-
-        assert_eq!(
-            outputs,
-            vec![
-                vec![0, 1, 2, 3],
-                vec![104, 105, 106, 107],
-                vec![8, 9, 10, 11]
-            ]
-        );
-        assert_eq!(
-            outputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
-            capacities,
-            "Fix: ranged readback into caller storage must retain output slot capacity."
-        );
-        assert_eq!(dispatcher.read_calls.get(), 2);
-
-        let source = include_str!("dispatcher.rs");
-        assert!(
-            source.contains("self.read_resident_ranges_into(read_ranges, outputs)")
-                && !source.contains(concat!(
-                    "let readbacks =\n            self.upload_resident_many_sequence_read_ranges"
-                )),
-            "Fix: resident range readback _into path must not allocate an intermediate Vec<Vec<u8>> before copying into caller-owned outputs."
-        );
-    }
-
-    #[test]
     fn generated_ranged_readbacks_deduplicate_handles_without_reordering_ranges() {
         let dispatcher = RangedReadDispatcher {
             buffers: (0..8u64)

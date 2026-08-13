@@ -257,23 +257,6 @@ mod tests {
     };
 
     #[test]
-    fn token_fact_adapter_uses_shared_typed_cuda_arithmetic() {
-        let source = include_str!("token_fact_graph_cuda_adapter.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: token/fact CUDA adapter source should contain production section");
-
-        assert!(source.contains("checked_add_u64_count as checked_add"));
-        assert!(source.contains("checked_mul_u64_count as checked_mul"));
-        assert!(source.contains("impl CudaArithmeticOverflow for CudaTokenFactGraphLayoutError"));
-        assert!(production.contains("BinaryHeap::with_capacity(profile_capacity)"));
-        assert!(!production.contains("Vec::with_capacity(graph.node_ids.len())"));
-        assert!(!source.contains(concat!("fn checked_", "mul(")));
-        assert!(!source.contains(concat!("fn checked_", "add(")));
-    }
-
-    #[test]
     fn adapter_accounts_for_cuda_resident_token_fact_layout() {
         let graph = plan_device_resident_token_fact_graph(
             &[

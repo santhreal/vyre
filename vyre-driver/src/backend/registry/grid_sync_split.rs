@@ -444,27 +444,6 @@ mod tests {
     use vyre_foundation::memory_model::MemoryOrdering;
 
     #[test]
-    fn registry_grid_sync_wrapper_uses_hardened_fallible_split_paths() {
-        let source = include_str!("grid_sync_split.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: registry grid-sync split production source must precede tests");
-
-        assert!(
-            production.contains("fn borrowed_inputs_from_owned")
-                && production.contains("try_reserve_exact")
-                && production.contains("dispatch_with_grid_sync_split_timed"),
-            "Fix: registry grid-sync wrapper must use fallible borrowed-input staging and the hardened shared timed split path."
-        );
-        assert!(
-            !production.contains("SmallVec::with_capacity")
-                && !production.contains(".as_nanos() as u64"),
-            "Fix: registry grid-sync wrapper must not keep infallible input staging or lossy timing conversion."
-        );
-    }
-
-    #[test]
     fn neutral_driver_alone_sees_no_backends() {
         assert!(
             registered_backends()

@@ -400,63 +400,6 @@ mod tests {
     }
 
     #[test]
-    fn result_compaction_avoids_tree_sets_and_slot_vector_copies() {
-        let src = include_str!("result_compaction.rs");
-        assert!(
-            !src.contains(concat!("BTree", "Set")),
-            "Fix: result compaction duplicate detection should use a hash set; slot ordering should be a final index sort."
-        );
-        assert!(
-            !src.contains(concat!("slots", ".to_vec()")),
-            "Fix: result compaction should sort slot indices rather than copying every slot before planning readback."
-        );
-        assert!(
-            !src.contains(concat!(".", "saturating_sub")),
-            "Fix: result compaction avoided-readback accounting must be exact, not saturating."
-        );
-        assert!(
-            !src.contains(concat!(" as ", "f32")) && !src.contains(concat!(" as ", "f64")),
-            "Fix: result compaction efficiency telemetry must use integer arithmetic, not lossy floats."
-        );
-        assert!(
-            src.contains("pub full_capacity_bytes: u64")
-                && src.contains("pub selected_readback_bytes: u64")
-                && src.contains("pub avoided_readback_basis_points: u32"),
-            "Fix: result compaction plans must expose checked capacity and integer reduction telemetry."
-        );
-        assert!(src.contains("RESULT_COMPACTION_NUMERIC.ratio_basis_points_u64"));
-        assert!(
-            !src.contains(concat!("fn ", "ratio_basis_points(")),
-            "Fix: result compaction must not carry a local numeric wrapper around the shared numeric policy."
-        );
-        assert!(
-            src.contains("ResultCompactionScratch::try_with_capacity(slots.len())?"),
-            "Fix: result compaction must stage scratch with fallible release-path allocation."
-        );
-        assert!(
-            src.contains("scratch.try_reserve_slots(slots.len())?"),
-            "Fix: caller-owned result compaction scratch must grow through fallible reservation."
-        );
-        assert!(
-            src.contains("ReusableIndexScratch"),
-            "Fix: result compaction duplicate detection and ordering scratch must share the paired typed fallible reservation helper."
-        );
-        assert!(
-            src.contains("StorageReserveFailed"),
-            "Fix: result compaction allocation failures must surface as actionable launch-planning errors."
-        );
-        assert!(
-            !src.contains(concat!("FxHashSet::with_capacity", "_and_hasher")),
-            "Fix: result compaction scratch hash storage must not allocate infallibly."
-        );
-        assert!(
-            !src.contains(concat!("Vec::with_capacity", "(slot_count)"))
-                && !src.contains(concat!("Vec::with_capacity", "(slots.len())")),
-            "Fix: result compaction scratch/result vectors must not allocate infallibly."
-        );
-    }
-
-    #[test]
     fn result_compaction_reuses_caller_owned_slot_planning_scratch() {
         let mut scratch =
             ResultCompactionScratch::try_with_capacity(96).expect("Fix: scratch capacity");

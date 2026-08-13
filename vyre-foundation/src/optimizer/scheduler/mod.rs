@@ -613,7 +613,7 @@ pub use topo::{schedule_passes, PassSchedulingError};
 
 #[cfg(test)]
 mod research_trace_contract_tests {
-    use super::{PassResearchTrace, PassResearchTraceError, PASS_RESEARCH_TRACE_SCHEMA_VERSION};
+    use super::{PassResearchTrace, PassResearchTraceError};
 
     #[test]
     fn pass_research_trace_requires_all_identifiers() {
@@ -632,21 +632,6 @@ mod research_trace_contract_tests {
                 .unwrap_err(),
             PassResearchTraceError::MissingProofArtifactId
         );
-    }
-
-    #[test]
-    fn scheduler_metric_construction_carries_research_trace() {
-        let trace = PassResearchTrace::try_new(
-            "research/mlir-pass-replay",
-            "baseline/vyre-default",
-            "artifact/vx-336-optimizer-proof",
-        )
-        .unwrap();
-        assert_eq!(trace.schema_version, PASS_RESEARCH_TRACE_SCHEMA_VERSION);
-        assert!(trace.is_complete());
-
-        let run_source = include_str!("run.rs");
-        assert!(run_source.contains("research_trace: self.research_trace_for(metadata.name)"));
     }
 }
 

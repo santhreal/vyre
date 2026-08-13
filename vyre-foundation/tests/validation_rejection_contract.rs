@@ -29,7 +29,7 @@ fn div_by_lit_u32_zero_is_rejected() {
     assert!(
         errors
             .iter()
-            .any(|e| e.message().contains("V044") && e.message().contains("Div")),
+            .any(|e| e.code().as_str() == "V044" && e.message().contains("Div")),
         "Div by LitU32(0) must be rejected with V044, got {:?}",
         errors
     );
@@ -45,7 +45,7 @@ fn mod_by_lit_i32_zero_is_rejected() {
     assert!(
         errors
             .iter()
-            .any(|e| e.message().contains("V044") && e.message().contains("Mod")),
+            .any(|e| e.code().as_str() == "V044" && e.message().contains("Mod")),
         "Mod by LitI32(0) must be rejected with V044, got {:?}",
         errors
     );
@@ -278,7 +278,7 @@ fn unknown_operation_call_is_rejected() {
     )]);
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|error| error.message().contains("V016")),
+        errors.iter().any(|error| error.code().as_str() == "V016"),
         "unknown operation calls must fail canonical registry validation: {errors:?}"
     );
 }
@@ -297,7 +297,7 @@ fn select_with_mismatched_branch_types_is_rejected() {
     assert!(
         errors
             .iter()
-            .any(|e| e.message().contains("V029") && e.message().contains("mismatched types")),
+            .any(|e| e.code().as_str() == "V029" && e.message().contains("mismatched types")),
         "Select with mismatched branch types must be rejected with V029, got {:?}",
         errors
     );
@@ -311,7 +311,7 @@ fn assignment_type_mismatch_is_rejected() {
     ]);
     let errors = validate(&program);
     assert!(
-        errors.iter().any(|e| e.message().contains("V045")),
+        errors.iter().any(|e| e.code().as_str() == "V045"),
         "Assigning F32 into a U32 binding must be rejected with V045, got {:?}",
         errors
     );

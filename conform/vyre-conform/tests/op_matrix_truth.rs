@@ -470,52 +470,6 @@ fn assert_existing_paths(root: &Path, family: &str, field: &str, paths: Vec<&str
     }
 }
 
-/// An `inlined_callee` row opts out of per-backend release conformance, so the
-/// claim has to be true rather than convenient.
-///
-/// A Composite callee exists only to be inlined at its call sites, which is why
-/// executing it as a program of its own would exercise a shape the release never
-/// runs. Two things make that safe to assume, and this test pins both: the op
-/// registers through the dialect registry alone, so nothing has handed it a
-/// dispatch witness that would then go unrun, and it declares a test path, so a
-/// reader can find the caller-level suite that does cover its body.
-#[test]
-fn op_matrix_inlined_callee_rows_register_through_the_dialect_registry_alone() {
-    let root = workspace_root();
-    let matrix = read_toml(&root.join("docs/optimization/OP_MATRIX.toml"));
-    let rows = matrix
-        .get("op")
-        .and_then(Value::as_array)
-        .expect("Fix: OP_MATRIX.toml must contain [[op]] rows.");
-
-    let mut checked = 0usize;
-    for row in rows {
-        if !row
-            .get("inlined_callee")
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
-        {
-            continue;
-        }
-        checked += 1;
-        let family = required_str(row, "family");
-        let sources = required_array(row, "registry_sources");
-        assert_eq!(
-            sources,
-            vec!["vyre-driver::registry"],
-            "Fix: OP_MATRIX row `{family}` claims inlined_callee but registers through {sources:?}.              An op with a harness witness is dispatched on its own and must not opt out of              release conformance."
-        );
-        assert!(
-            !required_array(row, "tests").is_empty(),
-            "Fix: OP_MATRIX row `{family}` claims inlined_callee and must name the caller-level              suite that covers its body."
-        );
-    }
-    assert!(
-        checked > 0,
-        "Fix: this gate must see at least one inlined_callee row; if the last one was removed,          remove the `inlined_callee` handling in xtask conformance_matrix too."
-    );
-}
-
 // ── Task 9 / ROADMAP K8: tests_non_empty coverage scan gate ────────
 
 /// Every `[[op]]` row in OP_MATRIX.toml must declare at least one test

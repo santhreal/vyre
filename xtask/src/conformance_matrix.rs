@@ -170,10 +170,13 @@ pub(crate) fn run(args: &[String]) {
             std::process::exit(2);
         }
     };
-    let mut entries = Vec::new();
+    let operations = vyre_foundation::operation::OperationRegistry::global()
+        .iter()
+        .collect::<Vec<_>>();
+    let mut entries = Vec::with_capacity(operations.len());
     let mut ids = BTreeSet::new();
     let mut duplicate_op_ids = BTreeSet::new();
-    for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
+    for entry in operations {
         if !ids.insert(entry.id) {
             duplicate_op_ids.insert(entry.id.to_string());
         }
@@ -543,21 +546,6 @@ pub(crate) fn read_conformance_required_op_matrix(vyre_root: &Path) -> OpMatrixC
     for row in rows {
         let tier = row.get("tier").and_then(toml::Value::as_str).unwrap_or("");
         if tier == "foundation_ir" {
-            continue;
-        }
-        // A Composite callee that exists only to be inlined is never dispatched
-        // as a program of its own, so a per-backend conformance pair for it
-        // would execute a shape the release never runs. Its coverage is the
-        // caller's: the calls inline before lowering, so the caller's
-        // conformance pair exercises the callee's body on every backend. The
-        // row still has to declare owners, tests and backend statuses like any
-        // other, and `op_matrix_truth` checks that an inlined callee registers
-        // through the dialect registry alone.
-        if row
-            .get("inlined_callee")
-            .and_then(toml::Value::as_bool)
-            .unwrap_or(false)
-        {
             continue;
         }
         let family = row

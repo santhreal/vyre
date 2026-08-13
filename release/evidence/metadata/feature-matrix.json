@@ -9,6 +9,17 @@
   "missing_required_release_packages": [],
   "packages": [
     {
+      "name": "structure-gate",
+      "manifest": "structure-gate/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
+      "default_feature_members": [],
+      "features": [],
+      "malformed_features": [],
+      "unresolved_feature_members": [],
+      "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
+    },
+    {
       "name": "vyre",
       "manifest": "vyre/Cargo.toml",
       "feature_count": 4,
@@ -487,14 +498,12 @@
     {
       "name": "vyre-runtime",
       "manifest": "vyre-runtime/Cargo.toml",
-      "feature_count": 8,
+      "feature_count": 6,
       "has_default_feature": true,
       "default_feature_members": [],
       "features": [
-        "c-frontend-adapter",
         "default",
         "megakernel-batch",
-        "remote",
         "remote-cache",
         "self-substrate-adapters",
         "subgroup-ops",
@@ -505,15 +514,12 @@
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"
     },
     {
-      "name": "vyre-scan",
-      "manifest": "vyre-scan/Cargo.toml",
-      "feature_count": 2,
-      "has_default_feature": true,
+      "name": "vyre-safetensors",
+      "manifest": "vyre-safetensors/Cargo.toml",
+      "feature_count": 0,
+      "has_default_feature": false,
       "default_feature_members": [],
-      "features": [
-        "cpu-parity",
-        "default"
-      ],
+      "features": [],
       "malformed_features": [],
       "unresolved_feature_members": [],
       "release_policy": "feature definitions are syntactically valid and have an explicit default policy"

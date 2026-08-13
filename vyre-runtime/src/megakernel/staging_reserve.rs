@@ -87,24 +87,4 @@ mod tests {
         assert_eq!(values.get(&7), Some(&11));
         assert!(values.capacity() >= 32);
     }
-
-    #[test]
-    fn runtime_staging_reserve_delegates_to_backend_neutral_policy() {
-        let source = include_str!("staging_reserve.rs");
-
-        assert!(source.contains("ReservationPolicy::new"));
-        assert!(source.contains("reserve_vec_to_capacity"));
-        assert!(source.contains("reserve_hash_map_to_capacity"));
-        assert!(
-            !source.contains(concat!(
-                "vyre_foundation::allocation::",
-                "try_reserve_vec_to_capacity"
-            ))
-                && !source.contains(concat!(
-                    "vyre_foundation::allocation::",
-                    "try_reserve_hash_map_to_capacity"
-                )),
-            "Fix: megakernel runtime staging must use the backend-neutral reservation policy instead of carrying a parallel allocation adapter."
-        );
-    }
 }

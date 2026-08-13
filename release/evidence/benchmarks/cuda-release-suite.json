@@ -8,11 +8,11 @@
     "comparator_version": "benchmark-suite-comparator:v1:case-integrity+summary+hardware",
     "config_digest": "benchmark-config-digest:v1:9511c59fb4f4ce5e8885c7bb8af1ebdd6443e02e6d50d7b402d2390dfe256652",
     "dataset_digest": "benchmark-dataset-digest:v1:870f73a17260f24b5faafd92be8cba210439ebba3747e146b8892e0082f9ae60",
-    "digest": "benchmark-schema-digest-chain:v1:42abb52414e5369dd5d7d4f84fce1a6316355956e3b11ca119f8885998c6a9f9",
+    "digest": "benchmark-schema-digest-chain:v1:7158bc120597e1e100411972d2b396ada2ab85cae2d63d1b6551d6cad0ef9138",
     "hardware_digest": "benchmark-hardware-digest:v1:0d4111f67e57160d978d610ca7077cf86fe9fc4a6f24409897b4024344e27a04",
     "schema": "benchmark-schema-digest-chain",
     "schema_version": 1,
-    "source_digest": "benchmark-source-digest:v1:610b78a57e60fbea50b640ed10bc5f612eb1914edb9f642965c067f6efbe22c9"
+    "source_digest": "benchmark-source-digest:v1:7309be6f300652e18520ad4c1139946a51e36d583b65e64d32633f5303e15b47"
   },
   "hardware_digest": "benchmark-hardware-digest:v1:0d4111f67e57160d978d610ca7077cf86fe9fc4a6f24409897b4024344e27a04",
   "hardware_digest_fields": [
@@ -134,7 +134,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -142,10 +142,10 @@
       "family_id": "string-bitmap-scatter",
       "requested_case_id": "release.string_bitmap_scatter.1m",
       "exists": true,
-      "bytes": 31357,
+      "bytes": 31388,
       "read_error": null,
-      "source_fingerprint": "git:56d01f8fe77b2f6d5d40f39a29ec0ff328348dfb:dirty=true:worktree=b3f87dd1c8e09525ba4a5d1946171ccb0ed7a35e4f3756c12a5d206b700cbb08",
-      "source_tree_fingerprint": "source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425",
+      "source_fingerprint": "git:a14f1b979f30a2a703f92cddec2a859e1b491ec8:dirty=true:worktree=e7d154fede7aacbc62f8526d15b9592fb6414a321dc3f0611a9680d6b6edb175",
+      "source_tree_fingerprint": "source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee",
       "selected_backend": "cuda",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -166,19 +166,17 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 17934,
-      "min_wall_p95": 24163,
-      "min_wall_p99": 27340,
+      "min_wall_p50": 34219,
+      "min_wall_p95": 48599,
+      "min_wall_p99": 106782,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 5790111,
-      "min_baseline_wall_p95": 5810519,
-      "min_baseline_wall_p99": 5810699,
+      "min_baseline_wall_p50": 6043412,
+      "min_baseline_wall_p95": 6133281,
+      "min_baseline_wall_p99": 6160282,
       "cpu_sota_100x_required": true,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
-      ]
+      "blockers": []
     },
     {
       "path": "release/evidence/benchmarks/workload-03-offset-count-aggregation.json",
@@ -220,7 +218,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -263,7 +261,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -306,7 +304,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -349,7 +347,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -392,7 +390,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -435,7 +433,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -478,7 +476,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -521,7 +519,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -564,7 +562,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -607,7 +605,7 @@
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -650,7 +648,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -693,7 +691,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -736,7 +734,7 @@
       "cpu_sota_100x_contract_cases": 0,
       "cpu_sota_100x_passing_cases": 0,
       "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
       ]
     },
     {
@@ -744,10 +742,10 @@
       "family_id": "quantized-linear",
       "requested_case_id": "nn.linear_4bit_affine_grouped.1m",
       "exists": true,
-      "bytes": 28118,
+      "bytes": 28111,
       "read_error": null,
-      "source_fingerprint": "git:56d01f8fe77b2f6d5d40f39a29ec0ff328348dfb:dirty=true:worktree=b3f87dd1c8e09525ba4a5d1946171ccb0ed7a35e4f3756c12a5d206b700cbb08",
-      "source_tree_fingerprint": "source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425",
+      "source_fingerprint": "git:a14f1b979f30a2a703f92cddec2a859e1b491ec8:dirty=true:worktree=3355713ef36e0cb57008ad2450a6617e6725dc71976837820962d16566a03eb2",
+      "source_tree_fingerprint": "source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee",
       "selected_backend": "cuda",
       "host_cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
       "gpu_model": "NVIDIA GeForce RTX 5090",
@@ -768,37 +766,33 @@
       "failed_count": 0,
       "nonmatching_case_backend_count": 0,
       "min_wall_samples": 30,
-      "min_wall_p50": 6983,
-      "min_wall_p95": 9869,
-      "min_wall_p99": 10002,
+      "min_wall_p50": 8686,
+      "min_wall_p95": 13920,
+      "min_wall_p99": 17436,
       "min_baseline_wall_samples": 30,
-      "min_baseline_wall_p50": 680112,
-      "min_baseline_wall_p95": 680112,
-      "min_baseline_wall_p99": 680112,
+      "min_baseline_wall_p50": 716162,
+      "min_baseline_wall_p95": 716162,
+      "min_baseline_wall_p99": 716162,
       "cpu_sota_100x_required": false,
       "cpu_sota_100x_contract_cases": 1,
       "cpu_sota_100x_passing_cases": 1,
-      "blockers": [
-        "source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
-      ]
+      "blockers": []
     }
   ],
   "blockers": [
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-01-condition-eval.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-02-string-bitmap-scatter.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-08-ifds-witness.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json`: source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`",
-    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-16-quantized-linear.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:196f116f16cf1362709fdd225400b9775aa1396b31ccb0befae9968d7ad39a51`"
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-01-condition-eval.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-03-offset-count-aggregation.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-04-metadata-conditions.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-05-entropy-window.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-06-quantified-condition-loops.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-07-alias-reaching-def.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-08-ifds-witness.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-09-c-ast-traversal.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-10-megakernel-queued-batches.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-11-semantic-optimizer-impact.json`: source_tree_fingerprint `source-tree-v1:4e7226af4a999b1851b19541cf638a1a8496cb0656b51b10a712de240f828043` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-12-sparse-output-compaction.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-13-callgraph-reachability.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-14-compound-fused-filter.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`",
+    "backend `cuda` release suite artifact `release/evidence/benchmarks/workload-15-adaptive-routing.json`: source_tree_fingerprint `source-tree-v1:f42685f0dc36c541fc89293d67d76e3b5cd7f9d9464c4ff6fc2ae05384885425` does not match current workspace source `source-tree-v1:e351693246bac39eb9660f95d7c195aab10b656a27ca6d7c9ab55aacbd6f78ee`"
   ]
 }

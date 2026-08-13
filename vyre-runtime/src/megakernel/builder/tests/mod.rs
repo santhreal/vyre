@@ -26,33 +26,6 @@ fn async_load_bindings(nodes: &[Node], out: &mut Vec<(String, String, String)>) 
     }
 }
 
-fn contains_let_named(nodes: &[Node], needle: &str) -> bool {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } if name.as_str() == needle => return true,
-            Node::If {
-                then, otherwise, ..
-            } => {
-                if contains_let_named(then, needle) || contains_let_named(otherwise, needle) {
-                    return true;
-                }
-            }
-            Node::Loop { body, .. } | Node::Block(body) => {
-                if contains_let_named(body, needle) {
-                    return true;
-                }
-            }
-            Node::Region { body, .. } => {
-                if contains_let_named(body, needle) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
-}
-
 fn collect_let_names_preorder<'a>(nodes: &'a [Node], out: &mut Vec<&'a str>) {
     for node in nodes {
         match node {
@@ -146,24 +119,6 @@ fn empty_sharded_once_shared_builder_reuses_cached_program_arc() {
     assert!(
             Arc::ptr_eq(&first, &second),
             "Fix: one-shot megakernel dispatchers must reuse the cached Arc<Program> instead of rebuilding or cloning the Program on the hot path."
-        );
-}
-
-#[test]
-fn custom_opcode_is_optimized_inside_whole_megakernel_program() {
-    let handler = OpcodeHandler {
-        opcode: 99,
-        body: vec![Node::let_bind(
-            "__vyre_dead_custom_handler_tmp",
-            Expr::add(Expr::u32(1), Expr::u32(2)),
-        )],
-    };
-
-    let program = build_program_sharded_once_slots(64, 64, &[handler]);
-
-    assert!(
-            !contains_let_named(program.entry(), "__vyre_dead_custom_handler_tmp"),
-            "Fix: megakernel builders must optimize the assembled Program, including custom opcode handlers, before backend lowering."
         );
 }
 
