@@ -28,7 +28,7 @@ use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
-use crate::staging_reserve::reserve_backend_vec;
+use super::reserve_probe_vec;
 
 /// Stable adapter identity used for deterministic recovery.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -439,11 +439,6 @@ fn adapter_index_from_raw(raw: Option<&str>) -> Result<Option<usize>> {
     raw.parse::<usize>().map(Some).map_err(|error| BackendError::new(format!(
         "VYRE_ADAPTER_INDEX={raw:?} is not a valid adapter index: {error}. Fix: set VYRE_ADAPTER_INDEX to a non-negative integer from enumerate_adapters(), or unset it for automatic GPU selection."
     )))
-}
-
-fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static str) -> Result<()> {
-    reserve_backend_vec(vec, additional, context)
-        .map_err(|error| BackendError::new(error.to_string()))
 }
 
 #[cfg(test)]

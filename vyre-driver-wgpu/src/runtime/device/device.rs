@@ -7,7 +7,7 @@ use vyre_driver::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
-use crate::staging_reserve::reserve_backend_vec;
+use super::reserve_probe_vec;
 
 /// Snapshot of features that were actually enabled when the cached
 /// device was created. Consumed by `WgpuBackend::supports_*` methods
@@ -533,11 +533,6 @@ pub(super) fn wait_for_gpu<T>(future: impl Future<Output = T>) -> T {
             Poll::Pending => thread::park(),
         }
     }
-}
-
-fn reserve_probe_vec<T>(vec: &mut Vec<T>, additional: usize, context: &'static str) -> Result<()> {
-    reserve_backend_vec(vec, additional, context)
-        .map_err(|error| BackendError::new(error.to_string()))
 }
 
 #[cfg(test)]
