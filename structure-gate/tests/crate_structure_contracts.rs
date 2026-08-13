@@ -38,7 +38,7 @@ fn report(kind: &str, failures: &[String]) -> String {
     message
 }
 
-/// Only `vyre-foundation` (Category A) and `vyre-libs` (Category C) own operations.
+/// Only `vyre-libs` (Category A) and `vyre-primitives` (Category C) own operations.
 #[test]
 fn only_the_two_category_crates_register_operations() {
     let failures = registration_owner_failures(&workspace().registrations);
