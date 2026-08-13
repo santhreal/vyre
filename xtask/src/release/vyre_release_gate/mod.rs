@@ -15,7 +15,7 @@ mod semantic;
 mod types;
 
 use checks::check_markdown_evidence_path_ready;
-use paths::{options_from_args, read_text_bounded, resolve_manifest_path};
+use paths::{escapes_repository, options_from_args, read_text_bounded, resolve_manifest_path};
 use semantic::run_semantic_requirement_checks;
 use types::{EvidenceManifest, GateMode};
 
@@ -114,6 +114,13 @@ pub(crate) fn run(args: &[String]) {
                 if is_manifest_command_evidence(evidence) {
                     continue;
                 }
+                if escapes_repository(evidence) {
+                    failures.push(format!(
+                        "requirement `{}` evidence path `{evidence}` resolves outside the repository",
+                        requirement.id
+                    ));
+                    continue;
+                }
                 let evidence_path = resolve_manifest_path(&base_dir, evidence);
                 match fs::metadata(&evidence_path) {
                     Ok(metadata) if metadata.is_file() && metadata.len() > 0 => {
@@ -196,7 +203,6 @@ pub(crate) fn run(args: &[String]) {
         std::process::exit(1);
     }
 }
-
-fn is_manifest_command_evidence(evidence: &str) -> bool {
+pub(super) fn is_manifest_command_evidence(evidence: &str) -> bool {
     evidence.starts_with("cargo_full ")
 }

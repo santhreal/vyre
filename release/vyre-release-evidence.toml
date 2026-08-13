@@ -147,11 +147,11 @@ evidence = [
   "evidence/conformance/wgpu-conformance.json",
   "evidence/conformance/reference-conformance.json",
   "evidence/conformance/release-gate-log.json",
-  "../../../../../.github/workflows/conform.yml",
-  "../../../../../.github/workflows/gpu-parity.yml",
-  "../../../../../.github/workflows/architectural-invariants.yml",
-  "../../../../../.github/CI_REQUIRED.md",
-  "../../../../../scripts/apply-branch-protection.sh",
+  "../.github/workflows/conform.yml",
+  "../.github/workflows/gpu-parity.yml",
+  "../.github/workflows/architectural-invariants.yml",
+  "../.github/CI_REQUIRED.md",
+  "../scripts/apply-branch-protection.sh",
 ]
 
 
@@ -198,16 +198,18 @@ evidence = [
   "cargo_full run --bin xtask -- recursion-gate --strict",
   "cargo_full run --bin xtask -- heuristic-audit --strict",
   "evidence/hygiene/hygiene-matrix.json",
+  "evidence/hygiene/implementation-intake.json",
+  "evidence/hygiene/threshold-policy.json",
   "evidence/hygiene/no-stubs-scan.json",
   "evidence/hygiene/no-hidden-fallback-scan.json",
   "evidence/hygiene/resource-bound-scan.json",
   "evidence/hygiene/error-surface-scan.json",
   "evidence/hygiene/cargo-wrapper-scan.json",
   "evidence/docs/release-hygiene-proof.md",
-  "../../../../../.github/workflows/architectural-invariants.yml",
-  "../../../../../.github/CI_REQUIRED.md",
-  "../../../../../scripts/apply-branch-protection.sh",
-  "../../../../../scripts/check_architectural_invariants.sh",
+  "../.github/workflows/architectural-invariants.yml",
+  "../.github/CI_REQUIRED.md",
+  "../scripts/apply-branch-protection.sh",
+  "../scripts/check_architectural_invariants.sh",
 ]
 
 [[requirements]]

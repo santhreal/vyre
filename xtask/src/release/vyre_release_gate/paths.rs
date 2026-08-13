@@ -1,6 +1,6 @@
 use std::fs;
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use super::types::{GateMode, MAX_RELEASE_GATE_TEXT_BYTES};
 
@@ -75,6 +75,33 @@ pub(super) fn read_text_bounded(path: &Path) -> io::Result<String> {
     Ok(text)
 }
 
+/// Whether a manifest evidence entry resolves outside the repository.
+///
+/// Evidence paths are written relative to the manifest's directory, which is
+/// one level below the repository root, so a relative entry may pop exactly
+/// one segment. Anything absolute, or with more `..` than it has earned, names
+/// a file no clone of this repository is guaranteed to have.
+pub(super) fn escapes_repository(evidence: &str) -> bool {
+    let candidate = Path::new(evidence);
+    if candidate.is_absolute() {
+        return true;
+    }
+    let mut depth = 1i32;
+    for component in candidate.components() {
+        match component {
+            Component::ParentDir => {
+                depth -= 1;
+                if depth < 0 {
+                    return true;
+                }
+            }
+            Component::Normal(_) => depth += 1,
+            _ => {}
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,5 +134,49 @@ mod tests {
 
         assert_eq!(options.mode, GateMode::Final);
         assert_eq!(options.manifest_path, default_manifest_path());
+    }
+
+    /// Evidence must name a file the repository actually carries. Entries that
+    /// climb past the repository root resolve into whatever tree the checkout
+    /// happens to sit in, so the gate passes or fails on the contents of a
+    /// directory that is not under version control here and that no clone,
+    /// worktree, or CI runner will reproduce.
+    ///
+    /// The class it closes: two requirements cited
+    /// `../../../../../.github/CI_REQUIRED.md` and four siblings, all five of
+    /// which exist inside this repository. Three of them also happened to
+    /// exist five levels up on the machine the manifest was written on, which
+    /// is why only the fourth ever reported missing. It does not catch an
+    /// in-repository path that names the wrong file.
+    #[test]
+    fn evidence_paths_that_climb_past_the_repository_root_are_rejected() {
+        assert!(escapes_repository("../../../../../.github/CI_REQUIRED.md"));
+        assert!(escapes_repository("../.././.github/CI_REQUIRED.md"));
+        assert!(escapes_repository("/etc/passwd"));
+
+        assert!(!escapes_repository("../.github/CI_REQUIRED.md"));
+        assert!(!escapes_repository("evidence/hygiene/hygiene-matrix.json"));
+        assert!(!escapes_repository("../scripts/../scripts/apply.sh"));
+    }
+
+    /// The shipped manifest is the artifact the rule exists for, so assert it
+    /// directly rather than trusting that a future edit stays inside the tree.
+    #[test]
+    fn the_shipped_manifest_cites_only_repository_paths() {
+        let manifest = default_manifest_path();
+        let text = read_text_bounded(&manifest).expect("release evidence manifest is readable");
+        let manifest: super::super::types::EvidenceManifest =
+            toml::from_str(&text).expect("release evidence manifest is valid TOML");
+
+        let escaping = manifest
+            .requirements
+            .iter()
+            .flat_map(|requirement| requirement.evidence.iter())
+            .filter(|evidence| !super::super::is_manifest_command_evidence(evidence))
+            .filter(|evidence| escapes_repository(evidence))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        assert_eq!(escaping, Vec::<String>::new());
     }
 }
