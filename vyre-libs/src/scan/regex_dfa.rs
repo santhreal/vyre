@@ -24,7 +24,7 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
 use crate::scan::classic_ac::{
-    regex_exact_ranges_program_ext, try_build_ac_bounded_ranges_program_ext,
+    regex_exact_ranges_program_ext, try_build_ac_bounded_ranges_program_ext, AcInputBindings,
 };
 use crate::scan::regex_compile::{
     compile_regex_set, compile_regex_set_with_policy, CompiledRegexSet, RegexCompileError,
@@ -490,17 +490,19 @@ fn finish_regex_dfa_pipeline(
                 ),
             })?;
         regex_exact_ranges_program_ext(
-            "haystack",
-            "transitions",
-            "output_offsets",
-            "output_records",
-            "pattern_lengths",
-            "haystack_len",
+            AcInputBindings {
+                haystack: "haystack",
+                transitions: "transitions",
+                output_offsets: "output_offsets",
+                output_records: "output_records",
+                pattern_lengths: "pattern_lengths",
+                haystack_len: "haystack_len",
+                state_count: dfa.state_count,
+                output_records_len,
+                pattern_count,
+            },
             "match_count",
             "matches",
-            dfa.state_count,
-            output_records_len,
-            pattern_count,
             max_matches,
             dfa.max_pattern_len,
             use_subgroup_coalesce,

@@ -19,6 +19,7 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
+use crate::scan::classic_ac::ac_advance_state_node;
 
 /// Build a Program that scans `haystack` (u32 per byte) for any
 /// accepting state of a pre-built DFA. Buffers:
@@ -84,15 +85,9 @@ pub fn aho_corasick_bounded(
                     "step",
                     Expr::var("scan_start"),
                     end,
-                    vec![Node::assign(
-                        "state",
-                        Expr::load(
-                            transitions,
-                            Expr::add(
-                                Expr::mul(Expr::var("state"), Expr::u32(256)),
-                                Expr::load(haystack, Expr::var("step")),
-                            ),
-                        ),
+                    vec![ac_advance_state_node(
+                        transitions,
+                        Expr::load(haystack, Expr::var("step")),
                     )],
                 ),
                 Node::Store {

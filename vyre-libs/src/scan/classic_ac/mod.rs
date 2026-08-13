@@ -14,17 +14,12 @@
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::load_packed_byte;
 use vyre_primitives::matching::{dfa_compile, CompiledDfa};
 
-#[path = "classic_ac/bounded_ranges.rs"]
 mod bounded_ranges;
-
-#[path = "classic_ac/count_program.rs"]
 mod count_program;
 
 #[cfg(test)]
-#[path = "classic_ac/test_helpers.rs"]
 pub(crate) mod test_helpers;
 
 #[cfg(any(test, feature = "cpu-parity"))]
@@ -53,9 +48,8 @@ pub use bounded_ranges::{
 };
 
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub(crate) use bounded_ranges::regex_exact_ranges_program_ext;
+pub(in crate::scan) use bounded_ranges::regex_exact_ranges_program_ext;
 pub use count_program::ascii_case_variants;
-pub(crate) use count_program::classic_ac_dfa_buffer_decls;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,
     build_ac_bounded_count_suffix2_prefilter_program,
@@ -67,52 +61,14 @@ pub use count_program::{
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
 
-/// Shared bounded-window DFA-walk prologue for the scan/count/presence builders:
-/// binds `state`/`scan_start`/`scan_end`, replays the suffix window from state 0,
-/// and binds `out_begin`/`out_end`. Callers append their per-record emit loop. ONE
-/// owner so the five builders cannot drift.
-pub(in crate::scan::classic_ac) fn bounded_walk_prologue_nodes(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    max_pattern_len: u32,
-) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let i = Expr::var("i");
-    let end = Expr::add(i.clone(), Expr::u32(1));
-    let scan_start = Expr::select(
-        Expr::lt(i, Expr::u32(max_pattern_len - 1)),
-        Expr::u32(0),
-        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
-    );
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-
-    vec![
-        Node::let_bind("state", Expr::u32(0)),
-        Node::let_bind("scan_start", scan_start),
-        Node::let_bind("scan_end", end),
-        Node::loop_for(
-            "step",
-            Expr::var("scan_start"),
-            Expr::var("scan_end"),
-            vec![
-                load_step_byte,
-                Node::assign(
-                    "state",
-                    Expr::load(
-                        transitions,
-                        Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-    ]
-}
+/// THE Aho-Corasick walk lives in [`bounded_ranges`]. Re-exported here so the
+/// scan-level builders that walk the same tables from outside this module
+/// (`regex_anchored_window`, `regex_region_admission`, `fused_region_evidence`)
+/// reach the one owner instead of respelling the step.
+pub(in crate::scan) use bounded_ranges::{
+    ac_advance_state_node, ac_output_span_nodes, ac_transition_step_nodes,
+    classic_ac_dfa_buffer_decls, region_search_prologue_nodes, AcInputBindings,
+};
 
 /// A classic AC automaton with precomputed flat output links.
 ///
@@ -221,59 +177,51 @@ pub fn classic_ac_program(
     //       slot = atomic_add(match_count, 0, 1)
     //       if slot < max_matches:
     //           matches[slot] = pattern_id
+    //
+    // The transition step and the output-link span come from the shared AC walk
+    // owner. This builder differs from the bounded family in one respect: it
+    // reads the haystack UNPACKED, one byte per u32 element, so it hands the
+    // owner a direct element load instead of an unpacked-word byte.
+    let mut per_position = vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::loop_for(
+            "step",
+            Expr::u32(0),
+            Expr::add(Expr::var("i"), Expr::u32(1)),
+            vec![ac_advance_state_node(
+                transitions,
+                Expr::load(haystack, Expr::var("step")),
+            )],
+        ),
+    ];
+    per_position.extend(ac_output_span_nodes(output_offsets));
+    per_position.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        vec![
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
+            ),
+            Node::let_bind(
+                "slot",
+                Expr::atomic_add(match_count, Expr::u32(0), Expr::u32(1)),
+            ),
+            Node::if_then(
+                Expr::lt(Expr::var("slot"), Expr::u32(max_matches)),
+                vec![Node::Store {
+                    buffer: matches.into(),
+                    index: Expr::var("slot"),
+                    value: Expr::var("pattern_id"),
+                }],
+            ),
+        ],
+    ));
+
     let walk_body = vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::buf_len(haystack)),
-            vec![
-                // Walk the automaton from state 0 through haystack[0..=i].
-                Node::let_bind("state", Expr::u32(0)),
-                Node::loop_for(
-                    "step",
-                    Expr::u32(0),
-                    Expr::add(Expr::var("i"), Expr::u32(1)),
-                    vec![Node::assign(
-                        "state",
-                        Expr::load(
-                            transitions,
-                            Expr::add(
-                                Expr::mul(Expr::var("state"), Expr::u32(256)),
-                                Expr::load(haystack, Expr::var("step")),
-                            ),
-                        ),
-                    )],
-                ),
-                // Emit every pattern in the flat output_links[state].
-                Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-                Node::let_bind(
-                    "out_end",
-                    Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-                ),
-                Node::loop_for(
-                    "out_idx",
-                    Expr::var("out_begin"),
-                    Expr::var("out_end"),
-                    vec![
-                        Node::let_bind(
-                            "pattern_id",
-                            Expr::load(output_records, Expr::var("out_idx")),
-                        ),
-                        Node::let_bind(
-                            "slot",
-                            Expr::atomic_add(match_count, Expr::u32(0), Expr::u32(1)),
-                        ),
-                        Node::if_then(
-                            Expr::lt(Expr::var("slot"), Expr::u32(max_matches)),
-                            vec![Node::Store {
-                                buffer: matches.into(),
-                                index: Expr::var("slot"),
-                                value: Expr::var("pattern_id"),
-                            }],
-                        ),
-                    ],
-                ),
-            ],
-        ),
+        Node::if_then(Expr::lt(i.clone(), Expr::buf_len(haystack)), per_position),
     ];
 
     Program::wrapped(

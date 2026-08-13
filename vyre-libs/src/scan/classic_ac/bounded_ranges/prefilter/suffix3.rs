@@ -9,8 +9,32 @@ use super::super::super::count_program::{
 };
 use super::super::{
     bounded_ranges_presence_and_positions_by_region_nodes, bounded_ranges_presence_by_region_nodes,
-    bounded_ranges_presence_nodes, bounded_ranges_scan_nodes,
+    bounded_ranges_presence_nodes, bounded_ranges_scan_nodes, AcInputBindings,
 };
+
+/// Bindings 7-9: the candidate-end byte mask, the suffix2 bigram mask and the
+/// suffix3 bloom that gate a position before the bounded DFA replay runs. One
+/// value instead of three names threaded through every suffix3 builder.
+#[derive(Clone, Copy)]
+struct SuffixGateBindings<'a> {
+    end_mask: &'a str,
+    suffix2_mask: &'a str,
+    suffix3_bloom: &'a str,
+}
+
+impl SuffixGateBindings<'_> {
+    /// The three declarations, in binding order.
+    fn decls(&self) -> [BufferDecl; 3] {
+        [
+            BufferDecl::storage(self.end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(8),
+            BufferDecl::storage(self.suffix2_mask, 8, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
+            BufferDecl::storage(self.suffix3_bloom, 9, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
+        ]
+    }
+}
 
 /// The suffix2/suffix3 candidate-gating body shared by the match-emitting scan
 /// program and the presence-bitmap program. Both run the IDENTICAL prefilter
@@ -51,6 +75,11 @@ fn suffix3_prefilter_program(
 ) -> Program {
     let [haystack, transitions, output_offsets, output_records, pattern_lengths, haystack_len, candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom] =
         names;
+    let gates = SuffixGateBindings {
+        end_mask: candidate_end_mask,
+        suffix2_mask: candidate_suffix2_mask,
+        suffix3_bloom: candidate_suffix3_bloom,
+    };
     let body = suffix3_prefilter_body(
         haystack,
         haystack_len,
@@ -59,37 +88,21 @@ fn suffix3_prefilter_program(
         candidate_suffix3_bloom,
         replay_nodes,
     );
-    let mut buffers = super::super::super::classic_ac_dfa_buffer_decls(
+    let mut buffers = AcInputBindings {
         haystack,
         transitions,
         output_offsets,
+        output_records,
+        pattern_lengths,
+        haystack_len,
         state_count,
-    );
-    buffers.reserve(7 + usize::from(trailing_output.is_some()));
-    buffers.extend([
-        BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(output_records_len),
-        BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(pattern_count),
-        BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        result,
-        BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(8),
-        BufferDecl::storage(
-            candidate_suffix2_mask,
-            8,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-        BufferDecl::storage(
-            candidate_suffix3_bloom,
-            9,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
-    ]);
+        output_records_len,
+        pattern_count,
+    }
+    .decls();
+    buffers.reserve(4 + usize::from(trailing_output.is_some()));
+    buffers.push(result);
+    buffers.extend(gates.decls());
     buffers.extend(trailing_output);
     Program::wrapped(buffers, [128, 1, 1], vec![wrap_anonymous(generator, body)])
 }
@@ -314,54 +327,20 @@ pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
 /// which appends its match-counter binding 12 + triple-output binding 13). One
 /// source of truth keeps the shared static-table / region-attribution ABI identical
 /// across both builders (a binding added or resized here reaches both at once).
-#[allow(clippy::too_many_arguments)]
 fn presence_by_region_base_buffer_decls(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    output_records: &str,
-    pattern_lengths: &str,
-    haystack_len: &str,
+    inputs: AcInputBindings<'_>,
+    gates: SuffixGateBindings<'_>,
     presence: &str,
-    candidate_end_mask: &str,
-    candidate_suffix2_mask: &str,
-    candidate_suffix3_bloom: &str,
     region_starts: &str,
     region_base: &str,
-    state_count: u32,
-    output_records_len: u32,
-    pattern_count: u32,
     total_presence_words: u32,
 ) -> Vec<BufferDecl> {
-    let mut buffers = super::super::super::classic_ac_dfa_buffer_decls(
-        haystack,
-        transitions,
-        output_offsets,
-        state_count,
-    );
+    let mut buffers = inputs.decls();
+    buffers.reserve(6);
+    buffers
+        .push(BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words));
+    buffers.extend(gates.decls());
     buffers.extend([
-        BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(output_records_len),
-        BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(pattern_count),
-        BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-        BufferDecl::read_write(presence, 6, DataType::U32).with_count(total_presence_words),
-        BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(8),
-        BufferDecl::storage(
-            candidate_suffix2_mask,
-            8,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(CLASSIC_AC_SUFFIX2_MASK_WORDS as u32),
-        BufferDecl::storage(
-            candidate_suffix3_bloom,
-            9,
-            BufferAccess::ReadOnly,
-            DataType::U32,
-        )
-        .with_count(CLASSIC_AC_SUFFIX3_BLOOM_WORDS as u32),
         BufferDecl::storage(region_starts, 10, BufferAccess::ReadOnly, DataType::U32),
         BufferDecl::storage(region_base, 11, BufferAccess::ReadOnly, DataType::U32).with_count(1),
     ]);
@@ -423,21 +402,25 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
 
     Program::wrapped(
         presence_by_region_base_buffer_decls(
-            haystack,
-            transitions,
-            output_offsets,
-            output_records,
-            pattern_lengths,
-            haystack_len,
+            AcInputBindings {
+                haystack,
+                transitions,
+                output_offsets,
+                output_records,
+                pattern_lengths,
+                haystack_len,
+                state_count,
+                output_records_len,
+                pattern_count,
+            },
+            SuffixGateBindings {
+                end_mask: candidate_end_mask,
+                suffix2_mask: candidate_suffix2_mask,
+                suffix3_bloom: candidate_suffix3_bloom,
+            },
             presence,
-            candidate_end_mask,
-            candidate_suffix2_mask,
-            candidate_suffix3_bloom,
             region_starts,
             region_base,
-            state_count,
-            output_records_len,
-            pattern_count,
             total_presence_words,
         ),
         [128, 1, 1],
@@ -607,21 +590,25 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
     );
 
     let mut buffers = presence_by_region_base_buffer_decls(
-        haystack,
-        transitions,
-        output_offsets,
-        output_records,
-        pattern_lengths,
-        haystack_len,
+        AcInputBindings {
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            haystack_len,
+            state_count,
+            output_records_len,
+            pattern_count,
+        },
+        SuffixGateBindings {
+            end_mask: candidate_end_mask,
+            suffix2_mask: candidate_suffix2_mask,
+            suffix3_bloom: candidate_suffix3_bloom,
+        },
         presence,
-        candidate_end_mask,
-        candidate_suffix2_mask,
-        candidate_suffix3_bloom,
         region_starts,
         region_base,
-        state_count,
-        output_records_len,
-        pattern_count,
         total_presence_words,
     );
     // Match counter (binding 12) + triple output (binding 13): the position half of

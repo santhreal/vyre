@@ -542,3 +542,8 @@ required-features = ["security"]
 name = "c_preprocess_dedup_guard"
 path = "tests/c_preprocess_dedup_guard.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "scan_ac_transition_walk_single_owner"
+path = "tests/scan_ac_transition_walk_single_owner.rs"
+required-features = ["matching-regex"]
