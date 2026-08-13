@@ -40,16 +40,17 @@ has no direct GPU / shader knowledge.
 ## Cross-crate contracts
 
 - `VyreBackend` trait  -  implemented by concrete backend crates
-- `DialectLookup` trait  -  implemented by `DialectRegistry`,
-  consumed by `vyre-reference`
-- `OpDef`, `LoweringTable`  -  re-exported from `vyre-foundation`;
-  every `vyre-ops` dialect submits `OpDefRegistration`
+- `registered_target_operation_facets`  -  joins the semantic catalog
+  with each linked target registration; consumed by `vyre-reference`
+- `SemanticOperation`, `TargetOperationFacet`  -  owned by
+  `vyre-foundation::operation`; every LEGO crate submits one
+  `OperationRegistration` through `inventory`
 - `CompiledPipeline`, `PendingDispatch`  -  implemented per-backend
 - `BackendError`, `ErrorCode`  -  surfaced to every consumer
 
 ## Bench targets
 
-- `DialectRegistry::lookup`  -  sub-10 ns per lookup
+- `registered_target_operation_facets` lookup  -  sub-10 ns per lookup
 - `PipelineCacheKey` hash + eq  -  sub-100 ns
 - `VyreBackend` virtual call overhead through `Arc<dyn VyreBackend>`
 

@@ -43,10 +43,10 @@ naga / wgpu / toml  -  foundation tier.
   `BufferAccess`  -  consumed by every backend + conform
 - `ExprVisitor` / `NodeVisitor`  -  intended for lowering crates and
   the reference interpreter; see integration tier
-- `LoweringTable` (moved from vyre-driver in 0.6)  -  consumed by
-  `vyre-driver::registry`, `vyre-ops`, every backend
-- `DialectLookup` trait  -  implemented by `vyre-driver::DialectRegistry`,
-  consumed by `vyre-reference`
+- `OperationRegistry` / `SemanticOperation`  -  consumed by
+  `vyre-driver::backend::registry`, every LEGO crate, every backend
+- `TargetOperationFacet` + `TargetId`  -  built from target-owned
+  registrations, consumed by `vyre-reference` and conform
 
 ## Bench targets
 

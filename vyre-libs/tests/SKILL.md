@@ -118,6 +118,5 @@ options avoid.
 | `canonical_regex_set()`            | Regex frontend smoke fixture.                         |
 | `realistic_detector_pattern_corpus()` | 200 production-shaped pattern bytestrings (no dups). |
 
-The full list of public exports is enumerated in
-`vyre_libs::matching::API_INDEX`; the `tests/api_index.rs` test
-verifies every entry resolves to a real symbol.
+Public exports are pinned by `tests/surface_contracts.rs`, which names
+each migrated item and fails at compile time if one disappears.

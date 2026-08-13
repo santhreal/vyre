@@ -16,7 +16,7 @@ Program walks the table one byte per step.
 - `compile_regex_set` / `regex_compile` / `RegexDfaPipeline` and related
   admission helpers (`matching-regex`, often combined with DFA features).
 - Hit packing, post-process, and fused-region evidence helpers on the
-  always-on scan surface (`API_INDEX` in `mod.rs`).
+  always-on scan surface (unconditional `pub use` re-exports in `mod.rs`).
 
 ## Witness sources
 
