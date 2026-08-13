@@ -1,4 +1,5 @@
-//! Contract tests for c ast gnu computed goto and c11 atomic contracts.
+//! Property-graph lowering of GNU computed goto, for loops with declarations, and the C11 _Atomic
+//! qualifier.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

@@ -1,4 +1,5 @@
-//! Contract tests for c parser pipeline macro boundary contracts.
+//! Macro expansion at the C parser pipeline boundary, including determinism of the conditional mask
+//! and GPU agreement with the reference expander.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

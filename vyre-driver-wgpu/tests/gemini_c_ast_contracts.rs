@@ -1,4 +1,5 @@
-//! Contract tests for gemini c ast contracts.
+//! Tag separation, GNU attributes, and compound literals in the C AST, with GPU parity against the
+//! CPU reference.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]

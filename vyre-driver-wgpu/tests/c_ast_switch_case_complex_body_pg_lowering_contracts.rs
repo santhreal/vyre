@@ -1,4 +1,5 @@
-//! Contract tests for c ast switch case complex body pg lowering contracts.
+//! Switch bodies that mix compound literals, designated initializers, statement expressions, nested
+//! switches, and Duff's device.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

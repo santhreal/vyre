@@ -1,4 +1,5 @@
-//! Contract tests for c ast compound literal designated init nested pg lowering contracts.
+//! Property-graph lowering of compound literals and nested designated initializers, including their
+//! use inside ternaries and statement expressions.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

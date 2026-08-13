@@ -1,4 +1,5 @@
-//! Contract tests for c ast pg expression shape e2e.
+//! Expression shape from C source through property-graph lowering, covering designators, nested
+//! conditionals, and labelled switch bodies.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 #[path = "c_ast_pg_expression_shape_e2e/bytes.rs"]

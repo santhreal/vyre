@@ -1,4 +1,5 @@
-//! Contract tests for c ast pg lowering deep contracts.
+//! Semantic categories, roles, and edges the deep property-graph lowering must assign, checked
+//! against a GPU oracle.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

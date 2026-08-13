@@ -1,4 +1,5 @@
-//! Contract tests for typedef shadowing and restoration across nested scopes.
+//! Typedef shadowing and scope restoration in C semantic analysis, across disjoint blocks,
+//! parameters, K&R parameters, for loops, and nested chains.
 //!
 //! Asserts standard C11 semantics:
 //!   * typedef names live in the ordinary identifier namespace

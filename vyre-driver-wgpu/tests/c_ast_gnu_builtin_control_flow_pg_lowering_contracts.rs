@@ -1,4 +1,5 @@
-//! Contract tests for c ast gnu builtin control flow pg lowering contracts.
+//! Property-graph lowering of __builtin_expect and __builtin_choose_expr in control-flow and
+//! initializer positions.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

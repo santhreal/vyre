@@ -1,4 +1,5 @@
-//! Contract tests for c ast kernel grade construct shape.
+//! AST node shape and CPU/GPU parity for the constructs kernel sources rely on: nested declarators,
+//! asm with attributes, control flow, typedef shadowing, and statement expressions.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

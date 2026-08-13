@@ -1,4 +1,4 @@
-//! Contract tests for c ast expression operator builtin contracts.
+//! GNU builtin expressions carry no binary or unary operator shape, on CPU and GPU alike.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]

@@ -1,4 +1,5 @@
-//! Contract tests for c ast expression member ptr access and ambiguity contracts.
+//! Member and pointer member access rows, and the cast versus parenthesized expression ambiguities
+//! that surround them.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

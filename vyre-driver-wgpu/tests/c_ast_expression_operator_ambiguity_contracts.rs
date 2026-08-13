@@ -1,4 +1,5 @@
-//! Contract tests for c ast expression operator ambiguity contracts.
+//! Operators that are both unary and binary, and the cast versus parenthesized expression
+//! classification that separates them.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]

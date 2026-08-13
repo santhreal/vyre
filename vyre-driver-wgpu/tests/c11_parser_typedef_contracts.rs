@@ -1,4 +1,5 @@
-//! Contract tests for c11 parser typedef contracts.
+//! Typedef name resolution in the C11 parser: cast versus expression, shadowing, struct tags, and
+//! declarator contexts, on CPU and GPU.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 #[path = "c11_parser_typedef_contracts/assert_kind.rs"]

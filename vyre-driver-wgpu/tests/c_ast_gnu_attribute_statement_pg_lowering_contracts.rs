@@ -1,4 +1,5 @@
-//! Contract tests for c ast gnu attribute statement pg lowering contracts.
+//! Property-graph lowering of GNU attributes attached to labels, compound statements, if arms, and
+//! switch cases.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

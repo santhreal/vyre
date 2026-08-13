@@ -1,4 +1,5 @@
-//! Contract tests for c ast expression operator postfix contracts.
+//! Postfix increment and decrement are neither unary nor binary operator shapes, on CPU and GPU
+//! alike.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]

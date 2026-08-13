@@ -1,4 +1,5 @@
-//! Contract tests for c ast asm extended operand goto label pg lowering contracts.
+//! Property-graph lowering of GNU extended asm: symbolic operand names, earlyclobber, clobber
+//! lists, and asm goto labels.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

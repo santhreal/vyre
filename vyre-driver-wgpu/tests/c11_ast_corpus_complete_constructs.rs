@@ -1,4 +1,5 @@
-//! Contract tests for c11 ast corpus complete constructs.
+//! CPU reference C11 AST construction across a corpus covering every declaration, statement, and
+//! expression construct.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::type_complexity)]
 #![allow(deprecated)]

@@ -1,4 +1,5 @@
-//! Contract tests for c ast semantic gaps linux grade.
+//! Semantic gaps exposed by kernel-grade C: asm aliases, mixed and incomplete initializers,
+//! function pointer typedefs, and attribute-bearing declarations.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

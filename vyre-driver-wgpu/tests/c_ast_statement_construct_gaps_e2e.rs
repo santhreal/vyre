@@ -1,4 +1,5 @@
-//! Contract tests for c ast statement construct gaps e2e.
+//! Statement constructs end to end: nested compound statements, control-flow rows, and label and
+//! goto rows.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;

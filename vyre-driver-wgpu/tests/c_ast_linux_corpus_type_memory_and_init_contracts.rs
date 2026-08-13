@@ -1,4 +1,5 @@
-//! Contract tests for c ast linux corpus type memory and init contracts.
+//! Type, memory, and initializer constructs taken from a Linux corpus, each checked for
+//! classification and GPU lowering parity.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
 mod c_ast_gpu_parity_support;
