@@ -19300,18 +19300,18 @@
           },
           {
             "binding": 2,
-            "name": "guards",
-            "access": "ReadOnly",
-            "memory": "Readonly",
+            "name": "scratch",
+            "access": "ReadWrite",
+            "memory": "Global",
             "element": "U32",
             "count": 1,
             "pipeline_live_out": false
           },
           {
             "binding": 3,
-            "name": "scratch",
-            "access": "ReadWrite",
-            "memory": "Global",
+            "name": "guards",
+            "access": "ReadOnly",
+            "memory": "Readonly",
             "element": "U32",
             "count": 1,
             "pipeline_live_out": false
@@ -19323,7 +19323,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": true
+            "pipeline_live_out": false
           }
         ],
         "inputs": [],
@@ -19374,6 +19374,21 @@
         {
           "depth": 0,
           "operation": "vyre-libs::security::integer_overflow_arith",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "inline::vyre-libs::security::integer_overflow_arith",
+          "registered": false
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::bitset::and",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::bitset::and_not",
           "registered": true
         }
       ]
@@ -20016,7 +20031,7 @@
             "memory": "Global",
             "element": "U32",
             "count": 1,
-            "pipeline_live_out": true
+            "pipeline_live_out": false
           }
         ],
         "inputs": [],
@@ -20067,6 +20082,21 @@
         {
           "depth": 0,
           "operation": "vyre-libs::security::sink_intersection",
+          "registered": true
+        },
+        {
+          "depth": 1,
+          "operation": "inline::vyre-libs::security::sink_intersection",
+          "registered": false
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::bitset::and",
+          "registered": true
+        },
+        {
+          "depth": 2,
+          "operation": "vyre-primitives::reduce::count",
           "registered": true
         }
       ]
