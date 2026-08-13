@@ -1,17 +1,24 @@
 //! Metal target-compiler registry and immutable module-bundle contracts.
 
+// Everything below the registry check builds and compiles an artifact, which
+// only the Apple-gated tests do. The non-Apple test asserts the absence of a
+// registration and reaches for none of it.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 use std::collections::BTreeMap;
+
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_driver::BindingSet;
-
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::TargetModuleBundle;
+use vyre_megakernel::{
+    CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle,
+};
 
+#[cfg(any(target_os = "macos", target_os = "ios"))]
 fn artifact() -> vyre_megakernel::Artifact {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
