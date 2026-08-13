@@ -1,10 +1,17 @@
-//! Backend-neutral frontier memory planning for dependency-aware megakernels.
+//! Backend-neutral frontier planning for dependency-aware megakernels.
 //!
 //! Backends can choose different execution topologies, but the memory envelope
 //! of dependency-layered frontier waves is a backend-neutral contract. This
 //! module plans that envelope once, including dependency barriers, fused-group
 //! splitting under an explicit byte budget, peak byte accounting, and readback
-//! pressure amortization.
+//! pressure amortization, and then drives topology selection from it.
+//!
+//! Composing those two halves used to live in the CUDA driver, which is why the
+//! device-wide-barrier rule in [`crate::megakernel_execution`] could sit on one
+//! backend without the neutral policy knowing it. The composition is decided
+//! entirely by graph shape, wave bytes, and budgets, so it belongs here; a
+//! backend supplies only its telemetry and, through
+//! [`MegakernelExecutionPlanner`], its own plan cache.
 
 use crate::accounting::{
     checked_add_u64_count as checked_add, checked_mul_u64_count as checked_mul,
@@ -12,6 +19,11 @@ use crate::accounting::{
 use crate::megakernel_barrier::{
     plan_megakernel_barriers_with_scratch, MegakernelBarrierGroup, MegakernelBarrierPlan,
     MegakernelBarrierPlanError, MegakernelBarrierScratch, MegakernelWaveDependency,
+};
+use crate::megakernel_execution::{
+    megakernel_resident_graph_bytes, MegakernelDeviceCapabilities, MegakernelExecutionPlan,
+    MegakernelExecutionPlanner, MegakernelExecutionRequest, MegakernelExecutionSample,
+    MegakernelGraphShape, MegakernelMemoryError,
 };
 use crate::reservation_policy::{
     reserve_typed_vec_to_capacity as reserve_vec_to_capacity, ReservationPolicy,
@@ -121,6 +133,233 @@ impl From<MegakernelBarrierPlanError> for MegakernelFrontierMemoryPlanError {
     fn from(error: MegakernelBarrierPlanError) -> Self {
         Self::Barrier(error)
     }
+}
+
+/// Dependency-aware megakernel execution plan for frontier waves.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MegakernelFrontierExecutionPlan {
+    /// Topology and memory-budget plan for the peak barrier-free group.
+    pub execution: MegakernelExecutionPlan,
+    /// Minimum global-barrier grouping for the wave dependencies.
+    pub barriers: MegakernelBarrierPlan,
+    /// Peak frontier bytes across any fused barrier-free group.
+    pub peak_frontier_bytes: u64,
+    /// Peak scratch bytes across any fused barrier-free group.
+    pub peak_scratch_bytes: u64,
+    /// Peak output bytes across any fused barrier-free group.
+    pub peak_output_bytes: u64,
+    /// Readback pressure fed into topology selection after combining runtime
+    /// telemetry with static fused-wave output volume.
+    pub amortized_readback_bytes: u64,
+    /// Widest barrier-free group in wave count.
+    pub max_group_width: usize,
+}
+
+/// Dependency-aware frontier execution planning failure.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MegakernelFrontierExecutionPlanError {
+    /// Dependency graph cannot be barrier-planned.
+    Barrier(MegakernelBarrierPlanError),
+    /// Peak wave bytes overflowed while grouping a barrier-free phase.
+    ByteCountOverflow {
+        /// Field being accumulated.
+        field: &'static str,
+    },
+    /// Static graph or fused frontier bytes exceed the caller-approved budget.
+    GroupOverBudget {
+        /// Required bytes before topology selection.
+        required_bytes: u64,
+        /// Caller-provided budget.
+        budget_bytes: u64,
+        /// Budget region being checked.
+        field: &'static str,
+    },
+    /// Topology-validated execution memory planning failed.
+    Memory(MegakernelMemoryError),
+    /// Frontier planning result storage could not be reserved.
+    StorageReserveFailed {
+        /// Field being reserved.
+        field: &'static str,
+        /// Number of elements requested.
+        requested: usize,
+        /// Allocator error text.
+        message: String,
+    },
+}
+
+impl crate::accounting::ArithmeticOverflow for MegakernelFrontierExecutionPlanError {
+    fn arithmetic_overflow(field: &'static str) -> Self {
+        Self::ByteCountOverflow { field }
+    }
+}
+
+impl std::fmt::Display for MegakernelFrontierExecutionPlanError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Barrier(error) => error.fmt(f),
+            Self::ByteCountOverflow { field } => write!(
+                f,
+                "megakernel frontier execution planner overflowed while accumulating {field}. Fix: shard the frontier wave group or split the fused phase."
+            ),
+            Self::GroupOverBudget {
+                required_bytes,
+                budget_bytes,
+                field,
+            } => write!(
+                f,
+                "megakernel frontier execution planner requires {required_bytes} bytes for {field} but budget allows {budget_bytes}. Fix: shard the graph/frontier waves or raise the explicit megakernel budget."
+            ),
+            Self::Memory(error) => error.fmt(f),
+            Self::StorageReserveFailed {
+                field,
+                requested,
+                message,
+            } => write!(
+                f,
+                "megakernel frontier execution planner could not reserve {requested} {field} entries: {message}. Fix: shard the frontier waves before planning."
+            ),
+        }
+    }
+}
+
+impl std::error::Error for MegakernelFrontierExecutionPlanError {}
+
+impl From<MegakernelBarrierPlanError> for MegakernelFrontierExecutionPlanError {
+    fn from(error: MegakernelBarrierPlanError) -> Self {
+        Self::Barrier(error)
+    }
+}
+
+impl From<MegakernelMemoryError> for MegakernelFrontierExecutionPlanError {
+    fn from(error: MegakernelMemoryError) -> Self {
+        Self::Memory(error)
+    }
+}
+
+impl From<MegakernelFrontierMemoryPlanError> for MegakernelFrontierExecutionPlanError {
+    fn from(error: MegakernelFrontierMemoryPlanError) -> Self {
+        match error {
+            MegakernelFrontierMemoryPlanError::Barrier(error) => Self::Barrier(error),
+            MegakernelFrontierMemoryPlanError::ByteCountOverflow { field } => {
+                Self::ByteCountOverflow { field }
+            }
+            MegakernelFrontierMemoryPlanError::GroupOverBudget {
+                required_bytes,
+                budget_bytes,
+                field,
+            } => Self::GroupOverBudget {
+                required_bytes,
+                budget_bytes,
+                field,
+            },
+            MegakernelFrontierMemoryPlanError::StorageReserveFailed {
+                field,
+                requested,
+                message,
+            } => Self::StorageReserveFailed {
+                field,
+                requested,
+                message,
+            },
+        }
+    }
+}
+
+/// Plan dependency-aware megakernel execution for frontier-typed waves.
+///
+/// The planner minimizes global barriers from the wave dependencies, computes
+/// the peak memory envelope of any barrier-free fused group, and asks `planner`
+/// for a memory-validated topology for that envelope.
+///
+/// # Errors
+///
+/// Returns [`MegakernelFrontierExecutionPlanError`] when dependencies are
+/// invalid, counters overflow, storage cannot be reserved, or the envelope does
+/// not fit the explicit budget.
+pub fn plan_megakernel_frontier_execution(
+    planner: &mut impl MegakernelExecutionPlanner,
+    sample: MegakernelExecutionSample,
+    graph: MegakernelGraphShape,
+    bytes_per_node: u64,
+    bytes_per_edge: u64,
+    waves: &[MegakernelFrontierWave],
+    dependencies: &[MegakernelWaveDependency],
+    budget_bytes: u64,
+    launch_overhead_ns: f64,
+    fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
+) -> Result<MegakernelFrontierExecutionPlan, MegakernelFrontierExecutionPlanError> {
+    let mut scratch = MegakernelBarrierScratch::try_with_capacity(waves.len(), dependencies.len())?;
+    plan_megakernel_frontier_execution_with_scratch(
+        planner,
+        sample,
+        graph,
+        bytes_per_node,
+        bytes_per_edge,
+        waves,
+        dependencies,
+        budget_bytes,
+        launch_overhead_ns,
+        fusion_pressure,
+        capabilities,
+        &mut scratch,
+    )
+}
+
+/// Plan dependency-aware megakernel execution using caller-owned scratch.
+///
+/// # Errors
+///
+/// Same rejections as [`plan_megakernel_frontier_execution`].
+#[allow(clippy::too_many_arguments)]
+pub fn plan_megakernel_frontier_execution_with_scratch(
+    planner: &mut impl MegakernelExecutionPlanner,
+    sample: MegakernelExecutionSample,
+    graph: MegakernelGraphShape,
+    bytes_per_node: u64,
+    bytes_per_edge: u64,
+    waves: &[MegakernelFrontierWave],
+    dependencies: &[MegakernelWaveDependency],
+    budget_bytes: u64,
+    launch_overhead_ns: f64,
+    fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
+    scratch: &mut MegakernelBarrierScratch,
+) -> Result<MegakernelFrontierExecutionPlan, MegakernelFrontierExecutionPlanError> {
+    let graph_bytes = megakernel_resident_graph_bytes(graph, bytes_per_node, bytes_per_edge)?;
+    let memory = plan_megakernel_frontier_memory_with_scratch(
+        waves,
+        dependencies,
+        graph_bytes,
+        budget_bytes,
+        sample.readback_bytes,
+        scratch,
+    )?;
+    let execution = planner.plan_execution(MegakernelExecutionRequest {
+        sample: MegakernelExecutionSample {
+            readback_bytes: memory.amortized_readback_bytes,
+            ..sample
+        },
+        graph,
+        bytes_per_node,
+        bytes_per_edge,
+        frontier_bytes: memory.peak_frontier_bytes,
+        scratch_bytes: memory.peak_scratch_bytes,
+        output_bytes: memory.peak_output_bytes,
+        budget_bytes,
+        launch_overhead_ns,
+        fusion_pressure: capabilities.admissible_fusion_pressure(fusion_pressure),
+        capabilities,
+    })?;
+    Ok(MegakernelFrontierExecutionPlan {
+        execution,
+        barriers: memory.barriers,
+        peak_frontier_bytes: memory.peak_frontier_bytes,
+        peak_scratch_bytes: memory.peak_scratch_bytes,
+        peak_output_bytes: memory.peak_output_bytes,
+        amortized_readback_bytes: memory.amortized_readback_bytes,
+        max_group_width: memory.max_group_width,
+    })
 }
 
 /// Plan dependency-aware frontier memory using caller-owned barrier scratch.
@@ -306,10 +545,15 @@ fn storage_reserve_failed(
 #[cfg(test)]
 mod tests {
     use super::{
-        megakernel_frontier_fused_wave_budget_bytes, plan_megakernel_frontier_memory_with_scratch,
+        megakernel_frontier_fused_wave_budget_bytes, plan_megakernel_frontier_execution,
+        plan_megakernel_frontier_memory_with_scratch, MegakernelFrontierExecutionPlanError,
         MegakernelFrontierMemoryPlanError, MegakernelFrontierWave,
     };
     use crate::megakernel_barrier::{MegakernelBarrierScratch, MegakernelWaveDependency};
+    use crate::megakernel_execution::{
+        MegakernelDeviceCapabilities, MegakernelExecutionSample, MegakernelExecutionTopology,
+        MegakernelGraphShape, NeutralMegakernelExecutionPlanner,
+    };
 
     #[test]
     fn frontier_memory_plan_uses_peak_barrier_group_memory() {
@@ -565,5 +809,171 @@ mod tests {
                 assert_eq!(plan.amortized_readback_bytes, 7.max(width * depth));
             }
         }
+    }
+
+    const FUSION_WAVES: &[MegakernelFrontierWave] = &[
+        MegakernelFrontierWave {
+            frontier_bytes: 1_024,
+            scratch_bytes: 512,
+            output_bytes: 256,
+        },
+        MegakernelFrontierWave {
+            frontier_bytes: 2_048,
+            scratch_bytes: 1_024,
+            output_bytes: 512,
+        },
+    ];
+
+    fn fused_pressure_plan(
+        capabilities: MegakernelDeviceCapabilities,
+    ) -> Result<super::MegakernelFrontierExecutionPlan, MegakernelFrontierExecutionPlanError> {
+        plan_megakernel_frontier_execution(
+            &mut NeutralMegakernelExecutionPlanner,
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.50,
+                readback_bytes: 1 << 20,
+            },
+            MegakernelGraphShape {
+                node_count: 1_000,
+                edge_count: 4_000,
+            },
+            16,
+            8,
+            FUSION_WAVES,
+            &[MegakernelWaveDependency {
+                before: 0,
+                after: 1,
+            }],
+            128 * 1024,
+            250.0,
+            0.95,
+            capabilities,
+        )
+    }
+
+    #[test]
+    fn frontier_execution_plans_barriers_and_topology_from_one_envelope() {
+        let plan = fused_pressure_plan(MegakernelDeviceCapabilities::FUSION_CAPABLE)
+            .expect("Fix: dependency-layered frontier waves should fit the budget.");
+
+        assert_eq!(plan.barriers.global_barriers, 1);
+        assert_eq!(plan.barriers.groups[0].waves, vec![0]);
+        assert_eq!(plan.barriers.groups[1].waves, vec![1]);
+        assert_eq!(plan.peak_frontier_bytes, 2_048);
+        assert_eq!(plan.peak_scratch_bytes, 1_024);
+        assert_eq!(plan.peak_output_bytes, 512);
+        assert_eq!(plan.amortized_readback_bytes, 1 << 20);
+        assert_eq!(plan.max_group_width, 1);
+        assert_eq!(
+            plan.execution.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
+        assert_eq!(plan.execution.memory.frontier_bytes, 2_048);
+        assert_eq!(plan.execution.memory.scratch_bytes, 4_096);
+    }
+
+    #[test]
+    fn frontier_execution_refuses_a_fused_wave_without_a_device_wide_barrier() {
+        let capable = fused_pressure_plan(MegakernelDeviceCapabilities::FUSION_CAPABLE)
+            .expect("Fix: capable device should plan.");
+        let incapable = fused_pressure_plan(MegakernelDeviceCapabilities::FUSION_INCAPABLE)
+            .expect("Fix: a device without a device-wide barrier still gets a plan.");
+
+        assert_eq!(
+            capable.barriers, incapable.barriers,
+            "Fix: device capability changes the topology, never the dependency grouping."
+        );
+        assert_ne!(
+            incapable.execution.topology,
+            MegakernelExecutionTopology::FusedWave,
+            "Fix: a fused wave crosses wave boundaries inside one launch and needs a barrier \
+             across every resident block; a device without one cannot run the plan."
+        );
+        assert!(
+            incapable.execution.memory.required_bytes < capable.execution.memory.required_bytes,
+            "Fix: refusing fusion must also drop the fused scratch multiplier from the envelope."
+        );
+    }
+
+    #[test]
+    fn frontier_execution_rejects_a_graph_that_leaves_no_wave_headroom() {
+        let error = plan_megakernel_frontier_execution(
+            &mut NeutralMegakernelExecutionPlanner,
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.50,
+                readback_bytes: 4_096,
+            },
+            MegakernelGraphShape {
+                node_count: 100,
+                edge_count: 100,
+            },
+            8,
+            8,
+            &[MegakernelFrontierWave {
+                frontier_bytes: 1,
+                scratch_bytes: 1,
+                output_bytes: 1,
+            }],
+            &[],
+            1_000,
+            250.0,
+            0.95,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
+        )
+        .expect_err("Fix: resident graph bytes above budget must fail before split planning.");
+
+        assert_eq!(
+            error,
+            MegakernelFrontierExecutionPlanError::GroupOverBudget {
+                required_bytes: 1_600,
+                budget_bytes: 1_000,
+                field: "resident graph bytes",
+            }
+        );
+    }
+
+    #[test]
+    fn frontier_execution_fails_loudly_on_wave_byte_overflow() {
+        let error = plan_megakernel_frontier_execution(
+            &mut NeutralMegakernelExecutionPlanner,
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.90,
+                readback_bytes: 1 << 20,
+            },
+            MegakernelGraphShape {
+                node_count: 1,
+                edge_count: 1,
+            },
+            1,
+            1,
+            &[
+                MegakernelFrontierWave {
+                    frontier_bytes: u64::MAX,
+                    scratch_bytes: 1,
+                    output_bytes: 1,
+                },
+                MegakernelFrontierWave {
+                    frontier_bytes: 1,
+                    scratch_bytes: 1,
+                    output_bytes: 1,
+                },
+            ],
+            &[],
+            u64::MAX,
+            250.0,
+            0.95,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
+        )
+        .expect_err("Fix: overflowed frontier wave bytes must fail before launch planning.");
+
+        assert_eq!(
+            error,
+            MegakernelFrontierExecutionPlanError::ByteCountOverflow {
+                field: "fused wave bytes"
+            }
+        );
     }
 }

@@ -4,6 +4,15 @@
 //! sparse, dense, hybrid, or fused execution topology before allocating device
 //! scratch. The policy is deterministic, allocation-free, and validates byte
 //! pressure before a backend reaches an API-specific allocation path.
+//!
+//! One rule used to live only in the CUDA copy of this policy: a `FusedWave`
+//! runs dependency-ordered waves inside a single launch, so it needs a barrier
+//! across every resident block, and a device without one cannot run the plan at
+//! all. The neutral policy did not know that, so for the same wave it answered
+//! `FusedWave` where the CUDA fork answered a per-launch topology, and any
+//! backend that had not written the check itself would have been handed an
+//! unlaunchable plan. The check is a property of the device, not of CUDA, so it
+//! is [`MegakernelDeviceCapabilities`] here and every backend inherits it.
 
 const WARP_SPARSE_DENSITY: f64 = 0.03125;
 const SPARSE_DENSITY: f64 = 0.125;
@@ -19,6 +28,37 @@ const LAUNCH_HYSTERESIS_BPS: u32 = 250;
 const FUSION_READBACK_BYTES: u64 = 4_096;
 const DENSE_AVERAGE_DEGREE_BPS: u64 = 20_000;
 const WARP_SPARSE_AVERAGE_DEGREE_BPS: u64 = 80_000;
+
+/// Device capabilities that constrain which wave topologies are launchable.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MegakernelDeviceCapabilities {
+    /// Whether every resident block can synchronize inside one launch.
+    pub supports_device_wide_barrier: bool,
+}
+
+impl MegakernelDeviceCapabilities {
+    /// Device that can host a fused wave.
+    pub const FUSION_CAPABLE: Self = Self {
+        supports_device_wide_barrier: true,
+    };
+    /// Device that must keep every wave in its own launch.
+    pub const FUSION_INCAPABLE: Self = Self {
+        supports_device_wide_barrier: false,
+    };
+
+    /// Fusion pressure this device can act on.
+    ///
+    /// Without a device-wide barrier the fused plan is unlaunchable, so the
+    /// measured pressure toward it is zero however high the caller observed it.
+    #[must_use]
+    pub fn admissible_fusion_pressure(self, fusion_pressure: f64) -> f64 {
+        if self.supports_device_wide_barrier {
+            fusion_pressure
+        } else {
+            0.0
+        }
+    }
+}
 
 /// Per-candidate telemetry used to bias megakernel fusion.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -196,6 +236,7 @@ pub fn select_megakernel_topology(
     memory: MegakernelMemoryBudget,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> MegakernelTopologyDecision {
     let memory_pressure_bps = pressure_bps(memory.required_bytes, memory.budget_bytes);
     let average_degree_bps = pressure_bps_u64(graph.edge_count, graph.node_count);
@@ -210,7 +251,7 @@ pub fn select_megakernel_topology(
             )
         };
     let density = finite_unit(sample.frontier_density);
-    let fusion = finite_unit(fusion_pressure);
+    let fusion = finite_unit(capabilities.admissible_fusion_pressure(fusion_pressure));
     let topology = if memory_pressure_bps >= MEMORY_RED_ZONE_BPS {
         MegakernelExecutionTopology::SparseFrontier
     } else if fusion >= FUSION_PRESSURE
@@ -249,10 +290,22 @@ pub fn select_megakernel_topology_stable(
     launch_overhead_ns: f64,
     fusion_pressure: f64,
     previous_topology: MegakernelExecutionTopology,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> MegakernelTopologyDecision {
-    let mut decision =
-        select_megakernel_topology(sample, graph, memory, launch_overhead_ns, fusion_pressure);
-    decision.topology = stabilize_topology(decision, sample, fusion_pressure, previous_topology);
+    let mut decision = select_megakernel_topology(
+        sample,
+        graph,
+        memory,
+        launch_overhead_ns,
+        fusion_pressure,
+        capabilities,
+    );
+    decision.topology = stabilize_topology(
+        decision,
+        sample,
+        capabilities.admissible_fusion_pressure(fusion_pressure),
+        previous_topology,
+    );
     decision
 }
 
@@ -342,6 +395,22 @@ fn stabilize_topology(
     }
 }
 
+/// Resident bytes a graph layout occupies before any wave state.
+///
+/// # Errors
+///
+/// Returns [`MegakernelMemoryError::ByteCountOverflow`] when the node or edge
+/// layout does not fit `u64`.
+pub fn megakernel_resident_graph_bytes(
+    graph: MegakernelGraphShape,
+    bytes_per_node: u64,
+    bytes_per_edge: u64,
+) -> Result<u64, MegakernelMemoryError> {
+    let node_bytes = checked_mul(graph.node_count, bytes_per_node, "node layout bytes")?;
+    let edge_bytes = checked_mul(graph.edge_count, bytes_per_edge, "edge layout bytes")?;
+    checked_add(node_bytes, edge_bytes, "graph layout bytes")
+}
+
 /// Compute and validate a megakernel device-memory plan.
 pub fn plan_megakernel_memory_budget(
     topology: MegakernelExecutionTopology,
@@ -353,9 +422,7 @@ pub fn plan_megakernel_memory_budget(
     output_bytes: u64,
     budget_bytes: u64,
 ) -> Result<MegakernelMemoryPlan, MegakernelMemoryError> {
-    let node_bytes = checked_mul(graph.node_count, bytes_per_node, "node layout bytes")?;
-    let edge_bytes = checked_mul(graph.edge_count, bytes_per_edge, "edge layout bytes")?;
-    let graph_bytes = checked_add(node_bytes, edge_bytes, "graph layout bytes")?;
+    let graph_bytes = megakernel_resident_graph_bytes(graph, bytes_per_node, bytes_per_edge)?;
     let topology_scratch_bytes = topology_scratch_bytes(topology, scratch_bytes)?;
     let required_without_output =
         checked_add(graph_bytes, frontier_bytes, "graph plus frontier bytes")?;
@@ -397,6 +464,7 @@ pub fn plan_megakernel_execution(
     budget_bytes: u64,
     launch_overhead_ns: f64,
     fusion_pressure: f64,
+    capabilities: MegakernelDeviceCapabilities,
 ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
     let sparse_memory = plan_megakernel_memory_budget(
         MegakernelExecutionTopology::SparseFrontier,
@@ -417,6 +485,7 @@ pub fn plan_megakernel_execution(
         },
         launch_overhead_ns,
         fusion_pressure,
+        capabilities,
     );
     match plan_megakernel_memory_budget(
         decision.topology,
@@ -443,6 +512,79 @@ pub fn plan_megakernel_execution(
             })
         }
         Err(error) => Err(error),
+    }
+}
+
+/// Every input one candidate wave needs to reach an execution plan.
+///
+/// This is the argument list of [`plan_megakernel_execution`] as one value so a
+/// backend can memoize the decision without restating it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MegakernelExecutionRequest {
+    /// Runtime telemetry for the candidate wave.
+    pub sample: MegakernelExecutionSample,
+    /// Static graph shape.
+    pub graph: MegakernelGraphShape,
+    /// Resident bytes per graph node.
+    pub bytes_per_node: u64,
+    /// Resident bytes per graph edge.
+    pub bytes_per_edge: u64,
+    /// Frontier-state bytes for the wave.
+    pub frontier_bytes: u64,
+    /// Base scratch bytes before the topology multiplier.
+    pub scratch_bytes: u64,
+    /// Final compact output bytes.
+    pub output_bytes: u64,
+    /// Caller-approved device-memory budget.
+    pub budget_bytes: u64,
+    /// Per-launch overhead observed for this device.
+    pub launch_overhead_ns: f64,
+    /// Caller-measured pressure toward fusing adjacent waves.
+    pub fusion_pressure: f64,
+    /// Capabilities of the device that will run the wave.
+    pub capabilities: MegakernelDeviceCapabilities,
+}
+
+/// Source of memory-validated megakernel execution plans.
+///
+/// The decision itself is [`plan_megakernel_execution`]. A backend implements
+/// this trait only to put a device-local cache in front of that decision, never
+/// to make a different one.
+pub trait MegakernelExecutionPlanner {
+    /// Plan one candidate wave.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MegakernelMemoryError`] when the request overflows byte
+    /// accounting or cannot fit the approved budget.
+    fn plan_execution(
+        &mut self,
+        request: MegakernelExecutionRequest,
+    ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError>;
+}
+
+/// The neutral policy with no memoization, for backends without a plan cache.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct NeutralMegakernelExecutionPlanner;
+
+impl MegakernelExecutionPlanner for NeutralMegakernelExecutionPlanner {
+    fn plan_execution(
+        &mut self,
+        request: MegakernelExecutionRequest,
+    ) -> Result<MegakernelExecutionPlan, MegakernelMemoryError> {
+        plan_megakernel_execution(
+            request.sample,
+            request.graph,
+            request.bytes_per_node,
+            request.bytes_per_edge,
+            request.frontier_bytes,
+            request.scratch_bytes,
+            request.output_bytes,
+            request.budget_bytes,
+            request.launch_overhead_ns,
+            request.fusion_pressure,
+            request.capabilities,
+        )
     }
 }
 
@@ -536,8 +678,9 @@ fn checked_mul(lhs: u64, rhs: u64, field: &'static str) -> Result<u64, Megakerne
 mod tests {
     use super::{
         plan_megakernel_execution, plan_megakernel_memory_budget, select_megakernel_topology,
-        select_megakernel_topology_stable, MegakernelExecutionSample, MegakernelExecutionTopology,
-        MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
+        select_megakernel_topology_stable, MegakernelDeviceCapabilities, MegakernelExecutionSample,
+        MegakernelExecutionTopology, MegakernelGraphShape, MegakernelMemoryBudget,
+        MegakernelMemoryError,
     };
 
     #[test]
@@ -560,6 +703,7 @@ mod tests {
             memory,
             100.0,
             0.0,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
         assert_eq!(
             warp_sparse.topology,
@@ -580,6 +724,7 @@ mod tests {
             memory,
             100.0,
             0.0,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
         assert_eq!(
             block_dense.topology,
@@ -596,6 +741,7 @@ mod tests {
             memory,
             100.0,
             0.0,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
         assert_eq!(hybrid.topology, MegakernelExecutionTopology::HybridFrontier);
 
@@ -609,9 +755,29 @@ mod tests {
             memory,
             250.0,
             0.90,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
         assert_eq!(fused.topology, MegakernelExecutionTopology::FusedWave);
         assert_eq!(fused.launch_pressure_bps, 2_500);
+
+        let unfusable = select_megakernel_topology(
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.50,
+                readback_bytes: 1 << 20,
+            },
+            graph,
+            memory,
+            250.0,
+            0.90,
+            MegakernelDeviceCapabilities::FUSION_INCAPABLE,
+        );
+        assert_eq!(
+            unfusable.topology,
+            MegakernelExecutionTopology::HybridFrontier,
+            "Fix: a fused wave crosses wave boundaries inside one launch, so a device without a \
+             device-wide barrier cannot run it however high the measured fusion pressure is."
+        );
     }
 
     #[test]
@@ -635,10 +801,48 @@ mod tests {
             100.0,
             0.0,
             MegakernelExecutionTopology::SparseFrontier,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
         );
         assert_eq!(
             sparse_to_hybrid.topology,
             MegakernelExecutionTopology::SparseFrontier
+        );
+
+        let held_fusion = select_megakernel_topology_stable(
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.50,
+                readback_bytes: 1 << 20,
+            },
+            graph,
+            memory,
+            250.0,
+            0.65,
+            MegakernelExecutionTopology::FusedWave,
+            MegakernelDeviceCapabilities::FUSION_CAPABLE,
+        );
+        assert_eq!(
+            held_fusion.topology,
+            MegakernelExecutionTopology::FusedWave
+        );
+
+        let released_fusion = select_megakernel_topology_stable(
+            MegakernelExecutionSample {
+                dispatch_cost_ns: 1_000.0,
+                frontier_density: 0.50,
+                readback_bytes: 1 << 20,
+            },
+            graph,
+            memory,
+            250.0,
+            0.65,
+            MegakernelExecutionTopology::FusedWave,
+            MegakernelDeviceCapabilities::FUSION_INCAPABLE,
+        );
+        assert_ne!(
+            released_fusion.topology,
+            MegakernelExecutionTopology::FusedWave,
+            "Fix: hysteresis must not hold a fused wave on a device that cannot run one."
         );
     }
 
@@ -746,6 +950,7 @@ mod tests {
                 budget_bytes,
                 250.0,
                 0.85,
+                MegakernelDeviceCapabilities::FUSION_CAPABLE,
             );
             match result {
                 Ok(plan) => {
