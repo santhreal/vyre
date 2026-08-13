@@ -166,5 +166,5 @@ total_lines = 9445
 
 [[crate]]
 name = "xtask"
-duplicate_lines = 2238
-total_lines = 49782
+duplicate_lines = 1999
+total_lines = 49796

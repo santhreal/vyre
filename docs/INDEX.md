@@ -69,42 +69,42 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `archived` | `contributor` | `historical` | `history` | `archive/README.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/UX_SWEEP.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/vision-2026-04-27-essay.md` | self | manual |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/bitset.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/core.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/decode.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/fixpoint.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/geom.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/graph.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hardware.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hash.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/io.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/label.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/logical.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/matching.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/math.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/mem.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/nn.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/opt.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/optim.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/parsing.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/predicate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/quant.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/reduce.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/representation.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/scan.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/security.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/substrate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/text.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/vfs.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
-| `generated` | `extension` | `operation-registry` | `reference` | `catalog/visual.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/catalog.rs](../xtask/src/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/README.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/bitset.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/core.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/decode.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/fixpoint.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/geom.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/graph.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hardware.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/hash.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/io.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/label.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/logical.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/matching.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/math.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/mem.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/nn.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/opt.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/optim.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/parsing.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/predicate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/quant.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/reduce.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/representation.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/scan.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/security.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/substrate.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/text.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/vfs.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `catalog/visual.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/catalog.rs](../xtask/src/docs/catalog.rs) |
 | `current` | `user` | `public-facade` | `guide` | `code-style.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `consumer-integration.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `consumer-showcase.md` | self | manual |
 | `current` | `extension` | `foundation` | `reference` | `error-codes.md` | [../vyre-foundation/src/validate/validation_error.rs](../vyre-foundation/src/validate/validation_error.rs) | manual |
 | `current` | `user` | `public-facade` | `guide` | `faq.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `frozen-traits/README.md` | self | manual |
-| `generated` | `extension` | `operation-registry` | `reference` | `generated/OP_INVENTORY.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/list_ops.rs](../xtask/src/list_ops.rs) |
+| `generated` | `extension` | `operation-registry` | `reference` | `generated/OP_INVENTORY.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/docs/list_ops.rs](../xtask/src/docs/list_ops.rs) |
 | `current` | `extension` | `operation-registry` | `reference` | `generated/README.md` | self | manual |
 | `current` | `extension` | `operation-registry` | `reference` | `inventory-contract.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `ir-semantics.md` | self | manual |
@@ -118,7 +118,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `op-naming.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `ops-catalog.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `optimization/LEGACY_DOCS.md` | self | manual |
-| `generated` | `extension` | `optimization` | `reference` | `optimization/PASSES.md` | [../vyre-foundation/src/optimizer.rs](../vyre-foundation/src/optimizer.rs) | generated: [../xtask/src/optimization_docs.rs](../xtask/src/optimization_docs.rs) |
+| `generated` | `extension` | `optimization` | `reference` | `optimization/PASSES.md` | [../vyre-foundation/src/optimizer.rs](../vyre-foundation/src/optimizer.rs) | generated: [../xtask/src/docs/optimization_docs.rs](../xtask/src/docs/optimization_docs.rs) |
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/README.md` | self | manual |
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/START_HERE.md` | self | manual |
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/TAXONOMY.md` | self | manual |
