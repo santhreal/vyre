@@ -98,11 +98,12 @@ inventory::submit! {
                 4, "arith", "reach", "guards", "scratch", "out",
             )
         },
+        // Declaration order: arith, reach, scratch, guards, out.
         Some(|| vec![vec![
             u32s(&[0b1111]),
             u32s(&[0b1100]),
-            u32s(&[0b1000]),
             u32s(&[0]),
+            u32s(&[0b1000]),
             u32s(&[0]),
         ]]),
         Some(|| vec![vec![

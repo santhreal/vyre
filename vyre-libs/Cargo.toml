@@ -349,3 +349,11 @@ required-features = ["c-parser"]
 name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
+
+# Step 0 guard for the security flow-skeleton clone family. Registered with
+# `required-features` so a package-scoped run without `security` skips it
+# instead of compiling a `#![cfg]`-emptied file to a vacuous pass.
+[[test]]
+name = "security_flow_skeleton_family_guard"
+path = "tests/security_flow_skeleton_family_guard.rs"
+required-features = ["security"]
