@@ -2,11 +2,11 @@
 // parent file focused on production code.
 
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 use super::*;
-use crate::ir::{AtomicOp, BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use crate::validate::fusion_safety::validate_fusion_alias_hazards;
 use crate::validate::self_composition::validate_self_composition;
-use crate::MemoryOrdering;
 use proptest::prelude::*;
 
 // ------------------------------------------------------------------
@@ -88,173 +88,109 @@ fn validate_with_options_legacy(
 }
 
 // ------------------------------------------------------------------
-// Proptest generators (adapted from transform::visit tests).
+// IR-shape corpus. One owner: `transform::visit::fixtures`, the module
+// that owns the public visitor these programs are walked with.
 // ------------------------------------------------------------------
-fn arb_ident() -> BoxedStrategy<String> {
-    prop::sample::select(&["x", "y", "idx", "i", "acc"][..])
-        .prop_map(str::to_string)
-        .boxed()
-}
+use crate::transform::visit::{
+    fixtures::arb_program, walk_nodes_and_exprs, ExprVisitor, NodeVisitor,
+};
 
-fn arb_buffer_name() -> BoxedStrategy<String> {
-    prop::sample::select(&["out", "input", "rw", "counts", "scratch"][..])
-        .prop_map(str::to_string)
-        .boxed()
-}
+/// Every buffer name the PUBLIC visitor reaches, driving
+/// [`walk_nodes_and_exprs`] directly. `referenced_buffers` is deliberately
+/// not used here: it answers from the cached `ProgramFacts` SoA walk, so it
+/// would compare the validator against that walk rather than against the
+/// visitor this test exists to pin.
+#[derive(Default)]
+struct BufferNamesReached(BTreeSet<String>);
 
-fn arb_call_op() -> BoxedStrategy<String> {
-    prop::sample::select(
-        &[
-            "test.noop",
-            "test.add.u32",
-            "test.mul.f32",
-            "test.unknown_op",
-        ][..],
-    )
-    .prop_map(str::to_string)
-    .boxed()
-}
-
-fn arb_expr() -> BoxedStrategy<Expr> {
-    let leaf = prop_oneof![
-        any::<u32>().prop_map(Expr::LitU32),
-        any::<i32>().prop_map(Expr::LitI32),
-        any::<bool>().prop_map(Expr::LitBool),
-        arb_ident().prop_map(Expr::var),
-        arb_buffer_name().prop_map(Expr::buf_len),
-        // Expr::Call with no arguments: exercises the validate_call code path
-        // (previously absent, so single_pass_validator_matches_legacy never
-        // covered the silent-fallback defect).
-        arb_call_op().prop_map(|op| Expr::call(op, vec![])),
-    ];
-
-    leaf.prop_recursive(3, 48, 3, |inner| {
-        prop_oneof![
-            (arb_buffer_name(), inner.clone()).prop_map(|(buffer, index)| Expr::Load {
-                buffer: buffer.into(),
-                index: Box::new(index),
-            }),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::BinOp {
-                op: BinOp::Add,
-                left: Box::new(left),
-                right: Box::new(right),
-            }),
-            (inner.clone(), inner.clone()).prop_map(|(left, right)| Expr::BinOp {
-                op: BinOp::Sub,
-                left: Box::new(left),
-                right: Box::new(right),
-            }),
-            inner.clone().prop_map(|operand| Expr::UnOp {
-                op: UnOp::Negate,
-                operand: Box::new(operand),
-            }),
-            (inner.clone(), inner.clone(), inner.clone()).prop_map(
-                |(cond, true_val, false_val)| Expr::Select {
-                    cond: Box::new(cond),
-                    true_val: Box::new(true_val),
-                    false_val: Box::new(false_val),
-                }
-            ),
-            inner.clone().prop_map(|value| Expr::Cast {
-                target: DataType::U32,
-                value: Box::new(value),
-            }),
-            (
-                arb_buffer_name(),
-                inner.clone(),
-                proptest::option::of(inner.clone()),
-                inner.clone(),
-            )
-                .prop_map(|(buffer, index, expected, value)| Expr::Atomic {
-                    op: AtomicOp::Add,
-                    buffer: buffer.into(),
-                    index: Box::new(index),
-                    expected: expected.map(Box::new),
-                    value: Box::new(value),
-                    ordering: MemoryOrdering::SeqCst,
-                }),
-        ]
-    })
-    .boxed()
-}
-
-fn arb_node() -> BoxedStrategy<Node> {
-    arb_node_with_depth(3)
-}
-
-fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
-    let leaf = prop_oneof![
-        (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
-            name: name.into(),
-            value,
-        }),
-        (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Assign {
-            name: name.into(),
-            value,
-        }),
-        (arb_buffer_name(), arb_expr(), arb_expr()).prop_map(|(buffer, index, value)| {
-            Node::Store {
-                buffer: buffer.into(),
-                index,
-                value,
+impl NodeVisitor for BufferNamesReached {
+    fn visit_node(&mut self, node: &Node) {
+        let mut record = |name: &crate::ir::Ident| {
+            self.0.insert(name.as_str().to_string());
+        };
+        match node {
+            Node::Store { buffer, .. }
+            | Node::AllReduce { buffer, .. }
+            | Node::Broadcast { buffer, .. } => record(buffer),
+            Node::IndirectDispatch { count_buffer, .. } => record(count_buffer),
+            Node::AsyncLoad {
+                source,
+                destination,
+                ..
             }
-        }),
-        Just(Node::Return),
-        Just(Node::barrier()),
-    ];
-
-    if depth == 0 {
-        return leaf.boxed();
+            | Node::AsyncStore {
+                source,
+                destination,
+                ..
+            }
+            | Node::AllGather {
+                input: source,
+                output: destination,
+                ..
+            }
+            | Node::ReduceScatter {
+                input: source,
+                output: destination,
+                ..
+            } => {
+                record(source);
+                record(destination);
+            }
+            _ => {}
+        }
     }
-
-    leaf.prop_recursive(2, 32, 2, move |inner| {
-        prop_oneof![
-            (
-                arb_expr(),
-                prop::collection::vec(inner.clone(), 0..=3),
-                prop::collection::vec(inner.clone(), 0..=3),
-            )
-                .prop_map(|(cond, then, otherwise)| Node::If {
-                    cond,
-                    then,
-                    otherwise,
-                }),
-            (
-                arb_ident(),
-                arb_expr(),
-                arb_expr(),
-                prop::collection::vec(inner.clone(), 0..=3),
-            )
-                .prop_map(|(var, from, to, body)| Node::Loop {
-                    var: var.into(),
-                    from,
-                    to,
-                    body,
-                }),
-            prop::collection::vec(inner, 0..=3).prop_map(Node::Block),
-        ]
-    })
-    .boxed()
 }
 
-fn arb_program() -> BoxedStrategy<Program> {
-    prop::collection::vec(arb_node(), 0..=8)
-        .prop_map(|entry| {
-            Program::wrapped(
-                vec![
-                    BufferDecl::output("out", 0, DataType::U32)
-                        .with_count(8)
-                        .with_output_byte_range(0..16),
-                    BufferDecl::read("input", 1, DataType::U32).with_count(8),
-                    BufferDecl::read_write("rw", 2, DataType::U32).with_count(8),
-                    BufferDecl::read("counts", 3, DataType::U32).with_count(8),
-                    BufferDecl::workgroup("scratch", 4, DataType::U32),
-                ],
-                [1, 1, 1],
-                entry,
-            )
-        })
-        .boxed()
+impl ExprVisitor for BufferNamesReached {
+    fn visit_expr(&mut self, expr: &Expr) {
+        match expr {
+            Expr::Load { buffer, .. }
+            | Expr::BufLen { buffer }
+            | Expr::BufferRef { buffer }
+            | Expr::Atomic { buffer, .. } => {
+                self.0.insert(buffer.as_str().to_string());
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Pull `NAME` out of a diagnostic of the form ``... unknown buffer `NAME` ...``.
+fn unknown_buffer_name(message: &str) -> Option<String> {
+    let tail = message.split("unknown buffer `").nth(1)?;
+    tail.split('`').next().map(str::to_string)
+}
+
+// ------------------------------------------------------------------
+// Cross-walk guard for the merged corpus: the validator's traversal and
+// the public visitor must reach the same buffer references. Declaring no
+// buffers turns every reference the validator resolves into an
+// `unknown buffer` diagnostic, which makes the two walks directly
+// comparable. A node or expression kind that one walk descends into and
+// the other skips shows up here as a set difference.
+// ------------------------------------------------------------------
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: 128,
+        ..ProptestConfig::default()
+    })]
+
+    #[test]
+    fn validator_walk_reaches_the_same_buffers_as_the_public_visitor(program in arb_program()) {
+        let probe = program.with_rewritten_buffers(Vec::new());
+
+        let mut by_visitor = BufferNamesReached::default();
+        walk_nodes_and_exprs(&probe, &mut by_visitor);
+
+        let report = validate_with_options(&probe, ValidationOptions::default());
+        let by_validator: BTreeSet<String> = report
+            .errors
+            .iter()
+            .filter_map(|issue| unknown_buffer_name(&issue.message()))
+            .collect();
+
+        prop_assert_eq!(by_visitor.0, by_validator);
+    }
 }
 
 // ------------------------------------------------------------------

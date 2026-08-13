@@ -44,6 +44,8 @@ pub mod loop_unroll;
 /// `Loop(i, lo, hi, body)` (ROADMAP A16  -  range facts into branch
 /// elision via the structural loop range).
 pub mod loop_var_range_fold;
+/// Shared legality / dependence analysis for the loop restructuring passes.
+mod legality;
 mod substitution;
 
 fn collect_vars_in_expr(expr: &crate::ir::Expr, out: &mut rustc_hash::FxHashSet<crate::ir::Ident>) {
