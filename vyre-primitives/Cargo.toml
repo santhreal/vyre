@@ -138,11 +138,6 @@ required-features = ["decode"]
 name = "wire_throughput"
 harness = false
 
-[[test]]
-name = "generated_graph_oracle_matrix"
-path = "tests/generated_graph_oracle_matrix.rs"
-required-features = ["graph", "cpu-parity"]
-
 
 
 

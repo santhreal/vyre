@@ -2,24 +2,19 @@ use super::{
     ResidentCsrQueueGraph, ResidentCsrQueueProgramShape, ResidentCsrQueueScratch,
     ResidentCsrQueueScratchHandles,
 };
-use vyre_primitives::bitset::zero::bitset_zero;
-use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse, frontier_queue_len_init, frontier_word_block_offsets_in_place,
-    frontier_word_block_offsets_to_queue_parallel, frontier_word_block_prefix_to_queue_parallel,
-    frontier_word_counts_scan_pass_a, frontier_words_to_queue_clear_out_parallel,
-    validate_frontier_queue_query,
-};
-use vyre_primitives::graph::csr_queue_split::csr_queue_split_low_forward_traverse;
-use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse;
+use vyre_primitives::graph::csr_frontier_queue::validate_frontier_queue_query;
 
 use crate::dispatch_buffers::u32_word_bytes;
+use crate::graph::csr_frontier_queue_programs::{
+    resident_csr_queue_len_init_program, resident_csr_queue_materializer_programs,
+    resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
+};
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_frontier_stats,
     resident_csr_queue_materializer_for_stats, resident_csr_queue_split_low_grid,
     resident_csr_queue_traverse_grid, resident_csr_queue_traverse_kind_for_graph_stats,
     FrontierWordPrefixScratch, ResidentCsrQueueMaterializer, ResidentCsrQueueTraverseKind,
-    STRIDED_FORWARD_MIN_ROW_DEGREE,
 };
 use crate::graph::dispatch_bridge::alloc_resident_buffers;
 use crate::optimizer::dispatcher::{
@@ -500,120 +495,46 @@ fn ensure_programs(
     if scratch.cached_shape == Some(shape) {
         return Ok(());
     }
-    scratch.word_counts_program = None;
-    scratch.word_block_offsets_program = None;
-    scratch.queue_len_init_program = None;
-    scratch.clear_frontier_out_program = None;
+    let precomputed_block_offsets = match shape.materializer {
+        ResidentCsrQueueMaterializer::AtomicWordScan => false,
+        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
+            frontier_word_prefix_uses_precomputed_offsets(
+                word_prefix_scratch(graph.words)?.block_count,
+            )
+        }
+    };
+    let materializer_programs = resident_csr_queue_materializer_programs(
+        "frontier",
+        graph.node_count,
+        graph.words as u32,
+        queue_capacity,
+        shape.materializer,
+        precomputed_block_offsets,
+    );
+    scratch.clear_frontier_out_program = materializer_programs.clear_frontier_out;
+    scratch.queue_len_init_program = materializer_programs.queue_len_init;
+    scratch.word_counts_program = materializer_programs.word_counts;
+    scratch.word_block_offsets_program = materializer_programs.word_block_offsets;
+    scratch.queue_program = Some(materializer_programs.queue);
+    scratch.traverse_program = Some(resident_csr_queue_traverse_program(
+        graph.node_count,
+        graph.edge_count,
+        queue_capacity,
+        allow_mask,
+        shape.traverse_kind,
+    ));
     scratch.high_len_init_program = None;
     scratch.split_low_program = None;
-    match shape.materializer {
-        ResidentCsrQueueMaterializer::AtomicWordScan => {
-            scratch.queue_len_init_program = Some(frontier_queue_len_init("queue_len"));
-            scratch.queue_program = Some(frontier_words_to_queue_clear_out_parallel(
-                "frontier",
-                "active_queue",
-                "queue_len",
-                "frontier_out",
-                graph.node_count,
-                queue_capacity,
-            ));
-        }
-        ResidentCsrQueueMaterializer::DeterministicWordPrefix => {
-            scratch.clear_frontier_out_program =
-                Some(bitset_zero("frontier_out", graph.words as u32));
-            let word_prefix = word_prefix_scratch(graph.words)?;
-            scratch.word_counts_program = Some(frontier_word_counts_scan_pass_a(
-                "frontier",
-                "word_partials",
-                "block_totals",
-                graph.node_count,
-            ));
-            if frontier_word_prefix_uses_precomputed_offsets(word_prefix.block_count) {
-                scratch.word_block_offsets_program = Some(frontier_word_block_offsets_in_place(
-                    "block_totals",
-                    graph.node_count,
-                ));
-                scratch.queue_program = Some(frontier_word_block_offsets_to_queue_parallel(
-                    "frontier",
-                    "word_partials",
-                    "block_totals",
-                    "active_queue",
-                    "queue_len",
-                    graph.node_count,
-                    queue_capacity,
-                ));
-            } else {
-                scratch.queue_program = Some(frontier_word_block_prefix_to_queue_parallel(
-                    "frontier",
-                    "word_partials",
-                    "block_totals",
-                    "active_queue",
-                    "queue_len",
-                    graph.node_count,
-                    queue_capacity,
-                ));
-            }
-        }
-    }
-    scratch.traverse_program = Some(match shape.traverse_kind {
-        ResidentCsrQueueTraverseKind::RowSerial => csr_queue_forward_traverse(
-            "active_queue",
-            "queue_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            graph.node_count,
-            graph.edge_count,
-            queue_capacity,
-            allow_mask,
-        ),
-        ResidentCsrQueueTraverseKind::RowStrided => csr_queue_strided_forward_traverse(
-            "active_queue",
-            "queue_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            graph.node_count,
-            graph.edge_count,
-            queue_capacity,
-            allow_mask,
-        ),
-        ResidentCsrQueueTraverseKind::MixedSplit {
-            high_queue_capacity,
-        } => csr_queue_strided_forward_traverse(
-            "high_queue",
-            "high_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            graph.node_count,
-            graph.edge_count,
-            high_queue_capacity,
-            allow_mask,
-        ),
-    });
     if let ResidentCsrQueueTraverseKind::MixedSplit {
         high_queue_capacity,
     } = shape.traverse_kind
     {
-        scratch.high_len_init_program = Some(frontier_queue_len_init("high_len"));
-        scratch.split_low_program = Some(csr_queue_split_low_forward_traverse(
-            "active_queue",
-            "queue_len",
-            "edge_offsets",
-            "edge_targets",
-            "edge_kind_mask",
-            "frontier_out",
-            "high_queue",
-            "high_len",
+        scratch.high_len_init_program = Some(resident_csr_queue_len_init_program("high_len"));
+        scratch.split_low_program = Some(resident_csr_queue_split_low_program(
             graph.node_count,
             graph.edge_count,
             queue_capacity,
             high_queue_capacity,
-            STRIDED_FORWARD_MIN_ROW_DEGREE,
             allow_mask,
         ));
     }

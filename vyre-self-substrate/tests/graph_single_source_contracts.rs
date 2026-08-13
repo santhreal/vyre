@@ -22,7 +22,7 @@ const GRAPH_WRAPPERS: &[WrapperContract] = &[
         primitive_module: "adaptive_traverse",
         required_tokens: &[
             "primitive_adaptive_sparse_dense_step",
-            "primitive_csr_queue_forward_traverse",
+            "resident_csr_queue_traverse_program",
             "validate_adaptive_frontier",
         ],
         max_wrapper_lines: 775,
@@ -51,7 +51,7 @@ const GRAPH_WRAPPERS: &[WrapperContract] = &[
         file: "csr_forward_or_changed.rs",
         primitive_module: "csr_forward_or_changed",
         required_tokens: &[
-            "plan_csr_forward_or_changed_dispatch",
+            "plan_csr_forward_or_changed_launch",
             "plan.uses_changed_history",
             "csr_foc_cpu",
         ],
