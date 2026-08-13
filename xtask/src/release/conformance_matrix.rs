@@ -109,10 +109,10 @@ struct ConformanceCaseClassEvidence {
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct CiConformanceGate {
-    workflow: String,
+pub(crate) struct CiConformanceGate {
+    pub(crate) workflow: String,
     read_error: Option<String>,
-    gate: String,
+    pub(crate) gate: String,
     present: bool,
     command_present: bool,
     artifact_check_present: bool,
@@ -891,7 +891,7 @@ fn is_even_hex(value: &str) -> bool {
     !value.is_empty() && value.len() % 2 == 0 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
-fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
+pub(crate) fn inspect_ci_conformance_gates(vyre_root: &Path) -> Vec<CiConformanceGate> {
     vec![
         inspect_ci_gate(
             vyre_root,

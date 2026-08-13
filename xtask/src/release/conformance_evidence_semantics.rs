@@ -6,7 +6,6 @@ const REQUIRED_WORKFLOWS: &[&str] = &[
     ".github/workflows/gpu-parity.yml",
     ".github/workflows/ci.yml",
     ".github/workflows/architectural-invariants.yml",
-    ".github/CI_REQUIRED.md",
     "scripts/apply-branch-protection.sh",
 ];
 const REQUIRED_GATES: &[&str] = &[
@@ -200,6 +199,8 @@ pub(crate) fn inspect_conformance_matrix(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::release::conformance_matrix::inspect_ci_conformance_gates;
+    use std::path::Path;
 
     fn complete_matrix(workflows: impl Iterator<Item = &'static str>) -> Value {
         let mut ci_gates = workflows
@@ -281,5 +282,34 @@ mod tests {
                     .to_string()
             ]
         );
+    }
+
+    /// Every name this module requires must be a name the matrix generator can
+    /// actually emit, so that a requirement is a statement about the repository
+    /// rather than one the producer is structurally unable to satisfy. Both
+    /// sides are enumerated from source at run time: adding a required workflow
+    /// or gate without the matching `inspect_ci_gate` row turns this red.
+    ///
+    /// The class it closes: `.github/CI_REQUIRED.md` was listed as a required
+    /// workflow while the generator only ever named it as the *command* of the
+    /// `scripts/apply-branch-protection.sh` row, so the blocker fired on every
+    /// run regardless of repository state. It does not catch a required name
+    /// the generator emits with the wrong predicate wired to it; the per-gate
+    /// `command_present` / `artifact_check_present` assertions cover that.
+    #[test]
+    fn every_required_name_is_one_the_matrix_generator_emits() {
+        let emitted = inspect_ci_conformance_gates(Path::new(""));
+
+        let missing_workflows = REQUIRED_WORKFLOWS
+            .iter()
+            .filter(|required| !emitted.iter().any(|gate| gate.workflow == **required))
+            .collect::<Vec<_>>();
+        let missing_gates = REQUIRED_GATES
+            .iter()
+            .filter(|required| !emitted.iter().any(|gate| gate.gate == **required))
+            .collect::<Vec<_>>();
+
+        assert_eq!(missing_workflows, Vec::<&&str>::new());
+        assert_eq!(missing_gates, Vec::<&&str>::new());
     }
 }
