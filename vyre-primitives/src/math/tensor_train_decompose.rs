@@ -2,16 +2,17 @@
 //!
 //! Decomposes an n-mode tensor into a chain of TT cores.
 //!
-//! Composes `tt_contract_step` (for validation/testing) and SVD truncation.
+//! Composes `symmetric_eigen_jacobi` (the eigensolve) and `dot_partial` (the core columns).
 //!
 //! Algorithm: TT-SVD (Oseledets 2011).
 
 use std::sync::Arc;
 
-use vyre_foundation::ir::model::expr::Ident;
+use vyre_foundation::ir::model::expr::{GeneratorRef, Ident};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::math::symmetric_eigen_jacobi::jacobi_eigen_body;
+use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
+use crate::math::symmetric_eigen_jacobi::jacobi_eigen_region;
 
 /// `row * cols + col` flat index for a row-major matrix.
 fn tt_idx(row: Expr, cols: u32, col: Expr) -> Expr {
@@ -101,8 +102,9 @@ pub fn tensor_train_decompose_step(
 
     // Real per-mode TT-SVD (Oseledets 2011) of the `m x n` unfolding `M` (m = r_prev*nk rows,
     // n = rem columns), in f32, run serially on lane 0. Mirrors the CPU reference
-    // `truncated_svd_into`: (1) Gram matrix G = MᵀM (n x n, symmetric PSD); (2) eigendecompose G via
-    // the shared Jacobi body → eigenvalues + eigenvectors V; (3) take the r_next largest eigenpairs:
+    // `truncated_svd_into`: (1) Gram matrix G = MᵀM (n x n, symmetric PSD); (2) eigendecompose G by
+    // composing `symmetric_eigen_jacobi` → eigenvalues + eigenvectors V; (3) take the r_next
+    // largest eigenpairs:
     // σ = √max(λ,0); core column U[:,k] = M·V[:,k]/σ; remainder row = σ·V[:,k]ᵀ carried to the next
     // mode. `tt_ata`/`tt_evec`/`tt_eval` are internal f32 scratch (Gram, eigenvectors, eigenvalues);
     // after selecting an eigenpair its eigenvalue is marked used (−inf) so the next rank picks the
@@ -153,8 +155,13 @@ pub fn tensor_train_decompose_step(
         )],
     ));
 
-    // 2. Eigendecompose the Gram matrix (ONE-PLACE: shared Jacobi body).
-    body.extend(jacobi_eigen_body("tt_ata", "tt_evec", "tt_eval", n));
+    // 2. Eigendecompose the Gram matrix. ONE-PLACE: `symmetric_eigen_jacobi` owns the only
+    // Program-emitting spelling of the symmetric Jacobi eigendecomposition in this crate, and
+    // the child region records that composition edge in the IR rather than leaving the nodes
+    // spliced in bare where no audit can distinguish them from a hand-rolled eigensolve.
+    body.push(jacobi_eigen_region(
+        OP_ID, "tt_ata", "tt_evec", "tt_eval", n,
+    ));
 
     // 3. Truncated SVD: r_next largest eigenpairs → core U and remainder S·Vᵀ.
     body.push(Node::loop_for(
@@ -208,27 +215,24 @@ pub fn tensor_train_decompose_step(
                 Expr::u32(m),
                 vec![
                     Node::let_bind("tt_dot", Expr::f32(0.0)),
-                    Node::loop_for(
-                        "tt_uk",
-                        Expr::u32(0),
-                        Expr::u32(n),
-                        vec![Node::assign(
+                    // Composed from the registered `dot_partial` primitive rather than a
+                    // second hand-rolled accumulation loop: row `tt_ur` of the unfolding and
+                    // row `tt_rank` of the remainder are both unit-stride runs of `n` f32,
+                    // which is exactly that primitive's contract.
+                    Node::Region {
+                        generator: Ident::from(DOT_PARTIAL_OP_ID),
+                        source_region: Some(GeneratorRef {
+                            name: OP_ID.to_string(),
+                        }),
+                        body: Arc::new(vec![dot_partial(
+                            input_matrix,
+                            rem_out,
                             "tt_dot",
-                            Expr::add(
-                                Expr::var("tt_dot"),
-                                Expr::mul(
-                                    Expr::load(
-                                        input_matrix,
-                                        tt_idx(Expr::var("tt_ur"), n, Expr::var("tt_uk")),
-                                    ),
-                                    Expr::load(
-                                        rem_out,
-                                        tt_idx(Expr::var("tt_rank"), n, Expr::var("tt_uk")),
-                                    ),
-                                ),
-                            ),
-                        )],
-                    ),
+                            Expr::mul(Expr::var("tt_ur"), Expr::u32(n)),
+                            Expr::mul(Expr::var("tt_rank"), Expr::u32(n)),
+                            n,
+                        )]),
+                    },
                     Node::store(
                         u_out,
                         tt_idx(Expr::var("tt_ur"), r_next, Expr::var("tt_rank")),

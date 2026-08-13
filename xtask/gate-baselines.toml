@@ -44,9 +44,8 @@ output_lines = 1
 
 [[gate]]
 name = "gate1"
-status = "red"
-output_lines = 397
-owner = "Collapse C1-C5: the single failure is vyre-primitives::math::tensor_train_decompose at loops=21 nodes=79 composed=0%, a Category A composition sitting in the Category C crate; it clears when the op moves to vyre-libs"
+status = "green"
+output_lines = 372
 
 [[gate]]
 name = "heuristic-audit"
