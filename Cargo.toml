@@ -28,6 +28,9 @@ members = [
     "conform/vyre-conform-spec",
     "conform/vyre-conform",
     "xtask",
+    # Workspace structural gate. Depends on no vyre crate on purpose: it reads
+    # source text so it still runs while the workspace does not compile.
+    "structure-gate",
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs",

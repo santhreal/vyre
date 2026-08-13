@@ -1,0 +1,26 @@
+[package]
+name = "structure-gate"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Workspace structural gate: crate roster, one identity per operation, one home per concept."
+# Internal gate, never published.
+publish = false
+
+# This crate deliberately depends on no vyre crate. It reads source text, so it
+# keeps working while the workspace it judges does not compile - which is
+# exactly when a structural migration needs it.
+[dependencies]
+toml.workspace = true
+walkdir.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "structure-gate"
+path = "src/main.rs"
