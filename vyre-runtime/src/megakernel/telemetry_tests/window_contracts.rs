@@ -51,8 +51,12 @@ fn decode_window_opcodes_groups_ticketed_slots() {
     let mut active_slots = Vec::with_capacity(4);
     let windows_ptr = active_windows.as_ptr();
     let slots_ptr = active_slots.as_ptr();
-    telemetry.active_windows_into(&mut active_windows);
-    telemetry.active_slots_for_opcode_into(window_opcode, &mut active_slots);
+    telemetry
+        .try_active_windows_into(&mut active_windows)
+        .expect("Fix: active-window staging must fit the caller-owned buffer reserved above");
+    telemetry
+        .try_active_slots_for_opcode_into(window_opcode, &mut active_slots)
+        .expect("Fix: active-slot staging must fit the caller-owned buffer reserved above");
     assert_eq!(active_windows.len(), 1);
     assert_eq!(active_slots.len(), 3);
     assert_eq!(active_windows.as_ptr(), windows_ptr);

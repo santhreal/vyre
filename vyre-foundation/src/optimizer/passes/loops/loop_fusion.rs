@@ -732,8 +732,14 @@ mod tests {
         let result = LoopFusion::transform(program(entry));
         assert!(result.changed);
         let body = region_body(result.program.entry());
+        // Invariant: `result.changed` (asserted above) means `fuse_in_body`
+        // rewrote the adjacent loop pair, and the only node it ever writes for
+        // a fused pair is a `Node::Loop` (see `fuse_in_body`, which pushes the
+        // rebuilt `Node::Loop` and skips the consumed second loop). `Node` is
+        // one enum for every IR shape, so no type carries "this slot holds the
+        // fused loop"; the pass is the guarantee and this is where it is read.
         let Node::Loop { body: fused, .. } = &body[0] else {
-            panic!("Fix: must be a Loop");
+            panic!("Fix: fusion reported a change, so body[0] must be the fused Node::Loop");
         };
         assert_eq!(fused.len(), 2);
         if let Node::Store { index, .. } = &fused[1] {
@@ -743,7 +749,12 @@ mod tests {
                 "second store's index must be renamed to outer var"
             );
         } else {
-            panic!("Fix: second fused node must be a Store");
+            // Invariant: fusion concatenates body_a then body_b verbatim
+            // (`fuse_in_body` extends the rebuilt body with both slices), so
+            // index 1 is body_b's only node, the `Store("b", j, 2)` built at
+            // the top of this test with `j` rewritten to the surviving loop
+            // var. Established by the pass, not by any type.
+            panic!("Fix: fusion concatenates body_b verbatim, so fused[1] must be body_b's Store");
         }
     }
 
