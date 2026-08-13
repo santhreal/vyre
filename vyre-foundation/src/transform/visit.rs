@@ -462,71 +462,56 @@ pub fn collect_call_op_ids(program: &Program) -> Vec<Arc<str>> {
     op_ids
 }
 
+/// Shared IR-shape generators for the traversal proptests.
+///
+/// The public visitor and the validator are exercised over the same corpus,
+/// so the corpus has exactly one owner: this module. `crate::validate` drives
+/// it through [`arb_program`].
+///
+/// The corpus is the union of what both callers need. In particular
+/// [`arb_expr`] emits argument-less `Expr::Call` leaves: the validator needs
+/// them to reach `validate_call`, and the traversal proptests are strictly
+/// better covered for having them, since `Expr::Call` is a node the walk
+/// descends into.
 #[cfg(test)]
-mod tests {
-    use super::*;
+pub(crate) mod fixtures {
     use crate::ir::{AtomicOp, BinOp, BufferDecl, DataType, Expr, Node, Program, UnOp};
+    use crate::MemoryOrdering;
     use proptest::prelude::*;
 
-    /// Legacy double-walk implementation for equivalence verification.
-    /// Mirrors every buffer-touching site that ProgramFacts::buffer_refs
-    /// records so the equivalence proptest stays sound even when arb_node
-    /// is extended with Async / IndirectDispatch variants.
-    fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
-        let mut names = HashSet::new();
-        walk_exprs(program, |expr| match expr {
-            Expr::Load { buffer, .. }
-            | Expr::BufLen { buffer }
-            | Expr::BufferRef { buffer }
-            | Expr::Atomic { buffer, .. } => {
-                names.insert(buffer.clone());
-            }
-            _ => {}
-        });
-        walk_nodes(program, |node| match node {
-            Node::Store { buffer, .. } => {
-                names.insert(buffer.clone());
-            }
-            Node::IndirectDispatch { count_buffer, .. } => {
-                names.insert(count_buffer.clone());
-            }
-            Node::AsyncLoad {
-                source,
-                destination,
-                ..
-            }
-            | Node::AsyncStore {
-                source,
-                destination,
-                ..
-            } => {
-                names.insert(source.clone());
-                names.insert(destination.clone());
-            }
-            _ => {}
-        });
-        names
-    }
-
-    fn arb_ident() -> BoxedStrategy<String> {
+    pub(crate) fn arb_ident() -> BoxedStrategy<String> {
         prop::sample::select(&["x", "y", "idx", "i", "acc"][..])
             .prop_map(str::to_string)
             .boxed()
     }
 
-    fn arb_buffer_name() -> BoxedStrategy<String> {
+    pub(crate) fn arb_buffer_name() -> BoxedStrategy<String> {
         prop::sample::select(&["out", "input", "rw", "counts", "scratch"][..])
             .prop_map(str::to_string)
             .boxed()
     }
 
-    fn arb_expr() -> BoxedStrategy<Expr> {
+    pub(crate) fn arb_call_op() -> BoxedStrategy<String> {
+        prop::sample::select(
+            &[
+                "test.noop",
+                "test.add.u32",
+                "test.mul.f32",
+                "test.unknown_op",
+            ][..],
+        )
+        .prop_map(str::to_string)
+        .boxed()
+    }
+
+    pub(crate) fn arb_expr() -> BoxedStrategy<Expr> {
         let leaf = prop_oneof![
             any::<u32>().prop_map(Expr::LitU32),
             any::<i32>().prop_map(Expr::LitI32),
             any::<bool>().prop_map(Expr::LitBool),
             arb_ident().prop_map(Expr::var),
             arb_buffer_name().prop_map(Expr::buf_len),
+            arb_call_op().prop_map(|op| Expr::call(op, vec![])),
         ];
 
         leaf.prop_recursive(3, 48, 3, |inner| {
@@ -572,18 +557,18 @@ mod tests {
                         index: Box::new(index),
                         expected: expected.map(Box::new),
                         value: Box::new(value),
-                        ordering: crate::MemoryOrdering::SeqCst,
+                        ordering: MemoryOrdering::SeqCst,
                     }),
             ]
         })
         .boxed()
     }
 
-    fn arb_node() -> BoxedStrategy<Node> {
+    pub(crate) fn arb_node() -> BoxedStrategy<Node> {
         arb_node_with_depth(3)
     }
 
-    fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
+    pub(crate) fn arb_node_with_depth(depth: u32) -> BoxedStrategy<Node> {
         let leaf = prop_oneof![
             (arb_ident(), arb_expr()).prop_map(|(name, value)| Node::Let {
                 name: name.into(),
@@ -638,7 +623,7 @@ mod tests {
         .boxed()
     }
 
-    fn arb_program() -> BoxedStrategy<Program> {
+    pub(crate) fn arb_program() -> BoxedStrategy<Program> {
         prop::collection::vec(arb_node(), 0..=8)
             .prop_map(|entry| {
                 Program::wrapped(
@@ -656,6 +641,54 @@ mod tests {
                 )
             })
             .boxed()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fixtures::arb_program;
+    use super::*;
+    use crate::ir::{AtomicOp, BufferDecl, DataType, Expr, Node, Program};
+    use proptest::prelude::*;
+
+    /// Legacy double-walk implementation for equivalence verification.
+    /// Mirrors every buffer-touching site that ProgramFacts::buffer_refs
+    /// records so the equivalence proptest stays sound even when arb_node
+    /// is extended with Async / IndirectDispatch variants.
+    fn referenced_buffers_legacy(program: &Program) -> HashSet<Ident> {
+        let mut names = HashSet::new();
+        walk_exprs(program, |expr| match expr {
+            Expr::Load { buffer, .. }
+            | Expr::BufLen { buffer }
+            | Expr::BufferRef { buffer }
+            | Expr::Atomic { buffer, .. } => {
+                names.insert(buffer.clone());
+            }
+            _ => {}
+        });
+        walk_nodes(program, |node| match node {
+            Node::Store { buffer, .. } => {
+                names.insert(buffer.clone());
+            }
+            Node::IndirectDispatch { count_buffer, .. } => {
+                names.insert(count_buffer.clone());
+            }
+            Node::AsyncLoad {
+                source,
+                destination,
+                ..
+            }
+            | Node::AsyncStore {
+                source,
+                destination,
+                ..
+            } => {
+                names.insert(source.clone());
+                names.insert(destination.clone());
+            }
+            _ => {}
+        });
+        names
     }
 
     proptest! {

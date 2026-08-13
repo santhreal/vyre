@@ -53,7 +53,7 @@
 //!   interleaving silently changes the observed values. Assign-free bodies (the
 //!   common map/transform loops) take the fast path and are unaffected.
 
-use super::{collect_touched_buffers, collect_var_reads, rename_var_in_expr};
+use super::{collect_touched_buffers, collect_var_reads, legality};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -139,15 +139,20 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
         else {
             unreachable!("peek confirmed Loop above");
         };
-        if !bounds_match(&from_a, &to_a, &from_b, &to_b)
-            || var_a == var_b
-            || !super::buffers_disjoint_with(&body_a, &body_b, collect_touched_buffers)
-            || has_unsummarisable_effect(&body_a)
-            || has_unsummarisable_effect(&body_b)
-            || body_a_let_names_collide_with_b(&body_a, &body_b, &var_b)
-            || fusion_collides_bindings(&body_a, &body_b, &var_a, &var_b)
-            || fusion_has_scalar_dependency(&body_a, &body_b)
-        {
+        if !pair_is_fusable(
+            &LoopRef {
+                var: &var_a,
+                from: &from_a,
+                to: &to_a,
+                body: &body_a,
+            },
+            &LoopRef {
+                var: &var_b,
+                from: &from_b,
+                to: &to_b,
+                body: &body_b,
+            },
+        ) {
             // Cannot fuse  -  emit the first loop, push the second back
             // for the next iteration to consider against its successor.
             out.push(Node::Loop {
@@ -170,7 +175,7 @@ fn fuse_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
         let mut fused = body_a;
         let renamed_body_b: Vec<Node> = body_b
             .into_iter()
-            .map(|n| rename_var_in_node(n, &var_b, &var_a))
+            .map(|n| legality::rename_var_in_node(n, &var_b, &var_a))
             .collect();
         fused.extend(renamed_body_b);
         *changed = true;
@@ -202,79 +207,41 @@ fn bounds_match(from_a: &Expr, to_a: &Expr, from_b: &Expr, to_b: &Expr) -> bool 
         && to_a == to_b
 }
 
-/// True iff `nodes` contains an operation whose memory effect cannot be
-/// summarised by [`collect_touched_buffers`], an opaque extension node or
-/// expression, or a trap/resume host handler.
-///
-/// `collect_touched_buffers` reports `Node::Opaque`/`Expr::Opaque` as touching
-/// NO buffer and a `Trap` as touching only its explicit `address` operand, but
-/// their real effect may read or write ANY buffer: an opaque payload is
-/// backend-defined, and a trap invokes an unknowable host handler (see
-/// `effect_lattice`, which lifts all three to the `Diverging` lattice top).
-/// Fusion interleaves the iterations of the two loops, so such a hidden access
-/// could be reordered past the sibling loop's writes, breaking a cross-loop
-/// dependency the [`buffers_disjoint`] proof never saw. Either loop containing
-/// one keeps the pair unfused.
-///
-/// Async / collective / indirect-dispatch nodes are intentionally NOT included:
-/// their buffer operands ARE captured by `collect_touched_buffers`, so the
-/// disjointness test already covers them, refusing them here would needlessly
-/// forbid legal fusions of loops whose async/collective ops touch disjoint
-/// buffers.
-fn has_unsummarisable_effect(nodes: &[Node]) -> bool {
-    nodes.iter().any(node_has_unsummarisable_effect)
+/// One side of a candidate fusion, borrowed from the `Node::Loop` it came
+/// from so the transform and the analysis gate ask the same question without
+/// cloning either body.
+struct LoopRef<'a> {
+    var: &'a Ident,
+    from: &'a Expr,
+    to: &'a Expr,
+    body: &'a [Node],
 }
 
-fn node_has_unsummarisable_effect(node: &Node) -> bool {
-    use super::substitution::expr_contains_opaque;
-    match node {
-        // Unknowable host/backend effect regardless of any operand.
-        Node::Opaque(_) | Node::Trap { .. } | Node::Resume { .. } => true,
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_opaque(value),
-        Node::Store { index, value, .. } => {
-            expr_contains_opaque(index) || expr_contains_opaque(value)
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => {
-            expr_contains_opaque(cond)
-                || has_unsummarisable_effect(then)
-                || has_unsummarisable_effect(otherwise)
-        }
-        Node::Loop { from, to, body, .. } => {
-            expr_contains_opaque(from)
-                || expr_contains_opaque(to)
-                || has_unsummarisable_effect(body)
-        }
-        Node::Block(body) => has_unsummarisable_effect(body),
-        Node::Region { body, .. } => has_unsummarisable_effect(body),
-        Node::AsyncLoad { offset, size, .. } | Node::AsyncStore { offset, size, .. } => {
-            expr_contains_opaque(offset) || expr_contains_opaque(size)
-        }
-        // Buffer operands captured by `collect_touched_buffers`; no Expr operand
-        // that could hide an opaque payload.
-        Node::Barrier { .. }
-        | Node::Return
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncWait { .. }
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. } => false,
-    }
-}
-
-fn body_a_let_names_collide_with_b(body_a: &[Node], body_b: &[Node], var_b: &Ident) -> bool {
-    // If body_a binds a name that body_b reads (other than var_b),
-    // fusing would change resolution. Conservative: refuse to fuse.
-    let mut a_lets: FxHashSet<Ident> = FxHashSet::default();
-    collect_let_names(body_a, &mut a_lets);
-    let mut b_reads: FxHashSet<Ident> = FxHashSet::default();
-    collect_var_reads(body_b, &mut b_reads);
-    b_reads.remove(var_b);
-    !a_lets.is_disjoint(&b_reads)
+/// The complete fusion legality gate. `a` runs entirely before `b` in the
+/// original program and fusing interleaves their iterations, so every
+/// dependency between the two bodies has to be ruled out first.
+///
+/// Memory dependence, unsummarisable effects, and the binding-capture hazard
+/// come from the shared [`legality`] core. The binding-collision and
+/// scalar-dependence checks are fusion-specific: they describe what happens
+/// when two scopes merge into one, which fission never does.
+///
+/// Async, collective, and indirect-dispatch nodes are deliberately allowed.
+/// Their buffer operands ARE captured by [`collect_touched_buffers`], so the
+/// disjointness test already covers them, and refusing them would needlessly
+/// forbid legal fusions of loops whose async or collective ops touch disjoint
+/// buffers. Fission refuses them through its own barrier gate because
+/// splitting a loop reorders them against the surrounding work; fusion has no
+/// such reordering, so the asymmetry is intentional.
+fn pair_is_fusable(a: &LoopRef<'_>, b: &LoopRef<'_>) -> bool {
+    bounds_match(a.from, a.to, b.from, b.to)
+        && a.var != b.var
+        && super::buffers_disjoint_with(a.body, b.body, collect_touched_buffers)
+        && !legality::unsummarisable_effect(a.body)
+        && !legality::unsummarisable_effect(b.body)
+        && !legality::bindings_flow_across(a.body, b.body, b.var)
+        && !fusion_collides_bindings(a.body, b.body, a.var, b.var)
+        && !fusion_has_scalar_dependency(a.body, b.body)
 }
 
 /// True iff fusing the two bodies would introduce a duplicate or shadowing
@@ -285,12 +252,12 @@ fn body_a_let_names_collide_with_b(body_a: &[Node], body_b: &[Node], var_b: &Ide
 /// IR pops each loop body's bindings at loop exit, so two sibling loops binding
 /// the same local are legal pre-fusion but collide once merged.
 ///
-/// `collect_let_names` recurses into nested scopes (and counts `Assign`
-/// targets), so this is conservative: it may refuse a fusion whose shared name
-/// actually sits in disjoint nested scopes, but it never permits a real
-/// collision. This is disjoint from the *capture* hazard guarded by
-/// [`body_a_let_names_collide_with_b`] (body_b READING a body_a binding); this
-/// is the duplicate-BINDING hazard.
+/// [`legality::collect_bound_names`] recurses into nested scopes (and counts
+/// `Assign` targets and nested loop variables), so this is conservative: it may
+/// refuse a fusion whose shared name actually sits in disjoint nested scopes,
+/// but it never permits a real collision. This is disjoint from the *capture*
+/// hazard guarded by [`legality::bindings_flow_across`] (body_b READING a
+/// body_a binding); this is the duplicate-BINDING hazard.
 fn fusion_collides_bindings(
     body_a: &[Node],
     body_b: &[Node],
@@ -298,9 +265,9 @@ fn fusion_collides_bindings(
     var_b: &Ident,
 ) -> bool {
     let mut a_lets: FxHashSet<Ident> = FxHashSet::default();
-    collect_let_names(body_a, &mut a_lets);
+    legality::collect_bound_names(body_a, &mut a_lets);
     let mut b_lets: FxHashSet<Ident> = FxHashSet::default();
-    collect_let_names(body_b, &mut b_lets);
+    legality::collect_bound_names(body_b, &mut b_lets);
     b_lets.iter().any(|name| {
         // body_b is rewritten var_b -> var_a before splicing, so a body_b
         // binding of var_b lands as var_a in the fused scope.
@@ -334,7 +301,7 @@ fn collect_assign_targets(nodes: &[Node], out: &mut FxHashSet<Ident>) {
 
 /// True iff fusing the two bodies would reorder a cross-loop dependency through
 /// a shared mutable scalar. `buffers_disjoint` rules out memory dependencies and
-/// `body_a_let_names_collide_with_b` rules out body_b capturing a body_a
+/// [`legality::bindings_flow_across`] rules out body_b capturing a body_a
 /// binding, but NEITHER covers a scalar that one body WRITES (via `Node::Assign`)
 /// and the other body reads or writes. The original program runs loop_a entirely
 /// before loop_b; fusing interleaves them, so any such scalar dependency changes
@@ -363,98 +330,6 @@ fn fusion_has_scalar_dependency(body_a: &[Node], body_b: &[Node]) -> bool {
     !writes_a.is_disjoint(&refs_b) || !writes_b.is_disjoint(&refs_a)
 }
 
-fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_let_names(then, out);
-                collect_let_names(otherwise, out);
-            }
-            Node::Loop { body, .. } | Node::Block(body) => collect_let_names(body, out),
-            Node::Region { body, .. } => collect_let_names(body, out),
-            _ => {}
-        }
-    }
-}
-
-fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
-    match node {
-        Node::Let { name, value } => Node::Let {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Assign { name, value } => Node::Assign {
-            name: if name == *from { to.clone() } else { name },
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::Store {
-            buffer,
-            index: rename_var_in_expr(index, from, to),
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond: rename_var_in_expr(cond, from, to),
-            then: then
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        },
-        Node::Loop {
-            var,
-            from: lo,
-            to: hi,
-            body,
-        } => Node::Loop {
-            var,
-            from: rename_var_in_expr(lo, from, to),
-            to: rename_var_in_expr(hi, from, to),
-            body: body
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        },
-        Node::Block(body) => Node::Block(
-            body.into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        ),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec = std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
-            let renamed: Vec<Node> = body_vec
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect();
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(renamed),
-            }
-        }
-        other => other,
-    }
-}
-
 fn has_fusable_pair(node: &Node) -> bool {
     let body: &[Node] = match node {
         Node::If {
@@ -470,8 +345,8 @@ fn has_fusable_pair(node: &Node) -> bool {
 }
 
 fn body_has_fusable_pair(body: &[Node]) -> bool {
-    for window in body.windows(2) {
-        if let (
+    body.windows(2).any(|window| {
+        let (
             Node::Loop {
                 var: var_a,
                 from: from_a,
@@ -485,21 +360,24 @@ fn body_has_fusable_pair(body: &[Node]) -> bool {
                 body: body_b,
             },
         ) = (&window[0], &window[1])
-        {
-            if bounds_match(from_a, to_a, from_b, to_b)
-                && var_a != var_b
-                && super::buffers_disjoint_with(body_a, body_b, collect_touched_buffers)
-                && !has_unsummarisable_effect(body_a)
-                && !has_unsummarisable_effect(body_b)
-                && !body_a_let_names_collide_with_b(body_a, body_b, var_b)
-                && !fusion_collides_bindings(body_a, body_b, var_a, var_b)
-                && !fusion_has_scalar_dependency(body_a, body_b)
-            {
-                return true;
-            }
-        }
-    }
-    false
+        else {
+            return false;
+        };
+        pair_is_fusable(
+            &LoopRef {
+                var: var_a,
+                from: from_a,
+                to: to_a,
+                body: body_a,
+            },
+            &LoopRef {
+                var: var_b,
+                from: from_b,
+                to: to_b,
+                body: body_b,
+            },
+        )
+    })
 }
 
 #[cfg(test)]

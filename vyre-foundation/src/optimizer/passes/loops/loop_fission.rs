@@ -41,7 +41,7 @@
 //!   relative ordering with the surrounding work cannot be split, so
 //!   any presence in the body blocks fission.
 
-use super::{collect_touched_buffers, collect_var_reads, rename_var_in_expr};
+use super::{collect_touched_buffers, legality};
 use crate::ir::{Expr, Ident, Node, Program};
 use crate::optimizer::{vyre_pass, PassAnalysis, PassResult};
 use crate::visit::node_map;
@@ -111,7 +111,7 @@ fn fission_in_body(body: Vec<Node>, changed: &mut bool) -> Vec<Node> {
                     let fresh_var = freshen(&var, &loop_body);
                     let renamed_suffix: Vec<Node> = suffix
                         .into_iter()
-                        .map(|n| rename_var_in_node(n, &var, &fresh_var))
+                        .map(|n| legality::rename_var_in_node(n, &var, &fresh_var))
                         .collect();
                     out.push(Node::Loop {
                         var: var.clone(),
@@ -174,58 +174,6 @@ fn has_barrier_like(nodes: &[Node]) -> bool {
     })
 }
 
-/// True iff any expression anywhere in `nodes` is an `Expr::Opaque`. An opaque
-/// expression carries backend-defined behavior that may read or write any
-/// buffer, but [`collect_buffers_in_expr`] cannot see through it and summarises
-/// it as touching NO buffers. Fission relies on a complete touched-buffer set to
-/// prove the two halves disjoint, so a hidden opaque buffer access would let it
-/// reorder that access past a sibling touching the same buffer, a
-/// cross-iteration dependency break. Node-level opaque/async/trap ops are
-/// already refused by [`has_barrier_like`]; this closes the expression-level
-/// hole (an `Expr::Opaque` embedded in a `Let`/`Store`/`If`-cond/`Loop` bound).
-/// The per-expression test reuses [`substitution::expr_contains_opaque`], the
-/// one exhaustive opaque-expr walker shared with [`super::loop_fusion`].
-fn has_opaque_expr(nodes: &[Node]) -> bool {
-    nodes.iter().any(node_has_opaque_expr)
-}
-
-fn node_has_opaque_expr(node: &Node) -> bool {
-    use super::substitution::expr_contains_opaque;
-    match node {
-        Node::Let { value, .. } | Node::Assign { value, .. } => expr_contains_opaque(value),
-        Node::Store { index, value, .. } => {
-            expr_contains_opaque(index) || expr_contains_opaque(value)
-        }
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => expr_contains_opaque(cond) || has_opaque_expr(then) || has_opaque_expr(otherwise),
-        Node::Loop { from, to, body, .. } => {
-            expr_contains_opaque(from) || expr_contains_opaque(to) || has_opaque_expr(body)
-        }
-        Node::Block(body) => has_opaque_expr(body),
-        Node::Region { body, .. } => has_opaque_expr(body),
-        Node::Trap { address, .. } => expr_contains_opaque(address),
-        // The remaining node kinds are already refused by `has_barrier_like`
-        // (async/collective/opaque/indirect-dispatch/resume) or carry no Expr
-        // operand (Barrier/Return); none reach a fission split with an
-        // inspectable embedded expression.
-        Node::Barrier { .. }
-        | Node::Return
-        | Node::IndirectDispatch { .. }
-        | Node::AsyncLoad { .. }
-        | Node::AsyncStore { .. }
-        | Node::AsyncWait { .. }
-        | Node::Resume { .. }
-        | Node::Opaque(_)
-        | Node::AllReduce { .. }
-        | Node::AllGather { .. }
-        | Node::ReduceScatter { .. }
-        | Node::Broadcast { .. } => false,
-    }
-}
-
 /// Partition the body into the largest prefix + non-empty suffix
 /// whose touched-buffer sets are disjoint AND whose name-flow does
 /// not cross the split. Returns `(prefix, suffix)` if such a split
@@ -234,17 +182,17 @@ fn try_partition(body: &[Node], loop_var: &Ident) -> Option<(Vec<Node>, Vec<Node
     if body.len() < 2 {
         return None;
     }
-    // A barrier-like node, or an opaque expression with unknowable buffer
-    // effects, defeats the disjoint-buffer proof fission depends on. Either
-    // one must keep the body whole.
-    if has_barrier_like(body) || has_opaque_expr(body) {
+    // A barrier-like node, or an effect the touched-buffer summary cannot
+    // see, defeats the disjoint-buffer proof fission depends on. Either one
+    // must keep the body whole.
+    if has_barrier_like(body) || legality::unsummarisable_effect(body) {
         return None;
     }
     for split in 1..body.len() {
         let prefix = &body[..split];
         let suffix = &body[split..];
         if super::buffers_disjoint_with(prefix, suffix, collect_touched_buffers)
-            && !suffix_reads_prefix_names(prefix, suffix, loop_var)
+            && !legality::bindings_flow_across(prefix, suffix, loop_var)
         {
             return Some((prefix.to_vec(), suffix.to_vec()));
         }
@@ -252,126 +200,10 @@ fn try_partition(body: &[Node], loop_var: &Ident) -> Option<(Vec<Node>, Vec<Node
     None
 }
 
-/// True iff any name introduced by `prefix` (via `Let`) is read in
-/// `suffix`. The loop induction `loop_var` is excluded  -  both halves
-/// see it bound by their own loop header after the split, so the
-/// suffix's reference to `loop_var` is not a cross-half name flow.
-fn suffix_reads_prefix_names(prefix: &[Node], suffix: &[Node], loop_var: &Ident) -> bool {
-    let mut prefix_names: FxHashSet<Ident> = FxHashSet::default();
-    collect_let_names(prefix, &mut prefix_names);
-    prefix_names.remove(loop_var);
-    if prefix_names.is_empty() {
-        return false;
-    }
-    let mut suffix_reads: FxHashSet<Ident> = FxHashSet::default();
-    collect_var_reads(suffix, &mut suffix_reads);
-    !prefix_names.is_disjoint(&suffix_reads)
-}
-
-fn collect_let_names(nodes: &[Node], out: &mut FxHashSet<Ident>) {
-    for node in nodes {
-        match node {
-            Node::Let { name, .. } | Node::Assign { name, .. } => {
-                out.insert(name.clone());
-            }
-            Node::If {
-                then, otherwise, ..
-            } => {
-                collect_let_names(then, out);
-                collect_let_names(otherwise, out);
-            }
-            Node::Loop { var, body, .. } => {
-                out.insert(var.clone());
-                collect_let_names(body, out);
-            }
-            Node::Block(body) => collect_let_names(body, out),
-            Node::Region { body, .. } => collect_let_names(body, out),
-            _ => {}
-        }
-    }
-}
-
-fn rename_var_in_node(node: Node, from: &Ident, to: &Ident) -> Node {
-    match node {
-        Node::Let { name, value } => Node::Let {
-            name,
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Assign { name, value } => Node::Assign {
-            name,
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::Store {
-            buffer,
-            index,
-            value,
-        } => Node::Store {
-            buffer,
-            index: rename_var_in_expr(index, from, to),
-            value: rename_var_in_expr(value, from, to),
-        },
-        Node::If {
-            cond,
-            then,
-            otherwise,
-        } => Node::If {
-            cond: rename_var_in_expr(cond, from, to),
-            then: then
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        },
-        Node::Loop {
-            var,
-            from: lo,
-            to: hi,
-            body,
-        } => Node::Loop {
-            var,
-            from: rename_var_in_expr(lo, from, to),
-            to: rename_var_in_expr(hi, from, to),
-            body: body
-                .into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        },
-        Node::Block(body) => Node::Block(
-            body.into_iter()
-                .map(|n| rename_var_in_node(n, from, to))
-                .collect(),
-        ),
-        Node::Region {
-            generator,
-            source_region,
-            body,
-        } => {
-            let body_vec: Vec<Node> = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(
-                    body_vec
-                        .into_iter()
-                        .map(|n| rename_var_in_node(n, from, to))
-                        .collect(),
-                ),
-            }
-        }
-        other => other,
-    }
-}
-
 /// Pick a name not used as a Let/Assign/Loop var anywhere in `body`.
 fn freshen(base: &Ident, body: &[Node]) -> Ident {
     let mut used: FxHashSet<Ident> = FxHashSet::default();
-    collect_let_names(body, &mut used);
+    legality::collect_bound_names(body, &mut used);
     used.insert(base.clone());
     let mut counter = 0u32;
     loop {
