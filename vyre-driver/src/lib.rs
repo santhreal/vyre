@@ -87,6 +87,8 @@ pub mod fusion;
 pub mod graph_capture;
 /// Backend-neutral exact-input identity keys for replay caches.
 pub mod input_identity;
+/// Backend-neutral target-payload admission shared by every concrete driver.
+pub mod materialize;
 /// Backend-neutral monotonic ordering helpers for staging hot paths.
 pub mod ordering;
 /// Backend-neutral fallible output-slot vector management.
