@@ -27,17 +27,17 @@ use crate::{BackendError, DispatchConfig};
 #[must_use]
 pub fn invalid_module(reason: &str) -> BackendError {
     BackendError::InvalidProgram {
-        fix: format!("Fix: {reason}. Recompile the target payload for this artifact."),
+        fix: format!("Fix: {reason}. Recompile the target payload from the neutral artifact."),
     }
 }
 
 /// Build the shared payload-decode failure for `backend`.
 #[must_use]
 pub fn compile_error(backend: &str, error: impl std::fmt::Display) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!(
-            "Fix: target module bundle failed to decode for {backend}: {error}. \
-             Recompile the target payload for this artifact."
+    BackendError::KernelCompileFailed {
+        backend: backend.to_string(),
+        compiler_message: format!(
+            "{error}. Fix: rebuild the target payload from the neutral artifact."
         ),
     }
 }
@@ -54,6 +54,7 @@ pub struct MaterializerTarget<'a> {
 }
 
 /// One target module whose identity matches the compiler-selected plan.
+#[derive(Debug)]
 pub struct AdmittedModule {
     /// The target-native module image, identity already verified.
     pub image: TargetModuleImage,
@@ -83,9 +84,9 @@ pub fn admit(
     target: MaterializerTarget<'_>,
 ) -> Result<Vec<AdmittedModule>, BackendError> {
     if payload.neutral_artifact() != artifact.digest() {
-        return Err(BackendError::InvalidProgram {
-            fix: "Fix: materialize only a target payload authenticated for the supplied neutral artifact.".to_string(),
-        });
+        return Err(invalid_module(
+            "target payload is not authenticated for the supplied neutral artifact",
+        ));
     }
     if payload.format() != target.format {
         return Err(BackendError::UnsupportedFeature {

@@ -9,9 +9,10 @@ mod native {
         ArtifactInstance, BindingPlan, BindingSet, BoundResource, Completion, Device,
         DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
     };
+    use vyre_driver::materialize;
     use vyre_foundation::ir::Program;
     use vyre_megakernel::{
-        Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+        Artifact, ArtifactValueId, Digest, TargetPayload,
         TargetPayloadFormat, TargetProfile,
     };
 
@@ -58,71 +59,32 @@ mod native {
             artifact: &Artifact,
             payload: &TargetPayload,
         ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-            if payload.neutral_artifact() != artifact.digest() {
-                return Err(invalid_module(
-                    "target payload is not authenticated for the supplied neutral artifact",
-                ));
-            }
-            if payload.format() != self.descriptor.target_format() {
-                return Err(BackendError::UnsupportedFeature {
-                    name: format!("target payload format `{}`", payload.format().identity()),
-                    backend: METAL_BACKEND_ID.to_string(),
-                });
-            }
-            if payload.profile() != self.descriptor.target_profile() {
-                return Err(invalid_module(
-                    "target payload profile does not match the acquired materializer profile",
-                ));
-            }
-            let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-            let selected = artifact.fusion();
-            if bundle.modules.len() != selected.len() {
-                return Err(invalid_module(
-                    "target module count must equal the compiler-selected fusion-group count",
-                ));
-            }
-            if payload.entries().len() != selected.len() {
-                return Err(invalid_module(
-                    "target entry count must equal the compiler-selected fusion-group count",
-                ));
-            }
-            let mut modules = Vec::with_capacity(selected.len());
-            for ((image, selected), entry) in bundle
-                .modules
-                .into_iter()
-                .zip(selected)
-                .zip(payload.entries())
-            {
-                if image.group != selected.id
-                    || image.stage != selected.stage
-                    || image.nodes != selected.members
-                {
-                    return Err(invalid_module(
-                        "target module group/stage/node identity must match the neutral selected plan",
-                    ));
-                }
-                let target: vyre_emit_metal::MetalArtifact = serde_json::from_slice(&image.bytes)
-                    .map_err(|error| {
-                    invalid_module(&format!("Metal target artifact is malformed: {error}"))
-                })?;
-                if image.entry_point != target.entry_point {
-                    return Err(invalid_module(
+            let admitted = materialize::admit(
+                artifact,
+                payload,
+                materialize::MaterializerTarget {
+                    backend_id: METAL_BACKEND_ID,
+                    format: self.descriptor.target_format(),
+                    profile: self.descriptor.target_profile(),
+                },
+            )?;
+            let mut modules = Vec::with_capacity(admitted.len());
+            for admitted_module in admitted {
+                let target: vyre_emit_metal::MetalArtifact =
+                    serde_json::from_slice(&admitted_module.image.bytes).map_err(|error| {
+                        materialize::invalid_module(&format!(
+                            "Metal target artifact is malformed: {error}"
+                        ))
+                    })?;
+                if admitted_module.image.entry_point != target.entry_point {
+                    return Err(materialize::invalid_module(
                         "module bundle and Metal artifact entry points disagree",
                     ));
                 }
-                if entry.name != image.entry_point {
-                    return Err(invalid_module(
-                        "target entry metadata must name the emitted Metal entry point",
-                    ));
-                }
-                let mut config = DispatchConfig::default();
-                config.grid_override = Some(entry.grid_size);
-                config.dispatch_grid = Some(entry.grid_size);
-                let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
-                    invalid_module(&format!("selected Program is malformed: {error}"))
-                })?);
+                let program = admitted_module.program;
+                let config = admitted_module.config;
                 if target.workgroup_size != program.workgroup_size {
-                    return Err(invalid_module(
+                    return Err(materialize::invalid_module(
                         "Metal artifact workgroup geometry disagrees with the selected Program",
                     ));
                 }
@@ -133,29 +95,16 @@ mod native {
                     config,
                 });
             }
+            let resources = materialize::project_resources(artifact);
             Ok(Box::new(MetalArtifactInstance {
                 artifact: artifact.digest(),
                 payload: payload.digest(),
                 device: self.descriptor.identity.clone(),
                 backend: Arc::clone(&self.backend),
                 modules,
-                values: artifact
-                    .resources()
-                    .iter()
-                    .map(|resource| (resource.name.clone(), resource.value))
-                    .collect(),
-                outputs: artifact
-                    .resources()
-                    .iter()
-                    .filter(|resource| resource.lifetime == ResourceLifetime::Output)
-                    .map(|resource| resource.value)
-                    .collect(),
-                retained: artifact
-                    .resources()
-                    .iter()
-                    .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
-                    .map(|resource| resource.value)
-                    .collect(),
+                values: resources.values,
+                outputs: resources.outputs,
+                retained: resources.retained,
             }))
         }
     }
@@ -192,7 +141,7 @@ mod native {
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
             if bindings.artifact() != self.artifact {
-                return Err(invalid_module("bindings name a different neutral artifact"));
+                return Err(materialize::invalid_module("bindings name a different neutral artifact"));
             }
             let invocation_grid = bindings.invocation_grid();
             let mut state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
@@ -243,7 +192,7 @@ mod native {
                     let value = self.value_for_buffer(buffer.name())?;
                     inputs[input_index] =
                         state.get(&value).map(Vec::as_slice).ok_or_else(|| {
-                            invalid_module(&format!(
+                            materialize::invalid_module(&format!(
                                 "canonical artifact value {} for Program buffer `{}` is unbound",
                                 value.0,
                                 buffer.name()
@@ -263,7 +212,7 @@ mod native {
                     let buffer = &executable.program.buffers()[binding.buffer_index];
                     let value = self.value_for_buffer(buffer.name())?;
                     let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                        invalid_module(&format!(
+                        materialize::invalid_module(&format!(
                             "Metal target module omitted output {output_index} for Program buffer `{}`",
                             buffer.name()
                         ))
@@ -280,7 +229,7 @@ mod native {
                         .cloned()
                         .map(|bytes| (*value, bytes))
                         .ok_or_else(|| {
-                            invalid_module(&format!(
+                            materialize::invalid_module(&format!(
                                 "selected execution did not produce canonical output value {}",
                                 value.0
                             ))
@@ -296,7 +245,7 @@ mod native {
                         .cloned()
                         .map(|bytes| (*value, bytes))
                         .ok_or_else(|| {
-                            invalid_module(&format!(
+                            materialize::invalid_module(&format!(
                                 "selected execution did not preserve retained value {}",
                                 value.0
                             ))
@@ -313,7 +262,7 @@ mod native {
 
         fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
             self.values.get(name).copied().ok_or_else(|| {
-                invalid_module(&format!(
+                materialize::invalid_module(&format!(
                     "Program buffer `{name}` is absent from the canonical artifact ABI"
                 ))
             })
@@ -331,7 +280,7 @@ mod native {
 
         fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
             self.result.take().ok_or_else(|| {
-                invalid_module("each Submission completion may be consumed only once")
+                materialize::invalid_module("each Submission completion may be consumed only once")
             })?
         }
     }
@@ -339,7 +288,7 @@ mod native {
     pub(super) fn factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
         let backend = Arc::new(MetalBackend::acquire()?);
         let format =
-            TargetPayloadFormat::new("msl", METAL_TARGET_FORMAT_VERSION).map_err(compile_error)?;
+            TargetPayloadFormat::new("msl", METAL_TARGET_FORMAT_VERSION).map_err(|error| materialize::compile_error(METAL_BACKEND_ID, error))?;
         let profile = crate::target_compiler::target_profile()?;
         let generation = ResidentOwner::new()?.get();
         let device = backend.artifact_device_name();
@@ -357,19 +306,8 @@ mod native {
         }))
     }
 
-    fn invalid_module(reason: &str) -> BackendError {
-        BackendError::InvalidProgram {
-            fix: format!("Fix: {reason}. Recompile the target payload from the neutral artifact."),
-        }
     }
 
-    fn compile_error(error: impl std::fmt::Display) -> BackendError {
-        BackendError::KernelCompileFailed {
-            backend: METAL_BACKEND_ID.to_string(),
-            compiler_message: format!(
-                "{error}. Fix: rebuild the target payload from the neutral artifact."
-            ),
-        }
     }
 }
 

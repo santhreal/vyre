@@ -6,9 +6,10 @@ use vyre_driver::{
     BoundResource, CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig,
     ResidentOwner, Submission,
 };
+use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    Artifact, ArtifactValueId, Digest, TargetPayload,
     TargetPayloadFormat, TargetProfile,
 };
 
@@ -80,113 +81,54 @@ impl ArtifactMaterializer for CudaMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        if payload.neutral_artifact() != artifact.digest() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: materialize only a target payload authenticated for the supplied neutral artifact.".to_string(),
-            });
-        }
-        if payload.format() != self.descriptor.target_format() {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!("target payload format `{}`", payload.format().identity()),
-                backend: CUDA_BACKEND_ID.to_string(),
-            });
-        }
-        if payload.profile() != self.descriptor.target_profile() {
-            return Err(invalid_module(
-                "target payload profile does not match the acquired materializer profile",
-            ));
-        }
-        let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = artifact.fusion();
-        if bundle.modules.len() != selected.len() {
-            return Err(invalid_module(
-                "target module count must equal the compiler-selected fusion-group count",
-            ));
-        }
-        if payload.entries().len() != selected.len() {
-            return Err(invalid_module(
-                "target entry count must equal the compiler-selected fusion-group count",
-            ));
-        }
-        let mut modules = Vec::with_capacity(selected.len());
-        for ((image, selected), entry) in bundle
-            .modules
-            .into_iter()
-            .zip(selected)
-            .zip(payload.entries())
-        {
-            if image.group != selected.id
-                || image.stage != selected.stage
-                || image.nodes != selected.members
-            {
-                return Err(invalid_module(
-                    "target module group/stage/node identity must match the neutral selected plan",
-                ));
-            }
-            if image.entry_point != "main" {
-                return Err(invalid_module(
-                    "PTX target module entry point must be `main`",
-                ));
-            }
-            let ptx = std::str::from_utf8(&image.bytes).map_err(|error| {
-                invalid_module(&format!("PTX target module is not UTF-8: {error}"))
+        let admitted = materialize::admit(
+            artifact,
+            payload,
+            materialize::MaterializerTarget {
+                backend_id: CUDA_BACKEND_ID,
+                format: self.descriptor.target_format(),
+                profile: self.descriptor.target_profile(),
+            },
+        )?;
+        let mut modules = Vec::with_capacity(admitted.len());
+        for module in admitted {
+            let ptx = std::str::from_utf8(&module.image.bytes).map_err(|error| {
+                materialize::invalid_module(&format!("PTX target module is not UTF-8: {error}"))
             })?;
             if !ptx.contains(".visible .entry main(") {
-                return Err(invalid_module(
+                return Err(materialize::invalid_module(
                     "PTX target module does not define `.visible .entry main`",
                 ));
             }
-            if entry.name != image.entry_point {
-                return Err(invalid_module(
-                    "target entry metadata must name the emitted PTX entry point",
-                ));
-            }
-            let mut config = DispatchConfig::default();
-            config.grid_override = Some(entry.grid_size);
-            config.dispatch_grid = Some(entry.grid_size);
-            let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
-                invalid_module(&format!("selected Program is malformed: {error}"))
-            })?);
-            let prepared = self.backend.prepare_static_dispatch(&program, &config)?;
+            let prepared = self
+                .backend
+                .prepare_static_dispatch(&module.program, &module.config)?;
             let module_key = self.backend.module_cache_key_for_raw_ptx_artifact(ptx)?;
             self.backend.module_for_ptx_with_key(ptx, module_key)?;
             let ptx: Arc<str> = Arc::from(ptx);
             let pipeline = Arc::new(CudaCompiledPipeline::new_from_target_payload(
                 self.backend.clone(),
-                Arc::clone(&program),
+                Arc::clone(&module.program),
                 ptx,
                 module_key,
-                &config,
+                &module.config,
                 prepared,
             )?);
             modules.push(CudaExecutableModule {
-                program,
+                program: module.program,
                 pipeline,
-                config,
+                config: module.config,
             });
         }
+        let resources = materialize::project_resources(artifact);
         Ok(Box::new(CudaArtifactInstance {
             artifact: artifact.digest(),
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
             modules,
-            values: artifact
-                .resources()
-                .iter()
-                .map(|resource| (resource.name.clone(), resource.value))
-                .collect(),
-            outputs: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Output)
-                .map(|resource| resource.value)
-                .collect(),
-            retained: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
-                .map(|resource| resource.value)
-                .collect(),
+            values: resources.values,
+            outputs: resources.outputs,
+            retained: resources.retained,
         }))
     }
 }
@@ -242,7 +184,7 @@ impl ArtifactInstance for CudaArtifactInstance {
             }
         }
         if !host_state.is_empty() && !resident_state.is_empty() {
-            return Err(invalid_module(
+            return Err(materialize::invalid_module(
                 "CUDA artifact submission cannot mix host and resident resources",
             ));
         }
@@ -385,7 +327,7 @@ impl CudaArtifactInstance {
 
     fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
         self.values.get(name).copied().ok_or_else(|| {
-            invalid_module(&format!(
+            materialize::invalid_module(&format!(
                 "Program buffer `{name}` is absent from the canonical artifact ABI"
             ))
         })
@@ -410,7 +352,7 @@ impl Submission for ReadySubmission {
     fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
         self.result
             .take()
-            .ok_or_else(|| invalid_module("each Submission completion may be consumed only once"))?
+            .ok_or_else(|| materialize::invalid_module("each Submission completion may be consumed only once"))?
     }
 }
 
@@ -419,7 +361,8 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
         code: None,
         message: format!("CUDA artifact device acquisition failed: {message}"),
     })?;
-    let format = TargetPayloadFormat::new("ptx", 1).map_err(compile_error)?;
+    let format = TargetPayloadFormat::new("ptx", 1)
+        .map_err(|error| materialize::compile_error(CUDA_BACKEND_ID, error))?;
     let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     let device = backend.caps.name.clone();
@@ -452,7 +395,7 @@ fn project_outputs(
                 .cloned()
                 .map(|bytes| (*value, bytes))
                 .ok_or_else(|| {
-                    invalid_module(&format!(
+                    materialize::invalid_module(&format!(
                         "selected execution did not produce canonical output value {}",
                         value.0
                     ))
@@ -461,20 +404,7 @@ fn project_outputs(
         .collect()
 }
 
-fn invalid_module(reason: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!("Fix: {reason}. Recompile the target payload from the neutral artifact."),
-    }
-}
 
-fn compile_error(error: impl std::fmt::Display) -> BackendError {
-    BackendError::KernelCompileFailed {
-        backend: CUDA_BACKEND_ID.to_string(),
-        compiler_message: format!(
-            "{error}. Fix: rebuild the target payload from the neutral artifact."
-        ),
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -5,9 +5,10 @@ use vyre_driver::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet, BoundResource,
     Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner, Submission,
 };
+use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    Artifact, ArtifactValueId, Digest, TargetPayload,
     TargetPayloadFormat, TargetProfile,
 };
 
@@ -52,118 +53,55 @@ impl ArtifactMaterializer for SpirvMaterializer {
         artifact: &Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn ArtifactInstance>, BackendError> {
-        if payload.neutral_artifact() != artifact.digest() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: materialize only a target payload authenticated for the supplied neutral artifact.".to_string(),
-            });
-        }
-        if payload.format() != self.descriptor.target_format() {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!("target payload format `{}`", payload.format().identity()),
-                backend: SPIRV_BACKEND_ID.to_string(),
-            });
-        }
-        if payload.profile() != self.descriptor.target_profile() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: target payload profile must match the acquired materializer profile."
-                    .to_string(),
-            });
-        }
-        let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = artifact.fusion();
-        if bundle.modules.len() != selected.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: target module count must equal the compiler-selected fusion-group count. Recompile the payload from this artifact.".to_string(),
-            });
-        }
-        if payload.entries().len() != selected.len() {
-            return Err(BackendError::InvalidProgram {
-                fix: "Fix: target entry count must equal the compiler-selected fusion-group count."
-                    .to_string(),
-            });
-        }
-        let mut modules = Vec::with_capacity(selected.len());
-        for ((image, selected), entry) in bundle
-            .modules
-            .into_iter()
-            .zip(selected)
-            .zip(payload.entries())
-        {
-            if image.group != selected.id
-                || image.stage != selected.stage
-                || image.nodes != selected.members
-            {
-                return Err(BackendError::InvalidProgram {
-                    fix: "Fix: target module group/stage/node identity must match the neutral selected plan. Recompile the payload.".to_string(),
-                });
+        let admitted = materialize::admit(
+            artifact,
+            payload,
+            materialize::MaterializerTarget {
+                backend_id: SPIRV_BACKEND_ID,
+                format: self.descriptor.target_format(),
+                profile: self.descriptor.target_profile(),
+            },
+        )?;
+        let mut modules = Vec::with_capacity(admitted.len());
+        for admitted_module in admitted {
+            if admitted_module.image.bytes.len() % 4 != 0 {
+                return Err(materialize::invalid_module(
+                    "SPIR-V module byte length must be divisible by four",
+                ));
             }
-            if image.bytes.len() % 4 != 0 {
-                return Err(BackendError::InvalidProgram {
-                    fix: "Fix: SPIR-V module byte length must be divisible by four.".to_string(),
-                });
-            }
-            let words = image
+            let words = admitted_module
+                .image
                 .bytes
                 .chunks_exact(4)
                 .map(|word| u32::from_le_bytes([word[0], word[1], word[2], word[3]]))
                 .collect::<Vec<_>>();
             if words.first().copied() != Some(0x0723_0203) {
-                return Err(BackendError::InvalidProgram {
-                    fix: "Fix: SPIR-V target module must begin with the SPIR-V magic word."
-                        .to_string(),
-                });
+                return Err(materialize::invalid_module(
+                    "SPIR-V target module must begin with the SPIR-V magic word",
+                ));
             }
-            if entry.name != image.entry_point {
-                return Err(BackendError::InvalidProgram {
-                    fix: "Fix: target entry metadata must name the emitted SPIR-V entry point."
-                        .to_string(),
-                });
-            }
-            let mut config = DispatchConfig::default();
-            config.grid_override = Some(entry.grid_size);
-            config.dispatch_grid = Some(entry.grid_size);
-            let program = Program::from_wire(&image.program).map_err(|error| {
-                BackendError::InvalidProgram {
-                    fix: format!(
-                        "Fix: selected Program is malformed: {error}. Recompile the payload."
-                    ),
-                }
-            })?;
             modules.push(SpirvExecutableModule {
-                program,
+                program: admitted_module.program,
                 words,
-                config,
+                config: admitted_module.config,
             });
         }
+        let resources = materialize::project_resources(artifact);
         Ok(Box::new(SpirvArtifactInstance {
             artifact: artifact.digest(),
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
             native: Arc::clone(&self.device),
             modules,
-            values: artifact
-                .resources()
-                .iter()
-                .map(|resource| (resource.name.clone(), resource.value))
-                .collect(),
-            outputs: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Output)
-                .map(|resource| resource.value)
-                .collect(),
-            retained: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
-                .map(|resource| resource.value)
-                .collect(),
+            values: resources.values,
+            outputs: resources.outputs,
+            retained: resources.retained,
         }))
     }
 }
 
 struct SpirvExecutableModule {
-    program: Program,
+    program: Arc<Program>,
     words: Vec<u32>,
     config: DispatchConfig,
 }
@@ -357,7 +295,7 @@ impl Submission for ReadySubmission {
 
 pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let native = Arc::new(vulkan::VulkanDevice::acquire()?);
-    let format = TargetPayloadFormat::new("spv", 1).map_err(compile_error)?;
+    let format = TargetPayloadFormat::new("spv", 1).map_err(|error| materialize::compile_error(SPIRV_BACKEND_ID, error))?;
     let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     Ok(Box::new(SpirvMaterializer {
@@ -372,13 +310,4 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
             profile,
         },
     }))
-}
-
-fn compile_error(error: impl std::fmt::Display) -> BackendError {
-    BackendError::KernelCompileFailed {
-        backend: SPIRV_BACKEND_ID.to_string(),
-        compiler_message: format!(
-            "{error}. Fix: rebuild the target payload from the neutral artifact."
-        ),
-    }
 }

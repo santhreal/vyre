@@ -120,6 +120,8 @@ pub struct Workspace {
     pub substrate_paths: Vec<String>,
     /// `(crate, path)` for every source-language frontend stage found.
     pub frontend_paths: Vec<(String, String)>,
+    /// `(path, source text)` for every concrete backend materializer.
+    pub materializers: Vec<(String, String)>,
 }
 
 /// Read the workspace rooted at `root` into the structural model.
@@ -129,11 +131,13 @@ pub fn scan(root: &Path) -> Workspace {
     let registrations = scan_registrations(root, &members);
     let substrate_paths = scan_substrate_paths(root, &members);
     let frontend_paths = scan_frontend_paths(root, &members);
+    let materializers = scan_materializers(root, &members);
     Workspace {
         members,
         registrations,
         substrate_paths,
         frontend_paths,
+        materializers,
     }
 }
 
@@ -151,6 +155,7 @@ pub fn violations(root: &Path) -> Vec<String> {
     failures.extend(category_home_failures(&workspace.registrations));
     failures.extend(substrate_home_failures(&workspace.substrate_paths));
     failures.extend(frontend_owner_failures(&workspace.frontend_paths));
+    failures.extend(materializer_admission_failures(&workspace.materializers));
     failures
 }
 
@@ -322,6 +327,35 @@ pub fn frontend_owner_failures(paths: &[(String, String)]) -> Vec<String> {
                     "`{path}` puts a {language} frontend in {found_crate}; {owner} owns the {language} frontend"
                 ));
             }
+        }
+    }
+    failures
+}
+
+/// Names of the admission helpers `vyre-driver` owns for every backend.
+const SHARED_ADMISSION_HELPERS: &[&str] = &["invalid_module", "compile_error"];
+
+/// Reject a concrete backend that decides target-payload admission by itself.
+///
+/// Admitting a payload is a property of the neutral artifact and the payload
+/// envelope, so it is identical for every target. It was nonetheless written
+/// once per backend, and the copies drifted until a payload two backends
+/// rejected was accepted by the other two. `vyre_driver::materialize` is the
+/// single decision; a backend that reimplements it has reopened that class.
+pub fn materializer_admission_failures(materializers: &[(String, String)]) -> Vec<String> {
+    let mut failures = Vec::new();
+    for (path, text) in materializers {
+        for helper in SHARED_ADMISSION_HELPERS {
+            if text.contains(&format!("fn {helper}(")) {
+                failures.push(format!(
+                    "`{path}` defines its own `{helper}`; call `vyre_driver::materialize::{helper}` instead"
+                ));
+            }
+        }
+        if !text.contains("materialize::admit(") {
+            failures.push(format!(
+                "`{path}` does not admit its target payload through `vyre_driver::materialize::admit`"
+            ));
         }
     }
     failures
@@ -598,6 +632,32 @@ fn scan_frontend_paths(root: &Path, members: &[String]) -> Vec<(String, String)>
     paths.sort();
     paths.dedup();
     paths
+}
+
+/// Read every concrete backend materializer source.
+///
+/// Only `vyre-driver-*` members are scanned. `vyre-driver` itself is the owner
+/// of the shared admission helpers, so finding their definitions there is the
+/// rule being satisfied, not broken.
+fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> {
+    let mut found = Vec::new();
+    for member in members {
+        let crate_name = member.rsplit('/').next().unwrap_or(member);
+        if !crate_name.starts_with("vyre-driver-") {
+            continue;
+        }
+        for path in source_files(root, member) {
+            if path.file_name().is_some_and(|name| name == "materializer.rs") {
+                let Ok(text) = fs::read_to_string(&path) else {
+                    continue;
+                };
+                found.push((relative(root, &path), text));
+            }
+        }
+    }
+    found.sort();
+    found.dedup();
+    found
 }
 
 #[cfg(test)]

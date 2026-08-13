@@ -7,9 +7,10 @@ use vyre_driver::{
     CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, ResidentOwner,
     Submission,
 };
+use vyre_driver::materialize;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
-    Artifact, ArtifactValueId, Digest, ResourceLifetime, TargetModuleBundle, TargetPayload,
+    Artifact, ArtifactValueId, Digest, TargetPayload,
     TargetPayloadFormat, TargetProfile,
 };
 
@@ -88,79 +89,38 @@ impl ArtifactMaterializer for WgpuMaterializer {
         if !self.descriptor.is_healthy() {
             return Err(device_lost_error(&self.descriptor.identity));
         }
-        if payload.neutral_artifact() != artifact.digest() {
-            return Err(invalid_module(
-                "target payload is not authenticated for the supplied neutral artifact",
-            ));
-        }
-        if payload.format() != self.descriptor.target_format() {
-            return Err(BackendError::UnsupportedFeature {
-                name: format!("target payload format `{}`", payload.format().identity()),
-                backend: WGPU_BACKEND_ID.to_string(),
-            });
-        }
-        if payload.profile() != self.descriptor.target_profile() {
-            return Err(invalid_module(
-                "target payload profile does not match the acquired materializer profile",
-            ));
-        }
-        let bundle = TargetModuleBundle::from_bytes(payload.bytes()).map_err(compile_error)?;
-        let selected = artifact.fusion();
-        if bundle.modules.len() != selected.len() {
-            return Err(invalid_module(
-                "target module count must equal the compiler-selected fusion-group count",
-            ));
-        }
-        if payload.entries().len() != selected.len() {
-            return Err(invalid_module(
-                "target entry count must equal the compiler-selected fusion-group count",
-            ));
-        }
-        let mut modules = Vec::with_capacity(selected.len());
-        for ((image, selected), entry) in bundle
-            .modules
-            .into_iter()
-            .zip(selected)
-            .zip(payload.entries())
-        {
-            if image.group != selected.id
-                || image.stage != selected.stage
-                || image.nodes != selected.members
-            {
-                return Err(invalid_module(
-                    "target module group/stage/node identity must match the neutral selected plan",
-                ));
-            }
-            if image.entry_point != "main" {
-                return Err(invalid_module(
-                    "WGSL target module entry point must be `main`",
-                ));
-            }
-            let target: WgpuTargetModule =
-                serde_json::from_slice(&image.bytes).map_err(|error| {
-                    invalid_module(&format!("WGSL target module is malformed: {error}"))
+        let admitted = materialize::admit(
+            artifact,
+            payload,
+            materialize::MaterializerTarget {
+                backend_id: WGPU_BACKEND_ID,
+                format: self.descriptor.target_format(),
+                profile: self.descriptor.target_profile(),
+            },
+        )?;
+        let mut modules = Vec::with_capacity(admitted.len());
+        for module in admitted {
+            let target: WgpuTargetModule = serde_json::from_slice(&module.image.bytes)
+                .map_err(|error| {
+                    materialize::invalid_module(&format!(
+                        "WGSL target module is malformed: {error}"
+                    ))
                 })?;
             if target.schema_version != WGPU_TARGET_MODULE_SCHEMA_VERSION {
-                return Err(invalid_module("WGSL target module schema is unsupported"));
+                return Err(materialize::invalid_module(
+                    "WGSL target module schema is unsupported",
+                ));
             }
             if !target.wgsl.contains("@compute") || !target.wgsl.contains("fn main(") {
-                return Err(invalid_module(
+                return Err(materialize::invalid_module(
                     "WGSL target module does not define compute entry point `main`",
                 ));
             }
-            if entry.name != image.entry_point {
-                return Err(invalid_module(
-                    "target entry metadata must name the emitted WGSL entry point",
-                ));
-            }
-            let mut config = DispatchConfig::default();
-            config.grid_override = Some(entry.grid_size);
-            config.dispatch_grid = Some(entry.grid_size);
-            let program = Arc::new(Program::from_wire(&image.program).map_err(|error| {
-                invalid_module(&format!("selected Program is malformed: {error}"))
-            })?);
+            let program = module.program;
+            let config = module.config;
             let binding_plan = BindingPlan::build(&program)?;
-            let input_slots = image
+            let input_slots = module
+                .image
                 .descriptor
                 .bindings
                 .slots
@@ -184,7 +144,7 @@ impl ArtifactMaterializer for WgpuMaterializer {
             let pipeline = WgpuPipeline::compile_target_with_device_queue(
                 &program,
                 &target.wgsl,
-                &image.descriptor,
+                &module.image.descriptor,
                 &config,
                 self.backend.adapter_info.clone(),
                 self.backend.enabled_features,
@@ -206,29 +166,16 @@ impl ArtifactMaterializer for WgpuMaterializer {
                 config,
             });
         }
+        let resources = materialize::project_resources(artifact);
         Ok(Box::new(WgpuArtifactInstance {
             artifact: artifact.digest(),
             payload: payload.digest(),
             device: self.descriptor.identity.clone(),
             lost: Arc::clone(&self.descriptor.lost),
             modules,
-            values: artifact
-                .resources()
-                .iter()
-                .map(|resource| (resource.name.clone(), resource.value))
-                .collect(),
-            outputs: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Output)
-                .map(|resource| resource.value)
-                .collect(),
-            retained: artifact
-                .resources()
-                .iter()
-                .filter(|resource| resource.lifetime == ResourceLifetime::Retained)
-                .map(|resource| resource.value)
-                .collect(),
+            values: resources.values,
+            outputs: resources.outputs,
+            retained: resources.retained,
         }))
     }
 }
@@ -275,7 +222,7 @@ impl ArtifactInstance for WgpuArtifactInstance {
             return Err(device_lost_error(&self.device));
         }
         if bindings.artifact() != self.artifact {
-            return Err(invalid_module("bindings name a different neutral artifact"));
+            return Err(materialize::invalid_module("bindings name a different neutral artifact"));
         }
         let invocation_grid = bindings.invocation_grid();
         let mut host_state = BTreeMap::<ArtifactValueId, Vec<u8>>::new();
@@ -291,7 +238,7 @@ impl ArtifactInstance for WgpuArtifactInstance {
             }
         }
         if !host_state.is_empty() && !resident_state.is_empty() {
-            return Err(invalid_module(
+            return Err(materialize::invalid_module(
                 "WGPU artifact submission cannot mix host and resident resources",
             ));
         }
@@ -328,7 +275,7 @@ impl WgpuArtifactInstance {
                     Some(bytes) => inputs.push(bytes.as_slice()),
                     None if !slot.required => inputs.push(&[]),
                     None => {
-                        return Err(invalid_module(&format!(
+                        return Err(materialize::invalid_module(&format!(
                             "canonical artifact value {} for target binding `{}` is unbound",
                             value.0, slot.name
                         )));
@@ -352,7 +299,7 @@ impl WgpuArtifactInstance {
                 let buffer = &module.program.buffers()[binding.buffer_index];
                 let value = self.value_for_buffer(buffer.name())?;
                 let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                    invalid_module(&format!(
+                    materialize::invalid_module(&format!(
                         "WGSL target module omitted output {output_index} for Program buffer `{}`",
                         buffer.name()
                     ))
@@ -369,7 +316,7 @@ impl WgpuArtifactInstance {
                     .cloned()
                     .map(|bytes| (*value, bytes))
                     .ok_or_else(|| {
-                        invalid_module(&format!(
+                        materialize::invalid_module(&format!(
                             "selected execution did not produce canonical output value {}",
                             value.0
                         ))
@@ -385,7 +332,7 @@ impl WgpuArtifactInstance {
                     .cloned()
                     .map(|bytes| (*value, bytes))
                     .ok_or_else(|| {
-                        invalid_module(&format!(
+                        materialize::invalid_module(&format!(
                             "selected execution did not preserve retained value {}",
                             value.0
                         ))
@@ -415,7 +362,7 @@ impl WgpuArtifactInstance {
         for name in &module.resident_slots {
             let value = self.value_for_buffer(name)?;
             let resource = resources.get(&value).ok_or_else(|| {
-                invalid_module(&format!(
+                materialize::invalid_module(&format!(
                     "canonical artifact value {} for resident target binding `{name}` is unbound",
                     value.0
                 ))
@@ -439,7 +386,7 @@ impl WgpuArtifactInstance {
             let buffer = &module.program.buffers()[binding.buffer_index];
             let value = self.value_for_buffer(buffer.name())?;
             let bytes = dispatched.outputs.get(output_index).ok_or_else(|| {
-                invalid_module(&format!(
+                materialize::invalid_module(&format!(
                     "WGPU resident target module omitted output {output_index} for Program buffer `{}`",
                     buffer.name()
                 ))
@@ -470,7 +417,7 @@ impl WgpuArtifactInstance {
                     .cloned()
                     .map(|bytes| (*value, bytes))
                     .ok_or_else(|| {
-                        invalid_module(&format!(
+                        materialize::invalid_module(&format!(
                             "selected execution did not {action} canonical value {}",
                             value.0
                         ))
@@ -481,7 +428,7 @@ impl WgpuArtifactInstance {
 
     fn value_for_buffer(&self, name: &str) -> Result<ArtifactValueId, BackendError> {
         self.values.get(name).copied().ok_or_else(|| {
-            invalid_module(&format!(
+            materialize::invalid_module(&format!(
                 "Program buffer `{name}` is absent from the canonical artifact ABI"
             ))
         })
@@ -509,7 +456,7 @@ impl Submission for ReadySubmission {
     fn wait(mut self: Box<Self>) -> Result<Completion, BackendError> {
         self.result
             .take()
-            .ok_or_else(|| invalid_module("each Submission completion may be consumed only once"))?
+            .ok_or_else(|| materialize::invalid_module("each Submission completion may be consumed only once"))?
     }
 }
 
@@ -517,7 +464,8 @@ pub(crate) fn materializer_for_backend(
     backend: WgpuBackend,
 ) -> Result<Box<dyn ArtifactMaterializer>, BackendError> {
     let format =
-        TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION).map_err(compile_error)?;
+        TargetPayloadFormat::new("wgsl", WGPU_TARGET_FORMAT_VERSION)
+        .map_err(|error| materialize::compile_error(WGPU_BACKEND_ID, error))?;
     let profile = crate::target_compiler::target_profile()?;
     let generation = ResidentOwner::new()?.get();
     let device = backend.adapter_name.to_string();
@@ -541,20 +489,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
     materializer_for_backend(WgpuBackend::acquire()?)
 }
 
-fn invalid_module(reason: &str) -> BackendError {
-    BackendError::InvalidProgram {
-        fix: format!("Fix: {reason}. Recompile the target payload from the neutral artifact."),
-    }
-}
 
-fn compile_error(error: impl std::fmt::Display) -> BackendError {
-    BackendError::KernelCompileFailed {
-        backend: WGPU_BACKEND_ID.to_string(),
-        compiler_message: format!(
-            "{error}. Fix: rebuild the target payload from the neutral artifact."
-        ),
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
