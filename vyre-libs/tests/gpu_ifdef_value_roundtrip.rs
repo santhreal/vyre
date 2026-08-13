@@ -7,7 +7,7 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-use vyre::scan::dispatch_io::pack_u32_slice as pack_u32_le;
+use vyre_primitives::wire::pack_u32_slice as pack_u32_le;
 use vyre_libs::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PREPROC};
 use vyre_libs::parsing::c::preprocess::gpu_directive_metadata::gpu_directive_metadata;
 use vyre_libs::parsing::c::preprocess::gpu_ifdef_value::gpu_ifdef_value;

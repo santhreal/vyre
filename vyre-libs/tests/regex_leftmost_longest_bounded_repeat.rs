@@ -20,11 +20,11 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre::scan::{build_regex_dfa_pipeline, AnchoredWindowValidator};
+use vyre_libs::scan::{AnchoredWindowValidator, build_regex_dfa_pipeline};
 use vyre_foundation::match_result::ByteRange;
 
 /// Build the anchored DFA for one pattern and return its validator-ready DFA.
-fn dfa_for(pattern: &str) -> vyre::scan::regex_dfa::RegexDfaPipeline {
+fn dfa_for(pattern: &str) -> vyre_libs::scan::regex_dfa::RegexDfaPipeline {
     build_regex_dfa_pipeline(&[pattern], 4096, 16_384)
         .unwrap_or_else(|e| panic!("pattern {pattern:?} must compile to an anchored DFA: {e:?}"))
 }

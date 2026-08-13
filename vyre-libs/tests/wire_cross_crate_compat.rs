@@ -4,22 +4,11 @@
 //! crate-boundary stable - independent re-implementations would
 //! show up here as divergent output.
 
-use vyre::scan::dispatch_io::{pack_haystack_u32, pack_u32_slice};
+use vyre_libs::scan::pack_haystack_u32;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_u32_le_bytes_all, decode_u64_le_bytes_all, pack_f32_slice,
-    pack_u32_slice as wire_pack_u32, pack_u64_slice, unpack_u32_slice_into,
+    pack_u32_slice, pack_u64_slice, unpack_u32_slice_into,
 };
-
-#[test]
-fn vyre_libs_scan_pack_matches_vyre_primitives_wire() {
-    let words: Vec<u32> = (0u32..256).collect();
-    let scan_path = pack_u32_slice(&words);
-    let wire_path = wire_pack_u32(&words);
-    assert_eq!(
-        scan_path, wire_path,
-        "vyre::scan::pack_u32_slice diverged from vyre_primitives::wire"
-    );
-}
 
 #[test]
 fn round_trip_u32_across_crates() {

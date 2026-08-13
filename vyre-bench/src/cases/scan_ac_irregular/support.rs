@@ -1,5 +1,4 @@
 use crate::api::case::BenchError;
-use vyre::scan::dispatch_io::try_unpack_match_triples;
 use vyre_foundation::ir::Program;
 use vyre_foundation::match_result::ByteRange;
 
@@ -72,11 +71,48 @@ pub(super) fn decode_scan_outputs(
             triples.len()
         )));
     }
-    try_unpack_match_triples(triples, count).map_err(|error| {
+    unpack_match_triples(triples, count, context)
+}
+
+/// Decode `(tag, start, end)` little-endian u32 triples from a compact match
+/// readback. Fails closed on an inverted half-open range rather than returning
+/// a silently truncated match set.
+fn unpack_match_triples(
+    triples: &[u8],
+    count: u32,
+    context: &str,
+) -> Result<Vec<ByteRange>, BenchError> {
+    let triple_bytes = MATCH_TRIPLE_WORDS * 4;
+    let decoded = usize::try_from(count)
+        .unwrap_or(usize::MAX)
+        .min(triples.len() / triple_bytes);
+    let mut results: Vec<ByteRange> = Vec::new();
+    results.try_reserve_exact(decoded).map_err(|source| {
         BenchError::CorrectnessViolation(format!(
-            "{context} match triples failed to decode: {error}"
+            "{context} could not reserve {decoded} decoded match record(s): {source}"
         ))
-    })
+    })?;
+    for index in 0..decoded {
+        let base = index * triple_bytes;
+        let word = |slot: usize| {
+            let at = base + slot * 4;
+            u32::from_le_bytes([
+                triples[at],
+                triples[at + 1],
+                triples[at + 2],
+                triples[at + 3],
+            ])
+        };
+        let (tag, start, end) = (word(0), word(1), word(2));
+        if end < start {
+            return Err(BenchError::CorrectnessViolation(format!(
+                "{context} decoded match record {index} with invalid half-open range [{start}, {end})"
+            )));
+        }
+        results.push(ByteRange::new(tag, start, end));
+    }
+    results.sort_unstable();
+    Ok(results)
 }
 
 pub(crate) fn encode_match_triples(matches: &[ByteRange]) -> Vec<u8> {

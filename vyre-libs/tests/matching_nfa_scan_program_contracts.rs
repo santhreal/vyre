@@ -2,13 +2,7 @@
 
 #![cfg(feature = "matching-nfa")]
 #![allow(deprecated)]
-use vyre::scan::{dispatch_io, nfa};
-
-#[test]
-fn candidate_start_dispatch_uses_one_workgroup_per_byte() {
-    let cfg = dispatch_io::candidate_start_dispatch_config(129);
-    assert_eq!(cfg.grid_override, Some([129, 1, 1]));
-}
+use vyre_libs::scan::nfa;
 
 #[test]
 fn nfa_compile_records_terminal_state_ids() {

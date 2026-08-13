@@ -131,7 +131,7 @@ proptest! {
         haystack in "[a-e]{1,24}",
         needle in "[a-e]{1,4}",
     ) {
-        use vyre::scan::substring_search;
+        use vyre_libs::scan::substring_search;
         let haystack_bytes = haystack.as_bytes();
         let needle_bytes = needle.as_bytes();
         let program = substring_search(
@@ -157,7 +157,7 @@ proptest! {
 
 // ---------- Aho-Corasick ----------
 
-fn cpu_aho_corasick(dfa: &vyre::scan::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
+fn cpu_aho_corasick(dfa: &vyre_primitives::matching::CompiledDfa, haystack: &[u8]) -> Vec<u32> {
     let mut state = 0u32;
     let mut out = Vec::with_capacity(haystack.len());
     for &b in haystack {
@@ -175,7 +175,8 @@ proptest! {
         patterns in prop::collection::vec("[a-c]{1,4}", 1..6),
         haystack in "[a-c]{1,32}",
     ) {
-        use vyre::scan::{aho_corasick, dfa_compile};
+        use vyre_libs::scan::{aho_corasick};
+use vyre_primitives::matching::{dfa_compile};
 
         let pattern_bytes: Vec<&[u8]> = patterns.iter().map(|p| p.as_bytes()).collect();
         let compiled = dfa_compile(&pattern_bytes);

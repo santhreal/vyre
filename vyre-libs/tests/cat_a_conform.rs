@@ -32,7 +32,7 @@ fn run_program(program: &Program, inputs: Vec<Value>) -> Vec<Vec<u8>> {
 #[test]
 fn cat_a_substring_edge_cases() {
     // Needle longer than haystack → every match slot is 0.
-    use vyre::scan::substring_search;
+    use vyre_libs::scan::substring_search;
     let program = substring_search("haystack", "needle", "matches", 3, 10);
     let haystack_bytes: Vec<u8> = "abc"
         .bytes()
@@ -56,7 +56,7 @@ fn cat_a_substring_edge_cases() {
 
 #[test]
 fn cat_a_substring_search_matches_cpu_reference() {
-    use vyre::scan::substring_search;
+    use vyre_libs::scan::substring_search;
 
     // Witness set: (haystack, needle, expected match bitmap).
     let witnesses: &[(&str, &str, Vec<u32>)] = &[
@@ -127,7 +127,8 @@ fn cat_a_dot_matches_cpu_reference() {
 
 #[test]
 fn cat_a_aho_corasick_matches_cpu_reference() {
-    use vyre::scan::{aho_corasick, dfa_compile};
+    use vyre_libs::scan::{aho_corasick};
+use vyre_primitives::matching::{dfa_compile};
 
     let patterns: [&[u8]; 4] = [b"he", b"she", b"his", b"hers"];
     let compiled = dfa_compile(&patterns);

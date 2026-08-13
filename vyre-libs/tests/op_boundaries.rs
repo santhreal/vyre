@@ -61,7 +61,7 @@ fn scan_prefix_sum_boundaries_do_not_panic() {
 fn substring_search_boundaries_do_not_panic() {
     for &n in &[0, 1, MAX_WORKGROUP_LANES, MAX_WORKGROUP_LANES + 1] {
         assert_no_panic("substring_search", || {
-            let _ = vyre::scan::substring_search("haystack", "needle", "matches", n, 1);
+            let _ = vyre_libs::scan::substring_search("haystack", "needle", "matches", n, 1);
         });
     }
 }

@@ -15,7 +15,7 @@
 ))]
 
 use vyre::ir::{BufferAccess, MemoryKind, Program};
-use vyre::scan::substring_search;
+use vyre_libs::scan::substring_search;
 use vyre_libs::hash::fnv1a32;
 use vyre_libs::math::broadcast::broadcast;
 use vyre_libs::math::linalg::{dot, matmul};

@@ -2,11 +2,11 @@ use super::super::baseline::cpu_aho_overlapping_matches;
 use super::super::count;
 use super::super::PATTERNS;
 use super::super::{pattern_lengths, scan_ac_inputs};
-use vyre::scan::classic_ac::{
+use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile, classic_ac_scan_counts,
 };
-use vyre::scan::pack_u32_slice;
+use vyre_primitives::wire::pack_u32_slice;
 
 #[test]
 fn count_prefilter_mask_keeps_all_generated_overlapping_hits_and_skips_noise() {

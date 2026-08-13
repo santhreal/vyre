@@ -3,7 +3,7 @@
 #![allow(deprecated)]
 use proptest::prelude::*;
 use std::collections::BTreeSet;
-use vyre::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_driver::DispatchConfig;
 use vyre_driver::VyreBackend;
 use vyre_foundation::optimizer::optimize;

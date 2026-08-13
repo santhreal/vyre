@@ -31,6 +31,7 @@ pub mod regex_dfa;
 pub mod regex_region_admission;
 
 #[cfg(feature = "matching-dfa")]
+pub use crate::fixture_bytes::pack_haystack_u32;
 pub use dfa::aho_corasick;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use fused_region_evidence::{

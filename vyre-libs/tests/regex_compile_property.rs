@@ -1,4 +1,4 @@
-//! Property tests for `vyre::scan::regex_compile`.
+//! Property tests for `vyre_libs::scan::regex_compile`.
 //!
 //! Generated patterns exercise:
 //!
@@ -16,7 +16,7 @@
 #![cfg(feature = "matching-regex")]
 
 use proptest::prelude::*;
-use vyre::scan::{compile_regex_set, RegexCompileError};
+use vyre_libs::scan::{RegexCompileError, compile_regex_set};
 
 /// Generate ASCII-safe literal strings in 1..=12 bytes. Bound keeps
 /// state counts well under the per-pipeline cap and shrinking quick.

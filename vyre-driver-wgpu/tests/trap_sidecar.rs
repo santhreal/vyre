@@ -1,6 +1,6 @@
 //! WGPU trap sidecar integration tests.
 
-use vyre::scan::dispatch_io::pack_u32_slice as pack_words;
+use vyre_primitives::wire::pack_u32_slice as pack_words;
 use vyre_driver::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 

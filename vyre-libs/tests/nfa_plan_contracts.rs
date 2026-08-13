@@ -3,7 +3,7 @@
 #[cfg(feature = "matching-nfa")]
 #[test]
 fn generated_nfa_plan_and_table_layout_matrix_is_stable_after_split() {
-    use vyre::scan::nfa::{
+    use vyre_libs::scan::nfa::{
         build_transition_table, build_transition_table_lane_major, plan_shards, try_compile,
     };
     use vyre_primitives::nfa::subgroup_nfa::{LANES_PER_SUBGROUP, MAX_STATES_PER_SUBGROUP};

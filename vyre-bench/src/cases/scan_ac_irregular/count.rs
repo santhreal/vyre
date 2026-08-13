@@ -10,13 +10,14 @@ use crate::api::resident::{
     ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
-use vyre::scan::classic_ac::{
+use vyre_libs::scan::classic_ac::{
     build_ac_bounded_count_suffix3_prefilter_program, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_compile, classic_ac_suffix3_bloom_contains, ClassicAcAutomaton,
     CLASSIC_AC_SUFFIX2_MASK_WORDS, CLASSIC_AC_SUFFIX3_BLOOM_WORDS,
 };
-use vyre::scan::{pack_haystack_u32, pack_u32_slice};
+use vyre_libs::scan::pack_haystack_u32;
+use vyre_primitives::wire::pack_u32_slice;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
 

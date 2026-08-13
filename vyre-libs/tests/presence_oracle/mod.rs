@@ -20,7 +20,7 @@
 // OTHER gate can import it).
 #![allow(dead_code, unreachable_pub)]
 
-use vyre::scan::classic_ac::{classic_ac_compile, presence_by_region_words, ClassicAcAutomaton};
+use vyre_libs::scan::classic_ac::{classic_ac_compile, presence_by_region_words, ClassicAcAutomaton};
 
 /// A labeled literal-set fixture with its haystack and region starts.
 pub type PresenceCase = (String, Vec<Vec<u8>>, Vec<u8>, Vec<u32>);
