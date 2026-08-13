@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::support::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_queue_resident_step_initializes_queue_len_on_device() {
@@ -8,10 +8,8 @@ fn sparse_queue_resident_step_initializes_queue_len_on_device() {
         node_count: 1,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words: 1,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = Vec::new();
@@ -66,10 +64,8 @@ fn large_single_word_sparse_queue_resident_step_uses_atomic_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_in = vec![0u32; words];
@@ -128,10 +124,8 @@ fn large_dense_sparse_queue_resident_step_uses_word_prefix_materializer() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let frontier_in = vec![u32::MAX; words];
@@ -194,10 +188,9 @@ fn small_multiblock_sparse_queue_resident_step_inlines_block_offsets() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
         layout_hash: 11,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let frontier_in = vec![u32::MAX; words];
@@ -267,10 +260,9 @@ fn many_block_sparse_queue_resident_step_scans_block_offsets_once() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
         layout_hash: 11,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let frontier_in = vec![u32::MAX; words];

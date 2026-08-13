@@ -28,13 +28,13 @@
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 405,
+      "line": 427,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: cannot read {}: {error}\", manifest.display()));"
     },
     {
       "path": "structure-gate/src/lib.rs",
-      "line": 407,
+      "line": 429,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"Fix: parse {}: {error}\", manifest.display()));"
     },
@@ -181,6 +181,18 @@
       "line": 77,
       "pattern": "documented_panic_contract",
       "text": ".expect(\"truncated VAST: node_count * row stride overflowed usize\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
+      "line": 89,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: cell_width * cell_height overflows u32\");"
+    },
+    {
+      "path": "vyre-libs/src/visual/glyph_grid/mod.rs",
+      "line": 92,
+      "pattern": "documented_panic_contract",
+      "text": ".expect(\"Fix: glyph_count * cell area overflows u32\");"
     },
     {
       "path": "vyre-libs/src/visual/cell_grid/mod.rs",
@@ -675,13 +687,13 @@
       "text": ".expect(\"production session initialized\")"
     },
     {
-      "path": "xtask/src/conformance_matrix.rs",
+      "path": "xtask/src/release/conformance_matrix.rs",
       "line": 193,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"));"
     },
     {
-      "path": "xtask/src/conformance_matrix.rs",
+      "path": "xtask/src/release/conformance_matrix.rs",
       "line": 197,
       "pattern": "panic_macro",
       "text": ".unwrap_or_else(|error| panic!(\"backend registry startup failed: {error}\"))"

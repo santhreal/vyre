@@ -31,4 +31,4 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | [`substrate`](substrate.md) | 2 |
 | [`text`](text.md) | 6 |
 | [`vfs`](vfs.md) | 1 |
-| [`visual`](visual.md) | 10 |
+| [`visual`](visual.md) | 11 |

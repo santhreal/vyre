@@ -1259,6 +1259,19 @@ generation = "manual"
 nav = true
 
 [[page]]
+path = "testing/structure-gate.md"
+title = "Testing `structure-gate`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
 path = "testing/vyre-aot.md"
 title = "Testing `vyre-aot`"
 status = "generated"

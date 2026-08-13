@@ -1,17 +1,13 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::support::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_dense_zero_frontier_returns_zero_without_resident_work_or_cache() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
-        words: 2,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = vec![9, 9, 9];
@@ -70,13 +66,9 @@ fn four_russians_zero_frontier_returns_zero_without_resident_work_or_cache() {
 fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
-        words: 2,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = vec![9, 9, 9];
@@ -107,13 +99,9 @@ fn sparse_queue_zero_frontier_returns_zero_without_queue_allocation_or_cache() {
 fn auto_zero_frontier_returns_sparse_queue_without_resident_work_or_cache() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
         edge_count: 128,
         max_row_degree: 8,
-        high_degree_source_count: 0,
-        words: 2,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = vec![9, 9, 9];
@@ -146,13 +134,9 @@ fn auto_zero_frontier_returns_sparse_queue_without_resident_work_or_cache() {
 fn auto_step_rejects_bad_frontier_before_resident_allocation() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
-        words: 2,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = vec![123];

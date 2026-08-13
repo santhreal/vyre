@@ -36,7 +36,7 @@ total_lines = 1540
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 4476
+duplicate_lines = 3572
 total_lines = 38030
 
 [[crate]]
@@ -96,7 +96,7 @@ total_lines = 1330
 
 [[crate]]
 name = "vyre-foundation"
-duplicate_lines = 5977
+duplicate_lines = 5978
 total_lines = 94598
 
 [[crate]]
@@ -141,12 +141,12 @@ total_lines = 3653
 
 [[crate]]
 name = "vyre-primitives"
-duplicate_lines = 8449
+duplicate_lines = 8454
 total_lines = 100036
 
 [[crate]]
 name = "vyre-reference"
-duplicate_lines = 1321
+duplicate_lines = 1322
 total_lines = 15426
 
 [[crate]]
@@ -156,7 +156,7 @@ total_lines = 29212
 
 [[crate]]
 name = "vyre-self-substrate"
-duplicate_lines = 4726
+duplicate_lines = 4711
 total_lines = 58675
 
 [[crate]]

@@ -1,12 +1,12 @@
 {
   "schema_version": 4,
-  "op_count": 369,
-  "distinct_op_count": 369,
-  "catalog_required_op_count": 369,
-  "catalog_covered_op_count": 369,
+  "op_count": 370,
+  "distinct_op_count": 370,
+  "catalog_required_op_count": 370,
+  "catalog_covered_op_count": 370,
   "missing_catalog_ops": [],
-  "release_backend_row_count": 1107,
-  "non_runtime_supported_release_backend_row_count": 1092,
+  "release_backend_row_count": 1110,
+  "non_runtime_supported_release_backend_row_count": 1095,
   "runtime_dialect_contract_row_count": 15,
   "runtime_dialect_contract_ops": [
     "core.indirect_dispatch",
@@ -652,6 +652,9 @@
     "vyre-libs::visual::glass:reference:supported",
     "vyre-libs::visual::glass:cuda:supported",
     "vyre-libs::visual::glass:wgpu:supported",
+    "vyre-libs::visual::glyph_grid:reference:supported",
+    "vyre-libs::visual::glyph_grid:cuda:supported",
+    "vyre-libs::visual::glyph_grid:wgpu:supported",
     "vyre-libs::visual::gradient:reference:supported",
     "vyre-libs::visual::gradient:cuda:supported",
     "vyre-libs::visual::gradient:wgpu:supported",
@@ -31108,6 +31111,147 @@
       "blockers": []
     },
     {
+      "op_id": "vyre-libs::visual::glyph_grid",
+      "backend": "reference",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::glyph_grid",
+      "backend": "cuda",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
+      "op_id": "vyre-libs::visual::glyph_grid",
+      "backend": "wgpu",
+      "status": "supported",
+      "test_paths": [
+        "vyre-libs/tests/universal_harness.rs",
+        "conform/vyre-conform/tests/op_matrix_truth.rs"
+      ],
+      "case_classes": [
+        {
+          "class": "positive",
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
+        },
+        {
+          "class": "negative",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain reject/error/invalid/unsupported evidence"
+        },
+        {
+          "class": "boundary",
+          "covered": true,
+          "source": "OP_MATRIX referenced tests contain boundary/zero/limit/overflow evidence"
+        },
+        {
+          "class": "adversarial",
+          "covered": false,
+          "source": "OP_MATRIX referenced tests contain adversarial/hostile/malformed evidence"
+        },
+        {
+          "class": "byte_output",
+          "covered": true,
+          "source": "registered expected byte output"
+        },
+        {
+          "class": "unsupported_diagnostic",
+          "covered": true,
+          "source": "supported row; unsupported diagnostics are only covered when referenced tests exercise them"
+        }
+      ],
+      "required_case_classes": [
+        "positive",
+        "byte_output"
+      ],
+      "missing_required_case_classes": [],
+      "blockers": []
+    },
+    {
       "op_id": "vyre-libs::visual::gradient",
       "backend": "reference",
       "status": "supported",
@@ -53244,9 +53388,9 @@
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
-  "fixture_required_count": 364,
-  "fixture_input_count": 359,
-  "expected_output_count": 359,
+  "fixture_required_count": 365,
+  "fixture_input_count": 360,
+  "expected_output_count": 360,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -54937,6 +55081,13 @@
       "tolerance_ulp": 0
     },
     {
+      "id": "vyre-libs::visual::glyph_grid",
+      "requires_fixture": true,
+      "has_test_inputs": true,
+      "has_expected_output": true,
+      "tolerance_ulp": 0
+    },
+    {
       "id": "vyre-libs::visual::gradient",
       "requires_fixture": true,
       "has_test_inputs": true,
@@ -56032,7 +56183,7 @@
     "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:cuda` status `supported` is missing required `byte_output` case-class evidence",
     "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `positive` case-class evidence",
     "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "only 359/364 executable op entries have fixture inputs",
-    "only 359/364 executable op entries have expected outputs"
+    "only 360/365 executable op entries have fixture inputs",
+    "only 360/365 executable op entries have expected outputs"
   ]
 }

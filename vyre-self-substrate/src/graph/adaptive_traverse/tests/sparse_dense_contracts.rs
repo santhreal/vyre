@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::support::{traversal_graph, RecordingResidentDispatcher};
 
 #[test]
 fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {
@@ -8,10 +8,8 @@ fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {
         node_count: 1,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words: 1,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = Vec::new();
@@ -42,22 +40,12 @@ fn sparse_dense_resident_step_does_not_upload_popcount_zero_seed() {
 fn sparse_dense_resident_program_cache_reuses_same_shape_graphs() {
     let dispatcher = RecordingResidentDispatcher::default();
     let graph_a = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
-        edge_count: 8,
-        max_row_degree: 2,
-        high_degree_source_count: 0,
-        words: 2,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let graph_b = ResidentAdaptiveTraversalGraph {
-        node_count: 33,
-        edge_count: 8,
-        max_row_degree: 2,
-        high_degree_source_count: 0,
-        words: 2,
         layout_hash: 99,
         handles: [201, 202, 203, 204],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_out = Vec::new();

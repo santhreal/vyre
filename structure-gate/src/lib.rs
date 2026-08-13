@@ -398,10 +398,32 @@ fn path_names_language(path: &str, language: &str) -> bool {
         .any(|segment| segment.eq_ignore_ascii_case(language))
 }
 
+/// Largest source or manifest file this gate will read.
+///
+/// The gate walks whatever tree it is pointed at, so an unbounded
+/// `read_to_string` lets one pathological file decide the process's memory.
+/// Every read in this crate goes through here.
+const MAX_SOURCE_BYTES: u64 = 16_777_216;
+
+/// Read a source or manifest file, refusing anything over [`MAX_SOURCE_BYTES`].
+fn read_source_bounded(path: &Path) -> std::io::Result<String> {
+    use std::io::Read as _;
+
+    let file = fs::File::open(path)?;
+    if file.metadata()?.len() > MAX_SOURCE_BYTES {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("{} exceeds {MAX_SOURCE_BYTES} bytes", path.display()),
+        ));
+    }
+    let mut text = String::new();
+    file.take(MAX_SOURCE_BYTES + 1).read_to_string(&mut text)?;
+    Ok(text)
+}
 
 fn workspace_members(root: &Path) -> Vec<String> {
     let manifest = root.join("Cargo.toml");
-    let text = fs::read_to_string(&manifest)
+    let text = read_source_bounded(&manifest)
         .unwrap_or_else(|error| panic!("Fix: cannot read {}: {error}", manifest.display()));
     let table: toml::Table = toml::from_str(&text)
         .unwrap_or_else(|error| panic!("Fix: parse {}: {error}", manifest.display()));
@@ -448,7 +470,7 @@ fn scan_registrations(root: &Path, members: &[String]) -> Vec<Registration> {
     for member in members {
         let crate_name = member.rsplit('/').next().unwrap_or(member).to_string();
         for path in source_files(root, member) {
-            let Ok(text) = fs::read_to_string(&path) else {
+            let Ok(text) = read_source_bounded(&path) else {
                 continue;
             };
             let file = relative(root, &path);
@@ -795,7 +817,7 @@ fn scan_materializers(root: &Path, members: &[String]) -> Vec<(String, String)> 
         }
         for path in source_files(root, member) {
             if path.file_name().is_some_and(|name| name == "materializer.rs") {
-                let Ok(text) = fs::read_to_string(&path) else {
+                let Ok(text) = read_source_bounded(&path) else {
                     continue;
                 };
                 found.push((relative(root, &path), text));

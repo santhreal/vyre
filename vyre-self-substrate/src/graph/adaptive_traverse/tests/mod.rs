@@ -1,5 +1,6 @@
 mod lifecycle_contracts;
 mod selector_layout_contracts;
+mod source_contracts;
 mod sparse_dense_contracts;
 mod sparse_queue_materializer_contracts;
 mod sparse_queue_shape_contracts;

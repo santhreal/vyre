@@ -1,5 +1,5 @@
 use super::super::*;
-use super::support::RecordingResidentDispatcher;
+use super::support::{traversal_graph, RecordingResidentDispatcher};
 use crate::graph::csr_frontier_queue_scratch::STRIDED_FORWARD_MIN_ROW_DEGREE;
 
 #[test]
@@ -64,10 +64,8 @@ fn sparse_queue_step_sizes_active_queue_from_frontier_popcount() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
-        layout_hash: 7,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_in = vec![0u32; words];
@@ -106,10 +104,9 @@ fn sparse_queue_step_reuses_larger_queue_scratch_for_smaller_frontier() {
         node_count,
         edge_count: 0,
         max_row_degree: 0,
-        high_degree_source_count: 0,
         words,
         layout_hash: 11,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut larger_frontier = vec![0u32; words];
@@ -175,7 +172,7 @@ fn skewed_high_degree_sparse_queue_step_uses_bounded_split_queue() {
         high_degree_source_count: 1,
         words,
         layout_hash: 13,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_in = vec![0u32; words];
@@ -313,7 +310,7 @@ fn uniformly_high_degree_sparse_queue_step_keeps_global_strided_consumer() {
         high_degree_source_count: queue_slots,
         words,
         layout_hash: 17,
-        handles: [101, 102, 103, 104],
+        ..traversal_graph()
     };
     let mut scratch = AdaptiveTraversalResidentScratch::default();
     let mut frontier_in = vec![0u32; words];

@@ -1,59 +1,7 @@
 {
   "schema_version": 1,
   "scan": "resource-bound",
-  "findings": [
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 404,
-      "pattern": "unbounded_read",
-      "text": "let text = fs::read_to_string(&manifest)"
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 451,
-      "pattern": "unbounded_read",
-      "text": "let Ok(text) = fs::read_to_string(&path) else {"
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 798,
-      "pattern": "unbounded_read",
-      "text": "let Ok(text) = fs::read_to_string(&path) else {"
-    }
-  ],
-  "release_blocking_findings": [
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 404,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 451,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    },
-    {
-      "path": "structure-gate/src/lib.rs",
-      "line": 798,
-      "pattern": "unbounded_read",
-      "owner_lane": "coordination",
-      "surface": "production",
-      "risk": "release_blocker",
-      "hot_path": false,
-      "release_blocker": true
-    }
-  ],
-  "blockers": [
-    "3 release-blocking `resource-bound` finding(s) remain"
-  ]
+  "findings": [],
+  "release_blocking_findings": [],
+  "blockers": []
 }

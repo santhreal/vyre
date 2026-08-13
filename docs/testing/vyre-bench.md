@@ -43,6 +43,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- release-benchmarks --backend 
 | `test` | `baseline_determinism` | `vyre-bench/tests/baseline_determinism.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test baseline_determinism` |
 | `test` | `benchmark_methodology_contracts` | `vyre-bench/tests/benchmark_methodology_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test benchmark_methodology_contracts` |
 | `test` | `benchmark_target_contracts` | `vyre-bench/tests/benchmark_target_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test benchmark_target_contracts` |
+| `test` | `clone_family_contracts` | `vyre-bench/tests/clone_family_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test clone_family_contracts` |
 | `test` | `corpus_paging_planner` | `vyre-bench/tests/corpus_paging_planner.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test corpus_paging_planner` |
 | `test` | `coverage_sanitizer_matrix` | `vyre-bench/tests/coverage_sanitizer_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test coverage_sanitizer_matrix` |
 | `test` | `cross_backend_counter_schema` | `vyre-bench/tests/cross_backend_counter_schema.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test cross_backend_counter_schema` |

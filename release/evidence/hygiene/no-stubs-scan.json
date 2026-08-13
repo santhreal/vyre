@@ -9,7 +9,7 @@
       "text": "// unused buffer, so the placeholder is bound but inert (proven equal to"
     },
     {
-      "path": "vyre-bench/src/cases/scan_ac_irregular.rs",
+      "path": "vyre-bench/src/cases/scan_ac_irregular/mod.rs",
       "line": 84,
       "pattern": "TODO",
       "text": "b\"TODO:\","
@@ -19,6 +19,12 @@
       "line": 21,
       "pattern": "TODO",
       "text": "//! rather than a pending TODO: on the warm steady state the"
+    },
+    {
+      "path": "vyre-foundation/src/ir_inner/model/node/impl_node.rs",
+      "line": 284,
+      "pattern": "placeholder_text",
+      "text": "/// node records placeholder operands. Emit"
     },
     {
       "path": "vyre-foundation/src/validate/binding.rs",

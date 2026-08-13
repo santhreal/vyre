@@ -96,6 +96,7 @@
 
 # Testing and conformance
 
+- [Testing `structure-gate`](testing/structure-gate.md)
 - [Testing `vyre-aot`](testing/vyre-aot.md)
 - [Testing `vyre-bench`](testing/vyre-bench.md)
 - [Testing `vyre-conform-spec`](testing/vyre-conform-spec.md)

@@ -1539,6 +1539,29 @@ impl RustSourceFactsVisitor {
     }
 }
 
+/// Collect the identifiers a macro body names, recursing into its groups.
+///
+/// A macro body is opaque to `syn`'s typed visitors, so a call inside
+/// `assert!(...)` is only reachable through its raw tokens. Rendering those
+/// tokens to a string and splitting on non-identifier characters also splits
+/// the CONTENTS of every string literal: `assert!(text.contains("vyre-scan"))`
+/// then claims a call to `scan`, and the transitive walk enters whatever
+/// unrelated local function carries that name. Walking the token trees keeps
+/// the real call names and drops literals, punctuation, and lifetimes.
+fn collect_macro_identifiers(tokens: proc_macro2::TokenStream, callees: &mut BTreeSet<String>) {
+    for tree in tokens {
+        match tree {
+            proc_macro2::TokenTree::Ident(ident) => {
+                callees.insert(ident.to_string());
+            }
+            proc_macro2::TokenTree::Group(group) => {
+                collect_macro_identifiers(group.stream(), callees);
+            }
+            proc_macro2::TokenTree::Literal(_) | proc_macro2::TokenTree::Punct(_) => {}
+        }
+    }
+}
+
 impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
     fn visit_macro(&mut self, expression: &'ast syn::Macro) {
         if expression.path.is_ident("include_str")
@@ -1547,14 +1570,7 @@ impl<'ast> Visit<'ast> for RustSourceFactsVisitor {
         {
             self.reads_rust_source = true;
         }
-        self.callees.extend(
-            expression
-                .tokens
-                .to_string()
-                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
-                .filter(|token| !token.is_empty())
-                .map(ToOwned::to_owned),
-        );
+        collect_macro_identifiers(expression.tokens.clone(), &mut self.callees);
         syn::visit::visit_macro(self, expression);
     }
 
@@ -2443,6 +2459,59 @@ mod tests {
         findings.clear();
         scan_source_inspection_tests(Path::new("driver/src/lib.rs"), allowed, &mut findings);
         assert!(findings.is_empty());
+    }
+
+    /// A macro body reaches the callee graph through raw tokens, and the
+    /// scanner used to render those tokens to a string and split on every
+    /// non-identifier character. That split the CONTENTS of string literals,
+    /// so `assert!(failures.iter().any(|f| f.contains("vyre-scan")))` claimed
+    /// a call to a local `fn scan`, whose real body reads Rust source, and the
+    /// pure test that owns that assertion was reported as a release blocker.
+    /// Punctuation inside a literal is not a call.
+    #[test]
+    fn a_string_literal_inside_a_macro_is_not_a_call() {
+        let source = r#"
+            fn scan(root: &str) -> Vec<String> {
+                let text = std::fs::read_to_string("owner.rs").unwrap();
+                text.split('\n').map(ToOwned::to_owned).collect()
+            }
+
+            fn roster_failures(members: &[String]) -> Vec<String> {
+                members.iter().filter(|m| m.starts_with("vyre")).cloned().collect()
+            }
+
+            #[cfg(test)]
+            mod tests {
+                #[test]
+                fn a_product_crate_on_the_roster_is_rejected() {
+                    let failures = roster_failures(&["vyre-scan".to_string()]);
+                    assert!(failures.iter().any(|f| f.contains("vyre-scan")));
+                }
+
+                #[test]
+                fn a_real_call_inside_a_macro_is_still_seen() {
+                    assert!(scan("root").iter().any(|f| f.contains("owner")));
+                }
+            }
+        "#;
+        let mut findings = Vec::new();
+        scan_source_inspection_tests(Path::new("gate/src/lib.rs"), source, &mut findings);
+        let names = findings
+            .iter()
+            .map(|finding| finding.text.clone())
+            .collect::<Vec<_>>();
+        assert!(
+            !names
+                .iter()
+                .any(|text| text.contains("a_product_crate_on_the_roster_is_rejected")),
+            "a literal naming `vyre-scan` must not resolve to `fn scan`: {names:?}"
+        );
+        assert!(
+            names
+                .iter()
+                .any(|text| text.contains("a_real_call_inside_a_macro_is_still_seen")),
+            "a genuine call written inside a macro must still be followed: {names:?}"
+        );
     }
 
     #[test]

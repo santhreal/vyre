@@ -9,7 +9,7 @@
 [[gate]]
 name = "abstraction-gate"
 status = "red"
-output_lines = 31
+output_lines = 32
 owner = "Collapse C1-C5: findings span vyre-libs parsing/security/nn and vyre-primitives graph/math, and clear only once every op sits in its category owner"
 
 [[gate]]
@@ -59,9 +59,8 @@ output_lines = 170
 
 [[gate]]
 name = "hygiene-matrix"
-status = "red"
+status = "green"
 output_lines = 1
-owner = "PR-26: 6 release-blocking source hygiene findings, 4 on the coordination production surface and 2 on the security dataflow test surface"
 
 [[gate]]
 name = "lego-audit"
@@ -71,8 +70,8 @@ output_lines = 47
 [[gate]]
 name = "lego-quick"
 status = "red"
-output_lines = 12740
-owner = "Collapse C1-C5: every finding is a raw-ir op in vyre-libs that must become a composition over primitives"
+output_lines = 13292
+owner = "Collapse C1-C5: 12883 of the findings are raw-ir ops in vyre-libs that must become compositions over primitives; the visual `cell_grid`/`glyph_grid` pair contributes the most recent 117"
 
 [[gate]]
 name = "list-ops"
@@ -107,7 +106,7 @@ output_lines = 5
 [[gate]]
 name = "vyre-release-gate"
 status = "red"
-output_lines = 252
+output_lines = 250
 owner = "release-evidence workflow: the blockers are stale benchmark source_tree_fingerprint values, which only a GPU host can regenerate"
 
 [[gate]]

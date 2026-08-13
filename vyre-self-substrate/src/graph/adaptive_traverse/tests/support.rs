@@ -4,6 +4,8 @@ use crate::optimizer::dispatcher::{
 use std::cell::{Cell, RefCell};
 use vyre_foundation::ir::Program;
 
+use super::super::ResidentAdaptiveTraversalGraph;
+
 #[derive(Default)]
 pub(super) struct RecordingResidentDispatcher {
     pub(super) next_handle: Cell<u64>,
@@ -13,7 +15,27 @@ pub(super) struct RecordingResidentDispatcher {
     pub(super) upload_handles: RefCell<Vec<Vec<u64>>>,
     pub(super) step_handles: RefCell<Vec<Vec<Vec<u64>>>>,
     pub(super) step_grids: RefCell<Vec<Vec<Option<[u32; 3]>>>>,
+    pub(super) step_programs: RefCell<Vec<Vec<[u8; 32]>>>,
     pub(super) freed: RefCell<Vec<u64>>,
+}
+
+/// The shared resident traversal graph these tests dispatch against.
+///
+/// Seventeen copies of this literal used to sit across the module's test
+/// files, differing in two or three fields each, so a new field on
+/// `ResidentAdaptiveTraversalGraph` meant seventeen edits. Each test now
+/// states only what it varies: `ResidentAdaptiveTraversalGraph { node_count:
+/// 5, ..traversal_graph() }`.
+pub(super) fn traversal_graph() -> ResidentAdaptiveTraversalGraph {
+    ResidentAdaptiveTraversalGraph {
+        node_count: 33,
+        edge_count: 8,
+        max_row_degree: 2,
+        high_degree_source_count: 0,
+        words: 2,
+        layout_hash: 7,
+        handles: [101, 102, 103, 104],
+    }
 }
 
 impl RecordingResidentDispatcher {
@@ -35,6 +57,16 @@ impl RecordingResidentDispatcher {
 
     pub(super) fn last_step_grids(&self) -> Vec<Option<[u32; 3]>> {
         self.step_grids
+            .borrow()
+            .last()
+            .cloned()
+            .expect("Fix: test dispatcher expected at least one resident dispatch sequence")
+    }
+
+    /// Wire fingerprints of the Programs the last dispatch sequence launched,
+    /// in launch order.
+    pub(super) fn last_step_programs(&self) -> Vec<[u8; 32]> {
+        self.step_programs
             .borrow()
             .last()
             .cloned()
@@ -122,6 +154,9 @@ impl OptimizerDispatcher for RecordingResidentDispatcher {
         self.step_grids
             .borrow_mut()
             .push(steps.iter().map(|step| step.grid_override).collect());
+        self.step_programs
+            .borrow_mut()
+            .push(steps.iter().map(|step| step.program.fingerprint()).collect());
         outputs.clear();
         outputs.extend(read_ranges.iter().map(|range| vec![0u8; range.byte_len]));
         Ok(())
