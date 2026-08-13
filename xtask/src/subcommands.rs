@@ -10,16 +10,19 @@
 //! and `xtask gates` fails when that obligation is unmet, so a new row cannot
 //! be quietly left unwired.
 
-use crate::{
-    abstraction_gate, backend_matrix, bench_crossback, bench_release, catalog, check_cat_a,
-    check_tier_deps, compile, conformance_matrix, dep_drift, docs_check, dup_scan, feature_matrix,
-    gate1, gates, heuristic_audit, hot_path_scan, hygiene_matrix, launch_state, lego_audit,
-    lego_quick, list_ops, metadata_matrix, op_matrix, operation_schema, optimization_corpus,
-    optimization_docs, optimization_matrix, package_readiness, platform_boundary,
-    print_composition, release_benchmarks, release_conformance, release_evidence, release_gate,
-    release_workload_matrix, shrink, trace_f32, verify_rewrite_proofs, version_matrix,
-    vyre_release_gate, whats_similar,
+use crate::bench::{bench_crossback, bench_release, release_benchmarks};
+use crate::docs::{catalog, docs_check, list_ops, op_matrix, operation_schema, optimization_docs};
+use crate::gates::{
+    abstraction_gate, check_cat_a, check_tier_deps, dep_drift, dup_scan, gate1, gates,
+    heuristic_audit, hot_path_scan, hygiene_matrix, lego_audit, lego_quick, platform_boundary,
+    verify_rewrite_proofs, whats_similar,
 };
+use crate::release::{
+    backend_matrix, conformance_matrix, feature_matrix, launch_state, metadata_matrix,
+    optimization_corpus, optimization_matrix, package_readiness, release_conformance,
+    release_evidence, release_gate, release_workload_matrix, version_matrix, vyre_release_gate,
+};
+use crate::{compile, print_composition, shrink, trace_f32};
 
 /// What a subcommand is for, and therefore what CI owes it.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
