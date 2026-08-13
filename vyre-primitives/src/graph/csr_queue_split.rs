@@ -6,12 +6,12 @@
 //! compacts only high-degree sources into a second queue for row-strided
 //! traversal.
 
-use std::sync::Arc;
+use vyre_foundation::ir::{DataType, Program};
 
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
-use crate::bitset::bitset_words;
+use crate::graph::csr_frontier_step::{
+    csr_queue_step_program, CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan,
+    CsrQueueStepSpec,
+};
 use crate::graph::csr_queue_strided::CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE;
 
 /// Canonical op id for mixed low-row traversal and high-row compaction.
@@ -44,6 +44,39 @@ pub const fn csr_queue_split_mixed_logical_lanes(
     )
 }
 
+/// Positional inputs for [`csr_queue_split_low_forward_traverse`].
+#[derive(Clone, Copy, Debug)]
+pub struct CsrQueueSplitLowForwardParams<'a> {
+    /// Compacted queue of active source nodes.
+    pub active_queue: &'a str,
+    /// Single-element resident length of `active_queue`.
+    pub queue_len: &'a str,
+    /// CSR row pointers, `node_count + 1` entries.
+    pub edge_offsets: &'a str,
+    /// CSR edge destinations.
+    pub edge_targets: &'a str,
+    /// Per-edge kind bits tested against `allow_mask`.
+    pub edge_kind_mask: &'a str,
+    /// Packed bitset the reached destinations are ORed into.
+    pub frontier_out: &'a str,
+    /// Compact queue collecting hub sources for a later row-strided pass.
+    pub high_queue: &'a str,
+    /// Single-element observed hub count, which may exceed the capacity.
+    pub high_len: &'a str,
+    /// Node count the CSR row pointers and destination bounds are sized by.
+    pub node_count: u32,
+    /// Logical edge count the edge-slot bound check uses.
+    pub edge_count: u32,
+    /// Static capacity of `active_queue`.
+    pub queue_capacity: u32,
+    /// Static capacity of `high_queue`.
+    pub high_queue_capacity: u32,
+    /// Row degree at which a source is worth a 32-lane team.
+    pub high_degree_threshold: u32,
+    /// Edge kinds this traversal is allowed to follow.
+    pub allow_mask: u32,
+}
+
 /// Build the low-row half of a mixed queue traversal.
 ///
 /// Low-degree rows are expanded directly into `frontier_out`. High-degree rows
@@ -69,6 +102,45 @@ pub fn csr_queue_split_low_forward_traverse(
     high_degree_threshold: u32,
     allow_mask: u32,
 ) -> Program {
+    csr_queue_split_low_forward_traverse_with(CsrQueueSplitLowForwardParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        high_queue,
+        high_len,
+        node_count,
+        edge_count,
+        queue_capacity,
+        high_queue_capacity,
+        high_degree_threshold,
+        allow_mask,
+    })
+}
+
+/// Build the low-row half of a mixed queue traversal.
+#[must_use]
+pub fn csr_queue_split_low_forward_traverse_with(
+    params: CsrQueueSplitLowForwardParams<'_>,
+) -> Program {
+    let CsrQueueSplitLowForwardParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        high_queue,
+        high_len,
+        node_count,
+        edge_count,
+        queue_capacity,
+        high_queue_capacity,
+        high_degree_threshold,
+        allow_mask,
+    } = params;
     if node_count == 0
         || queue_capacity == 0
         || high_queue_capacity == 0
@@ -81,167 +153,31 @@ pub fn csr_queue_split_low_forward_traverse(
             "Fix: csr_queue_split_low_forward_traverse requires node_count > 0, non-zero queue capacities, and high_degree_threshold > 0; got node_count={node_count} queue_capacity={queue_capacity} high_queue_capacity={high_queue_capacity} high_degree_threshold={high_degree_threshold}."
         ),);
     }
-
-    let lane = Expr::InvocationId { axis: 0 };
-    let words = bitset_words(node_count);
-    let physical_edge_count = edge_count.max(1);
-    let edge_offset_count = match crate::graph::checked_csr_offset_count(
-        node_count,
-        "csr_queue_split_low_forward_traverse",
-    ) {
-        Ok(edge_offset_count) => edge_offset_count,
-        Err(error) => {
-            return crate::invalid_output_program(
-                CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID,
-                frontier_out,
-                DataType::U32,
-                error,
-            );
-        }
-    };
-    let scalar_emit = || {
-        scalar_emit_nodes(
+    csr_queue_step_program(&CsrQueueStepSpec {
+        op_id: CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID,
+        builder_name: "csr_queue_split_low_forward_traverse",
+        prefix: "qsl",
+        workgroup_size: CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE,
+        inputs: CsrQueueInputs {
+            active_queue,
+            queue_len,
+            edge_offsets,
             edge_targets,
             edge_kind_mask,
-            frontier_out,
-            node_count,
-            edge_count,
-            allow_mask,
-        )
-    };
-    let body = vec![
-        Node::let_bind("qsl_idx", lane),
-        Node::if_then(
-            Expr::lt(Expr::var("qsl_idx"), Expr::u32(queue_capacity)),
-            vec![Node::if_then(
-                Expr::lt(Expr::var("qsl_idx"), Expr::load(queue_len, Expr::u32(0))),
-                vec![
-                    Node::let_bind("qsl_src", Expr::load(active_queue, Expr::var("qsl_idx"))),
-                    Node::if_then(
-                        Expr::lt(Expr::var("qsl_src"), Expr::u32(node_count)),
-                        vec![
-                            Node::let_bind(
-                                "qsl_edge_start",
-                                Expr::load(edge_offsets, Expr::var("qsl_src")),
-                            ),
-                            Node::let_bind(
-                                "qsl_edge_end",
-                                Expr::load(
-                                    edge_offsets,
-                                    Expr::add(Expr::var("qsl_src"), Expr::u32(1)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "qsl_degree",
-                                Expr::sub(Expr::var("qsl_edge_end"), Expr::var("qsl_edge_start")),
-                            ),
-                            Node::if_then_else(
-                                Expr::ge(Expr::var("qsl_degree"), Expr::u32(high_degree_threshold)),
-                                vec![
-                                    Node::let_bind(
-                                        "qsl_high_slot",
-                                        Expr::atomic_add(high_len, Expr::u32(0), Expr::u32(1)),
-                                    ),
-                                    Node::if_then_else(
-                                        Expr::lt(
-                                            Expr::var("qsl_high_slot"),
-                                            Expr::u32(high_queue_capacity),
-                                        ),
-                                        vec![Node::store(
-                                            high_queue,
-                                            Expr::var("qsl_high_slot"),
-                                            Expr::var("qsl_src"),
-                                        )],
-                                        scalar_emit(),
-                                    ),
-                                ],
-                                scalar_emit(),
-                            ),
-                        ],
-                    ),
-                ],
-            )],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(active_queue, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(queue_capacity),
-            BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(edge_offset_count),
-            BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(frontier_out, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-            BufferDecl::storage(high_queue, 6, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(high_queue_capacity),
-            BufferDecl::storage(high_len, 7, BufferAccess::ReadWrite, DataType::U32).with_count(1),
-        ],
-        CSR_QUEUE_SPLIT_LOW_FORWARD_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(CSR_QUEUE_SPLIT_LOW_FORWARD_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
-}
-
-fn scalar_emit_nodes(
-    edge_targets: &str,
-    edge_kind_mask: &str,
-    frontier_out: &str,
-    node_count: u32,
-    edge_count: u32,
-    allow_mask: u32,
-) -> Vec<Node> {
-    vec![Node::loop_for(
-        "qsl_e",
-        Expr::var("qsl_edge_start"),
-        Expr::var("qsl_edge_end"),
-        vec![Node::if_then(
-            Expr::lt(Expr::var("qsl_e"), Expr::u32(edge_count)),
-            vec![
-                Node::let_bind("qsl_kind", Expr::load(edge_kind_mask, Expr::var("qsl_e"))),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("qsl_kind"), Expr::u32(allow_mask)),
-                        Expr::u32(0),
-                    ),
-                    vec![
-                        Node::let_bind("qsl_dst", Expr::load(edge_targets, Expr::var("qsl_e"))),
-                        Node::if_then(
-                            Expr::lt(Expr::var("qsl_dst"), Expr::u32(node_count)),
-                            vec![
-                                Node::let_bind(
-                                    "qsl_dst_word",
-                                    Expr::shr(Expr::var("qsl_dst"), Expr::u32(5)),
-                                ),
-                                Node::let_bind(
-                                    "qsl_dst_bit",
-                                    Expr::shl(
-                                        Expr::u32(1),
-                                        Expr::bitand(Expr::var("qsl_dst"), Expr::u32(31)),
-                                    ),
-                                ),
-                                Node::let_bind(
-                                    "_qsl_prev",
-                                    Expr::atomic_or(
-                                        frontier_out,
-                                        Expr::var("qsl_dst_word"),
-                                        Expr::var("qsl_dst_bit"),
-                                    ),
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-            ],
-        )],
-    )]
+        },
+        lanes: CsrQueueLanes::Scalar,
+        row_plan: CsrQueueRowPlan::CompactHighDegree {
+            high_queue,
+            high_len,
+            high_queue_capacity,
+            high_degree_threshold,
+        },
+        emit: CsrQueueEmit::Frontier { frontier_out },
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    })
 }
 
 /// CPU result for the low split pass.

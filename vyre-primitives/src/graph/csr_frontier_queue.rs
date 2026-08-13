@@ -24,6 +24,10 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_foundation::MemoryOrdering;
 
 use crate::bitset::bitset_words;
+use crate::graph::csr_frontier_step::{
+    csr_queue_step_program, CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan,
+    CsrQueueStepSpec,
+};
 
 /// Canonical op id for bitset-to-queue compaction.
 pub const FRONTIER_TO_QUEUE_OP_ID: &str = "vyre-primitives::graph::frontier_to_queue";
@@ -1140,6 +1144,31 @@ fn frontier_word_queue_scatter_program(
     )
 }
 
+/// Positional inputs for [`csr_queue_forward_traverse`].
+#[derive(Clone, Copy, Debug)]
+pub struct CsrQueueForwardTraverseParams<'a> {
+    /// Compacted queue of active source nodes.
+    pub active_queue: &'a str,
+    /// Single-element resident length of `active_queue`.
+    pub queue_len: &'a str,
+    /// CSR row pointers, `node_count + 1` entries.
+    pub edge_offsets: &'a str,
+    /// CSR edge destinations.
+    pub edge_targets: &'a str,
+    /// Per-edge kind bits tested against `allow_mask`.
+    pub edge_kind_mask: &'a str,
+    /// Packed bitset the reached destinations are ORed into.
+    pub frontier_out: &'a str,
+    /// Node count the CSR row pointers and destination bounds are sized by.
+    pub node_count: u32,
+    /// Logical edge count the edge-slot bound check uses.
+    pub edge_count: u32,
+    /// Static capacity of `active_queue`.
+    pub queue_capacity: u32,
+    /// Edge kinds this traversal is allowed to follow.
+    pub allow_mask: u32,
+}
+
 /// Build a GPU program that expands only queued CSR source rows.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
@@ -1155,6 +1184,35 @@ pub fn csr_queue_forward_traverse(
     queue_capacity: u32,
     allow_mask: u32,
 ) -> Program {
+    csr_queue_forward_traverse_with(CsrQueueForwardTraverseParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    })
+}
+
+/// Build a GPU program that expands only queued CSR source rows.
+#[must_use]
+pub fn csr_queue_forward_traverse_with(params: CsrQueueForwardTraverseParams<'_>) -> Program {
+    let CsrQueueForwardTraverseParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    } = params;
     if node_count == 0 || queue_capacity == 0 {
         return crate::invalid_output_program(CSR_QUEUE_FORWARD_OP_ID,
         frontier_out,
@@ -1163,131 +1221,26 @@ pub fn csr_queue_forward_traverse(
             "Fix: csr_queue_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
         ),);
     }
-    let lane = Expr::InvocationId { axis: 0 };
-    let words = bitset_words(node_count);
-    let physical_edge_count = edge_count.max(1);
-    let edge_offset_count = match node_count.checked_add(1) {
-        Some(edge_offset_count) => edge_offset_count,
-        None => {
-            return crate::invalid_output_program(CSR_QUEUE_FORWARD_OP_ID,
-            frontier_out,
-            DataType::U32,
-            format!(
-                "Fix: csr_queue_forward_traverse node_count + 1 overflows u32 for node_count={node_count}. Shard the CSR graph before GPU dispatch."
-            ),);
-        }
-    };
-    let body = vec![
-        Node::let_bind("qt_idx", lane.clone()),
-        Node::if_then(
-            Expr::lt(Expr::var("qt_idx"), Expr::u32(queue_capacity)),
-            vec![Node::if_then(
-                Expr::lt(Expr::var("qt_idx"), Expr::load(queue_len, Expr::u32(0))),
-                vec![
-                    Node::let_bind("qt_src", Expr::load(active_queue, Expr::var("qt_idx"))),
-                    Node::if_then(
-                        Expr::lt(Expr::var("qt_src"), Expr::u32(node_count)),
-                        vec![
-                            Node::let_bind(
-                                "qt_edge_start",
-                                Expr::load(edge_offsets, Expr::var("qt_src")),
-                            ),
-                            Node::let_bind(
-                                "qt_edge_end",
-                                Expr::load(
-                                    edge_offsets,
-                                    Expr::add(Expr::var("qt_src"), Expr::u32(1)),
-                                ),
-                            ),
-                            Node::loop_for(
-                                "qt_e",
-                                Expr::var("qt_edge_start"),
-                                Expr::var("qt_edge_end"),
-                                vec![Node::if_then(
-                                    Expr::lt(Expr::var("qt_e"), Expr::u32(edge_count)),
-                                    vec![
-                                        Node::let_bind(
-                                            "qt_kind",
-                                            Expr::load(edge_kind_mask, Expr::var("qt_e")),
-                                        ),
-                                        Node::if_then(
-                                            Expr::ne(
-                                                Expr::bitand(
-                                                    Expr::var("qt_kind"),
-                                                    Expr::u32(allow_mask),
-                                                ),
-                                                Expr::u32(0),
-                                            ),
-                                            vec![
-                                                Node::let_bind(
-                                                    "qt_dst",
-                                                    Expr::load(edge_targets, Expr::var("qt_e")),
-                                                ),
-                                                Node::if_then(
-                                                    Expr::lt(
-                                                        Expr::var("qt_dst"),
-                                                        Expr::u32(node_count),
-                                                    ),
-                                                    vec![
-                                                        Node::let_bind(
-                                                            "qt_dst_word",
-                                                            Expr::shr(
-                                                                Expr::var("qt_dst"),
-                                                                Expr::u32(5),
-                                                            ),
-                                                        ),
-                                                        Node::let_bind(
-                                                            "qt_dst_bit",
-                                                            Expr::shl(
-                                                                Expr::u32(1),
-                                                                Expr::bitand(
-                                                                    Expr::var("qt_dst"),
-                                                                    Expr::u32(31),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                        Node::let_bind(
-                                                            "_qt_prev",
-                                                            Expr::atomic_or(
-                                                                frontier_out,
-                                                                Expr::var("qt_dst_word"),
-                                                                Expr::var("qt_dst_bit"),
-                                                            ),
-                                                        ),
-                                                    ],
-                                                ),
-                                            ],
-                                        ),
-                                    ],
-                                )],
-                            ),
-                        ],
-                    ),
-                ],
-            )],
-        ),
-    ];
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(active_queue, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(queue_capacity),
-            BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(edge_offset_count),
-            BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(frontier_out, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-        ],
-        [256, 1, 1],
-        vec![Node::Region {
-            generator: Ident::from(CSR_QUEUE_FORWARD_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
+    csr_queue_step_program(&CsrQueueStepSpec {
+        op_id: CSR_QUEUE_FORWARD_OP_ID,
+        builder_name: "csr_queue_forward_traverse",
+        prefix: "qt",
+        workgroup_size: [256, 1, 1],
+        inputs: CsrQueueInputs {
+            active_queue,
+            queue_len,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+        },
+        lanes: CsrQueueLanes::Scalar,
+        row_plan: CsrQueueRowPlan::ExpandAll,
+        emit: CsrQueueEmit::Frontier { frontier_out },
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    })
 }
 
 /// CPU reference for queue materialization.
