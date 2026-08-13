@@ -72,6 +72,12 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   F16, BF16, and F32 inputs retain F32 internal math. Guarded rows in the final
   structural tile cannot read padding, change state, or appear in truncated
   output.
+- `vyre-lower` now publishes the structured body walk
+  (`analyses::structured_walk`) and the kernel pattern audit
+  (`pattern_audit`) it already owned internally. The PTX emitter's
+  `ldmatrix_cp_async` and `predicated_execution` passes call the walk instead
+  of each keeping a copy, so one traversal serves every backend judgment built
+  on it.
 
 ### Changed
 
