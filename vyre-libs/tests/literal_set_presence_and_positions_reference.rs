@@ -18,7 +18,7 @@ use vyre_libs::scan::classic_ac::{
     classic_ac_bounded_ranges_scan, classic_ac_candidate_end_byte_mask_words,
     classic_ac_candidate_suffix2_mask_words, classic_ac_candidate_suffix3_bloom_words,
     classic_ac_compile, presence_by_region_words,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
 };
@@ -179,7 +179,7 @@ fn fused_presence_and_positions_equals_separate_scans_high_volume() {
         // subgroup ops, and this is the exact non-subgroup form the production consumer's position
         // scan uses (`try_build_literal_set_program`). The fused program likewise
         // uses plain `append_match`, so both append paths match bit-for-bit.
-        let sep_positions_program = try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+        let sep_positions_program = try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
             &ac.dfa,
             pattern_count,
             MAX_MATCHES,

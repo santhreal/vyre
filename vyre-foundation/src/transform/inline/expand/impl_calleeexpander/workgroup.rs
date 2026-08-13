@@ -57,7 +57,7 @@ impl CalleeExpander<'_> {
                 let (mut prefix, offset) = self.expr(offset)?;
                 let (size_prefix, size) = self.expr(size)?;
                 prefix.extend(size_prefix);
-                prefix.push(Node::async_load_ext(
+                prefix.push(Node::async_load_gpu_driven(
                     source.clone(),
                     destination.clone(),
                     offset,

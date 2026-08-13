@@ -243,7 +243,7 @@ fn rewrite_node_cow<'a>(
             if matches!((&off, &sz), (Cow::Borrowed(_), Cow::Borrowed(_))) {
                 Cow::Borrowed(node)
             } else {
-                Cow::Owned(Node::async_load_ext(
+                Cow::Owned(Node::async_load_gpu_driven(
                     source.clone(),
                     destination.clone(),
                     off.into_owned(),

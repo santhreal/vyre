@@ -29,7 +29,7 @@ fn derive_use_counts_async_operands() {
         vec![
             Node::let_bind("offset", Expr::u32(1)),
             Node::let_bind("size", Expr::u32(2)),
-            Node::async_load_ext(
+            Node::async_load_gpu_driven(
                 Ident::from("input"),
                 Ident::from("out"),
                 Expr::var("offset"),

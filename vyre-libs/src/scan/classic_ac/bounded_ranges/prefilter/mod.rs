@@ -9,15 +9,15 @@ mod suffix3;
 
 pub use suffix3::{
     build_ac_bounded_ranges_suffix3_prefilter_program,
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
+    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
+    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_suffix3_prefilter_program,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
@@ -48,7 +48,7 @@ pub fn classic_ac_bounded_ranges_prefilter_program(
     max_matches: u32,
     max_pattern_len: u32,
 ) -> Program {
-    classic_ac_bounded_ranges_prefilter_program_ext(
+    classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
         haystack,
         transitions,
         output_offsets,
@@ -71,7 +71,7 @@ pub fn classic_ac_bounded_ranges_prefilter_program(
 /// control over subgroup match-append coalescing.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_prefilter_program_ext(
+pub fn classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -142,7 +142,7 @@ pub fn build_ac_bounded_ranges_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Program {
-    build_ac_bounded_ranges_prefilter_program_ext(dfa, pattern_count, max_matches, true)
+    build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
 /// Variant of [`build_ac_bounded_ranges_prefilter_program`] that exposes the
@@ -151,15 +151,15 @@ pub fn build_ac_bounded_ranges_prefilter_program(
 /// # Panics
 /// Panics when the prefilter program exceeds the GPU ABI limits. An empty mask would
 /// silently suppress every match, so callers that must recover use
-/// [`try_build_ac_bounded_ranges_prefilter_program_ext`].
+/// [`try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce`].
 #[must_use]
-pub fn build_ac_bounded_ranges_prefilter_program_ext(
+pub fn build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_prefilter_program_ext(
+    match try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
         dfa,
         pattern_count,
         max_matches,
@@ -170,12 +170,12 @@ pub fn build_ac_bounded_ranges_prefilter_program_ext(
             // Returning an empty-mask prefilter program would silently suppress
             // every candidate position (a total recall-loss silent fallback).
             // Fail closed instead. Callers that need graceful overflow handling
-            // must call try_build_ac_bounded_ranges_prefilter_program_ext
+            // must call try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce
             // directly and shard oversized DFAs across multiple programs.
             panic!(
                 "AC bounded-ranges prefilter program build failed: {error}. \
                  returning an empty-mask program would silently suppress every match; \
-                 use try_build_ac_bounded_ranges_prefilter_program_ext and shard oversized DFAs."
+                 use try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce and shard oversized DFAs."
             )
         }
     }
@@ -192,16 +192,16 @@ pub fn try_build_ac_bounded_ranges_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_prefilter_program_ext(dfa, pattern_count, max_matches, true)
+    try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
-/// Fallible variant of [`build_ac_bounded_ranges_prefilter_program_ext`].
+/// Fallible variant of [`build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce`].
 ///
 /// # Errors
 ///
 /// Returns an actionable error when DFA metadata cannot fit the GPU program's
 /// u32 buffer-count ABI.
-pub fn try_build_ac_bounded_ranges_prefilter_program_ext(
+pub fn try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
@@ -213,7 +213,7 @@ pub fn try_build_ac_bounded_ranges_prefilter_program_ext(
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_prefilter_program_ext(
+    Ok(classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
         "haystack",
         "transitions",
         "output_offsets",
@@ -251,7 +251,7 @@ mod tests {
         let lengths = pattern_lengths(&patterns);
         let mut expected = classic_ac_bounded_ranges_scan(&ac, &lengths, haystack);
         expected.sort_unstable();
-        let program = build_ac_bounded_ranges_prefilter_program_ext(
+        let program = build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(
             &ac.dfa,
             patterns.len() as u32,
             128,
@@ -284,8 +284,8 @@ mod tests {
     #[test]
     fn infallible_prefilter_uses_real_dfa_not_empty_fallback() {
         let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
-        let via_infallible = build_ac_bounded_ranges_prefilter_program_ext(&ac.dfa, 3, 128, false);
-        let via_try = try_build_ac_bounded_ranges_prefilter_program_ext(&ac.dfa, 3, 128, false)
+        let via_infallible = build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
+        let via_try = try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
             .expect("valid DFA must build");
         // Binding 3 is output_records: the empty fallback carried 0 here.
         let records = via_infallible.buffers()[3].count;
@@ -308,7 +308,7 @@ mod tests {
     #[test]
     fn bounded_ranges_prefilter_program_has_compact_stable_shape() {
         let ac = classic_ac_compile(&[b"Authorization: Bearer ", b"token", b"tok"]);
-        let program = build_ac_bounded_ranges_prefilter_program_ext(&ac.dfa, 3, 1024, false);
+        let program = build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 1024, false);
 
         assert_eq!(program.workgroup_size(), [128, 1, 1]);
         assert_eq!(program.buffers().len(), 9);

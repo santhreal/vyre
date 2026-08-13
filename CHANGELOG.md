@@ -116,6 +116,16 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   `ir::model::spec_types`, `ir_inner::model::program::core` to
   `program::definition`, and `vyre_reference::dual_impls::common` to
   `dual_impls::evaluator`.
+- Functions no longer end in `_ext`. Where the suffixed spelling was the only
+  one, it is gone: `classic_ac_bounded_ranges_suffix3_presence_program_ext`,
+  its two by-region siblings, and the `_filtered` variant now drop it. Where a
+  pair exists, the longer name states the extra argument:
+  `build_ac_bounded_ranges_program_ext` is
+  `build_ac_bounded_ranges_program_with_subgroup_coalesce`,
+  `build_regex_dfa_pipeline_ext` is
+  `build_regex_dfa_pipeline_with_subgroup_coalesce`, and `Node::async_load_ext`
+  is `Node::async_load_gpu_driven` against the tag-only host-driven
+  `Node::async_load`.
 
 ### Removed
 

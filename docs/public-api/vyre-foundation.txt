@@ -1031,7 +1031,7 @@ pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation
 pub fn vyre_foundation::ir::MemoryHints::default() -> Self
 pub fn vyre_foundation::ir::Node::assign(name: impl core::convert::Into<vyre_foundation::ir::Ident>, value: vyre_foundation::ir::Expr) -> Self
 pub fn vyre_foundation::ir::Node::async_load(tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
-pub fn vyre_foundation::ir::Node::async_load_ext(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
+pub fn vyre_foundation::ir::Node::async_load_gpu_driven(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::async_store(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::async_wait(tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::block(nodes: alloc::vec::Vec<Self>) -> Self

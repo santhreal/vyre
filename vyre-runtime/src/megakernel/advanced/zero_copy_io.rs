@@ -50,7 +50,7 @@ pub fn pull_file_async_direct() -> Node {
 /// Emit a GPU-initiated direct file pull using custom binding names.
 #[must_use]
 pub fn pull_file_async_direct_with(bindings: &DirectIoBindings) -> Node {
-    Node::async_load_ext(
+    Node::async_load_gpu_driven(
         bindings.source,
         bindings.destination,
         Expr::var(bindings.file_start),

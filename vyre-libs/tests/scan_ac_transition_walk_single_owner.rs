@@ -37,7 +37,7 @@ use vyre_libs::scan::classic_ac::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 use vyre_libs::scan::{
-    aho_corasick, anchored_window_extract_program, build_regex_dfa_pipeline_with_policy_ext,
+    aho_corasick, anchored_window_extract_program, build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce,
     fused_region_evidence_program, regex_admission_by_region_program, RegexReplayPolicy,
 };
 use vyre_primitives::matching::CompiledDfa;
@@ -183,8 +183,8 @@ fn packed_walk_programs(dfa: &CompiledDfa) -> BTreeMap<&'static str, Program> {
         ),
     );
     programs.insert(
-        "regex_exact_ranges_program (via build_regex_dfa_pipeline_with_policy_ext)",
-        build_regex_dfa_pipeline_with_policy_ext(
+        "regex_exact_ranges_program (via build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce)",
+        build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(
             &["alpha", "beta", "gamma", "al"],
             MAX_MATCHES,
             4096,

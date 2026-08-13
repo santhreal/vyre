@@ -24,27 +24,27 @@ mod prefilter;
 mod regex_exact;
 
 pub use prefilter::{
-    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
+    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program,
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
+    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
+    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
+    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
-    try_build_ac_bounded_ranges_prefilter_program_ext,
+    try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_prefilter_program,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub(in crate::scan) use regex_exact::regex_exact_ranges_program_ext;
+pub(in crate::scan) use regex_exact::regex_exact_ranges_program;
 
 /// Advance `state` one byte through the dense `state * 256 + byte` transition
 /// row.
@@ -269,7 +269,7 @@ pub fn classic_ac_bounded_ranges_program(
     max_matches: u32,
     max_pattern_len: u32,
 ) -> Program {
-    classic_ac_bounded_ranges_program_ext(
+    classic_ac_bounded_ranges_program_with_subgroup_coalesce(
         haystack,
         transitions,
         output_offsets,
@@ -297,7 +297,7 @@ pub fn classic_ac_bounded_ranges_program(
 /// can't emit `subgroup_ballot`/`subgroup_shuffle`.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_program_ext(
+pub fn classic_ac_bounded_ranges_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -759,7 +759,7 @@ pub fn build_ac_bounded_ranges_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Program {
-    build_ac_bounded_ranges_program_ext(dfa, pattern_count, max_matches, true)
+    build_ac_bounded_ranges_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
 /// Variant of [`build_ac_bounded_ranges_program`] that exposes the
@@ -771,15 +771,15 @@ pub fn build_ac_bounded_ranges_program(
 /// # Panics
 /// Panics when the automaton exceeds the GPU ABI limits. Returning an empty rejecting
 /// automaton would silently drop every match, so callers that must recover use
-/// [`try_build_ac_bounded_ranges_program_ext`] and shard the DFA.
+/// [`try_build_ac_bounded_ranges_program_with_subgroup_coalesce`] and shard the DFA.
 #[must_use]
-pub fn build_ac_bounded_ranges_program_ext(
+pub fn build_ac_bounded_ranges_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_program_ext(
+    match try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
         dfa,
         pattern_count,
         max_matches,
@@ -790,12 +790,12 @@ pub fn build_ac_bounded_ranges_program_ext(
             // Returning an empty-rejecting program would silently drop every
             // match without the caller knowing, a total recall-loss silent
             // fallback. Fail closed instead. Callers that need graceful
-            // overflow handling must call try_build_ac_bounded_ranges_program_ext
+            // overflow handling must call try_build_ac_bounded_ranges_program_with_subgroup_coalesce
             // directly and shard oversized DFAs across multiple programs.
             panic!(
                 "AC bounded-ranges program build failed: {error}. \
                  returning an empty rejecting automaton would silently drop every match; \
-                 use try_build_ac_bounded_ranges_program_ext and shard oversized DFAs."
+                 use try_build_ac_bounded_ranges_program_with_subgroup_coalesce and shard oversized DFAs."
             )
         }
     }
@@ -812,16 +812,16 @@ pub fn try_build_ac_bounded_ranges_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_program_ext(dfa, pattern_count, max_matches, true)
+    try_build_ac_bounded_ranges_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
-/// Fallible variant of [`build_ac_bounded_ranges_program_ext`].
+/// Fallible variant of [`build_ac_bounded_ranges_program_with_subgroup_coalesce`].
 ///
 /// # Errors
 ///
 /// Returns an actionable error when DFA metadata cannot fit the GPU program's
 /// u32 buffer-count ABI.
-pub fn try_build_ac_bounded_ranges_program_ext(
+pub fn try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
@@ -833,7 +833,7 @@ pub fn try_build_ac_bounded_ranges_program_ext(
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_program_ext(
+    Ok(classic_ac_bounded_ranges_program_with_subgroup_coalesce(
         "haystack",
         "transitions",
         "output_offsets",
@@ -895,8 +895,8 @@ mod tests {
     #[test]
     fn infallible_builder_uses_real_dfa_not_empty_fallback() {
         let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
-        let via_infallible = build_ac_bounded_ranges_program_ext(&ac.dfa, 3, 128, false);
-        let via_try = try_build_ac_bounded_ranges_program_ext(&ac.dfa, 3, 128, false)
+        let via_infallible = build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
+        let via_try = try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
             .expect("valid DFA must build");
         // Binding 3 is output_records: the empty fallback carried 0 here.
         let records = via_infallible.buffers()[3].count;
@@ -917,12 +917,12 @@ mod tests {
         );
     }
 
-    /// Verify try_build_ac_bounded_ranges_program_ext returns Ok for a valid
+    /// Verify try_build_ac_bounded_ranges_program_with_subgroup_coalesce returns Ok for a valid
     /// small DFA, proving the success path is intact after the panic-on-error fix.
     #[test]
     fn try_build_ac_bounded_ranges_program_ext_succeeds_for_valid_dfa() {
         let ac = classic_ac_compile(&[b"abc", b"de"]);
-        let result = try_build_ac_bounded_ranges_program_ext(&ac.dfa, 2, 128, false);
+        let result = try_build_ac_bounded_ranges_program_with_subgroup_coalesce(&ac.dfa, 2, 128, false);
         assert!(
             result.is_ok(),
             "try_build must succeed for a valid small DFA: {:?}",

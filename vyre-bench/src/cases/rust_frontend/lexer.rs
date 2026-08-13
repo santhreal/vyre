@@ -5,7 +5,7 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
-use vyre_frontend_rust::lex::lexer::core::lex as lex_cpu;
+use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
 use vyre_frontend_rust::lex::lexer::plan::rust_lexer;
 
 struct RustLexerGpuPipeline;
@@ -295,7 +295,7 @@ inventory::submit! {
 mod tests {
     use super::*;
     use vyre::ir::BufferAccess;
-    use vyre_frontend_rust::lex::lexer::core::Token;
+    use vyre_frontend_rust::lex::lexer::cpu_lexer::Token;
     use vyre_frontend_rust::lex::tokens::{EOF, KW_FN};
 
     fn decode_u32_words(bytes: &[u8]) -> Vec<u32> {

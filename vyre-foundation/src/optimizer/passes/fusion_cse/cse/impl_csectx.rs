@@ -197,7 +197,7 @@ impl CseCtx {
                 tag,
             } => {
                 self.clear_observed_state();
-                Node::async_load_ext(
+                Node::async_load_gpu_driven(
                     source.clone(),
                     destination.clone(),
                     (**offset).clone(),
