@@ -1,5 +1,15 @@
 //! Test: types registers.
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_wo,
+    lit,
+    op,
+};
 
 #[test]
 fn capability_constants_present() {
@@ -62,82 +72,37 @@ fn reg_display_uses_correct_prefix() {
 fn register_declaration_sized_to_used_count() {
     // A kernel with 3 u32 ops declares those registers on top of
     // the reserved launch-ABI registers.
-    let kernel = KernelDescriptor {
-        id: "regs".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(1), LiteralValue::U32(2)],
-        },
-    };
+    let kernel = descriptor("regs")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(1), LiteralValue::U32(2)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains(".reg .u32   %r<30>;"));
 }
 
 fn narrow_global_copy_kernel(element_type: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "narrow_copy".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: element_type.clone(),
-                    element_count: Some(8),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type,
-                    element_count: Some(8),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "output".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("narrow_copy")
+        .slots([
+            global_ro(0, element_type.clone(), "input").with_count(8),
+            global_wo(1, element_type, "output").with_count(8),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build()
 }
 
 #[test]

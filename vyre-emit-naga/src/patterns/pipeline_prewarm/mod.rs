@@ -94,46 +94,23 @@ fn has_child_body(op: &KernelOp) -> bool {
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit};
+    use vyre_lower::{BindingSlot, KernelDescriptor, KernelOpKind, LiteralValue};
 
     fn binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::U32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadWrite,
-            name: format!("b{slot}"),
-        }
+        global_rw(slot, DataType::U32, &format!("b{slot}"))
     }
 
     fn small_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "small".into(),
-            bindings: BindingLayout {
-                slots: vec![binding(0)],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Return,
-                        operands: vec![],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        }
+        descriptor("small")
+            .slot(binding(0))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([lit(0, 0), effect(KernelOpKind::Return, [])])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build()
     }
 
     #[test]
@@ -147,22 +124,9 @@ mod tests {
     fn many_op_kernel_warrants_prewarm() {
         let mut ops = Vec::with_capacity(60);
         for i in 0..60 {
-            ops.push(KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(i),
-            });
+            ops.push(lit(0, i));
         }
-        let kernel = KernelDescriptor {
-            id: "big".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let kernel = descriptor("big").body(body().ops(ops).literal(LiteralValue::U32(0))).build();
         let h = analyze(&kernel);
         assert!(h.should_prewarm);
         assert!(h.reason.contains("op-count"));
@@ -170,18 +134,7 @@ mod tests {
 
     #[test]
     fn many_binding_kernel_warrants_prewarm() {
-        let kernel = KernelDescriptor {
-            id: "many_bindings".into(),
-            bindings: BindingLayout {
-                slots: (0..6).map(binding).collect(),
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let kernel = descriptor("many_bindings").slots((0..6).map(binding)).build();
         let h = analyze(&kernel);
         assert!(h.should_prewarm);
         assert!(h.reason.contains("binding-count"));
@@ -196,16 +149,7 @@ mod tests {
 
     #[test]
     fn empty_kernel_estimated_at_baseline() {
-        let kernel = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let kernel = descriptor("empty").dispatch(64, 1, 1).build();
         let h = analyze(&kernel);
         assert_eq!(h.estimated_first_dispatch_us, 10); // baseline only
         assert!(!h.should_prewarm);

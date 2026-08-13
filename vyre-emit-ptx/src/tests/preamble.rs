@@ -1,5 +1,16 @@
 //! Test: preamble.
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_rw,
+    global_wo,
+    lit,
+    op,
+};
 
 #[test]
 fn emit_produces_preamble_with_target() {
@@ -31,41 +42,18 @@ fn emit_writes_param_for_each_binding() {
 
 #[test]
 fn literal_index_store_uses_immediate_byte_offset() {
-    let kernel = KernelDescriptor {
-        id: "literal_store_offset".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(8),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3), LiteralValue::U32(7)],
-        },
-    };
+    let kernel = descriptor("literal_store_offset")
+        .slot(global_wo(0, DataType::U32, "out").with_count(8))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(3), LiteralValue::U32(7)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("+12]"),
@@ -85,59 +73,24 @@ fn predicate_and_uses_and_pred_not_and_b32() {
     // requires the type suffix to match the operand class. This test
     // builds a kernel that boolean-ANDs two comparisons and checks the
     // emitted text.
-    let kernel = KernelDescriptor {
-        id: "pred_and".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(2),
-                },
-                // p1 = (tid < 3)
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Lt),
-                    operands: vec![2, 0],
-                    result: Some(3),
-                },
-                // p2 = (tid < 5)
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Lt),
-                    operands: vec![2, 1],
-                    result: Some(4),
-                },
-                // p3 = p1 && p2  ← must be `and.pred`
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::And),
-                    operands: vec![3, 4],
-                    result: Some(5),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3), LiteralValue::U32(5)],
-        },
-    };
+    let kernel = descriptor("pred_and")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::LocalInvocationId, [0], 2),
+                    // p1 = (tid < 3)
+                    op(KernelOpKind::BinOpKind(BinOp::Lt), [2, 0], 3),
+                    // p2 = (tid < 5)
+                    op(KernelOpKind::BinOpKind(BinOp::Lt), [2, 1], 4),
+                    // p3 = p1 && p2  ← must be `and.pred`
+                    op(KernelOpKind::BinOpKind(BinOp::And), [3, 4], 5),
+                ])
+                .literals([LiteralValue::U32(3), LiteralValue::U32(5)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("and.pred"),
@@ -174,25 +127,9 @@ fn emit_emits_literal_mov_then_store() {
 #[test]
 fn slot_offset_overflow_returns_invalid_binding_error() {
     let overflow_slot: u32 = 1_073_741_824; // slot * 4 = 0x1_0000_0000, overflows u32
-    let desc = KernelDescriptor {
-        id: "overflow_slot".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: overflow_slot,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadOnly,
-                name: "huge".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let desc = descriptor("overflow_slot")
+        .slot(global_ro(overflow_slot, DataType::U32, "huge"))
+        .build();
     let result = emit(&desc);
     match result {
         Err(crate::EmitError::InvalidBinding { slot, reason }) => {

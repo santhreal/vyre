@@ -1,86 +1,27 @@
 //! Test: memory vector.
 use super::*;
+use vyre_lower::descriptor_builder::{effect, lit, op};
 
 fn dynamic_reassociated_vector_load_kernel(seed: u32) -> KernelDescriptor {
     let stride = seed.wrapping_mul(13).wrapping_add(1) << 2;
     two_slot_u32_kernel(
         "dynamic_reassociated_vec_load",
         vec![
-            KernelOp {
-                kind: KernelOpKind::LocalInvocationId,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 2],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 3],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 7],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 4],
-                result: Some(9),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 9],
-                result: Some(10),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 5],
-                result: Some(11),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 11],
-                result: Some(12),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(13),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 13, 12],
-                result: None,
-            },
+            op(KernelOpKind::LocalInvocationId, [0], 0),
+            lit(0, 1),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 2),
+            lit(1, 3),
+            lit(2, 4),
+            lit(3, 5),
+            op(KernelOpKind::LoadGlobal, [0, 2], 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 7),
+            op(KernelOpKind::LoadGlobal, [0, 7], 8),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
+            op(KernelOpKind::LoadGlobal, [0, 9], 10),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 5], 11),
+            op(KernelOpKind::LoadGlobal, [0, 11], 12),
+            lit(4, 13),
+            effect(KernelOpKind::StoreGlobal, [1, 13, 12]),
         ],
         vec![
             LiteralValue::U32(stride),
@@ -98,111 +39,27 @@ fn dynamic_reassociated_vector_store_kernel(seed: u32) -> KernelDescriptor {
     two_slot_u32_kernel(
         "dynamic_reassociated_vec_store",
         vec![
-            KernelOp {
-                kind: KernelOpKind::LocalInvocationId,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![0, 1],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 6],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![5],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 8],
-                result: Some(9),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![6],
-                result: Some(10),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 10],
-                result: Some(11),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![7],
-                result: Some(12),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 12],
-                result: Some(13),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 2, 7],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 3],
-                result: Some(14),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 14, 9],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 4],
-                result: Some(15),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 15, 11],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 5],
-                result: Some(16),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 16, 13],
-                result: None,
-            },
+            op(KernelOpKind::LocalInvocationId, [0], 0),
+            lit(0, 1),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 2),
+            lit(1, 3),
+            lit(2, 4),
+            lit(3, 5),
+            lit(4, 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 6], 7),
+            lit(5, 8),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 8], 9),
+            lit(6, 10),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+            lit(7, 12),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+            effect(KernelOpKind::StoreGlobal, [1, 2, 7]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 14),
+            effect(KernelOpKind::StoreGlobal, [1, 14, 9]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 15),
+            effect(KernelOpKind::StoreGlobal, [1, 15, 11]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 5], 16),
+            effect(KernelOpKind::StoreGlobal, [1, 16, 13]),
         ],
         vec![
             LiteralValue::U32(stride),
@@ -221,116 +78,28 @@ fn dynamic_misaligned_gather_to_vector_store_kernel() -> KernelDescriptor {
     two_slot_u32_kernel(
         "dynamic_misaligned_gather_to_vec_store",
         vec![
-            KernelOp {
-                kind: KernelOpKind::LocalInvocationId,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![0, 1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![0, 4],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 3],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 2],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 7],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(9),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 9],
-                result: Some(10),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 10],
-                result: Some(11),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(12),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 12],
-                result: Some(13),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 13],
-                result: Some(14),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 5, 6],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 2],
-                result: Some(15),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 15, 8],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 9],
-                result: Some(16),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 16, 11],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 12],
-                result: Some(17),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 17, 14],
-                result: None,
-            },
+            op(KernelOpKind::LocalInvocationId, [0], 0),
+            lit(0, 1),
+            lit(1, 2),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 3),
+            lit(2, 4),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 4], 5),
+            op(KernelOpKind::LoadGlobal, [0, 3], 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 2], 7),
+            op(KernelOpKind::LoadGlobal, [0, 7], 8),
+            lit(3, 9),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 9], 10),
+            op(KernelOpKind::LoadGlobal, [0, 10], 11),
+            lit(4, 12),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 12], 13),
+            op(KernelOpKind::LoadGlobal, [0, 13], 14),
+            effect(KernelOpKind::StoreGlobal, [1, 5, 6]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 2], 15),
+            effect(KernelOpKind::StoreGlobal, [1, 15, 8]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 9], 16),
+            effect(KernelOpKind::StoreGlobal, [1, 16, 11]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 12], 17),
+            effect(KernelOpKind::StoreGlobal, [1, 17, 14]),
         ],
         vec![
             LiteralValue::U32(5),

@@ -203,28 +203,11 @@ fn literal_u32_value(body: &KernelBody, operand_id: u32) -> Option<u32> {
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
-
-    fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
-        KernelOp {
-            kind,
-            operands,
-            result,
-        }
-    }
+    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, op};
+    use vyre_lower::{BindingSlot, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
     fn binding(slot: u32) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::F32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility: BindingVisibility::ReadWrite,
-            name: format!("buf{slot}"),
-        }
+        global_rw(slot, DataType::F32, &format!("buf{slot}"))
     }
 
     fn k(
@@ -232,16 +215,11 @@ mod tests {
         ops: Vec<KernelOp>,
         literals: Vec<LiteralValue>,
     ) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals,
-            },
-        }
+        descriptor("k")
+            .slots(slots)
+            .dispatch(64, 1, 1)
+            .body(body().ops(ops).literals(literals))
+            .build()
     }
 
     // ============== Positive truth (group detected) ==============
@@ -252,19 +230,19 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)), // base, id 0
-                op(KernelOpKind::Literal, vec![0], Some(10)),         // 0
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)), // base+0
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)), // 1
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)), // base+1
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
-                op(KernelOpKind::Literal, vec![2], Some(14)), // 2
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 14], Some(15)), // base+2
-                op(KernelOpKind::LoadGlobal, vec![0, 15], Some(22)),
-                op(KernelOpKind::Literal, vec![3], Some(16)), // 3
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 16], Some(17)), // base+3
-                op(KernelOpKind::LoadGlobal, vec![0, 17], Some(23)),
+                op(KernelOpKind::LocalInvocationId, [], 0), // base, id 0
+                op(KernelOpKind::Literal, [0], 10),         // 0
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11), // base+0
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12), // 1
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13), // base+1
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
+                op(KernelOpKind::Literal, [2], 14), // 2
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 14], 15), // base+2
+                op(KernelOpKind::LoadGlobal, [0, 15], 22),
+                op(KernelOpKind::Literal, [3], 16), // 3
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 16], 17), // base+3
+                op(KernelOpKind::LoadGlobal, [0, 17], 23),
             ],
             vec![
                 LiteralValue::U32(0),
@@ -287,13 +265,13 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         );
@@ -307,17 +285,17 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::Literal, vec![3], Some(99)),
-                op(KernelOpKind::StoreGlobal, vec![0, 11, 99], None),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::StoreGlobal, vec![0, 13, 99], None),
-                op(KernelOpKind::Literal, vec![2], Some(14)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 14], Some(15)),
-                op(KernelOpKind::StoreGlobal, vec![0, 15, 99], None),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::Literal, [3], 99),
+                effect(KernelOpKind::StoreGlobal, [0, 11, 99]),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                effect(KernelOpKind::StoreGlobal, [0, 13, 99]),
+                op(KernelOpKind::Literal, [2], 14),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 14], 15),
+                effect(KernelOpKind::StoreGlobal, [0, 15, 99]),
             ],
             vec![
                 LiteralValue::U32(0),
@@ -340,13 +318,13 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(2)],
         );
@@ -359,13 +337,13 @@ mod tests {
         let kk = k(
             vec![binding(0), binding(1)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![1, 13], Some(21)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [1, 13], 21),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         );
@@ -378,13 +356,13 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::StoreGlobal, vec![0, 13, 20], None),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                effect(KernelOpKind::StoreGlobal, [0, 13, 20]),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         );
@@ -397,9 +375,9 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(1)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 1], Some(2)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 1),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
             ],
             vec![LiteralValue::U32(7)],
         );
@@ -416,22 +394,22 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
-                op(KernelOpKind::Literal, vec![2], Some(14)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 14], Some(15)),
-                op(KernelOpKind::LoadGlobal, vec![0, 15], Some(22)),
-                op(KernelOpKind::Literal, vec![3], Some(16)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 16], Some(17)),
-                op(KernelOpKind::LoadGlobal, vec![0, 17], Some(23)),
-                op(KernelOpKind::Literal, vec![4], Some(18)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 18], Some(19)),
-                op(KernelOpKind::LoadGlobal, vec![0, 19], Some(24)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
+                op(KernelOpKind::Literal, [2], 14),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 14], 15),
+                op(KernelOpKind::LoadGlobal, [0, 15], 22),
+                op(KernelOpKind::Literal, [3], 16),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 16], 17),
+                op(KernelOpKind::LoadGlobal, [0, 17], 23),
+                op(KernelOpKind::Literal, [4], 18),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 18], 19),
+                op(KernelOpKind::LoadGlobal, [0, 19], 24),
             ],
             vec![
                 LiteralValue::U32(0),
@@ -458,14 +436,14 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![20, 20], Some(99)), // pure compute, no buffer touch
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [20, 20], 99), // pure compute, no buffer touch
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
             ],
             vec![LiteralValue::U32(0), LiteralValue::U32(1)],
         );
@@ -482,17 +460,17 @@ mod tests {
         let kk = k(
             vec![binding(0)],
             vec![
-                op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                op(KernelOpKind::Literal, vec![0], Some(10)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                op(KernelOpKind::Literal, vec![3], Some(98)), // 5
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 98], Some(50)), // base+5
-                op(KernelOpKind::Literal, vec![0], Some(99)), // value to store
-                op(KernelOpKind::StoreGlobal, vec![0, 50, 99], None),
-                op(KernelOpKind::Literal, vec![1], Some(12)),
-                op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
+                op(KernelOpKind::LocalInvocationId, [], 0),
+                op(KernelOpKind::Literal, [0], 10),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                op(KernelOpKind::Literal, [3], 98), // 5
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 98], 50), // base+5
+                op(KernelOpKind::Literal, [0], 99), // value to store
+                effect(KernelOpKind::StoreGlobal, [0, 50, 99]),
+                op(KernelOpKind::Literal, [1], 12),
+                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                op(KernelOpKind::LoadGlobal, [0, 13], 21),
             ],
             vec![
                 LiteralValue::U32(0),
@@ -515,7 +493,7 @@ mod tests {
     fn adversarial_load_with_no_operands_skipped_safely() {
         let kk = k(
             vec![binding(0)],
-            vec![op(KernelOpKind::LoadGlobal, vec![], None)],
+            vec![effect(KernelOpKind::LoadGlobal, [])],
             vec![],
         );
         let p = analyze(&kk);
@@ -526,40 +504,34 @@ mod tests {
     fn adversarial_load_inside_loop_body_packs_inner_group() {
         // Phase 1 walks structured-body children, so a 4-load group
         // inside a for-loop should pack.
-        let kk = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![binding(0)],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    op(KernelOpKind::Literal, vec![0], Some(0)),
-                    op(KernelOpKind::Literal, vec![1], Some(1)),
-                    op(
-                        KernelOpKind::StructuredForLoop {
+        let kk = descriptor("k")
+            .slot(binding(0))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        op(KernelOpKind::Literal, [0], 0),
+                        op(KernelOpKind::Literal, [1], 1),
+                        effect(KernelOpKind::StructuredForLoop {
                             loop_var: "".into(),
-                        },
-                        vec![0, 1, 0],
-                        None,
-                    ),
-                ],
-                child_bodies: vec![KernelBody {
-                    ops: vec![
-                        op(KernelOpKind::LocalInvocationId, vec![], Some(0)),
-                        op(KernelOpKind::Literal, vec![0], Some(10)),
-                        op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 10], Some(11)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 11], Some(20)),
-                        op(KernelOpKind::Literal, vec![1], Some(12)),
-                        op(KernelOpKind::BinOpKind(BinOp::Add), vec![0, 12], Some(13)),
-                        op(KernelOpKind::LoadGlobal, vec![0, 13], Some(21)),
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-                }],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            },
-        };
+                        }, [0, 1, 0]),
+                    ])
+                    .children([
+                        body()
+                            .ops([
+                                op(KernelOpKind::LocalInvocationId, [], 0),
+                                op(KernelOpKind::Literal, [0], 10),
+                                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 10], 11),
+                                op(KernelOpKind::LoadGlobal, [0, 11], 20),
+                                op(KernelOpKind::Literal, [1], 12),
+                                op(KernelOpKind::BinOpKind(BinOp::Add), [0, 12], 13),
+                                op(KernelOpKind::LoadGlobal, [0, 13], 21),
+                            ])
+                            .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+            )
+            .build();
         let p = analyze(&kk);
         assert_eq!(p.groups.len(), 1);
         assert_eq!(p.groups[0].pack, PackKind::Vec2);

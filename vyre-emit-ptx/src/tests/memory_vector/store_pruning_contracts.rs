@@ -1,40 +1,17 @@
 use super::*;
+use vyre_lower::descriptor_builder::{body, effect, lit};
 
 #[test]
 fn emit_does_not_fuse_vector_store_across_value_producer_gap() {
     let s = emit(&two_slot_u32_kernel(
         "value_gap_vec_store",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 2, 3],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+            lit(2, 2),
+            lit(3, 3),
+            effect(KernelOpKind::StoreGlobal, [1, 2, 3]),
         ],
         vec![
             LiteralValue::U32(0),
@@ -60,56 +37,16 @@ fn vector_store_pruning_keeps_parent_index_used_by_child_body() {
     let kernel = two_slot_u32_kernel(
         "vec_store_parent_index_child_use",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 2, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 3, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 4, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::StructuredBlock,
-                operands: vec![0],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
+            lit(3, 3),
+            lit(4, 4),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+            effect(KernelOpKind::StoreGlobal, [1, 2, 1]),
+            effect(KernelOpKind::StoreGlobal, [1, 3, 1]),
+            effect(KernelOpKind::StoreGlobal, [1, 4, 1]),
+            effect(KernelOpKind::StructuredBlock, [0]),
         ],
         vec![
             LiteralValue::U32(0),
@@ -120,15 +57,7 @@ fn vector_store_pruning_keeps_parent_index_used_by_child_body() {
         ],
     );
     let mut kernel = kernel;
-    kernel.body.child_bodies = vec![KernelBody {
-        ops: vec![KernelOp {
-            kind: KernelOpKind::StoreGlobal,
-            operands: vec![1, 2, 1],
-            result: None,
-        }],
-        child_bodies: vec![],
-        literals: vec![],
-    }];
+    kernel.body.child_bodies = vec![body().op(effect(KernelOpKind::StoreGlobal, [1, 2, 1])).build()];
 
     let s = emit(&kernel).expect(
         "Fix: vector-store index producer pruning must keep parent results read by child bodies.",

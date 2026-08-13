@@ -12,8 +12,13 @@ use crate::{KernelBody, KernelOp, KernelOpKind};
 
 /// True when `kind.operands[pos]` is a result-id reference in the lowered
 /// kernel SSA namespace.
+///
+/// ONE owner for the operand namespace table. Every analysis and every
+/// emitter that needs to tell an SSA reference from a binding slot, a
+/// literal-pool index, a child-body index, or an axis imports this instead
+/// of re-deriving the per-kind skip offsets.
 #[must_use]
-pub(crate) fn operand_is_result_reference(kind: &KernelOpKind, pos: usize) -> bool {
+pub fn operand_is_result_reference(kind: &KernelOpKind, pos: usize) -> bool {
     use KernelOpKind::*;
     match kind {
         Literal => false,

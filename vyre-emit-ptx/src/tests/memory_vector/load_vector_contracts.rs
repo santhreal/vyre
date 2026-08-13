@@ -1,60 +1,31 @@
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_wo,
+    lit,
+    op,
+    slot,
+};
 
 #[test]
 fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
     let s = emit(&two_slot_u32_kernel(
         "vec_load",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 3],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 1],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 5],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 1],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 7],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 8],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            op(KernelOpKind::LoadGlobal, [0, 0], 2),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
+            op(KernelOpKind::LoadGlobal, [0, 3], 4),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
+            op(KernelOpKind::LoadGlobal, [0, 5], 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
+            op(KernelOpKind::LoadGlobal, [0, 7], 8),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 8]),
         ],
         vec![LiteralValue::U32(0), LiteralValue::U32(1)],
     ))
@@ -78,101 +49,31 @@ fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
     // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4× scalar
     // `ld.global.u32` (a 4× memory-transaction Law-7 pessimization on exactly
     // the buffers the promote pass targets).
-    let desc = KernelDescriptor {
-        id: "vec_load_constant".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(16),
-                    memory_class: MemoryClass::Constant,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(16),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "output".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 0],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![3, 1],
-                    result: Some(5),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 5],
-                    result: Some(6),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![5, 1],
-                    result: Some(7),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 7],
-                    result: Some(8),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 4],
-                    result: Some(9),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![9, 6],
-                    result: Some(10),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![10, 8],
-                    result: Some(11),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 11],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+    let desc = descriptor("vec_load_constant")
+        .slots([
+            slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "input").with_count(16),
+            global_wo(1, DataType::U32, "output").with_count(16),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::LoadConstant, [0, 0], 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
+                    op(KernelOpKind::LoadConstant, [0, 3], 4),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
+                    op(KernelOpKind::LoadConstant, [0, 5], 6),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
+                    op(KernelOpKind::LoadConstant, [0, 7], 8),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [9, 6], 10),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [10, 8], 11),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 11]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let s = emit(&desc).unwrap();
     assert!(
         s.contains("ld.global.v4.u32"),
@@ -236,93 +137,40 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
     // most values (tid % 4 != 0 in general), so alignment cannot be proved
     // for a v4 or v2 load. The emitter must fall back to scalar loads AND emit
     // `// vyre: vector-fusion-skipped` in the PTX text.
-    let desc = KernelDescriptor {
-        id: "unaligned_fusion_fallback".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(1),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "output".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // tid = LocalInvocationId[0]
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // stride = 3  (not a power of 2 aligned multiplier)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                // base = tid * 3
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                // inc1 = 1
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(3),
-                },
-                // base+1 = base + 1
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 3],
-                    result: Some(4),
-                },
-                // Four adjacent loads at base, base+1, base+2, base+3.
-                // Alignment of `tid * 3` mod 4 is unknown → fusion must be skipped.
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 2],
-                    result: Some(5),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 4],
-                    result: Some(6),
-                },
-                // Store just one result to keep the kernel non-trivial.
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(7),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 7, 5],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::U32(3),
-                LiteralValue::U32(1),
-                LiteralValue::U32(0),
-            ],
-        },
-    };
+    let desc = descriptor("unaligned_fusion_fallback")
+        .slots([
+            global_ro(0, DataType::U32, "input"),
+            global_wo(1, DataType::U32, "output").with_count(1),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    // tid = LocalInvocationId[0]
+                    op(KernelOpKind::LocalInvocationId, [0], 0),
+                    // stride = 3  (not a power of 2 aligned multiplier)
+                    lit(0, 1),
+                    // base = tid * 3
+                    op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 2),
+                    // inc1 = 1
+                    lit(1, 3),
+                    // base+1 = base + 1
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+                    // Four adjacent loads at base, base+1, base+2, base+3.
+                    // Alignment of `tid * 3` mod 4 is unknown → fusion must be skipped.
+                    op(KernelOpKind::LoadGlobal, [0, 2], 5),
+                    op(KernelOpKind::LoadGlobal, [0, 4], 6),
+                    // Store just one result to keep the kernel non-trivial.
+                    lit(2, 7),
+                    effect(KernelOpKind::StoreGlobal, [1, 7, 5]),
+                ])
+                .literals([
+                    LiteralValue::U32(3),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(0),
+                ]),
+        )
+        .build();
     let s = emit(&desc).expect("Fix: unaligned adjacent load kernel must emit PTX without error.");
     // Must NOT fuse into a vector load (alignment unknown for tid*3).
     assert!(
@@ -366,88 +214,26 @@ fn constant_binding_loads_fuse_to_plain_global_vector_load_never_nc() {
         id: "const_no_vec".into(),
         bindings: BindingLayout {
             slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(16),
-                    memory_class: MemoryClass::Constant,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "const_input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "output".into(),
-                },
+                slot(0, DataType::U32, MemoryClass::Constant, BindingVisibility::ReadOnly, "const_input").with_count(16),
+                global_wo(1, DataType::U32, "output").with_count(4),
             ],
         },
         dispatch: Dispatch::new(1, 1, 1),
         body: KernelBody {
             // Four consecutive LoadConstant ops at indices 0, 1, 2, 3.
             ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![3],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 0],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 1],
-                    result: Some(5),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 2],
-                    result: Some(6),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadConstant,
-                    operands: vec![0, 3],
-                    result: Some(7),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 4],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 1, 5],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 2, 6],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 3, 7],
-                    result: None,
-                },
+                lit(0, 0),
+                lit(1, 1),
+                lit(2, 2),
+                lit(3, 3),
+                op(KernelOpKind::LoadConstant, [0, 0], 4),
+                op(KernelOpKind::LoadConstant, [0, 1], 5),
+                op(KernelOpKind::LoadConstant, [0, 2], 6),
+                op(KernelOpKind::LoadConstant, [0, 3], 7),
+                effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                effect(KernelOpKind::StoreGlobal, [1, 1, 5]),
+                effect(KernelOpKind::StoreGlobal, [1, 2, 6]),
+                effect(KernelOpKind::StoreGlobal, [1, 3, 7]),
             ],
             child_bodies: vec![],
             literals: vec![

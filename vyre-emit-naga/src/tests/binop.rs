@@ -2,6 +2,7 @@
 //! extended-width type handles (VYRE-NAGA-001 regression).
 use super::*;
 use naga::{Expression, Literal};
+use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
 
 /// BinOp::WrappingSub of two u32 literals must fold to wrapping_sub, not
 /// saturating_sub. 0u32 WrappingSub 1u32 must produce 0xFFFF_FFFFu32, the
@@ -11,37 +12,22 @@ use naga::{Expression, Literal};
 /// value without any error).
 #[test]
 fn fold_literal_wrapping_sub_u32_underflow_wraps() {
-    let desc = KernelDescriptor {
-        id: "wrapping_sub_fold".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: literal 0u32 (left operand)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: literal 1u32 (right operand)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                // result 2: 0u32 WrappingSub 1u32, must fold to 0xFFFF_FFFF,
-                // NOT 0 (saturating). Operands are [left_result_id,
-                // right_result_id].
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::WrappingSub),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+    let desc = descriptor("wrapping_sub_fold")
+        .body(
+            body()
+                .ops([
+                    // result 0: literal 0u32 (left operand)
+                    lit(0, 0),
+                    // result 1: literal 1u32 (right operand)
+                    lit(1, 1),
+                    // result 2: 0u32 WrappingSub 1u32, must fold to 0xFFFF_FFFF,
+                    // NOT 0 (saturating). Operands are [left_result_id,
+                    // right_result_id].
+                    op(KernelOpKind::BinOpKind(BinOp::WrappingSub), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let module = emit(&desc).expect("WrappingSub of u32 literals must emit without error");
 
     // The fold must have produced Literal::U32(0xFFFF_FFFF) in the
@@ -65,32 +51,17 @@ fn fold_literal_wrapping_sub_u32_underflow_wraps() {
 /// match runtime semantics.
 #[test]
 fn fold_literal_plain_sub_u32_underflow_wraps() {
-    let desc = KernelDescriptor {
-        id: "plain_sub_fold".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Sub),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+    let desc = descriptor("plain_sub_fold")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Sub), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let module = emit(&desc).expect("Sub of u32 literals must emit without error");
     let entry = &module.entry_points[0];
     let has_wrapping_result = entry
@@ -143,64 +114,38 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
     //             fix it fell to `return value` which is harmless for matching
     //             kinds but would panic for mismatched kinds, testing this
     //             shape proves the dispatch path is reachable without panicking)
-    let desc = KernelDescriptor {
-        id: "select_u64_arms".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: vyre.literal.u64(100)
-                KernelOp {
-                    kind: KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
-                        extension_id: 10,
-                        extension_kind: "vyre.literal.u64".to_owned(),
-                        payload: 100u64.to_le_bytes().to_vec(),
-                    })),
-                    operands: vec![],
-                    result: Some(0),
-                },
-                // result 1: vyre.literal.u64(200)
-                KernelOp {
-                    kind: KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
-                        extension_id: 11,
-                        extension_kind: "vyre.literal.u64".to_owned(),
-                        payload: 200u64.to_le_bytes().to_vec(),
-                    })),
-                    operands: vec![],
-                    result: Some(1),
-                },
-                // result 2: Literal U32(0) for comparison
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(2),
-                },
-                // result 3: LocalInvocationId (U32)
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(3),
-                },
-                // result 4: thread_id == 0  →  Bool
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Eq),
-                    operands: vec![3, 2],
-                    result: Some(4),
-                },
-                // result 5: Select(cond=Bool, accept=u64(100), reject=u64(200))
-                // coerce_value_to_type(u64_expr, u64_ty) must not panic or fall through.
-                // Before the fix: else branch returned value unchanged.
-                // After the fix: u64_ty → ScalarKind::Uint; actual==target → identity.
-                KernelOp {
-                    kind: KernelOpKind::Select,
-                    operands: vec![4, 0, 1],
-                    result: Some(5),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
+    let desc = descriptor("select_u64_arms")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    // result 0: vyre.literal.u64(100)
+                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                            extension_id: 10,
+                            extension_kind: "vyre.literal.u64".to_owned(),
+                            payload: 100u64.to_le_bytes().to_vec(),
+                        })), [], 0),
+                    // result 1: vyre.literal.u64(200)
+                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                            extension_id: 11,
+                            extension_kind: "vyre.literal.u64".to_owned(),
+                            payload: 200u64.to_le_bytes().to_vec(),
+                        })), [], 1),
+                    // result 2: Literal U32(0) for comparison
+                    lit(0, 2),
+                    // result 3: LocalInvocationId (U32)
+                    op(KernelOpKind::LocalInvocationId, [0], 3),
+                    // result 4: thread_id == 0  →  Bool
+                    op(KernelOpKind::BinOpKind(BinOp::Eq), [3, 2], 4),
+                    // result 5: Select(cond=Bool, accept=u64(100), reject=u64(200))
+                    // coerce_value_to_type(u64_expr, u64_ty) must not panic or fall through.
+                    // Before the fix: else branch returned value unchanged.
+                    // After the fix: u64_ty → ScalarKind::Uint; actual==target → identity.
+                    op(KernelOpKind::Select, [4, 0, 1], 5),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
 
     let module = emit(&desc).expect(
         "Select with u64-typed arms must emit without error; \

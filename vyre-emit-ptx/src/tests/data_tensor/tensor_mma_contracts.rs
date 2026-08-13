@@ -1,4 +1,5 @@
 use super::*;
+use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_wo, lit};
 
 #[test]
 fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
@@ -6,19 +7,11 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
     let mut literals = Vec::new();
     for id in 0..6 {
         literals.push(LiteralValue::U32(id));
-        ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![id],
-            result: Some(id),
-        });
+        ops.push(lit(id, id));
     }
     for id in 6..10 {
         literals.push(LiteralValue::F32(0.0));
-        ops.push(KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![id],
-            result: Some(id),
-        });
+        ops.push(lit(id, id));
     }
     ops.push(KernelOp {
         kind: KernelOpKind::MatrixMma {
@@ -32,37 +25,15 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         operands: (0..10).collect(),
         result: Some(10),
     });
-    ops.push(KernelOp {
-        kind: KernelOpKind::Literal,
-        operands: vec![10],
-        result: Some(14),
-    });
+    ops.push(lit(10, 14));
     literals.push(LiteralValue::U32(0));
-    ops.push(KernelOp {
-        kind: KernelOpKind::StoreGlobal,
-        operands: vec![0, 14, 13],
-        result: None,
-    });
+    ops.push(effect(KernelOpKind::StoreGlobal, [0, 14, 13]));
 
-    let kernel = KernelDescriptor {
-        id: "mma".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::F32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(32, 1, 1),
-        body: KernelBody {
-            ops,
-            child_bodies: vec![],
-            literals,
-        },
-    };
+    let kernel = descriptor("mma")
+        .slot(global_wo(0, DataType::F32, "out").with_count(1))
+        .dispatch(32, 1, 1)
+        .body(body().ops(ops).literals(literals))
+        .build();
 
     vyre_lower::verify::verify(&kernel)
         .expect("MatrixMma must publish result ids base..base+4 to verifier");

@@ -6,40 +6,33 @@
 //! `addr`. The reference evaluator treats U8 as byte-addressed; this test
 //! pins the WGSL emit pattern that keeps both backends in agreement.
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_rw,
+    lit,
+    op,
+};
 
 fn byte_load_desc(element_type: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "byte_load".into(),
-        bindings: BindingLayout {
-            slots: vec![vyre_lower::BindingSlot {
-                slot: 0,
-                element_type,
-                element_count: Some(64),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadOnly,
-                name: "source".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: the byte address (literal 7)
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: source[byte=7]  -  must auto-byte-extract
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7)],
-        },
-    }
+    descriptor("byte_load")
+        .slots([
+            global_ro(0, element_type, "source").with_count(64),
+        ])
+        .body(
+            body()
+                .ops([
+                    // result 0: the byte address (literal 7)
+                    lit(0, 0),
+                    // result 1: source[byte=7]  -  must auto-byte-extract
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build()
 }
 
 #[test]
@@ -151,41 +144,16 @@ fn i8_load_global_emits_byte_extract_with_sign_extend() {
 }
 
 fn byte_store_desc(element_type: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "byte_store".into(),
-        bindings: BindingLayout {
-            slots: vec![vyre_lower::BindingSlot {
-                slot: 0,
-                element_type,
-                element_count: Some(64),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7), LiteralValue::U32(0xab)],
-        },
-    }
+    descriptor("byte_store")
+        .slots([
+            global_rw(0, element_type, "out").with_count(64),
+        ])
+        .body(
+            body()
+                .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                .literals([LiteralValue::U32(7), LiteralValue::U32(0xab)]),
+        )
+        .build()
 }
 
 #[test]
@@ -288,41 +256,24 @@ fn u32_store_global_unchanged_by_byte_rmw_path() {
 /// silently widen. This is the value/cast twin of the buffer-element rejection
 /// in `naga_type_buffer_followup::bytes_buffers`.
 fn cast_to_bytes_desc() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "cast_to_bytes".into(),
-        bindings: BindingLayout {
-            slots: vec![vyre_lower::BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                // result 0: a u32 literal value
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                // result 1: cast that u32 -> Bytes. This is the invalid op that
-                // must fail closed, NOT silently emit a u32 `As` conversion.
-                KernelOp {
-                    kind: KernelOpKind::Cast {
-                        target: DataType::Bytes,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0xab)],
-        },
-    }
+    descriptor("cast_to_bytes")
+        .slots([
+            global_rw(0, DataType::U32, "out").with_count(1),
+        ])
+        .body(
+            body()
+                .ops([
+                    // result 0: a u32 literal value
+                    lit(0, 0),
+                    // result 1: cast that u32 -> Bytes. This is the invalid op that
+                    // must fail closed, NOT silently emit a u32 `As` conversion.
+                    op(KernelOpKind::Cast {
+                            target: DataType::Bytes,
+                        }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(0xab)),
+        )
+        .build()
 }
 
 #[test]

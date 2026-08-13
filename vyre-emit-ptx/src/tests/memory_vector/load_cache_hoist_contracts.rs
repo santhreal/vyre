@@ -1,25 +1,14 @@
 use super::*;
+use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit, op};
 
 #[test]
 fn emit_uniform_load_uses_readonly_global_addressing() {
     let mut desc = two_slot_u32_kernel(
         "uniform_load",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 1],
-                result: None,
-            },
+            lit(0, 0),
+            op(KernelOpKind::LoadGlobal, [0, 0], 1),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
         ],
         vec![LiteralValue::U32(0)],
     );
@@ -34,66 +23,18 @@ fn emit_hoists_ready_pure_op_into_vector_load_gap() {
     let s = emit(&two_slot_u32_kernel(
         "scheduled_vector_load_gap",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 3],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![3, 1],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 5],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 1],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 7],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(9),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![9, 1],
-                result: Some(10),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 8],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            op(KernelOpKind::LoadGlobal, [0, 0], 2),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 3),
+            op(KernelOpKind::LoadGlobal, [0, 3], 4),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [3, 1], 5),
+            op(KernelOpKind::LoadGlobal, [0, 5], 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 1], 7),
+            op(KernelOpKind::LoadGlobal, [0, 7], 8),
+            lit(2, 9),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [9, 1], 10),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 8]),
         ],
         vec![
             LiteralValue::U32(0),
@@ -127,41 +68,13 @@ fn emit_hoists_ready_pure_op_into_load_use_gap() {
     let s = emit(&two_slot_u32_kernel(
         "scheduled_load_gap",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![2, 1],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![4, 1],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 3],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            op(KernelOpKind::LoadGlobal, [0, 0], 2),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [2, 1], 3),
+            lit(2, 4),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [4, 1], 5),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 3]),
         ],
         vec![
             LiteralValue::U32(0),
@@ -195,26 +108,10 @@ fn emit_uses_read_only_cache_loads_for_texture_promoted_bindings() {
     let s = emit(&two_slot_u32_kernel(
         "readonly_cache_loads",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![0, 0],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 2],
-                result: None,
-            },
+            lit(0, 0),
+            op(KernelOpKind::LoadGlobal, [0, 0], 1),
+            op(KernelOpKind::LoadGlobal, [0, 0], 2),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
         ],
         vec![LiteralValue::U32(0)],
     ))
@@ -228,41 +125,18 @@ fn emit_uses_read_only_cache_loads_for_texture_promoted_bindings() {
 
 #[test]
 fn emit_keeps_read_write_loads_on_coherent_global_path() {
-    let desc = KernelDescriptor {
-        id: "rw_global_loads".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(16),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "rw".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
+    let desc = descriptor("rw_global_loads")
+        .slot(global_rw(0, DataType::U32, "rw").with_count(16))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 2),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
     let s = emit(&desc).unwrap();
 
     assert!(s.contains("ld.global.u32"));

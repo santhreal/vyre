@@ -1,59 +1,35 @@
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_wo,
+    lit,
+    op,
+};
 
 #[test]
 fn bool_global_load_uses_word_load_then_predicate_set() {
-    let kernel = KernelDescriptor {
-        id: "bool_load".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::Bool,
-                    element_count: Some(1),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(1),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("bool_load")
+        .slots([
+            global_ro(0, DataType::Bool, "input").with_count(1),
+            global_wo(1, DataType::U32, "out").with_count(1),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::U32,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
+                    }, [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -72,41 +48,18 @@ fn bool_global_load_uses_word_load_then_predicate_set() {
 
 #[test]
 fn bool_global_store_materializes_predicate_word() {
-    let kernel = KernelDescriptor {
-        id: "bool_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::Bool,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::Bool(true)],
-        },
-    };
+    let kernel = descriptor("bool_store")
+        .slot(global_wo(0, DataType::Bool, "out").with_count(1))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::Bool(true)]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(

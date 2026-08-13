@@ -1,30 +1,23 @@
 //! Test: descriptor control.
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_rw,
+    lit,
+    op,
+    slot,
+};
 
 /// Build `literal -> Cast(target)` so the emitted module's 64-bit backing
 /// `Compose(vec2<u32>)` can be inspected for the high-word extension policy.
 fn cast_widen_desc(literal: LiteralValue, target: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "cast_widen".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![literal],
-        },
-    }
+    descriptor("cast_widen")
+        .body(body().ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)]).literal(literal))
+        .build()
 }
 
 /// The single 2-component `Compose` (the vec2<u32> 64-bit backing) high-word
@@ -53,66 +46,24 @@ fn high_word_of_only_vec2_compose(module: &naga::Module) -> naga::Expression {
 /// a `U64` out buffer. Used to prove the 64-bit carry gate fires for arithmetic
 /// and admits the carry-free bitwise ops.
 fn u64_binop_desc(binop: BinOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "u64_binop".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U64,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U64,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(binop),
-                    operands: vec![1, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 4],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    }
+    descriptor("u64_binop")
+        .slots([
+            global_ro(0, DataType::U64, "src").with_count(4),
+            global_rw(1, DataType::U64, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
+                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
 }
 
 #[test]
@@ -202,131 +153,47 @@ fn u64_bitwise_binops_emit_valid_componentwise_wgsl() {
 /// to a u32 out. Both operands are runtime loads so no constant fold short-
 /// circuits the divide.
 fn u32_div_desc(binop: BinOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "u32_div".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(binop),
-                    operands: vec![1, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 4],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    }
+    descriptor("u32_div")
+        .slots([
+            global_ro(0, DataType::U32, "src").with_count(4),
+            global_rw(1, DataType::U32, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
+                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
 }
 
 /// Signed (I32) twin of `u32_div_desc`: loads two i32 values and applies `binop`,
 /// storing into an i32 buffer. Used to exercise the signed div/mod emit path.
 fn i32_div_desc(binop: BinOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "i32_div".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::I32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::I32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(binop),
-                    operands: vec![1, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 4],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    }
+    descriptor("i32_div")
+        .slots([
+            global_ro(0, DataType::I32, "src").with_count(4),
+            global_rw(1, DataType::I32, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::LoadGlobal, [0, 2], 3),
+                    op(KernelOpKind::BinOpKind(binop), [1, 3], 4),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 4]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
 }
 
 /// naga's `BinaryOperator::Modulo` lowers to an UNSIGNED remainder on the SPIR-V
@@ -399,56 +266,22 @@ fn signed_division_still_emits_single_divide() {
 
 /// Load a U64 (vec2<u32>), cast to `target`, store to an `out_elem` buffer.
 fn u64_narrow_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "u64_narrow".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U64,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: out_elem,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("u64_narrow")
+        .slots([
+            global_ro(0, DataType::U64, "src").with_count(4),
+            global_rw(1, out_elem, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::Cast { target }, [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build()
 }
 
 #[test]
@@ -488,56 +321,22 @@ fn u64_to_i32_narrowing_cast_validates() {
 /// prove the Float->{U32,I32} cast emits the explicit Rust-saturating guard
 /// (NaN->0, overflow->INT_MAX) instead of naga's bare clamp-to-representable-f32.
 fn f32_to_int_cast_desc(target: DataType, out_elem: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "f32_to_int".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: out_elem,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("f32_to_int")
+        .slots([
+            global_ro(0, DataType::F32, "src").with_count(4),
+            global_rw(1, out_elem, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::Cast { target }, [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build()
 }
 
 #[test]
@@ -824,56 +623,22 @@ fn signed_narrowing_cast_sign_extends_and_validates() {
 }
 
 fn wide_cast_desc(src_elem: DataType, target: DataType, out_elem: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "wide_cast".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: src_elem,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: out_elem,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("wide_cast")
+        .slots([
+            global_ro(0, src_elem, "src").with_count(4),
+            global_rw(1, out_elem, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::Cast { target }, [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build()
 }
 
 #[test]
@@ -923,56 +688,22 @@ fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
 
 /// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
 fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "u64_unop".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U64,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U64,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::UnOpKind(unop),
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    }
+    descriptor("u64_unop")
+        .slots([
+            global_ro(0, DataType::U64, "src").with_count(4),
+            global_rw(1, DataType::U64, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::UnOpKind(unop), [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build()
 }
 
 #[test]
@@ -1035,61 +766,23 @@ fn u32_variable_shift_desc(binop: BinOp) -> KernelDescriptor {
 
 /// Shift `x` (slot 0 idx 0) by a constant in-range `amount` literal.
 fn u32_const_shift_desc(binop: BinOp, amount: u32) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "u32_const_shift".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(binop),
-                    operands: vec![1, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(amount)],
-        },
-    }
+    descriptor("u32_const_shift")
+        .slots([
+            global_ro(0, DataType::U32, "src").with_count(4),
+            global_rw(1, DataType::U32, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::BinOpKind(binop), [1, 2], 3),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 3]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(amount)]),
+        )
+        .build()
 }
 
 #[test]
@@ -1265,61 +958,23 @@ fn comparisons_on_signed_buffer_load_emit_valid_wgsl() {
         BinOp::Eq,
         BinOp::Ne,
     ] {
-        let desc = KernelDescriptor {
-            id: "signed_cmp".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::I32,
-                        element_count: Some(4),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "src".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::U32,
-                        element_count: Some(4),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadWrite,
-                        name: "out".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(binop),
-                        operands: vec![1, 2],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![1, 0, 3],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(5)],
-            },
-        };
+        let desc = descriptor("signed_cmp")
+            .slots([
+                global_ro(0, DataType::I32, "src").with_count(4),
+                global_rw(1, DataType::U32, "out").with_count(4),
+            ])
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                        lit(1, 2),
+                        op(KernelOpKind::BinOpKind(binop), [1, 2], 3),
+                        effect(KernelOpKind::StoreGlobal, [1, 0, 3]),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(5)]),
+            )
+            .build();
         let module = emit(&desc).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
         validator
             .validate(&module)
@@ -1346,61 +1001,23 @@ fn bitops_on_signed_buffer_load_emit_valid_wgsl() {
         BinOp::Mul,
     ];
     for binop in ops {
-        let desc = KernelDescriptor {
-            id: "signed_bitop".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::I32,
-                        element_count: Some(4),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "src".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::U32,
-                        element_count: Some(4),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadWrite,
-                        name: "out".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(binop),
-                        operands: vec![1, 2],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![1, 0, 3],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(0xff)],
-            },
-        };
+        let desc = descriptor("signed_bitop")
+            .slots([
+                global_ro(0, DataType::I32, "src").with_count(4),
+                global_rw(1, DataType::U32, "out").with_count(4),
+            ])
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                        lit(1, 2),
+                        op(KernelOpKind::BinOpKind(binop), [1, 2], 3),
+                        effect(KernelOpKind::StoreGlobal, [1, 0, 3]),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(0xff)]),
+            )
+            .build();
         let module = emit(&desc).unwrap_or_else(|e| panic!("{binop:?}: emit failed: {e}"));
         validator
             .validate(&module)
@@ -1416,56 +1033,22 @@ fn unpack_on_signed_buffer_load_emits_valid_wgsl() {
     // `scalar_kind` does not resolve through the `Load(Access)` chain, so
     // `unify_binary_operand_types` cannot match the `& mask` operands → it would
     // emit `And(i32, u32)`, which naga rejects.
-    let desc = KernelDescriptor {
-        id: "unpack_signed".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                vyre_lower::BindingSlot {
-                    slot: 0,
-                    element_type: DataType::I32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                vyre_lower::BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(4),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::LoadGlobal,
-                    operands: vec![0, 0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::UnOpKind(UnOp::Unpack8Low),
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![1, 0, 2],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
+    let desc = descriptor("unpack_signed")
+        .slots([
+            global_ro(0, DataType::I32, "src").with_count(4),
+            global_rw(1, DataType::U32, "out").with_count(4),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                    op(KernelOpKind::UnOpKind(UnOp::Unpack8Low), [1], 2),
+                    effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+                ])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
     let module = emit(&desc).expect("unpack-on-signed-load must emit");
     Validator::new(ValidationFlags::all(), Capabilities::all())
         .validate(&module)
@@ -1480,62 +1063,29 @@ fn signed_i32_arithmetic_shift_right_emits_valid_wgsl() {
     // requires the shift AMOUNT (right operand) to be u32. The probe: emit a
     // real signed shift and run naga's validator, if the emitter coerced the
     // shift amount to i32 (to match the signed left), the module is invalid WGSL.
-    let desc = KernelDescriptor {
-        id: "signed_shr".into(),
-        bindings: BindingLayout {
-            slots: vec![vyre_lower::BindingSlot {
-                slot: 0,
-                element_type: DataType::I32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let desc = descriptor("signed_shr")
+        .slots([
+            global_rw(0, DataType::I32, "out").with_count(1),
+        ])
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::I32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Shr),
-                    operands: vec![1, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 4, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::U32(0x8000_0000),
-                LiteralValue::U32(1),
-                LiteralValue::U32(0),
-            ],
-        },
-    };
+                    }, [0], 1),
+                    lit(1, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Shr), [1, 2], 3),
+                    lit(2, 4),
+                    effect(KernelOpKind::StoreGlobal, [0, 4, 3]),
+                ])
+                .literals([
+                    LiteralValue::U32(0x8000_0000),
+                    LiteralValue::U32(1),
+                    LiteralValue::U32(0),
+                ]),
+        )
+        .build();
     let module = emit(&desc).expect("i32 >> 1 must emit");
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     validator
@@ -1687,31 +1237,20 @@ fn descriptor_async_store_emits_bounded_copy_loop() {
 
 #[test]
 fn descriptor_trap_emits_sidecar_atomic_path() {
-    let desc = KernelDescriptor {
-        id: "trap".into(),
-        bindings: BindingLayout {
-            slots: vec![trap_sidecar_slot(0)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            literals: vec![LiteralValue::U32(7)],
-            child_bodies: vec![],
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Trap {
+    let desc = descriptor("trap")
+        .slot(trap_sidecar_slot(0))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    effect(KernelOpKind::Trap {
                         tag: "page-fault".into(),
-                    },
-                    operands: vec![0],
-                    result: None,
-                },
-            ],
-        },
-    };
+                    }, [0]),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build();
     let module = emit(&desc).expect("descriptor Trap must emit sidecar atomics");
     let body = &module.entry_points[0].function.body;
     assert!(
@@ -1727,95 +1266,55 @@ fn descriptor_trap_emits_sidecar_atomic_path() {
 
 #[test]
 fn descriptor_resume_is_runtime_marker_not_unsupported() {
-    let desc = KernelDescriptor {
-        id: "resume".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            literals: vec![],
-            child_bodies: vec![],
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Resume { tag: "r".into() },
-                operands: vec![],
-                result: None,
-            }],
-        },
-    };
+    let desc = descriptor("resume")
+        .body(body().op(effect(KernelOpKind::Resume { tag: "r".into() }, [])))
+        .build();
     emit(&desc).expect("descriptor Resume is a runtime sequencing marker");
 }
 
 #[test]
 fn descriptor_wide_literal_opaque_emits_from_payload() {
-    let desc = KernelDescriptor {
-        id: "opaque-lit".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            literals: vec![],
-            child_bodies: vec![],
-            ops: vec![KernelOp {
-                kind: KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+    let desc = descriptor("opaque-lit")
+        .body(
+            body()
+                .ops([
+                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
                     extension_id: 1,
                     extension_kind: "vyre.literal.u64".to_owned(),
                     payload: 42u64.to_le_bytes().to_vec(),
-                })),
-                operands: vec![],
-                result: Some(0),
-            }],
-        },
-    };
+                })), [], 0),
+                ]),
+        )
+        .build();
     emit(&desc).expect("known opaque wide literal must emit from descriptor payload");
 }
 
 #[test]
 fn descriptor_structured_for_loop_emits_naga_loop() {
-    let desc = KernelDescriptor {
-        id: "loop".into(),
-        bindings: BindingLayout {
-            slots: vec![u32_output_slot(0)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredForLoop {
+    let desc = descriptor("loop")
+        .slot(u32_output_slot(0))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredForLoop {
                         loop_var: "i".into(),
-                    },
-                    operands: vec![0, 1, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                literals: vec![],
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::LoopIndex {
+                    }, [0, 1, 0]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            op(KernelOpKind::LoopIndex {
                             loop_var: "i".into(),
-                        },
-                        operands: vec![],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 2, 2],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-            }],
-        },
-    };
+                        }, [], 2),
+                            effect(KernelOpKind::StoreGlobal, [0, 2, 2]),
+                        ]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(4)]),
+        )
+        .build();
 
     let module = emit(&desc).expect("descriptor loop must emit through Naga");
     assert!(
@@ -1828,42 +1327,23 @@ fn descriptor_structured_for_loop_emits_naga_loop() {
 fn atomic_result_can_feed_later_descriptor_ops() {
     use vyre_foundation::ir::AtomicOp;
 
-    let desc = KernelDescriptor {
-        id: "atomic-result".into(),
-        bindings: BindingLayout {
-            slots: vec![u32_output_slot(0)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            child_bodies: vec![],
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
+    let desc = descriptor("atomic-result")
+        .slot(u32_output_slot(0))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::Atomic {
                         op: AtomicOp::Add,
                         ordering: MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![0, 0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 2],
-                    result: None,
-                },
-            ],
-        },
-    };
+                    }, [0, 0, 1], 2),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 2]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
 
     emit(&desc).expect("atomic RMW old value must remain usable by later descriptor ops");
 }
@@ -1875,24 +1355,18 @@ fn atomic_result_can_feed_later_descriptor_ops() {
 #[test]
 fn opaque_u64_literal_above_u32_max_emits_as_u64() {
     let value: u64 = 1u64 << 40; // 0x10000000000, above u32::MAX
-    let desc = KernelDescriptor {
-        id: "opaque-u64-wide".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            literals: vec![],
-            child_bodies: vec![],
-            ops: vec![KernelOp {
-                kind: KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+    let desc = descriptor("opaque-u64-wide")
+        .body(
+            body()
+                .ops([
+                    op(KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
                     extension_id: 1,
                     extension_kind: "vyre.literal.u64".to_owned(),
                     payload: value.to_le_bytes().to_vec(),
-                })),
-                operands: vec![],
-                result: Some(0),
-            }],
-        },
-    };
+                })), [], 0),
+                ]),
+        )
+        .build();
     // Before the fix: hard-errors with InvalidDescriptor("u64 literal ... exceeds u32::MAX").
     // After the fix: emits Literal::U64(0x10000000000) successfully.
     let module = emit(&desc)
@@ -1937,25 +1411,12 @@ fn uniform_and_constant_bindings_both_emit_read_only_storage_not_uniform() {
         (MemoryClass::Uniform, "Uniform"),
         (MemoryClass::Constant, "Constant"),
     ] {
-        let desc = KernelDescriptor {
-            id: "address_space".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(1),
-                    memory_class: class,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "params".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("address_space")
+            .slots([
+                slot(0, DataType::U32, class, BindingVisibility::ReadOnly, "params").with_count(1),
+            ])
+            .dispatch(64, 1, 1)
+            .build();
 
         let module = crate::emit(&desc).expect("Fix: single-binding descriptor must emit");
         let spaces: Vec<naga::AddressSpace> = module

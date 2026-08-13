@@ -1,29 +1,17 @@
 //! Test: subgroup.
 use super::*;
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
 
 #[test]
 fn subgroup_ballot_emits_vote_sync_ballot() {
-    let kernel = KernelDescriptor {
-        id: "ballot".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupBallot,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::Bool(true)],
-        },
-    };
+    let kernel = descriptor("ballot")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::SubgroupBallot, [0], 1)])
+                .literal(LiteralValue::Bool(true)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
     assert!(s.contains("vote.sync.ballot.b32"));
@@ -31,64 +19,36 @@ fn subgroup_ballot_emits_vote_sync_ballot() {
 
 #[test]
 fn subgroup_shuffle_emits_shfl_sync_idx() {
-    let kernel = KernelDescriptor {
-        id: "shuffle".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupShuffle,
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7), LiteralValue::U32(3)],
-        },
-    };
+    let kernel = descriptor("shuffle")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::SubgroupShuffle, [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(7), LiteralValue::U32(3)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("shfl.sync.idx.b32"));
 }
 
 #[test]
 fn f32_subgroup_shuffle_bitcasts_through_b32() {
-    let kernel = KernelDescriptor {
-        id: "shuffle_f32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupShuffle,
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(7.0), LiteralValue::U32(3)],
-        },
-    };
+    let kernel = descriptor("shuffle_f32")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::SubgroupShuffle, [0, 1], 2),
+                ])
+                .literals([LiteralValue::F32(7.0), LiteralValue::U32(3)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("mov.b32"));
     assert!(s.contains("shfl.sync.idx.b32"));
@@ -96,29 +56,19 @@ fn f32_subgroup_shuffle_bitcasts_through_b32() {
 
 #[test]
 fn f32_subgroup_add_emits_shuffle_tree() {
-    let kernel = KernelDescriptor {
-        id: "add".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+    let kernel = descriptor("add")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Add,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(5.0)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::F32(5.0)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
     // All-lane broadcast contract: f32 reduction uses an XOR all-reduce so every
@@ -145,29 +95,19 @@ fn f32_subgroup_add_emits_shuffle_tree() {
 
 #[test]
 fn u32_subgroup_add_emits_redux_sync() {
-    let kernel = KernelDescriptor {
-        id: "add_u32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+    let kernel = descriptor("add_u32")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Add,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(5)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(5)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("redux.sync.add.u32"));
 }
@@ -176,29 +116,19 @@ fn u32_subgroup_add_emits_redux_sync() {
 fn u32_subgroup_mul_emits_idx_butterfly_not_redux() {
     // Integer product has no `redux.sync`; it must reduce with the shfl.idx XOR
     // butterfly (laneid^offset source) and `mul.lo.u32`, all-lane-broadcast.
-    let kernel = KernelDescriptor {
-        id: "mul_u32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+    let kernel = descriptor("mul_u32")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Mul,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(3)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
     assert!(s.contains("%laneid"));
@@ -222,29 +152,19 @@ fn f32_subgroup_mul_emits_mul_f32_butterfly_not_redux() {
     // f32 product has no `redux.sync` (redux is integer-only); it reduces with
     // the shared shfl.idx XOR butterfly and a `mul.f32` combine, bitcasting the
     // accumulator through b32 around each shuffle. All-lane broadcast.
-    let kernel = KernelDescriptor {
-        id: "mul_f32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+    let kernel = descriptor("mul_f32")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Mul,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(3.0)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::F32(3.0)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("activemask.b32"));
     assert!(s.contains("%laneid"));
@@ -265,40 +185,20 @@ fn f32_subgroup_mul_emits_mul_f32_butterfly_not_redux() {
 
 #[test]
 fn subgroup_local_id_emits_laneid() {
-    let kernel = KernelDescriptor {
-        id: "lane".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::SubgroupLocalId,
-                operands: vec![],
-                result: Some(0),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let kernel = descriptor("lane")
+        .dispatch(64, 1, 1)
+        .body(body().op(op(KernelOpKind::SubgroupLocalId, [], 0)))
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("%laneid"));
 }
 
 #[test]
 fn subgroup_size_emits_probed_width_literal() {
-    let kernel = KernelDescriptor {
-        id: "wsz".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::SubgroupSize,
-                operands: vec![],
-                result: Some(0),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let kernel = descriptor("wsz")
+        .dispatch(64, 1, 1)
+        .body(body().op(op(KernelOpKind::SubgroupSize, [], 0)))
+        .build();
     let s = emit_with_options(
         &kernel,
         PtxEmitOptions {
@@ -315,78 +215,42 @@ fn subgroup_size_emits_probed_width_literal() {
 #[test]
 fn atomic_unsupported_op_returns_error() {
     use vyre_foundation::ir::AtomicOp;
-    let kernel = KernelDescriptor {
-        id: "k".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "b".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
+    let kernel = descriptor("k")
+        .slot(global_rw(0, DataType::U32, "b"))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::Atomic {
                         op: AtomicOp::FetchNand,
                         ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![0, 0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+                    }, [0, 0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let r = emit(&kernel);
     assert!(matches!(r, Err(EmitError::UnsupportedOp(_))));
 }
 
 #[test]
 fn for_loop_var_name_appears_in_comment() {
-    let kernel = KernelDescriptor {
-        id: "named_loop".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredForLoop {
+    let kernel = descriptor("named_loop")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredForLoop {
                         loop_var: "row_idx".into(),
-                    },
-                    operands: vec![0, 1, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![empty_child_body()],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
-        },
-    };
+                    }, [0, 1, 0]),
+                ])
+                .child(empty_child_body())
+                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("// for row_idx in"));
 }

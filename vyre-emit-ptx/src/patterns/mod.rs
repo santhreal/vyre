@@ -15,6 +15,8 @@ mod vec_memory_fusion;
 pub mod vec_store_fusion;
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::KernelDescriptor;
 
 use crate::ComputeCapability;
@@ -63,10 +65,14 @@ pub struct PtxAuditReport {
     pub scheduling: instruction_scheduling::SchedulingHints,
 }
 
-impl PtxAuditReport {
-    /// Sum of actionable findings across all patterns. `0` means no
-    /// PTX-specific optimizations apply to this kernel.
-    pub fn total_candidates(&self) -> usize {
+impl PatternAudit for PtxAuditReport {
+    const FINDING_NOUN: &'static str = "candidates";
+
+    fn kernel_id(&self) -> &str {
+        &self.kernel_id
+    }
+
+    fn finding_count(&self) -> usize {
         self.predication.candidates.len()
             + self.vec_load.candidates.len()
             + self.vec_store.candidates.len()
@@ -75,23 +81,14 @@ impl PtxAuditReport {
             + self.scheduling.long_chains.len()
     }
 
-    /// Whether any pattern fired.
-    pub fn has_any(&self) -> bool {
-        self.total_candidates() > 0
+    fn write_target_tag(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(out, "ptx sm_{}_{}", self.target.major, self.target.minor)
     }
 
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
-        format!(
-            "{id} (ptx sm_{}_{}): {} candidates ({}p, {}vl, {}vs, {}ac, {}tc, {}sched)",
-            self.target.major,
-            self.target.minor,
-            self.total_candidates(),
+    fn write_breakdown(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(
+            out,
+            "{}p, {}vl, {}vs, {}ac, {}tc, {}sched",
             self.predication.candidates.len(),
             self.vec_load.candidates.len(),
             self.vec_store.candidates.len(),
@@ -100,10 +97,28 @@ impl PtxAuditReport {
             self.scheduling.long_chains.len(),
         )
     }
+}
+
+impl PtxAuditReport {
+    /// Sum of actionable findings across all patterns. `0` means no
+    /// PTX-specific optimizations apply to this kernel.
+    pub fn total_candidates(&self) -> usize {
+        PatternAudit::finding_count(self)
+    }
+
+    /// Whether any pattern fired.
+    pub fn has_any(&self) -> bool {
+        PatternAudit::has_any(self)
+    }
+
+    /// One-line human-readable summary suitable for log lines.
+    pub fn format_short(&self) -> String {
+        PatternAudit::format_short(self)
+    }
 
     /// True iff no PTX-specific optimization opportunities found.
     pub fn is_clean(&self) -> bool {
-        !self.has_any()
+        PatternAudit::is_clean(self)
     }
 
     /// Identity element for [`Self::merge`]  -  empty report. The `target`
@@ -166,7 +181,7 @@ impl PtxAuditReport {
 
 impl std::fmt::Display for PtxAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
+        self.write_short(f)
     }
 }
 
@@ -174,23 +189,12 @@ impl std::fmt::Display for PtxAuditReport {
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op};
+    use vyre_lower::{KernelOpKind, LiteralValue};
 
     #[test]
     fn empty_kernel_yields_zero_candidates() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").build();
         let report = audit(&desc, ComputeCapability::SM_70);
         assert_eq!(report.kernel_id, "empty");
         assert_eq!(report.total_candidates(), 0);
@@ -199,51 +203,20 @@ mod tests {
 
     #[test]
     fn vec_load_chain_shows_up_in_audit() {
-        let desc = KernelDescriptor {
-            id: "vload_chain".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(2),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(3),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 3],
-                        result: Some(4),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            },
-        };
+        let desc = descriptor("vload_chain")
+            .slot(global_rw(0, DataType::U32, "buf"))
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 2),
+                        op(KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add), [0, 1], 3),
+                        op(KernelOpKind::LoadGlobal, [0, 3], 4),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+            )
+            .build();
         let report = audit(&desc, ComputeCapability::SM_70);
         assert!(report.has_any());
         assert_eq!(report.vec_load.candidates.len(), 1);
@@ -255,16 +228,7 @@ mod tests {
         let mut acc = PtxAuditReport::zero();
         // Merge two empty reports  -  both have no findings, so aggregate
         // stays empty.
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").dispatch(64, 1, 1).build();
         acc.merge(audit(&desc, ComputeCapability::SM_70));
         acc.merge(audit(&desc, ComputeCapability::SM_70));
         assert_eq!(acc.total_candidates(), 0);
@@ -272,16 +236,7 @@ mod tests {
 
     #[test]
     fn format_short_and_is_clean_on_empty() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").build();
         let r = audit(&desc, ComputeCapability::SM_80);
         assert!(r.is_clean());
         let s = r.format_short();
@@ -291,16 +246,7 @@ mod tests {
 
     #[test]
     fn audit_carries_target_through() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").build();
         let r80 = audit(&desc, ComputeCapability::SM_80);
         let r90 = audit(&desc, ComputeCapability::SM_90);
         assert_eq!(r80.target, ComputeCapability::SM_80);

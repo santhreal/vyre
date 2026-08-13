@@ -1,30 +1,20 @@
 use super::*;
+use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
 
 #[test]
 fn cast_emits_cvt_with_target_dtype() {
-    let kernel = KernelDescriptor {
-        id: "cast".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::F32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("cvt.rn.f32.u32"));
 }
@@ -32,29 +22,18 @@ fn cast_emits_cvt_with_target_dtype() {
 /// U32 → U64 must zero-extend with `cvt.u64.u32`, never silently reinterpret.
 #[test]
 fn cast_u32_to_u64_zero_extends() {
-    let kernel = KernelDescriptor {
-        id: "cast_u32_u64".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_u32_u64")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::U64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u64.u32"),
@@ -66,36 +45,21 @@ fn cast_u32_to_u64_zero_extends() {
 /// `cvt.u32.u64` (NOT a silent bit reinterpret).
 #[test]
 fn cast_u64_to_u32_truncates_low_word() {
-    let kernel = KernelDescriptor {
-        id: "cast_u64_u32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_u64_u32")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::U64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+                    }, [0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::U32,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(9)],
-        },
-    };
+                    }, [1], 2),
+                ])
+                .literal(LiteralValue::U32(9)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u32.u64"),
@@ -108,36 +72,21 @@ fn cast_u64_to_u32_truncates_low_word() {
 /// closed.
 #[test]
 fn cast_u64_to_i32_narrows_low_word() {
-    let kernel = KernelDescriptor {
-        id: "cast_u64_i32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_u64_i32")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::U64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+                    }, [0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::I32,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(9)],
-        },
-    };
+                    }, [1], 2),
+                ])
+                .literal(LiteralValue::U32(9)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u32.u64"),
@@ -149,36 +98,21 @@ fn cast_u64_to_i32_narrows_low_word() {
 /// reference `value != 0`: never just the low word.
 #[test]
 fn cast_u64_to_bool_tests_full_width() {
-    let kernel = KernelDescriptor {
-        id: "cast_u64_bool".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_u64_bool")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::U64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+                    }, [0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::Bool,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(9)],
-        },
-    };
+                    }, [1], 2),
+                ])
+                .literal(LiteralValue::U32(9)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("setp.ne.u64"),
@@ -190,36 +124,21 @@ fn cast_u64_to_bool_tests_full_width() {
 /// full 64-bit two's-complement pattern.
 #[test]
 fn cast_i32_to_u64_sign_extends() {
-    let kernel = KernelDescriptor {
-        id: "cast_i32_u64".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_i32_u64")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::I32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+                    }, [0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::U64,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3)],
-        },
-    };
+                    }, [1], 2),
+                ])
+                .literal(LiteralValue::U32(3)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.s64.s32"),
@@ -233,36 +152,21 @@ fn cast_i32_to_u64_sign_extends() {
 /// errored with `UnsupportedDataType(I64)`.
 #[test]
 fn cast_i32_to_i64_sign_extends() {
-    let kernel = KernelDescriptor {
-        id: "cast_i32_i64".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_i32_i64")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::I32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+                    }, [0], 1),
+                    op(KernelOpKind::Cast {
                         target: DataType::I64,
-                    },
-                    operands: vec![1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3)],
-        },
-    };
+                    }, [1], 2),
+                ])
+                .literal(LiteralValue::U32(3)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.s64.s32"),
@@ -274,29 +178,18 @@ fn cast_i32_to_i64_sign_extends() {
 /// unsigned twin of the sign-extend above.
 #[test]
 fn cast_u32_to_i64_zero_extends() {
-    let kernel = KernelDescriptor {
-        id: "cast_u32_i64".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_u32_i64")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::I64,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(9)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(9)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("cvt.u64.u32"),
@@ -306,29 +199,18 @@ fn cast_u32_to_i64_zero_extends() {
 
 #[test]
 fn f32_to_bool_cast_uses_unordered_not_equal_for_nan_truthiness() {
-    let kernel = KernelDescriptor {
-        id: "cast_f32_bool".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_f32_bool")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::Bool,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(f32::NAN)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::F32(f32::NAN)),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -339,32 +221,17 @@ fn f32_to_bool_cast_uses_unordered_not_equal_for_nan_truthiness() {
 
 #[test]
 fn f32_not_equal_comparison_uses_unordered_predicate_for_nan_truthiness() {
-    let kernel = KernelDescriptor {
-        id: "f32_ne_nan".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Ne),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(f32::NAN), LiteralValue::F32(1.0)],
-        },
-    };
+    let kernel = descriptor("f32_ne_nan")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Ne), [0, 1], 2),
+                ])
+                .literals([LiteralValue::F32(f32::NAN), LiteralValue::F32(1.0)]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -375,29 +242,18 @@ fn f32_not_equal_comparison_uses_unordered_predicate_for_nan_truthiness() {
 
 #[test]
 fn bool_to_f32_cast_materializes_predicate_before_numeric_conversion() {
-    let kernel = KernelDescriptor {
-        id: "cast_bool_f32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_bool_f32")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::F32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::Bool(true)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::Bool(true)),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -408,29 +264,18 @@ fn bool_to_f32_cast_materializes_predicate_before_numeric_conversion() {
 
 #[test]
 fn bool_to_i32_cast_materializes_predicate_word() {
-    let kernel = KernelDescriptor {
-        id: "cast_bool_i32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast {
+    let kernel = descriptor("cast_bool_i32")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::Cast {
                         target: DataType::I32,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::Bool(true)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::Bool(true)),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
     assert!(
@@ -440,27 +285,13 @@ fn bool_to_i32_cast_materializes_predicate_word() {
 }
 
 fn f32_cast_kernel(target: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "cast_f32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(3.5)],
-        },
-    }
+    descriptor("cast_f32")
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
+                .literal(LiteralValue::F32(3.5)),
+        )
+        .build()
 }
 
 /// A float source has no defined narrowing integer conversion. `from_dtype`
@@ -512,27 +343,13 @@ fn f32_to_permitted_targets_still_emit() {
 /// exercise the integer narrowing path (`from_dtype` collapses u8/u16->u32 and
 /// i8/i16->i32, so a same-width identity check would skip the truncation).
 fn u32_cast_kernel(target: DataType) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "cast_u32".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Cast { target },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(300)],
-        },
-    }
+    descriptor("cast_u32")
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::Cast { target }, [0], 1)])
+                .literal(LiteralValue::U32(300)),
+        )
+        .build()
 }
 
 /// Unsigned narrowing `u32 -> u8/u16` must TRUNCATE to the low byte/half via the

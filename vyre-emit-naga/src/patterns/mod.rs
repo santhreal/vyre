@@ -10,6 +10,8 @@ pub mod pipeline_prewarm;
 pub mod vec_pack;
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::KernelDescriptor;
 
 /// Unified naga-side pattern audit. Runs every shipped naga pattern
@@ -36,36 +38,51 @@ pub struct NagaAuditReport {
     pub prewarm: pipeline_prewarm::PrewarmHint,
 }
 
+impl PatternAudit for NagaAuditReport {
+    const FINDING_NOUN: &'static str = "candidates";
+
+    fn kernel_id(&self) -> &str {
+        &self.kernel_id
+    }
+
+    fn finding_count(&self) -> usize {
+        self.vec_pack.groups.len() + usize::from(self.prewarm.should_prewarm)
+    }
+
+    fn write_target_tag(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        out.write_str("naga")
+    }
+
+    fn write_breakdown(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(
+            out,
+            "{} vec_pack, prewarm={}",
+            self.vec_pack.groups.len(),
+            self.prewarm.should_prewarm
+        )
+    }
+}
+
 impl NagaAuditReport {
     /// Sum of actionable findings across the per-kernel patterns.
     /// Pre-warm contributes 1 if recommended.
     pub fn total_candidates(&self) -> usize {
-        self.vec_pack.groups.len() + (self.prewarm.should_prewarm as usize)
+        PatternAudit::finding_count(self)
     }
 
     /// Return whether any Naga-specific optimization is actionable.
     pub fn has_any(&self) -> bool {
-        self.total_candidates() > 0
+        PatternAudit::has_any(self)
     }
 
     /// One-line human-readable summary suitable for log lines.
     pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
-        format!(
-            "{id} (naga): {} candidates ({} vec_pack, prewarm={})",
-            self.total_candidates(),
-            self.vec_pack.groups.len(),
-            self.prewarm.should_prewarm,
-        )
+        PatternAudit::format_short(self)
     }
 
     /// True iff no naga-specific optimization opportunities found.
     pub fn is_clean(&self) -> bool {
-        !self.has_any()
+        PatternAudit::is_clean(self)
     }
 
     /// Identity element for `merge`  -  empty report. Useful as the
@@ -98,7 +115,7 @@ impl NagaAuditReport {
 
 impl std::fmt::Display for NagaAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
+        self.write_short(f)
     }
 }
 
@@ -106,23 +123,12 @@ impl std::fmt::Display for NagaAuditReport {
 mod audit_tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit};
+    use vyre_lower::{KernelOpKind, LiteralValue};
 
     #[test]
     fn empty_kernel_yields_zero_candidates() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").build();
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "empty");
         assert_eq!(report.total_candidates(), 0);
@@ -132,16 +138,7 @@ mod audit_tests {
     #[test]
     fn merge_aggregates_findings() {
         let mut acc = NagaAuditReport::zero();
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").dispatch(64, 1, 1).build();
         let r1 = audit(&desc);
         let r2 = audit(&desc);
         acc.merge(r1);
@@ -152,16 +149,7 @@ mod audit_tests {
 
     #[test]
     fn format_short_and_is_clean_on_empty() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").build();
         let r = audit(&desc);
         assert!(r.is_clean());
         let s = r.format_short();
@@ -171,41 +159,19 @@ mod audit_tests {
 
     #[test]
     fn nonempty_kernel_audit_doesnt_panic() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "buf".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        };
+        let desc = descriptor("k")
+            .slot(global_rw(0, DataType::U32, "buf"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+            )
+            .build();
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "k");
         // 3-op, 1-binding kernel sits below every naga pattern threshold

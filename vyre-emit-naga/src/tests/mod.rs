@@ -2,22 +2,20 @@ use super::*;
 use naga::{Binding, Block, BuiltIn, Statement, TypeInner};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
 use vyre_foundation::memory_model::MemoryOrdering;
+use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    BindingLayout,
+    BindingSlot,
+    BindingVisibility,
+    Dispatch,
+    KernelDescriptor,
+    KernelOpKind,
+    LiteralValue,
+    MemoryClass,
 };
 
 fn empty_desc() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "empty".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    }
+    descriptor("empty").build()
 }
 
 fn empty_desc_with_workgroup(id: &str, x: u32) -> KernelDescriptor {
@@ -25,11 +23,7 @@ fn empty_desc_with_workgroup(id: &str, x: u32) -> KernelDescriptor {
         id: id.into(),
         bindings: BindingLayout { slots: vec![] },
         dispatch: Dispatch::new(x, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
+        body: body().build(),
     }
 }
 
@@ -69,14 +63,7 @@ fn op_dispatch_route_cache_hits_preserve_uncached_classification() {
 }
 
 fn u32_output_slot(slot: u32) -> BindingSlot {
-    BindingSlot {
-        slot,
-        element_type: DataType::U32,
-        element_count: Some(8),
-        memory_class: MemoryClass::Global,
-        visibility: BindingVisibility::ReadWrite,
-        name: format!("out{slot}"),
-    }
+    global_rw(slot, DataType::U32, &format!("out{slot}")).with_count(8)
 }
 
 fn trap_sidecar_slot(slot: u32) -> BindingSlot {
@@ -91,39 +78,20 @@ fn trap_sidecar_slot(slot: u32) -> BindingSlot {
 }
 
 fn async_copy_desc(kind: KernelOpKind) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "async-copy".into(),
-        bindings: BindingLayout {
-            slots: vec![u32_output_slot(0), u32_output_slot(1)],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
-            child_bodies: vec![],
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind,
-                    operands: vec![0, 1, 0, 1],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncWait { tag: "copy".into() },
-                    operands: vec![],
-                    result: None,
-                },
-            ],
-        },
-    }
+    descriptor("async-copy")
+        .slots([u32_output_slot(0), u32_output_slot(1)])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(kind, [0, 1, 0, 1]),
+                    effect(KernelOpKind::AsyncWait { tag: "copy".into() }, []),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
+        )
+        .build()
 }
 
 fn block_has_loop(block: &Block) -> bool {

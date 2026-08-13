@@ -1,21 +1,11 @@
 use super::*;
 use vyre_foundation::ir::MemoryOrdering;
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op};
 
 fn barrier_kernel(ordering: MemoryOrdering) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "barrier_scope".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Barrier { ordering },
-                operands: vec![],
-                result: None,
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    }
+    descriptor("barrier_scope")
+        .body(body().op(effect(KernelOpKind::Barrier { ordering }, [])))
+        .build()
 }
 
 #[test]
@@ -49,56 +39,28 @@ fn grid_sync_barrier_is_not_silently_downgraded_to_cta_barrier() {
 
 #[test]
 fn nested_barrier_kernel_keeps_lanes_live_and_predicates_global_store() {
-    let kernel = KernelDescriptor {
-        id: "nested_barrier_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(256, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::StructuredBlock,
-                    operands: vec![0],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::LocalInvocationId,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Barrier {
+    let kernel = descriptor("nested_barrier_store")
+        .slot(global_wo(0, DataType::U32, "out"))
+        .dispatch(256, 1, 1)
+        .body(
+            body()
+                .ops([
+                    effect(KernelOpKind::StructuredBlock, [0]),
+                    op(KernelOpKind::LocalInvocationId, [0], 0),
+                    lit(0, 1),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            effect(KernelOpKind::Barrier {
                         ordering: MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![],
-                    result: None,
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            }],
-            literals: vec![LiteralValue::U32(7)],
-        },
-    };
+                    }, []),
+                        ]),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build();
 
     let ptx = emit(&kernel)
         .expect("Fix: nested workgroup barriers with global stores must remain PTX-emittable.");
@@ -133,44 +95,28 @@ fn cooperative_options() -> PtxEmitOptions {
 /// A `GridSync` barrier nested in a loop body, plus a bare one at top level for
 /// the control case. `lo = 0`, `hi = 4`, body index 0.
 fn grid_sync_in_loop_kernel() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "grid_sync_in_loop".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(256, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredForLoop {
+    descriptor("grid_sync_in_loop")
+        .dispatch(256, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredForLoop {
                         loop_var: "iter".into(),
-                    },
-                    operands: vec![0, 1, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::Barrier {
+                    }, [0, 1, 0]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            effect(KernelOpKind::Barrier {
                         ordering: MemoryOrdering::GridSync,
-                    },
-                    operands: vec![],
-                    result: None,
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            }],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
-        },
-    }
+                    }, []),
+                        ]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(4)]),
+        )
+        .build()
 }
 
 /// A `GridSync` barrier inside a loop body MUST be refused, because the

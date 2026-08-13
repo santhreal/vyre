@@ -1,5 +1,6 @@
 //! Test: scalar ops.
 use super::*;
+use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_wo, lit, op};
 
 #[test]
 fn emit_ends_with_return() {
@@ -10,16 +11,7 @@ fn emit_ends_with_return() {
 
 #[test]
 fn empty_kernel_emits_just_preamble_and_ret() {
-    let desc = KernelDescriptor {
-        id: "empty".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let desc = descriptor("empty").dispatch(64, 1, 1).build();
     let s = emit(&desc).unwrap();
     assert!(s.contains(".visible .entry main(\n    .param .u64 params_buf\n)"));
     assert!(s.contains("ret;"));
@@ -27,64 +19,34 @@ fn empty_kernel_emits_just_preamble_and_ret() {
 
 #[test]
 fn binop_add_emits_add_u32() {
-    let kernel = KernelDescriptor {
-        id: "add".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-        },
-    };
+    let kernel = descriptor("add")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("add.u32"));
 }
 
 #[test]
 fn f32_canonicalization_uses_native_flush_to_zero_and_nan_selection() {
-    let kernel = KernelDescriptor {
-        id: "canonical_f32_add".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(-0.0), LiteralValue::F32(f32::NAN)],
-        },
-    };
+    let kernel = descriptor("canonical_f32_add")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 2),
+                ])
+                .literals([LiteralValue::F32(-0.0), LiteralValue::F32(f32::NAN)]),
+        )
+        .build();
 
     let ptx = emit(&kernel).expect("Fix: f32 canonicalization fixture must emit PTX.");
     assert!(
@@ -101,46 +63,23 @@ fn f32_canonicalization_uses_native_flush_to_zero_and_nan_selection() {
 
 #[test]
 fn integer_single_use_mul_add_emits_mad_without_dead_mul() {
-    let kernel = KernelDescriptor {
-        id: "int_mad".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![3, 2],
-                    result: Some(4),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::I32(-3),
-                LiteralValue::I32(7),
-                LiteralValue::I32(5),
-            ],
-        },
-    };
+    let kernel = descriptor("int_mad")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 3),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [3, 2], 4),
+                ])
+                .literals([
+                    LiteralValue::I32(-3),
+                    LiteralValue::I32(7),
+                    LiteralValue::I32(5),
+                ]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -151,60 +90,25 @@ fn integer_single_use_mul_add_emits_mad_without_dead_mul() {
 
 #[test]
 fn integer_multi_use_mul_add_keeps_separate_mul() {
-    let kernel = KernelDescriptor {
-        id: "int_mad_multi_use".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::I32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![3, 2],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 3],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::I32(-3),
-                LiteralValue::I32(7),
-                LiteralValue::I32(5),
-            ],
-        },
-    };
+    let kernel = descriptor("int_mad_multi_use")
+        .slot(global_wo(0, DataType::I32, "out").with_count(1))
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Mul), [0, 1], 3),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [3, 2], 4),
+                    effect(KernelOpKind::StoreGlobal, [0, 0, 3]),
+                ])
+                .literals([
+                    LiteralValue::I32(-3),
+                    LiteralValue::I32(7),
+                    LiteralValue::I32(5),
+                ]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -214,32 +118,17 @@ fn integer_multi_use_mul_add_keeps_separate_mul() {
 
 #[test]
 fn binop_lt_emits_setp_lt_to_pred_register() {
-    let kernel = KernelDescriptor {
-        id: "lt".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Lt),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-        },
-    };
+    let kernel = descriptor("lt")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Lt), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("setp.lt.u32"));
     assert!(s.contains(".reg .pred"));
@@ -247,37 +136,18 @@ fn binop_lt_emits_setp_lt_to_pred_register() {
 
 #[test]
 fn integer_shift_masks_rhs_to_reference_width() {
-    let kernel = KernelDescriptor {
-        id: "masked_shift".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Shl),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Shr),
-                    operands: vec![0, 1],
-                    result: Some(3),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(1), LiteralValue::U32(33)],
-        },
-    };
+    let kernel = descriptor("masked_shift")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Shl), [0, 1], 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Shr), [0, 1], 3),
+                ])
+                .literals([LiteralValue::U32(1), LiteralValue::U32(33)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("and.b32"),
@@ -293,32 +163,17 @@ fn integer_shift_masks_rhs_to_reference_width() {
 
 #[test]
 fn u32_power_of_two_const_mod_emits_mask_without_rem() {
-    let kernel = KernelDescriptor {
-        id: "mod_pow2".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Mod),
-                    operands: vec![0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(37), LiteralValue::U32(8)],
-        },
-    };
+    let kernel = descriptor("mod_pow2")
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::BinOpKind(BinOp::Mod), [0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(37), LiteralValue::U32(8)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("and.b32"),
@@ -332,54 +187,26 @@ fn u32_power_of_two_const_mod_emits_mask_without_rem() {
 
 #[test]
 fn unop_negate_emits_neg() {
-    let kernel = KernelDescriptor {
-        id: "neg".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::UnOpKind(UnOp::Negate),
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::I32(-5)],
-        },
-    };
+    let kernel = descriptor("neg")
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::UnOpKind(UnOp::Negate), [0], 1)])
+                .literal(LiteralValue::I32(-5)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("neg.s32"));
 }
 
 #[test]
 fn unop_reciprocal_emits_strict_or_approx_rcp() {
-    let kernel = KernelDescriptor {
-        id: "reciprocal".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::UnOpKind(UnOp::Reciprocal),
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::F32(4.0)],
-        },
-    };
+    let kernel = descriptor("reciprocal")
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::UnOpKind(UnOp::Reciprocal), [0], 1)])
+                .literal(LiteralValue::F32(4.0)),
+        )
+        .build();
     let strict = emit(&kernel).unwrap();
     assert!(strict.contains("rcp.rn.f32"));
     let approx = emit_with_options(
@@ -397,40 +224,29 @@ fn unop_reciprocal_emits_strict_or_approx_rcp() {
 
 #[test]
 fn local_invocation_id_emits_tid_x() {
-    let kernel = KernelDescriptor {
-        id: "tid".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::LocalInvocationId,
-                operands: vec![0],
-                result: Some(0),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let kernel = descriptor("tid")
+        .dispatch(64, 1, 1)
+        .body(body().op(op(KernelOpKind::LocalInvocationId, [0], 0)))
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("%tid.x"));
 }
 
 #[test]
 fn workgroup_id_emits_ctaid() {
-    let kernel = KernelDescriptor {
-        id: "wid".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::WorkgroupId,
-                operands: vec![1], // y axis
-                result: Some(0),
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let kernel = descriptor("wid")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    KernelOp {
+                        kind: KernelOpKind::WorkgroupId,
+                        operands: vec![1], // y axis
+                        result: Some(0),
+                    },
+                ]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("%ctaid.y"));
 }
@@ -438,27 +254,13 @@ fn workgroup_id_emits_ctaid() {
 #[test]
 fn trap_emits_lane_exit() {
     // Trap is genuinely unsupported in PTX phase 1.
-    let kernel = KernelDescriptor {
-        id: "k".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Trap { tag: "t".into() },
-                    operands: vec![0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0)],
-        },
-    };
+    let kernel = descriptor("k")
+        .body(
+            body()
+                .ops([lit(0, 0), effect(KernelOpKind::Trap { tag: "t".into() }, [0])])
+                .literal(LiteralValue::U32(0)),
+        )
+        .build();
     let r = emit(&kernel);
     let s = r.unwrap();
     assert!(s.contains("// trap tag: t"));
@@ -470,51 +272,15 @@ fn add_of_two_single_use_muls_keeps_one_mul_available_for_mad() {
     let kernel = two_slot_u32_kernel(
         "mul_mul_add",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![1, 2],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Mul),
-                operands: vec![3, 4],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![5, 6],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 7],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
+            lit(3, 3),
+            lit(4, 4),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [1, 2], 5),
+            op(KernelOpKind::BinOpKind(BinOp::Mul), [3, 4], 6),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [5, 6], 7),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 7]),
         ],
         vec![
             LiteralValue::U32(0),

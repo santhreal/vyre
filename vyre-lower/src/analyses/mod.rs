@@ -22,6 +22,7 @@ pub mod op_histogram;
 pub mod reaching_def_facts;
 pub mod reaching_def_import;
 pub mod shared_mem_promote;
+pub mod structured_walk;
 pub mod texture_promote;
 pub mod value_range;
 pub mod vec_pack;
@@ -69,7 +70,7 @@ pub(crate) fn body_refs_only(body: &KernelBody, produced: &rustc_hash::FxHashSet
 ///
 /// ONE owner for the per-op-kind child-body start-offset table; every
 /// placement analysis imports this instead of re-deriving the skip offsets.
-pub(crate) fn child_body_operands<'a>(
+pub fn child_body_operands<'a>(
     kind: &KernelOpKind,
     operands: &'a [u32],
 ) -> impl Iterator<Item = u32> + 'a {
