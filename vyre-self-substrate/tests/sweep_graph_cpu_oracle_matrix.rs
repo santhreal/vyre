@@ -1,12 +1,21 @@
-//! Sweep oracle matrix for self-substrate CSR/graph CPU references.
+//! Sweep oracle matrix for graph CPU references.
 //!
-//! Compares substrate reference wrappers against independent bitset oracles
-//! across hostile CSR shapes. Uses CPU reference paths only - no mock
-//! dispatchers.
+//! One parameterized sweep over generated hostile CSR shapes, covering both
+//! layers of the graph stack against independent bitset oracles: the
+//! `vyre-primitives` CPU references that own graph semantics, and the
+//! `vyre-self-substrate` reference wrappers built on them. The shape stream,
+//! the bitset helpers and the successor/closure oracles exist once here and
+//! every family draws from them, so no two families can disagree about what a
+//! given seed means. CPU reference paths only - no mock dispatchers.
 
 #![forbid(unsafe_code)]
 
+use vyre_primitives::graph::csr_backward_or_changed;
+use vyre_primitives::graph::csr_forward_or_changed;
 use vyre_primitives::graph::exploded::build_cpu_reference;
+use vyre_primitives::graph::motif::{self, MotifEdge};
+use vyre_primitives::graph::path_reconstruct;
+use vyre_primitives::graph::persistent_bfs;
 use vyre_self_substrate::exploded::{
     build_ifds_csr_via, reference_build_ifds_csr, reference_canonicalize_csr_within_rows,
 };
@@ -15,7 +24,14 @@ use vyre_self_substrate::graph::csr_forward_or_changed::reference_forward_step_w
 use vyre_self_substrate::graph::persistent_bfs::bfs_expand;
 use vyre_self_substrate::optimizer::dispatcher::oracle::CpuOracleDispatcher;
 
+/// Shapes per substrate-wrapper family. The wrappers delegate to the primitive
+/// references swept below, so they need breadth, not depth.
 const CASES_PER_FAMILY: u64 = 512;
+/// Shapes per primitive CSR family. These own the semantics every other layer
+/// inherits, so they get the widest sweep.
+const PRIMITIVE_CSR_CASES: u64 = 4096;
+/// Shapes per primitive batch family (path reconstruction, motif matching).
+const PRIMITIVE_BATCH_CASES: u64 = 2048;
 
 #[derive(Clone, Copy)]
 struct Rng(u64);
@@ -90,6 +106,22 @@ fn generated_csr(seed: u64) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32
         _ => 0xFFFF_FFFF,
     };
     (node_count, offsets, targets, masks, frontier, allow_mask)
+}
+
+/// One generated CSR shape: case index, then the tuple `generated_csr` yields.
+type CsrCase = (u64, u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>, u32);
+
+/// Deterministic CSR shape stream for one sweep family.
+///
+/// `seed` keeps a family's shapes distinct from every other family's; `stride`
+/// decorrelates successive cases within it. Both are part of the sweep's
+/// coverage: changing either moves the family onto different graphs.
+fn csr_cases(cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = CsrCase> {
+    (0..cases).map(move |case| {
+        let (node_count, offsets, targets, masks, frontier, allow_mask) =
+            generated_csr(seed ^ case.wrapping_mul(stride));
+        (case, node_count, offsets, targets, masks, frontier, allow_mask)
+    })
 }
 
 fn bit_is_set(words: &[u32], node: u32) -> bool {
@@ -227,6 +259,63 @@ fn oracle_persistent_bfs(
     (out, changed)
 }
 
+/// Independent model of the reverse-or-changed FIXED POINT: the set of nodes that can
+/// reach an initial-frontier node along kind-passing edges. Built as an explicit reverse
+/// adjacency list + an iterative worklist BFS, a wholly different structure from the
+/// production `cpu_ref_closure` (which iterates a per-source bitset pass to convergence),
+/// so agreement is a real cross-check, not a restatement. Seed bits (including padding
+/// bits above `node_count`) are monotonically retained to match the in-place accumulator.
+fn oracle_backward_closure(
+    node_count: u32,
+    offsets: &[u32],
+    targets: &[u32],
+    masks: &[u32],
+    frontier: &[u32],
+    allow_mask: u32,
+) -> Vec<u32> {
+    let n = node_count as usize;
+    let mut reverse: Vec<Vec<u32>> = vec![Vec::new(); n];
+    for src in 0..node_count {
+        let start = offsets[src as usize] as usize;
+        let end = offsets[src as usize + 1] as usize;
+        for edge in start..end {
+            if masks[edge] & allow_mask == 0 {
+                continue;
+            }
+            let dst = targets[edge];
+            if dst < node_count {
+                // src → dst forward ⇒ dst can be reached-from src ⇒ reverse edge dst → src.
+                reverse[dst as usize].push(src);
+            }
+        }
+    }
+    let mut visited = vec![false; n];
+    let mut stack = Vec::new();
+    for node in 0..node_count {
+        if bit_is_set(frontier, node) {
+            visited[node as usize] = true;
+            stack.push(node);
+        }
+    }
+    while let Some(node) = stack.pop() {
+        for &pred in &reverse[node as usize] {
+            if !visited[pred as usize] {
+                visited[pred as usize] = true;
+                stack.push(pred);
+            }
+        }
+    }
+    let words = bitset_words(node_count);
+    let mut out = frontier.to_vec();
+    out.resize(words, 0);
+    for node in 0..node_count {
+        if visited[node as usize] {
+            out[(node / 32) as usize] |= 1u32 << (node % 32);
+        }
+    }
+    out
+}
+
 fn canonical_ifds_csr(
     num_procs: u32,
     blocks_per_proc: u32,
@@ -301,12 +390,183 @@ fn generated_ifds_rules(seed: u64) -> GeneratedIfdsRules {
     )
 }
 
+/// Deterministic IFDS rule-set stream for one sweep family.
+fn ifds_cases(cases: u64, seed: u64, stride: u64) -> impl Iterator<Item = (u64, GeneratedIfdsRules)> {
+    (0..cases).map(move |index| (index, generated_ifds_rules(seed ^ index.wrapping_mul(stride))))
+}
+
+fn generated_parent(seed: u64) -> (Vec<u32>, Vec<u32>, u32) {
+    let mut rng = Rng::new(seed);
+    let len = 1 + rng.range(128);
+    let mut parent = Vec::with_capacity(len as usize);
+    for node in 0..len {
+        let p = if node == 0 { 0 } else { rng.range(node + 1) };
+        parent.push(p);
+    }
+    let target_count = 1 + rng.range(16);
+    let mut targets = Vec::with_capacity(target_count as usize);
+    for _ in 0..target_count {
+        let target = if rng.next_u32() & 15 == 0 {
+            len + rng.range(8)
+        } else {
+            rng.range(len)
+        };
+        targets.push(target);
+    }
+    let max_depth = 1 + rng.range(64);
+    (parent, targets, max_depth)
+}
+
+// ---------------------------------------------------------------------------
+// Primitive families: the CPU references that own graph semantics.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn generated_csr_and_persistent_bfs_oracles_cover_4096_shapes() {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
+        csr_cases(PRIMITIVE_CSR_CASES, 0xC5A5_1D00_D00D_0001, 0x9E37_79B9)
+    {
+        let expected_step = oracle_forward_or_changed(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+        );
+        let actual_step = csr_forward_or_changed::cpu_ref(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+        );
+        assert_eq!(actual_step, expected_step, "case={case} forward_or_changed");
+
+        let max_iters = (case as u32 % 9) + 1;
+        let expected_bfs = oracle_persistent_bfs(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+        );
+        let actual_bfs = persistent_bfs::cpu_ref(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+        );
+        assert_eq!(actual_bfs, expected_bfs, "case={case} persistent_bfs");
+    }
+}
+
+#[test]
+fn generated_csr_backward_or_changed_oracles_cover_4096_shapes() {
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
+        csr_cases(PRIMITIVE_CSR_CASES, 0x8ACC_1234_D00D_0007, 0x9E37_79B9)
+    {
+        let max_iters = node_count.saturating_add(2);
+
+        // 1. The production reverse-or-changed fixed point == the independent reverse-BFS
+        //    closure. This is the op's real contract: a single node-parallel pass reads the
+        //    live accumulator and is order-dependent for multi-hop chains, but the CONVERGED
+        //    set is unique regardless of pass order.
+        let (closure, _changed) = csr_backward_or_changed::cpu_ref_closure(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
+        );
+        let expected = oracle_backward_closure(
+            node_count, &offsets, &targets, &masks, &frontier, allow_mask,
+        );
+        assert_eq!(closure, expected, "case={case} backward closure");
+
+        // 2. Idempotent at the fixed point: one more snapshot pass sets no new bit.
+        let (again, second_changed) = csr_backward_or_changed::cpu_ref(
+            node_count, &offsets, &targets, &masks, &closure, allow_mask,
+        );
+        assert_eq!(again, closure, "case={case} backward idempotent");
+        assert_eq!(
+            second_changed, 0,
+            "case={case} backward fixpoint changed flag"
+        );
+
+        // 3. Monotone: every initial-frontier node survives to the closure.
+        for node in 0..node_count {
+            if bit_is_set(&frontier, node) {
+                assert!(
+                    bit_is_set(&closure, node),
+                    "case={case} backward closure dropped seed node {node}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn generated_path_reconstruction_oracles_cover_2048_batches() {
+    for case in 0..PRIMITIVE_BATCH_CASES {
+        let (parent, targets, max_depth) =
+            generated_parent(0x9A7E_5EED_0123_0000 ^ case.wrapping_mul(0xD1B5_4A32));
+        let mut batched_paths = Vec::new();
+        let mut batched_lens = Vec::new();
+        path_reconstruct::cpu_ref_batched(
+            &parent,
+            &targets,
+            max_depth,
+            &mut batched_paths,
+            &mut batched_lens,
+        );
+
+        assert_eq!(batched_lens.len(), targets.len(), "case={case} lens len");
+        assert_eq!(
+            batched_paths.len(),
+            targets.len() * max_depth as usize,
+            "case={case} path matrix len"
+        );
+
+        let mut scratch = Vec::new();
+        for (index, &target) in targets.iter().enumerate() {
+            let len = path_reconstruct::cpu_ref(&parent, target, max_depth, &mut scratch);
+            assert_eq!(batched_lens[index], len, "case={case} target_index={index}");
+            let start = index * max_depth as usize;
+            let end = start + max_depth as usize;
+            assert_eq!(
+                &batched_paths[start..end],
+                scratch.as_slice(),
+                "case={case} target_index={index} segment"
+            );
+        }
+    }
+}
+
+#[test]
+fn generated_motif_oracles_cover_2048_patterns() {
+    for (case, node_count, offsets, targets, masks, _, _) in
+        csr_cases(PRIMITIVE_BATCH_CASES, 0xF00D_BA5E_4455_0000, 0xA24B_AED4)
+    {
+        let mut rng = Rng::new(0xBADC_0FFE_EE11_0000 ^ case);
+        let motif_len = rng.range(5) as usize;
+        let mut motif_edges = Vec::with_capacity(motif_len);
+        for _ in 0..motif_len {
+            motif_edges.push(MotifEdge {
+                from: rng.range(node_count),
+                kind_mask: 1u32 << rng.range(5),
+                to: rng.range(node_count),
+            });
+        }
+
+        let witness = motif::cpu_ref(node_count, &offsets, &targets, &masks, &motif_edges);
+        let counted = motif::cpu_ref_participation_count(
+            node_count,
+            &offsets,
+            &targets,
+            &masks,
+            &motif_edges,
+        );
+        let summed = witness.iter().copied().sum::<u32>();
+        assert_eq!(counted, summed, "case={case} motif participation");
+        assert_eq!(
+            witness.len(),
+            node_count as usize,
+            "case={case} witness len"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Substrate families: the wrappers built on those references.
+// ---------------------------------------------------------------------------
+
 #[test]
 fn sweep_csr_forward_or_changed_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for case in 0..CASES_PER_FAMILY {
-        let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr(0xF0C5_0001 ^ case.wrapping_mul(0x9E37_79B9));
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
+        csr_cases(CASES_PER_FAMILY, 0xF0C5_0001, 0x9E37_79B9)
+    {
         let expected = oracle_forward_or_changed(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -326,9 +586,9 @@ fn sweep_csr_forward_or_changed_matches_independent_oracle_matrix() {
 #[test]
 fn sweep_csr_bidirectional_step_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for case in 0..CASES_PER_FAMILY {
-        let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr(0xB1D1_0002 ^ case.wrapping_mul(0xD1B5_4A32));
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
+        csr_cases(CASES_PER_FAMILY, 0xB1D1_0002, 0xD1B5_4A32)
+    {
         let expected = oracle_bidirectional_step(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask,
         );
@@ -352,9 +612,9 @@ fn sweep_csr_bidirectional_step_matches_independent_oracle_matrix() {
 #[test]
 fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
     let mut assertions = 0usize;
-    for case in 0..CASES_PER_FAMILY {
-        let (node_count, offsets, targets, masks, frontier, allow_mask) =
-            generated_csr(0xBFC0_0003 ^ case.wrapping_mul(0xA24B_AED4));
+    for (case, node_count, offsets, targets, masks, frontier, allow_mask) in
+        csr_cases(CASES_PER_FAMILY, 0xBFC0_0003, 0xA24B_AED4)
+    {
         let max_iters = (case as u32 % 9) + 1;
         let expected = oracle_persistent_bfs(
             node_count, &offsets, &targets, &masks, &frontier, allow_mask, max_iters,
@@ -375,9 +635,9 @@ fn sweep_persistent_bfs_matches_independent_oracle_matrix() {
 #[test]
 fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
     let mut assertions = 0usize;
-    for case in 0..CASES_PER_FAMILY {
-        let (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill) =
-            generated_ifds_rules(0x1F05_0004 ^ case.wrapping_mul(0x85EB_CA6B));
+    for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
+        ifds_cases(CASES_PER_FAMILY, 0x1F05_0004, 0x85EB_CA6B)
+    {
         let expected = canonical_ifds_csr(
             num_procs,
             blocks_per_proc,
@@ -410,9 +670,9 @@ fn sweep_exploded_ifds_substrate_matches_primitive_oracle_matrix() {
 fn sweep_exploded_ifds_via_matches_cpu_oracle_matrix() {
     let dispatcher = CpuOracleDispatcher::new();
     let mut assertions = 0usize;
-    for case in 0..CASES_PER_FAMILY {
-        let (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill) =
-            generated_ifds_rules(0x1F05_0005 ^ case.wrapping_mul(0xC2B2_AE35));
+    for (case, (num_procs, blocks_per_proc, facts_per_proc, intra, inter, gen, kill)) in
+        ifds_cases(CASES_PER_FAMILY, 0x1F05_0005, 0xC2B2_AE35)
+    {
         let expected = canonical_ifds_csr(
             num_procs,
             blocks_per_proc,

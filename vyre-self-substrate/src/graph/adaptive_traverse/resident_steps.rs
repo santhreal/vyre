@@ -5,6 +5,12 @@ use super::{
 };
 
 use crate::dispatch_buffers::{u32_word_bytes, write_u32_slice_le_bytes};
+use crate::graph::csr_frontier_queue_programs::{
+    resident_csr_queue_atomic_word_scan_program, resident_csr_queue_block_offsets_program,
+    resident_csr_queue_clear_frontier_out_program, resident_csr_queue_len_init_program,
+    resident_csr_queue_split_low_program, resident_csr_queue_traverse_program,
+    resident_csr_queue_word_counts_program, resident_csr_queue_word_prefix_queue_program,
+};
 use crate::graph::csr_frontier_queue_scratch::{
     frontier_word_dispatch_grid, frontier_word_prefix_scratch,
     frontier_word_prefix_uses_precomputed_offsets, resident_csr_queue_materializer_for_stats,
@@ -28,18 +34,10 @@ use vyre_primitives::graph::adaptive_traverse::{
     plan_adaptive_resident_sparse_queue_step, AdaptiveResidentFrontierPlan,
     AdaptiveTraversalPlanCacheKey,
 };
-use vyre_primitives::graph::csr_frontier_queue::{
-    csr_queue_forward_traverse as primitive_csr_queue_forward_traverse,
-    frontier_queue_len_init as primitive_frontier_queue_len_init,
-    frontier_word_block_offsets_in_place as primitive_frontier_word_block_offsets,
-    frontier_word_block_offsets_to_queue_parallel as primitive_frontier_word_block_offsets_queue,
-    frontier_word_block_prefix_to_queue_parallel as primitive_frontier_word_prefix_queue,
-    frontier_word_counts_scan_pass_a as primitive_frontier_word_counts,
-    frontier_words_to_queue_clear_out_parallel as primitive_frontier_words_to_queue_clear_out,
-};
-use vyre_primitives::graph::csr_queue_split::csr_queue_split_low_forward_traverse as primitive_csr_queue_split_low_forward_traverse;
-use vyre_primitives::graph::csr_queue_strided::csr_queue_strided_forward_traverse as primitive_csr_queue_strided_forward_traverse;
 use vyre_primitives::reduce::count::reduce_count;
+
+/// Buffer adaptive traversal stages its own frontier upload into.
+const ADAPTIVE_FRONTIER_IN: &str = "frontier_in";
 
 #[derive(Clone, Copy)]
 struct AdaptiveSparseQueueGraphView {
@@ -402,47 +400,14 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
     };
     let traverse_program = scratch
         .plan_cache
-        .get_or_build(traverse_key, || match traverse_kind {
-            ResidentCsrQueueTraverseKind::RowSerial => primitive_csr_queue_forward_traverse(
-                "active_queue",
-                "queue_len",
-                "edge_offsets",
-                "edge_targets",
-                "edge_kind_mask",
-                "frontier_out",
+        .get_or_build(traverse_key, || {
+            resident_csr_queue_traverse_program(
                 graph.node_count,
                 graph.edge_count,
                 queue_capacity,
                 allow_mask,
-            ),
-            ResidentCsrQueueTraverseKind::RowStrided => {
-                primitive_csr_queue_strided_forward_traverse(
-                    "active_queue",
-                    "queue_len",
-                    "edge_offsets",
-                    "edge_targets",
-                    "edge_kind_mask",
-                    "frontier_out",
-                    graph.node_count,
-                    graph.edge_count,
-                    queue_capacity,
-                    allow_mask,
-                )
-            }
-            ResidentCsrQueueTraverseKind::MixedSplit {
-                high_queue_capacity,
-            } => primitive_csr_queue_strided_forward_traverse(
-                "high_queue",
-                "high_len",
-                "edge_offsets",
-                "edge_targets",
-                "edge_kind_mask",
-                "frontier_out",
-                graph.node_count,
-                graph.edge_count,
-                high_queue_capacity,
-                allow_mask,
-            ),
+                traverse_kind,
+            )
         });
     let graph_handles = graph.handles;
     let traverse_handles = [
@@ -476,7 +441,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         high_queue_capacity,
                         device_features,
                     ),
-                    || primitive_frontier_queue_len_init("high_len"),
+                    || resident_csr_queue_len_init_program("high_len"),
                 );
                 high_len_handles = [high_len_handle];
                 split_low_program = scratch.plan_cache.get_or_build(
@@ -492,20 +457,11 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         device_features,
                     ),
                     || {
-                        primitive_csr_queue_split_low_forward_traverse(
-                            "active_queue",
-                            "queue_len",
-                            "edge_offsets",
-                            "edge_targets",
-                            "edge_kind_mask",
-                            "frontier_out",
-                            "high_queue",
-                            "high_len",
+                        resident_csr_queue_split_low_program(
                             graph.node_count,
                             graph.edge_count,
                             queue_capacity,
                             high_queue_capacity,
-                            STRIDED_FORWARD_MIN_ROW_DEGREE,
                             allow_mask,
                         )
                     },
@@ -567,7 +523,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     queue_capacity,
                     device_features,
                 ),
-                || primitive_frontier_queue_len_init("queue_len"),
+                || resident_csr_queue_len_init_program("queue_len"),
             );
             let queue_program = scratch.plan_cache.get_or_build(
                 AdaptiveTraversalPlanCacheKey::frontier_to_queue(
@@ -579,11 +535,8 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     device_features,
                 ),
                 || {
-                    primitive_frontier_words_to_queue_clear_out(
-                        "frontier_in",
-                        "active_queue",
-                        "queue_len",
-                        "frontier_out",
+                    resident_csr_queue_atomic_word_scan_program(
+                        ADAPTIVE_FRONTIER_IN,
                         graph.node_count,
                         queue_capacity,
                     )
@@ -629,7 +582,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     words_u32,
                     device_features,
                 ),
-                || bitset_zero("frontier_out", words_u32),
+                || resident_csr_queue_clear_frontier_out_program(words_u32),
             );
             let clear_handles = [handles[1]];
             let word_prefix = adaptive_word_prefix_scratch(words)?;
@@ -644,12 +597,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                     device_features,
                 ),
                 || {
-                    primitive_frontier_word_counts(
-                        "frontier_in",
-                        "word_partials",
-                        "block_totals",
-                        graph.node_count,
-                    )
+                    resident_csr_queue_word_counts_program(ADAPTIVE_FRONTIER_IN, graph.node_count)
                 },
             );
             let word_count_handles = [handles[0], word_partials, block_totals];
@@ -662,7 +610,7 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         words_u32,
                         device_features,
                     ),
-                    || primitive_frontier_word_block_offsets("block_totals", graph.node_count),
+                    || resident_csr_queue_block_offsets_program(graph.node_count),
                 );
                 let queue_program = scratch.plan_cache.get_or_build(
                     AdaptiveTraversalPlanCacheKey::frontier_word_block_offsets_queue(
@@ -674,14 +622,11 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         device_features,
                     ),
                     || {
-                        primitive_frontier_word_block_offsets_queue(
-                            "frontier_in",
-                            "word_partials",
-                            "block_totals",
-                            "active_queue",
-                            "queue_len",
+                        resident_csr_queue_word_prefix_queue_program(
+                            ADAPTIVE_FRONTIER_IN,
                             graph.node_count,
                             queue_capacity,
+                            true,
                         )
                     },
                 );
@@ -742,14 +687,11 @@ fn adaptive_traverse_sparse_queue_step_with_graph_view_into(
                         device_features,
                     ),
                     || {
-                        primitive_frontier_word_prefix_queue(
-                            "frontier_in",
-                            "word_partials",
-                            "block_totals",
-                            "active_queue",
-                            "queue_len",
+                        resident_csr_queue_word_prefix_queue_program(
+                            ADAPTIVE_FRONTIER_IN,
                             graph.node_count,
                             queue_capacity,
+                            false,
                         )
                     },
                 );
