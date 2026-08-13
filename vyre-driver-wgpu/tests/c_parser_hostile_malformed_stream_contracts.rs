@@ -73,9 +73,9 @@ fn semantic_lower(typed_vast: &[u8]) -> (Vec<u8>, Vec<u8>) {
 // 1. Unmatched delimiters  -  must not crash, must emit structural rows
 // ---------------------------------------------------------------------------
 
-#[path = "c_parser_hostile_malformed_stream_contracts/case_inside_switch_has_switch_case_edge.rs"]
-mod case_inside_switch_has_switch_case_edge;
-#[path = "c_parser_hostile_malformed_stream_contracts/multiple_case_same_value_both_get_switch_case_edges.rs"]
-mod multiple_case_same_value_both_get_switch_case_edges;
-#[path = "c_parser_hostile_malformed_stream_contracts/vast_unmatched_lbrace_rbrace_lparen_mixed_produces_rows.rs"]
-mod vast_unmatched_lbrace_rbrace_lparen_mixed_produces_rows;
+#[path = "c_parser_hostile_malformed_stream_contracts/duplicate_cases_and_malformed_labels.rs"]
+mod duplicate_cases_and_malformed_labels;
+#[path = "c_parser_hostile_malformed_stream_contracts/semantic_edges_and_token_boundaries.rs"]
+mod semantic_edges_and_token_boundaries;
+#[path = "c_parser_hostile_malformed_stream_contracts/unmatched_delimiters_and_malformed_declarations.rs"]
+mod unmatched_delimiters_and_malformed_declarations;

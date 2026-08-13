@@ -6,5 +6,5 @@
 #[path = "c_ast_expression_operator_postfix_contracts/bytes.rs"]
 mod bytes;
 mod c_ast_gpu_parity_support;
-#[path = "c_ast_expression_operator_postfix_contracts/postfix_inc_dec_are_not_unary_and_not_binary.rs"]
-mod postfix_inc_dec_are_not_unary_and_not_binary;
+#[path = "c_ast_expression_operator_postfix_contracts/postfix_expression_shapes.rs"]
+mod postfix_expression_shapes;

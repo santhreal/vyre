@@ -5,5 +5,5 @@
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_statement_construct_gaps_e2e/classify.rs"]
 mod classify;
-#[path = "c_ast_statement_construct_gaps_e2e/nested_compound_statements_preserve_blocks_and_return.rs"]
-mod nested_compound_statements_preserve_blocks_and_return;
+#[path = "c_ast_statement_construct_gaps_e2e/compound_statements_and_control_flow.rs"]
+mod compound_statements_and_control_flow;

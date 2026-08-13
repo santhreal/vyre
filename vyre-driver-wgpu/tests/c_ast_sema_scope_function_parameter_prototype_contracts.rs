@@ -141,7 +141,7 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Function parameter scope
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_sema_scope_function_parameter_prototype_contracts/scope_tree_function_parameter_is_variable_decl.rs"]
-mod scope_tree_function_parameter_is_variable_decl;
-#[path = "c_ast_sema_scope_function_parameter_prototype_contracts/scope_tree_kr_function_definition_classified_correctly.rs"]
-mod scope_tree_kr_function_definition_classified_correctly;
+#[path = "c_ast_sema_scope_function_parameter_prototype_contracts/parameter_scopes_and_shadowing.rs"]
+mod parameter_scopes_and_shadowing;
+#[path = "c_ast_sema_scope_function_parameter_prototype_contracts/typedef_restore_and_gpu_parity.rs"]
+mod typedef_restore_and_gpu_parity;

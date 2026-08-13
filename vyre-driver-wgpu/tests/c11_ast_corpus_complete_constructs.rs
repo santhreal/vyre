@@ -450,23 +450,23 @@ const CORPUS_CASES: &[CorpusCase] = &[
         fixture: fixture_stmt_expr_nesting,
     },
 ];
-#[path = "c11_ast_corpus_complete_constructs/cpu_reference_all_corpus_fixtures_build_vast_without_panic.rs"]
-mod cpu_reference_all_corpus_fixtures_build_vast_without_panic;
-#[path = "c11_ast_corpus_complete_constructs/cpu_reference_enum_values_typed_correctly.rs"]
-mod cpu_reference_enum_values_typed_correctly;
-#[path = "c11_ast_corpus_complete_constructs/cpu_reference_function_pointer_array_with_qualifiers.rs"]
-mod cpu_reference_function_pointer_array_with_qualifiers;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_classifier_attribute_and_asm.rs"]
-mod gpu_parity_classifier_attribute_and_asm;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_classifier_nested_anonymous_aggregates.rs"]
-mod gpu_parity_classifier_nested_anonymous_aggregates;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_classifier_stmt_expr_nesting.rs"]
-mod gpu_parity_classifier_stmt_expr_nesting;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_pg_lower_enum_values.rs"]
-mod gpu_parity_pg_lower_enum_values;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_pg_lower_function_pointer_array.rs"]
-mod gpu_parity_pg_lower_function_pointer_array;
-#[path = "c11_ast_corpus_complete_constructs/gpu_parity_vast_builder_nested_designated_init.rs"]
-mod gpu_parity_vast_builder_nested_designated_init;
-#[path = "c11_ast_corpus_complete_constructs/pg_lower_preserves_corpus_kinds_and_spans.rs"]
-mod pg_lower_preserves_corpus_kinds_and_spans;
+#[path = "c11_ast_corpus_complete_constructs/cpu_corpus_macros_and_anonymous_aggregates.rs"]
+mod cpu_corpus_macros_and_anonymous_aggregates;
+#[path = "c11_ast_corpus_complete_constructs/cpu_enums_sizeof_and_statement_expressions.rs"]
+mod cpu_enums_sizeof_and_statement_expressions;
+#[path = "c11_ast_corpus_complete_constructs/cpu_function_pointers_designators_and_asm.rs"]
+mod cpu_function_pointers_designators_and_asm;
+#[path = "c11_ast_corpus_complete_constructs/gpu_classifier_aggregates_and_designators.rs"]
+mod gpu_classifier_aggregates_and_designators;
+#[path = "c11_ast_corpus_complete_constructs/gpu_classifier_asm_enums_and_sizeof.rs"]
+mod gpu_classifier_asm_enums_and_sizeof;
+#[path = "c11_ast_corpus_complete_constructs/gpu_pg_lowering_enums_sizeof_and_statement_expressions.rs"]
+mod gpu_pg_lowering_enums_sizeof_and_statement_expressions;
+#[path = "c11_ast_corpus_complete_constructs/gpu_pg_lowering_function_pointers_and_asm.rs"]
+mod gpu_pg_lowering_function_pointers_and_asm;
+#[path = "c11_ast_corpus_complete_constructs/gpu_statement_expressions_and_macro_declarations.rs"]
+mod gpu_statement_expressions_and_macro_declarations;
+#[path = "c11_ast_corpus_complete_constructs/gpu_vast_builder_designators_and_statement_expressions.rs"]
+mod gpu_vast_builder_designators_and_statement_expressions;
+#[path = "c11_ast_corpus_complete_constructs/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

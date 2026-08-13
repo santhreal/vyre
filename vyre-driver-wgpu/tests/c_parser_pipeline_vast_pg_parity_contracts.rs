@@ -226,7 +226,7 @@ fn assert_full_pipeline_parity(fix: &Fixture, label: &str) {
 // 1. GPU acquisition loud-failure contract
 // ---------------------------------------------------------------------------
 
-#[path = "c_parser_pipeline_vast_pg_parity_contracts/gpu_backend_acquisition_does_not_return_err.rs"]
-mod gpu_backend_acquisition_does_not_return_err;
-#[path = "c_parser_pipeline_vast_pg_parity_contracts/gpu_expr_shape_parity_on_ternary.rs"]
-mod gpu_expr_shape_parity_on_ternary;
+#[path = "c_parser_pipeline_vast_pg_parity_contracts/gpu_parity.rs"]
+mod gpu_parity;
+#[path = "c_parser_pipeline_vast_pg_parity_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

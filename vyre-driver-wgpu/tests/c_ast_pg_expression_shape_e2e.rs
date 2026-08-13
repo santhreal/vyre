@@ -5,5 +5,5 @@
 #[path = "c_ast_pg_expression_shape_e2e/bytes.rs"]
 mod bytes;
 mod c_ast_gpu_parity_support;
-#[path = "c_ast_pg_expression_shape_e2e/compound_literal_designators_and_nested_conditional_lower_to_pg.rs"]
-mod compound_literal_designators_and_nested_conditional_lower_to_pg;
+#[path = "c_ast_pg_expression_shape_e2e/expression_and_statement_rows.rs"]
+mod expression_and_statement_rows;

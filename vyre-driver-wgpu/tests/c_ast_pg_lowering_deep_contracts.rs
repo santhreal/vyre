@@ -5,5 +5,5 @@
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_pg_lowering_deep_contracts/classify.rs"]
 mod classify;
-#[path = "c_ast_pg_lowering_deep_contracts/function_definition_has_declaration_category.rs"]
-mod function_definition_has_declaration_category;
+#[path = "c_ast_pg_lowering_deep_contracts/semantic_categories_roles_and_edges.rs"]
+mod semantic_categories_roles_and_edges;

@@ -2,9 +2,7 @@ use super::*;
 
 #[test]
 fn hostile_mixed_flow_full_parity_and_pg_lower() {
-    let fix =
-        super::dense_switch_with_fallthrough_classifies_all_stmt_kinds::fixture_hostile_mixed_flow(
-        );
+    let fix = super::dense_switch_and_statement_expression_flow::fixture_hostile_mixed_flow();
     assert_full_pipeline_parity(&fix, "hostile_mixed_flow");
 
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
@@ -64,9 +62,7 @@ fn hostile_mixed_flow_full_parity_and_pg_lower() {
 
 #[test]
 fn hostile_mixed_flow_pg_preserves_all_control_kinds() {
-    let fix =
-        super::dense_switch_with_fallthrough_classifies_all_stmt_kinds::fixture_hostile_mixed_flow(
-        );
+    let fix = super::dense_switch_and_statement_expression_flow::fixture_hostile_mixed_flow();
     let raw = reference_c11_build_vast_nodes(&fix.tok_types, &fix.tok_starts, &fix.tok_lens);
     let annotated = reference_c11_annotate_typedef_names(&raw, fix.source.as_bytes());
     let typed = reference_c11_classify_vast_node_kinds(&annotated);

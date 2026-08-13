@@ -396,7 +396,7 @@ fn fixture_compound_literal_stress() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 // Table-driven CPU reference tests
 // ---------------------------------------------------------------------------
 
-#[path = "c11_parser_hostile_full_c/cpu_reference_typedef_expr_ambiguity.rs"]
-mod cpu_reference_typedef_expr_ambiguity;
-#[path = "c11_parser_hostile_full_c/gpu_parity_pg_lower_typedef_ambiguity.rs"]
-mod gpu_parity_pg_lower_typedef_ambiguity;
+#[path = "c11_parser_hostile_full_c/cpu_pg_and_gpu_parity.rs"]
+mod cpu_pg_and_gpu_parity;
+#[path = "c11_parser_hostile_full_c/cpu_reference_and_gpu_parity.rs"]
+mod cpu_reference_and_gpu_parity;

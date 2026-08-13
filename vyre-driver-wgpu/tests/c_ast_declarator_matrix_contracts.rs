@@ -358,7 +358,7 @@ fn fixture_gnu_restrict_qualifier() -> Fixture {
 // CPU reference contracts
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_declarator_matrix_contracts/cpu_pointer_to_array_classifies_correctly.rs"]
-mod cpu_pointer_to_array_classifies_correctly;
-#[path = "c_ast_declarator_matrix_contracts/pg_lower_preserves_nested_typedef_complex_declarator_rows.rs"]
-mod pg_lower_preserves_nested_typedef_complex_declarator_rows;
+#[path = "c_ast_declarator_matrix_contracts/cpu_reference_and_pg_lowering.rs"]
+mod cpu_reference_and_pg_lowering;
+#[path = "c_ast_declarator_matrix_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

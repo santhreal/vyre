@@ -478,13 +478,13 @@ fn adversarial_vast_cases() -> Vec<Vec<u8>> {
     }
     cases
 }
-#[path = "c_lower_ast_to_pg_nodes/ast_to_pg_nodes_has_zero_ulp_tolerance.rs"]
-mod ast_to_pg_nodes_has_zero_ulp_tolerance;
-#[path = "c_lower_ast_to_pg_nodes/ast_to_pg_nodes_registration_is_witnessed.rs"]
-mod ast_to_pg_nodes_registration_is_witnessed;
-#[path = "c_lower_ast_to_pg_nodes/c11_vast_reference_feeds_program_graph_node_lowering.rs"]
-mod c11_vast_reference_feeds_program_graph_node_lowering;
-#[path = "c_lower_ast_to_pg_nodes/gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph.rs"]
-mod gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph;
-#[path = "c_lower_ast_to_pg_nodes/typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes.rs"]
-mod typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes;
+#[path = "c_lower_ast_to_pg_nodes/adversarial_fixtures_and_gpu_dispatch.rs"]
+mod adversarial_fixtures_and_gpu_dispatch;
+#[path = "c_lower_ast_to_pg_nodes/declarator_and_function_pointer_prototypes.rs"]
+mod declarator_and_function_pointer_prototypes;
+#[path = "c_lower_ast_to_pg_nodes/registration_parity_and_tree_links.rs"]
+mod registration_parity_and_tree_links;
+#[path = "c_lower_ast_to_pg_nodes/stress_fixture_wgsl_and_certificate.rs"]
+mod stress_fixture_wgsl_and_certificate;
+#[path = "c_lower_ast_to_pg_nodes/typed_vast_lowering.rs"]
+mod typed_vast_lowering;

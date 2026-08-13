@@ -142,7 +142,7 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Tag namespace vs ordinary identifiers
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_sema_scope_tag_enum_label_contracts/annotation_label_does_not_affect_typedef_visibility.rs"]
-mod annotation_label_does_not_affect_typedef_visibility;
-#[path = "c_ast_sema_scope_tag_enum_label_contracts/scope_tree_struct_tag_does_not_shadow_ordinary_variable.rs"]
-mod scope_tree_struct_tag_does_not_shadow_ordinary_variable;
+#[path = "c_ast_sema_scope_tag_enum_label_contracts/annotation_and_gpu_parity.rs"]
+mod annotation_and_gpu_parity;
+#[path = "c_ast_sema_scope_tag_enum_label_contracts/tag_enum_and_label_namespaces.rs"]
+mod tag_enum_and_label_namespaces;

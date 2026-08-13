@@ -5,5 +5,5 @@
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_gnu_computed_goto_and_c11_atomic_contracts/classify.rs"]
 mod classify;
-#[path = "c_ast_gnu_computed_goto_and_c11_atomic_contracts/pg_lower_preserves_computed_goto_rows.rs"]
-mod pg_lower_preserves_computed_goto_rows;
+#[path = "c_ast_gnu_computed_goto_and_c11_atomic_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

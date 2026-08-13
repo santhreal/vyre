@@ -5,5 +5,5 @@
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_kernel_grade_construct_shape/classify.rs"]
 mod classify;
-#[path = "c_ast_kernel_grade_construct_shape/nested_declarator_parity_and_shape.rs"]
-mod nested_declarator_parity_and_shape;
+#[path = "c_ast_kernel_grade_construct_shape/kernel_construct_parity_and_shape.rs"]
+mod kernel_construct_parity_and_shape;

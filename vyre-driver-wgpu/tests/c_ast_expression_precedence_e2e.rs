@@ -169,7 +169,7 @@ fn unary_chain_fixture() -> (Vec<u32>, Vec<u32>) {
 // CPU shape + PG lowering tests
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_expression_precedence_e2e/comma_boundary_preserves_assignment_shapes_and_lowers_to_pg.rs"]
-mod comma_boundary_preserves_assignment_shapes_and_lowers_to_pg;
-#[path = "c_ast_expression_precedence_e2e/unary_chain_typing_and_pg_lower.rs"]
-mod unary_chain_typing_and_pg_lower;
+#[path = "c_ast_expression_precedence_e2e/precedence_shapes_lowered_to_pg.rs"]
+mod precedence_shapes_lowered_to_pg;
+#[path = "c_ast_expression_precedence_e2e/unary_chains_and_gpu_parity.rs"]
+mod unary_chains_and_gpu_parity;

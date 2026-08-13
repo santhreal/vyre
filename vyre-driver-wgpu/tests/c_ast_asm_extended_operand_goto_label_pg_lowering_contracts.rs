@@ -5,5 +5,5 @@
 mod c_ast_gpu_parity_support;
 #[path = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts/classify.rs"]
 mod classify;
-#[path = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts/pg_lower_preserves_asm_symbolic_names_and_earlyclobber.rs"]
-mod pg_lower_preserves_asm_symbolic_names_and_earlyclobber;
+#[path = "c_ast_asm_extended_operand_goto_label_pg_lowering_contracts/pg_lowering_and_gpu_parity.rs"]
+mod pg_lowering_and_gpu_parity;

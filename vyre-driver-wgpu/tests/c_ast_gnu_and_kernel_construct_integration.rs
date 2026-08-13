@@ -107,5 +107,5 @@ fn fixture_asm_extended_io_clobbers() -> Fixture {
 
 #[path = "c_ast_gnu_and_kernel_construct_integration/asm_goto_classifies_template_and_labels.rs"]
 mod asm_goto_classifies_template_and_labels;
-#[path = "c_ast_gnu_and_kernel_construct_integration/atomic_qualifier_does_not_misclassify.rs"]
-mod atomic_qualifier_does_not_misclassify;
+#[path = "c_ast_gnu_and_kernel_construct_integration/gnu_type_extensions_and_declarator_precedence.rs"]
+mod gnu_type_extensions_and_declarator_precedence;

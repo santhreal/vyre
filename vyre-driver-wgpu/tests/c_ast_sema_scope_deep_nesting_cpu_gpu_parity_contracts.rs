@@ -156,7 +156,7 @@ fn run_gpu_pg_lower(vast: &[u8], node_count: usize) -> Vec<u8> {
 // Deep nesting: scope tree
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts/gpu_parity_full_pipeline_typedef_shadow_restore_deep.rs"]
-mod gpu_parity_full_pipeline_typedef_shadow_restore_deep;
-#[path = "c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts/scope_tree_depth_8_block_chain_parent_links_correct.rs"]
-mod scope_tree_depth_8_block_chain_parent_links_correct;
+#[path = "c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts/deep_block_nesting.rs"]
+mod deep_block_nesting;
+#[path = "c_ast_sema_scope_deep_nesting_cpu_gpu_parity_contracts/gpu_parity.rs"]
+mod gpu_parity;

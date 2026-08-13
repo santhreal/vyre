@@ -6,5 +6,5 @@
 #[path = "c_ast_expression_operator_ambiguity_contracts/bytes.rs"]
 mod bytes;
 mod c_ast_gpu_parity_support;
-#[path = "c_ast_expression_operator_ambiguity_contracts/plus_binary_is_binary_and_unary_is_unary.rs"]
-mod plus_binary_is_binary_and_unary_is_unary;
+#[path = "c_ast_expression_operator_ambiguity_contracts/unary_binary_and_cast_classification.rs"]
+mod unary_binary_and_cast_classification;

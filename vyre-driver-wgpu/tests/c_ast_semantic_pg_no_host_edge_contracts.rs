@@ -246,7 +246,7 @@ fn fixture_scope_nesting() -> Fixture {
 // Typedef / tag / enum / function-pointer role contracts
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_semantic_pg_no_host_edge_contracts/gpu_semantic_lowering_completes_for_scope_nesting.rs"]
-mod gpu_semantic_lowering_completes_for_scope_nesting;
-#[path = "c_ast_semantic_pg_no_host_edge_contracts/gpu_typedef_node_has_declaration_category_and_typedef_role.rs"]
-mod gpu_typedef_node_has_declaration_category_and_typedef_role;
+#[path = "c_ast_semantic_pg_no_host_edge_contracts/node_roles_and_edges.rs"]
+mod node_roles_and_edges;
+#[path = "c_ast_semantic_pg_no_host_edge_contracts/scope_nesting.rs"]
+mod scope_nesting;

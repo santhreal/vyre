@@ -176,7 +176,7 @@ fn full_precedence_ladder_fixture() -> (Vec<u32>, Vec<u32>) {
 // Precedence tests
 // ---------------------------------------------------------------------------
 
-#[path = "c_ast_expression_operator_precedence_contracts/gpu_matches_cpu_for_precedence_fixtures.rs"]
-mod gpu_matches_cpu_for_precedence_fixtures;
-#[path = "c_ast_expression_operator_precedence_contracts/shift_operators_precedence_between_additive_and_relational.rs"]
-mod shift_operators_precedence_between_additive_and_relational;
+#[path = "c_ast_expression_operator_precedence_contracts/gpu_parity.rs"]
+mod gpu_parity;
+#[path = "c_ast_expression_operator_precedence_contracts/precedence_ladder_and_associativity.rs"]
+mod precedence_ladder_and_associativity;
