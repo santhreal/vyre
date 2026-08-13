@@ -360,6 +360,11 @@ name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
 
+[[test]]
+name = "typedef_row_phase_witnesses"
+path = "tests/typedef_row_phase_witnesses.rs"
+required-features = ["c-parser"]
+
 # Neural-network contract tests. These 32 files referenced `vyre_libs::nn`
 # with no manifest entry, so `cargo test -p vyre-libs` could not build the
 # package at all: the module is feature-gated and nothing declared the

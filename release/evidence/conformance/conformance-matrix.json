@@ -20738,8 +20738,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -20758,8 +20758,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -20771,14 +20771,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:reference` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
@@ -20791,8 +20785,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -20811,8 +20805,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -20824,14 +20818,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
@@ -20844,8 +20832,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -20864,8 +20852,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -20877,14 +20865,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
@@ -20897,8 +20879,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -20917,8 +20899,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -20930,14 +20912,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:reference` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:reference` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
@@ -20950,8 +20926,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -20970,8 +20946,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -20983,14 +20959,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:cuda` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:cuda` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
@@ -21003,8 +20973,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21023,8 +20993,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21036,14 +21006,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:wgpu` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:wgpu` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
@@ -21056,8 +21020,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21076,8 +21040,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21089,14 +21053,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:reference` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
@@ -21109,8 +21067,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21129,8 +21087,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21142,14 +21100,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
@@ -21162,8 +21114,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21182,8 +21134,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21195,14 +21147,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
@@ -21215,8 +21161,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21235,8 +21181,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21248,14 +21194,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:reference` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
@@ -21268,8 +21208,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21288,8 +21228,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21301,14 +21241,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
@@ -21321,8 +21255,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21341,8 +21275,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21354,14 +21288,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
@@ -21374,8 +21302,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21394,8 +21322,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21407,14 +21335,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:reference` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:reference` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
@@ -21427,8 +21349,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21447,8 +21369,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21460,14 +21382,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:cuda` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:cuda` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
@@ -21480,8 +21396,8 @@
       "case_classes": [
         {
           "class": "positive",
-          "covered": false,
-          "source": "missing supported-row fixture input/output pair"
+          "covered": true,
+          "source": "registered fixture inputs and expected output"
         },
         {
           "class": "negative",
@@ -21500,8 +21416,8 @@
         },
         {
           "class": "byte_output",
-          "covered": false,
-          "source": "missing registered expected byte output"
+          "covered": true,
+          "source": "registered expected byte output"
         },
         {
           "class": "unsupported_diagnostic",
@@ -21513,14 +21429,8 @@
         "positive",
         "byte_output"
       ],
-      "missing_required_case_classes": [
-        "positive",
-        "byte_output"
-      ],
-      "blockers": [
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `positive` case-class evidence",
-        "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `byte_output` case-class evidence"
-      ]
+      "missing_required_case_classes": [],
+      "blockers": []
     },
     {
       "op_id": "vyre-libs::parsing::c::lower::ast_to_pg_nodes",
@@ -53382,15 +53292,15 @@
     "byte_output",
     "unsupported_diagnostic"
   ],
-  "case_class_blocker_count": 30,
+  "case_class_blocker_count": 0,
   "missing_release_backend_rows": [],
   "op_matrix_blocked_release_count": 0,
   "op_matrix_blocked_release_rows": [],
   "op_matrix_errors": [],
   "duplicate_op_ids": [],
   "fixture_required_count": 365,
-  "fixture_input_count": 360,
-  "expected_output_count": 360,
+  "fixture_input_count": 365,
+  "expected_output_count": 365,
   "dispatch_backends": [
     "cuda",
     "spirv",
@@ -54572,36 +54482,36 @@
     {
       "id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row",
       "requires_fixture": true,
-      "has_test_inputs": false,
-      "has_expected_output": false,
+      "has_test_inputs": true,
+      "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
       "id": "vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack",
       "requires_fixture": true,
-      "has_test_inputs": false,
-      "has_expected_output": false,
+      "has_test_inputs": true,
+      "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
       "id": "vyre-libs::parsing::c11_typedef_scope_open_for_row",
       "requires_fixture": true,
-      "has_test_inputs": false,
-      "has_expected_output": false,
+      "has_test_inputs": true,
+      "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
       "id": "vyre-libs::parsing::c11_typedef_visible_name_for_row",
       "requires_fixture": true,
-      "has_test_inputs": false,
-      "has_expected_output": false,
+      "has_test_inputs": true,
+      "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
       "id": "vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack",
       "requires_fixture": true,
-      "has_test_inputs": false,
-      "has_expected_output": false,
+      "has_test_inputs": true,
+      "has_expected_output": true,
       "tolerance_ulp": 0
     },
     {
@@ -56152,38 +56062,5 @@
       "tolerance_ulp": 0
     }
   ],
-  "blockers": [
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:reference` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:reference` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:reference` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:cuda` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:cuda` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:wgpu` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_decl_kind_for_row_packed_haystack:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:reference` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_scope_open_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:reference` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:reference` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:cuda` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:cuda` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:wgpu` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:reference` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:reference` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:cuda` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:cuda` status `supported` is missing required `byte_output` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `positive` case-class evidence",
-    "conformance op/backend row `vyre-libs::parsing::c11_typedef_visible_name_for_row_packed_haystack:wgpu` status `supported` is missing required `byte_output` case-class evidence",
-    "only 360/365 executable op entries have fixture inputs",
-    "only 360/365 executable op entries have expected outputs"
-  ]
+  "blockers": []
 }

@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn visible_declaration_kind(
+pub(in crate::parsing::c::parse::vast) fn visible_declaration_kind(
     vast_nodes: &[u32],
     node_idx: usize,
     haystack: &[u8],
@@ -65,7 +65,11 @@ pub(super) fn scope_is_visible_from(
     false
 }
 
-pub(super) fn declaration_kind_at(vast_nodes: &[u32], node_idx: usize, haystack: &[u8]) -> u32 {
+pub(in crate::parsing::c::parse::vast) fn declaration_kind_at(
+    vast_nodes: &[u32],
+    node_idx: usize,
+    haystack: &[u8],
+) -> u32 {
     if kind_at(vast_nodes, node_idx) != TOK_IDENTIFIER {
         return 0;
     }

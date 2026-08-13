@@ -14,8 +14,17 @@
 //! argument. The VAST node table and the source haystack arrive as buffer
 //! references, which inlining retargets onto the caller's own buffers.
 
+use super::super::phase_witness::PHASE_WITNESS_ROWS;
 use super::*;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
+use vyre_foundation::operation::OperationFixtures;
+
+#[cfg(any(test, feature = "cpu-parity"))]
+use super::super::phase_witness::PhaseWitness;
+#[cfg(any(test, feature = "cpu-parity"))]
+use super::super::ref_typedef::{
+    declaration_kind_at, scope_open_before, visible_declaration_kind,
+};
 
 /// Scope-open row for a given row, from the reverse scope walk.
 pub(super) const SCOPE_OPEN_FOR_ROW_OP_ID: &str =
@@ -85,10 +94,12 @@ const HAYSTACK_PHASE_SIGNATURE: Signature = Signature {
 
 /// Rows a callee's own buffer declarations are sized for.
 ///
-/// A callee is never dispatched on its own, so this is only the shape the
-/// registry validates against. Inlining replaces every access with one on the
-/// caller's buffer, which carries the real extent.
-const PHASE_DECL_ROWS: u32 = 1;
+/// Sized for the registered witness so its fixture node buffer fits the
+/// declared shape. This is still only a declaration extent: a callee is never
+/// dispatched on its own, so this is the shape the registry validates against,
+/// and inlining replaces every access with one on the caller's buffer, which
+/// carries the real extent.
+const PHASE_DECL_ROWS: u32 = PHASE_WITNESS_ROWS;
 
 /// The row index the callee works on, read from its scalar parameter.
 fn row() -> Expr {
@@ -191,12 +202,122 @@ pub(super) fn c11_typedef_scope_open_for_row() -> Program {
     phase_program(SCOPE_OPEN_FOR_ROW_OP_ID, false, "scope_open", body)
 }
 
+/// Row the scope-walk and declaration-scan fixtures ask about: the declarator
+/// `v` inside the block. Both scans walk backwards from it and stop on real
+/// structure rather than falling out at their initial sentinel.
+#[cfg(any(test, feature = "cpu-parity"))]
+const WITNESS_DECLARATOR_ROW: u32 = 11;
+
+/// Row the visibility fixtures ask about: the use of the typedef name `T`
+/// inside the block, which resolves back to the file-scope `typedef int T`.
+#[cfg(any(test, feature = "cpu-parity"))]
+const WITNESS_TYPEDEF_USE_ROW: u32 = 10;
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn scope_open_witness_inputs() -> Vec<Vec<Vec<u8>>> {
+    let witness = PhaseWitness::build();
+    vec![vec![
+        witness.node_bytes,
+        WITNESS_DECLARATOR_ROW.to_le_bytes().to_vec(),
+    ]]
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn scope_open_witness_expected() -> Vec<Vec<Vec<u8>>> {
+    let witness = PhaseWitness::build();
+    let expected = scope_open_before(&witness.node_words, WITNESS_DECLARATOR_ROW as usize);
+    vec![vec![expected.to_le_bytes().to_vec()]]
+}
+
+/// Buffers for `HAYSTACK_PHASE_SIGNATURE`, in declaration order.
+#[cfg(any(test, feature = "cpu-parity"))]
+fn haystack_phase_witness_inputs(row: u32, packed_haystack: bool) -> Vec<Vec<Vec<u8>>> {
+    let witness = PhaseWitness::build();
+    let haystack = witness.haystack_bytes(packed_haystack);
+    vec![vec![
+        witness.node_bytes,
+        haystack,
+        row.to_le_bytes().to_vec(),
+        (witness.source.len() as u32).to_le_bytes().to_vec(),
+        PHASE_WITNESS_ROWS.to_le_bytes().to_vec(),
+    ]]
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn visible_name_witness_inputs() -> Vec<Vec<Vec<u8>>> {
+    haystack_phase_witness_inputs(WITNESS_TYPEDEF_USE_ROW, false)
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn visible_name_witness_packed_inputs() -> Vec<Vec<Vec<u8>>> {
+    haystack_phase_witness_inputs(WITNESS_TYPEDEF_USE_ROW, true)
+}
+
+/// The phase answers the visibility question as a flag, so the oracle's
+/// three-valued declaration kind collapses to "is a visible typedef name".
+#[cfg(any(test, feature = "cpu-parity"))]
+fn visible_name_witness_expected() -> Vec<Vec<Vec<u8>>> {
+    let witness = PhaseWitness::build();
+    let kind = visible_declaration_kind(
+        &witness.node_words,
+        WITNESS_TYPEDEF_USE_ROW as usize,
+        &witness.source,
+        witness.lexeme(WITNESS_TYPEDEF_USE_ROW),
+    );
+    let expected = u32::from(kind == 1);
+    vec![vec![expected.to_le_bytes().to_vec()]]
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn decl_kind_witness_inputs() -> Vec<Vec<Vec<u8>>> {
+    haystack_phase_witness_inputs(WITNESS_DECLARATOR_ROW, false)
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn decl_kind_witness_packed_inputs() -> Vec<Vec<Vec<u8>>> {
+    haystack_phase_witness_inputs(WITNESS_DECLARATOR_ROW, true)
+}
+
+#[cfg(any(test, feature = "cpu-parity"))]
+fn decl_kind_witness_expected() -> Vec<Vec<Vec<u8>>> {
+    let witness = PhaseWitness::build();
+    let expected = declaration_kind_at(
+        &witness.node_words,
+        WITNESS_DECLARATOR_ROW as usize,
+        &witness.source,
+    );
+    vec![vec![expected.to_le_bytes().to_vec()]]
+}
+
+/// Bind one fixture to a cfg-selected const so `inventory::submit!` stays a
+/// single const expression. The oracles behind these fixtures are themselves
+/// gated on `cpu-parity`, so every other configuration registers `None`.
+/// `default` implies `matching-dfa` implies `cpu-parity`, so every conformance
+/// harness still sees them.
+macro_rules! witness_fixture {
+    ($name:ident = $function:ident) => {
+        #[cfg(any(test, feature = "cpu-parity"))]
+        const $name: Option<OperationFixtures> = Some($function);
+        #[cfg(not(any(test, feature = "cpu-parity")))]
+        const $name: Option<OperationFixtures> = None;
+    };
+}
+
+witness_fixture!(SCOPE_OPEN_INPUTS = scope_open_witness_inputs);
+witness_fixture!(SCOPE_OPEN_EXPECTED = scope_open_witness_expected);
+witness_fixture!(VISIBLE_NAME_INPUTS = visible_name_witness_inputs);
+witness_fixture!(VISIBLE_NAME_PACKED_INPUTS = visible_name_witness_packed_inputs);
+witness_fixture!(VISIBLE_NAME_EXPECTED = visible_name_witness_expected);
+witness_fixture!(DECL_KIND_INPUTS = decl_kind_witness_inputs);
+witness_fixture!(DECL_KIND_PACKED_INPUTS = decl_kind_witness_packed_inputs);
+witness_fixture!(DECL_KIND_EXPECTED = decl_kind_witness_expected);
+
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         SCOPE_OPEN_FOR_ROW_OP_ID,
         c11_typedef_scope_open_for_row,
-        None,
-        None,
+        SCOPE_OPEN_INPUTS,
+        SCOPE_OPEN_EXPECTED,
     )
     .with_signature(SCOPE_OPEN_SIGNATURE)
 }
@@ -205,8 +326,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         VISIBLE_NAME_FOR_ROW_OP_ID,
         super::super::build::c11_typedef_visible_name_for_row,
-        None,
-        None,
+        VISIBLE_NAME_INPUTS,
+        VISIBLE_NAME_EXPECTED,
     )
     .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }
@@ -215,8 +336,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         VISIBLE_NAME_FOR_ROW_PACKED_OP_ID,
         super::super::build::c11_typedef_visible_name_for_row_packed_haystack,
-        None,
-        None,
+        VISIBLE_NAME_PACKED_INPUTS,
+        VISIBLE_NAME_EXPECTED,
     )
     .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }
@@ -225,8 +346,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         DECL_KIND_FOR_ROW_OP_ID,
         super::super::build::c11_typedef_decl_kind_for_row,
-        None,
-        None,
+        DECL_KIND_INPUTS,
+        DECL_KIND_EXPECTED,
     )
     .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }
@@ -235,8 +356,8 @@ inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library(
         DECL_KIND_FOR_ROW_PACKED_OP_ID,
         super::super::build::c11_typedef_decl_kind_for_row_packed_haystack,
-        None,
-        None,
+        DECL_KIND_PACKED_INPUTS,
+        DECL_KIND_EXPECTED,
     )
     .with_signature(HAYSTACK_PHASE_SIGNATURE)
 }

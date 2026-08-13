@@ -2,13 +2,14 @@
 
 #![allow(missing_docs)] // Internal VAST-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
-use crate::parsing::c::source_bytes::load_source_byte;
+use crate::parsing::c::source_bytes::{load_source_byte, source_haystack_words};
 use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use super::build_declaration_kind_inner::emit_declaration_kind_for_index_inner;
 use super::helpers::*;
+use super::phase_witness::{PHASE_WITNESS_ROWS, PHASE_WITNESS_SOURCE_LEN};
 use super::*;
 
 mod declaration_kind;

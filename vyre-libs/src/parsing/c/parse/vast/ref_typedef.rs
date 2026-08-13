@@ -23,10 +23,16 @@ mod typed_kind;
 use annotator::*;
 use asm_attributes::*;
 use decl_context::*;
-use declarations::*;
 use expressions::*;
 use identifiers::*;
 use scopes::*;
+
+// The three phase oracles the registered row-phase fixtures compute their
+// expected outputs from. Nothing outside the VAST module tree may reach them.
+pub(in crate::parsing::c::parse::vast) use declarations::{
+    declaration_kind_at, visible_declaration_kind,
+};
+pub(in crate::parsing::c::parse::vast) use scopes::scope_open_before;
 
 pub(super) fn vast_field_at(vast_nodes: &[u32], node_idx: usize, field_idx: usize) -> u32 {
     c_vast_word_at(vast_nodes, node_idx, field_idx)

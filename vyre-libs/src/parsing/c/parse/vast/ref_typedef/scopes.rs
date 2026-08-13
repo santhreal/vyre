@@ -1,6 +1,9 @@
 use super::*;
 
-pub(super) fn scope_open_before(vast_nodes: &[u32], node_idx: usize) -> u32 {
+pub(in crate::parsing::c::parse::vast) fn scope_open_before(
+    vast_nodes: &[u32],
+    node_idx: usize,
+) -> u32 {
     let mut depth = 0u32;
     for scan_idx in (0..node_idx).rev() {
         match kind_at(vast_nodes, scan_idx) {

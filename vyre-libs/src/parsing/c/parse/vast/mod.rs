@@ -10,6 +10,7 @@ mod classify;
 mod decl_context_common;
 mod expr_shape;
 mod helpers;
+mod phase_witness;
 #[cfg(any(test, feature = "cpu-parity"))]
 mod ref_classify;
 #[cfg(any(test, feature = "cpu-parity"))]
