@@ -26,13 +26,20 @@ use std::process;
 use toml::Value;
 use walkdir::WalkDir;
 
-/// The only workspace members allowed to register an operation.
-const CATEGORY_A_CRATE: &str = "vyre-foundation";
-/// Category C owner: hardware-contract operations and compositions over them.
-const CATEGORY_C_CRATE: &str = "vyre-libs";
+/// Category A owner: every composition. `docs/ARCHITECTURE.md`, "Target
+/// operation crate structure", decided 2026-08-12.
+const CATEGORY_A_CRATE: &str = "vyre-libs";
+/// Category C owner: strict hardware intrinsics, one emitter arm and one
+/// reference-interpreter arm each. Absorbs `vyre-intrinsics` at migration.
+const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
-const SUBSTRATE_HOME: &str = "vyre-foundation/src/substrate";
+///
+/// `vyre_foundation::pass_substrate` is the one sanctioned exception: it
+/// cannot consume the op crates without a dependency cycle, so foundation
+/// keeps a local copy, registered with `lego-audit`.
+const SUBSTRATE_HOME: &str = "vyre-self-substrate/src/optimizer";
+const SUBSTRATE_EXCEPTIONS: &[&str] = &["vyre-foundation/src/pass_substrate"];
 
 /// Closed workspace roster. A new member is a reviewable change here first.
 const ALLOWED_MEMBERS: &[&str] = &[
@@ -61,9 +68,13 @@ const ALLOWED_MEMBERS: &[&str] = &[
     "vyre-lower",
     "vyre-macros",
     "vyre-megakernel",
+    "vyre-primitives",
     "vyre-reference",
     "vyre-runtime",
     "vyre-safetensors",
+    // Narrows to the GPU pass engine and is renamed at migration; the roster
+    // moves with the rename.
+    "vyre-self-substrate",
     "vyre-spec",
     "vyre-test-support",
     "structure-gate",
@@ -258,7 +269,11 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
         let Some(tier) = reg.tier.as_deref() else {
             continue;
         };
-        let hardware = matches!(tier, "Intrinsic" | "Hardware");
+        // `Primitive` is the pre-rename spelling of `Intrinsic`; the registry
+        // rename lands with the migration. Reading only the new name here
+        // would report every current registration as a category violation and
+        // bury the real ones.
+        let hardware = matches!(tier, "Intrinsic" | "Hardware" | "Primitive");
         if hardware && reg.crate_name == CATEGORY_A_CRATE {
             failures.push(format!(
                 "{} registers Category C `{}` in {CATEGORY_A_CRATE}; hardware-contract operations live in {CATEGORY_C_CRATE}",
@@ -276,10 +291,19 @@ pub fn category_home_failures(registrations: &[Registration]) -> Vec<String> {
 }
 
 /// Reject a second home for the substrate concept.
+///
+/// The GPU pass engine owns the name. `SUBSTRATE_EXCEPTIONS` carries the
+/// duplications `docs/ARCHITECTURE.md` sanctions by name; anything else is a
+/// second home.
 pub fn substrate_home_failures(paths: &[String]) -> Vec<String> {
     paths
         .iter()
         .filter(|path| !path.starts_with(SUBSTRATE_HOME))
+        .filter(|path| {
+            !SUBSTRATE_EXCEPTIONS
+                .iter()
+                .any(|exception| path.starts_with(exception))
+        })
         .map(|path| {
             format!(
                 "`{path}` names the substrate concept outside {SUBSTRATE_HOME}; one concept gets one home"
@@ -376,10 +400,15 @@ fn scan_registrations(root: &Path, members: &[String]) -> Vec<Registration> {
 }
 
 /// Tier implied by each `OperationRegistration` constructor.
-const CONSTRUCTOR_TIERS: &[(&str, &str)] = &[
-    ("::primitive(", "Library"),
-    ("::library(", "Library"),
-    ("::new(", "Library"),
+///
+/// `new` takes the tier as its second argument, so it is read there rather
+/// than assumed. Guessing it wrong is worse than not knowing: mapping
+/// `primitive` to `Library` once reported all 122 of one crate's intrinsics as
+/// misplaced compositions and buried the real findings.
+const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
+    ("::primitive(", Some("Primitive")),
+    ("::library(", Some("Library")),
+    ("::new(", None),
 ];
 
 /// Extract `(op_id, tier)` for every `OperationRegistration` in one file.
@@ -404,7 +433,10 @@ pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
             .find(|(call, _)| after.trim_start().starts_with(call.trim_start_matches("::")) || after.starts_with(call));
         if let Some((call, tier)) = constructor {
             if let Some(id) = first_argument(after, call).and_then(|raw| resolve_id(raw, &consts)) {
-                found.push((id, Some((*tier).to_string())));
+                let tier = tier
+                    .map(|tier| tier.to_string())
+                    .or_else(|| nth_argument(after, call, 1).map(tier_variant));
+                found.push((id, tier));
             }
         } else {
             let block = &body[..struct_literal_end(body)];
@@ -419,10 +451,37 @@ pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
 
 /// First argument of a constructor call, as written.
 fn first_argument<'a>(after: &'a str, call: &str) -> Option<&'a str> {
+    nth_argument(after, call, 0)
+}
+
+/// Argument `index` of a constructor call, as written.
+///
+/// Splits on top-level commas only, so a nested `Some(f(a, b))` argument does
+/// not shift the count.
+fn nth_argument<'a>(after: &'a str, call: &str, index: usize) -> Option<&'a str> {
     let open = after.find(call)? + call.len();
     let rest = &after[open..];
-    let end = rest.find(',').or_else(|| rest.find(')'))?;
-    Some(rest[..end].trim())
+    let mut depth = 0usize;
+    let mut start = 0usize;
+    let mut argument = 0usize;
+    for (offset, byte) in rest.char_indices() {
+        match byte {
+            '(' | '[' | '{' | '<' => depth += 1,
+            ')' | ']' | '}' | '>' if depth > 0 => depth -= 1,
+            ')' => {
+                return (argument == index).then(|| rest[start..offset].trim());
+            }
+            ',' if depth == 0 => {
+                if argument == index {
+                    return Some(rest[start..offset].trim());
+                }
+                argument += 1;
+                start = offset + 1;
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Byte offset just past the struct literal that opens in `body`.
@@ -557,20 +616,24 @@ mod tests {
     #[test]
     fn a_third_registering_crate_is_rejected() {
         let failures = registration_owner_failures(&[registration(
-            "vyre-primitives",
-            "vyre-primitives::hash::adler32",
+            "vyre-self-substrate",
+            "vyre-self-substrate::graph::toposort",
             Some("Library"),
         )]);
 
         assert_eq!(failures.len(), 1);
-        assert!(failures[0].contains("vyre-primitives"));
+        assert!(failures[0].contains("vyre-self-substrate"));
     }
 
     #[test]
     fn the_two_category_owners_are_accepted() {
         let failures = registration_owner_failures(&[
-            registration("vyre-foundation", "vyre-foundation::hash::adler32", None),
-            registration("vyre-libs", "vyre-libs::atomic::compare_exchange", None),
+            registration("vyre-libs", "vyre-libs::hash::adler32", None),
+            registration(
+                "vyre-primitives",
+                "vyre-primitives::atomic::compare_exchange",
+                None,
+            ),
         ]);
 
         assert!(failures.is_empty(), "{failures:?}");
@@ -620,8 +683,8 @@ mod tests {
     #[test]
     fn a_hardware_operation_in_the_category_a_crate_is_rejected() {
         let failures = category_home_failures(&[registration(
-            "vyre-foundation",
-            "vyre-foundation::atomic::compare_exchange",
+            "vyre-libs",
+            "vyre-libs::atomic::compare_exchange",
             Some("Intrinsic"),
         )]);
 
@@ -632,8 +695,8 @@ mod tests {
     #[test]
     fn a_composition_in_the_category_c_crate_is_rejected() {
         let failures = category_home_failures(&[registration(
-            "vyre-libs",
-            "vyre-libs::hash::adler32",
+            "vyre-primitives",
+            "vyre-primitives::hash::adler32",
             Some("Library"),
         )]);
 
@@ -644,14 +707,10 @@ mod tests {
     #[test]
     fn each_category_in_its_own_home_is_accepted() {
         let failures = category_home_failures(&[
+            registration("vyre-libs", "vyre-libs::hash::adler32", Some("Library")),
             registration(
-                "vyre-foundation",
-                "vyre-foundation::hash::adler32",
-                Some("Library"),
-            ),
-            registration(
-                "vyre-libs",
-                "vyre-libs::atomic::compare_exchange",
+                "vyre-primitives",
+                "vyre-primitives::atomic::compare_exchange",
                 Some("Intrinsic"),
             ),
         ]);
@@ -662,14 +721,26 @@ mod tests {
     #[test]
     fn a_second_substrate_home_is_rejected() {
         let failures = substrate_home_failures(&[
-            "vyre-foundation/src/substrate/graph/toposort.rs".to_string(),
-            "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+            "vyre-self-substrate/src/optimizer/dispatcher.rs".to_string(),
+            "vyre-self-substrate/src/scheduling/homotopy_ilp.rs".to_string(),
             "vyre-libs/src/substrate_catalog.rs".to_string(),
         ]);
 
         assert_eq!(failures.len(), 2, "{failures:?}");
-        assert!(failures.iter().any(|f| f.contains("pass_substrate")));
+        assert!(failures.iter().any(|f| f.contains("scheduling")));
         assert!(failures.iter().any(|f| f.contains("substrate_catalog")));
+    }
+
+    #[test]
+    fn the_sanctioned_foundation_pass_substrate_is_accepted() {
+        // ARCHITECTURE.md: foundation cannot consume the op crates without a
+        // cycle, so `pass_substrate` is the one accepted duplication. Every
+        // other second home stays a failure.
+        let failures = substrate_home_failures(&[
+            "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
+        ]);
+
+        assert!(failures.is_empty(), "{failures:?}");
     }
 
     #[test]
@@ -744,7 +815,32 @@ fn registration() -> OperationRegistration {
             parsed,
             vec![(
                 "vyre-foundation::hash::adler32".to_string(),
-                Some("Library".to_string())
+                Some("Primitive".to_string())
+            )]
+        );
+    }
+
+    /// `new` carries the tier in argument two. Assuming a tier for it once
+    /// reported an entire crate's intrinsics as misplaced compositions.
+    #[test]
+    fn a_new_registration_reads_its_tier_argument() {
+        let parsed = parse_registrations(
+            r#"
+    OperationRegistration::new(
+        "vyre-primitives::hardware::fma_f32",
+        OperationTier::Intrinsic,
+        Some(fma_f32_program),
+        Some(|| vec![vec![vec![1u8, 2u8]]]),
+        None,
+    )
+"#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-primitives::hardware::fma_f32".to_string(),
+                Some("Intrinsic".to_string())
             )]
         );
     }
