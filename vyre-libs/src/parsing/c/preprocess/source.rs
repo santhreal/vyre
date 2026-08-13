@@ -1,13 +1,9 @@
 //! Source-manager ABI for C `#include` and GNU `#include_next`.
 
 #[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::lex::tokens::TOK_PREPROC;
-#[cfg(any(test, feature = "cpu-parity"))]
-use crate::parsing::c::preprocess::c_logical_directive_len;
-use crate::parsing::c::preprocess::{
-    c_directive_payload, c_translation_phase_line_splice, try_classify_preprocessor_directive,
-    CPreprocessorDirectiveKind, CPreprocessorError,
-};
+use crate::parsing::c::preprocess::directive_scan::for_each_directive_row;
+use crate::parsing::c::preprocess::directive_scan::{skip_horizontal_ws, ScannedDirective};
+use crate::parsing::c::preprocess::{CPreprocessorDirectiveKind, CPreprocessorError};
 
 /// Header spelling class from a C include directive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -91,11 +87,8 @@ pub fn parse_c_include_request(
     row: &[u8],
     directive_offset: usize,
 ) -> Result<Option<CIncludeRequest>, CPreprocessorError> {
-    let spliced = c_translation_phase_line_splice(row);
-    let directive = try_classify_preprocessor_directive(&spliced.bytes).map_err(|mut err| {
-        err.offset = directive_offset + spliced.original_offset(err.offset);
-        err
-    })?;
+    let scan = ScannedDirective::classify(row, directive_offset)?;
+    let directive = scan.directive;
     if !matches!(
         directive.kind,
         CPreprocessorDirectiveKind::Include | CPreprocessorDirectiveKind::IncludeNext
@@ -103,23 +96,18 @@ pub fn parse_c_include_request(
         return Ok(None);
     }
 
-    let payload = c_directive_payload(&spliced.bytes, directive).map_err(|mut err| {
-        err.offset = directive_offset + spliced.original_offset(err.offset);
-        err
-    })?;
+    let payload = scan.payload()?;
     let (style, spelling, payload_rel) =
         parse_header_name_payload(payload).map_err(|mut err| {
-            err.offset =
-                directive_offset + spliced.original_offset(directive.payload_start + err.offset);
-            err
+            err.offset += directive.payload_start;
+            scan.remap(err)
         })?;
     Ok(Some(CIncludeRequest {
         directive: directive.kind,
         style,
         spelling,
         directive_offset,
-        payload_offset: directive_offset
-            + spliced.original_offset(directive.payload_start + payload_rel),
+        payload_offset: scan.source_offset(directive.payload_start + payload_rel),
     }))
 }
 
@@ -138,63 +126,18 @@ pub fn reference_c_preprocessor_load_includes<M: CPreprocessorSourceManager>(
     source: &[u8],
     manager: &M,
 ) -> Result<Vec<CResolvedInclude>, CPreprocessorError> {
-    if tok_types.len() != tok_starts.len() || tok_types.len() != tok_lens.len() {
-        return Err(CPreprocessorError {
-            offset: tok_types.len().min(tok_starts.len()).min(tok_lens.len()),
-            message: "Fix: token type/start/length streams must have identical lengths",
-        });
-    }
-
     let mut resolved = Vec::new();
-    for (idx, ((tok_type, start), len)) in
-        tok_types.iter().zip(tok_starts).zip(tok_lens).enumerate()
-    {
-        if *tok_type != TOK_PREPROC {
-            continue;
-        }
-        let start = usize::try_from(*start).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token start does not fit host usize",
-        })?;
-        let len = usize::try_from(*len).map_err(|_| CPreprocessorError {
-            offset: idx,
-            message: "Fix: token length does not fit host usize",
-        })?;
-        let token_end = start.checked_add(len).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: token span overflows source address space",
-        })?;
-        let logical_len = c_logical_directive_len(source, start);
-        if logical_len > len {
-            return Err(CPreprocessorError {
-                offset: start + len,
-                message:
-                    "Fix: TOK_PREPROC span must include the full phase-2 spliced directive row",
-            });
-        }
-        if token_end > source.len() {
-            return Err(CPreprocessorError {
-                offset: start,
-                message: "Fix: preprocessor token span must be inside the source buffer",
-            });
-        }
-        let logical_end = start.checked_add(logical_len).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: directive logical span overflows source address space",
-        })?;
-        let row = source.get(start..logical_end).ok_or(CPreprocessorError {
-            offset: start,
-            message: "Fix: preprocessor token span must be inside the source buffer",
-        })?;
-        if let Some(request) = parse_c_include_request(row, start)? {
-            let source = manager.load_include(&request)?;
+    for_each_directive_row(tok_types, tok_starts, tok_lens, source, |row| {
+        if let Some(request) = parse_c_include_request(row.bytes, row.start)? {
+            let loaded = manager.load_include(&request)?;
             resolved.push(CResolvedInclude {
-                token_index: idx,
+                token_index: row.index,
                 request,
-                source,
+                source: loaded,
             });
         }
-    }
+        Ok(())
+    })?;
     Ok(resolved)
 }
 
@@ -249,11 +192,4 @@ fn parse_delimited_header(
         offset: start,
         message: "Fix: terminate #include header name",
     })
-}
-
-fn skip_horizontal_ws(bytes: &[u8], mut index: usize) -> usize {
-    while matches!(bytes.get(index), Some(b' ' | b'\t' | b'\x0b' | b'\x0c')) {
-        index += 1;
-    }
-    index
 }

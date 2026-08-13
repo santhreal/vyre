@@ -41,11 +41,11 @@
 //! check is bounded by the candidate macro-name length. One compiled
 //! program handles every macro-table size and identifier length.
 
-use super::gpu_directive_parse_shared::MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX;
-use super::gpu_source_bytes::{
-    safe_load_source_layout_byte_expr, source_buffer_element, source_byte_len_expr,
-    SourceByteLayout,
+use super::gpu_directive_parse_shared::{
+    push_c_identifier_span, push_directive_row_bounds, push_hash_and_keyword_start,
+    push_keyword_end, push_ws_skip_from_expr, source_buffer_element, DirectiveSourceLayout,
 };
+use super::gpu_source_bytes::{safe_load_source_layout_byte_expr, source_byte_len_expr};
 use crate::parsing::c::lex::tokens::{TOK_PP_IFDEF, TOK_PP_IFNDEF};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -79,8 +79,8 @@ pub fn gpu_ifdef_value(num_tokens: u32, source_len: u32) -> Program {
     gpu_ifdef_value_with_byte_layouts(
         num_tokens,
         source_len,
-        SourceByteLayout::PackedU32,
-        SourceByteLayout::PackedU32,
+        DirectiveSourceLayout::PackedU32,
+        DirectiveSourceLayout::PackedU32,
     )
 }
 
@@ -95,24 +95,28 @@ pub fn gpu_ifdef_value_u8(num_tokens: u32, source_len: u32) -> Program {
     gpu_ifdef_value_with_byte_layouts(
         num_tokens,
         source_len,
-        SourceByteLayout::RawU8,
-        SourceByteLayout::RawU8,
+        DirectiveSourceLayout::RawU8,
+        DirectiveSourceLayout::RawU8,
     )
 }
 
 fn gpu_ifdef_value_with_byte_layouts(
     num_tokens: u32,
     source_len: u32,
-    source_layout: SourceByteLayout,
-    macro_names_layout: SourceByteLayout,
+    source_layout: DirectiveSourceLayout,
+    macro_names_layout: DirectiveSourceLayout,
 ) -> Program {
     let _ = source_len;
     let t = Expr::var("t");
-    let source_byte_len = source_byte_len_expr("source", source_layout);
     let macro_names_byte_len = source_byte_len_expr("macro_names_packed", macro_names_layout);
 
     let safe_load_source = |addr: Expr| -> Expr {
-        safe_load_source_layout_byte_expr("source", source_layout, addr, source_byte_len.clone())
+        safe_load_source_layout_byte_expr(
+            "source",
+            source_layout,
+            addr,
+            source_byte_len_expr("source", source_layout),
+        )
     };
     let safe_load_macro_name = |addr: Expr| -> Expr {
         safe_load_source_layout_byte_expr(
@@ -122,157 +126,14 @@ fn gpu_ifdef_value_with_byte_layouts(
             macro_names_byte_len.clone(),
         )
     };
-    let is_ws = |b: Expr| -> Expr {
-        Expr::select(
-            Expr::or(
-                Expr::or(
-                    Expr::eq(b.clone(), Expr::u32(b' ' as u32)),
-                    Expr::eq(b.clone(), Expr::u32(b'\t' as u32)),
-                ),
-                Expr::or(
-                    Expr::eq(b.clone(), Expr::u32(0x0B)),
-                    Expr::eq(b, Expr::u32(0x0C)),
-                ),
-            ),
-            Expr::u32(1),
-            Expr::u32(0),
-        )
-    };
-    let is_continue = |b: Expr| -> Expr {
-        let is_lower = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'a' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'z' as u32)),
-        );
-        let is_upper = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'A' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'Z' as u32)),
-        );
-        let is_digit = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'0' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'9' as u32)),
-        );
-        let is_under = Expr::eq(b, Expr::u32(b'_' as u32));
-        Expr::select(
-            Expr::or(Expr::or(is_lower, is_upper), Expr::or(is_digit, is_under)),
-            Expr::u32(1),
-            Expr::u32(0),
-        )
-    };
-    let is_start = |b: Expr| -> Expr {
-        let is_lower = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'a' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'z' as u32)),
-        );
-        let is_upper = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'A' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'Z' as u32)),
-        );
-        let is_under = Expr::eq(b, Expr::u32(b'_' as u32));
-        Expr::select(
-            Expr::or(Expr::or(is_lower, is_upper), is_under),
-            Expr::u32(1),
-            Expr::u32(0),
-        )
-    };
 
-    // hash_off: scan for `#` within first MAX_WS_PREFIX+1 bytes.
-    let hash_off_expr = {
-        let mut acc = Expr::u32(0xFFFF_FFFF);
-        for p in (0..=MAX_WS_PREFIX).rev() {
-            let mut prefix_ws = Expr::u32(1);
-            for q in 0..p {
-                prefix_ws = Expr::bitand(prefix_ws, Expr::var(format!("hs_ws_{q}")));
-            }
-            let s_eq_hash = Expr::select(
-                Expr::eq(Expr::var(format!("hs_{p}")), Expr::u32(b'#' as u32)),
-                Expr::u32(1),
-                Expr::u32(0),
-            );
-            let cond_u32 = Expr::bitand(s_eq_hash, prefix_ws);
-            acc = Expr::select(Expr::eq(cond_u32, Expr::u32(1)), Expr::u32(p), acc);
-        }
-        acc
-    };
-
-    let ws_skip_expr = |prefix: &str, n: u32| -> Expr {
-        let mut acc = Expr::u32(n);
-        for q in (0..n).rev() {
-            let mut prefix_ws = Expr::u32(1);
-            for r in 0..q {
-                prefix_ws = Expr::bitand(prefix_ws, Expr::var(format!("{prefix}_ws_{r}")));
-            }
-            let xs_q_not_ws = Expr::select(
-                Expr::eq(Expr::var(format!("{prefix}_ws_{q}")), Expr::u32(0)),
-                Expr::u32(1),
-                Expr::u32(0),
-            );
-            let cond_u32 = Expr::bitand(xs_q_not_ws, prefix_ws);
-            acc = Expr::select(Expr::eq(cond_u32, Expr::u32(1)), Expr::u32(q), acc);
-        }
-        acc
-    };
-
+    // Steps 1-5 are the shared directive-line scan: row bounds, leading
+    // whitespace and `#`, whitespace before the keyword, the keyword itself,
+    // whitespace before the payload, then the payload identifier. Only the
+    // keyword length is this kernel's own (`ifdef` = 5, `ifndef` = 6).
     let mut evaluate: Vec<Node> = Vec::new();
-    evaluate.push(Node::let_bind(
-        "tok_start",
-        Expr::load("tok_starts", t.clone()),
-    ));
-    evaluate.push(Node::let_bind("tok_len", Expr::load("tok_lens", t.clone())));
-    evaluate.push(Node::let_bind(
-        "tok_end",
-        Expr::add(Expr::var("tok_start"), Expr::var("tok_len")),
-    ));
-
-    // Step 1: leading WS + `#`.
-    for p in 0..=MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("hs_{p}"),
-            safe_load_source(Expr::add(Expr::var("tok_start"), Expr::u32(p))),
-        ));
-    }
-    for p in 0..=MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("hs_ws_{p}"),
-            is_ws(Expr::var(format!("hs_{p}"))),
-        ));
-    }
-    evaluate.push(Node::let_bind("hash_off", hash_off_expr));
-    evaluate.push(Node::let_bind(
-        "hash_idx",
-        Expr::add(Expr::var("tok_start"), Expr::var("hash_off")),
-    ));
-    evaluate.push(Node::let_bind(
-        "found_hash",
-        Expr::select(
-            Expr::lt(Expr::var("hash_off"), Expr::u32(MAX_WS_PREFIX + 1)),
-            Expr::u32(1),
-            Expr::u32(0),
-        ),
-    ));
-
-    // Step 2: WS between `#` and the keyword.
-    for q in 0..MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("kp_{q}"),
-            safe_load_source(Expr::add(Expr::var("hash_idx"), Expr::u32(q + 1))),
-        ));
-    }
-    for q in 0..MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("kp_ws_{q}"),
-            is_ws(Expr::var(format!("kp_{q}"))),
-        ));
-    }
-    evaluate.push(Node::let_bind("kw_skip", ws_skip_expr("kp", MAX_WS_PREFIX)));
-    evaluate.push(Node::let_bind(
-        "kw_start",
-        Expr::add(
-            Expr::add(Expr::var("hash_idx"), Expr::u32(1)),
-            Expr::var("kw_skip"),
-        ),
-    ));
-
-    // Step 3: keyword length depends on kind (`ifdef`=5, `ifndef`=6).
+    push_directive_row_bounds(&mut evaluate);
+    push_hash_and_keyword_start(&mut evaluate, source_layout);
     evaluate.push(Node::let_bind(
         "kw_len_skip",
         Expr::select(
@@ -281,79 +142,22 @@ fn gpu_ifdef_value_with_byte_layouts(
             Expr::u32(5),
         ),
     ));
-    evaluate.push(Node::let_bind(
-        "post_kw",
-        Expr::add(Expr::var("kw_start"), Expr::var("kw_len_skip")),
-    ));
-
-    // Step 4: WS between keyword and identifier.
-    for q in 0..MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("ip_{q}"),
-            safe_load_source(Expr::add(Expr::var("post_kw"), Expr::u32(q))),
-        ));
-    }
-    for q in 0..MAX_WS_PREFIX {
-        evaluate.push(Node::let_bind(
-            format!("ip_ws_{q}"),
-            is_ws(Expr::var(format!("ip_{q}"))),
-        ));
-    }
-    evaluate.push(Node::let_bind(
+    push_keyword_end(&mut evaluate, Expr::var("kw_len_skip"));
+    push_ws_skip_from_expr(
+        &mut evaluate,
+        source_layout,
+        "ip",
+        Expr::var("post_kw"),
         "ident_skip",
-        ws_skip_expr("ip", MAX_WS_PREFIX),
-    ));
-    evaluate.push(Node::let_bind(
         "ident_start_val",
-        Expr::add(Expr::var("post_kw"), Expr::var("ident_skip")),
-    ));
-
-    // Step 5: scan identifier bytes to the directive row end. The
-    // first byte must be a valid C identifier start; subsequent bytes
-    // may be identifier continuations.
-    evaluate.push(Node::let_bind(
-        "ident_scan_limit",
-        Expr::select(
-            Expr::lt(Expr::var("ident_start_val"), Expr::var("tok_end")),
-            Expr::sub(Expr::var("tok_end"), Expr::var("ident_start_val")),
-            Expr::u32(0),
-        ),
-    ));
-    evaluate.push(Node::let_bind("ident_len_val", Expr::u32(0)));
-    evaluate.push(Node::let_bind("ident_done", Expr::u32(0)));
-    evaluate.push(Node::loop_for(
-        "ident_i",
-        Expr::u32(0),
-        Expr::var("ident_scan_limit"),
-        vec![Node::if_then(
-            Expr::eq(Expr::var("ident_done"), Expr::u32(0)),
-            vec![
-                Node::let_bind(
-                    "ident_byte",
-                    safe_load_source(Expr::add(
-                        Expr::var("ident_start_val"),
-                        Expr::var("ident_i"),
-                    )),
-                ),
-                Node::let_bind(
-                    "ident_byte_ok",
-                    Expr::select(
-                        Expr::eq(Expr::var("ident_i"), Expr::u32(0)),
-                        is_start(Expr::var("ident_byte")),
-                        is_continue(Expr::var("ident_byte")),
-                    ),
-                ),
-                Node::if_then_else(
-                    Expr::eq(Expr::var("ident_byte_ok"), Expr::u32(1)),
-                    vec![Node::assign(
-                        "ident_len_val",
-                        Expr::add(Expr::var("ident_i"), Expr::u32(1)),
-                    )],
-                    vec![Node::assign("ident_done", Expr::u32(1))],
-                ),
-            ],
-        )],
-    ));
+    );
+    push_c_identifier_span(
+        &mut evaluate,
+        source_layout,
+        "ident_start_val",
+        "ident_len_val",
+        "ident_done",
+    );
 
     // Step 6: per-macro byte equality.
     //

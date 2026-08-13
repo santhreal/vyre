@@ -59,7 +59,10 @@
 //! to `0` and conditionally overwritten by exactly the matching
 //! keyword arm (matches are mutually exclusive by length+content).
 
-use super::gpu_directive_parse_shared::MAX_DIRECTIVE_WS_PREFIX as MAX_WS_PREFIX;
+use super::gpu_directive_parse_shared::{
+    keyword_match_expr, push_found_hash, push_hash_scan, push_keyword_bytes, push_keyword_start,
+    source_buffer_element, DirectiveSourceLayout,
+};
 use crate::parsing::c::lex::tokens::{
     TOK_PP_DEFINE, TOK_PP_ELIF, TOK_PP_ELSE, TOK_PP_ENDIF, TOK_PP_ERROR, TOK_PP_IDENT, TOK_PP_IF,
     TOK_PP_IFDEF, TOK_PP_IFNDEF, TOK_PP_INCLUDE, TOK_PP_INCLUDE_NEXT, TOK_PP_LINE, TOK_PP_NULL,
@@ -90,11 +93,7 @@ pub const BINDING_DIRECTIVE_VALUES: u32 = 5;
 /// when classifying.
 pub const MAX_KEYWORD_LEN: u32 = 12;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum SourceLayout {
-    PackedU32,
-    RawU8,
-}
+
 
 /// Build the 17a directive-classification `Program` over packed `DataType::U32`
 /// source words.
@@ -104,243 +103,43 @@ enum SourceLayout {
 /// output buffer sizing, `source_len` is unused.
 #[must_use]
 pub fn gpu_directive_metadata(num_tokens: u32, source_len: u32) -> Program {
-    gpu_directive_metadata_with_source_layout(num_tokens, source_len, SourceLayout::PackedU32)
+    gpu_directive_metadata_with_source_layout(
+        num_tokens,
+        source_len,
+        DirectiveSourceLayout::PackedU32,
+    )
 }
 
 /// Build the 17a directive-classification `Program` over raw `DataType::U8`
 /// source bytes.
 #[must_use]
 pub fn gpu_directive_metadata_u8(num_tokens: u32, source_len: u32) -> Program {
-    gpu_directive_metadata_with_source_layout(num_tokens, source_len, SourceLayout::RawU8)
+    gpu_directive_metadata_with_source_layout(num_tokens, source_len, DirectiveSourceLayout::RawU8)
 }
 
 fn gpu_directive_metadata_with_source_layout(
     num_tokens: u32,
     source_len: u32,
-    source_layout: SourceLayout,
+    source_layout: DirectiveSourceLayout,
 ) -> Program {
     let _ = source_len;
     let t = Expr::var("t");
 
-    // ---- helper expression builders ----
-    let source_byte_len = match source_layout {
-        SourceLayout::PackedU32 => super::gpu_source_bytes::packed_source_byte_len_expr(),
-        SourceLayout::RawU8 => Expr::buf_len("source"),
-    };
-    let safe_load = |addr: Expr| -> Expr {
-        match source_layout {
-            SourceLayout::PackedU32 => {
-                super::gpu_source_bytes::safe_load_source_byte_expr(addr, source_byte_len.clone())
-            }
-            SourceLayout::RawU8 => Expr::select(
-                Expr::lt(addr.clone(), source_byte_len.clone()),
-                Expr::bitand(
-                    Expr::cast(DataType::U32, Expr::load("source", addr)),
-                    Expr::u32(0xFF),
-                ),
-                Expr::u32(0),
-            ),
-        }
-    };
-    // is_ws(b): 1 if b is one of {space, tab, VT, FF}, else 0.
-    let is_ws = |b: Expr| -> Expr {
-        Expr::select(
-            Expr::or(
-                Expr::or(
-                    Expr::eq(b.clone(), Expr::u32(b' ' as u32)),
-                    Expr::eq(b.clone(), Expr::u32(b'\t' as u32)),
-                ),
-                Expr::or(
-                    Expr::eq(b.clone(), Expr::u32(0x0B)),
-                    Expr::eq(b, Expr::u32(0x0C)),
-                ),
-            ),
-            Expr::u32(1),
-            Expr::u32(0),
-        )
-    };
-    // is_continue(b): 1 if b is ASCII alphanumeric or '_', else 0.
-    let is_continue = |b: Expr| -> Expr {
-        let is_lower = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'a' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'z' as u32)),
-        );
-        let is_upper = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'A' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'Z' as u32)),
-        );
-        let is_digit = Expr::and(
-            Expr::ge(b.clone(), Expr::u32(b'0' as u32)),
-            Expr::le(b.clone(), Expr::u32(b'9' as u32)),
-        );
-        let is_under = Expr::eq(b, Expr::u32(b'_' as u32));
-        Expr::select(
-            Expr::or(Expr::or(is_lower, is_upper), Expr::or(is_digit, is_under)),
-            Expr::u32(1),
-            Expr::u32(0),
-        )
-    };
-
-    // Build the chained-Select expression that resolves the byte-offset
-    // (relative to tok_start) of `#` within the first MAX_WS_PREFIX+1
-    // bytes. Returns 0xFFFF_FFFF if no `#` is found in that window.
-    //
-    // For each candidate position p in [0, MAX_WS_PREFIX]:
-    //   match if `s_p == '#'` and every byte before it in [0, p) is WS.
-    let hash_off_expr = {
-        let mut acc = Expr::u32(0xFFFF_FFFF);
-        for p in (0..=MAX_WS_PREFIX).rev() {
-            // Prefix WS predicate: all of s_0..s_{p-1} are WS. Each
-            // s_ws_{q} is already u32 0/1 from `is_ws`; AND of u32
-            // truth values is itself u32 truth.
-            let mut prefix_ws = Expr::u32(1);
-            for q in 0..p {
-                // bitand on u32 0/1 values stays u32; `Expr::and`
-                // returns Bool, which would create a u32/Bool mix on
-                // subsequent iterations that reference-eval rejects.
-                prefix_ws = Expr::bitand(prefix_ws, Expr::var(format!("s_ws_{q}")));
-            }
-            let s_eq_hash = Expr::select(
-                Expr::eq(Expr::var(format!("s_{p}")), Expr::u32(b'#' as u32)),
-                Expr::u32(1),
-                Expr::u32(0),
-            );
-            // u32 conjunction via bitand (both operands u32 0/1).
-            let cond_u32 = Expr::bitand(s_eq_hash, prefix_ws);
-            acc = Expr::select(Expr::eq(cond_u32, Expr::u32(1)), Expr::u32(p), acc);
-        }
-        acc
-    };
-
-    // Build the chained-Select expression that resolves the number of
-    // WS bytes between `#` and the keyword. Inspects up to MAX_WS_PREFIX
-    // bytes after `#`. Returns 0..=MAX_WS_PREFIX.
-    //
-    // kw_skip = first index q in [0, MAX_WS_PREFIX] where `p_q` is NOT WS.
-    // If all are WS, returns MAX_WS_PREFIX (best-effort cap).
-    let kw_skip_expr = {
-        let mut acc = Expr::u32(MAX_WS_PREFIX);
-        for q in (0..MAX_WS_PREFIX).rev() {
-            // Condition: p_q is NOT WS, AND every p before it IS WS.
-            let mut prefix_ws = Expr::u32(1);
-            for r in 0..q {
-                prefix_ws = Expr::bitand(prefix_ws, Expr::var(format!("p_ws_{r}")));
-            }
-            let p_not_ws = Expr::select(
-                Expr::eq(Expr::var(format!("p_ws_{q}")), Expr::u32(0)),
-                Expr::u32(1),
-                Expr::u32(0),
-            );
-            let cond_u32 = Expr::bitand(p_not_ws, prefix_ws);
-            acc = Expr::select(Expr::eq(cond_u32, Expr::u32(1)), Expr::u32(q), acc);
-        }
-        acc
-    };
-
-    // Build a u32 0/1 expression that is 1 iff the keyword starting at
-    // k_0..k_{N-1} matches `expected` exactly AND `k_N` is not an
-    // ident-continue byte (so e.g. `define` matches but `defined` does
-    // not).
-    let keyword_match_expr = |expected: &[u32]| -> Expr {
-        let mut all_eq = Expr::u32(1);
-        for (i, byte) in expected.iter().copied().enumerate() {
-            let eq_byte = Expr::select(
-                Expr::eq(Expr::var(format!("k_{i}")), Expr::u32(byte)),
-                Expr::u32(1),
-                Expr::u32(0),
-            );
-            all_eq = Expr::bitand(all_eq, eq_byte);
-        }
-        let next_not_ident = Expr::select(
-            Expr::eq(
-                Expr::var(format!("k_is_continue_{}", expected.len())),
-                Expr::u32(0),
-            ),
-            Expr::u32(1),
-            Expr::u32(0),
-        );
-        // Result is u32 0/1; the caller (`fire`) tests it via `eq u32(1)`.
-        Expr::bitand(all_eq, next_not_ident)
-    };
-
     // ---- per-thread classify body (loop-free, mutation-free) ----
+    //
+    // Directive-line scan stages come from `gpu_directive_parse_shared`; this
+    // builder only chooses the binding namespace and the stage order. Reading
+    // the keyword bytes before the found-hash flag is this classifier's own
+    // ordering and is deliberately not centralized.
     let mut classify: Vec<Node> = Vec::new();
     classify.push(Node::let_bind(
         "tok_start",
         Expr::load("tok_starts", t.clone()),
     ));
-
-    // Read bytes s_0..s_{MAX_WS_PREFIX} starting at tok_start (the
-    // potential leading-WS run plus the `#`).
-    for p in 0..=MAX_WS_PREFIX {
-        classify.push(Node::let_bind(
-            format!("s_{p}"),
-            safe_load(Expr::add(Expr::var("tok_start"), Expr::u32(p))),
-        ));
-    }
-    for p in 0..=MAX_WS_PREFIX {
-        classify.push(Node::let_bind(
-            format!("s_ws_{p}"),
-            is_ws(Expr::var(format!("s_{p}"))),
-        ));
-    }
-    classify.push(Node::let_bind("hash_off", hash_off_expr));
-    // hash_idx = tok_start + hash_off. If hash_off is 0xFFFF_FFFF, the
-    // load will be out-of-bounds and safe_load returns 0; subsequent
-    // keyword matches cannot fire.
-    classify.push(Node::let_bind(
-        "hash_idx",
-        Expr::add(Expr::var("tok_start"), Expr::var("hash_off")),
-    ));
-
-    // Read p_0..p_{MAX_WS_PREFIX-1}: bytes after `#`, used to find
-    // optional WS run between `#` and the keyword.
-    for q in 0..MAX_WS_PREFIX {
-        classify.push(Node::let_bind(
-            format!("p_{q}"),
-            safe_load(Expr::add(Expr::var("hash_idx"), Expr::u32(q + 1))),
-        ));
-    }
-    for q in 0..MAX_WS_PREFIX {
-        classify.push(Node::let_bind(
-            format!("p_ws_{q}"),
-            is_ws(Expr::var(format!("p_{q}"))),
-        ));
-    }
-    classify.push(Node::let_bind("kw_skip", kw_skip_expr));
-    // kw_start = hash_idx + 1 + kw_skip.
-    classify.push(Node::let_bind(
-        "kw_start",
-        Expr::add(
-            Expr::add(Expr::var("hash_idx"), Expr::u32(1)),
-            Expr::var("kw_skip"),
-        ),
-    ));
-
-    // Read k_0..k_{MAX_KEYWORD_LEN}: keyword bytes plus one trailing
-    // sentinel for the "not-ident-continue" check.
-    for i in 0..=MAX_KEYWORD_LEN {
-        classify.push(Node::let_bind(
-            format!("k_{i}"),
-            safe_load(Expr::add(Expr::var("kw_start"), Expr::u32(i))),
-        ));
-    }
-    for i in 0..=MAX_KEYWORD_LEN {
-        classify.push(Node::let_bind(
-            format!("k_is_continue_{i}"),
-            is_continue(Expr::var(format!("k_{i}"))),
-        ));
-    }
-
-    // Predicate: did we actually find `#` within MAX_WS_PREFIX bytes?
-    classify.push(Node::let_bind(
-        "found_hash",
-        Expr::select(
-            Expr::lt(Expr::var("hash_off"), Expr::u32(MAX_WS_PREFIX + 1)),
-            Expr::u32(1),
-            Expr::u32(0),
-        ),
-    ));
+    push_hash_scan(&mut classify, source_layout, "s");
+    push_keyword_start(&mut classify, source_layout, "p");
+    push_keyword_bytes(&mut classify, source_layout, MAX_KEYWORD_LEN);
+    push_found_hash(&mut classify);
 
     // Per-keyword stores. Each `if` is mutually exclusive with every
     // other (same first byte → different lengths or different later
@@ -449,10 +248,7 @@ fn gpu_directive_metadata_with_source_layout(
         ),
     ];
 
-    let source_element = match source_layout {
-        SourceLayout::PackedU32 => DataType::U32,
-        SourceLayout::RawU8 => DataType::U8,
-    };
+    let source_element = source_buffer_element(source_layout);
 
     Program::wrapped(
         vec![

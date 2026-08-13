@@ -537,3 +537,8 @@ required-features = ["nn-attention", "nn-norm"]
 name = "security_flow_skeleton_family_guard"
 path = "tests/security_flow_skeleton_family_guard.rs"
 required-features = ["security"]
+
+[[test]]
+name = "c_preprocess_dedup_guard"
+path = "tests/c_preprocess_dedup_guard.rs"
+required-features = ["c-parser"]

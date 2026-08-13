@@ -1,10 +1,13 @@
 //! Shared GPU macro-expansion helper builders.
 
-use crate::parsing::c::lex::tokens::{TOK_HASHHASH, TOK_IDENTIFIER, TOK_LPAREN};
+use crate::parsing::c::lex::tokens::{TOK_HASH, TOK_HASHHASH, TOK_IDENTIFIER, TOK_LPAREN};
+use crate::parsing::c::preprocess::materialization::C_MACRO_SOURCE_COUNT_BYTES;
 use crate::parsing::c::preprocess::synthesis::*;
+use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{Expr, Node};
 use vyre_primitives::hash::fnv1a::{fnv1a32_initial_expr, fnv1a32_update_byte_node};
 
+use super::arg_scan::emit_function_like_argument_scan;
 use super::*;
 
 pub(super) fn emit_macro_lookup(
@@ -659,4 +662,216 @@ pub(super) fn synthesized_paste_token(left: Expr, right: Expr) -> Expr {
             )
         },
     )
+}
+
+/// Branch bodies for the named-macro dispatch tree.
+///
+/// The token-only and materialized expansion kernels agree on the shape of the
+/// dispatch: resolve the macro slot, pass the token through when it names no
+/// macro, otherwise split object-like from function-like and pass a
+/// function-like name through when no `(` follows. They disagree only on what
+/// each of those four leaves emits.
+pub(super) struct NamedMacroDispatchSpec<'a> {
+    /// Prefix that resolves `named_macro_slot` for the current token.
+    pub(super) scan: NamedMacroScanSpec<'a>,
+    /// Replacement-size prelude input.
+    pub(super) macro_sizes: &'a str,
+    /// Token count driving the prelude's bounded loops.
+    pub(super) num_tokens: Expr,
+    /// Emitted when the token names no macro.
+    pub(super) unknown_passthrough: Vec<Node>,
+    /// Emitted for an object-like macro.
+    pub(super) object_like: Vec<Node>,
+    /// Emitted when a function-like macro name is not followed by `(`.
+    pub(super) function_name_passthrough: Vec<Node>,
+    /// Emitted for an invoked function-like macro.
+    pub(super) function_like: Vec<Node>,
+}
+
+/// Build the named-macro dispatch tree for one input token.
+///
+/// Both passthrough leaves advance `named_i` by one; every other leaf owns its
+/// own cursor update.
+pub(super) fn emit_named_macro_dispatch(spec: NamedMacroDispatchSpec<'_>) -> Vec<Node> {
+    let in_tok_types = spec.scan.in_tok_types;
+    let mut nodes = emit_named_macro_scan_prefix(spec.scan);
+    nodes.push(Node::if_then_else(
+        Expr::eq(Expr::var("named_macro_slot"), Expr::u32(EMPTY_MACRO_SLOT)),
+        advance_named_cursor(spec.unknown_passthrough),
+        {
+            let mut expanded =
+                emit_named_replacement_prelude(spec.macro_sizes, in_tok_types, spec.num_tokens);
+            expanded.push(Node::if_then_else(
+                Expr::eq(
+                    Expr::var("named_macro_kind"),
+                    Expr::u32(C_MACRO_KIND_OBJECT_LIKE),
+                ),
+                spec.object_like,
+                vec![Node::if_then_else(
+                    Expr::eq(Expr::var("named_has_open_paren"), Expr::u32(0)),
+                    advance_named_cursor(spec.function_name_passthrough),
+                    spec.function_like,
+                )],
+            ));
+            expanded
+        },
+    ));
+    nodes
+}
+
+fn advance_named_cursor(mut passthrough: Vec<Node>) -> Vec<Node> {
+    passthrough.push(Node::assign(
+        "named_i",
+        Expr::add(Expr::var("named_i"), Expr::u32(1)),
+    ));
+    passthrough
+}
+
+/// Serial driver shell around a named-macro dispatch body.
+pub(super) struct NamedExpansionDriverSpec<'a> {
+    /// Region name and entry op id of the owning kernel.
+    pub(super) op_id: &'static str,
+    /// Per-token dispatch body.
+    pub(super) body: Vec<Node>,
+    /// Upper bound of the cursor loop.
+    pub(super) num_tokens: Expr,
+    /// Buffer receiving the final output token count.
+    pub(super) out_tok_counts: &'a str,
+    /// Buffer receiving the final output byte count, for the materialized
+    /// kernel that also emits a source arena. `None` keeps the token-only
+    /// kernel free of a byte cursor.
+    pub(super) out_source_counts: Option<&'a str>,
+}
+
+/// Wrap a dispatch body in the single-invocation serial cursor loop.
+///
+/// Only invocation 0 runs: the expansion walk is inherently sequential because
+/// `named_i` can jump past a whole macro invocation.
+pub(super) fn emit_named_expansion_driver(spec: NamedExpansionDriverSpec<'_>) -> Node {
+    let mut serial = vec![
+        Node::let_bind("named_i", Expr::u32(0)),
+        Node::let_bind("named_out_idx", Expr::u32(0)),
+    ];
+    if spec.out_source_counts.is_some() {
+        serial.push(Node::let_bind("named_source_out_idx", Expr::u32(0)));
+    }
+    serial.push(Node::loop_for(
+        "named_cursor",
+        Expr::u32(0),
+        spec.num_tokens,
+        vec![Node::if_then(
+            Expr::eq(Expr::var("named_cursor"), Expr::var("named_i")),
+            spec.body,
+        )],
+    ));
+    serial.push(Node::store(
+        spec.out_tok_counts,
+        Expr::u32(0),
+        Expr::var("named_out_idx"),
+    ));
+    if let Some(out_source_counts) = spec.out_source_counts {
+        serial.push(Node::store(
+            out_source_counts,
+            Expr::u32(C_MACRO_SOURCE_COUNT_BYTES),
+            Expr::var("named_source_out_idx"),
+        ));
+    }
+    wrap_anonymous(
+        spec.op_id,
+        vec![Node::if_then(
+            Expr::eq(Expr::InvocationId { axis: 0 }, Expr::u32(0)),
+            serial,
+        )],
+    )
+}
+
+/// Branch bodies for the function-like replacement walk.
+///
+/// The token-only and materialized kernels share the argument scan, the
+/// skip-one-token guard, the replacement-token decode, and the three-way split
+/// on `#`, `##`, and everything else. They disagree only on what each of those
+/// three branches emits.
+pub(super) struct FunctionLikeReplacementSpec<'a> {
+    /// Input token-type stream, used by the argument scan.
+    pub(super) in_tok_types: &'a str,
+    /// Replacement token-type table.
+    pub(super) macro_vals: &'a str,
+    /// Replacement parameter-index table.
+    pub(super) macro_replacement_params: &'a str,
+    /// Workgroup argument start bounds.
+    pub(super) macro_arg_starts: &'a str,
+    /// Workgroup argument end bounds.
+    pub(super) macro_arg_ends: &'a str,
+    /// Token count bounding the argument scan.
+    pub(super) num_tokens: Expr,
+    /// `#param` stringification.
+    pub(super) stringify: Vec<Node>,
+    /// `lhs ## rhs` token paste.
+    pub(super) paste: Vec<Node>,
+    /// Any other replacement token.
+    pub(super) regular: Vec<Node>,
+}
+
+/// Build the function-like replacement walk.
+pub(super) fn emit_function_like_replacement_walk(
+    spec: FunctionLikeReplacementSpec<'_>,
+) -> Vec<Node> {
+    let mut nodes = emit_function_like_argument_scan(
+        spec.in_tok_types,
+        spec.macro_arg_starts,
+        spec.macro_arg_ends,
+        spec.num_tokens,
+    );
+    nodes.extend([
+        Node::let_bind("named_skip_repl", Expr::u32(0)),
+        Node::loop_for(
+            "named_repl_i",
+            Expr::u32(0),
+            Expr::var("named_repl_size"),
+            vec![Node::if_then_else(
+                Expr::eq(Expr::var("named_skip_repl"), Expr::u32(1)),
+                vec![Node::assign("named_skip_repl", Expr::u32(0))],
+                {
+                    let mut repl = vec![
+                        Node::let_bind(
+                            "named_repl_offset",
+                            Expr::add(Expr::var("named_macro_idx"), Expr::var("named_repl_i")),
+                        ),
+                        Node::let_bind(
+                            "named_repl_param",
+                            Expr::load(
+                                spec.macro_replacement_params,
+                                Expr::var("named_repl_offset"),
+                            ),
+                        ),
+                        Node::let_bind(
+                            "named_repl_tok",
+                            Expr::load(spec.macro_vals, Expr::var("named_repl_offset")),
+                        ),
+                    ];
+                    repl.push(Node::if_then_else(
+                        Expr::and(
+                            Expr::eq(Expr::var("named_repl_tok"), Expr::u32(TOK_HASH)),
+                            Expr::lt(
+                                Expr::add(Expr::var("named_repl_i"), Expr::u32(1)),
+                                Expr::var("named_repl_size"),
+                            ),
+                        ),
+                        spec.stringify,
+                        vec![Node::if_then_else(
+                            Expr::eq(Expr::var("named_repl_tok"), Expr::u32(TOK_HASHHASH)),
+                            spec.paste,
+                            spec.regular,
+                        )],
+                    ));
+                    repl
+                },
+            )],
+        ),
+        Node::assign(
+            "named_i",
+            Expr::add(Expr::var("macro_close_idx"), Expr::u32(1)),
+        ),
+    ]);
+    nodes
 }
