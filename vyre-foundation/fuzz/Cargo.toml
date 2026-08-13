@@ -12,7 +12,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 vyre-foundation = { path = ".." }
-toml = "=1.1.2"
+toml = "=1.1.3"
 
 [[bin]]
 name = "decoder"
