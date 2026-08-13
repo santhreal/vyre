@@ -10,7 +10,7 @@ pub struct EqDualReference;
 define_compare_dual_reference!(
     EqDualReference,
     |left, right| left == right,
-    super::super::common::eq_bytes
+    super::super::byte_walk_reference::eq_bytes
 );
 
 inventory::submit! {

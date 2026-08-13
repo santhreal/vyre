@@ -8,7 +8,7 @@
 
 use super::*;
 use crate::ir_inner::model::program::MemoryKind;
-use crate::ir_inner::model::types::BufferAccess;
+use crate::ir_inner::model::spec_types::BufferAccess;
 use std::sync::atomic::Ordering;
 
 /// Uncached digest computations performed on THIS thread.

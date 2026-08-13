@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use super::common::{self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec};
+use super::gated_delta_layout::{self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec};
 use super::gated_delta::RecurrentGatedDeltaError;
 use crate::region::wrap_anonymous;
 
@@ -160,7 +160,7 @@ pub(super) fn chunked_gated_delta_impl(
         ref dtype,
         ..
     } = *spec;
-    let chunk_value_count = common::checked(&[CHUNK_SIZE, value_dim])?;
+    let chunk_value_count = gated_delta_layout::checked(&[CHUNK_SIZE, value_dim])?;
     let chunk_count = sequence.div_ceil(CHUNK_SIZE);
 
     let init_state = Node::loop_for(
@@ -732,7 +732,7 @@ pub(super) fn chunked_gated_delta_impl(
         ),
     ];
 
-    let mut buffers = common::gated_delta_buffers(spec, &counts);
+    let mut buffers = gated_delta_layout::gated_delta_buffers(spec, &counts);
     buffers.extend([
         BufferDecl::workgroup(CHUNK_DECAY, CHUNK_SIZE, DataType::F32),
         BufferDecl::workgroup(CHUNK_VALUE, chunk_value_count, DataType::F32),

@@ -3,7 +3,7 @@
 use crate::parsing::c::preprocess::materialization::*;
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::arg_bounds::*;
 use super::*;
 
 pub(super) fn emit_materialized_stringification_branch(

@@ -1,7 +1,7 @@
 //! Cross-entry-point IR identity guard for the C11 lexer builders.
 //!
 //! Every builder below shares one parameterized token-classification walk
-//! (`parsing::c::lex::lexer::core::helpers`). A refactor of that shared walk is
+//! (`parsing::c::lex::lexer::classify::stages`). A refactor of that shared walk is
 //! only a rehome if each public entry point still emits byte-identical IR, so
 //! this pins the canonical wire fingerprint of every entry point across a set of
 //! haystack lengths that exercise the packed / expanded / raw-u8 / contiguous

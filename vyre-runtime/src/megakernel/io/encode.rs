@@ -2,7 +2,7 @@
 
 use crate::PipelineError;
 
-use super::helpers::validate_io_queue_view;
+use super::queue_words::validate_io_queue_view;
 use super::{IO_SLOT_COUNT, IO_SLOT_WORDS};
 
 /// contains a partial IO slot, or exceeds the compiled poll window.

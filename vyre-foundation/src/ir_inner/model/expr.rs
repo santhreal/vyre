@@ -3,7 +3,7 @@
 // Every expression evaluates to a typed value. Expressions are pure:
 // they read state but do not modify it.
 
-use crate::ir_inner::model::types::{DataType, SubgroupReduceOp};
+use crate::ir_inner::model::spec_types::{DataType, SubgroupReduceOp};
 use rustc_hash::FxHasher;
 use std::borrow::Borrow;
 use std::fmt;

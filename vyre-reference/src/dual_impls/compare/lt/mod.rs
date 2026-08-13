@@ -10,7 +10,7 @@ pub struct LtDualReference;
 define_compare_dual_reference!(
     LtDualReference,
     |left, right| left < right,
-    super::super::common::lt_bytes
+    super::super::byte_walk_reference::lt_bytes
 );
 
 inventory::submit! {

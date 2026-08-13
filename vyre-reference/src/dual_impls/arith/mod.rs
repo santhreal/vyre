@@ -6,7 +6,7 @@ macro_rules! define_arith_dual_reference {
             /// Evaluate the operation using the direct word-oriented oracle.
             #[must_use]
             pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::binary_direct(input, $direct)
+                crate::dual_impls::evaluator::binary_direct(input, $direct)
             }
         }
 
@@ -33,6 +33,6 @@ macro_rules! define_arith_dual_reference {
 
 /// docs
 pub mod add;
-mod common;
+mod bit_walk_reference;
 /// docs
 pub mod mul;

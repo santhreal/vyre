@@ -9,7 +9,7 @@ mod atomic_scanner;
 mod entry;
 mod extension_ops;
 mod trap_collector;
-mod types;
+mod trap_sidecar;
 
 pub(crate) use vyre_foundation::lower::LoweringError;
 
@@ -27,7 +27,7 @@ pub use entry::emit_prepared_module_with_capabilities;
 pub use entry::{emit_module, emit_module_with_capabilities, prepared_program};
 
 pub use entry::{trap_sidecar_decl, trap_tags};
-pub use types::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+pub use trap_sidecar::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
 #[cfg(test)]
 mod tests {

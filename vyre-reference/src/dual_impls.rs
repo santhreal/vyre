@@ -7,7 +7,7 @@ pub mod arith;
 /// docs
 pub mod bitwise;
 /// docs
-pub mod common;
+pub mod evaluator;
 /// docs
 pub mod compare;
 /// docs
@@ -20,4 +20,4 @@ mod scalar_reference_impls;
 pub mod scan;
 /// docs
 pub mod workgroup;
-pub use common::{EvalError, ReferenceEvaluator};
+pub use evaluator::{EvalError, ReferenceEvaluator};

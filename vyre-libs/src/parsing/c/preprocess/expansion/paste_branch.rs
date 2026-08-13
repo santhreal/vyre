@@ -4,7 +4,8 @@ use crate::parsing::c::lex::tokens::TOK_COMMA;
 use crate::parsing::c::preprocess::materialization::*;
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::arg_bounds::*;
+use super::objlike_replacement::*;
 use super::*;
 
 /// Divergences between the token-only and materialized `##` branches.

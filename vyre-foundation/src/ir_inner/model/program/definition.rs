@@ -1,3 +1,6 @@
+//! The `Program` type itself: its fields, its cache slots, and the clone and
+//! equality semantics those caches force.
+
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 

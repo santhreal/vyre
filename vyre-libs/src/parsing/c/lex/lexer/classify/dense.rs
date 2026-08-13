@@ -1,13 +1,13 @@
-use super::helpers::{
+use super::stages::{
     block_comment_scan, block_comment_start, char_start, classify_prologue, float_start,
     identifier_scan, identifier_start, integer_start, line_comment_scan, line_comment_start,
-    number_scan, preproc_start, string_start, ClassifyCtx, ScanNames, SerialLexer,
+    number_scan, preproc_start, set_token, string_start, ClassifyCtx, ScanNames, SerialLexer,
 };
 use super::*;
 use crate::parsing::c::lex::lexer::sections;
 
 /// Full C11 serial lexer. This is the contiguous-haystack composition of the
-/// shared classification walk: it selects every stage in `helpers`, adds the
+/// shared classification walk: it selects every stage in `stages`, adds the
 /// three classifiers that only the full grammar has (directive-line splicing,
 /// encoding-prefixed literals, and escape-validating literal bodies), and runs
 /// them under the shared serial shell.

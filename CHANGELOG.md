@@ -109,6 +109,13 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
 - C typedef row phases remain canonical callable operations. The operation
   matrix marks them as inlined callees whose execution coverage belongs to
   fixture-backed parent operations.
+- Modules no longer carry placeholder names. `common.rs`, `helpers.rs`,
+  `core.rs`, and `types.rs` throughout the workspace were renamed for their
+  contents, folded into their single consumer, or split by concern. Published
+  paths that moved include `vyre_foundation::ir::model::types` to
+  `ir::model::spec_types`, `ir_inner::model::program::core` to
+  `program::definition`, and `vyre_reference::dual_impls::common` to
+  `dual_impls::evaluator`.
 
 ### Removed
 

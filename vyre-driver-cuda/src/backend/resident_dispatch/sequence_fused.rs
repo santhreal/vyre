@@ -10,10 +10,12 @@ use crate::backend::dispatch::CudaBackend;
 use crate::backend::launch_params::launch_param_byte_len;
 use crate::backend::output_range::CudaOutputReadback;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_dispatch::helpers::{
+use crate::backend::resident_dispatch::host_uploads::{
     enqueue_resident_h2d_copy, enqueue_resident_upload_copies_on_stream,
-    prepare_resident_sequence_fills, stage_resident_fill_payload, PreparedStep,
+    stage_resident_fill_payload,
 };
+use crate::backend::resident_dispatch::sequence_slots::prepare_resident_sequence_fills;
+use crate::backend::resident_dispatch::PreparedStep;
 use crate::backend::resident_dispatch_support::{
     checked_resident_dispatch_capacity_add, CudaResidentDispatchStep,
 };

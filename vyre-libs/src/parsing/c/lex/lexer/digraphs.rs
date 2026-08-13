@@ -5,7 +5,7 @@ use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::core::*;
+use super::classify::*;
 
 /// Resolves C11 digraphs and line-splicing markers natively in the token stream.
 /// Translates sequence pairs like `<` and `:` into `[` natively via parallel SIMT passes

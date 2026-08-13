@@ -1,13 +1,14 @@
 //! Extracted `c11_lexer` body sub-builders. Each function returns a
 //! `Vec<Node>` to be appended to the `classify_at_pos` accumulator
-//! inside [`super::core::c11_lexer`]. Splitting these out keeps
-//! `core.rs` under the 500-LOC source-file cap.
+//! inside [`super::classify::c11_lexer`]. Splitting these out keeps
+//! the composition files under the 500-LOC source-file cap.
 
 use vyre_foundation::ir::{Expr, Node};
 
 use crate::parsing::c::lex::tokens::*;
 
-use super::helpers::{byte_at_or_zero, byte_eq, set_token};
+use super::byte_exprs::{byte_at_or_zero, byte_eq};
+use super::classify::stages::set_token;
 
 /// Operator + multi-byte punctuation table (LSHIFT_EQ, RSHIFT_EQ,
 /// ARROW, INC/DEC, all the `?_EQ` operators, the doubled `&&/||/<</>>`

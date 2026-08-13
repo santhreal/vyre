@@ -9,7 +9,7 @@ use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::{BufferDecl, Program};
-use crate::ir_inner::model::types::{BufferAccess, DataType};
+use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
 use rustc_hash::FxHashMap as HashMap;
 
 /// Resolve an operation id to the canonical IR program for that operation.

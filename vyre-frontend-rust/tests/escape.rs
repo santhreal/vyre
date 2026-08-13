@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::lex::lexer::cpu_lexer::lex;
 use vyre_frontend_rust::parse::parse;
 use vyre_frontend_rust::sema::{check_escape, resolve, RustSemaError};
 

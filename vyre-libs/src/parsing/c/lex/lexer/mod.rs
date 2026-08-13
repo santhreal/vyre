@@ -1,21 +1,24 @@
 //! C11 lexer program builder.
 //!
 //! `c11_lexer` constructs a single `Vec<Node>` by appending classifier
-//! sub-builders. Each sub-builder lives in its own file:
-//!  - `helpers.rs`: byte-class predicates + `set_token` + `classify_keyword`
-//!  - `sections.rs`: large extracted operator-table + epilogue builders
-//!  - `core.rs`: top-level `c11_lexer` orchestrator
+//! sub-builders:
+//!  - `byte_exprs.rs`: IR expressions over one haystack byte
+//!  - `classify/`: the token-classification stages and the serial, ranked, and
+//!    sparse lexers composed from them
+//!  - `core_sparse.rs`: the packed / expanded / raw-u8 sparse entry points
+//!  - `sections.rs`: operator-table and epilogue builders too large for the
+//!    composition files
 //!  - `digraphs.rs`: digraph + line-splice resolution pass
 
-mod core;
+mod byte_exprs;
+mod classify;
 mod core_sparse;
 mod digraphs;
-mod helpers;
 mod sections;
 mod single_pass;
 mod sparse_compact;
 
-pub use core::{c11_lexer, c11_lexer_regular, c11_lexer_regular_ranked, c11_lexer_regular_sparse};
+pub use classify::{c11_lexer, c11_lexer_regular, c11_lexer_regular_ranked, c11_lexer_regular_sparse};
 pub use core_sparse::{
     c11_lexer_regular_sparse_no_directives_no_backscan,
     c11_lexer_regular_sparse_packed_haystack_with_block_totals,

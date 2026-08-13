@@ -2,7 +2,8 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::objlike_replacement::*;
+use super::output_token::*;
 
 pub(super) fn emit_object_like_replacement(
     macro_vals: &str,

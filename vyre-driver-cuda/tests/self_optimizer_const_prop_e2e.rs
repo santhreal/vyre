@@ -313,7 +313,7 @@ fn cuda_const_prop_folds_saturating_arithmetic() {
 
 #[test]
 fn cuda_const_prop_folds_unop_literals() {
-    use vyre::ir::model::types::UnOp;
+    use vyre::ir::model::spec_types::UnOp;
     fn unop(op: UnOp, operand: Expr) -> Expr {
         Expr::UnOp {
             op,

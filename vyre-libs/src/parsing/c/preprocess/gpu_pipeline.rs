@@ -67,6 +67,8 @@ mod header_reuse;
 mod include_acceleration;
 #[path = "gpu_pipeline/include_events.rs"]
 mod include_events;
+#[path = "gpu_pipeline/include_loader.rs"]
+mod include_loader;
 #[path = "gpu_pipeline/live_conditional_cache.rs"]
 mod live_conditional_cache;
 #[path = "gpu_pipeline/live_state.rs"]
@@ -83,6 +85,8 @@ mod macro_table;
 mod macro_values;
 #[path = "gpu_pipeline/payload_size.rs"]
 mod payload_size;
+#[path = "gpu_pipeline/preprocessed_source.rs"]
+mod preprocessed_source;
 #[path = "gpu_pipeline/scan.rs"]
 mod scan;
 #[path = "gpu_pipeline/segments.rs"]
@@ -93,8 +97,6 @@ mod source_spans;
 mod token_provenance;
 #[path = "gpu_pipeline/tokenization.rs"]
 mod tokenization;
-#[path = "gpu_pipeline/types.rs"]
-mod types;
 fn trim_ascii(bytes: &[u8]) -> &[u8] {
     let mut start = 0_usize;
     let mut end = bytes.len();
@@ -121,10 +123,11 @@ pub use expansion_events::MacroExpansionEvent;
 pub use header_reuse::{HeaderReuseEvent, HeaderReuseKey};
 pub use include_acceleration::{IncludeAccelerationEvent, IncludeAccelerationKind};
 pub use include_events::{IncludeByteCacheStats, IncludeEvent, IncludeEventResidency};
+pub use include_loader::{IncludeLoader, MAX_INCLUDE_DEPTH};
 pub use macro_events::{MacroEvent, MacroEventKind};
+pub use preprocessed_source::{MacroDef, PreprocessedSource};
 pub use token_provenance::TokenProvenanceEvent;
 pub use tokenization::{gpu_tokenize_and_classify, ClassifiedTokens};
-pub use types::{IncludeLoader, MacroDef, PreprocessedSource, MAX_INCLUDE_DEPTH};
 
 /// Drive the GPU preprocessor over a translation unit and recursively expand
 /// active includes through `loader`.

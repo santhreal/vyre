@@ -1,5 +1,5 @@
 use crate::ir_inner::model::expr::{Expr, ExprNode, Ident};
-use crate::ir_inner::model::types::{AtomicOp, BinOp, DataType, UnOp};
+use crate::ir_inner::model::spec_types::{AtomicOp, BinOp, DataType, UnOp};
 use crate::visit::VisitOrder;
 use std::ops::ControlFlow;
 

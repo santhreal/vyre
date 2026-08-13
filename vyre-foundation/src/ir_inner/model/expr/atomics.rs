@@ -1,5 +1,5 @@
 use crate::ir_inner::model::expr::{Expr, Ident};
-use crate::ir_inner::model::types::AtomicOp;
+use crate::ir_inner::model::spec_types::AtomicOp;
 use crate::memory_model::MemoryOrdering;
 
 impl Expr {

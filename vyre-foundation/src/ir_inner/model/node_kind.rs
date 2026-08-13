@@ -1,7 +1,7 @@
 //! Open statement IR model.
 
 use crate::ir_eval::canonical_f32;
-use crate::ir_inner::model::types::{BinOp, UnOp};
+use crate::ir_inner::model::spec_types::{BinOp, UnOp};
 use rustc_hash::FxHashMap;
 use std::fmt;
 use std::sync::Arc;

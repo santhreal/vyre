@@ -11,10 +11,11 @@ use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::resident::{
     resident_bindings_from_handles, CudaDispatchBinding, CudaResidentBuffer, ResidentViewCache,
 };
-use crate::backend::resident_dispatch::helpers::{
-    next_dispatch_binding, next_resident_handle, validate_dense_resident_input_indices,
-    PreparedStep,
+use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_input_indices;
+use crate::backend::resident_dispatch::descriptor_cursor::{
+    next_dispatch_binding, next_resident_handle,
 };
+use crate::backend::resident_dispatch::PreparedStep;
 use crate::backend::resident_dispatch_support::CudaResidentDispatchStep;
 use crate::backend::resident_upload_fusion::{
     fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy,

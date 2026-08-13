@@ -1,6 +1,6 @@
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::program::BufferDecl;
-use crate::ir_inner::model::types::{BinOp, DataType};
+use crate::ir_inner::model::spec_types::{BinOp, DataType};
 use crate::validate::{err, Binding, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashMap;
@@ -227,7 +227,7 @@ fn expr_is_static_zero(expr: &Expr) -> bool {
 
 #[inline]
 pub(crate) fn validate_unop_operand(
-    op: &crate::ir_inner::model::types::UnOp,
+    op: &crate::ir_inner::model::spec_types::UnOp,
     expr: &Expr,
     buffers: &FxHashMap<&str, &BufferDecl>,
     scope: &FxHashMap<crate::ir::Ident, Binding>,
@@ -235,7 +235,7 @@ pub(crate) fn validate_unop_operand(
 ) {
     if let Some(ty) = expr_type(expr, buffers, scope) {
         match op {
-            crate::ir_inner::model::types::UnOp::Negate => {
+            crate::ir_inner::model::spec_types::UnOp::Negate => {
                 if matches!(ty, DataType::I32) {
                     errors.push(err("V098", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `Negate` operand has type `{ty}`, but legal total Negate types are `u32` and `f32`; raw i32 negation has the i32::MIN overflow case"
@@ -250,7 +250,7 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::types::UnOp::LogicalNot => {
+            crate::ir_inner::model::spec_types::UnOp::LogicalNot => {
                 if !matches!(ty, DataType::U32 | DataType::Bool) {
                     errors.push(err("V100", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `LogicalNot` operand has type `{ty}`; legal set is `u32` or `bool`"
@@ -259,11 +259,11 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::types::UnOp::BitNot
-            | crate::ir_inner::model::types::UnOp::Popcount
-            | crate::ir_inner::model::types::UnOp::Clz
-            | crate::ir_inner::model::types::UnOp::Ctz
-            | crate::ir_inner::model::types::UnOp::ReverseBits => {
+            crate::ir_inner::model::spec_types::UnOp::BitNot
+            | crate::ir_inner::model::spec_types::UnOp::Popcount
+            | crate::ir_inner::model::spec_types::UnOp::Clz
+            | crate::ir_inner::model::spec_types::UnOp::Ctz
+            | crate::ir_inner::model::spec_types::UnOp::ReverseBits => {
                 // VAL-004: U64 operands are valid for every bitwise-unary
                 // op. The reference interpreter handles Value::U64 for
                 // BitNot/Popcount/Clz/Ctz/ReverseBits and target-text ≥ the 64-bit
@@ -277,31 +277,31 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::types::UnOp::Sin
-            | crate::ir_inner::model::types::UnOp::Cos
-            | crate::ir_inner::model::types::UnOp::Exp
-            | crate::ir_inner::model::types::UnOp::Log
-            | crate::ir_inner::model::types::UnOp::Log2
-            | crate::ir_inner::model::types::UnOp::Exp2
-            | crate::ir_inner::model::types::UnOp::Tan
-            | crate::ir_inner::model::types::UnOp::Acos
-            | crate::ir_inner::model::types::UnOp::Asin
-            | crate::ir_inner::model::types::UnOp::Atan
-            | crate::ir_inner::model::types::UnOp::Tanh
-            | crate::ir_inner::model::types::UnOp::Sinh
-            | crate::ir_inner::model::types::UnOp::Cosh
-            | crate::ir_inner::model::types::UnOp::Abs
-            | crate::ir_inner::model::types::UnOp::Sqrt
-            | crate::ir_inner::model::types::UnOp::InverseSqrt
-            | crate::ir_inner::model::types::UnOp::Reciprocal
-            | crate::ir_inner::model::types::UnOp::Floor
-            | crate::ir_inner::model::types::UnOp::Ceil
-            | crate::ir_inner::model::types::UnOp::Round
-            | crate::ir_inner::model::types::UnOp::Trunc
-            | crate::ir_inner::model::types::UnOp::Sign
-            | crate::ir_inner::model::types::UnOp::IsNan
-            | crate::ir_inner::model::types::UnOp::IsInf
-            | crate::ir_inner::model::types::UnOp::IsFinite => {
+            crate::ir_inner::model::spec_types::UnOp::Sin
+            | crate::ir_inner::model::spec_types::UnOp::Cos
+            | crate::ir_inner::model::spec_types::UnOp::Exp
+            | crate::ir_inner::model::spec_types::UnOp::Log
+            | crate::ir_inner::model::spec_types::UnOp::Log2
+            | crate::ir_inner::model::spec_types::UnOp::Exp2
+            | crate::ir_inner::model::spec_types::UnOp::Tan
+            | crate::ir_inner::model::spec_types::UnOp::Acos
+            | crate::ir_inner::model::spec_types::UnOp::Asin
+            | crate::ir_inner::model::spec_types::UnOp::Atan
+            | crate::ir_inner::model::spec_types::UnOp::Tanh
+            | crate::ir_inner::model::spec_types::UnOp::Sinh
+            | crate::ir_inner::model::spec_types::UnOp::Cosh
+            | crate::ir_inner::model::spec_types::UnOp::Abs
+            | crate::ir_inner::model::spec_types::UnOp::Sqrt
+            | crate::ir_inner::model::spec_types::UnOp::InverseSqrt
+            | crate::ir_inner::model::spec_types::UnOp::Reciprocal
+            | crate::ir_inner::model::spec_types::UnOp::Floor
+            | crate::ir_inner::model::spec_types::UnOp::Ceil
+            | crate::ir_inner::model::spec_types::UnOp::Round
+            | crate::ir_inner::model::spec_types::UnOp::Trunc
+            | crate::ir_inner::model::spec_types::UnOp::Sign
+            | crate::ir_inner::model::spec_types::UnOp::IsNan
+            | crate::ir_inner::model::spec_types::UnOp::IsInf
+            | crate::ir_inner::model::spec_types::UnOp::IsFinite => {
                 if ty != DataType::F32 {
                     errors.push(err("V102", ValidationPhase::Type, ValidationLocation::Program, format!(
                         "unary operation `{op:?}` operand has type `{ty}`; legal set for math ops is `f32`"
@@ -310,10 +310,10 @@ pub(crate) fn validate_unop_operand(
                     )));
                 }
             }
-            crate::ir_inner::model::types::UnOp::Unpack4Low
-            | crate::ir_inner::model::types::UnOp::Unpack4High
-            | crate::ir_inner::model::types::UnOp::Unpack8Low
-            | crate::ir_inner::model::types::UnOp::Unpack8High => {
+            crate::ir_inner::model::spec_types::UnOp::Unpack4Low
+            | crate::ir_inner::model::spec_types::UnOp::Unpack4High
+            | crate::ir_inner::model::spec_types::UnOp::Unpack8Low
+            | crate::ir_inner::model::spec_types::UnOp::Unpack8High => {
                 // VAL-004: nibble/byte unpack ops extract a masked, shifted lane
                 // from a 32-bit integer word, emit lowers them to
                 // `(v >> shift) & mask` and the reference interpreter mirrors it,
@@ -418,45 +418,45 @@ pub(crate) fn expr_type(
                     _ => values.push(Some(DataType::U32)),
                 },
                 Expr::UnOp { op, operand } => match op {
-                    crate::ir_inner::model::types::UnOp::Negate
-                    | crate::ir_inner::model::types::UnOp::BitNot
-                    | crate::ir_inner::model::types::UnOp::Popcount
-                    | crate::ir_inner::model::types::UnOp::Clz
-                    | crate::ir_inner::model::types::UnOp::Ctz
-                    | crate::ir_inner::model::types::UnOp::ReverseBits => {
+                    crate::ir_inner::model::spec_types::UnOp::Negate
+                    | crate::ir_inner::model::spec_types::UnOp::BitNot
+                    | crate::ir_inner::model::spec_types::UnOp::Popcount
+                    | crate::ir_inner::model::spec_types::UnOp::Clz
+                    | crate::ir_inner::model::spec_types::UnOp::Ctz
+                    | crate::ir_inner::model::spec_types::UnOp::ReverseBits => {
                         frames.push(Frame::Un);
                         frames.push(Frame::Enter(operand));
                     }
                     // LogicalNot produces Bool. Integer lowering emits
                     // `x == 0u`, which also yields Bool.
-                    crate::ir_inner::model::types::UnOp::LogicalNot
-                    | crate::ir_inner::model::types::UnOp::IsNan
-                    | crate::ir_inner::model::types::UnOp::IsInf
-                    | crate::ir_inner::model::types::UnOp::IsFinite => {
+                    crate::ir_inner::model::spec_types::UnOp::LogicalNot
+                    | crate::ir_inner::model::spec_types::UnOp::IsNan
+                    | crate::ir_inner::model::spec_types::UnOp::IsInf
+                    | crate::ir_inner::model::spec_types::UnOp::IsFinite => {
                         values.push(Some(DataType::Bool));
                     }
-                    crate::ir_inner::model::types::UnOp::Sin
-                    | crate::ir_inner::model::types::UnOp::Cos
-                    | crate::ir_inner::model::types::UnOp::Exp
-                    | crate::ir_inner::model::types::UnOp::Log
-                    | crate::ir_inner::model::types::UnOp::Log2
-                    | crate::ir_inner::model::types::UnOp::Exp2
-                    | crate::ir_inner::model::types::UnOp::Tan
-                    | crate::ir_inner::model::types::UnOp::Acos
-                    | crate::ir_inner::model::types::UnOp::Asin
-                    | crate::ir_inner::model::types::UnOp::Atan
-                    | crate::ir_inner::model::types::UnOp::Tanh
-                    | crate::ir_inner::model::types::UnOp::Sinh
-                    | crate::ir_inner::model::types::UnOp::Cosh
-                    | crate::ir_inner::model::types::UnOp::Abs
-                    | crate::ir_inner::model::types::UnOp::Sqrt
-                    | crate::ir_inner::model::types::UnOp::InverseSqrt
-                    | crate::ir_inner::model::types::UnOp::Reciprocal
-                    | crate::ir_inner::model::types::UnOp::Floor
-                    | crate::ir_inner::model::types::UnOp::Ceil
-                    | crate::ir_inner::model::types::UnOp::Round
-                    | crate::ir_inner::model::types::UnOp::Trunc
-                    | crate::ir_inner::model::types::UnOp::Sign => values.push(Some(DataType::F32)),
+                    crate::ir_inner::model::spec_types::UnOp::Sin
+                    | crate::ir_inner::model::spec_types::UnOp::Cos
+                    | crate::ir_inner::model::spec_types::UnOp::Exp
+                    | crate::ir_inner::model::spec_types::UnOp::Log
+                    | crate::ir_inner::model::spec_types::UnOp::Log2
+                    | crate::ir_inner::model::spec_types::UnOp::Exp2
+                    | crate::ir_inner::model::spec_types::UnOp::Tan
+                    | crate::ir_inner::model::spec_types::UnOp::Acos
+                    | crate::ir_inner::model::spec_types::UnOp::Asin
+                    | crate::ir_inner::model::spec_types::UnOp::Atan
+                    | crate::ir_inner::model::spec_types::UnOp::Tanh
+                    | crate::ir_inner::model::spec_types::UnOp::Sinh
+                    | crate::ir_inner::model::spec_types::UnOp::Cosh
+                    | crate::ir_inner::model::spec_types::UnOp::Abs
+                    | crate::ir_inner::model::spec_types::UnOp::Sqrt
+                    | crate::ir_inner::model::spec_types::UnOp::InverseSqrt
+                    | crate::ir_inner::model::spec_types::UnOp::Reciprocal
+                    | crate::ir_inner::model::spec_types::UnOp::Floor
+                    | crate::ir_inner::model::spec_types::UnOp::Ceil
+                    | crate::ir_inner::model::spec_types::UnOp::Round
+                    | crate::ir_inner::model::spec_types::UnOp::Trunc
+                    | crate::ir_inner::model::spec_types::UnOp::Sign => values.push(Some(DataType::F32)),
                     _ => values.push(None),
                 },
                 Expr::Select {
@@ -475,7 +475,7 @@ pub(crate) fn expr_type(
                     frames.push(Frame::Enter(a));
                 }
                 &Expr::SubgroupBallot { .. } => {
-                    values.push(Some(crate::ir_inner::model::types::DataType::U32));
+                    values.push(Some(crate::ir_inner::model::spec_types::DataType::U32));
                 }
                 // Both operations produce the same type as their value operand.
                 Expr::SubgroupShuffle { value, .. } | Expr::SubgroupReduce { value, .. } => {

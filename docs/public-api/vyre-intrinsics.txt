@@ -16,24 +16,24 @@ pub const vyre_intrinsics::operation_catalog::F32_UNARY_SIGNATURE: vyre_foundati
 pub const vyre_intrinsics::operation_catalog::U32_BINARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
 pub const vyre_intrinsics::operation_catalog::U32_UNARY_SIGNATURE: vyre_foundation::dispatch::dialect_lookup::Signature
 pub enum vyre_intrinsics::operation_catalog::HardwareSemantic
-pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::fma_f32::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32::inverse_sqrt_f32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::popcount_u32::popcount_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::popcount_u32::popcount_u32::popcount_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::storage_barrier::storage_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::storage_barrier::storage_barrier::storage_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_add::subgroup_add(values: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_add::subgroup_add::subgroup_add(values: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_ballot::subgroup_ballot(cond_input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_ballot::subgroup_ballot::subgroup_ballot(cond_input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
-pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::bit_reverse_u32::bit_reverse_u32::bit_reverse_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::fma_f32::fma_f32::fma_f32(a: &str, b: &str, c: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::inverse_sqrt_f32::inverse_sqrt_f32::inverse_sqrt_f32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::popcount_u32::popcount_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::popcount_u32::popcount_u32::popcount_u32(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::storage_barrier::storage_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::storage_barrier::storage_barrier::storage_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_add::subgroup_add(values: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_add::subgroup_add::subgroup_add(values: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_ballot::subgroup_ballot(cond_input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_ballot::subgroup_ballot::subgroup_ballot(cond_input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::subgroup_shuffle::subgroup_shuffle::subgroup_shuffle(values: &str, lanes: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
+pub fn vyre_intrinsics::hardware::workgroup_barrier::workgroup_barrier::workgroup_barrier(input: &str, out: &str, n: u32) -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_intrinsics::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_intrinsics::operation_catalog::intrinsic_facet(operation_id: &str) -> core::option::Option<&'static vyre_intrinsics::operation_catalog::IntrinsicFacet>
 pub fn vyre_intrinsics::region::wrap(generator: &str, body: alloc::vec::Vec<vyre_foundation::ir_inner::model::generated::Node>, source_region: core::option::Option<vyre_foundation::ir_inner::model::expr::GeneratorRef>) -> vyre_foundation::ir_inner::model::generated::Node

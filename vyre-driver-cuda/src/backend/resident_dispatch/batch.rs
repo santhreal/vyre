@@ -15,10 +15,11 @@ use crate::backend::ordering::sort_unstable_by_key_if_needed;
 use crate::backend::output_range::{cuda_output_readback_for_binding, CudaOutputReadback};
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaResidentBuffer, ResidentViewCache};
-use crate::backend::resident_dispatch::helpers::{
-    enqueue_optional_resident_h2d_copy, next_resident_handle, resident_required_handles,
-    validate_dense_resident_output_indices,
+use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_output_indices;
+use crate::backend::resident_dispatch::descriptor_cursor::{
+    next_resident_handle, resident_required_handles,
 };
+use crate::backend::resident_dispatch::host_uploads::enqueue_optional_resident_h2d_copy;
 use crate::backend::resident_dispatch_support::{
     checked_resident_dispatch_capacity_mul, CudaResidentBatchDispatch,
 };

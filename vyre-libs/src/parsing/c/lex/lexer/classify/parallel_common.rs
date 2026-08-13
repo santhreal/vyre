@@ -1,4 +1,4 @@
-use super::helpers::{
+use super::stages::{
     classify_prologue, digit_run_scan, identifier_scan, identifier_start, integer_start,
     token_start_expr, ClassifyCtx, ScanNames, TokenStartOpts,
 };

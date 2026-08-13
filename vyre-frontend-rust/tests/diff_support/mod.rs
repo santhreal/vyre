@@ -5,7 +5,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::lex::lexer::cpu_lexer::lex;
 use vyre_frontend_rust::parse::parse;
 use vyre_frontend_rust::sema::{check_conflicts, check_escape, check_mutability, resolve, typeck};
 

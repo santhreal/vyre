@@ -5,10 +5,8 @@ use vyre_foundation::optimizer::eqsat_gpu::{Equivalence, GpuEGraphDeviceImage};
 
 use super::{
     constants::SIGNATURE_BUCKET_RECORD_WORDS,
-    helpers::{
-        cuda_egraph_signature_pair_rows, packed_rows_structurally_equal,
-        validate_image_view_matches,
-    },
+    device_image_rows::{packed_rows_structurally_equal, validate_image_view_matches},
+    signature_pair_ordinals::cuda_egraph_signature_pair_rows,
     plan_cuda_egraph_signature_buckets, CudaEGraphKernelLaunchConfig, CudaEGraphKernelPlanError,
     CudaEGraphSignatureBucketDeviceImage, CudaEGraphSignatureBucketPlan,
     CudaEGraphStructuralEquivalenceLaunchArtifact, CudaEGraphStructuralEquivalenceOutputPlan,

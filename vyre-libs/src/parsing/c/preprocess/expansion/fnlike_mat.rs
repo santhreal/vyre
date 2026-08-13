@@ -2,7 +2,7 @@
 
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::fnlike_replacement::*;
 use super::paste_branch::*;
 use super::regular_branch::*;
 use super::string_branch::*;

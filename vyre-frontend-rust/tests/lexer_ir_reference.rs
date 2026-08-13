@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use vyre_frontend_rust::lex::lexer::core::{lex as lex_cpu, Token};
+use vyre_frontend_rust::lex::lexer::cpu_lexer::{lex as lex_cpu, Token};
 use vyre_frontend_rust::lex::lexer::plan::{rust_lexer, rust_lexer_batch, RustLexerPlan};
 use vyre_frontend_rust::lex::tokens::*;
 use vyre_reference::value::Value;

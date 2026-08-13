@@ -9,7 +9,7 @@ pub mod reference_a {
     /// Evaluate `leading_zeros` over one little-endian u32 input.
     #[must_use]
     pub fn reference(input: &[u8]) -> Vec<u8> {
-        super::super::common::unary_direct(input, u32::leading_zeros)
+        crate::dual_impls::evaluator::unary_direct(input, u32::leading_zeros)
     }
 }
 
@@ -18,7 +18,7 @@ pub mod reference_b {
     /// Count leading zero bits by walking from the most significant bit.
     #[must_use]
     pub fn reference(input: &[u8]) -> Vec<u8> {
-        super::super::common::clz_bits(input)
+        super::super::bit_walk_reference::clz_bits(input)
     }
 }
 

@@ -1,6 +1,6 @@
 //! Source tokenization stage for the Rust frontend pipeline.
 
-use crate::lex::lexer::core::{lex as lex_source, Token};
+use crate::lex::lexer::cpu_lexer::{lex as lex_source, Token};
 use crate::RustFrontendError;
 
 /// Lex one Rust source buffer on the host.

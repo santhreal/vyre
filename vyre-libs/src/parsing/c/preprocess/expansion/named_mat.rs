@@ -5,7 +5,7 @@ use crate::parsing::c::preprocess::materialization::*;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Program};
 
 use super::fnlike_mat::*;
-use super::helpers::*;
+use super::named_dispatch::*;
 use super::objlike_mat::*;
 use super::*;
 

@@ -17,7 +17,7 @@ mod buffer_decl;
 mod builder;
 mod cache_digest;
 mod canonical;
-mod core;
+mod definition;
 #[allow(clippy::expect_used)]
 mod meta;
 mod scope;
@@ -43,7 +43,7 @@ fn record_digest_computation() {}
 
 pub use self::buffer_decl::{BufferDecl, LinearType, ShapePredicate};
 pub use self::cache_digest::NORMALIZED_PROGRAM_CACHE_DIGEST_VERSION;
-pub use self::core::Program;
+pub use self::definition::Program;
 pub use self::scope::Scope;
 pub use self::stats::ProgramStats;
 pub use self::stats::{

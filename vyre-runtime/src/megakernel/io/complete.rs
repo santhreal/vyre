@@ -6,7 +6,7 @@ use std::sync::atomic::{fence, Ordering};
 use crate::PipelineError;
 
 use super::super::protocol::slot;
-use super::helpers::{
+use super::queue_words::{
     read_queue_word, try_queue_word_index, validate_io_queue_view, write_queue_word_unfenced,
     IoQueueView,
 };

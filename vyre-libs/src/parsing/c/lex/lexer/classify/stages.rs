@@ -21,6 +21,21 @@
 
 use super::*;
 
+/// Emit `token` of length `len` at the current position when `condition`
+/// holds and no earlier stage has already claimed the position.
+///
+/// The `emit == 0` guard is what makes stage order the precedence rule.
+pub(crate) fn set_token(condition: Expr, token: u32, len: Expr) -> Node {
+    Node::if_then(
+        Expr::and(Expr::eq(Expr::var("emit"), Expr::u32(0)), condition),
+        vec![
+            Node::assign("emit", Expr::u32(1)),
+            Node::assign("tok_type", Expr::u32(token)),
+            Node::assign("tok_len", len),
+        ],
+    )
+}
+
 /// How a haystack byte is addressed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum SparseHaystackLayout {

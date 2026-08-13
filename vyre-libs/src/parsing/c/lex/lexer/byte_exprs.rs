@@ -1,4 +1,11 @@
-use vyre_foundation::ir::{Expr, Node};
+//! IR expressions over one haystack byte.
+//!
+//! Every C lexer builder reads the source through these: a masked word
+//! load, an ASCII literal, an equality test, and the character classes the
+//! C11 grammar splits on. They build `Expr` only; nothing here emits a
+//! token.
+
+use vyre_foundation::ir::Expr;
 
 pub(super) fn byte_load(buffer: &str, index: Expr) -> Expr {
     Expr::bitand(Expr::load(buffer, index), Expr::u32(0xFF))
@@ -119,15 +126,4 @@ pub(super) fn is_ident_start(value: Expr) -> Expr {
 
 pub(super) fn is_ident_continue(value: Expr) -> Expr {
     Expr::or(is_ident_start(value.clone()), is_digit(value))
-}
-
-pub(super) fn set_token(condition: Expr, token: u32, len: Expr) -> Node {
-    Node::if_then(
-        Expr::and(Expr::eq(Expr::var("emit"), Expr::u32(0)), condition),
-        vec![
-            Node::assign("emit", Expr::u32(1)),
-            Node::assign("tok_type", Expr::u32(token)),
-            Node::assign("tok_len", len),
-        ],
-    )
 }

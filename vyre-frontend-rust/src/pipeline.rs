@@ -1,6 +1,6 @@
 //! Pipeline orchestration: lex -> parse -> resolve -> typeck -> borrow -> lower.
 
-use crate::lex::lexer::core::Token;
+use crate::lex::lexer::cpu_lexer::Token;
 use crate::parse::Module;
 
 use crate::RustFrontendError;

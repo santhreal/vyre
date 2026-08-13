@@ -28,7 +28,19 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::common::{bit_reverse, validate_complex_len};
+use super::complex_length::validate_complex_len;
+
+/// Reverse the low `bits` bits of `value`.
+#[must_use]
+fn bit_reverse(value: u32, bits: usize) -> u32 {
+    let mut result = 0u32;
+    let mut v = value;
+    for _ in 0..bits {
+        result = (result << 1) | (v & 1);
+        v >>= 1;
+    }
+    result
+}
 use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::fft::fft_radix2";
@@ -315,6 +327,14 @@ mod tests {
         assert_eq!(bit_reverse(0, 3), 0);
         // bit_reverse(7, 3) = 7
         assert_eq!(bit_reverse(7, 3), 7);
+    }
+
+    /// Every 3-bit index maps to its reversal, so the bit-reverse load
+    /// permutation is a bijection over the whole domain.
+    #[test]
+    fn bit_reverse_covers_three_bit_permutation() {
+        let got: Vec<u32> = (0..8).map(|value| bit_reverse(value, 3)).collect();
+        assert_eq!(got, vec![0, 4, 2, 6, 1, 5, 3, 7]);
     }
 
     // ------------------------------------------------------------------

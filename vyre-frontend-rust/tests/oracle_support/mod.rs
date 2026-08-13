@@ -15,7 +15,7 @@
 use std::collections::BTreeSet;
 
 use rustc_lexer::TokenKind;
-use vyre_frontend_rust::lex::lexer::core::lex;
+use vyre_frontend_rust::lex::lexer::cpu_lexer::lex;
 use vyre_frontend_rust::lex::tokens as tok;
 
 /// Result of an oracle comparison.

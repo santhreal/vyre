@@ -21,7 +21,7 @@
 //! need them  -  adding them is a small extension of the `encode_expr`
 //! match arm and a new `expr_kind` constant.
 
-use vyre_foundation::ir::model::types::{BinOp, UnOp};
+use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 
 use super::encode::EncodeError;

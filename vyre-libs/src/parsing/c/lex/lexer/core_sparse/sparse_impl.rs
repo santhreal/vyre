@@ -1,5 +1,5 @@
 use super::*;
-use crate::parsing::c::lex::lexer::core::helpers::{
+use crate::parsing::c::lex::lexer::classify::stages::{
     block_comment_scan, block_comment_start, char_start, classify_prologue, float_start,
     identifier_scan, identifier_start, integer_start, line_comment_scan, line_comment_start,
     number_scan, preproc_start, quoted_literal_scan, string_start, token_start_expr, ClassifyCtx,
@@ -9,7 +9,7 @@ use crate::parsing::c::lex::lexer::sections;
 
 /// One per-invocation sparse lexer. Every entry point in this module is a
 /// preset of these knobs; the classification stages themselves live in
-/// `core::helpers` and are shared with the serial lexers.
+/// `classify::stages` and are shared with the serial lexers.
 pub(super) struct SparseLexerSpec<'a> {
     pub(super) haystack: &'a str,
     pub(super) out_tok_types: &'a str,

@@ -10,7 +10,6 @@ use super::collectors::collect_buffer_targets;
 use super::divergence::{
     has_divergent_invocation_gated_store, has_launch_geometry_dependent_write,
 };
-use super::helpers::{fallback_composition_key, upgrade_buffer_access};
 use super::{
     FusionError, FusionOverDispatchError, FusionSelfAliasingError, FusionWorkgroupGeometryError,
 };
@@ -475,4 +474,41 @@ fn reject_overdispatch(fused_workgroup: [u32; 3], max_arm_threads: u64) -> Resul
         fused_threads,
         fix: "split the batch or use per-arm dispatch; axis-wise max exceeds the shared over-dispatch policy",
     }))
+}
+
+pub(super) fn fallback_composition_key(prog: &Program) -> String {
+    let mut hasher = blake3::Hasher::new();
+    for buf in prog.buffers() {
+        hasher.update(buf.name().as_bytes());
+        hasher.update(&[0]);
+    }
+    for dim in prog.workgroup_size() {
+        hasher.update(&dim.to_le_bytes());
+    }
+    hasher.update(&(prog.entry().len() as u64).to_le_bytes());
+    format!("{}", hasher.finalize().to_hex())
+}
+
+/// Upgrade `buffer.access` to the more permissive of the two modes.
+pub(super) fn upgrade_buffer_access(buffer: &mut BufferDecl, other: &BufferAccess) {
+    let current = buffer.access();
+    buffer.access = match (&current, &other) {
+        (BufferAccess::ReadWrite, _)
+        | (_, BufferAccess::ReadWrite)
+        | (BufferAccess::WriteOnly, BufferAccess::ReadOnly | BufferAccess::Uniform)
+        | (BufferAccess::ReadOnly | BufferAccess::Uniform, BufferAccess::WriteOnly) => {
+            BufferAccess::ReadWrite
+        }
+        (BufferAccess::WriteOnly, BufferAccess::WriteOnly) => BufferAccess::WriteOnly,
+        (BufferAccess::Uniform, _) | (_, BufferAccess::Uniform) => BufferAccess::Uniform,
+        (BufferAccess::Workgroup, _) | (_, BufferAccess::Workgroup) => BufferAccess::Workgroup,
+        _ => BufferAccess::ReadOnly,
+    };
+    // Keep kind in sync with the upgraded access.
+    buffer.kind = match buffer.access {
+        BufferAccess::ReadOnly => crate::ir::MemoryKind::Readonly,
+        BufferAccess::Uniform => crate::ir::MemoryKind::Uniform,
+        BufferAccess::Workgroup => crate::ir::MemoryKind::Shared,
+        _ => crate::ir::MemoryKind::Global,
+    };
 }

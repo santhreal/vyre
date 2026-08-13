@@ -6,7 +6,7 @@ use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::helpers::*;
+use super::macro_lookup::*;
 use super::*;
 
 pub fn opt_dynamic_macro_expansion(

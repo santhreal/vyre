@@ -5,7 +5,7 @@ use super::program_graph::{
     GraphInput, GraphOutput, GraphValueId, ProgramGraph, ProgramGraphError, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use super::types::{BufferAccess, DataType};
+use super::spec_types::{BufferAccess, DataType};
 
 const MAGIC: &[u8; 4] = b"VGR0";
 const VERSION: u16 = 2;

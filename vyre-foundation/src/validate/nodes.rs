@@ -3,8 +3,8 @@ use crate::ir_inner::model::expr::{Expr, Ident};
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::BufferDecl;
 #[cfg(test)]
-use crate::ir_inner::model::types::BufferAccess;
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::spec_types::BufferAccess;
+use crate::ir_inner::model::spec_types::DataType;
 #[cfg(test)]
 use crate::validate::barrier;
 #[cfg(test)]

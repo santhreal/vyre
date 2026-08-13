@@ -1,6 +1,9 @@
-//! Shared byte helpers for canonical primitive evaluators.
+//! The reference-evaluator contract and the byte decoding every canonical
+//! primitive reference shares.
 
 use std::{error::Error, fmt};
+
+use vyre_primitives::CombineOp;
 
 use crate::workgroup::Memory;
 
@@ -13,6 +16,11 @@ pub(crate) fn read_two_words(input: &[u8]) -> Option<(u32, u32)> {
     })
 }
 
+fn read_one_word(input: &[u8]) -> Option<u32> {
+    (input.len() >= 4).then(|| u32::from_le_bytes([input[0], input[1], input[2], input[3]]))
+}
+
+/// Direct u32 binary reference over the first two little-endian words.
 #[must_use]
 pub(crate) fn binary_direct(input: &[u8], op: impl FnOnce(u32, u32) -> u32) -> Vec<u8> {
     let Some((left, right)) = read_two_words(input) else {
@@ -20,7 +28,25 @@ pub(crate) fn binary_direct(input: &[u8], op: impl FnOnce(u32, u32) -> u32) -> V
     };
     op(left, right).to_le_bytes().to_vec()
 }
-use vyre_primitives::CombineOp;
+
+/// Direct u32 unary reference over the first little-endian word.
+#[must_use]
+pub(crate) fn unary_direct(input: &[u8], op: impl FnOnce(u32) -> u32) -> Vec<u8> {
+    let Some(value) = read_one_word(input) else {
+        return vec![0; 4];
+    };
+    op(value).to_le_bytes().to_vec()
+}
+
+/// Direct u32 binary predicate reference over the first two little-endian
+/// words, widened to a one-word boolean.
+#[must_use]
+pub(crate) fn binary_direct_predicate(input: &[u8], op: impl FnOnce(u32, u32) -> bool) -> Vec<u8> {
+    let Some((left, right)) = read_two_words(input) else {
+        return vec![0; 4];
+    };
+    u32::from(op(left, right)).to_le_bytes().to_vec()
+}
 
 /// Error returned by canonical primitive reference evaluation.
 #[derive(Debug, Clone, PartialEq, Eq)]
