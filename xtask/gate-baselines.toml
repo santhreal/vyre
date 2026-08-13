@@ -1,0 +1,117 @@
+# Pinned result of every registered gate, written by `xtask gates --write-baseline`.
+#
+# `status` is the exit result and `output_lines` is the combined stdout and
+# stderr line count, used as the finding count. More lines than the pin
+# fails; fewer is reported so the pin can be lowered here. A red gate that
+# starts passing fails until its status is flipped, and must name the PR
+# that clears it while it is still red.
+
+[[gate]]
+name = "abstraction-gate"
+status = "red"
+output_lines = 34
+owner = "unassigned"
+
+[[gate]]
+name = "catalog"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "check-tier-deps"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "conformance-matrix"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "dep-drift"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "docs-check"
+status = "green"
+output_lines = 0
+
+[[gate]]
+name = "dup-scan"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "gate1"
+status = "red"
+output_lines = 396
+owner = "unassigned"
+
+[[gate]]
+name = "heuristic-audit"
+status = "green"
+output_lines = 6
+
+[[gate]]
+name = "hot-path-scan"
+status = "green"
+output_lines = 182
+
+[[gate]]
+name = "hygiene-matrix"
+status = "red"
+output_lines = 1
+owner = "unassigned"
+
+[[gate]]
+name = "lego-audit"
+status = "green"
+output_lines = 47
+
+[[gate]]
+name = "lego-quick"
+status = "red"
+output_lines = 13390
+owner = "unassigned"
+
+[[gate]]
+name = "list-ops"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "operation-schema"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "optimization-docs"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "platform-boundary"
+status = "green"
+output_lines = 1
+
+[[gate]]
+name = "primitive-admission-gate"
+status = "green"
+output_lines = 3
+
+[[gate]]
+name = "verify-rewrite-proofs"
+status = "green"
+output_lines = 5
+
+[[gate]]
+name = "vyre-release-gate"
+status = "red"
+output_lines = 251
+owner = "unassigned"
+
+[[gate]]
+name = "whats-similar"
+status = "green"
+output_lines = 5

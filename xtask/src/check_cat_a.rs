@@ -45,7 +45,17 @@ pub(crate) fn run(_args: &[String]) {
     let root = repo_root();
     let mut failed = Vec::<&str>::new();
 
-    let cargo = std::env::var("VYRE_CARGO_RUNNER").unwrap_or_else(|_| "cargo_full".to_string());
+    // `cargo_full` is a repo script, not a program on PATH. Spawning it by bare
+    // name failed to launch every time this gate ran, which read as a gate
+    // failure rather than a missing wrapper.
+    let cargo = std::env::var("VYRE_CARGO_RUNNER").unwrap_or_else(|_| {
+        let wrapper = root.join("cargo_full");
+        if wrapper.is_file() {
+            wrapper.to_string_lossy().into_owned()
+        } else {
+            "cargo".to_string()
+        }
+    });
 
     let mut check = Command::new(&cargo);
     check

@@ -1,0 +1,81 @@
+name: release-evidence
+
+# The evidence generators and the composite pre-publish runners. They either
+# write release artifacts or drive full cargo builds, so they are not part of
+# the per-change gate sweep. They are still registered, and `xtask gates` fails
+# when any of them is not named by a workflow, which is why they are all here.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  evidence:
+    name: Generate release evidence
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Crate metadata evidence
+        run: |
+          ./cargo_full run -p xtask -- metadata-matrix
+          ./cargo_full run -p xtask -- version-matrix
+          ./cargo_full run -p xtask -- feature-matrix
+          ./cargo_full run -p xtask -- package-readiness
+
+      - name: Backend and workload evidence
+        run: |
+          ./cargo_full run -p xtask -- backend-matrix
+          ./cargo_full run -p xtask -- release-workload-matrix
+          ./cargo_full run -p xtask -- op-matrix
+
+      - name: Optimization evidence
+        run: |
+          ./cargo_full run -p xtask -- optimization-matrix
+          ./cargo_full run -p xtask -- optimization-corpus
+
+      - name: Launch state
+        run: ./cargo_full run -p xtask -- launch-state
+
+      - name: Structural release evidence
+        run: ./cargo_full run -p xtask -- release-evidence
+
+  measured-evidence:
+    name: Generate measured evidence
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Backend conformance artifacts
+        run: ./cargo_full run -p xtask -- release-conformance
+
+      - name: Release benchmark artifacts
+        run: |
+          ./cargo_full run -p xtask -- release-benchmarks
+          ./cargo_full run -p xtask -- bench-release
+
+  prepublish:
+    name: Composite pre-publish runners
+    runs-on: ubuntu-latest
+    needs: [evidence, measured-evidence]
+    env:
+      CARGO_BUILD_JOBS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Both re-run checks that `xtask gates` already covers individually, and
+      # additionally drive full workspace builds, so they belong here rather
+      # than in the per-change sweep.
+      - name: Cat-A pre-merge runner
+        run: ./cargo_full run -p xtask -- check-cat-a
+
+      - name: Pre-publish sanity checks
+        run: ./cargo_full run -p xtask -- release-gate

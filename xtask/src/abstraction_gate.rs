@@ -71,11 +71,20 @@ struct OpInfo {
 fn collect_ops() -> Vec<OpInfo> {
     let mut ops = Vec::new();
     for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
+        // A runtime-owned operation is dispatch, not IR: it is registered with
+        // no neutral builder on purpose, so it has no composition to judge.
+        if entry.tier == vyre_foundation::operation::OperationTier::Runtime {
+            continue;
+        }
+        let program = entry.program().unwrap_or_else(|| {
+            panic!(
+                "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",
+                entry.id
+            )
+        });
         ops.push(OpInfo {
             id: entry.id.to_string(),
-            program: entry
-                .program()
-                .expect("Fix: canonical operation must provide a neutral builder"),
+            program,
             test_inputs_missing: entry.test_inputs.is_none(),
             expected_output_missing: entry.expected_output.is_none(),
         });

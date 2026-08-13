@@ -65,12 +65,18 @@ impl Verdict {
 pub(crate) fn run(_args: &[String]) {
     let mut verdicts: Vec<Verdict> = Vec::new();
     for entry in vyre_foundation::operation::OperationRegistry::global().iter() {
-        verdicts.push(verdict_for(
-            entry.id,
-            &entry
-                .program()
-                .expect("Fix: canonical operation must provide a neutral builder"),
-        ));
+        // A runtime-owned operation is dispatch, not IR: it is registered with
+        // no neutral builder on purpose, so there is no complexity to budget.
+        if entry.tier == vyre_foundation::operation::OperationTier::Runtime {
+            continue;
+        }
+        let program = entry.program().unwrap_or_else(|| {
+            panic!(
+                "Fix: canonical operation `{}` provides no neutral builder; register one or remove the registration",
+                entry.id
+            )
+        });
+        verdicts.push(verdict_for(entry.id, &program));
     }
 
     verdicts.sort_by(|a, b| a.op_id.cmp(&b.op_id));

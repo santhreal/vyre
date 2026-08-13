@@ -1,0 +1,170 @@
+# Duplicated source lines per crate, written by `xtask dup-scan --write-baseline`.
+#
+# A line counts as duplicated when an 8-line normalized shingle covering it
+# also appears in another file. More than the pin fails; less is reported so
+# the owning dedup PR can lower it here as part of its own diff.
+
+[[crate]]
+name = "conform"
+duplicate_lines = 1559
+total_lines = 10709
+
+[[crate]]
+name = "examples"
+duplicate_lines = 46
+total_lines = 552
+
+[[crate]]
+name = "fuzz"
+duplicate_lines = 23
+total_lines = 106
+
+[[crate]]
+name = "tests"
+duplicate_lines = 8
+total_lines = 282
+
+[[crate]]
+name = "vyre"
+duplicate_lines = 40
+total_lines = 258
+
+[[crate]]
+name = "vyre-aot"
+duplicate_lines = 54
+total_lines = 1540
+
+[[crate]]
+name = "vyre-bench"
+duplicate_lines = 4508
+total_lines = 38030
+
+[[crate]]
+name = "vyre-debug"
+duplicate_lines = 82
+total_lines = 2280
+
+[[crate]]
+name = "vyre-driver"
+duplicate_lines = 1660
+total_lines = 34858
+
+[[crate]]
+name = "vyre-driver-cuda"
+duplicate_lines = 6306
+total_lines = 70574
+
+[[crate]]
+name = "vyre-driver-metal"
+duplicate_lines = 287
+total_lines = 4881
+
+[[crate]]
+name = "vyre-driver-reference"
+duplicate_lines = 32
+total_lines = 732
+
+[[crate]]
+name = "vyre-driver-spirv"
+duplicate_lines = 319
+total_lines = 2141
+
+[[crate]]
+name = "vyre-driver-wgpu"
+duplicate_lines = 13292
+total_lines = 75103
+
+[[crate]]
+name = "vyre-emit-metal"
+duplicate_lines = 98
+total_lines = 850
+
+[[crate]]
+name = "vyre-emit-naga"
+duplicate_lines = 1352
+total_lines = 9998
+
+[[crate]]
+name = "vyre-emit-ptx"
+duplicate_lines = 4092
+total_lines = 14709
+
+[[crate]]
+name = "vyre-emit-spirv"
+duplicate_lines = 357
+total_lines = 1541
+
+[[crate]]
+name = "vyre-foundation"
+duplicate_lines = 6258
+total_lines = 94435
+
+[[crate]]
+name = "vyre-frontend-rust"
+duplicate_lines = 147
+total_lines = 5223
+
+[[crate]]
+name = "vyre-grammar-gen"
+duplicate_lines = 137
+total_lines = 3393
+
+[[crate]]
+name = "vyre-intrinsics"
+duplicate_lines = 169
+total_lines = 1623
+
+[[crate]]
+name = "vyre-libs"
+duplicate_lines = 14465
+total_lines = 135247
+
+[[crate]]
+name = "vyre-lints"
+duplicate_lines = 68
+total_lines = 3387
+
+[[crate]]
+name = "vyre-lower"
+duplicate_lines = 2250
+total_lines = 14237
+
+[[crate]]
+name = "vyre-macros"
+duplicate_lines = 89
+total_lines = 1997
+
+[[crate]]
+name = "vyre-megakernel"
+duplicate_lines = 60
+total_lines = 3653
+
+[[crate]]
+name = "vyre-primitives"
+duplicate_lines = 8984
+total_lines = 100257
+
+[[crate]]
+name = "vyre-reference"
+duplicate_lines = 1321
+total_lines = 15426
+
+[[crate]]
+name = "vyre-runtime"
+duplicate_lines = 545
+total_lines = 29212
+
+[[crate]]
+name = "vyre-self-substrate"
+duplicate_lines = 4906
+total_lines = 57665
+
+[[crate]]
+name = "vyre-spec"
+duplicate_lines = 446
+total_lines = 9445
+
+[[crate]]
+name = "xtask"
+duplicate_lines = 2238
+total_lines = 49746
