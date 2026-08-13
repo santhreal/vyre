@@ -1,5 +1,6 @@
 //! Test: subgroup.
 use super::*;
+use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
 
 fn block_has_subgroup_collective(block: &naga::Block) -> bool {
     block.iter().any(|statement| match statement {
@@ -47,29 +48,19 @@ fn block_has_subgroup_ballot(block: &naga::Block) -> bool {
 
 #[test]
 fn subgroup_add_emits_collective_operation() {
-    let desc = KernelDescriptor {
-        id: "sub_add".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+    let desc = descriptor("sub_add")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Add,
-                    },
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(7)],
-        },
-    };
+                    }, [0], 1),
+                ])
+                .literal(LiteralValue::U32(7)),
+        )
+        .build();
     let module = emit(&desc).unwrap();
     // Assert the SubgroupCollectiveOperation statement is present in the body,
     // not just that the module compiled. A refactor that converts SubgroupAdd
@@ -95,27 +86,17 @@ fn subgroup_reduce_maps_each_op_to_its_naga_operation() {
         (SubgroupReduceOp::Xor, naga::SubgroupOperation::Xor),
     ];
     for (reduce_op, expected) in cases {
-        let desc = KernelDescriptor {
-            id: "sub_reduce".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::SubgroupReduce { op: reduce_op },
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(7)],
-            },
-        };
+        let desc = descriptor("sub_reduce")
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::SubgroupReduce { op: reduce_op }, [0], 1),
+                    ])
+                    .literal(LiteralValue::U32(7)),
+            )
+            .build();
         let module = emit(&desc).unwrap();
         let body = &module.entry_points[0].function.body;
         assert_eq!(
@@ -128,27 +109,14 @@ fn subgroup_reduce_maps_each_op_to_its_naga_operation() {
 
 #[test]
 fn subgroup_ballot_emits_ballot_statement() {
-    let desc = KernelDescriptor {
-        id: "ballot".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::SubgroupBallot,
-                    operands: vec![0],
-                    result: Some(1),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::Bool(true)],
-        },
-    };
+    let desc = descriptor("ballot")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([lit(0, 0), op(KernelOpKind::SubgroupBallot, [0], 1)])
+                .literal(LiteralValue::Bool(true)),
+        )
+        .build();
     let module = emit(&desc).unwrap();
     // Assert Statement::SubgroupBallot is present. A no-op refactor would
     // still pass the old name-only assertion.
@@ -162,16 +130,8 @@ fn subgroup_ballot_emits_ballot_statement() {
 #[test]
 fn subgroup_scalar_builtins_are_emitted_only_when_used() {
     let mut desc = empty_desc();
-    desc.body.ops.push(KernelOp {
-        kind: KernelOpKind::SubgroupLocalId,
-        operands: vec![],
-        result: Some(0),
-    });
-    desc.body.ops.push(KernelOp {
-        kind: KernelOpKind::SubgroupSize,
-        operands: vec![],
-        result: Some(1),
-    });
+    desc.body.ops.push(op(KernelOpKind::SubgroupLocalId, [], 0));
+    desc.body.ops.push(op(KernelOpKind::SubgroupSize, [], 1));
 
     let module = emit(&desc).expect("descriptor subgroup scalar builtins must emit");
     let args = &module.entry_points[0].function.arguments;

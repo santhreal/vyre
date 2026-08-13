@@ -153,7 +153,8 @@ fn walk(
 pub(super) mod tests {
     use super::*;
     use vyre_foundation::ir::BinOp;
-    use vyre_lower::{BindingLayout, BindingVisibility, Dispatch, LiteralValue, MemoryClass};
+    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_ro, global_wo, lit, op};
+    use vyre_lower::{BindingVisibility, LiteralValue};
 
     const KINDS: [MemoryFusionKind; 2] = [MemoryFusionKind::Load, MemoryFusionKind::Store];
 
@@ -174,30 +175,14 @@ pub(super) mod tests {
     }
 
     fn binding(slot: u32, name: &str, visibility: BindingVisibility) -> BindingSlot {
-        BindingSlot {
-            slot,
-            element_type: DataType::U32,
-            element_count: None,
-            memory_class: MemoryClass::Global,
-            visibility,
-            name: name.into(),
-        }
-    }
-
-    fn lit(literal_index: u32, result: u32) -> KernelOp {
-        KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![literal_index],
-            result: Some(result),
+        match visibility {
+            BindingVisibility::ReadOnly => global_ro(slot, DataType::U32, name),
+            _ => global_wo(slot, DataType::U32, name),
         }
     }
 
     fn add(lhs: u32, rhs: u32, result: u32) -> KernelOp {
-        KernelOp {
-            kind: KernelOpKind::BinOpKind(BinOp::Add),
-            operands: vec![lhs, rhs],
-            result: Some(result),
-        }
+        op(KernelOpKind::BinOpKind(BinOp::Add), [lhs, rhs], result)
     }
 
     /// One access of `kind`: a load reads `slot[index_id]`, a store
@@ -210,34 +195,20 @@ pub(super) mod tests {
         result: u32,
     ) -> KernelOp {
         match kind {
-            MemoryFusionKind::Load => KernelOp {
-                kind: KernelOpKind::LoadGlobal,
-                operands: vec![slot, index_id],
-                result: Some(result),
-            },
-            MemoryFusionKind::Store => KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![slot, index_id, value_id],
-                result: None,
-            },
+            MemoryFusionKind::Load => op(KernelOpKind::LoadGlobal, [slot, index_id], result),
+            MemoryFusionKind::Store => effect(KernelOpKind::StoreGlobal, [slot, index_id, value_id]),
         }
     }
 
-    fn descriptor(
+    fn kernel(
         slots: Vec<BindingSlot>,
         ops: Vec<KernelOp>,
         literals: Vec<LiteralValue>,
     ) -> KernelDescriptor {
-        KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals,
-            },
-        }
+        descriptor("k")
+            .slots(slots)
+            .body(body().ops(ops).literals(literals))
+            .build()
     }
 
     /// `count` accesses on slot 0, each index the previous plus `stride`.
@@ -256,7 +227,7 @@ pub(super) mod tests {
             ops.push(access(kind, 0, index_id, 1, next_id));
             next_id += 1;
         }
-        descriptor(
+        kernel(
             vec![binding(0, "buf", kind.visibility())],
             ops,
             vec![LiteralValue::U32(0), LiteralValue::U32(stride)],
@@ -267,7 +238,7 @@ pub(super) mod tests {
     /// op 5, so a facade that asks for the wrong kind reports the wrong
     /// first-op index instead of an empty plan.
     pub(in crate::patterns) fn mixed_load_and_store_chains() -> KernelDescriptor {
-        descriptor(
+        kernel(
             vec![
                 binding(0, "in", BindingVisibility::ReadOnly),
                 binding(1, "out", BindingVisibility::WriteOnly),
@@ -355,7 +326,7 @@ pub(super) mod tests {
     #[test]
     fn accesses_to_different_slots_do_not_chain() {
         for kind in KINDS {
-            let desc = descriptor(
+            let desc = kernel(
                 vec![
                     binding(0, "a", kind.visibility()),
                     binding(1, "b", kind.visibility()),
@@ -378,7 +349,7 @@ pub(super) mod tests {
         // Pure arithmetic may be scheduled into the gap; another memory
         // access may not be crossed.
         for kind in KINDS {
-            let desc = descriptor(
+            let desc = kernel(
                 vec![
                     binding(0, "buf", kind.visibility()),
                     binding(1, "other", kind.opposite().visibility()),
@@ -401,7 +372,7 @@ pub(super) mod tests {
     fn folded_literal_indices_form_a_v4_candidate() {
         // Indices 0,1,2,3 arrive as separate literals rather than adds.
         for kind in KINDS {
-            let desc = descriptor(
+            let desc = kernel(
                 vec![binding(0, "buf", kind.visibility())],
                 vec![
                     lit(0, 0),
@@ -434,7 +405,7 @@ pub(super) mod tests {
         // Store-only: the fused value registers must already be live at
         // the first store. A load has no value operand to constrain.
         let kind = MemoryFusionKind::Store;
-        let desc = descriptor(
+        let desc = kernel(
             vec![binding(0, "out", BindingVisibility::WriteOnly)],
             vec![
                 lit(0, 0),

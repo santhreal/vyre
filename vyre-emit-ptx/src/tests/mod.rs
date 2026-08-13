@@ -1,48 +1,39 @@
 use super::*;
 use crate::reg::{PtxType, Reg};
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_wo,
+    lit,
+};
 use vyre_lower::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-    KernelOp, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape,
+    BindingLayout,
+    BindingVisibility,
+    Dispatch,
+    KernelBody,
+    KernelDescriptor,
+    KernelOp,
+    KernelOpKind,
+    LiteralValue,
+    MatrixMmaElement,
+    MatrixMmaLayout,
+    MatrixMmaShape,
     MemoryClass,
 };
 
 fn one_store_kernel() -> KernelDescriptor {
-    KernelDescriptor {
-        id: "store_one".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::WriteOnly,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-        },
-    }
+    descriptor("store_one")
+        .slot(global_wo(0, DataType::U32, "out").with_count(1))
+        .body(
+            body()
+                .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+        )
+        .build()
 }
 
 fn two_slot_u32_kernel(
@@ -54,39 +45,17 @@ fn two_slot_u32_kernel(
         id: id.into(),
         bindings: BindingLayout {
             slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(16),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "input".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(16),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::WriteOnly,
-                    name: "output".into(),
-                },
+                global_ro(0, DataType::U32, "input").with_count(16),
+                global_wo(1, DataType::U32, "output").with_count(16),
             ],
         },
         dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops,
-            child_bodies: vec![],
-            literals,
-        },
+        body: body().ops(ops).literals(literals).build(),
     }
 }
 
 fn empty_child_body() -> KernelBody {
-    KernelBody {
-        ops: vec![],
-        child_bodies: vec![],
-        literals: vec![],
-    }
+    body().build()
 }
 
 mod async_ops;

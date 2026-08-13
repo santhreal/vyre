@@ -119,58 +119,33 @@ impl<'a> StructuredVisitor<'a> for CandidateCollector {
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, LiteralValue, MemoryClass,
+    use vyre_lower::descriptor_builder::{
+        body,
+        descriptor,
+        effect,
+        global_ro,
+        global_rw,
+        lit,
+        op,
+        shared_rw,
     };
+    use vyre_lower::{KernelDescriptor, LiteralValue};
 
     fn cp_async_kernel() -> KernelDescriptor {
         // load(global, 0) → r0; store(shared, 0, r0)
-        KernelDescriptor {
-            id: "cp_async".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::F32,
-                        element_count: None,
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "g".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::F32,
-                        element_count: Some(64),
-                        memory_class: MemoryClass::Shared,
-                        visibility: BindingVisibility::ReadWrite,
-                        name: "s".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreShared,
-                        operands: vec![1, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        }
+        descriptor("cp_async")
+            .slots([global_ro(0, DataType::F32, "g"), shared_rw(1, DataType::F32, 64, "s")])
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                        effect(KernelOpKind::StoreShared, [1, 0, 1]),
+                    ])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build()
     }
 
     #[test]
@@ -193,93 +168,41 @@ mod tests {
 
     #[test]
     fn empty_kernel_yields_no_candidates() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let p = analyze(&desc, ComputeCapability::SM_80);
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn load_without_immediate_store_no_candidate() {
-        let desc = KernelDescriptor {
-            id: "load_only".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "g".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let desc = descriptor("load_only")
+            .slot(global_ro(0, DataType::F32, "g"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([lit(0, 0), op(KernelOpKind::LoadGlobal, [0, 0], 1)])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
         let p = analyze(&desc, ComputeCapability::SM_80);
         assert!(p.candidates.is_empty());
     }
 
     #[test]
     fn store_to_global_not_shared_no_candidate() {
-        let desc = KernelDescriptor {
-            id: "store_global".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::F32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "g".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let desc = descriptor("store_global")
+            .slot(global_rw(0, DataType::F32, "g"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                        effect(KernelOpKind::StoreGlobal, [0, 0, 1]),
+                    ])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
         let p = analyze(&desc, ComputeCapability::SM_80);
         assert!(
             p.candidates.is_empty(),

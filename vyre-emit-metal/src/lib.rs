@@ -605,60 +605,33 @@ fn hex_encode(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
     use vyre_foundation::ir::{DataType, Expr, Node, Program};
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    use vyre_lower::descriptor_builder::{
+        SlotCount,
+        body,
+        descriptor,
+        effect,
+        global_ro,
+        global_rw,
+        lit,
+        op,
+        shared_rw,
     };
+    use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
     fn empty_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        }
+        descriptor("empty").dispatch(64, 1, 1).build()
     }
 
     fn one_store_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "store_one".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(1),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        }
+        descriptor("store_one")
+            .slot(global_rw(0, DataType::U32, "out").with_count(1))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+            )
+            .build()
     }
 
     #[test]
@@ -726,14 +699,7 @@ mod tests {
     #[test]
     fn workgroup_slot_is_not_a_metal_buffer_binding() {
         let mut desc = one_store_kernel();
-        desc.bindings.slots.push(BindingSlot {
-            slot: 1 << 24,
-            element_type: DataType::U32,
-            element_count: Some(4),
-            memory_class: MemoryClass::Shared,
-            visibility: BindingVisibility::ReadWrite,
-            name: "tile".into(),
-        });
+        desc.bindings.slots.push(shared_rw(1 << 24, DataType::U32, 4, "tile"));
         desc.bindings.slots.sort_by_key(|slot| slot.slot);
         let artifact = emit_artifact(&desc).unwrap();
         assert_eq!(artifact.bindings.len(), 1);
@@ -752,14 +718,7 @@ mod tests {
     fn metal_resource_count_without_sidecar_room_is_rejected() {
         let mut desc = empty_kernel();
         desc.bindings.slots = (0..=255)
-            .map(|slot| BindingSlot {
-                slot,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadOnly,
-                name: format!("buf{slot}"),
-            })
+            .map(|slot| global_ro(slot, DataType::U32, &format!("buf{slot}")).with_count(1))
             .collect();
         let error = emit_artifact(&desc).unwrap_err();
         let text = error.to_string();
@@ -800,51 +759,22 @@ mod tests {
     /// miscompilation under Metal's strict aliasing rules.
     #[test]
     fn readonly_binding_emits_const_device_pointer() {
-        let desc = KernelDescriptor {
-            id: "readonly_smoke".into(),
-            bindings: BindingLayout {
-                slots: vec![
-                    BindingSlot {
-                        slot: 0,
-                        element_type: DataType::U32,
-                        element_count: Some(16),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadOnly,
-                        name: "input".into(),
-                    },
-                    BindingSlot {
-                        slot: 1,
-                        element_type: DataType::U32,
-                        element_count: Some(16),
-                        memory_class: MemoryClass::Global,
-                        visibility: BindingVisibility::ReadWrite,
-                        name: "output".into(),
-                    },
-                ],
-            },
-            dispatch: Dispatch::new(16, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::LoadGlobal,
-                        operands: vec![0, 0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![1, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let desc = descriptor("readonly_smoke")
+            .slots([
+                global_ro(0, DataType::U32, "input").with_count(16),
+                global_rw(1, DataType::U32, "output").with_count(16),
+            ])
+            .dispatch(16, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        op(KernelOpKind::LoadGlobal, [0, 0], 1),
+                        effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+                    ])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
         let msl =
             emit(&desc).expect("Fix: read-only + read-write kernel must emit MSL without error.");
         // Naga's MSL backend emits a read-only storage buffer as a CONST

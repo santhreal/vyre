@@ -1,28 +1,20 @@
 //! Test: control flow.
 use super::*;
+use vyre_lower::descriptor_builder::{SlotCount, body, descriptor, effect, global_rw, lit};
 
 #[test]
 fn region_op_passes_through_with_comment() {
-    let kernel = KernelDescriptor {
-        id: "region".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(1, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::Region {
+    let kernel = descriptor("region")
+        .body(
+            body()
+                .ops([
+                    effect(KernelOpKind::Region {
                     generator: "vyre.libs.test".into(),
-                },
-                operands: vec![0],
-                result: None,
-            }],
-            child_bodies: vec![KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            }],
-            literals: vec![],
-        },
-    };
+                }, [0]),
+                ])
+                .child(body()),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("// region: vyre.libs.test"));
 }
@@ -31,27 +23,15 @@ fn region_op_passes_through_with_comment() {
 
 #[test]
 fn structured_if_then_emits_branch_and_label() {
-    let kernel = KernelDescriptor {
-        id: "if_then".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThen,
-                    operands: vec![0, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![empty_child_body()],
-            literals: vec![LiteralValue::Bool(true)],
-        },
-    };
+    let kernel = descriptor("if_then")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([lit(0, 0), effect(KernelOpKind::StructuredIfThen, [0, 0])])
+                .child(empty_child_body())
+                .literal(LiteralValue::Bool(true)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("@!"), "must emit a negated-pred branch");
     assert!(s.contains("bra "));
@@ -60,27 +40,18 @@ fn structured_if_then_emits_branch_and_label() {
 
 #[test]
 fn structured_if_then_else_emits_else_label_and_unconditional_jump() {
-    let kernel = KernelDescriptor {
-        id: "if_else".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThenElse,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![empty_child_body(), empty_child_body()],
-            literals: vec![LiteralValue::Bool(false)],
-        },
-    };
+    let kernel = descriptor("if_else")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]),
+                ])
+                .children([empty_child_body(), empty_child_body()])
+                .literal(LiteralValue::Bool(false)),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("$L_if_else_"), "must emit an else label");
     assert!(s.contains("$L_if_end_"));
@@ -90,58 +61,25 @@ fn structured_if_then_else_emits_else_label_and_unconditional_jump() {
 
 #[test]
 fn short_if_then_store_is_predicated_without_branch() {
-    let kernel = KernelDescriptor {
-        id: "if_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThen,
-                    operands: vec![0, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::StoreGlobal,
-                    operands: vec![0, 1, 2],
-                    result: None,
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            }],
-            literals: vec![
-                LiteralValue::Bool(true),
-                LiteralValue::U32(0),
-                LiteralValue::U32(7),
-            ],
-        },
-    };
+    let kernel = descriptor("if_store")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    effect(KernelOpKind::StructuredIfThen, [0, 0]),
+                ])
+                .child(body().op(effect(KernelOpKind::StoreGlobal, [0, 1, 2])))
+                .literals([
+                    LiteralValue::Bool(true),
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(7),
+                ]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -155,56 +93,27 @@ fn short_if_then_store_is_predicated_without_branch() {
 
 #[test]
 fn short_if_then_literal_store_body_is_predicated_without_branch() {
-    let kernel = KernelDescriptor {
-        id: "if_literal_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThen,
-                    operands: vec![0, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(20),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 1, 20],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(13)],
-            }],
-            literals: vec![LiteralValue::Bool(true), LiteralValue::U32(0)],
-        },
-    };
+    let kernel = descriptor("if_literal_store")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredIfThen, [0, 0]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            lit(0, 20),
+                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
+                        ])
+                        .literal(LiteralValue::U32(13)),
+                ])
+                .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -218,66 +127,29 @@ fn short_if_then_literal_store_body_is_predicated_without_branch() {
 
 #[test]
 fn short_if_then_two_store_body_is_fully_predicated_without_branch() {
-    let kernel = KernelDescriptor {
-        id: "if_two_stores".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(2),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThen,
-                    operands: vec![0, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(20),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 1, 20],
-                        result: None,
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(21),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 1, 21],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(13), LiteralValue::U32(17)],
-            }],
-            literals: vec![LiteralValue::Bool(true), LiteralValue::U32(0)],
-        },
-    };
+    let kernel = descriptor("if_two_stores")
+        .slot(global_rw(0, DataType::U32, "out").with_count(2))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredIfThen, [0, 0]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            lit(0, 20),
+                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
+                            lit(1, 21),
+                            effect(KernelOpKind::StoreGlobal, [0, 1, 21]),
+                        ])
+                        .literals([LiteralValue::U32(13), LiteralValue::U32(17)]),
+                ])
+                .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -291,75 +163,30 @@ fn short_if_then_two_store_body_is_fully_predicated_without_branch() {
 
 #[test]
 fn short_if_else_stores_are_dual_predicated_without_reconvergence_branch() {
-    let kernel = KernelDescriptor {
-        id: "if_else_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![3],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThenElse,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![
-                KernelBody {
-                    ops: vec![KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 1, 2],
-                        result: None,
-                    }],
-                    child_bodies: vec![],
-                    literals: vec![],
-                },
-                KernelBody {
-                    ops: vec![KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 1, 3],
-                        result: None,
-                    }],
-                    child_bodies: vec![],
-                    literals: vec![],
-                },
-            ],
-            literals: vec![
-                LiteralValue::Bool(true),
-                LiteralValue::U32(0),
-                LiteralValue::U32(7),
-                LiteralValue::U32(9),
-            ],
-        },
-    };
+    let kernel = descriptor("if_else_store")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]),
+                ])
+                .children([
+                    body().op(effect(KernelOpKind::StoreGlobal, [0, 1, 2])),
+                    body().op(effect(KernelOpKind::StoreGlobal, [0, 1, 3])),
+                ])
+                .literals([
+                    LiteralValue::Bool(true),
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(7),
+                    LiteralValue::U32(9),
+                ]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -374,74 +201,33 @@ fn short_if_else_stores_are_dual_predicated_without_reconvergence_branch() {
 
 #[test]
 fn short_if_else_literal_store_bodies_are_dual_predicated_without_branch() {
-    let kernel = KernelDescriptor {
-        id: "if_else_literal_store".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(1),
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "out".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredIfThenElse,
-                    operands: vec![0, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![
-                KernelBody {
-                    ops: vec![
-                        KernelOp {
-                            kind: KernelOpKind::Literal,
-                            operands: vec![0],
-                            result: Some(20),
-                        },
-                        KernelOp {
-                            kind: KernelOpKind::StoreGlobal,
-                            operands: vec![0, 1, 20],
-                            result: None,
-                        },
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(21)],
-                },
-                KernelBody {
-                    ops: vec![
-                        KernelOp {
-                            kind: KernelOpKind::Literal,
-                            operands: vec![0],
-                            result: Some(21),
-                        },
-                        KernelOp {
-                            kind: KernelOpKind::StoreGlobal,
-                            operands: vec![0, 1, 21],
-                            result: None,
-                        },
-                    ],
-                    child_bodies: vec![],
-                    literals: vec![LiteralValue::U32(34)],
-                },
-            ],
-            literals: vec![LiteralValue::Bool(true), LiteralValue::U32(0)],
-        },
-    };
+    let kernel = descriptor("if_else_literal_store")
+        .slot(global_rw(0, DataType::U32, "out").with_count(1))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredIfThenElse, [0, 0, 1]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            lit(0, 20),
+                            effect(KernelOpKind::StoreGlobal, [0, 1, 20]),
+                        ])
+                        .literal(LiteralValue::U32(21)),
+                    body()
+                        .ops([
+                            lit(0, 21),
+                            effect(KernelOpKind::StoreGlobal, [0, 1, 21]),
+                        ])
+                        .literal(LiteralValue::U32(34)),
+                ])
+                .literals([LiteralValue::Bool(true), LiteralValue::U32(0)]),
+        )
+        .build();
 
     let s = emit(&kernel).unwrap();
 
@@ -456,34 +242,21 @@ fn short_if_else_literal_store_bodies_are_dual_predicated_without_branch() {
 
 #[test]
 fn structured_for_loop_emits_head_label_setp_and_jump_back() {
-    let kernel = KernelDescriptor {
-        id: "for_loop".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredForLoop {
+    let kernel = descriptor("for_loop")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredForLoop {
                         loop_var: "i".into(),
-                    },
-                    operands: vec![0, 1, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![empty_child_body()],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(64)],
-        },
-    };
+                    }, [0, 1, 0]),
+                ])
+                .child(empty_child_body())
+                .literals([LiteralValue::U32(0), LiteralValue::U32(64)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("$L_for_head_"), "must emit head label");
     assert!(s.contains("$L_for_exit_"), "must emit exit label");

@@ -187,8 +187,9 @@ impl KernelBodyBuilder {
 
     /// Append several child bodies in order.
     #[must_use]
-    pub fn children(mut self, children: impl IntoIterator<Item = KernelBody>) -> Self {
-        self.child_bodies.extend(children);
+    pub fn children<B: Into<KernelBody>>(mut self, children: impl IntoIterator<Item = B>) -> Self {
+        self.child_bodies
+            .extend(children.into_iter().map(Into::into));
         self
     }
 

@@ -1,55 +1,37 @@
 //! Test: async ops.
 use super::*;
+use vyre_lower::descriptor_builder::{
+    SlotCount,
+    body,
+    descriptor,
+    effect,
+    global_ro,
+    global_rw,
+    lit,
+    op,
+    shared_rw,
+};
 
 #[test]
 fn async_load_emits_bounded_sync_copy() {
-    let kernel = KernelDescriptor {
-        id: "async_load".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Shared,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "dst".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncLoad {
+    let kernel = descriptor("async_load")
+        .slots([
+            global_ro(0, DataType::U32, "src"),
+            shared_rw(1, DataType::U32, 64, "dst"),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::AsyncLoad {
                         tag: "tile0".into(),
-                    },
-                    operands: vec![0, 1, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
-        },
-    };
+                    }, [0, 1, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
+        )
+        .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("// async_load tag=tile0"));
     assert!(s.contains(".shared .align 4 .b8 shared_buf_1[256];"));
@@ -60,51 +42,22 @@ fn async_load_emits_bounded_sync_copy() {
 
 #[test]
 fn async_load_uses_cp_async_on_sm_80() {
-    let kernel = KernelDescriptor {
-        id: "k".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Shared,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "dst".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncLoad { tag: "t".into() },
-                    operands: vec![0, 1, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
-        },
-    };
+    let kernel = descriptor("k")
+        .slots([
+            global_ro(0, DataType::U32, "src"),
+            shared_rw(1, DataType::U32, 64, "dst"),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::AsyncLoad { tag: "t".into() }, [0, 1, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
+        )
+        .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_80).unwrap();
     assert!(s.contains("// cp.async_load tag=t"));
     assert!(s.contains("cp.async.ca.shared.global"));
@@ -118,76 +71,31 @@ fn async_load_uses_cp_async_on_sm_80() {
 
 #[test]
 fn cp_async_wait_is_deferred_until_async_wait_to_overlap_compute() {
-    let kernel = KernelDescriptor {
-        id: "cp_async_overlap".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadOnly,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Shared,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "dst".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![2],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![3],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncLoad { tag: "tile".into() },
-                    operands: vec![0, 1, 0, 1],
-                    result: None,
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Add),
-                    operands: vec![2, 3],
-                    result: Some(4),
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncWait { tag: "tile".into() },
-                    operands: vec![],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![
-                LiteralValue::U32(0),
-                LiteralValue::U32(16),
-                LiteralValue::U32(7),
-                LiteralValue::U32(9),
-            ],
-        },
-    };
+    let kernel = descriptor("cp_async_overlap")
+        .slots([
+            global_ro(0, DataType::U32, "src"),
+            shared_rw(1, DataType::U32, 64, "dst"),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(2, 2),
+                    lit(3, 3),
+                    effect(KernelOpKind::AsyncLoad { tag: "tile".into() }, [0, 1, 0, 1]),
+                    op(KernelOpKind::BinOpKind(BinOp::Add), [2, 3], 4),
+                    effect(KernelOpKind::AsyncWait { tag: "tile".into() }, []),
+                ])
+                .literals([
+                    LiteralValue::U32(0),
+                    LiteralValue::U32(16),
+                    LiteralValue::U32(7),
+                    LiteralValue::U32(9),
+                ]),
+        )
+        .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_80).unwrap();
     let commit = s
         .find("cp.async.commit_group;")
@@ -203,53 +111,24 @@ fn cp_async_wait_is_deferred_until_async_wait_to_overlap_compute() {
 
 #[test]
 fn async_store_emits_bounded_sync_copy() {
-    let kernel = KernelDescriptor {
-        id: "async_store".into(),
-        bindings: BindingLayout {
-            slots: vec![
-                BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Shared,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "src".into(),
-                },
-                BindingSlot {
-                    slot: 1,
-                    element_type: DataType::U32,
-                    element_count: Some(64),
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "dst".into(),
-                },
-            ],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::AsyncStore {
+    let kernel = descriptor("async_store")
+        .slots([
+            shared_rw(0, DataType::U32, 64, "src"),
+            global_rw(1, DataType::U32, "dst").with_count(64),
+        ])
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::AsyncStore {
                         tag: "tile0".into(),
-                    },
-                    operands: vec![0, 1, 0, 1],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(16)],
-        },
-    };
+                    }, [0, 1, 0, 1]),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(16)]),
+        )
+        .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("// async_store tag=tile0"));
     assert!(s.contains("ld.shared.u32"));
@@ -258,20 +137,10 @@ fn async_store_emits_bounded_sync_copy() {
 
 #[test]
 fn async_wait_emits_workgroup_memory_barrier() {
-    let kernel = KernelDescriptor {
-        id: "async_wait".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![KernelOp {
-                kind: KernelOpKind::AsyncWait { tag: "t".into() },
-                operands: vec![],
-                result: None,
-            }],
-            child_bodies: vec![],
-            literals: vec![],
-        },
-    };
+    let kernel = descriptor("async_wait")
+        .dispatch(64, 1, 1)
+        .body(body().op(effect(KernelOpKind::AsyncWait { tag: "t".into() }, [])))
+        .build();
     let s = emit_with_target(&kernel, ComputeCapability::SM_80).unwrap();
     assert!(s.contains("membar.cta"));
 }

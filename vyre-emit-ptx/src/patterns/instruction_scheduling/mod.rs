@@ -114,53 +114,24 @@ fn first_later_consumer(body: &KernelBody, value: u32, start: usize) -> Option<u
 mod tests {
     use super::*;
     use vyre_foundation::ir::BinOp;
-    use vyre_lower::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+    use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
     fn linear_chain(length: usize) -> KernelDescriptor {
         // x0 = literal; x1 = x0 + lit; x2 = x1 + lit; ...
-        let mut ops = vec![KernelOp {
-            kind: KernelOpKind::Literal,
-            operands: vec![0],
-            result: Some(0),
-        }];
+        let mut ops = vec![lit(0, 0)];
         for i in 1..length {
-            ops.push(KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(100 + i as u32),
-            });
-            ops.push(KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![(i - 1) as u32, 100 + i as u32],
-                result: Some(i as u32),
-            });
+            ops.push(lit(1, 100 + i as u32));
+            ops.push(op(KernelOpKind::BinOpKind(BinOp::Add), [(i - 1) as u32, 100 + i as u32], i as u32));
         }
-        KernelDescriptor {
-            id: "chain".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            },
-        }
+        descriptor("chain")
+            .body(body().ops(ops).literals([LiteralValue::U32(0), LiteralValue::U32(1)]))
+            .build()
     }
 
     #[test]
     fn empty_kernel_no_chains() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").build();
         let h = analyze(&desc);
         assert!(h.long_chains.is_empty());
         assert_eq!(h.total_op_count, 0);
@@ -168,32 +139,13 @@ mod tests {
 
     #[test]
     fn short_independent_ops_no_long_chain() {
-        let desc = KernelDescriptor {
-            id: "indep".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0)],
-            },
-        };
+        let desc = descriptor("indep")
+            .body(
+                body()
+                    .ops([lit(0, 0), lit(0, 1), lit(0, 2)])
+                    .literal(LiteralValue::U32(0)),
+            )
+            .build();
         let h = analyze(&desc);
         assert!(h.long_chains.is_empty());
         assert_eq!(h.total_op_count, 3);

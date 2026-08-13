@@ -1,75 +1,24 @@
 use super::*;
+use vyre_lower::descriptor_builder::{effect, lit, op};
 
 #[test]
 fn emit_fuses_four_adjacent_u32_stores_to_ptx_vector_store() {
     let s = emit(&two_slot_u32_kernel(
         "vec_store",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![5],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 2],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![0, 1],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 6, 3],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![6, 1],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 7, 4],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::BinOpKind(BinOp::Add),
-                operands: vec![7, 1],
-                result: Some(8),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 8, 5],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
+            lit(3, 3),
+            lit(4, 4),
+            lit(5, 5),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 2]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [0, 1], 6),
+            effect(KernelOpKind::StoreGlobal, [1, 6, 3]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [6, 1], 7),
+            effect(KernelOpKind::StoreGlobal, [1, 7, 4]),
+            op(KernelOpKind::BinOpKind(BinOp::Add), [7, 1], 8),
+            effect(KernelOpKind::StoreGlobal, [1, 8, 5]),
         ],
         vec![
             LiteralValue::U32(0),
@@ -111,66 +60,18 @@ fn emit_fuses_vector_store_across_folded_literal_index_gaps() {
     let s = emit(&two_slot_u32_kernel(
         "folded_literal_vec_store",
         vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![3],
-                result: Some(3),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![4],
-                result: Some(4),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 0, 1],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![5],
-                result: Some(5),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 5, 2],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![6],
-                result: Some(6),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 6, 3],
-                result: None,
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![7],
-                result: Some(7),
-            },
-            KernelOp {
-                kind: KernelOpKind::StoreGlobal,
-                operands: vec![1, 7, 4],
-                result: None,
-            },
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
+            lit(3, 3),
+            lit(4, 4),
+            effect(KernelOpKind::StoreGlobal, [1, 0, 1]),
+            lit(5, 5),
+            effect(KernelOpKind::StoreGlobal, [1, 5, 2]),
+            lit(6, 6),
+            effect(KernelOpKind::StoreGlobal, [1, 6, 3]),
+            lit(7, 7),
+            effect(KernelOpKind::StoreGlobal, [1, 7, 4]),
         ],
         vec![
             LiteralValue::U32(0),

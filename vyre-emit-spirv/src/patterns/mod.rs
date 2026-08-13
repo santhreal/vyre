@@ -143,22 +143,12 @@ impl std::fmt::Display for SpirvAuditReport {
 #[cfg(test)]
 mod audit_tests {
     use super::*;
-    use vyre_lower::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, KernelOpKind,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, op};
+    use vyre_lower::{KernelOpKind};
 
     #[test]
     fn empty_kernel_yields_no_findings() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let report = audit(&desc);
         assert_eq!(report.kernel_id, "empty");
         assert_eq!(report.total_findings(), 0);
@@ -167,16 +157,7 @@ mod audit_tests {
 
     #[test]
     fn oversized_workgroup_shows_in_audit() {
-        let desc = KernelDescriptor {
-            id: "huge".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(2048, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("huge").dispatch(2048, 1, 1).build();
         let report = audit(&desc);
         assert!(report.requires_action());
         assert!(!report.workgroup_validation.violations.is_empty());
@@ -185,20 +166,10 @@ mod audit_tests {
     #[test]
     fn spirv_audit_merge_aggregates() {
         let mut acc = SpirvAuditReport::zero();
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::SubgroupBallot,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k")
+            .dispatch(64, 1, 1)
+            .body(body().op(op(KernelOpKind::SubgroupBallot, [0], 0)))
+            .build();
         acc.merge(audit(&desc));
         // After merging in a kernel that uses SubgroupBallot, the
         // ballot capability bit should be set on the aggregate.
@@ -207,16 +178,7 @@ mod audit_tests {
 
     #[test]
     fn format_short_and_is_clean_on_empty() {
-        let desc = KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("k").dispatch(64, 1, 1).build();
         let r = audit(&desc);
         assert!(r.is_clean());
         let s = r.format_short();
@@ -226,20 +188,10 @@ mod audit_tests {
 
     #[test]
     fn subgroup_op_promotes_capability_in_audit() {
-        let desc = KernelDescriptor {
-            id: "sg".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::SubgroupBallot,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("sg")
+            .dispatch(64, 1, 1)
+            .body(body().op(op(KernelOpKind::SubgroupBallot, [0], 0)))
+            .build();
         let report = audit(&desc);
         assert!(report.requires_action());
         assert!(report.subgroup.capabilities.ballot);

@@ -1,52 +1,33 @@
 //! Test: atomics.
 use super::*;
+use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
 
 #[test]
 fn nested_if_inside_for_emits_correct_label_nesting() {
     // for { if { ... } }
-    let kernel = KernelDescriptor {
-        id: "nested".into(),
-        bindings: BindingLayout { slots: vec![] },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::StructuredForLoop {
+    let kernel = descriptor("nested")
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    effect(KernelOpKind::StructuredForLoop {
                         loop_var: "i".into(),
-                    },
-                    operands: vec![0, 1, 0],
-                    result: None,
-                },
-            ],
-            child_bodies: vec![KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(10),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StructuredIfThen,
-                        operands: vec![10, 0],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![empty_child_body()],
-                literals: vec![LiteralValue::Bool(true)],
-            }],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(8)],
-        },
-    };
+                    }, [0, 1, 0]),
+                ])
+                .children([
+                    body()
+                        .ops([
+                            lit(0, 10),
+                            effect(KernelOpKind::StructuredIfThen, [10, 0]),
+                        ])
+                        .child(empty_child_body())
+                        .literal(LiteralValue::Bool(true)),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(8)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("$L_for_head_"));
     assert!(s.contains("$L_if_end_"));
@@ -55,44 +36,22 @@ fn nested_if_inside_for_emits_correct_label_nesting() {
 #[test]
 fn atomic_add_emits_atom_global_add_u32() {
     use vyre_foundation::ir::AtomicOp;
-    let kernel = KernelDescriptor {
-        id: "atomic_add".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "counter".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
+    let kernel = descriptor("atomic_add")
+        .slot(global_rw(0, DataType::U32, "counter"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::Atomic {
                         op: AtomicOp::Add,
                         ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![0, 0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+                    }, [0, 0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(s.contains("atom.global.add.u32"));
 }
@@ -100,44 +59,22 @@ fn atomic_add_emits_atom_global_add_u32() {
 #[test]
 fn atomic_exchange_emits_atom_global_exch_b32() {
     use vyre_foundation::ir::AtomicOp;
-    let kernel = KernelDescriptor {
-        id: "atomic_exchange".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "slot".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
+    let kernel = descriptor("atomic_exchange")
+        .slot(global_rw(0, DataType::U32, "slot"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::Atomic {
                         op: AtomicOp::Exchange,
                         ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![0, 0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    };
+                    }, [0, 0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     assert!(
         s.contains("atom.global.exch.b32"),
@@ -152,49 +89,27 @@ fn atomic_exchange_emits_atom_global_exch_b32() {
 #[test]
 fn atomic_bitwise_emits_atom_global_b32_suffix() {
     use vyre_foundation::ir::AtomicOp;
-    for (op, mnemonic) in [
+    for (atomic_op, mnemonic) in [
         (AtomicOp::And, "and"),
         (AtomicOp::Or, "or"),
         (AtomicOp::Xor, "xor"),
     ] {
-        let kernel = KernelDescriptor {
-            id: "atomic_bitwise".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "slot".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Atomic {
-                            op,
+        let kernel = descriptor("atomic_bitwise")
+            .slot(global_rw(0, DataType::U32, "slot"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        op(KernelOpKind::Atomic {
+                            op: atomic_op,
                             ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                        },
-                        operands: vec![0, 0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-            },
-        };
+                        }, [0, 0, 1], 2),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+            )
+            .build();
         let s = emit(&kernel).unwrap();
         assert!(
             s.contains(&format!("atom.global.{mnemonic}.b32")),
@@ -206,54 +121,24 @@ fn atomic_bitwise_emits_atom_global_b32_suffix() {
 #[test]
 fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
     use vyre_foundation::ir::AtomicOp;
-    let kernel = KernelDescriptor {
-        id: "atomic_bool_to_b32".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: None,
-                memory_class: MemoryClass::Global,
-                visibility: BindingVisibility::ReadWrite,
-                name: "slot".into(),
-            }],
-        },
-        dispatch: Dispatch::new(64, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(2),
-                },
-                KernelOp {
-                    kind: KernelOpKind::BinOpKind(BinOp::Eq),
-                    operands: vec![1, 2],
-                    result: Some(3),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
+    let kernel = descriptor("atomic_bool_to_b32")
+        .slot(global_rw(0, DataType::U32, "slot"))
+        .dispatch(64, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    lit(1, 2),
+                    op(KernelOpKind::BinOpKind(BinOp::Eq), [1, 2], 3),
+                    op(KernelOpKind::Atomic {
                         op: AtomicOp::Or,
                         ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                    },
-                    operands: vec![0, 0, 3],
-                    result: Some(4),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-        },
-    };
+                    }, [0, 0, 3], 4),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+        )
+        .build();
     let s = emit(&kernel).unwrap();
     let atom_line = s
         .lines()
@@ -272,45 +157,23 @@ fn atomic_bitwise_bool_operand_materializes_u32_before_atom() {
 #[test]
 fn atomic_min_max_emit_correct_mnemonic() {
     use vyre_foundation::ir::AtomicOp;
-    for (op, mnemonic) in [(AtomicOp::Min, "min"), (AtomicOp::Max, "max")] {
-        let kernel = KernelDescriptor {
-            id: "atomic_minmax".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "b".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Atomic {
-                            op,
+    for (atomic_op, mnemonic) in [(AtomicOp::Min, "min"), (AtomicOp::Max, "max")] {
+        let kernel = descriptor("atomic_minmax")
+            .slot(global_rw(0, DataType::U32, "b"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        op(KernelOpKind::Atomic {
+                            op: atomic_op,
                             ordering: vyre_foundation::memory_model::MemoryOrdering::Relaxed,
-                        },
-                        operands: vec![0, 0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        };
+                        }, [0, 0, 1], 2),
+                    ])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+            )
+            .build();
         let s = emit(&kernel).unwrap();
         assert!(s.contains(&format!("atom.global.{mnemonic}.u32")));
     }
@@ -320,45 +183,23 @@ fn atomic_min_max_emit_correct_mnemonic() {
 ///
 /// `slot 0` is the shared bin array, indexed by the literal `0`, incremented by
 /// the literal `1`.
-fn shared_atomic_kernel(op: vyre_foundation::ir::AtomicOp) -> KernelDescriptor {
-    KernelDescriptor {
-        id: "shared_atomic".into(),
-        bindings: BindingLayout {
-            slots: vec![BindingSlot {
-                slot: 0,
-                element_type: DataType::U32,
-                element_count: Some(256),
-                memory_class: MemoryClass::Shared,
-                visibility: BindingVisibility::ReadWrite,
-                name: "wg_bins".into(),
-            }],
-        },
-        dispatch: Dispatch::new(256, 1, 1),
-        body: KernelBody {
-            ops: vec![
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Literal,
-                    operands: vec![1],
-                    result: Some(1),
-                },
-                KernelOp {
-                    kind: KernelOpKind::Atomic {
-                        op,
+fn shared_atomic_kernel(atomic_op: vyre_foundation::ir::AtomicOp) -> KernelDescriptor {
+    descriptor("shared_atomic")
+        .slot(shared_rw(0, DataType::U32, 256, "wg_bins"))
+        .dispatch(256, 1, 1)
+        .body(
+            body()
+                .ops([
+                    lit(0, 0),
+                    lit(1, 1),
+                    op(KernelOpKind::Atomic {
+                            op: atomic_op,
                         ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
-                    },
-                    operands: vec![0, 0, 1],
-                    result: Some(2),
-                },
-            ],
-            child_bodies: vec![],
-            literals: vec![LiteralValue::U32(0), LiteralValue::U32(1)],
-        },
-    }
+                    }, [0, 0, 1], 2),
+                ])
+                .literals([LiteralValue::U32(0), LiteralValue::U32(1)]),
+        )
+        .build()
 }
 
 /// An atomic on a workgroup-shared binding must lower to `atom.shared.*`

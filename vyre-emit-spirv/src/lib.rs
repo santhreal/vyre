@@ -150,61 +150,24 @@ pub const SPIRV_MAGIC: u32 = 0x07230203;
 mod tests {
     use super::*;
     use vyre_foundation::ir::DataType;
-    use vyre_lower::{
-        BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
-        KernelOp, KernelOpKind, LiteralValue, MemoryClass,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+    use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
     fn one_store_kernel() -> KernelDescriptor {
-        KernelDescriptor {
-            id: "store_one".into(),
-            bindings: BindingLayout {
-                slots: vec![BindingSlot {
-                    slot: 0,
-                    element_type: DataType::U32,
-                    element_count: None,
-                    memory_class: MemoryClass::Global,
-                    visibility: BindingVisibility::ReadWrite,
-                    name: "out".into(),
-                }],
-            },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::StoreGlobal,
-                        operands: vec![0, 0, 1],
-                        result: None,
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(0), LiteralValue::U32(7)],
-            },
-        }
+        descriptor("store_one")
+            .slot(global_rw(0, DataType::U32, "out"))
+            .dispatch(64, 1, 1)
+            .body(
+                body()
+                    .ops([lit(0, 0), lit(1, 1), effect(KernelOpKind::StoreGlobal, [0, 0, 1])])
+                    .literals([LiteralValue::U32(0), LiteralValue::U32(7)]),
+            )
+            .build()
     }
 
     #[test]
     fn empty_kernel_emits_valid_spirv_with_magic_header() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let words = emit(&desc).unwrap();
         assert!(!words.is_empty());
         assert_eq!(
@@ -225,16 +188,7 @@ mod tests {
 
     #[test]
     fn emit_bytes_matches_words_in_le() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let words = emit(&desc).unwrap();
         let bytes = emit_bytes(&desc).unwrap();
         assert_eq!(bytes.len(), words.len() * 4);
@@ -244,54 +198,33 @@ mod tests {
 
     #[test]
     fn emit_with_unsupported_op_propagates_naga_error() {
-        let desc = KernelDescriptor {
-            id: "bad".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![KernelOp {
-                    kind: KernelOpKind::SubgroupReduce {
+        let desc = descriptor("bad")
+            .body(
+                body()
+                    .ops([
+                        op(KernelOpKind::SubgroupReduce {
                         op: vyre_lower::SubgroupReduceOp::Add,
-                    },
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+                    }, [0], 0),
+                    ]),
+            )
+            .build();
         let r = emit(&desc);
         assert!(matches!(r, Err(EmitError::NagaEmit(_))));
     }
 
     #[test]
     fn binop_add_emits_valid_spirv() {
-        let kernel = KernelDescriptor {
-            id: "add".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![0],
-                        result: Some(0),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::Literal,
-                        operands: vec![1],
-                        result: Some(1),
-                    },
-                    KernelOp {
-                        kind: KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add),
-                        operands: vec![0, 1],
-                        result: Some(2),
-                    },
-                ],
-                child_bodies: vec![],
-                literals: vec![LiteralValue::U32(3), LiteralValue::U32(4)],
-            },
-        };
+        let kernel = descriptor("add")
+            .body(
+                body()
+                    .ops([
+                        lit(0, 0),
+                        lit(1, 1),
+                        op(KernelOpKind::BinOpKind(vyre_foundation::ir::BinOp::Add), [0, 1], 2),
+                    ])
+                    .literals([LiteralValue::U32(3), LiteralValue::U32(4)]),
+            )
+            .build();
         let words = emit(&kernel).unwrap();
         assert_eq!(words[0], SPIRV_MAGIC);
         assert!(words.len() > 16);
@@ -305,16 +238,7 @@ mod tests {
     #[test]
     fn emit_from_naga_module_independently_consumable() {
         // Build a valid naga::Module via emit-naga, then convert.
-        let module = vyre_emit_naga::emit(&KernelDescriptor {
-            id: "k".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(1, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        })
+        let module = vyre_emit_naga::emit(&descriptor("k").build())
         .unwrap();
         let words = emit_from_naga_module(&module).unwrap();
         assert_eq!(words[0], SPIRV_MAGIC);

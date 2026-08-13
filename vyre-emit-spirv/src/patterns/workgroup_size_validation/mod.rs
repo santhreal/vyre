@@ -78,18 +78,15 @@ pub fn analyze_against(desc: &KernelDescriptor, limits: WorkgroupLimits) -> Vali
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::{BindingLayout, Dispatch, KernelBody, KernelDescriptor};
+    use vyre_lower::descriptor_builder::{body};
+    use vyre_lower::{BindingLayout, Dispatch, KernelDescriptor};
 
     fn empty_with_dispatch(d: Dispatch) -> KernelDescriptor {
         KernelDescriptor {
             id: "k".into(),
             bindings: BindingLayout { slots: vec![] },
             dispatch: d,
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
+            body: body().build(),
         }
     }
 

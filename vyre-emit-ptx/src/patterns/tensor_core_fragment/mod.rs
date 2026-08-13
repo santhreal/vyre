@@ -134,63 +134,35 @@ fn workgroup_size_aligned(size: [u32; 3]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::{
-        BindingLayout, Dispatch, KernelBody, KernelDescriptor, KernelOp, LiteralValue,
-    };
+    use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+    use vyre_lower::{KernelDescriptor, LiteralValue};
 
     fn fma_kernel(fma_count: u32, workgroup_x: u32) -> KernelDescriptor {
         let mut ops = vec![
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![0],
-                result: Some(0),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![1],
-                result: Some(1),
-            },
-            KernelOp {
-                kind: KernelOpKind::Literal,
-                operands: vec![2],
-                result: Some(2),
-            },
+            lit(0, 0),
+            lit(1, 1),
+            lit(2, 2),
         ];
         for i in 0..fma_count {
-            ops.push(KernelOp {
-                kind: KernelOpKind::Fma,
-                operands: vec![0, 1, 2],
-                result: Some(3 + i),
-            });
+            ops.push(op(KernelOpKind::Fma, [0, 1, 2], 3 + i));
         }
-        KernelDescriptor {
-            id: "fma_chain".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(workgroup_x, 1, 1),
-            body: KernelBody {
-                ops,
-                child_bodies: vec![],
-                literals: vec![
-                    LiteralValue::F32(1.0),
-                    LiteralValue::F32(2.0),
-                    LiteralValue::F32(3.0),
-                ],
-            },
-        }
+        descriptor("fma_chain")
+            .dispatch(workgroup_x, 1, 1)
+            .body(
+                body()
+                    .ops(ops)
+                    .literals([
+                        LiteralValue::F32(1.0),
+                        LiteralValue::F32(2.0),
+                        LiteralValue::F32(3.0),
+                    ]),
+            )
+            .build()
     }
 
     #[test]
     fn empty_kernel_has_no_candidates() {
-        let desc = KernelDescriptor {
-            id: "empty".into(),
-            bindings: BindingLayout { slots: vec![] },
-            dispatch: Dispatch::new(64, 1, 1),
-            body: KernelBody {
-                ops: vec![],
-                child_bodies: vec![],
-                literals: vec![],
-            },
-        };
+        let desc = descriptor("empty").dispatch(64, 1, 1).build();
         let p = analyze(&desc, ComputeCapability::SM_80);
         assert!(p.candidates.is_empty());
     }
