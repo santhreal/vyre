@@ -17,7 +17,7 @@ fn test_dfa_gpu_matches_cpu_baseline() {
     config.case_ids = vec!["foundation.dfa_match.256k".to_string()];
 
     let registry = vyre_bench::registry::collect_all();
-    let report = execute_suite(&registry, SuiteKind::Smoke, &config);
+    let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
 
     assert!(!report.cases.is_empty(), "DFA case must produce a result");
     let case = &report.cases[0];

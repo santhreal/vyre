@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Which benchmark suite a case belongs to.
+///
+/// `Custom` carries an owned name so a suite named at run time costs one
+/// allocation instead of a permanent one. It is not `Copy` for that reason.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SuiteKind {
     Smoke,
     Release,
@@ -12,7 +17,7 @@ pub enum SuiteKind {
     Adversarial,
     Competition,
     Honest,
-    Custom(&'static str),
+    Custom(Arc<str>),
 }
 
 impl std::str::FromStr for SuiteKind {
@@ -30,14 +35,18 @@ impl std::str::FromStr for SuiteKind {
             "adversarial" => Ok(SuiteKind::Adversarial),
             "competition" => Ok(SuiteKind::Competition),
             "honest" => Ok(SuiteKind::Honest),
-            other => Ok(SuiteKind::Custom(Box::leak(
-                other.to_string().into_boxed_str(),
-            ))),
+            other => Ok(SuiteKind::Custom(Arc::from(other))),
         }
     }
 }
 
 impl SuiteKind {
+    /// Name a custom suite without going through `FromStr`.
+    #[must_use]
+    pub fn custom(name: &str) -> Self {
+        SuiteKind::Custom(Arc::from(name))
+    }
+
     pub fn as_str(&self) -> &str {
         match self {
             SuiteKind::Smoke => "smoke",

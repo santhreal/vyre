@@ -12,7 +12,7 @@ fn report_cache_rate_is_absent_without_an_observed_cache_contract() {
     config.case_ids = vec!["foundation.elementwise.add.1m".to_string()];
     let registry = vyre_bench::registry::collect_all();
 
-    let report = execute_suite(&registry, SuiteKind::Smoke, &config);
+    let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
     assert_eq!(report.cases.len(), 1);
     assert_eq!(
         report.summary.cache_hit_rate, None,

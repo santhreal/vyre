@@ -29,7 +29,7 @@ fn test_few_samples_rejected() {
     // rejection in `report.cases[*].status` so the dispatch can keep
     // running other cases. Either contract is acceptable  -  what the
     // gate guarantees is that few-sample runs do NOT silently pass.
-    let report = execute_suite(&registry, SuiteKind::Smoke, &config);
+    let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
     assert!(
         !report.cases.is_empty(),
         "expected at least one rejected case in the report"

@@ -12,7 +12,7 @@ fn test_baseline_determinism() {
     config.case_ids = vec!["foundation.elementwise.add.1m".to_string()];
 
     let registry = vyre_bench::registry::collect_all();
-    let report = execute_suite(&registry, SuiteKind::Custom("deterministic_test"), &config);
+    let report = execute_suite(&registry, &SuiteKind::custom("deterministic_test"), &config);
 
     assert_eq!(report.cases.len(), 1, "Should run exactly 1 case");
     let case = &report.cases[0];

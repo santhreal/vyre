@@ -13,7 +13,7 @@ fn test_determinism_gate() {
 
     let registry = vyre_bench::registry::collect_all();
 
-    let report = execute_suite(&registry, SuiteKind::Custom("flaky_test"), &config);
+    let report = execute_suite(&registry, &SuiteKind::custom("flaky_test"), &config);
     assert_eq!(report.cases.len(), 1);
     let case = &report.cases[0];
 
@@ -44,7 +44,7 @@ fn test_repeatable_workload_determinism() {
     config.case_ids = vec!["synthetic.flaky".to_string()];
 
     let registry = vyre_bench::registry::collect_all();
-    let report = execute_suite(&registry, SuiteKind::Custom("flaky_test"), &config);
+    let report = execute_suite(&registry, &SuiteKind::custom("flaky_test"), &config);
     assert_eq!(report.cases.len(), 1);
     let stats = report.cases[0]
         .metrics

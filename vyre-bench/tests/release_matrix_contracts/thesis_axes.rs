@@ -50,7 +50,7 @@ fn release_suite_proves_compiler_grade_gpu_thesis_axes() {
         let mut matched = Vec::new();
         for case in registry
             .iter()
-            .filter(|case| case.active_in_suite(SuiteKind::Release))
+            .filter(|case| case.active_in_suite(&SuiteKind::Release))
         {
             let metadata = case.metadata();
             if !case_matches_any_axis_term(&metadata, &terms) {

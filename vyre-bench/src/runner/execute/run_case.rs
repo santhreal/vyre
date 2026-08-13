@@ -19,7 +19,7 @@ pub(super) fn run_case(
     case: &'static dyn crate::api::case::BenchCase,
     ctx: &mut BenchContext,
     prepared: &mut crate::api::case::PreparedCase,
-    suite: SuiteKind,
+    suite: &SuiteKind,
     config: &RunConfig,
 ) -> Result<CaseReport, String> {
     let meta = case.metadata();

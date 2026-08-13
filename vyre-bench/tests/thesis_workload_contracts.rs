@@ -36,7 +36,7 @@ fn release_suite_cannot_regress_to_elementwise_only_evidence() {
     let registry = vyre_bench::registry::collect_all();
     let release_cases = registry
         .iter()
-        .filter(|case| case.active_in_suite(vyre_bench::api::suite::SuiteKind::Release))
+        .filter(|case| case.active_in_suite(&vyre_bench::api::suite::SuiteKind::Release))
         .collect::<Vec<_>>();
 
     let mut evidence_classes = BTreeSet::new();

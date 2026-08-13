@@ -8,7 +8,7 @@ fn test_suite_completeness() {
     // SuiteKind::Smoke
     let smoke_cases: Vec<_> = registry
         .iter()
-        .filter(|c| c.active_in_suite(SuiteKind::Smoke))
+        .filter(|c| c.active_in_suite(&SuiteKind::Smoke))
         .collect();
     // Verify adversarial case is NOT in Smoke
     assert!(!smoke_cases
@@ -22,7 +22,7 @@ fn test_suite_completeness() {
     // SuiteKind::Adversarial
     let adv_cases: Vec<_> = registry
         .iter()
-        .filter(|c| c.active_in_suite(SuiteKind::Adversarial))
+        .filter(|c| c.active_in_suite(&SuiteKind::Adversarial))
         .collect();
     assert!(adv_cases
         .iter()
@@ -31,7 +31,7 @@ fn test_suite_completeness() {
     // SuiteKind::Release
     let release_cases: Vec<_> = registry
         .iter()
-        .filter(|c| c.active_in_suite(SuiteKind::Release))
+        .filter(|c| c.active_in_suite(&SuiteKind::Release))
         .collect();
     assert!(release_cases
         .iter()

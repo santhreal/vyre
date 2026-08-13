@@ -302,7 +302,7 @@ pub fn build_release_matrix(registry: &BenchRegistry) -> ReleaseWorkloadMatrix {
     let target_by_id = release_bench_target_by_id(&release_targets);
     let release_cases: Vec<_> = registry
         .iter()
-        .filter(|case| case.active_in_suite(SuiteKind::Release))
+        .filter(|case| case.active_in_suite(&SuiteKind::Release))
         .collect();
 
     let mut cpu_sota_contract_ids = BTreeSet::new();

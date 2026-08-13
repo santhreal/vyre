@@ -50,7 +50,7 @@ fn test_cross_backend_elementwise() {
         config.backend_id = Some(backend_id.to_string());
         config.case_ids = vec![ELEMENTWISE_CASE_ID.to_string()];
 
-        let report = execute_suite(&registry, SuiteKind::Smoke, &config);
+        let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
 
         assert_eq!(
             report.cases.len(),

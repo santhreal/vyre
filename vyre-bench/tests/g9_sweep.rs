@@ -17,7 +17,7 @@ fn test_sweep_suite_runs() {
     config.case_ids = vec!["foundation.elementwise.add.1m".to_string()];
 
     let registry = vyre_bench::registry::collect_all();
-    let report = execute_suite(&registry, SuiteKind::Smoke, &config);
+    let report = execute_suite(&registry, &SuiteKind::Smoke, &config);
 
     // The elementwise case should produce results
     assert!(

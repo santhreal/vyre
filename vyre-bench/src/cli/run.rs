@@ -4,7 +4,7 @@ use crate::runner::{execute_suite, RunConfig};
 
 pub(super) fn execute_run_matrix(
     registry: &crate::registry::BenchRegistry,
-    suite: SuiteKind,
+    suite: &SuiteKind,
     config: &RunConfig,
 ) -> anyhow::Result<Vec<ReportSchema>> {
     match suite {

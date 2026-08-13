@@ -44,8 +44,8 @@ impl BenchCase for FlakyCase {
         None
     }
 
-    fn active_in_suite(&self, suite: SuiteKind) -> bool {
-        matches!(suite, SuiteKind::Custom(name) if name == "flaky_test")
+    fn active_in_suite(&self, suite: &SuiteKind) -> bool {
+        matches!(suite, SuiteKind::Custom(name) if &**name == "flaky_test")
     }
 
     fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {

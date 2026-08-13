@@ -55,7 +55,7 @@ impl Default for RunConfig {
     }
 }
 
-pub fn run_suite(registry: &BenchRegistry, suite: SuiteKind, format: &str) {
+pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
     let config = RunConfig::default();
     let report = execute_suite(registry, suite, &config);
 
@@ -80,7 +80,7 @@ pub fn run_suite(registry: &BenchRegistry, suite: SuiteKind, format: &str) {
 
 pub fn execute_suite(
     registry: &BenchRegistry,
-    suite: SuiteKind,
+    suite: &SuiteKind,
     config: &RunConfig,
 ) -> ReportSchema {
     let environment = capture_environment().unwrap_or_else(|error| {
@@ -304,7 +304,7 @@ fn write_snapshot(report: &ReportSchema) -> Result<(), String> {
     Ok(())
 }
 
-fn target_samples(suite: SuiteKind) -> usize {
+fn target_samples(suite: &SuiteKind) -> usize {
     match suite {
         SuiteKind::Smoke => 10,
         SuiteKind::Release => 50,
@@ -474,5 +474,5 @@ pub fn evaluate_candidate_headless(
             .map_err(|error| format!("Artifact preparation error: {error}"))?;
     }
 
-    run_case(case, &mut ctx, &mut prepared, SuiteKind::Evolve, config)
+    run_case(case, &mut ctx, &mut prepared, &SuiteKind::Evolve, config)
 }

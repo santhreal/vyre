@@ -287,7 +287,7 @@ fn benchmark_target_contracts_cover_release_workload_case_ids() {
     let registry = vyre_bench::registry::collect_all();
     let active_release_case_ids = registry
         .iter()
-        .filter(|case| case.active_in_suite(SuiteKind::Release))
+        .filter(|case| case.active_in_suite(&SuiteKind::Release))
         .map(|case| case.id().0)
         .collect::<BTreeSet<_>>();
     let matrix = vyre_bench::release_matrix::build_release_matrix(&registry);

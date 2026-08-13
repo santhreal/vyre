@@ -67,7 +67,7 @@ fn nvme_gpu_ingest_registry_contains_release_zero_copy_cases() {
                 )
             });
         assert!(
-            case.active_in_suite(vyre_bench::api::suite::SuiteKind::Release),
+            case.active_in_suite(&vyre_bench::api::suite::SuiteKind::Release),
             "Fix: ingest benchmark spec `{}` must be part of the release suite.",
             spec.id
         );

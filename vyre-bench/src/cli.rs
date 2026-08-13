@@ -179,7 +179,7 @@ where
                 baseline_warmup_runs: 0,
                 snapshot_on_pass: *snapshot_on_pass,
             };
-            let reports = execute_run_matrix(&registry, suite_kind, &config)?;
+            let reports = execute_run_matrix(&registry, &suite_kind, &config)?;
             if let Some(output) = output {
                 write_run_reports(&reports, output)?;
             }
@@ -265,7 +265,7 @@ where
             let baseline_report = load_report(&path.to_string_lossy())?;
             let registry = crate::registry::collect_all();
             let config = RunConfig::default();
-            let current_report = execute_suite(&registry, SuiteKind::Release, &config);
+            let current_report = execute_suite(&registry, &SuiteKind::Release, &config);
             compare_reports(&baseline_report, &current_report, None)?;
         }
         Commands::List { format } => list_cases(format)?,

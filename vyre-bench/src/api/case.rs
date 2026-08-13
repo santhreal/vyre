@@ -709,9 +709,9 @@ pub trait BenchCase: Send + Sync {
     fn suites(&self) -> &'static [SuiteKind] {
         &[]
     }
-    fn active_in_suite(&self, suite: SuiteKind) -> bool {
+    fn active_in_suite(&self, suite: &SuiteKind) -> bool {
         let suites = self.suites();
-        suites.is_empty() || suites.contains(&suite)
+        suites.is_empty() || suites.contains(suite)
     }
     fn requirements(&self) -> BenchRequirements;
     fn performance_contract(&self) -> Option<PerformanceContract> {

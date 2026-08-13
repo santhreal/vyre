@@ -161,7 +161,7 @@ fn release_matrix_bench_targets_reference_active_release_cases() {
             );
         };
         assert!(
-            case.active_in_suite(SuiteKind::Release),
+            case.active_in_suite(&SuiteKind::Release),
             "Fix: release-workload BENCH_TARGETS target `{target_id}` bench_case_id `{bench_case_id}` must be active in the release suite."
         );
     }
