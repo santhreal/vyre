@@ -26,6 +26,7 @@
 //! raw-IR or cross-dialect boundary is violated.
 
 use crate::gates::use_paths::{collect_use_paths, is_test_source_path};
+use std::collections::BTreeSet;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process::{self, Command};
@@ -199,57 +200,53 @@ fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
         Err(_) => vyre_lints::allowlist::Allowlist::empty(),
     };
 
-    let mut out = Vec::new();
-    for path in files {
-        let path_str = path.to_string_lossy();
-        if !path_str.contains("vyre-libs/src/") {
-            continue;
-        }
-        let workspace_rel = workspace_relative(&path_str, "vyre-libs/");
-        if allow.contains(&workspace_rel) {
-            continue;
-        }
-        let Ok(violations) = scan_file_for_raw_ir(path, &workspace_rel) else {
-            continue;
-        };
-        for v in violations {
-            out.push(Finding {
-                file: v.file,
-                line: v.line,
-                category: "raw-ir".to_string(),
-                message: v.message,
-                fix: "use vyre-primitives builders or region::wrap_anonymous instead of constructing Node/Expr directly".to_string(),
-            });
-        }
+    // The files this run is responsible for, spelled the way the lint
+    // reports them. In staged mode that is the staged diff; under `--all`
+    // it is every source file in the crate.
+    let considered = considered_libs_sources(files, &allow);
+    if considered.is_empty() {
+        return Vec::new();
     }
-    out
+
+    // One walk. `scan_tree` recurses, so calling it per candidate file
+    // reparsed the whole crate once per file, and for a file directly in
+    // `vyre-libs/src` that meant reparsing every descendant.
+    let libs_src = root.join("vyre-libs").join("src");
+    let Ok(violations) = vyre_lints::raw_ir_in_libs::scan_tree(&libs_src, &allow) else {
+        return Vec::new();
+    };
+
+    violations
+        .into_iter()
+        .filter(|violation| considered.contains(&violation.file))
+        .map(|violation| Finding {
+            file: violation.file,
+            line: violation.line,
+            category: "raw-ir".to_string(),
+            message: violation.message,
+            fix: "use vyre-primitives builders or region::wrap_anonymous instead of constructing Node/Expr directly".to_string(),
+        })
+        .collect()
+}
+
+fn considered_libs_sources(
+    files: &[PathBuf],
+    allow: &vyre_lints::allowlist::Allowlist,
+) -> BTreeSet<String> {
+    files
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .filter(|path| path.contains("vyre-libs/src/"))
+        .map(|path| workspace_relative(&path, "vyre-libs/"))
+        .filter(|workspace_rel| !allow.contains(workspace_rel))
+        .collect()
 }
 
 fn workspace_relative(path: &str, marker: &str) -> String {
-    if let Some(idx) = path.find(marker) {
-        path[idx..].to_string()
-    } else {
-        path.to_string()
+    match path.find(marker) {
+        Some(idx) => path[idx..].to_string(),
+        None => path.to_string(),
     }
-}
-
-fn scan_file_for_raw_ir(
-    path: &Path,
-    workspace_rel: &str,
-) -> anyhow::Result<Vec<vyre_lints::Violation>> {
-    let allow = vyre_lints::allowlist::Allowlist::empty();
-    // Single-file scan: build a one-element root from the file's parent
-    // and let the existing scanner do its thing, then filter to the file.
-    let parent = path.parent().unwrap_or(Path::new("."));
-    let all = vyre_lints::raw_ir_in_libs::scan_tree(parent, &allow)?;
-    let me_basename = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default();
-    Ok(all
-        .into_iter()
-        .filter(|v| v.file.ends_with(me_basename) && v.file.contains(workspace_rel))
-        .collect())
 }
 
 /// Check 4 (file-only): a Tier-3 dialect under `vyre-libs/src/<X>/`
@@ -397,6 +394,58 @@ mod tests {
         // Advisory category: partitioned out of the blocking set at exit, so a
         // large file is flagged for review but never fails the gate.
         assert_eq!(findings[0].category, "large-file");
+    }
+
+    /// WHY: `check_raw_ir` was rewritten from one recursive `scan_tree` per
+    /// candidate file to a single walk plus a filter. The old shape reparsed
+    /// the crate once per source, and a file sitting directly in
+    /// `vyre-libs/src` dragged every descendant through syn on each pass.
+    ///
+    /// This test pins the reporting contract the rewrite has to preserve: one
+    /// finding per offending file, none for a clean one. It does NOT catch the
+    /// performance defect itself, which was proven by measurement, and it does
+    /// not check the line numbers the lint assigns, which are the lint's own
+    /// contract. It does fail on a duplicate, which is the way a filter-based
+    /// rewrite breaks.
+    #[test]
+    fn each_raw_ir_violation_is_reported_once_across_sibling_files() {
+        let dir = TempDir::new().unwrap();
+        let offender = "use vyre_foundation::ir::Expr;\npub fn f() -> Expr { Expr::u32(0) }\n";
+        let first = write(dir.path(), "vyre-libs/src/math/first.rs", offender);
+        let second = write(dir.path(), "vyre-libs/src/math/second.rs", offender);
+        let clean = write(dir.path(), "vyre-libs/src/math/clean.rs", "pub fn g() {}\n");
+
+        let findings = check_raw_ir(dir.path(), &[first, second, clean]);
+
+        // Walk order is not a contract; the gate sorts before printing. A
+        // duplicate still fails this, which is the point.
+        let mut reported: Vec<&str> = findings.iter().map(|f| f.file.as_str()).collect();
+        reported.sort_unstable();
+        assert_eq!(
+            reported,
+            vec![
+                "vyre-libs/src/math/first.rs",
+                "vyre-libs/src/math/second.rs"
+            ],
+            "each offending file is named exactly once and the clean file not at all"
+        );
+        assert!(findings.iter().all(|f| f.category == "raw-ir"));
+    }
+
+    /// WHY: the one-walk rewrite scans the whole crate and then filters, so a
+    /// violation in a file the run is not responsible for must not leak into
+    /// the report. Staged mode depends on that.
+    #[test]
+    fn a_violation_outside_the_considered_set_is_not_reported() {
+        let dir = TempDir::new().unwrap();
+        let offender = "use vyre_foundation::ir::Expr;\npub fn f() -> Expr { Expr::u32(0) }\n";
+        let staged = write(dir.path(), "vyre-libs/src/math/staged.rs", offender);
+        write(dir.path(), "vyre-libs/src/math/unstaged.rs", offender);
+
+        let findings = check_raw_ir(dir.path(), &[staged]);
+
+        let reported: Vec<&str> = findings.iter().map(|f| f.file.as_str()).collect();
+        assert_eq!(reported, vec!["vyre-libs/src/math/staged.rs"]);
     }
 
     #[test]
