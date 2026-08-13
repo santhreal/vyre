@@ -17,10 +17,37 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 
-use crate::region::wrap_anonymous;
-use vyre_primitives::nn::attention_stability::{
-    bounded_exp_arg, bounded_score, flush_tiny, positive_denominator,
+use super::tiled_online_softmax::{
+    scratch_index, tiled_online_softmax_body, TiledOnlineSoftmaxSpec,
 };
+use crate::region::wrap_anonymous;
+use vyre_primitives::nn::attention_stability::{bounded_exp_arg, bounded_score};
+
+/// Buffer names and shape for one [`mla_decode`] build.
+struct MlaDecodeSpec<'a> {
+    /// Query vectors for the current token, `[num_heads, head_dim]`.
+    q: &'a str,
+    /// Compressed KV latents for prior tokens, `[seq_len, kv_lora_rank]`.
+    kv_cache: &'a str,
+    /// Decoupled RoPE keys for prior tokens, `[seq_len, qk_rope_head_dim]`.
+    kr_cache: &'a str,
+    /// K up-projection, `[kv_lora_rank, num_heads * head_dim]`.
+    w_uk: &'a str,
+    /// V up-projection, `[kv_lora_rank, num_heads * head_dim]`.
+    w_uv: &'a str,
+    /// Attention output, `[num_heads, head_dim]`.
+    out: &'a str,
+    /// Cached token count.
+    seq_len: u32,
+    /// Attention head count.
+    num_heads: u32,
+    /// Per-head feature width.
+    head_dim: u32,
+    /// Latent rank of the compressed KV cache.
+    kv_lora_rank: u32,
+    /// Leading dimensions carrying the decoupled RoPE key.
+    qk_rope_head_dim: u32,
+}
 
 /// MLA single-token decode with compressed KV cache.
 ///
@@ -52,6 +79,42 @@ pub fn mla_decode(
     kv_lora_rank: u32,
     qk_rope_head_dim: u32,
 ) -> Result<Program, String> {
+    mla_decode_impl(&MlaDecodeSpec {
+        q,
+        kv_cache,
+        kr_cache,
+        w_uk,
+        w_uv,
+        out,
+        seq_len,
+        num_heads,
+        head_dim,
+        kv_lora_rank,
+        qk_rope_head_dim,
+    })
+}
+
+/// MLA decode over the shared tiled online-softmax skeleton.
+///
+/// Only two fragments are MLA-specific: the score pass, which decompresses
+/// `k_t` from the latent cache and folds in the decoupled RoPE component, and
+/// the accumulator update, which decompresses `v_t`. The `(m, l, o_acc)`
+/// recurrence around them comes from
+/// [`tiled_online_softmax_body`](super::tiled_online_softmax::tiled_online_softmax_body).
+fn mla_decode_impl(spec: &MlaDecodeSpec<'_>) -> Result<Program, String> {
+    let MlaDecodeSpec {
+        q,
+        kv_cache,
+        kr_cache,
+        w_uk,
+        w_uv,
+        out,
+        seq_len,
+        num_heads,
+        head_dim,
+        kv_lora_rank,
+        qk_rope_head_dim,
+    } = *spec;
     if seq_len == 0 || num_heads == 0 || head_dim == 0 || kv_lora_rank == 0 || qk_rope_head_dim == 0
     {
         return Err("Fix: mla_decode all dims must be > 0".to_string());
@@ -72,40 +135,9 @@ pub fn mla_decode(
     let num_tiles = seq_len.div_ceil(TILE_SIZE);
 
     // Scratch index helpers: each lane gets its own sub-slice.
-    let q_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local.clone(), Expr::u32(head_dim)), d);
-    let score_idx =
-        |local: Expr, j: Expr| Expr::add(Expr::mul(local.clone(), Expr::u32(TILE_SIZE)), j);
-    let o_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local.clone(), Expr::u32(head_dim)), d);
-
-    // ---- Load the query vector for this head into workgroup scratch ----
-    let load_q = vec![Node::loop_for(
-        "load_d",
-        Expr::u32(0),
-        Expr::u32(head_dim),
-        vec![Node::store(
-            "q_scratch",
-            q_idx(Expr::var("local"), Expr::var("load_d")),
-            Expr::load(
-                q,
-                Expr::add(
-                    Expr::mul(Expr::var("head"), Expr::u32(head_dim)),
-                    Expr::var("load_d"),
-                ),
-            ),
-        )],
-    )];
-
-    // ---- Zero the per-head output accumulator ----
-    let zero_o_acc = vec![Node::loop_for(
-        "zero_d",
-        Expr::u32(0),
-        Expr::u32(head_dim),
-        vec![Node::store(
-            "o_acc",
-            o_idx(Expr::var("local"), Expr::var("zero_d")),
-            Expr::f32(0.0),
-        )],
-    )];
+    let q_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
+    let score_idx = |local: Expr, j: Expr| scratch_index(TILE_SIZE, local, j);
+    let o_idx = |local: Expr, d: Expr| scratch_index(head_dim, local, d);
 
     // ---- Compute all scores for the current tile ----
     let compute_tile_scores = vec![Node::loop_for(
@@ -207,94 +239,6 @@ pub fn mla_decode(
         ],
     )];
 
-    // ---- Find max score inside the tile ----
-    let find_tile_max = vec![
-        Node::let_bind("tile_max", Expr::f32(f32::MIN)),
-        Node::loop_for(
-            "max_j",
-            Expr::u32(0),
-            Expr::var("tile_len"),
-            vec![Node::assign(
-                "tile_max",
-                Expr::select(
-                    Expr::is_nan(Expr::var("tile_max")),
-                    Expr::var("tile_max"),
-                    Expr::select(
-                        Expr::gt(
-                            Expr::load(
-                                "score_tile",
-                                score_idx(Expr::var("local"), Expr::var("max_j")),
-                            ),
-                            Expr::var("tile_max"),
-                        ),
-                        Expr::load(
-                            "score_tile",
-                            score_idx(Expr::var("local"), Expr::var("max_j")),
-                        ),
-                        Expr::var("tile_max"),
-                    ),
-                ),
-            )],
-        ),
-    ];
-
-    // ---- m_new = max(m, tile_max) ----
-    let compute_m_new = vec![Node::let_bind(
-        "m_new",
-        Expr::select(
-            Expr::gt(Expr::var("tile_max"), Expr::var("m")),
-            Expr::var("tile_max"),
-            Expr::var("m"),
-        ),
-    )];
-
-    // ---- rescale = exp(m - m_new) ----
-    let compute_rescale = vec![Node::let_bind(
-        "rescale",
-        Expr::UnOp {
-            op: UnOp::Exp,
-            operand: Box::new(bounded_exp_arg(Expr::sub(
-                Expr::var("m"),
-                Expr::var("m_new"),
-            ))),
-        },
-    )];
-
-    // ---- tile_sum = sum_j exp(score[j] - m_new) ----
-    let compute_tile_sum = vec![
-        Node::let_bind("tile_sum", Expr::f32(0.0)),
-        Node::loop_for(
-            "sum_j",
-            Expr::u32(0),
-            Expr::var("tile_len"),
-            vec![Node::assign(
-                "tile_sum",
-                Expr::add(
-                    Expr::var("tile_sum"),
-                    Expr::UnOp {
-                        op: UnOp::Exp,
-                        operand: Box::new(bounded_exp_arg(Expr::sub(
-                            Expr::load(
-                                "score_tile",
-                                score_idx(Expr::var("local"), Expr::var("sum_j")),
-                            ),
-                            Expr::var("m_new"),
-                        ))),
-                    },
-                ),
-            )],
-        ),
-    ];
-
-    // ---- l = rescale * l + tile_sum ----
-    let update_l = vec![Node::assign(
-        "l",
-        Expr::add(
-            Expr::mul(Expr::var("rescale"), Expr::var("l")),
-            Expr::var("tile_sum"),
-        ),
-    )];
-
     // ---- o_acc[d] = rescale * o_acc[d] + sum_j weight_j * v_t_j[d] ----
     let update_o_acc = vec![
         // rescale existing accumulator
@@ -390,78 +334,20 @@ pub fn mla_decode(
         ),
     ];
 
-    // ---- m = m_new ----
-    let update_m = vec![Node::assign("m", Expr::var("m_new"))];
-
-    // Assemble the per-tile body
-    let mut tile_body = vec![
-        Node::let_bind(
-            "tile_start",
-            Expr::mul(Expr::var("tile_idx"), Expr::u32(TILE_SIZE)),
-        ),
-        Node::let_bind(
-            "tile_end",
-            Expr::min(
-                Expr::add(Expr::var("tile_start"), Expr::u32(TILE_SIZE)),
-                Expr::u32(seq_len),
-            ),
-        ),
-        Node::let_bind(
-            "tile_len",
-            Expr::sub(Expr::var("tile_end"), Expr::var("tile_start")),
-        ),
-    ];
-    tile_body.extend(compute_tile_scores);
-    tile_body.extend(find_tile_max);
-    tile_body.extend(compute_m_new);
-    tile_body.extend(compute_rescale);
-    tile_body.extend(compute_tile_sum);
-    tile_body.extend(update_l);
-    tile_body.extend(update_o_acc);
-    tile_body.extend(update_m);
-
-    // Assemble the per-head body
-    let mut per_head = Vec::new();
-    per_head.extend(load_q);
-    per_head.push(Node::let_bind("m", Expr::f32(f32::MIN)));
-    per_head.push(Node::let_bind("l", Expr::f32(0.0)));
-    per_head.extend(zero_o_acc);
-    per_head.push(Node::loop_for(
-        "tile_idx",
-        Expr::u32(0),
-        Expr::u32(num_tiles),
-        tile_body,
-    ));
-    // Finalise: out[head, d] = o_acc[d] / max(l, MIN_POSITIVE)
-    per_head.push(Node::let_bind(
-        "denom",
-        positive_denominator(Expr::var("l")),
-    ));
-    per_head.push(Node::loop_for(
-        "final_d",
-        Expr::u32(0),
-        Expr::u32(head_dim),
-        vec![Node::store(
+    let body = tiled_online_softmax_body(
+        TiledOnlineSoftmaxSpec {
+            q,
             out,
-            Expr::add(
-                Expr::mul(Expr::var("head"), Expr::u32(head_dim)),
-                Expr::var("final_d"),
-            ),
-            flush_tiny(Expr::div(
-                Expr::load("o_acc", o_idx(Expr::var("local"), Expr::var("final_d"))),
-                Expr::var("denom"),
-            )),
-        )],
-    ));
-
-    let mut body = vec![
-        Node::let_bind("head", Expr::InvocationId { axis: 0 }),
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-    ];
-    body.push(Node::if_then(
-        Expr::lt(Expr::var("head"), Expr::u32(num_heads)),
-        per_head,
-    ));
+            item_var: "head",
+            item_count: num_heads,
+            seq_len,
+            head_dim,
+            tile_size: TILE_SIZE,
+            tile_count: num_tiles,
+        },
+        compute_tile_scores,
+        update_o_acc,
+    );
 
     Ok(Program::wrapped(
         vec![

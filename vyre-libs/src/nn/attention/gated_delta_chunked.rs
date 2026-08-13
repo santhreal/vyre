@@ -1,7 +1,8 @@
 //! Chunk-size-64 cumulative-decay triangular gated delta-rule prefill.
 
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, UnOp};
 
+use super::common::{self, qk_index, scalar_index, state_index, value_index, GatedDeltaSpec};
 use super::gated_delta::RecurrentGatedDeltaError;
 use crate::region::wrap_anonymous;
 
@@ -9,52 +10,6 @@ const OP_ID: &str = "vyre-libs::nn::chunked_gated_delta";
 const CHUNK_SIZE: u32 = 64;
 const CHUNK_DECAY: &str = "chunk_decay";
 const CHUNK_VALUE: &str = "chunk_value";
-
-fn qk_index(sequence: u32, heads: u32, dim: u32, token: Expr, feature: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads * dim),
-        ),
-        Expr::add(Expr::mul(Expr::var("key_head"), Expr::u32(dim)), feature),
-    )
-}
-
-fn value_index(sequence: u32, heads: u32, dim: u32, token: Expr, feature: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads * dim),
-        ),
-        Expr::add(Expr::mul(Expr::var("value_head"), Expr::u32(dim)), feature),
-    )
-}
-
-fn scalar_index(sequence: u32, heads: u32, token: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(
-            Expr::add(
-                Expr::mul(Expr::var("batch_index"), Expr::u32(sequence)),
-                token,
-            ),
-            Expr::u32(heads),
-        ),
-        Expr::var("value_head"),
-    )
-}
-
-fn state_index(key_dim: u32, value_dim: u32, key: Expr, value: Expr) -> Expr {
-    Expr::add(
-        Expr::mul(Expr::var("head_index"), Expr::u32(key_dim * value_dim)),
-        Expr::add(Expr::mul(key, Expr::u32(value_dim)), value),
-    )
-}
 
 fn chunk_value_index(value_dim: u32, row: Expr, value: Expr) -> Expr {
     Expr::add(Expr::mul(row, Expr::u32(value_dim)), value)
@@ -183,57 +138,29 @@ fn pair_dot_nodes(
 }
 
 /// Build the authoritative cumulative-decay triangular chunk schedule.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn chunked_gated_delta_impl(
-    query: &str,
-    key: &str,
-    value: &str,
-    decay_log: &str,
-    beta_logits: &str,
-    state_input: &str,
-    output: &str,
-    state_output: &str,
-    batch: u32,
-    sequence: u32,
-    key_heads: u32,
-    value_heads: u32,
-    key_dim: u32,
-    value_dim: u32,
-    eps: f32,
-    dtype: DataType,
+    spec: &GatedDeltaSpec<'_>,
 ) -> Result<Program, RecurrentGatedDeltaError> {
-    if batch == 0
-        || sequence == 0
-        || key_heads == 0
-        || value_heads == 0
-        || key_dim == 0
-        || value_dim == 0
-    {
-        return Err(RecurrentGatedDeltaError::EmptyShape);
-    }
-    if value_heads % key_heads != 0 {
-        return Err(RecurrentGatedDeltaError::InvalidHeadGrouping {
-            key_heads,
-            value_heads,
-        });
-    }
-    if !matches!(dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
-        return Err(RecurrentGatedDeltaError::UnsupportedDtype { dtype });
-    }
-    let checked = |values: &[u32]| {
-        values.iter().try_fold(1_u32, |product, value| {
-            product
-                .checked_mul(*value)
-                .ok_or(RecurrentGatedDeltaError::ElementCountOverflow)
-        })
-    };
-    let qk_count = checked(&[batch, sequence, key_heads, key_dim])?;
-    let value_count = checked(&[batch, sequence, value_heads, value_dim])?;
-    let scalar_count = checked(&[batch, sequence, value_heads])?;
-    let state_count = checked(&[batch, value_heads, key_dim, value_dim])?;
-    let head_count = checked(&[batch, value_heads])?;
-    let chunk_value_count = checked(&[CHUNK_SIZE, value_dim])?;
-    let group = value_heads / key_heads;
+    let counts = spec.counts()?;
+    let GatedDeltaSpec {
+        query,
+        key,
+        value,
+        decay_log,
+        beta_logits,
+        state_input,
+        output,
+        state_output,
+        sequence,
+        key_heads,
+        value_heads,
+        key_dim,
+        value_dim,
+        eps,
+        ref dtype,
+        ..
+    } = *spec;
+    let chunk_value_count = common::checked(&[CHUNK_SIZE, value_dim])?;
     let chunk_count = sequence.div_ceil(CHUNK_SIZE);
 
     let init_state = Node::loop_for(
@@ -785,7 +712,7 @@ pub(super) fn chunked_gated_delta_impl(
     let body = vec![
         Node::let_bind("head_index", Expr::InvocationId { axis: 0 }),
         Node::if_then(
-            Expr::lt(Expr::var("head_index"), Expr::u32(head_count)),
+            Expr::lt(Expr::var("head_index"), Expr::u32(counts.head)),
             vec![
                 Node::let_bind(
                     "batch_index",
@@ -797,7 +724,7 @@ pub(super) fn chunked_gated_delta_impl(
                 ),
                 Node::let_bind(
                     "key_head",
-                    Expr::div(Expr::var("value_head"), Expr::u32(group)),
+                    Expr::div(Expr::var("value_head"), Expr::u32(counts.group)),
                 ),
                 init_state,
                 Node::loop_for("chunk", Expr::u32(0), Expr::u32(chunk_count), chunk_body),
@@ -805,25 +732,14 @@ pub(super) fn chunked_gated_delta_impl(
         ),
     ];
 
+    let mut buffers = common::gated_delta_buffers(spec, &counts);
+    buffers.extend([
+        BufferDecl::workgroup(CHUNK_DECAY, CHUNK_SIZE, DataType::F32),
+        BufferDecl::workgroup(CHUNK_VALUE, chunk_value_count, DataType::F32),
+    ]);
+
     Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(query, 0, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(qk_count),
-            BufferDecl::storage(key, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(qk_count),
-            BufferDecl::storage(value, 2, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(value_count),
-            BufferDecl::storage(decay_log, 3, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(scalar_count),
-            BufferDecl::storage(beta_logits, 4, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(scalar_count),
-            BufferDecl::storage(state_input, 5, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(state_count),
-            BufferDecl::output(output, 6, dtype).with_count(value_count),
-            BufferDecl::storage(state_output, 7, BufferAccess::ReadWrite, DataType::F32)
-                .with_count(state_count),
-            BufferDecl::workgroup(CHUNK_DECAY, CHUNK_SIZE, DataType::F32),
-            BufferDecl::workgroup(CHUNK_VALUE, chunk_value_count, DataType::F32),
-        ],
+        buffers,
         [1, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],
     ))

@@ -1,3 +1,13 @@
+//! The tiled online-softmax skeleton shared by the attention decoders.
+//!
+//! [`flash_attention_2`](super::flash_attention_2::flash_attention_2) and
+//! [`mla_decode`](super::mla::mla_decode) run the identical `(m, l, o_acc)`
+//! recurrence over identical tiling; they differ only in how a tile's scores
+//! are produced and how the accumulator absorbs the tile's values. Those two
+//! op-specific fragments are the parameters of
+//! [`tiled_online_softmax_body`]; everything around them lives here once, so a
+//! numerical-stability change cannot land in one decoder and miss the other.
+
 use vyre_foundation::ir::{Expr, Node, UnOp};
 
 use vyre_primitives::nn::attention_stability::{bounded_exp_arg, flush_tiny, positive_denominator};
@@ -13,15 +23,19 @@ pub(super) struct TiledOnlineSoftmaxSpec<'a> {
     pub(super) tile_count: u32,
 }
 
+/// Flat index into one lane's `stride`-wide slice of workgroup scratch.
+pub(super) fn scratch_index(stride: u32, local: Expr, offset: Expr) -> Expr {
+    Expr::add(Expr::mul(local, Expr::u32(stride)), offset)
+}
+
 pub(super) fn tiled_online_softmax_body(
     spec: TiledOnlineSoftmaxSpec<'_>,
     compute_tile_scores: Vec<Node>,
     update_o_acc: Vec<Node>,
 ) -> Vec<Node> {
-    let q_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local, Expr::u32(spec.head_dim)), d);
-    let score_idx =
-        |local: Expr, j: Expr| Expr::add(Expr::mul(local, Expr::u32(spec.tile_size)), j);
-    let o_idx = |local: Expr, d: Expr| Expr::add(Expr::mul(local, Expr::u32(spec.head_dim)), d);
+    let q_idx = |local: Expr, d: Expr| scratch_index(spec.head_dim, local, d);
+    let score_idx = |local: Expr, j: Expr| scratch_index(spec.tile_size, local, j);
+    let o_idx = |local: Expr, d: Expr| scratch_index(spec.head_dim, local, d);
     let load_q = Node::loop_for(
         "load_d",
         Expr::u32(0),

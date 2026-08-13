@@ -1,5 +1,6 @@
 //! Attention sub-dialect: softmax + scaled dot-product + GQA + RoPE + MLA.
 mod attention;
+mod common;
 pub mod flash_attention;
 pub mod flash_attention_2;
 mod gated_delta;

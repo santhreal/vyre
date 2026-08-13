@@ -506,6 +506,11 @@ path = "tests/quantized_linear_affine_fma.rs"
 required-features = ["nn-linear"]
 
 [[test]]
+name = "nn_attention_clone_family_ir_invariance"
+path = "tests/nn_attention_clone_family_ir_invariance.rs"
+required-features = ["nn-attention"]
+
+[[test]]
 name = "recurrent_gated_delta_contract"
 path = "tests/recurrent_gated_delta_contract.rs"
 required-features = ["nn-attention"]
