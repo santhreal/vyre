@@ -1,9 +1,8 @@
-//! Generated wrapper test crate for c11 parser typedef contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Contract tests for c11 parser typedef contracts.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c11_parser_typedef_contracts__assert_kind.rs");
-include!(
-    "contract_cases/c11_parser_typedef_contracts__pg_lower_preserves_typedef_cast_vs_expr_kinds.rs"
-);
+#[path = "c11_parser_typedef_contracts/assert_kind.rs"]
+mod assert_kind;
+mod c_ast_gpu_parity_support;
+#[path = "c11_parser_typedef_contracts/pg_lower_preserves_typedef_cast_vs_expr_kinds.rs"]
+mod pg_lower_preserves_typedef_cast_vs_expr_kinds;

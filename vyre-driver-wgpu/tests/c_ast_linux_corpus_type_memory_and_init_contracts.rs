@@ -1,7 +1,8 @@
-//! Generated wrapper test crate for c ast linux corpus type memory and init contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Contract tests for c ast linux corpus type memory and init contracts.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_linux_corpus_type_memory_and_init_contracts__kind_at.rs");
-include!("contract_cases/c_ast_linux_corpus_type_memory_and_init_contracts__function_pointer_table_gpu_pg_lower_matches_cpu.rs");
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_linux_corpus_type_memory_and_init_contracts/function_pointer_table_gpu_pg_lower_matches_cpu.rs"]
+mod function_pointer_table_gpu_pg_lower_matches_cpu;
+#[path = "c_ast_linux_corpus_type_memory_and_init_contracts/kind_at.rs"]
+mod kind_at;

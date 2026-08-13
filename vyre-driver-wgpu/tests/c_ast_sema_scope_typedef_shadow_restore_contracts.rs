@@ -143,13 +143,9 @@ fn run_gpu_classify(annotated: &[u8], node_count: usize) -> Vec<u8> {
 // Scope-tree contract tests
 // ---------------------------------------------------------------------------
 
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids {
-
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids.rs");
-}
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_annotation_multiple_typedefs_same_name_in_disjoint_blocks {
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__annotation_multiple_typedefs_same_name_in_disjoint_blocks.rs");
-}
-mod c_ast_sema_scope_typedef_shadow_restore_contracts_gpu_parity_annotation_deep_shadow_chain {
-    include!("contract_cases/c_ast_sema_scope_typedef_shadow_restore_contracts__gpu_parity_annotation_deep_shadow_chain.rs");
-}
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/annotation_multiple_typedefs_same_name_in_disjoint_blocks.rs"]
+mod annotation_multiple_typedefs_same_name_in_disjoint_blocks;
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/gpu_parity_annotation_deep_shadow_chain.rs"]
+mod gpu_parity_annotation_deep_shadow_chain;
+#[path = "c_ast_sema_scope_typedef_shadow_restore_contracts/scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids.rs"]
+mod scope_tree_typedef_shadowed_by_inner_variable_has_different_scope_ids;

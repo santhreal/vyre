@@ -321,10 +321,7 @@ fn fixture_array_of_function_pointers_qualified() -> Fixture {
 // CPU reference contracts  -  nested struct/union/enum
 // ---------------------------------------------------------------------------
 
-mod c_ast_declaration_advanced_contracts_cpu_nested_struct_union_enum_kinds {
-
-    include!("contract_cases/c_ast_declaration_advanced_contracts__cpu_nested_struct_union_enum_kinds.rs");
-}
-mod c_ast_declaration_advanced_contracts_pg_lower_preserves_bitfield_nested_struct_rows {
-    include!("contract_cases/c_ast_declaration_advanced_contracts__pg_lower_preserves_bitfield_nested_struct_rows.rs");
-}
+#[path = "c_ast_declaration_advanced_contracts/cpu_nested_struct_union_enum_kinds.rs"]
+mod cpu_nested_struct_union_enum_kinds;
+#[path = "c_ast_declaration_advanced_contracts/pg_lower_preserves_bitfield_nested_struct_rows.rs"]
+mod pg_lower_preserves_bitfield_nested_struct_rows;

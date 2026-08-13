@@ -1,8 +1,9 @@
-//! Generated wrapper test crate for gemini c ast contracts.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Contract tests for gemini c ast contracts.
 #![cfg(feature = "c-parser")]
 #![allow(clippy::erasing_op)]
 #![allow(deprecated)]
-include!("contract_cases/gemini_c_ast_contracts__tok.rs");
-include!("contract_cases/gemini_c_ast_contracts__cpu_reference_tag_separation.rs");
+mod c_ast_gpu_parity_support;
+#[path = "gemini_c_ast_contracts/cpu_reference_tag_separation.rs"]
+mod cpu_reference_tag_separation;
+#[path = "gemini_c_ast_contracts/tok.rs"]
+mod tok;

@@ -1,5 +1,6 @@
-//! Pairwise op-composition proptest. Implementation lives in two
-//! `include!`-d chunks under `contract_cases/`.
+//! Pairwise op-composition proptest.
 #![allow(deprecated)]
-include!("contract_cases/op_pairwise__all_entries_vec.rs");
-include!("contract_cases/op_pairwise__entry_cases.rs");
+#[path = "op_pairwise/all_entries_vec.rs"]
+mod all_entries_vec;
+#[path = "op_pairwise/entry_cases.rs"]
+mod entry_cases;

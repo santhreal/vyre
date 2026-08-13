@@ -317,10 +317,7 @@ fn run_gpu_pg_lower(typed_vast: &[u8]) -> Vec<u8> {
 // 1. Directive preservation
 // ---------------------------------------------------------------------------
 
-mod c_preprocess_macro_deep_contracts_host_lexer_preserves_complex_directive_block_as_preproc_rows {
-
-    include!("contract_cases/c_preprocess_macro_deep_contracts__host_lexer_preserves_complex_directive_block_as_preproc_rows.rs");
-}
-mod c_preprocess_macro_deep_contracts_macro_call_with_trailing_comma_survives_as_call_in_vast {
-    include!("contract_cases/c_preprocess_macro_deep_contracts__macro_call_with_trailing_comma_survives_as_call_in_vast.rs");
-}
+#[path = "c_preprocess_macro_deep_contracts/host_lexer_preserves_complex_directive_block_as_preproc_rows.rs"]
+mod host_lexer_preserves_complex_directive_block_as_preproc_rows;
+#[path = "c_preprocess_macro_deep_contracts/macro_call_with_trailing_comma_survives_as_call_in_vast.rs"]
+mod macro_call_with_trailing_comma_survives_as_call_in_vast;

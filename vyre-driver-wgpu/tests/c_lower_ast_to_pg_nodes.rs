@@ -478,20 +478,13 @@ fn adversarial_vast_cases() -> Vec<Vec<u8>> {
     }
     cases
 }
-mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_registration_is_witnessed {
-    include!(
-        "contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_registration_is_witnessed.rs"
-    );
-}
-mod c_lower_ast_to_pg_nodes_c11_vast_reference_feeds_program_graph_node_lowering {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__c11_vast_reference_feeds_program_graph_node_lowering.rs");
-}
-mod c_lower_ast_to_pg_nodes_typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes.rs");
-}
-mod c_lower_ast_to_pg_nodes_gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph.rs");
-}
-mod c_lower_ast_to_pg_nodes_ast_to_pg_nodes_has_zero_ulp_tolerance {
-    include!("contract_cases/c_lower_ast_to_pg_nodes__ast_to_pg_nodes_has_zero_ulp_tolerance.rs");
-}
+#[path = "c_lower_ast_to_pg_nodes/ast_to_pg_nodes_has_zero_ulp_tolerance.rs"]
+mod ast_to_pg_nodes_has_zero_ulp_tolerance;
+#[path = "c_lower_ast_to_pg_nodes/ast_to_pg_nodes_registration_is_witnessed.rs"]
+mod ast_to_pg_nodes_registration_is_witnessed;
+#[path = "c_lower_ast_to_pg_nodes/c11_vast_reference_feeds_program_graph_node_lowering.rs"]
+mod c11_vast_reference_feeds_program_graph_node_lowering;
+#[path = "c_lower_ast_to_pg_nodes/gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph.rs"]
+mod gnu_c_stress_fixture_flows_from_lexer_to_typed_program_graph;
+#[path = "c_lower_ast_to_pg_nodes/typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes.rs"]
+mod typed_c_declarator_initializer_vast_lowers_to_program_graph_nodes;

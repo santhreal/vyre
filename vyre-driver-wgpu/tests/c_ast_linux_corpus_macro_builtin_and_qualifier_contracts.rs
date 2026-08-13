@@ -314,10 +314,7 @@ fn fixture_linux_error_label_cleanup() -> Fixture {
 // Tests  -  container_of
 // ---------------------------------------------------------------------------
 
-mod c_ast_linux_corpus_macro_builtin_and_qualifier_contracts_container_of_macro_def_survives_and_use_is_call_shaped {
-
-    include!("contract_cases/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts__container_of_macro_def_survives_and_use_is_call_shaped.rs");
-}
-mod c_ast_linux_corpus_macro_builtin_and_qualifier_contracts_linux_error_label_pg_preserves_control_flow_kinds {
-    include!("contract_cases/c_ast_linux_corpus_macro_builtin_and_qualifier_contracts__linux_error_label_pg_preserves_control_flow_kinds.rs");
-}
+#[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/container_of_macro_def_survives_and_use_is_call_shaped.rs"]
+mod container_of_macro_def_survives_and_use_is_call_shaped;
+#[path = "c_ast_linux_corpus_macro_builtin_and_qualifier_contracts/linux_error_label_pg_preserves_control_flow_kinds.rs"]
+mod linux_error_label_pg_preserves_control_flow_kinds;

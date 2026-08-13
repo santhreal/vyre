@@ -1,9 +1,8 @@
-//! Generated wrapper test crate for c ast kernel grade construct shape.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Contract tests for c ast kernel grade construct shape.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_kernel_grade_construct_shape__classify.rs");
-include!(
-    "contract_cases/c_ast_kernel_grade_construct_shape__nested_declarator_parity_and_shape.rs"
-);
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_kernel_grade_construct_shape/classify.rs"]
+mod classify;
+#[path = "c_ast_kernel_grade_construct_shape/nested_declarator_parity_and_shape.rs"]
+mod nested_declarator_parity_and_shape;

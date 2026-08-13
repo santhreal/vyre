@@ -2,15 +2,11 @@
 
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-mod cpu {
-    include!("c_ast_declaration_container_nodes/cpu.rs");
-}
-mod fixtures {
-    include!("c_ast_declaration_container_nodes/fixtures.rs");
-}
-mod gpu {
-    include!("c_ast_declaration_container_nodes/gpu.rs");
-}
-mod support {
-    include!("c_ast_declaration_container_nodes/support.rs");
-}
+#[path = "c_ast_declaration_container_nodes/cpu.rs"]
+mod cpu;
+#[path = "c_ast_declaration_container_nodes/fixtures.rs"]
+mod fixtures;
+#[path = "c_ast_declaration_container_nodes/gpu.rs"]
+mod gpu;
+#[path = "c_ast_declaration_container_nodes/support.rs"]
+mod support;

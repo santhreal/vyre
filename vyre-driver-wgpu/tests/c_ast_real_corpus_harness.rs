@@ -1,7 +1,8 @@
-//! Generated wrapper test crate for c ast real corpus harness.
-//!
-//! Implementation lives in `contract_cases/` chunks.
+//! Contract tests for c ast real corpus harness.
 #![cfg(feature = "c-parser")]
 #![allow(deprecated)]
-include!("contract_cases/c_ast_real_corpus_harness__bytes.rs");
-include!("contract_cases/c_ast_real_corpus_harness__test_kernel_list_head_parity.rs");
+#[path = "c_ast_real_corpus_harness/bytes.rs"]
+mod bytes;
+mod c_ast_gpu_parity_support;
+#[path = "c_ast_real_corpus_harness/test_kernel_list_head_parity.rs"]
+mod test_kernel_list_head_parity;

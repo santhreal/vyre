@@ -626,22 +626,4 @@ fn hex_nibble_index(nibble: u8) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    #![allow(missing_docs)]
-    include!("disk_cache_tests.rs");
-
-    #[test]
-    fn fixed_digest_hex_hash_is_lowercase_and_stack_encoded() {
-        let mut digest = [0_u8; 32];
-        digest[0] = 0xab;
-        digest[31] = 0x7f;
-
-        let hex = hex_hash(&digest);
-
-        assert_eq!(hex.len(), 64);
-        assert!(hex.starts_with("ab00"));
-        assert!(hex.ends_with("007f"));
-        assert!(hex.bytes().all(|byte| byte.is_ascii_hexdigit()));
-        assert_eq!(hex, hex.to_ascii_lowercase());
-    }
-}
+mod tests;
