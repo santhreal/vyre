@@ -124,6 +124,9 @@ All notable changes to vyre are documented here. Follows Keep a Changelog.
   semantic pass registration generators. Test-only operation registration,
   algebraic-law derive, no-op builder marker, and generated decoder stubs are
   gone.
+- The `vyre-scan` product crate has left the platform workspace, and the
+  `vyre::scan` re-export is gone with it. Scanning is a product built on the
+  platform, not a member of it.
 
 ### Fixed
 

@@ -26,6 +26,5 @@ pub use vyre::admit_envelope
 pub use vyre::compiler
 pub use vyre::ir
 pub use vyre::match_result
-pub use vyre::scan
 pub use vyre::soundness
 pub use vyre::validate

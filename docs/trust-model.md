@@ -83,7 +83,7 @@ fail-closed status checks enforced by branch protection.
 
 A contributor or maintainer changes the behavior of a published op, invalidating historical certificates silently.
 
-Mitigation: every published op is recorded in the registry with a stable hash. The registry hash in every certificate changes if the op changes. Certificates from year 1 remain verifiable against the op as-it-was-at-year-1. Old certificates do not auto-upgrade to new semantics. See STABILITY.md for the permanence guarantee.
+Mitigation: every published op is recorded in the registry with a stable hash. The registry hash in every certificate changes if the op changes. Certificates from year 1 remain verifiable against the op as-it-was-at-year-1. Old certificates do not auto-upgrade to new semantics.
 
 ### Attack: delete or weaken a regression test
 
@@ -107,14 +107,18 @@ Mitigation: TOML rules are scanned, parsed, and executed by the same automated g
 
 ## Deprecation process
 
-When an interface or op is superseded, it follows the lifecycle defined in STABILITY.md:
+Before 1.0 there is no deprecation window. A superseded interface is replaced
+in place, and every caller migrates in the same change. No alias, re-export, or
+parallel path is kept so that old code keeps compiling. Two ways to spell one
+operation is a defect, and a released version does not make it one less.
 
-- Marked `#[deprecated]` in version N, with a clear note pointing to the replacement.
-- Still compiled, tested, and shipped in versions N+1 and N+2.
-- Removed no earlier than 12 months after the deprecation first appears in a stable release.
-- Or never removed at all, if removal would break published conformance certificates or violate the stability guarantee.
+A staged deprecation window begins at 1.0. That policy is not written yet, and
+no interface is kept alive on the expectation of it.
 
-Deprecation is the tool of last resort. Preference is given to additive replacement: leave the old interface untouched and introduce a new one alongside it. A consumer who earned a certificate in year 1 must be able to verify it in year 5.
+Certificate durability is separate from API shape. A conformance certificate
+earned in year 1 verifies in year 5 because the certificate format and the
+operation semantics it pins are versioned. It does not require the interface
+that produced it to survive unchanged.
 
 ---
 
