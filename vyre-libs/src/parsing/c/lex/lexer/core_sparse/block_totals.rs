@@ -9,20 +9,20 @@ pub fn c11_lexer_regular_sparse_packed_haystack_with_block_totals(
     block_totals: &str,
     haystack_len: u32,
 ) -> Program {
-    super::c11_lexer_regular_sparse_impl(
+    super::c11_lexer_regular_sparse_impl(&super::SparseLexerSpec {
         haystack,
         out_tok_types,
         out_tok_starts,
         out_tok_lens,
-        scratch_counts,
+        out_counts: scratch_counts,
         haystack_len,
-        false,
-        false,
-        super::SparseHaystackLayout::PackedU32,
-        true,
-        true,
-        Some(block_totals),
-    )
+        suppress_span_readback: false,
+        emit_flags: false,
+        layout: super::SparseHaystackLayout::PackedU32,
+        track_preproc_lines: true,
+        track_literals: true,
+        block_totals: Some(block_totals),
+    })
 }
 
 #[cfg(test)]

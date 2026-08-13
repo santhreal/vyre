@@ -1,6 +1,6 @@
+use super::helpers::{token_column_buffers, LEXER_WORKGROUP_SIZE};
 use super::parallel_common::{
-    regular_parallel_buffers, regular_parallel_classifier, regular_parallel_token_start_expr,
-    RegularParallelMode, REGULAR_PARALLEL_WORKGROUP_SIZE,
+    regular_parallel_classifier, regular_parallel_token_start_expr, RegularParallelMode,
 };
 use super::*;
 
@@ -29,7 +29,7 @@ pub fn c11_lexer_regular_ranked(
     ));
 
     Program::wrapped(
-        regular_parallel_buffers(
+        token_column_buffers(
             haystack,
             out_tok_types,
             out_tok_starts,
@@ -37,7 +37,7 @@ pub fn c11_lexer_regular_ranked(
             out_counts,
             haystack_len,
         ),
-        [REGULAR_PARALLEL_WORKGROUP_SIZE, 1, 1],
+        [LEXER_WORKGROUP_SIZE, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::parsing::c_lexer_regular_ranked",
             vec![

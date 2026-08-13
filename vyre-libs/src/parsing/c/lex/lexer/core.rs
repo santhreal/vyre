@@ -1,8 +1,11 @@
-//! `c11_lexer` builder. ~780 LOC of `Vec<Node>` accumulation  -  over the
-//! 500-LOC source cap because the lexer body is one logical block whose
-//! sub-sections share closure state (next_byte, byte references, etc).
-//! Extracting those into helpers would change parser semantics, so this
-//! file is allowed to exceed the cap (docs/code-style.md `KNOWN_OVER_CAP`).
+//! Serial and per-invocation C11 lexer builders.
+//!
+//! `helpers` owns the one token-classification walk every builder in this
+//! module and in `core_sparse` composes; the files beside it are thin
+//! compositions that pick stages, name their loop variables, and choose an
+//! output shell. `dense.rs` is the full C11 grammar over a contiguous haystack,
+//! `regular.rs` the reduced identifier/integer grammar, `ranked.rs` and
+//! `sparse.rs` the per-invocation layouts.
 
 #![allow(missing_docs)] // Internal lexer-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;
@@ -16,15 +19,17 @@ use super::helpers::{
 };
 
 mod dense;
-mod helpers;
 mod parallel_common;
 mod ranked;
+mod regular;
 mod scan_bounds;
 mod sparse;
 
+pub(super) mod helpers;
+
 pub use dense::c11_lexer;
-pub use helpers::c11_lexer_regular;
 pub use ranked::c11_lexer_regular_ranked;
+pub use regular::c11_lexer_regular;
 pub use sparse::c11_lexer_regular_sparse;
 
 use scan_bounds::*;

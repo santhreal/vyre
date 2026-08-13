@@ -7,9 +7,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 pub use block_totals::c11_lexer_regular_sparse_packed_haystack_with_block_totals;
 
-use super::helpers::{
-    byte_at_or_zero, byte_eq, is_digit, is_ident_continue, is_ident_start, set_token,
-};
+use super::core::helpers::SparseHaystackLayout;
+use super::helpers::byte_eq;
 
 mod bounds;
 mod entrypoints;
@@ -24,11 +23,4 @@ pub use entrypoints::{
 };
 
 use bounds::*;
-use sparse_impl::c11_lexer_regular_sparse_impl;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum SparseHaystackLayout {
-    PackedU32,
-    ExpandedU32,
-    RawU8,
-}
+use sparse_impl::{c11_lexer_regular_sparse_impl, SparseLexerSpec};

@@ -7,6 +7,17 @@
 //! - `40..59`  -  multi-char operators
 //! - `100..199`  -  keywords
 //! - `200..255`  -  meta-tokens (stripped before structural analysis)
+//!
+//! This module owns the numbering. `vyre-grammar-gen/src/c11_lexer.rs` carries
+//! a hand-maintained copy of the 107 ids its DFA patterns emit;
+//! `verified-intentional`. It cannot be collapsed into this table:
+//! `vyre-grammar-gen` is a leaf crate with no vyre dependencies, and
+//! `vyre-libs` dev-depends on it as the host lexer oracle, so pointing it here
+//! would invert the layering and route a dependency cycle through the whole
+//! compiler stack for two integer tables. `tests/c11_token_table_parity.rs` is
+//! the only place that sees both, and it pins every id the generator can emit
+//! against the constant here, deriving the covered set from `C11_PATTERNS` so a
+//! new generator pattern fails rather than diverges.
 #![allow(missing_docs)]
 
 // Token type constants (fits in u8, stored as u32 for GPU alignment)
