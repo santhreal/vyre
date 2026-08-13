@@ -21,7 +21,7 @@ These pages are generated browsing views of `docs/generated/OP_SCHEMA.json`. The
 | [`nn`](nn.md) | 53 |
 | [`opt`](opt.md) | 1 |
 | [`optim`](optim.md) | 5 |
-| [`parsing`](parsing.md) | 48 |
+| [`parsing`](parsing.md) | 47 |
 | [`predicate`](predicate.md) | 10 |
 | [`quant`](quant.md) | 13 |
 | [`reduce`](reduce.md) | 18 |
