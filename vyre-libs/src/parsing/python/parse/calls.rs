@@ -1,16 +1,15 @@
+use super::walk::{pack_sparse_tokens, DottedName, TokenPass};
 use super::{
-    find_matching_delimiter, load_u32, search_next_token, search_next_token_into,
-    search_prev_token, store_words, write_words,
+    find_matching_delimiter, load_u32, search_next_token, search_prev_token, store_words,
+    write_words,
 };
-use crate::parsing::composition::child_phase;
 use crate::parsing::python::lex::{
     TOK_AWAIT, TOK_DOT, TOK_EQ, TOK_IDENTIFIER, TOK_LPAREN, TOK_NUMBER, TOK_RPAREN,
 };
-use crate::parsing::python::{
-    CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS, MAX_DOTTED_SEGMENTS,
-};
-use crate::region::wrap_anonymous;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use crate::parsing::python::{CALL_RECORD_WORDS, INVALID_POS, KWARG_RECORD_WORDS};
+use vyre_foundation::ir::{Expr, Node, Program};
+
+const OP_ID: &str = "vyre-libs::parsing::python312_extract_calls";
 
 /// Extract Python call sites plus top-level keyword arguments.
 #[must_use]
@@ -26,19 +25,21 @@ pub fn python312_extract_calls(
     haystack_len: u32,
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
+    let name = DottedName {
+        tok_types,
+        haystack_len,
+        head: t.clone(),
+        accumulator: "name_end",
+    };
+    // The dotted-name carriers are hoisted to the outer body so they outlive
+    // the if_then block that assigns them and remain in scope for the
+    // post-if_then `search_next_token` call that reads `name_end`.
     let mut body = vec![
         Node::let_bind("tok", load_u32(tok_types, t.clone())),
         Node::let_bind("emit", Expr::u32(0)),
-        // Hoist `name_end`, `cursor`, `dot_pos`, `after_dot` to the
-        // outer body so they outlive the if_then block that assigns
-        // them and remain in scope for the post-if_then `search_next_token`
-        // call that reads `name_end`.
         Node::let_bind("is_call_head", Expr::u32(0)),
-        Node::let_bind("name_end", t.clone()),
-        Node::let_bind("cursor", t.clone()),
-        Node::let_bind("dot_pos", Expr::u32(INVALID_POS)),
-        Node::let_bind("after_dot", Expr::u32(INVALID_POS)),
     ];
+    body.extend(name.carriers());
     body.extend(search_prev_token("prev_tok", t.clone(), tok_types));
     body.push(Node::if_then(
         Expr::and(
@@ -48,56 +49,7 @@ pub fn python312_extract_calls(
                 Expr::u32(TOK_DOT),
             ),
         ),
-        vec![
-            Node::assign("is_call_head", Expr::u32(1)),
-            Node::loop_for(
-                "seg",
-                Expr::u32(0),
-                Expr::u32(MAX_DOTTED_SEGMENTS),
-                vec![
-                    Node::assign("dot_pos", Expr::u32(INVALID_POS)),
-                    Node::assign("after_dot", Expr::u32(INVALID_POS)),
-                    Node::if_then(
-                        Expr::ne(Expr::var("cursor"), Expr::u32(INVALID_POS)),
-                        search_next_token_into(
-                            "dot_pos",
-                            Expr::add(Expr::var("cursor"), Expr::u32(1)),
-                            tok_types,
-                            haystack_len,
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::eq(
-                            load_u32(tok_types, Expr::var("dot_pos")),
-                            Expr::u32(TOK_DOT),
-                        ),
-                        search_next_token_into(
-                            "after_dot",
-                            Expr::add(Expr::var("dot_pos"), Expr::u32(1)),
-                            tok_types,
-                            haystack_len,
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::eq(
-                            load_u32(tok_types, Expr::var("after_dot")),
-                            Expr::u32(TOK_IDENTIFIER),
-                        ),
-                        vec![
-                            Node::assign("name_end", Expr::var("after_dot")),
-                            Node::assign("cursor", Expr::var("after_dot")),
-                        ],
-                    ),
-                    Node::if_then(
-                        Expr::ne(
-                            load_u32(tok_types, Expr::var("after_dot")),
-                            Expr::u32(TOK_IDENTIFIER),
-                        ),
-                        vec![Node::assign("cursor", Expr::u32(INVALID_POS))],
-                    ),
-                ],
-            ),
-        ],
+        vec![Node::assign("is_call_head", Expr::u32(1)), name.walk()],
     ));
     body.extend(search_next_token(
         "after_name",
@@ -126,6 +78,7 @@ pub fn python312_extract_calls(
         ),
         vec![Node::assign("emit", Expr::u32(1))],
     ));
+    let span = name.span(tok_starts, tok_lens);
     body.push(Node::if_then(
         Expr::eq(Expr::var("emit"), Expr::u32(1)),
         vec![
@@ -249,14 +202,8 @@ pub fn python312_extract_calls(
             out_calls,
             "call_slot",
             &[
-                load_u32(tok_starts, t.clone()),
-                Expr::add(
-                    Expr::sub(
-                        load_u32(tok_starts, Expr::var("name_end")),
-                        load_u32(tok_starts, t.clone()),
-                    ),
-                    load_u32(tok_lens, Expr::var("name_end")),
-                ),
+                span[0].clone(),
+                span[1].clone(),
                 Expr::var("after_name"),
                 Expr::var("rparen"),
                 Expr::var("kw_base"),
@@ -274,38 +221,18 @@ pub fn python312_extract_calls(
         .collect(),
     ));
 
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(tok_types, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(tok_starts, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(tok_lens, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len),
-            BufferDecl::storage(out_calls, 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.saturating_mul(CALL_RECORD_WORDS)),
-            BufferDecl::storage(out_call_counts, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-            BufferDecl::storage(out_kwargs, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.saturating_mul(KWARG_RECORD_WORDS)),
-            BufferDecl::storage(out_kw_counts, 6, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        vec![wrap_anonymous(
-            "vyre-libs::parsing::python312_extract_calls",
-            vec![child_phase(
-                "vyre-libs::parsing::python312_extract_calls",
-                vyre_primitives::parsing::core_delimiter_match::OP_ID,
-                vec![Node::if_then(
-                    Expr::lt(t.clone(), Expr::u32(haystack_len)),
-                    body,
-                )],
-            )],
-        )],
-    )
-    .with_entry_op_id("vyre-libs::parsing::python312_extract_calls")
-    .with_non_composable_with_self(true)
+    let pass = TokenPass {
+        op_id: OP_ID,
+        child_op_id: vyre_primitives::parsing::core_delimiter_match::OP_ID,
+        tok_types,
+        tok_starts,
+        tok_lens,
+        haystack_len,
+    };
+    let mut buffers = pass.token_buffers();
+    buffers.extend(pass.record_buffers(out_calls, out_call_counts, 3, CALL_RECORD_WORDS));
+    buffers.extend(pass.record_buffers(out_kwargs, out_kw_counts, 5, KWARG_RECORD_WORDS));
+    pass.program(buffers, body)
 }
 
 inventory::submit! {
@@ -315,7 +242,7 @@ inventory::submit! {
         tier: vyre_foundation::operation::OperationTier::Library,
         laws: &[],
         tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: "vyre-libs::parsing::python312_extract_calls",
+        id: OP_ID,
         build: Some(|| python312_extract_calls(
             "tok_types", "tok_starts", "tok_lens", "out_calls", "out_call_counts", "out_kwargs", "out_kw_counts", 16
         )),
@@ -326,23 +253,18 @@ inventory::submit! {
 }
 
 fn call_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
-    let mut tok_types = vec![0u8; 16 * 4];
-    let mut tok_starts = vec![0u8; 16 * 4];
-    let mut tok_lens = vec![0u8; 16 * 4];
-    for (pos, tok, len) in [
-        (0usize, TOK_AWAIT, 5u32),
-        (6, TOK_IDENTIFIER, 3),
-        (9, TOK_LPAREN, 1),
-        (10, TOK_IDENTIFIER, 1),
-        (11, TOK_EQ, 1),
-        (12, TOK_NUMBER, 1),
-        (13, TOK_RPAREN, 1),
-    ] {
-        let base = pos * 4;
-        tok_types[base..base + 4].copy_from_slice(&tok.to_le_bytes());
-        tok_starts[base..base + 4].copy_from_slice(&(pos as u32).to_le_bytes());
-        tok_lens[base..base + 4].copy_from_slice(&len.to_le_bytes());
-    }
+    let (tok_types, tok_starts, tok_lens) = pack_sparse_tokens(
+        &[
+            (0, TOK_AWAIT, 5),
+            (6, TOK_IDENTIFIER, 3),
+            (9, TOK_LPAREN, 1),
+            (10, TOK_IDENTIFIER, 1),
+            (11, TOK_EQ, 1),
+            (12, TOK_NUMBER, 1),
+            (13, TOK_RPAREN, 1),
+        ],
+        16,
+    );
 
     vec![vec![
         tok_types,

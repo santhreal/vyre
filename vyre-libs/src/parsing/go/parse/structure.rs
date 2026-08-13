@@ -16,6 +16,110 @@ pub const GO_DECL_METHOD: u32 = 2;
 /// Interface declaration kind.
 pub const GO_DECL_INTERFACE: u32 = 3;
 
+/// The one brace-balanced body span plus declaration record Go declaration
+/// extraction emits.
+///
+/// Function, method, and interface declarations differ only in where the body
+/// scan starts, which kind word is recorded, and which token carries the name.
+struct GoDeclSpan<'a> {
+    tok_types: &'a str,
+    tok_starts: &'a str,
+    tok_lens: &'a str,
+    out_decls: &'a str,
+    out_decl_counts: &'a str,
+    num_tokens: &'a Expr,
+}
+
+impl GoDeclSpan<'_> {
+    /// Scans forward from `scan_from` for the outermost balanced `{`..`}` pair,
+    /// then appends the five-word record for `name_tok`.
+    fn nodes(&self, scan_from: Expr, kind: Expr, name_tok: Expr) -> Vec<Node> {
+        vec![
+            Node::let_bind("body_start", Expr::u32(0)),
+            Node::let_bind("body_end", Expr::u32(0)),
+            Node::let_bind("brace_depth", Expr::u32(0)),
+            Node::let_bind("brace_done", Expr::u32(0)),
+            Node::loop_for(
+                "scan",
+                scan_from,
+                self.num_tokens.clone(),
+                vec![Node::if_then(
+                    Expr::eq(Expr::var("brace_done"), Expr::u32(0)),
+                    vec![
+                        Node::if_then(
+                            token_type_eq(self.tok_types, Expr::var("scan"), TOK_LBRACE),
+                            vec![
+                                Node::if_then(
+                                    Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
+                                    vec![Node::assign(
+                                        "body_start",
+                                        token_start(self.tok_starts, Expr::var("scan")),
+                                    )],
+                                ),
+                                Node::assign(
+                                    "brace_depth",
+                                    Expr::add(Expr::var("brace_depth"), Expr::u32(1)),
+                                ),
+                            ],
+                        ),
+                        Node::if_then(
+                            token_type_eq(self.tok_types, Expr::var("scan"), TOK_RBRACE),
+                            vec![
+                                Node::assign(
+                                    "brace_depth",
+                                    Expr::sub(Expr::var("brace_depth"), Expr::u32(1)),
+                                ),
+                                Node::if_then(
+                                    Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
+                                    vec![
+                                        Node::assign(
+                                            "body_end",
+                                            Expr::add(
+                                                token_start(self.tok_starts, Expr::var("scan")),
+                                                token_len(self.tok_lens, Expr::var("scan")),
+                                            ),
+                                        ),
+                                        Node::assign("brace_done", Expr::u32(1)),
+                                    ],
+                                ),
+                            ],
+                        ),
+                    ],
+                )],
+            ),
+            Node::let_bind(
+                "decl_idx",
+                Expr::atomic_add(
+                    self.out_decl_counts,
+                    Expr::u32(0),
+                    Expr::u32(GO_DECL_RECORD_WORDS),
+                ),
+            ),
+            Node::store(self.out_decls, Expr::var("decl_idx"), kind),
+            Node::store(
+                self.out_decls,
+                Expr::add(Expr::var("decl_idx"), Expr::u32(1)),
+                token_start(self.tok_starts, name_tok.clone()),
+            ),
+            Node::store(
+                self.out_decls,
+                Expr::add(Expr::var("decl_idx"), Expr::u32(2)),
+                token_len(self.tok_lens, name_tok),
+            ),
+            Node::store(
+                self.out_decls,
+                Expr::add(Expr::var("decl_idx"), Expr::u32(3)),
+                Expr::var("body_start"),
+            ),
+            Node::store(
+                self.out_decls,
+                Expr::add(Expr::var("decl_idx"), Expr::u32(4)),
+                Expr::var("body_end"),
+            ),
+        ]
+    }
+}
+
 /// Extract `package` declarations and imported string spans.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
@@ -195,6 +299,14 @@ pub fn go_extract_declarations(
     out_decl_counts: &str,
 ) -> Program {
     let t = Expr::gid_x();
+    let decl_span = GoDeclSpan {
+        tok_types,
+        tok_starts,
+        tok_lens,
+        out_decls,
+        out_decl_counts,
+        num_tokens: &num_tokens,
+    };
     let body = vec![
         Node::if_then(
             token_is_keyword(
@@ -253,92 +365,11 @@ pub fn go_extract_declarations(
                 ),
                 Node::if_then(
                     token_is_ident(tok_types, Expr::var("name_tok")),
-                    vec![
-                        Node::let_bind("body_start", Expr::u32(0)),
-                        Node::let_bind("body_end", Expr::u32(0)),
-                        Node::let_bind("brace_depth", Expr::u32(0)),
-                        Node::let_bind("brace_done", Expr::u32(0)),
-                        Node::loop_for(
-                            "scan",
-                            Expr::add(Expr::var("name_tok"), Expr::u32(1)),
-                            num_tokens.clone(),
-                            vec![Node::if_then(
-                                Expr::eq(Expr::var("brace_done"), Expr::u32(0)),
-                                vec![
-                                    Node::if_then(
-                                        token_type_eq(tok_types, Expr::var("scan"), TOK_LBRACE),
-                                        vec![
-                                            Node::if_then(
-                                                Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
-                                                vec![Node::assign(
-                                                    "body_start",
-                                                    token_start(tok_starts, Expr::var("scan")),
-                                                )],
-                                            ),
-                                            Node::assign(
-                                                "brace_depth",
-                                                Expr::add(Expr::var("brace_depth"), Expr::u32(1)),
-                                            ),
-                                        ],
-                                    ),
-                                    Node::if_then(
-                                        token_type_eq(tok_types, Expr::var("scan"), TOK_RBRACE),
-                                        vec![
-                                            Node::assign(
-                                                "brace_depth",
-                                                Expr::sub(Expr::var("brace_depth"), Expr::u32(1)),
-                                            ),
-                                            Node::if_then(
-                                                Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
-                                                vec![
-                                                    Node::assign(
-                                                        "body_end",
-                                                        Expr::add(
-                                                            token_start(
-                                                                tok_starts,
-                                                                Expr::var("scan"),
-                                                            ),
-                                                            token_len(tok_lens, Expr::var("scan")),
-                                                        ),
-                                                    ),
-                                                    Node::assign("brace_done", Expr::u32(1)),
-                                                ],
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            )],
-                        ),
-                        Node::let_bind(
-                            "decl_idx",
-                            Expr::atomic_add(
-                                out_decl_counts,
-                                Expr::u32(0),
-                                Expr::u32(GO_DECL_RECORD_WORDS),
-                            ),
-                        ),
-                        Node::store(out_decls, Expr::var("decl_idx"), Expr::var("decl_kind")),
-                        Node::store(
-                            out_decls,
-                            Expr::add(Expr::var("decl_idx"), Expr::u32(1)),
-                            token_start(tok_starts, Expr::var("name_tok")),
-                        ),
-                        Node::store(
-                            out_decls,
-                            Expr::add(Expr::var("decl_idx"), Expr::u32(2)),
-                            token_len(tok_lens, Expr::var("name_tok")),
-                        ),
-                        Node::store(
-                            out_decls,
-                            Expr::add(Expr::var("decl_idx"), Expr::u32(3)),
-                            Expr::var("body_start"),
-                        ),
-                        Node::store(
-                            out_decls,
-                            Expr::add(Expr::var("decl_idx"), Expr::u32(4)),
-                            Expr::var("body_end"),
-                        ),
-                    ],
+                    decl_span.nodes(
+                        Expr::add(Expr::var("name_tok"), Expr::u32(1)),
+                        Expr::var("decl_kind"),
+                        Expr::var("name_tok"),
+                    ),
                 ),
             ],
         ),
@@ -366,93 +397,11 @@ pub fn go_extract_declarations(
                         ),
                     ),
                 ),
-                vec![
-                    Node::let_bind("body_start", Expr::u32(0)),
-                    Node::let_bind("body_end", Expr::u32(0)),
-                    Node::let_bind("brace_depth", Expr::u32(0)),
-                    Node::let_bind("brace_done", Expr::u32(0)),
-                    Node::loop_for(
-                        "scan",
-                        Expr::add(t.clone(), Expr::u32(3)),
-                        num_tokens.clone(),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("brace_done"), Expr::u32(0)),
-                            vec![
-                                Node::if_then(
-                                    token_type_eq(tok_types, Expr::var("scan"), TOK_LBRACE),
-                                    vec![
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
-                                            vec![Node::assign(
-                                                "body_start",
-                                                token_start(tok_starts, Expr::var("scan")),
-                                            )],
-                                        ),
-                                        Node::assign(
-                                            "brace_depth",
-                                            Expr::add(Expr::var("brace_depth"), Expr::u32(1)),
-                                        ),
-                                    ],
-                                ),
-                                Node::if_then(
-                                    token_type_eq(tok_types, Expr::var("scan"), TOK_RBRACE),
-                                    vec![
-                                        Node::assign(
-                                            "brace_depth",
-                                            Expr::sub(Expr::var("brace_depth"), Expr::u32(1)),
-                                        ),
-                                        Node::if_then(
-                                            Expr::eq(Expr::var("brace_depth"), Expr::u32(0)),
-                                            vec![
-                                                Node::assign(
-                                                    "body_end",
-                                                    Expr::add(
-                                                        token_start(tok_starts, Expr::var("scan")),
-                                                        token_len(tok_lens, Expr::var("scan")),
-                                                    ),
-                                                ),
-                                                Node::assign("brace_done", Expr::u32(1)),
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                            ],
-                        )],
-                    ),
-                    Node::let_bind(
-                        "decl_idx",
-                        Expr::atomic_add(
-                            out_decl_counts,
-                            Expr::u32(0),
-                            Expr::u32(GO_DECL_RECORD_WORDS),
-                        ),
-                    ),
-                    Node::store(
-                        out_decls,
-                        Expr::var("decl_idx"),
-                        Expr::u32(GO_DECL_INTERFACE),
-                    ),
-                    Node::store(
-                        out_decls,
-                        Expr::add(Expr::var("decl_idx"), Expr::u32(1)),
-                        token_start(tok_starts, Expr::add(t.clone(), Expr::u32(1))),
-                    ),
-                    Node::store(
-                        out_decls,
-                        Expr::add(Expr::var("decl_idx"), Expr::u32(2)),
-                        token_len(tok_lens, Expr::add(t.clone(), Expr::u32(1))),
-                    ),
-                    Node::store(
-                        out_decls,
-                        Expr::add(Expr::var("decl_idx"), Expr::u32(3)),
-                        Expr::var("body_start"),
-                    ),
-                    Node::store(
-                        out_decls,
-                        Expr::add(Expr::var("decl_idx"), Expr::u32(4)),
-                        Expr::var("body_end"),
-                    ),
-                ],
+                decl_span.nodes(
+                    Expr::add(t.clone(), Expr::u32(3)),
+                    Expr::u32(GO_DECL_INTERFACE),
+                    Expr::add(t.clone(), Expr::u32(1)),
+                ),
             )],
         ),
     ];

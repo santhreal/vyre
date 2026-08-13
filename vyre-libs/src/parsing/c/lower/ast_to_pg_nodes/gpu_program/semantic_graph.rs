@@ -81,7 +81,10 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
 ) -> Program {
     let t = Expr::InvocationId { axis: 0 };
 
-    let vast_base = Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32));
+    let row = VastRow {
+        vast_nodes,
+        base: Expr::mul(t.clone(), Expr::u32(VAST_NODE_STRIDE_U32)),
+    };
     let pg_base = Expr::mul(t.clone(), Expr::u32(C_AST_PG_SEMANTIC_NODE_STRIDE_U32));
     let plain_pg_base =
         out_plain_pg_nodes.map(|_| Expr::mul(t.clone(), Expr::u32(PG_NODE_STRIDE_U32)));
@@ -90,58 +93,8 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
         Expr::u32(C_AST_PG_EDGE_ROWS_PER_NODE.saturating_mul(C_AST_PG_EDGE_STRIDE_U32)),
     );
 
-    let mut loop_body = vec![
-        Node::let_bind("kind", Expr::load(vast_nodes, vast_base.clone())),
-        Node::let_bind(
-            "parent_idx",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_PARENT as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "first_child_idx",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_FIRST_CHILD as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "next_sibling_idx",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_NEXT_SIBLING as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "span_start",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_SRC_BYTE_OFF as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "span_len",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_SRC_BYTE_LEN as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "attr_off",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_ATTR_OFF as u32)),
-            ),
-        ),
-        Node::let_bind(
-            "attr_len",
-            Expr::load(
-                vast_nodes,
-                Expr::add(vast_base.clone(), Expr::u32(IDX_ATTR_LEN as u32)),
-            ),
-        ),
-    ];
+    let mut loop_body = row.structural_bindings();
+    loop_body.extend(row.attribute_bindings());
     loop_body.extend(semantic_context_bind_nodes());
     loop_body.push(Node::if_then(
         expr_is_kind(Expr::var("kind"), C_AST_KIND_POINTER_DECL),
@@ -153,33 +106,8 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
     } else {
         loop_body.extend(unresolved_control_edge_slots());
     }
-    loop_body.extend(vec![
-        Node::store(out_pg_nodes, pg_base.clone(), Expr::var("kind")),
-        Node::store(
-            out_pg_nodes,
-            Expr::add(pg_base.clone(), Expr::u32(1)),
-            Expr::var("span_start"),
-        ),
-        Node::store(
-            out_pg_nodes,
-            Expr::add(pg_base.clone(), Expr::u32(2)),
-            Expr::add(Expr::var("span_start"), Expr::var("span_len")),
-        ),
-        Node::store(
-            out_pg_nodes,
-            Expr::add(pg_base.clone(), Expr::u32(3)),
-            Expr::var("parent_idx"),
-        ),
-        Node::store(
-            out_pg_nodes,
-            Expr::add(pg_base.clone(), Expr::u32(4)),
-            Expr::var("first_child_idx"),
-        ),
-        Node::store(
-            out_pg_nodes,
-            Expr::add(pg_base.clone(), Expr::u32(5)),
-            Expr::var("next_sibling_idx"),
-        ),
+    loop_body.extend(store_pg_node_row(out_pg_nodes, &pg_base));
+    loop_body.extend([
         Node::store(
             out_pg_nodes,
             Expr::add(pg_base.clone(), Expr::u32(6)),
@@ -202,34 +130,7 @@ pub(super) fn c_lower_ast_to_pg_semantic_graph_impl(
         ),
     ]);
     if let (Some(out_plain_pg_nodes), Some(plain_pg_base)) = (out_plain_pg_nodes, plain_pg_base) {
-        loop_body.extend(vec![
-            Node::store(out_plain_pg_nodes, plain_pg_base.clone(), Expr::var("kind")),
-            Node::store(
-                out_plain_pg_nodes,
-                Expr::add(plain_pg_base.clone(), Expr::u32(1)),
-                Expr::var("span_start"),
-            ),
-            Node::store(
-                out_plain_pg_nodes,
-                Expr::add(plain_pg_base.clone(), Expr::u32(2)),
-                Expr::add(Expr::var("span_start"), Expr::var("span_len")),
-            ),
-            Node::store(
-                out_plain_pg_nodes,
-                Expr::add(plain_pg_base.clone(), Expr::u32(3)),
-                Expr::var("parent_idx"),
-            ),
-            Node::store(
-                out_plain_pg_nodes,
-                Expr::add(plain_pg_base.clone(), Expr::u32(4)),
-                Expr::var("first_child_idx"),
-            ),
-            Node::store(
-                out_plain_pg_nodes,
-                Expr::add(plain_pg_base, Expr::u32(5)),
-                Expr::var("next_sibling_idx"),
-            ),
-        ]);
+        loop_body.extend(store_pg_node_row(out_plain_pg_nodes, &plain_pg_base));
     }
 
     loop_body.extend(store_semantic_edge(

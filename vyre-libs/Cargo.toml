@@ -547,3 +547,8 @@ required-features = ["c-parser"]
 name = "scan_ac_transition_walk_single_owner"
 path = "tests/scan_ac_transition_walk_single_owner.rs"
 required-features = ["matching-regex"]
+
+[[test]]
+name = "parsing_walker_clone_family"
+path = "tests/parsing_walker_clone_family.rs"
+required-features = ["parsing"]

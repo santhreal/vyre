@@ -1,6 +1,5 @@
 use crate::parsing::c::lex::tokens::*;
 use crate::parsing::composition::child_phase;
-use crate::parsing::core::ast::node::*;
 use crate::region::wrap_anonymous;
 use emit::{binary_token_body, emit_value_leaf, final_sweep_body, rparen_body};
 use operator::{is_assignment_token, is_value_token, precedence};
@@ -8,13 +7,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 mod emit;
 mod operator;
+mod shunting_witness;
 
 const OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard";
 const STATEMENT_PASS_OP_ID: &str = "vyre-libs::parsing::ast_shunting_yard::statement_pass";
 const MAX_TOK_SCAN: u32 = 65_536;
 const STACK_SLOTS_PER_STATEMENT: u32 = 64;
-
-use vyre_primitives::wire::pack_u32_slice as pack_u32;
 
 /// Data-parallel shunting-yard AST builder.
 ///
@@ -249,58 +247,4 @@ fn ast_shunting_yard_program(
     )
     .with_entry_op_id(OP_ID)
     .with_non_composable_with_self(true)
-}
-
-inventory::submit! {
-    vyre_foundation::operation::OperationRegistration {
-        semantic_version: 1,
-        signature: None,
-        tier: vyre_foundation::operation::OperationTier::Library,
-        laws: &[],
-        tolerance: vyre_foundation::operation::TolerancePolicy::EXACT,
-        id: OP_ID,
-        build: Some(|| ast_shunting_yard_with_capacity(
-            "tok_types", "statements", Expr::u32(100),
-            "out_ast_nodes", "out_ast_count", "out_statement_roots",
-            "scratch_val_stack", "scratch_op_stack",
-            MAX_TOK_SCAN, 100
-        )),
-        test_inputs: Some(|| vec![vec![
-            shunting_token_fixture(),
-            shunting_statement_fixture(),
-            vec![0u8; MAX_TOK_SCAN as usize * 4 * 4],
-            vec![0u8; 4],
-            vec![0u8; 100 * 4],
-            vec![0u8; 6_400 * 4],
-            vec![0u8; 6_400 * 4],
-        ]]),
-        expected_output: Some(shunting_expected_output),
-        category: Some("parsing"),
-    }
-}
-
-fn shunting_token_fixture() -> Vec<u8> {
-    let mut tokens = vec![0u32; MAX_TOK_SCAN as usize];
-    tokens[0] = TOK_IDENTIFIER;
-    pack_u32(&tokens)
-}
-
-fn shunting_statement_fixture() -> Vec<u8> {
-    let mut statements = vec![0u32; 200];
-    statements[1] = 1;
-    pack_u32(&statements)
-}
-
-fn shunting_expected_output() -> Vec<Vec<Vec<u8>>> {
-    let mut ast_nodes = vec![0u32; MAX_TOK_SCAN as usize * 4];
-    ast_nodes[0..4].copy_from_slice(&[AST_VAR, u32::MAX, u32::MAX, 0]);
-    let mut roots = vec![u32::MAX; 100];
-    roots[0] = 0;
-    vec![vec![
-        pack_u32(&ast_nodes),
-        pack_u32(&[4]),
-        pack_u32(&roots),
-        vec![0u8; 6_400 * 4],
-        vec![0u8; 6_400 * 4],
-    ]]
 }
