@@ -11,5 +11,5 @@
   "blockers": [
     "wgpu certificate bundle has not been regenerated in this workspace state"
   ],
-  "cert_schema_reference": "conform/vyre-conform-runner/src/bundle_cert.rs"
+  "cert_schema_reference": "conform/vyre-conform/src/bundle_cert.rs"
 }
