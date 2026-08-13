@@ -120,14 +120,14 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-foundation/Cargo.toml",
         ),
         step(
-            "vyre-megakernel",
-            release_train::vyre_version(),
-            "vyre-megakernel/Cargo.toml",
-        ),
-        step(
             "vyre-lower",
             release_train::vyre_version(),
             "vyre-lower/Cargo.toml",
+        ),
+        step(
+            "vyre-megakernel",
+            release_train::vyre_version(),
+            "vyre-megakernel/Cargo.toml",
         ),
         step(
             "vyre-emit-ptx",
@@ -210,9 +210,9 @@ fn publish_order() -> Vec<PublishStep> {
             "vyre-libs/Cargo.toml",
         ),
         step(
-            "vyre-scan",
+            "vyre-safetensors",
             release_train::vyre_version(),
-            "vyre-scan/Cargo.toml",
+            "vyre-safetensors/Cargo.toml",
         ),
         step("vyre", release_train::vyre_version(), "vyre/Cargo.toml"),
         step(

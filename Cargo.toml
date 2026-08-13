@@ -34,7 +34,6 @@ members = [
     "vyre-runtime",
     "vyre-safetensors",
     "vyre-libs",
-    "vyre-scan",
     "vyre-intrinsics",
     "vyre-aot",
     "vyre-frontend-c",
@@ -215,7 +214,6 @@ vyre-test-support = { path = "vyre-test-support" }
 vyre-runtime = { version = "0.7.2", path = "vyre-runtime" }
 vyre-safetensors = { version = "0.7.2", path = "vyre-safetensors" }
 vyre-libs = { version = "0.7.2", path = "vyre-libs" }
-vyre-scan = { version = "0.7.2", path = "vyre-scan" }
 vyre-self-substrate = { version = "0.7.2", path = "vyre-self-substrate" }
 vyre-intrinsics = { version = "0.7.2", path = "vyre-intrinsics" }
 vyre-aot = { version = "0.7.2", path = "vyre-aot" }

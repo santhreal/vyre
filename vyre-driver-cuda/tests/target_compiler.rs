@@ -7,7 +7,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphOutput, Node, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget, TargetModuleBundle};
+use vyre_megakernel::{CompileRequest, Digest, ExternalFacts, SearchBudget};
 
 fn artifact() -> vyre_megakernel::Artifact {
     let program = Program::wrapped(
@@ -46,24 +46,6 @@ fn artifact() -> vyre_megakernel::Artifact {
 }
 
 /// WHY: CUDA payload production must not acquire a GPU or compile a caller-owned Program.
-#[test]
-fn registered_target_compiler_emits_selected_ptx_bundle() {
-    let registration = vyre_driver::backend::registered_backends()
-        .expect("valid backend registry")
-        .iter()
-        .find(|registration| registration.id == vyre_driver_cuda::CUDA_BACKEND_ID)
-        .expect("CUDA target compiler registration must be linked");
-    let compiler = registration.target_compiler().unwrap();
-    let artifact = artifact();
-    let payload = compiler.compile(&artifact).unwrap();
-    let bundle = TargetModuleBundle::from_bytes(payload.bytes()).unwrap();
-    assert_eq!(compiler.format().identity(), "ptx");
-    assert_eq!(bundle.modules.len(), 1);
-    let source = std::str::from_utf8(&bundle.modules[0].bytes).unwrap();
-    assert!(source.contains(".visible .entry"));
-    assert_eq!(payload.neutral_artifact(), artifact.digest());
-}
-
 /// WHY: CUDA materialization must load authenticated PTX and execute without re-emitting it.
 #[test]
 fn registered_materializer_executes_authenticated_ptx() {

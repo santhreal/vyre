@@ -35,7 +35,6 @@ pub mod naga_dump;
 /// Naga validation and binding failure traces.
 pub mod naga_trace;
 pub(crate) mod path_map_serde;
-pub mod scan_explain;
 /// Source-level assignment traversal.
 pub mod source_walker;
 /// WGSL emission and source-line mapping.
@@ -49,10 +48,5 @@ pub use descriptor_dump::{dump_descriptor, DescriptorDump, DescriptorDumpOptions
 pub use naga_dump::{dump_naga_module, NagaDump};
 pub use naga_trace::{
     failure_trace, failure_trace_wgsl, load_bind_result_log, BindResultLogError, FailureTrace,
-};
-pub use scan_explain::{
-    scan_explain_report, ScanExplainEngine, ScanExplainError, ScanExplainExactnessClass,
-    ScanExplainFactor, ScanExplainRejectedEngine, ScanExplainReport, ScanExplainRouteEvidence,
-    ScanExplainVerifierFragment, ScanFactorRole, SCAN_EXPLAIN_REPORT_SCHEMA_VERSION,
 };
 pub use wgsl::{dump_wgsl, dump_wgsl_with_lines, WgslDump};

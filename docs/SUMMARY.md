@@ -125,7 +125,6 @@
 - [Testing `vyre-reference`](testing/vyre-reference.md)
 - [Testing `vyre-runtime`](testing/vyre-runtime.md)
 - [Testing `vyre-safetensors`](testing/vyre-safetensors.md)
-- [Testing `vyre-scan`](testing/vyre-scan.md)
 - [Testing `vyre-self-substrate`](testing/vyre-self-substrate.md)
 - [Testing `vyre-spec`](testing/vyre-spec.md)
 - [Testing `vyre-test-support`](testing/vyre-test-support.md)

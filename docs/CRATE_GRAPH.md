@@ -11,182 +11,174 @@ an internal normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
 graph TD
-  C0["vyre"]
-  C1["vyre-aot"]
-  C2["vyre-bench"]
-  C3["vyre-conform"]
-  C4["vyre-conform-spec"]
-  C5["vyre-debug"]
-  C6["vyre-driver"]
-  C7["vyre-driver-cuda"]
-  C8["vyre-driver-metal"]
-  C9["vyre-driver-reference"]
-  C10["vyre-driver-spirv"]
-  C11["vyre-driver-wgpu"]
-  C12["vyre-emit-metal"]
-  C13["vyre-emit-naga"]
-  C14["vyre-emit-ptx"]
-  C15["vyre-emit-spirv"]
-  C16["vyre-foundation"]
-  C17["vyre-frontend-c"]
-  C18["vyre-frontend-rust"]
-  C19["vyre-grammar-gen"]
-  C20["vyre-intrinsics"]
-  C21["vyre-libs"]
-  C22["vyre-lints"]
-  C23["vyre-lower"]
-  C24["vyre-macros"]
-  C25["vyre-megakernel"]
-  C26["vyre-primitives"]
-  C27["vyre-reference"]
-  C28["vyre-runtime"]
-  C29["vyre-safetensors"]
-  C30["vyre-scan"]
+  C0["structure-gate"]
+  C1["vyre"]
+  C2["vyre-aot"]
+  C3["vyre-bench"]
+  C4["vyre-conform"]
+  C5["vyre-conform-spec"]
+  C6["vyre-debug"]
+  C7["vyre-driver"]
+  C8["vyre-driver-cuda"]
+  C9["vyre-driver-metal"]
+  C10["vyre-driver-reference"]
+  C11["vyre-driver-spirv"]
+  C12["vyre-driver-wgpu"]
+  C13["vyre-emit-metal"]
+  C14["vyre-emit-naga"]
+  C15["vyre-emit-ptx"]
+  C16["vyre-emit-spirv"]
+  C17["vyre-foundation"]
+  C18["vyre-frontend-c"]
+  C19["vyre-frontend-rust"]
+  C20["vyre-grammar-gen"]
+  C21["vyre-intrinsics"]
+  C22["vyre-libs"]
+  C23["vyre-lints"]
+  C24["vyre-lower"]
+  C25["vyre-macros"]
+  C26["vyre-megakernel"]
+  C27["vyre-primitives"]
+  C28["vyre-reference"]
+  C29["vyre-runtime"]
+  C30["vyre-safetensors"]
   C31["vyre-self-substrate"]
   C32["vyre-spec"]
   C33["vyre-test-support"]
   C34["xtask"]
-  C0 --> C6
-  C0 --> C7
-  C0 --> C11
-  C0 --> C16
-  C0 --> C25
-  C0 --> C28
-  C0 --> C30
-  C0 --> C32
-  C1 --> C6
-  C1 --> C16
-  C1 --> C25
+  C1 --> C7
+  C1 --> C8
+  C1 --> C12
+  C1 --> C17
   C1 --> C26
+  C1 --> C29
   C1 --> C32
-  C2 --> C0
-  C2 --> C6
   C2 --> C7
-  C2 --> C8
-  C2 --> C9
-  C2 --> C10
-  C2 --> C11
-  C2 --> C14
-  C2 --> C16
   C2 --> C17
-  C2 --> C18
-  C2 --> C20
-  C2 --> C21
-  C2 --> C23
   C2 --> C26
   C2 --> C27
-  C2 --> C28
   C2 --> C32
-  C3 --> C0
-  C3 --> C4
-  C3 --> C6
+  C3 --> C1
   C3 --> C7
   C3 --> C8
   C3 --> C9
+  C3 --> C10
   C3 --> C11
-  C3 --> C16
-  C3 --> C20
+  C3 --> C12
+  C3 --> C15
+  C3 --> C17
+  C3 --> C18
+  C3 --> C19
   C3 --> C21
-  C3 --> C25
-  C3 --> C26
+  C3 --> C22
+  C3 --> C24
   C3 --> C27
   C3 --> C28
+  C3 --> C29
   C3 --> C32
+  C4 --> C1
+  C4 --> C5
+  C4 --> C7
+  C4 --> C8
+  C4 --> C9
+  C4 --> C10
+  C4 --> C12
+  C4 --> C17
+  C4 --> C21
+  C4 --> C22
+  C4 --> C26
+  C4 --> C27
+  C4 --> C28
+  C4 --> C29
   C4 --> C32
-  C5 --> C0
-  C5 --> C13
-  C5 --> C16
-  C5 --> C21
-  C5 --> C23
-  C5 --> C26
-  C5 --> C30
-  C6 --> C16
+  C5 --> C32
+  C6 --> C1
+  C6 --> C14
+  C6 --> C17
+  C6 --> C22
   C6 --> C24
-  C6 --> C25
-  C6 --> C31
-  C6 --> C32
-  C7 --> C6
-  C7 --> C14
-  C7 --> C16
-  C7 --> C23
+  C6 --> C27
+  C7 --> C17
   C7 --> C25
+  C7 --> C26
   C7 --> C31
   C7 --> C32
-  C8 --> C6
-  C8 --> C12
-  C8 --> C16
-  C8 --> C23
-  C8 --> C25
-  C9 --> C6
-  C9 --> C16
-  C9 --> C27
-  C10 --> C6
-  C10 --> C15
-  C10 --> C16
-  C10 --> C23
-  C10 --> C25
-  C10 --> C32
-  C11 --> C6
-  C11 --> C13
+  C8 --> C7
+  C8 --> C15
+  C8 --> C17
+  C8 --> C24
+  C8 --> C26
+  C8 --> C31
+  C8 --> C32
+  C9 --> C7
+  C9 --> C13
+  C9 --> C17
+  C9 --> C24
+  C9 --> C26
+  C10 --> C7
+  C10 --> C17
+  C10 --> C28
+  C11 --> C7
   C11 --> C16
-  C11 --> C23
-  C11 --> C25
-  C11 --> C31
+  C11 --> C17
+  C11 --> C24
+  C11 --> C26
   C11 --> C32
-  C12 --> C13
-  C12 --> C16
-  C12 --> C23
-  C13 --> C16
-  C13 --> C23
-  C14 --> C16
-  C14 --> C23
-  C15 --> C13
-  C15 --> C23
+  C12 --> C7
+  C12 --> C14
+  C12 --> C17
+  C12 --> C24
+  C12 --> C26
+  C12 --> C31
+  C12 --> C32
+  C13 --> C14
+  C13 --> C17
+  C13 --> C24
+  C14 --> C17
+  C14 --> C24
+  C15 --> C17
+  C15 --> C24
+  C16 --> C14
   C16 --> C24
-  C16 --> C32
-  C17 --> C16
-  C18 --> C16
-  C20 --> C16
-  C20 --> C26
-  C21 --> C16
-  C21 --> C26
-  C21 --> C32
-  C23 --> C16
-  C25 --> C16
-  C25 --> C23
-  C26 --> C16
-  C26 --> C32
-  C27 --> C16
-  C27 --> C26
+  C17 --> C25
+  C17 --> C32
+  C18 --> C17
+  C19 --> C17
+  C21 --> C17
+  C21 --> C27
+  C22 --> C17
+  C22 --> C27
+  C22 --> C32
+  C24 --> C17
+  C26 --> C17
+  C26 --> C24
+  C27 --> C17
   C27 --> C32
-  C28 --> C6
-  C28 --> C16
-  C28 --> C25
-  C28 --> C31
-  C30 --> C6
-  C30 --> C16
-  C30 --> C21
-  C30 --> C25
-  C30 --> C26
-  C30 --> C28
-  C31 --> C16
-  C31 --> C26
-  C34 --> C0
-  C34 --> C2
-  C34 --> C6
+  C28 --> C17
+  C28 --> C27
+  C28 --> C32
+  C29 --> C7
+  C29 --> C17
+  C29 --> C26
+  C29 --> C31
+  C31 --> C17
+  C31 --> C27
+  C34 --> C1
+  C34 --> C3
   C34 --> C7
-  C34 --> C9
+  C34 --> C8
   C34 --> C10
   C34 --> C11
   C34 --> C12
-  C34 --> C16
-  C34 --> C20
+  C34 --> C13
+  C34 --> C17
   C34 --> C21
   C34 --> C22
   C34 --> C23
-  C34 --> C25
+  C34 --> C24
   C34 --> C26
   C34 --> C27
+  C34 --> C28
   C34 --> C32
 ```
 
@@ -200,7 +192,6 @@ graph TD
 | `vyre` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `vyre` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
 | `vyre` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
-| `vyre` | `vyre-scan` | scan product compilation and execution | None | `always` | `normal` | `false` | `true` | `private` | `scan-product` |
 | `vyre` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
 | `vyre-aot` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
 | `vyre-aot` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
@@ -247,7 +238,6 @@ graph TD
 | `vyre-debug` | `vyre-libs` | product operation builders | `c-parser` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-debug` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `public` | `lowering` |
 | `vyre-debug` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
-| `vyre-debug` | `vyre-scan` | scan product compilation and execution | None | `always` | `normal` | `false` | `true` | `public` | `scan-product` |
 | `vyre-driver` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-driver` | `vyre-macros` | compile-time registration generation | None | `always` | `normal` | `false` | `true` | `private` | `registration-macros` |
 | `vyre-driver` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
@@ -311,12 +301,6 @@ graph TD
 | `vyre-runtime` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-runtime` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
 | `vyre-runtime` | `vyre-self-substrate` | optional scheduler and analysis substrate | None | `always` | `normal` | `true` | `true` | `private` | `self-substrate` |
-| `vyre-scan` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `public` | `backend-contract` |
-| `vyre-scan` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
-| `vyre-scan` | `vyre-libs` | product operation builders | `full`, `matching-regex` | `always` | `normal` | `false` | `true` | `public` | `product-libraries` |
-| `vyre-scan` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `public` | `megakernel-compiler` |
-| `vyre-scan` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
-| `vyre-scan` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `public` | `runtime` |
 | `vyre-self-substrate` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `public` | `foundation-ir` |
 | `vyre-self-substrate` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `public` | `primitive-library` |
 | `xtask` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |

@@ -45,7 +45,7 @@ fn count_node_exprs(node: &Node) -> usize {
         | Node::Resume { .. }
         | Node::Return
         | Node::Barrier {
-            ordering: vyre::memory_model::MemoryOrdering::SeqCst,
+            ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst,
         }
         | Node::Opaque(_) => 0,
         _ => panic!("Fix: update newton_schulz IR-shape test for new Node variant."),

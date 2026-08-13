@@ -110,10 +110,6 @@ pub use vyre_runtime::{
     admit_artifact, admit_envelope, ArtifactAdmissionError, ArtifactSession, ArtifactSessionError,
     PersistentExecutor, RetainedArtifactSession, RetryClass,
 };
-
-/// Canonical scan compilation, session, paging, residency, and readback owner.
-pub use vyre_scan as scan;
-
 /// Domain-neutral tagged byte-range contract.
 pub use vyre_foundation::match_result;
 
@@ -122,5 +118,5 @@ pub use vyre_driver::{ArtifactInstance, BindingSet, Completion, DeviceIdentity, 
 /// Canonical frontend IR program and validation entry point.
 pub use ir::{validate, Program};
 
-/// Domain-neutral tagged byte range shared by scan and source-processing products.
+/// Domain-neutral tagged byte range shared by source-processing products.
 pub use vyre_foundation::match_result::ByteRange;

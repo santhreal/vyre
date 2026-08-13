@@ -30,6 +30,13 @@ boundary = "private"
 seam = "lowering"
 
 [[crate]]
+package = "structure-gate"
+path = "structure-gate"
+owner = "release-tooling"
+layer = "tooling"
+responsibility = "Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile."
+
+[[crate]]
 package = "vyre"
 path = "vyre"
 owner = "public-facade"
@@ -101,17 +108,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "runtime"
-
-[[crate.dependency]]
-package = "vyre-scan"
-purpose = "scan product compilation and execution"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "scan-product"
 
 [[crate.dependency]]
 package = "vyre-spec"
@@ -1120,79 +1116,6 @@ layer = "runtime"
 responsibility = "Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency."
 
 [[crate]]
-package = "vyre-scan"
-path = "vyre-scan"
-owner = "scan-product"
-layer = "runtime"
-responsibility = "Own scan compilation, database codecs, artifact sessions, paging, residency, execution, and readback."
-
-[[crate.dependency]]
-package = "vyre-driver"
-purpose = "backend-neutral target, materialization, submission, and completion contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "backend-contract"
-
-[[crate.dependency]]
-package = "vyre-foundation"
-purpose = "typed IR, graph, diagnostics, validation, and semantic optimization contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "foundation-ir"
-
-[[crate.dependency]]
-package = "vyre-libs"
-purpose = "product operation builders"
-features = ["full", "matching-regex"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "product-libraries"
-
-[[crate.dependency]]
-package = "vyre-megakernel"
-purpose = "whole-graph compilation and immutable artifact contracts"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "megakernel-compiler"
-
-[[crate.dependency]]
-package = "vyre-primitives"
-purpose = "reusable semantic Program builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "public"
-seam = "primitive-library"
-
-[[crate.dependency]]
-package = "vyre-runtime"
-purpose = "artifact admission, residency, submission, recovery, and readback lifecycle"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "runtime"
-
-[[crate]]
 package = "vyre-libs"
 path = "vyre-libs"
 owner = "product-libraries"
@@ -1788,17 +1711,6 @@ optional = false
 default_features = false
 boundary = "private"
 seam = "primitive-library"
-
-[[crate.dependency]]
-package = "vyre-scan"
-purpose = "scan product compilation and execution"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "public"
-seam = "scan-product"
 
 [[crate]]
 package = "vyre-grammar-gen"

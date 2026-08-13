@@ -11,6 +11,15 @@ crosses the public API, and the destination seam that owns the contract.
 
 ## Per-crate ownership
 
+### `structure-gate`
+
+Enforce the crate roster, one operation identity per semantic operation, and one home per concept. Depends on no vyre crate so it keeps running while the workspace does not compile.
+
+- Path: `structure-gate`
+- Owner: `release-tooling`
+- Layer: `tooling`
+- Internal production dependencies: None
+
 ### `vyre`
 
 Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points without re-owning backend contracts.
@@ -18,7 +27,7 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 - Path: `vyre`
 - Owner: `public-facade`
 - Layer: `facade`
-- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-scan`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -28,7 +37,6 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
 | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | `private` | `runtime` |
-| `vyre-scan` | scan product compilation and execution | `private` | `scan-product` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
 
 ### `vyre-aot`
@@ -125,7 +133,7 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 - Path: `vyre-debug`
 - Owner: `debugging`
 - Layer: `tooling`
-- Internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`, `vyre-scan`
+- Internal production dependencies: `vyre`, `vyre-emit-naga`, `vyre-foundation`, `vyre-libs`, `vyre-lower`, `vyre-primitives`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -135,7 +143,6 @@ Inspect, explain, and diagnose typed programs, lowering, and product-library com
 | `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-lower` | verified backend-neutral representation lowering | `public` | `lowering` |
 | `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
-| `vyre-scan` | scan product compilation and execution | `public` | `scan-product` |
 
 ### `vyre-driver`
 
@@ -475,24 +482,6 @@ Validate safetensors metadata, shard indexes, compiler requirements, trusted sha
 - Owner: `safetensors-adapter`
 - Layer: `runtime`
 - Internal production dependencies: None
-
-### `vyre-scan`
-
-Own scan compilation, database codecs, artifact sessions, paging, residency, execution, and readback.
-
-- Path: `vyre-scan`
-- Owner: `scan-product`
-- Layer: `runtime`
-- Internal production dependencies: `vyre-driver`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`
-
-| Dependency | Purpose | Boundary | Owning seam |
-| --- | --- | --- | --- |
-| `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `public` | `backend-contract` |
-| `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
-| `vyre-libs` | product operation builders | `public` | `product-libraries` |
-| `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
-| `vyre-primitives` | reusable semantic Program builders | `public` | `primitive-library` |
-| `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | `public` | `runtime` |
 
 ### `vyre-self-substrate`
 

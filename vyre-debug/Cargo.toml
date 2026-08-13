@@ -23,7 +23,6 @@ path = "src/bin/vyre_dbg.rs"
 [dependencies]
 vyre.workspace = true
 vyre-foundation.workspace = true
-vyre-scan.workspace = true
 vyre-lower.workspace = true
 vyre-emit-naga.workspace = true
 naga = { workspace = true, features = ["wgsl-out"] }

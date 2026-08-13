@@ -18,17 +18,6 @@ required_fields = [
 ]
 
 [[command]]
-command_id = "vyre-scan"
-subcommand = "scan"
-option_contract = "short-and-long-options-with-stable-long-names"
-help_contract = "short-help-and-long-help-include-config-precedence"
-config_binding = "CONFIG_PRECEDENCE_AND_TIERING.toml"
-env_binding = "documented-env-vars-only"
-completion_contract = "shell-completions-generated-from-cli-schema"
-tty_policy = "human-progress-only-on-tty"
-machine_output_policy = "json-sarif-and-quiet-modes-are-stable"
-
-[[command]]
 command_id = "vyre-explain"
 subcommand = "explain"
 option_contract = "long-options-preferred-for-public-docs"

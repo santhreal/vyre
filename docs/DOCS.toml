@@ -1636,19 +1636,6 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
-path = "testing/vyre-scan.md"
-title = "Testing `vyre-scan`"
-status = "generated"
-audience = "contributor"
-owner = "testing"
-kind = "testing"
-section = "Testing and conformance"
-authority = "testing/TESTING.toml"
-generation = "generated"
-generator = "../scripts/testing_guides.py"
-nav = true
-
-[[page]]
 path = "testing/vyre-self-substrate.md"
 title = "Testing `vyre-self-substrate`"
 status = "generated"

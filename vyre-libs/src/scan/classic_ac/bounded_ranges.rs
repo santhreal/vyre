@@ -41,7 +41,7 @@ pub(crate) use regex_exact::regex_exact_ranges_program_ext;
 /// Build a Program that scans `haystack` for any AC match and emits
 /// `(pattern_id, start, end)` triples through the canonical
 /// [`append_match`] hit buffer. Pairs with
-/// `vyre_scan::dispatch_io::pack_haystack_u32`: each invocation `i`
+/// the product-side haystack packer: each invocation `i`
 /// corresponds to byte position `i` of the
 /// **unpacked** haystack, but loads from the packed u32 buffer via
 /// [`load_packed_byte_expr`](crate::scan::builders::load_packed_byte_expr).

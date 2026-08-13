@@ -6,7 +6,7 @@
 //! must assert a specific error shape, not a general success.
 
 use vyre::ir::{AtomicOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre::memory_model::MemoryOrdering;
+use vyre_foundation::memory_model::MemoryOrdering;
 
 use vyre_emit_naga::program as naga_emit;
 

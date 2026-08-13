@@ -57,7 +57,6 @@ and [`CRATE_OWNERSHIP.toml`](CRATE_OWNERSHIP.toml).
 | Backend contracts | `vyre-driver` | Own backend-neutral target compiler, materializer, device, binding, submission, completion, and capability contracts. |
 | Concrete backends | `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-driver-spirv`, `vyre-driver-metal`, `vyre-driver-reference` | Register target compilers, materializers, and devices; admit authenticated payloads; submit typed work. |
 | Runtime | `vyre-runtime` | Orchestrate compilation, admission, artifact sessions, recovery, persistence, residency, scheduling, and readback. |
-| Scan product | `vyre-scan` | Own scan database framing, sessions, paging, residency, execution, and readback. |
 | Artifact packaging | `vyre-aot` | Package validated artifacts without owning artifact identity or live dispatch. |
 | Frontends | `vyre-frontend-c`, `vyre-frontend-rust` | Lower source-language subsets into backend-neutral `Program` or `ProgramGraph` values. |
 | Conformance | `vyre-conform`, `vyre-conform-spec` | Execute canonical artifact routes and own frozen conformance schemas. |

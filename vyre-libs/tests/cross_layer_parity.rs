@@ -2,7 +2,7 @@
 //!
 //! These tests cover DFA construction, literal-set reference execution, and
 //! regex-to-NFA compilation. Registered artifact execution is covered by
-//! `vyre-scan` product tests and concrete backend conformance tests.
+//! the downstream scan product's tests and concrete backend conformance tests.
 
 #![allow(deprecated)]
 // (MatchScan trait imported in the tests that need it.)

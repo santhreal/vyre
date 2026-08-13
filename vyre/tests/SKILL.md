@@ -32,7 +32,6 @@ This crate proves that the canonical owners compose through one public route:
 - `vyre::ir` comes from `vyre-foundation`.
 - `vyre::compiler` comes from `vyre-megakernel`.
 - `vyre::ArtifactSession` comes from `vyre-runtime`.
-- `vyre::scan` comes from `vyre-scan`.
 - Concrete target compilation and materialization stay in concrete drivers.
 
 ## Bench and fuzz targets

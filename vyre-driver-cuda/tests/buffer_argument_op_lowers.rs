@@ -174,7 +174,7 @@ fn passing_a_value_for_a_buffer_parameter_is_rejected() {
     );
     let report = vyre_foundation::validate::validate(&bad);
     assert!(
-        report.iter().any(|e| e.to_string().contains("V053")),
+        report.iter().any(|e| e.code().as_str() == "V053"),
         "a scalar in a buffer parameter must raise V053, got {:?}",
         report
     );
@@ -199,7 +199,7 @@ fn referencing_an_undeclared_buffer_is_rejected() {
     );
     let report = vyre_foundation::validate::validate(&bad);
     assert!(
-        report.iter().any(|e| e.to_string().contains("V052")),
+        report.iter().any(|e| e.code().as_str() == "V052"),
         "an undeclared buffer reference must raise V052, got {:?}",
         report
     );

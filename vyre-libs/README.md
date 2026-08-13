@@ -23,7 +23,7 @@ passes can unroll. This is LLVM's function-vs-always-inline split at
 IR level.
 
 One crate with four public modules today; each module promotes to
-its own crates.io identity (`vyre-nn`, `vyre-math`, `vyre-scan`,
+its own crates.io identity (`vyre-nn`, `vyre-math`,
 `vyre-crypto`) when its consumer base justifies the fragmentation.
 
 ## Usage

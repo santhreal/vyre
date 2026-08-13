@@ -17,7 +17,6 @@ in the workspace.
   target payloads, and target compiler facets from `vyre-megakernel`.
 - **`vyre::runtime`** exposes artifact compilation, materialization, typed
   submission, completion, and recovery from `vyre-runtime`.
-- **`vyre::scan`** exposes the scan product from `vyre-scan`.
 
 Backend implementation contracts remain under `vyre-driver`. Concrete driver
 crates implement `VyreBackend`, `TargetCompiler`, and materializer facets.

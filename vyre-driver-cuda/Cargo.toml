@@ -51,7 +51,6 @@ vyre-test-support.workspace = true
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. The canonical scan product is a direct dev dependency.
 vyre-libs = { path = "../vyre-libs", features = ["full", "c-parser"] }
-vyre-scan.workspace = true
 vyre-frontend-rust = { path = "../vyre-frontend-rust" }
 tempfile.workspace = true
 serde_json.workspace = true
