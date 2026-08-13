@@ -36,9 +36,10 @@ const CATEGORY_C_CRATE: &str = "vyre-primitives";
 
 /// Directory that owns every module named `*substrate*`.
 ///
-/// `vyre_foundation::pass_substrate` is the one sanctioned exception: it
-/// cannot consume the op crates without a dependency cycle, so foundation
-/// keeps a local copy, registered with `lego-audit`.
+/// `vyre_foundation::pass_substrate` is exempt because it owns the CPU pass
+/// math outright: the GPU crate imports those functions and wraps them in
+/// dispatch rather than reimplementing them. The exemption is about the name
+/// only, and it retires when the three `*substrate*` concepts are renamed.
 const SUBSTRATE_HOME: &str = "vyre-self-substrate/src/optimizer";
 const SUBSTRATE_EXCEPTIONS: &[&str] = &["vyre-foundation/src/pass_substrate"];
 
@@ -898,9 +899,9 @@ mod tests {
 
     #[test]
     fn the_sanctioned_foundation_pass_substrate_is_accepted() {
-        // ARCHITECTURE.md: foundation cannot consume the op crates without a
-        // cycle, so `pass_substrate` is the one accepted duplication. Every
-        // other second home stays a failure.
+        // ARCHITECTURE.md: foundation owns the CPU pass math and the GPU crate
+        // imports it, so this name is exempt. Every other second home stays a
+        // failure.
         let failures = substrate_home_failures(&[
             "vyre-foundation/src/pass_substrate/dataflow_fixpoint.rs".to_string(),
         ]);

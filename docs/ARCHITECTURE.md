@@ -140,16 +140,17 @@ foundation's, the GPU engine replays them.
   generic `math/` solvers) move to `vyre-libs`.
 - Dispatch and telemetry machinery moves to its consumers in
   `vyre-driver` and `vyre-runtime`.
-- Research modules consumed only by their own tests are parked or
-  deleted per the module audit in `DEDUP_PLAN.md`; they do not move to
-  libs.
+- Research modules consumed today only by their own tests become real
+  Category A operations in `vyre-libs`, registered like any other
+  composition.
 
 The dependency DAG: `vyre-foundation` (IR, registry, CPU optimizer) ←
 `vyre-primitives` (hardware intrinsics) ← `vyre-libs` (compositions) ←
-GPU pass engine ← compiler and drivers. Foundation still cannot consume
-the operation crates; `vyre_foundation::pass_substrate` remains its
-sanctioned local exception and is the one accepted duplication,
-registered with `lego-audit`.
+GPU pass engine ← compiler and drivers. Foundation cannot consume the
+operation crates, so `vyre_foundation::pass_substrate` owns the CPU pass
+math outright. It is not a duplicate: the GPU crate imports those
+functions and adds dispatch around them, so one implementation keeps one
+home. What the three `*substrate*` names share is the word, not the code.
 
 Registry impact: `OperationTier::Primitive` becomes
 `OperationTier::Intrinsic`; every registration site and
