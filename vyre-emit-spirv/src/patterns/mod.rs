@@ -9,6 +9,8 @@ pub mod subgroup_capabilities;
 pub mod workgroup_size_validation;
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::{KernelDescriptor, SubgroupCapabilities};
 
 /// Unified SPIR-V-side pattern audit. Runs every shipped SPIR-V
@@ -34,59 +36,62 @@ pub struct SpirvAuditReport {
     pub workgroup_validation: workgroup_size_validation::ValidationReport,
 }
 
+impl PatternAudit for SpirvAuditReport {
+    const FINDING_NOUN: &'static str = "findings";
+
+    fn kernel_id(&self) -> &str {
+        &self.kernel_id
+    }
+
+    fn finding_count(&self) -> usize {
+        self.required_capability_count() + self.workgroup_validation.violations.len()
+    }
+
+    fn write_target_tag(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        out.write_str("spirv")
+    }
+
+    fn write_breakdown(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(
+            out,
+            "{} subgroup caps, {} wg violations",
+            self.required_capability_count(),
+            self.workgroup_validation.violations.len()
+        )
+    }
+}
+
 impl SpirvAuditReport {
+    /// Subgroup capability bits the kernel requires.
+    fn required_capability_count(&self) -> usize {
+        let caps = &self.subgroup.capabilities;
+        usize::from(caps.basic)
+            + usize::from(caps.ballot)
+            + usize::from(caps.shuffle)
+            + usize::from(caps.arithmetic)
+    }
+
     /// True iff at least one subgroup capability needs to be enabled
     /// OR at least one workgroup-size violation must be addressed.
     /// Both signals matter for pipeline construction.
     pub fn requires_action(&self) -> bool {
-        let caps = &self.subgroup.capabilities;
-        let needs_caps = caps.basic || caps.ballot || caps.shuffle || caps.arithmetic;
-        let has_violations = !self.workgroup_validation.violations.is_empty();
-        needs_caps || has_violations
+        PatternAudit::has_any(self)
     }
 
     /// Number of distinct findings across both patterns.
     pub fn total_findings(&self) -> usize {
-        let caps = &self.subgroup.capabilities;
-        let mut n = 0;
-        if caps.basic {
-            n += 1;
-        }
-        if caps.ballot {
-            n += 1;
-        }
-        if caps.shuffle {
-            n += 1;
-        }
-        if caps.arithmetic {
-            n += 1;
-        }
-        n + self.workgroup_validation.violations.len()
+        PatternAudit::finding_count(self)
     }
 
     /// One-line human-readable summary suitable for log lines.
     pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
-        let caps = &self.subgroup.capabilities;
-        format!(
-            "{id} (spirv): {} findings ({} subgroup caps, {} wg violations)",
-            self.total_findings(),
-            (caps.basic as usize)
-                + (caps.ballot as usize)
-                + (caps.shuffle as usize)
-                + (caps.arithmetic as usize),
-            self.workgroup_validation.violations.len(),
-        )
+        PatternAudit::format_short(self)
     }
 
     /// True iff no SPIR-V-specific findings  -  no required capabilities,
     /// no workgroup-size violations.
     pub fn is_clean(&self) -> bool {
-        !self.requires_action()
+        PatternAudit::is_clean(self)
     }
 
     /// Identity element for `merge`  -  no required caps, no
@@ -131,7 +136,7 @@ impl SpirvAuditReport {
 
 impl std::fmt::Display for SpirvAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
+        self.write_short(f)
     }
 }
 

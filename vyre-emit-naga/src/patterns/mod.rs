@@ -10,6 +10,8 @@ pub mod pipeline_prewarm;
 pub mod vec_pack;
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::KernelDescriptor;
 
 /// Unified naga-side pattern audit. Runs every shipped naga pattern
@@ -36,36 +38,51 @@ pub struct NagaAuditReport {
     pub prewarm: pipeline_prewarm::PrewarmHint,
 }
 
+impl PatternAudit for NagaAuditReport {
+    const FINDING_NOUN: &'static str = "candidates";
+
+    fn kernel_id(&self) -> &str {
+        &self.kernel_id
+    }
+
+    fn finding_count(&self) -> usize {
+        self.vec_pack.groups.len() + usize::from(self.prewarm.should_prewarm)
+    }
+
+    fn write_target_tag(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        out.write_str("naga")
+    }
+
+    fn write_breakdown(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(
+            out,
+            "{} vec_pack, prewarm={}",
+            self.vec_pack.groups.len(),
+            self.prewarm.should_prewarm
+        )
+    }
+}
+
 impl NagaAuditReport {
     /// Sum of actionable findings across the per-kernel patterns.
     /// Pre-warm contributes 1 if recommended.
     pub fn total_candidates(&self) -> usize {
-        self.vec_pack.groups.len() + (self.prewarm.should_prewarm as usize)
+        PatternAudit::finding_count(self)
     }
 
     /// Return whether any Naga-specific optimization is actionable.
     pub fn has_any(&self) -> bool {
-        self.total_candidates() > 0
+        PatternAudit::has_any(self)
     }
 
     /// One-line human-readable summary suitable for log lines.
     pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
-        format!(
-            "{id} (naga): {} candidates ({} vec_pack, prewarm={})",
-            self.total_candidates(),
-            self.vec_pack.groups.len(),
-            self.prewarm.should_prewarm,
-        )
+        PatternAudit::format_short(self)
     }
 
     /// True iff no naga-specific optimization opportunities found.
     pub fn is_clean(&self) -> bool {
-        !self.has_any()
+        PatternAudit::is_clean(self)
     }
 
     /// Identity element for `merge`  -  empty report. Useful as the
@@ -98,7 +115,7 @@ impl NagaAuditReport {
 
 impl std::fmt::Display for NagaAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
+        self.write_short(f)
     }
 }
 

@@ -1,5 +1,25 @@
+//! Body-local index arithmetic facts for PTX emission.
+//!
+//! `verified-intentional`: this index survives alongside
+//! `vyre_lower::analyses::def_use` rather than consuming it. The target
+//! constraint is what PTX asks of an index. `ld.global.v2/v4` is only legal
+//! when the base address is naturally aligned to the vector width, and
+//! `ldmatrix` addresses a fragment row by its offset within a 32-lane group,
+//! so the emitter needs `index mod k` for a symbolic index expression, not a
+//! list of use sites. That is what [`IndexFacts::index_modulo`] and
+//! `normalized_index` compute, and it has no meaning off the PTX register
+//! model. `def_use` answers a different question (which operand position of
+//! which op in which body references an id) over the whole descriptor tree,
+//! and its per-position `UseSite` allocation cannot be narrowed to the single
+//! body an emitter has in hand.
+//!
+//! What is NOT re-derived here: which operand positions name an SSA result,
+//! and which ids an op defines. Both come from `vyre-lower`, their one owner.
+//! A private copy of either table drifted out of agreement once already.
+
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
+use vyre_lower::operand_semantics::operand_is_result_reference;
 use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 pub(crate) struct IndexFacts {
@@ -28,21 +48,16 @@ const AFFINE_ROOT_WORKGROUP: u32 = u32::MAX - 8;
 impl IndexFacts {
     pub(crate) fn new(body: &KernelBody) -> Self {
         let mut producer = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
-        let mut consumer_indices =
+        let mut consumer_indices: FxHashMap<u32, Vec<usize>> =
             FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         let mut lit_u32 = FxHashMap::with_capacity_and_hasher(body.ops.len(), Default::default());
         for (idx, op) in body.ops.iter().enumerate() {
+            for result_id in op.result_ids() {
+                producer.insert(result_id, idx);
+            }
             let Some(result_id) = op.result else {
                 continue;
             };
-            producer.insert(result_id, idx);
-            if matches!(op.kind, KernelOpKind::MatrixMma { .. }) {
-                for offset in 1..4 {
-                    if let Some(fragment_id) = result_id.checked_add(offset) {
-                        producer.insert(fragment_id, idx);
-                    }
-                }
-            }
             if !matches!(op.kind, KernelOpKind::Literal) {
                 continue;
             }
@@ -62,15 +77,12 @@ impl IndexFacts {
             }
         }
         for (op_idx, op) in body.ops.iter().enumerate() {
-            visit_value_operands(op, |operand| {
-                if !producer.contains_key(&operand) {
-                    return;
+            for (pos, &operand) in op.operands.iter().enumerate() {
+                if !operand_is_result_reference(&op.kind, pos) || !producer.contains_key(&operand) {
+                    continue;
                 }
-                consumer_indices
-                    .entry(operand)
-                    .or_insert_with(Vec::new)
-                    .push(op_idx);
-            });
+                consumer_indices.entry(operand).or_default().push(op_idx);
+            }
         }
         Self {
             producer,
@@ -296,73 +308,6 @@ impl IndexFacts {
         match self.consumer_indices(result_id)? {
             [index] => Some(*index),
             _ => None,
-        }
-    }
-}
-
-fn visit_value_operands(op: &KernelOp, mut visit: impl FnMut(u32)) {
-    match &op.kind {
-        KernelOpKind::Literal
-        | KernelOpKind::LocalInvocationId
-        | KernelOpKind::GlobalInvocationId
-        | KernelOpKind::WorkgroupId
-        | KernelOpKind::SubgroupLocalId
-        | KernelOpKind::SubgroupSize
-        | KernelOpKind::LoopIndex { .. }
-        | KernelOpKind::LoopCarrier { .. }
-        | KernelOpKind::BufferLength
-        | KernelOpKind::StructuredBlock
-        | KernelOpKind::Return
-        | KernelOpKind::Barrier { .. }
-        | KernelOpKind::Region { .. }
-        | KernelOpKind::AsyncWait { .. }
-        | KernelOpKind::Resume { .. }
-        | KernelOpKind::IndirectDispatch { .. } => {}
-        KernelOpKind::LoadGlobal | KernelOpKind::LoadShared | KernelOpKind::LoadConstant => {
-            if let Some(&index_id) = op.operands.get(1) {
-                visit(index_id);
-            }
-        }
-        KernelOpKind::StoreGlobal | KernelOpKind::StoreShared | KernelOpKind::Atomic { .. } => {
-            for &operand in op.operands.iter().skip(1) {
-                visit(operand);
-            }
-        }
-        KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => {
-            if let Some(&condition_id) = op.operands.first() {
-                visit(condition_id);
-            }
-        }
-        KernelOpKind::StructuredForLoop { .. } => {
-            for &operand in op.operands.iter().take(2) {
-                visit(operand);
-            }
-        }
-        KernelOpKind::AsyncLoad { .. } | KernelOpKind::AsyncStore { .. } => {
-            for &operand in op.operands.iter().skip(2) {
-                visit(operand);
-            }
-        }
-        KernelOpKind::Copy
-        | KernelOpKind::LoopCarrierInit { .. }
-        | KernelOpKind::LoopCarrierEnd { .. }
-        | KernelOpKind::BinOpKind(_)
-        | KernelOpKind::UnOpKind(_)
-        | KernelOpKind::Fma
-        | KernelOpKind::MatrixMma { .. }
-        | KernelOpKind::Select
-        | KernelOpKind::Cast { .. }
-        | KernelOpKind::SubgroupBallot
-        | KernelOpKind::SubgroupShuffle
-        | KernelOpKind::SubgroupBroadcast
-        | KernelOpKind::SubgroupReduce { .. }
-        | KernelOpKind::Trap { .. }
-        | KernelOpKind::Call { .. }
-        | KernelOpKind::OpaqueExpr(_)
-        | KernelOpKind::OpaqueNode(_) => {
-            for &operand in &op.operands {
-                visit(operand);
-            }
         }
     }
 }
@@ -712,5 +657,94 @@ mod tests {
         assert!(facts.index_is_multiple_of(&body, 11, 2));
         assert!(!facts.index_is_multiple_of(&body, 11, 4));
         assert!(!facts.index_is_multiple_of(&body, 12, 2));
+    }
+
+    /// Resolution guard for the operand-namespace clone family.
+    ///
+    /// This crate used to carry its own operand classifier. Step 0 proved it
+    /// had drifted from `vyre_lower::operand_semantics`: on operand counts the
+    /// op contracts forbid, the local copy dropped trailing operands from the
+    /// use map (`take(2)` on `StructuredForLoop`, `skip(1)` on the loads)
+    /// while the owner kept them. The owner won, because under-counting uses
+    /// is the unsafe direction: a value that is still read looks dead to a
+    /// hoisting or elimination decision.
+    ///
+    /// A `StructuredForLoop` whose operands run past `[lo, hi, body]` is
+    /// out of contract, and every operand past the body index must still be
+    /// counted as a use.
+    #[test]
+    fn out_of_contract_loop_operands_still_count_as_uses() {
+        let body = KernelBody {
+            ops: vec![
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(1),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![1],
+                    result: Some(2),
+                },
+                KernelOp {
+                    kind: KernelOpKind::Literal,
+                    operands: vec![0],
+                    result: Some(3),
+                },
+                KernelOp {
+                    kind: KernelOpKind::StructuredForLoop {
+                        loop_var: "i".into(),
+                    },
+                    operands: vec![1, 2, 0, 3],
+                    result: None,
+                },
+            ],
+            child_bodies: vec![KernelBody {
+                ops: vec![],
+                child_bodies: vec![],
+                literals: vec![],
+            }],
+            literals: vec![LiteralValue::U32(0), LiteralValue::U32(4)],
+        };
+        let facts = IndexFacts::new(&body);
+        assert_eq!(facts.result_use_count(1), 1, "lo bound is a use");
+        assert_eq!(facts.result_use_count(2), 1, "hi bound is a use");
+        assert_eq!(
+            facts.result_use_count(3),
+            1,
+            "an operand past the body index is still an SSA reference"
+        );
+    }
+
+    /// The MMA accumulator tuple is `vyre-lower`'s rule, not this crate's.
+    /// Every fragment id must resolve to the producing op without this file
+    /// restating how wide the tuple is.
+    #[test]
+    fn mma_fragment_ids_resolve_to_the_producing_op() {
+        use vyre_lower::{MatrixMmaElement, MatrixMmaLayout, MatrixMmaShape};
+        let mma = KernelOp {
+            kind: KernelOpKind::MatrixMma {
+                shape: MatrixMmaShape::M16N8K16,
+                a_layout: MatrixMmaLayout::RowMajor,
+                b_layout: MatrixMmaLayout::ColMajor,
+                a_type: MatrixMmaElement::F16,
+                b_type: MatrixMmaElement::F16,
+                accum_type: MatrixMmaElement::F32,
+            },
+            operands: vec![],
+            result: Some(10),
+        };
+        let expected: Vec<u32> = mma.result_ids().collect();
+        assert_eq!(expected, vec![10, 11, 12, 13]);
+        let body = KernelBody {
+            ops: vec![mma],
+            child_bodies: vec![],
+            literals: vec![],
+        };
+        let facts = IndexFacts::new(&body);
+        for id in expected {
+            assert_eq!(facts.producer_idx(id), Some(0), "fragment id {id}");
+        }
+        assert_eq!(facts.producer_idx(14), None, "tuple must not run past 4");
     }
 }

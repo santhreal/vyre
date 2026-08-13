@@ -10,16 +10,27 @@
 //! reconvergence overhead. The loss: every thread runs both arms.
 //! Profitable when the arms are short (≤ 4 instructions each).
 //!
-//! Phase-1 detection: walk every `StructuredIfThen` /
-//! `StructuredIfThenElse` op; for each, count ops in the then/else
-//! body; if both bodies are ≤ 4 ops AND contain no non-predicatable
-//! side effects, flag as a predicated-execution candidate. Ordinary
-//! global/shared stores are predicatable on PTX and are handled by the
-//! emitter, so treating every store as unsafe would suppress the fast
-//! path for the exact branch shape this pass is meant to find.
+//! Phase-1 detection: for every `StructuredIfThen` / `StructuredIfThenElse`
+//! op, count ops in the then/else body; if both bodies are ≤ 4 ops AND
+//! contain no non-predicatable side effects, flag as a predicated-execution
+//! candidate. Ordinary global/shared stores are predicatable on PTX and are
+//! handled by the emitter, so treating every store as unsafe would suppress
+//! the fast path for the exact branch shape this pass is meant to find.
+//!
+//! The branch traversal is `vyre_lower::analyses::structured_walk`, not a
+//! copy of it. What stays here is the PTX judgment:
+//! [`has_unsafe_predicated_effect`] enumerates the ops that a PTX instruction
+//! predicate cannot guard, which is a property of the `@%p` predication
+//! encoding and has no meaning on a target without per-instruction
+//! predicates. The walk enters loop, block, and region bodies but NOT branch
+//! arms, because this pass judges an arm as one predicable unit; a site
+//! inside an arm is already accounted for by that arm's unsafe-effect flag.
 
 use serde::{Deserialize, Serialize};
-use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
+use vyre_lower::analyses::structured_walk::{
+    branch_at, walk_structured, ArmDescent, BranchForm, StructuredVisitor,
+};
+use vyre_lower::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 
 /// One short structured branch eligible for predicated execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,81 +77,53 @@ pub const PREDICATION_OP_THRESHOLD: u32 = 4;
 /// Analyze short structured branches for predicated execution.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> PredicationPlan {
-    let mut candidates = Vec::new();
-    scan_body(&desc.body, &mut candidates, 0);
+    let mut collector = CandidateCollector::default();
+    walk_structured(&desc.body, ArmDescent::Skip, &mut collector);
     PredicationPlan {
         kernel_id: desc.id.clone(),
-        candidates,
+        candidates: collector.candidates,
     }
 }
 
-fn scan_body(
-    body: &KernelBody,
-    candidates: &mut Vec<PredicationCandidate>,
-    op_index_offset: usize,
-) {
-    for (local_idx, op) in body.ops.iter().enumerate() {
-        let op_index = op_index_offset + local_idx;
-        match &op.kind {
-            KernelOpKind::StructuredIfThen => {
-                let Some(then_id) = op.operands.get(1).copied() else {
-                    continue;
-                };
-                let Some(then) = body.child_bodies.get(then_id as usize) else {
-                    continue;
-                };
-                let then_count = then.ops.len() as u32;
-                let then_has_store = has_global_store(then);
-                let then_has_unsafe_effect = has_unsafe_predicated_effect(then);
-                if then_count <= PREDICATION_OP_THRESHOLD {
-                    candidates.push(PredicationCandidate {
-                        if_op_index: op_index,
-                        then_body_op_count: then_count,
-                        else_body_op_count: 0,
-                        has_global_store: then_has_store,
-                        has_unsafe_effect: then_has_unsafe_effect,
-                    });
-                }
-            }
-            KernelOpKind::StructuredIfThenElse => {
-                let (Some(then_id), Some(else_id)) =
-                    (op.operands.get(1).copied(), op.operands.get(2).copied())
-                else {
-                    continue;
-                };
-                let (Some(then), Some(else_b)) = (
-                    body.child_bodies.get(then_id as usize),
-                    body.child_bodies.get(else_id as usize),
-                ) else {
-                    continue;
-                };
-                let then_count = then.ops.len() as u32;
-                let else_count = else_b.ops.len() as u32;
-                let has_store = has_global_store(then) || has_global_store(else_b);
-                let has_unsafe_effect =
-                    has_unsafe_predicated_effect(then) || has_unsafe_predicated_effect(else_b);
-                if then_count <= PREDICATION_OP_THRESHOLD && else_count <= PREDICATION_OP_THRESHOLD
-                {
-                    candidates.push(PredicationCandidate {
-                        if_op_index: op_index,
-                        then_body_op_count: then_count,
-                        else_body_op_count: else_count,
-                        has_global_store: has_store,
-                        has_unsafe_effect,
-                    });
-                }
-            }
-            KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                if let Some(child_id) = op.operands.last() {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        scan_body(child, candidates, op_index_offset + body.ops.len());
-                    }
-                }
-            }
-            _ => {}
+#[derive(Default)]
+struct CandidateCollector {
+    candidates: Vec<PredicationCandidate>,
+}
+
+impl<'a> StructuredVisitor<'a> for CandidateCollector {
+    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+        let Some(branch) = branch_at(body, op) else {
+            return;
+        };
+        let Some(then) = branch.then_body else {
+            return;
+        };
+        // An if-else whose else arm does not resolve is not a shape this pass
+        // can reason about; an if-then simply has no else arm to weigh.
+        let else_body = match branch.form {
+            BranchForm::IfThen => None,
+            BranchForm::IfThenElse => match branch.else_body {
+                Some(body) => Some(body),
+                None => return,
+            },
+        };
+        let then_count = then.ops.len() as u32;
+        let else_count = else_body.map_or(0, |body| body.ops.len() as u32);
+        if then_count > PREDICATION_OP_THRESHOLD || else_count > PREDICATION_OP_THRESHOLD {
+            return;
         }
+        let arms = [Some(then), else_body];
+        self.candidates.push(PredicationCandidate {
+            if_op_index: op_index,
+            then_body_op_count: then_count,
+            else_body_op_count: else_count,
+            has_global_store: arms.iter().flatten().copied().any(has_global_store),
+            has_unsafe_effect: arms
+                .iter()
+                .flatten()
+                .copied()
+                .any(has_unsafe_predicated_effect),
+        });
     }
 }
 

@@ -1233,11 +1233,7 @@ impl KernelDescriptor {
     pub fn summary(&self) -> String {
         format!(
             "{}: {} ops, {} bindings, {} child bodies, {} literals, dispatch {:?}",
-            if self.id.is_empty() {
-                "<unnamed>"
-            } else {
-                &self.id
-            },
+            crate::pattern_audit::display_kernel_id(&self.id),
             self.body.ops.len(),
             self.bindings.slots.len(),
             self.body.child_bodies.len(),
@@ -1253,11 +1249,7 @@ impl KernelDescriptor {
     pub fn summary_compact(&self) -> String {
         format!(
             "{}({} ops, {} bindings)",
-            if self.id.is_empty() {
-                "<unnamed>"
-            } else {
-                &self.id
-            },
+            crate::pattern_audit::display_kernel_id(&self.id),
             self.body.ops.len(),
             self.bindings.slots.len(),
         )

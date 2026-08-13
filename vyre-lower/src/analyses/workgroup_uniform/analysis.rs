@@ -1,54 +1,53 @@
 //! Implementation: trace branch conditions back through the op stream
 //! looking for any thread-id dependency.
+//!
+//! The branch traversal itself is not implemented here. It belongs to
+//! [`crate::analyses::structured_walk`], the one owner; this file supplies
+//! only the uniformity judgment made at each site.
 
 use super::report::{BranchSite, BranchUniformity, WorkgroupUniformReport};
+use crate::analyses::structured_walk::{branch_at, walk_structured, ArmDescent, StructuredVisitor};
 use crate::analyses::{producer_map, ProducerMap};
-use crate::{KernelBody, KernelDescriptor, KernelOpKind};
+use crate::{KernelBody, KernelDescriptor, KernelOp, KernelOpKind};
 use rustc_hash::FxHashSet;
 
 /// Classify structured branches by workgroup uniformity.
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor) -> WorkgroupUniformReport {
-    let mut branches = Vec::new();
-    walk_body(&desc.body, &mut branches, 0);
+    let mut collector = BranchCollector::default();
+    walk_structured(&desc.body, ArmDescent::Enter, &mut collector);
     WorkgroupUniformReport {
         kernel_id: desc.id.clone(),
-        branches,
+        branches: collector.branches,
     }
 }
 
-fn walk_body(body: &KernelBody, branches: &mut Vec<BranchSite>, op_index_offset: usize) {
-    let producers = producer_map(body);
-    for (local_idx, op) in body.ops.iter().enumerate() {
-        let op_index = op_index_offset + local_idx;
-        match &op.kind {
-            KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse => {
-                if let Some(cond_id) = op.operands.first() {
-                    let uniformity = classify(&producers, *cond_id);
-                    branches.push(BranchSite {
-                        op_index,
-                        cond_operand_id: *cond_id,
-                        uniformity,
-                    });
-                }
-                // Recurse into child bodies.
-                for child_id in op.operands.iter().skip(1) {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        walk_body(child, branches, op_index_offset + body.ops.len());
-                    }
-                }
-            }
-            KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                if let Some(child_id) = op.operands.last() {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        walk_body(child, branches, op_index_offset + body.ops.len());
-                    }
-                }
-            }
-            _ => {}
+/// Classifies each branch against the producer map of the body that holds it.
+///
+/// The map is rebuilt whenever the walk moves to a different body, including
+/// on the way back up out of a child, so a branch is never classified against
+/// a nested body's producers. Consecutive branches in one body reuse it.
+#[derive(Default)]
+struct BranchCollector<'a> {
+    mapped_body: Option<&'a KernelBody>,
+    producers: ProducerMap<'a>,
+    branches: Vec<BranchSite>,
+}
+
+impl<'a> StructuredVisitor<'a> for BranchCollector<'a> {
+    fn visit_op(&mut self, body: &'a KernelBody, op_index: usize, op: &'a KernelOp) {
+        let Some(branch) = branch_at(body, op) else {
+            return;
+        };
+        if !self.mapped_body.is_some_and(|held| std::ptr::eq(held, body)) {
+            self.mapped_body = Some(body);
+            self.producers = producer_map(body);
         }
+        self.branches.push(BranchSite {
+            op_index,
+            cond_operand_id: branch.cond_operand_id,
+            uniformity: classify(&self.producers, branch.cond_operand_id),
+        });
     }
 }
 

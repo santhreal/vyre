@@ -15,6 +15,8 @@ mod vec_memory_fusion;
 pub mod vec_store_fusion;
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use vyre_lower::pattern_audit::PatternAudit;
 use vyre_lower::KernelDescriptor;
 
 use crate::ComputeCapability;
@@ -63,10 +65,14 @@ pub struct PtxAuditReport {
     pub scheduling: instruction_scheduling::SchedulingHints,
 }
 
-impl PtxAuditReport {
-    /// Sum of actionable findings across all patterns. `0` means no
-    /// PTX-specific optimizations apply to this kernel.
-    pub fn total_candidates(&self) -> usize {
+impl PatternAudit for PtxAuditReport {
+    const FINDING_NOUN: &'static str = "candidates";
+
+    fn kernel_id(&self) -> &str {
+        &self.kernel_id
+    }
+
+    fn finding_count(&self) -> usize {
         self.predication.candidates.len()
             + self.vec_load.candidates.len()
             + self.vec_store.candidates.len()
@@ -75,23 +81,14 @@ impl PtxAuditReport {
             + self.scheduling.long_chains.len()
     }
 
-    /// Whether any pattern fired.
-    pub fn has_any(&self) -> bool {
-        self.total_candidates() > 0
+    fn write_target_tag(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(out, "ptx sm_{}_{}", self.target.major, self.target.minor)
     }
 
-    /// One-line human-readable summary suitable for log lines.
-    pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
-        format!(
-            "{id} (ptx sm_{}_{}): {} candidates ({}p, {}vl, {}vs, {}ac, {}tc, {}sched)",
-            self.target.major,
-            self.target.minor,
-            self.total_candidates(),
+    fn write_breakdown(&self, out: &mut dyn fmt::Write) -> fmt::Result {
+        write!(
+            out,
+            "{}p, {}vl, {}vs, {}ac, {}tc, {}sched",
             self.predication.candidates.len(),
             self.vec_load.candidates.len(),
             self.vec_store.candidates.len(),
@@ -100,10 +97,28 @@ impl PtxAuditReport {
             self.scheduling.long_chains.len(),
         )
     }
+}
+
+impl PtxAuditReport {
+    /// Sum of actionable findings across all patterns. `0` means no
+    /// PTX-specific optimizations apply to this kernel.
+    pub fn total_candidates(&self) -> usize {
+        PatternAudit::finding_count(self)
+    }
+
+    /// Whether any pattern fired.
+    pub fn has_any(&self) -> bool {
+        PatternAudit::has_any(self)
+    }
+
+    /// One-line human-readable summary suitable for log lines.
+    pub fn format_short(&self) -> String {
+        PatternAudit::format_short(self)
+    }
 
     /// True iff no PTX-specific optimization opportunities found.
     pub fn is_clean(&self) -> bool {
-        !self.has_any()
+        PatternAudit::is_clean(self)
     }
 
     /// Identity element for [`Self::merge`]  -  empty report. The `target`
@@ -166,7 +181,7 @@ impl PtxAuditReport {
 
 impl std::fmt::Display for PtxAuditReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
+        self.write_short(f)
     }
 }
 

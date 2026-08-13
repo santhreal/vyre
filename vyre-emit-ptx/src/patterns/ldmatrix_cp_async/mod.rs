@@ -12,8 +12,14 @@
 //! When found in adjacent positions on the same logical index, the
 //! emitter can replace both with a single `cp.async.ca.shared.global`
 //! issue + an `AsyncWait` later in the kernel.
+//!
+//! The body traversal is `vyre_lower::analyses::structured_walk`, not a copy
+//! of it. What stays here is the PTX judgment: the adjacency and same-index
+//! conditions above describe what one `cp.async` instruction can actually
+//! issue, and the gate on them is a compute-capability question.
 
 use serde::{Deserialize, Serialize};
+use vyre_lower::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
 use vyre_lower::{KernelBody, KernelDescriptor, KernelOpKind};
 
 use crate::ComputeCapability;
@@ -56,61 +62,55 @@ impl AsyncCopyPlan {
 #[must_use]
 pub fn analyze(desc: &KernelDescriptor, target: ComputeCapability) -> AsyncCopyPlan {
     let cp_async_supported = target.supports_async_copy();
-    let ldmatrix_supported = target.supports_ldmatrix();
-    let mut candidates = Vec::new();
+    let mut collector = CandidateCollector::default();
     if cp_async_supported {
-        scan_body(&desc.body, &mut candidates, 0);
+        walk_structured(&desc.body, ArmDescent::Enter, &mut collector);
     }
     AsyncCopyPlan {
         kernel_id: desc.id.clone(),
         target_supports_cp_async: cp_async_supported,
-        target_supports_ldmatrix: ldmatrix_supported,
-        candidates,
+        target_supports_ldmatrix: target.supports_ldmatrix(),
+        candidates: collector.candidates,
     }
 }
 
-fn scan_body(body: &KernelBody, candidates: &mut Vec<AsyncCopyCandidate>, op_index_offset: usize) {
-    for window in body.ops.windows(2).enumerate() {
-        let (i, [load, store]) = (window.0, window.1) else {
-            continue;
-        };
-        if let (KernelOpKind::LoadGlobal, KernelOpKind::StoreShared) = (&load.kind, &store.kind) {
-            // store_value_id must equal load_result_id (the load feeds
-            // the store), and both ops must use the same logical index.
-            let load_result = load.result;
-            let store_value = store.operands.get(2).copied();
-            let same_index = load.operands.get(1) == store.operands.get(1);
-            if load_result.is_some() && load_result.map(Some) == Some(store_value) && same_index {
-                let Some(global_slot) = load.operands.first().copied() else {
-                    continue;
-                };
-                let Some(shared_slot) = store.operands.first().copied() else {
-                    continue;
-                };
-                candidates.push(AsyncCopyCandidate {
-                    load_op_index: op_index_offset + i,
-                    store_op_index: op_index_offset + i + 1,
-                    global_binding_slot: global_slot,
-                    shared_binding_slot: shared_slot,
-                });
+#[derive(Default)]
+struct CandidateCollector {
+    candidates: Vec<AsyncCopyCandidate>,
+}
+
+impl<'a> StructuredVisitor<'a> for CandidateCollector {
+    fn enter_body(&mut self, body: &'a KernelBody, op_index_offset: usize) {
+        for (local_index, pair) in body.ops.windows(2).enumerate() {
+            let [load, store] = pair else {
+                continue;
+            };
+            if !matches!(
+                (&load.kind, &store.kind),
+                (KernelOpKind::LoadGlobal, KernelOpKind::StoreShared)
+            ) {
+                continue;
             }
-        }
-    }
-    // Recurse into structured-control-flow children.
-    for op in &body.ops {
-        match &op.kind {
-            KernelOpKind::StructuredIfThen
-            | KernelOpKind::StructuredIfThenElse
-            | KernelOpKind::StructuredForLoop { .. }
-            | KernelOpKind::StructuredBlock
-            | KernelOpKind::Region { .. } => {
-                if let Some(child_id) = op.operands.last() {
-                    if let Some(child) = body.child_bodies.get(*child_id as usize) {
-                        scan_body(child, candidates, op_index_offset + body.ops.len());
-                    }
-                }
+            // The load must feed the store, and both must address the same
+            // logical index: that is the shape one `cp.async` can issue.
+            if load.result.is_none() || load.result != store.operands.get(2).copied() {
+                continue;
             }
-            _ => {}
+            if load.operands.get(1) != store.operands.get(1) {
+                continue;
+            }
+            let (Some(global_slot), Some(shared_slot)) = (
+                load.operands.first().copied(),
+                store.operands.first().copied(),
+            ) else {
+                continue;
+            };
+            self.candidates.push(AsyncCopyCandidate {
+                load_op_index: op_index_offset + local_index,
+                store_op_index: op_index_offset + local_index + 1,
+                global_binding_slot: global_slot,
+                shared_binding_slot: shared_slot,
+            });
         }
     }
 }

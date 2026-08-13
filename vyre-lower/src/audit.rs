@@ -41,11 +41,7 @@ impl PerfAuditReport {
     /// When there are no recommendations: `"<id>: waste=X.X, clean"`.
     #[must_use]
     pub fn format_short(&self) -> String {
-        let id = if self.kernel_id.is_empty() {
-            "<unnamed>"
-        } else {
-            self.kernel_id.as_str()
-        };
+        let id = crate::pattern_audit::display_kernel_id(&self.kernel_id);
         match self.recommendations.first() {
             Some(top) => format!(
                 "{id}: waste={:.2}, {} recommendations (top: {})",
