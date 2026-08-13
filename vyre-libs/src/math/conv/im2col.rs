@@ -14,6 +14,8 @@
 //! The decision substrate lives beside this primitive once the
 //! profiling hooks are wired.
 
+use std::cmp::Ordering;
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::fixture_bytes::f32_bytes;
@@ -35,50 +37,20 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
     let cells = pixels
         .checked_mul(9)
         .ok_or_else(|| "Fix: im2col_3x3 h*w*9 overflows u32; reduce dimensions.".to_string())?;
-    let mut tap_writes: Vec<Node> = Vec::new();
-    for ky in 0..3u32 {
-        for kx in 0..3u32 {
-            let dy = (ky as i32) - 1;
-            let dx = (kx as i32) - 1;
-            let y_in_bounds = if dy < 0 {
-                Expr::ge(Expr::var("y"), Expr::u32((-dy) as u32))
-            } else {
-                Expr::lt(
-                    Expr::add(Expr::var("y"), Expr::u32(dy as u32)),
-                    Expr::u32(h),
-                )
-            };
-            let x_in_bounds = if dx < 0 {
-                Expr::ge(Expr::var("x"), Expr::u32((-dx) as u32))
-            } else {
-                Expr::lt(
-                    Expr::add(Expr::var("x"), Expr::u32(dx as u32)),
-                    Expr::u32(w),
-                )
-            };
-            let ny = if dy < 0 {
-                Expr::sub(Expr::var("y"), Expr::u32((-dy) as u32))
-            } else if dy > 0 {
-                Expr::add(Expr::var("y"), Expr::u32(dy as u32))
-            } else {
-                Expr::var("y")
-            };
-            let nx = if dx < 0 {
-                Expr::sub(Expr::var("x"), Expr::u32((-dx) as u32))
-            } else if dx > 0 {
-                Expr::add(Expr::var("x"), Expr::u32(dx as u32))
-            } else {
-                Expr::var("x")
-            };
-            let load_idx = Expr::add(Expr::mul(ny, Expr::u32(w)), nx);
-            let in_bounds = Expr::and(y_in_bounds, x_in_bounds);
-            let value = Expr::select(in_bounds, Expr::load(input, load_idx), Expr::f32(0.0));
+    let tap_writes: Vec<Node> = patch_taps(&Expr::var("y"), &Expr::var("x"), h, w)
+        .into_iter()
+        .map(|tap| {
             // im2col[flat, ky*3 + kx]
-            let row = ky * 3 + kx;
-            let dest_idx = Expr::add(Expr::mul(Expr::var("flat"), Expr::u32(9)), Expr::u32(row));
-            tap_writes.push(Node::store(output, dest_idx, value));
-        }
-    }
+            Node::store(
+                output,
+                Expr::add(
+                    Expr::mul(Expr::var("flat"), Expr::u32(9)),
+                    Expr::u32(tap.column),
+                ),
+                patch_cell(input, tap),
+            )
+        })
+        .collect();
     let body = vec![
         Node::let_bind("flat", Expr::InvocationId { axis: 0 }),
         Node::if_then(
@@ -98,6 +70,74 @@ pub fn im2col_3x3(input: &str, output: &str, h: u32, w: u32) -> Result<Program, 
         [64, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],
     ))
+}
+
+/// One tap of the zero-padded 3x3 patch centred at (`y`, `x`).
+///
+/// `column` is the im2col column `ky*3 + kx`, `input_index` is the row-major
+/// index of the neighbour it reads, and `in_bounds` is true exactly when that
+/// neighbour lies inside the `[H, W]` image.
+pub(super) struct PatchTap {
+    pub column: u32,
+    pub in_bounds: Expr,
+    pub input_index: Expr,
+}
+
+/// The nine taps of the patch centred at (`y`, `x`), in im2col column order.
+///
+/// Single owner of the 3x3 neighbour-coordinate arithmetic and its padding
+/// predicate. `im2col_3x3` writes the taps into a patch matrix;
+/// `conv2d_3x3_direct` contracts them against the kernel in place. Neither
+/// re-derives the walk.
+pub(super) fn patch_taps(y: &Expr, x: &Expr, h: u32, w: u32) -> Vec<PatchTap> {
+    let mut taps = Vec::with_capacity(9);
+    for ky in 0..3u32 {
+        for kx in 0..3u32 {
+            let dy = (ky as i32) - 1;
+            let dx = (kx as i32) - 1;
+            taps.push(PatchTap {
+                column: ky * 3 + kx,
+                in_bounds: Expr::and(axis_in_bounds(y, dy, h), axis_in_bounds(x, dx, w)),
+                input_index: Expr::add(
+                    Expr::mul(shifted_coord(y, dy), Expr::u32(w)),
+                    shifted_coord(x, dx),
+                ),
+            });
+        }
+    }
+    taps
+}
+
+/// The im2col cell value for `tap`: the input sample, or zero-padding outside
+/// the image bounds.
+pub(super) fn patch_cell(input: &str, tap: PatchTap) -> Expr {
+    Expr::select(
+        tap.in_bounds,
+        Expr::load(input, tap.input_index),
+        Expr::f32(0.0),
+    )
+}
+
+/// `coord + delta` is inside `[0, extent)`. Coordinates are unsigned, so a
+/// negative offset becomes a lower-bound test instead of a signed add.
+fn axis_in_bounds(coord: &Expr, delta: i32, extent: u32) -> Expr {
+    if delta < 0 {
+        Expr::ge(coord.clone(), Expr::u32(delta.unsigned_abs()))
+    } else {
+        Expr::lt(
+            Expr::add(coord.clone(), Expr::u32(delta.unsigned_abs())),
+            Expr::u32(extent),
+        )
+    }
+}
+
+/// `coord + delta` under unsigned arithmetic, guarded by [`axis_in_bounds`].
+fn shifted_coord(coord: &Expr, delta: i32) -> Expr {
+    match delta.cmp(&0) {
+        Ordering::Less => Expr::sub(coord.clone(), Expr::u32(delta.unsigned_abs())),
+        Ordering::Equal => coord.clone(),
+        Ordering::Greater => Expr::add(coord.clone(), Expr::u32(delta.unsigned_abs())),
+    }
 }
 
 inventory::submit! {

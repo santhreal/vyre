@@ -1,6 +1,17 @@
-//! Direct 2D convolution with a 3x3 kernel and unit stride.
+//! 2D convolution with a 3x3 kernel and unit stride, expressed as an
+//! im2col patch row contracted against the kernel:
 //!
-//! `out[y, x] = sum_{ky=0..3, kx=0..3} input[y+ky-1, x+kx-1] * kernel[ky, kx]`
+//! `out[y, x] = sum_{k=0..9} im2col[y*W + x, k] * kernel[k]`
+//!
+//! which is the canonical
+//! `sum_{ky, kx} input[y+ky-1, x+kx-1] * kernel[ky, kx]`.
+//!
+//! The patch row comes from the im2col owner (`super::im2col::patch_taps`),
+//! so the 3x3 neighbour walk lives in exactly one place. The gemm half is the
+//! `k` contraction in the body, unrolled at `k = 9` and fused into the same
+//! invocation: a lane consumes only the patch row it produced, so no patch
+//! matrix is materialized and the registered buffer signature stays
+//! `input` / `kernel` / `output`.
 //!
 //! Boundary handling: zero-padding (samples outside the input
 //! bounds are treated as 0). Input + output are length-`H * W` F32
@@ -9,6 +20,7 @@
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
+use super::im2col::patch_taps;
 use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::math::conv::conv2d_3x3_direct";
@@ -41,64 +53,31 @@ pub fn conv2d_3x3_direct(
                 Node::let_bind("y", Expr::div(Expr::var("flat"), Expr::u32(w))),
                 Node::let_bind("x", Expr::rem(Expr::var("flat"), Expr::u32(w))),
                 Node::let_bind("acc", Expr::f32(0.0)),
-                // Unrolled 3x3 inner loop. Each tap loads
-                // input[y+ky-1, x+kx-1] (zero-padded) and multiplies
-                // by kernel[ky*3 + kx].
-                {
-                    let mut taps: Vec<Node> = Vec::new();
-                    for ky in 0..3u32 {
-                        for kx in 0..3u32 {
-                            // Compute neighbour coordinates with
-                            // unsigned arithmetic + bounds check.
-                            // Source: ky_off = ky as i32 - 1 (i.e.
-                            // -1, 0, +1). Apply via wrapping_add
-                            // and bounds-check `Var(y) + ky_off in
-                            // [0, h)`.
-                            let dy = (ky as i32) - 1;
-                            let dx = (kx as i32) - 1;
-                            let y_in_bounds = if dy < 0 {
-                                Expr::ge(Expr::var("y"), Expr::u32((-dy) as u32))
-                            } else {
-                                Expr::lt(
-                                    Expr::add(Expr::var("y"), Expr::u32(dy as u32)),
-                                    Expr::u32(h),
-                                )
-                            };
-                            let x_in_bounds = if dx < 0 {
-                                Expr::ge(Expr::var("x"), Expr::u32((-dx) as u32))
-                            } else {
-                                Expr::lt(
-                                    Expr::add(Expr::var("x"), Expr::u32(dx as u32)),
-                                    Expr::u32(w),
-                                )
-                            };
-                            let ny = if dy < 0 {
-                                Expr::sub(Expr::var("y"), Expr::u32((-dy) as u32))
-                            } else if dy > 0 {
-                                Expr::add(Expr::var("y"), Expr::u32(dy as u32))
-                            } else {
-                                Expr::var("y")
-                            };
-                            let nx = if dx < 0 {
-                                Expr::sub(Expr::var("x"), Expr::u32((-dx) as u32))
-                            } else if dx > 0 {
-                                Expr::add(Expr::var("x"), Expr::u32(dx as u32))
-                            } else {
-                                Expr::var("x")
-                            };
-                            let load_idx = Expr::add(Expr::mul(ny, Expr::u32(w)), nx);
-                            let kernel_val = Expr::load(kernel, Expr::u32(ky * 3 + kx));
-                            let in_bounds = Expr::and(y_in_bounds, x_in_bounds);
-                            let tap = Expr::select(
-                                in_bounds,
-                                Expr::mul(Expr::load(input, load_idx), kernel_val),
-                                Expr::f32(0.0),
-                            );
-                            taps.push(Node::assign("acc", Expr::add(Expr::var("acc"), tap)));
-                        }
-                    }
-                    Node::Block(taps)
-                },
+                // gemm over the im2col patch row: patch column k times
+                // kernel[k], accumulated across the nine taps. A column
+                // outside the image is zero-padding, so it contributes
+                // exactly 0.0 instead of a product with the kernel tap.
+                Node::Block(
+                    patch_taps(&Expr::var("y"), &Expr::var("x"), h, w)
+                        .into_iter()
+                        .map(|tap| {
+                            Node::assign(
+                                "acc",
+                                Expr::add(
+                                    Expr::var("acc"),
+                                    Expr::select(
+                                        tap.in_bounds,
+                                        Expr::mul(
+                                            Expr::load(input, tap.input_index),
+                                            Expr::load(kernel, Expr::u32(tap.column)),
+                                        ),
+                                        Expr::f32(0.0),
+                                    ),
+                                ),
+                            )
+                        })
+                        .collect(),
+                ),
                 Node::store(output, Expr::var("flat"), Expr::var("acc")),
             ],
         ),
