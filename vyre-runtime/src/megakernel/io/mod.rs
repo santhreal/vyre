@@ -3,10 +3,10 @@
 //! Module ownership:
 //!  - `mod.rs`: doc + constants + IoRequest/IoCompletion + word/op/status modules
 //!  - `queue.rs`: [`ResidentIoQueue`] + view
-//!  - `poll.rs`: poll/claim/peek surface
+//!  - `poll.rs`: host poll/claim/peek surface + the GPU completion-poll IR builder
 //!  - `complete.rs`: completion-write surface
 //!  - `encode.rs`: bytes <-> validated queue helpers
-//!  - `helpers.rs`: low-level queue-word + validation utilities + IR builders
+//!  - `queue_words.rs`: bounds-checked slot-word addressing + queue validation
 //!  - `tests.rs`: full test suite
 //!
 //! ## Protocol
@@ -21,9 +21,9 @@
 
 mod complete;
 mod encode;
-mod helpers;
 mod poll;
 mod queue;
+mod queue_words;
 
 #[cfg(test)]
 mod tests;
@@ -37,10 +37,9 @@ pub use encode::{
     encode_empty_io_queue, try_encode_empty_io_queue, try_encode_empty_io_queue_into,
     validate_io_queue_bytes,
 };
-pub use helpers::io_completion_poll_body;
 pub use poll::{
-    claim_io_requests_into, try_claim_io_requests_into, try_poll_io_requests,
-    try_poll_io_requests_into,
+    claim_io_requests_into, io_completion_poll_body, try_claim_io_requests_into,
+    try_poll_io_requests, try_poll_io_requests_into,
 };
 pub use queue::ResidentIoQueue;
 

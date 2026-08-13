@@ -1,11 +1,10 @@
-//! Low-level queue word access + queue-view validation + IR builders.
+//! Bounds-checked word addressing inside the IO slot ring, and the queue-view
+//! validation every host-side entry point runs before touching it.
 
 use crate::PipelineError;
 use std::sync::atomic::{fence, Ordering};
-use vyre_foundation::ir::{Expr, Node};
 
-use super::super::protocol::slot;
-use super::{io_status, io_word, IO_SLOT_COUNT, IO_SLOT_WORDS};
+use super::{IO_SLOT_COUNT, IO_SLOT_WORDS};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct IoQueueView {
@@ -143,46 +142,6 @@ pub(super) fn validate_io_queue_view(byte_len: usize) -> Result<IoQueueView, Pip
         });
     }
     Ok(IoQueueView { slot_count })
-}
-
-/// Build the GPU-side IO poll body as `Vec<Node>` for composition
-/// into the megakernel persistent loop.
-///
-/// Each iteration, the kernel scans IO slots for DONE status
-/// (set by the host) and reads the completion result. This is
-/// the GPU's "interrupt handler" for asynchronous DMA.
-#[must_use]
-pub fn io_completion_poll_body() -> Vec<Node> {
-    vec![Node::loop_for(
-        "io_poll_idx",
-        Expr::u32(0),
-        Expr::u32(IO_SLOT_COUNT),
-        vec![
-            Node::let_bind(
-                "io_poll_base",
-                Expr::mul(Expr::var("io_poll_idx"), Expr::u32(IO_SLOT_WORDS)),
-            ),
-            Node::let_bind(
-                "io_poll_status",
-                Expr::load(
-                    "io_queue",
-                    Expr::add(Expr::var("io_poll_base"), Expr::u32(io_word::STATUS)),
-                ),
-            ),
-            // If host marked OK or ERROR, clear the slot for reuse.
-            Node::if_then(
-                Expr::or(
-                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::OK)),
-                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::ERROR)),
-                ),
-                vec![Node::store(
-                    "io_queue",
-                    Expr::add(Expr::var("io_poll_base"), Expr::u32(io_word::STATUS)),
-                    Expr::u32(slot::EMPTY),
-                )],
-            ),
-        ],
-    )]
 }
 
 #[cfg(test)]

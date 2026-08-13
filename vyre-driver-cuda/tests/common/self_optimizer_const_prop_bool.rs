@@ -1,5 +1,5 @@
 use crate::{body_of, run_pipeline};
-use vyre::ir::model::types::UnOp;
+use vyre::ir::model::spec_types::UnOp;
 use vyre::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 fn binop(op: BinOp, a: Expr, b: Expr) -> Expr {

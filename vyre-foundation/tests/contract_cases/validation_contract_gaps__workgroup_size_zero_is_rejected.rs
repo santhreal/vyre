@@ -299,7 +299,7 @@ fn async_load_with_empty_tag_is_rejected() {
     let program = Program::wrapped(
         vec![BufferDecl::read_write("a", 0, DataType::U32).with_count(1)],
         [1, 1, 1],
-        vec![Node::async_load_ext(
+        vec![Node::async_load_gpu_driven(
             "a",
             "a",
             Expr::u32(0),

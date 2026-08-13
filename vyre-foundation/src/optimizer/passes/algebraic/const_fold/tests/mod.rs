@@ -1,9 +1,5 @@
-//! Const-fold test suite  -  split per audit cleanup A13 (2026-04-30) so
-//! no single file exceeds the 1000-LOC hygiene cap. Original `tests.rs`
-//! (1340 LOC, 108 tests) split into 4 per-section files + a shared
-//! helpers module.
-
-mod helpers;
+//! Const-fold test suite, one file per rule section so no single file
+//! exceeds the 1000-LOC hygiene cap.
 
 mod binop_identity;
 mod early;

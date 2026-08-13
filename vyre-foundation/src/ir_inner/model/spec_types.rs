@@ -1,4 +1,4 @@
-//! Core type definitions for the vyre IR.
+//! The frozen IR vocabulary, re-exported from `vyre-spec`.
 //!
 //! These public types are defined by `vyre-spec` so that backend
 //! conformance can be proved without depending on `vyre`.

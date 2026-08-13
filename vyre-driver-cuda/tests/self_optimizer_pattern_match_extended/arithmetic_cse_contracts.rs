@@ -110,7 +110,7 @@ fn cuda_double_abs_does_not_collapse_to_inner() {
     // (Abs(Abs(x)) ≠ x in general). Adversarial test: catches a
     // previous bug where the UnOp double-application matcher fired
     // for any same-op pair, incorrectly collapsing Abs(Abs(x)) → x.
-    use vyre::ir::model::types::UnOp;
+    use vyre::ir::model::spec_types::UnOp;
     let p = program_with_x_load_then(Expr::UnOp {
         op: UnOp::Abs,
         operand: Box::new(Expr::UnOp {

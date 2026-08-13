@@ -5,7 +5,7 @@ use crate::api::case::{
 };
 use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
-use vyre_frontend_rust::lex::lexer::core::lex as lex_cpu;
+use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
 use vyre_frontend_rust::lex::lexer::plan::rust_lexer_batch;
 
 struct RustLexerBatchGpuPipeline;

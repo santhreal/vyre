@@ -1,7 +1,8 @@
-use super::helpers::{
-    prepare_resident_sequence_fills, stage_resident_fill_payload,
+use super::dense_index_validation::{
     validate_dense_resident_input_indices, validate_dense_resident_output_indices,
 };
+use super::host_uploads::stage_resident_fill_payload;
+use super::sequence_slots::prepare_resident_sequence_fills;
 
 #[cfg(test)]
 #[allow(clippy::module_inception)]

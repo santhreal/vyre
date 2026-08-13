@@ -15,7 +15,7 @@ use vyre_foundation::visit::visit_node_preorder;
 
 use super::atomic_scanner::scan_atomic_targets_into;
 use super::trap_collector::TrapTagCollector;
-use super::types::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+use super::trap_sidecar::{TrapTag, TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 use super::{bind_group_for, LoweringError};
 
 /// Emit a validated Naga module for a vyre program.

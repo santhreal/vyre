@@ -1,8 +1,8 @@
-//! Shared arithmetic dual-reference machinery.
+//! Arithmetic references built from bit operations alone: addition by carry
+//! propagation and multiplication by shift-and-add, so neither shares code
+//! with the direct `u32` arm of its dual pair.
 
-use crate::dual_impls::common::read_two_words;
-
-pub(crate) use crate::dual_impls::common::binary_direct;
+use crate::dual_impls::evaluator::read_two_words;
 
 /// Wrapping-add reference implemented through carry propagation only.
 #[must_use]
@@ -46,6 +46,7 @@ fn zero_word() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dual_impls::evaluator::binary_direct;
 
     #[test]
     fn generated_arithmetic_duals_match_native_wrapping_ops() {

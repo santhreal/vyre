@@ -19,7 +19,7 @@ fn async_load_copies_only_when_waited() {
         ],
         [1, 1, 1],
         vec![
-            Node::async_load_ext("src", "dst", Expr::u32(0), Expr::u32(8), "copy"),
+            Node::async_load_gpu_driven("src", "dst", Expr::u32(0), Expr::u32(8), "copy"),
             Node::store("dst", Expr::u32(0), Expr::u32(0xdead_beef)),
             Node::async_wait("copy"),
         ],
@@ -52,7 +52,7 @@ fn async_transfer_without_wait_is_rejected() {
             BufferDecl::output("dst", 1, DataType::U32).with_count(1),
         ],
         [1, 1, 1],
-        vec![Node::async_load_ext(
+        vec![Node::async_load_gpu_driven(
             "src",
             "dst",
             Expr::u32(0),

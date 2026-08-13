@@ -24,7 +24,7 @@ use vyre_foundation::ir::Program;
 use vyre_primitives::matching::{nfa_to_dfa, CompiledDfa, NfaTables, NfaToDfaError};
 
 use crate::scan::classic_ac::{
-    regex_exact_ranges_program_ext, try_build_ac_bounded_ranges_program_ext, AcInputBindings,
+    regex_exact_ranges_program, try_build_ac_bounded_ranges_program_with_subgroup_coalesce, AcInputBindings,
 };
 use crate::scan::regex_compile::{
     compile_regex_set, compile_regex_set_with_policy, CompiledRegexSet, RegexCompileError,
@@ -125,7 +125,7 @@ impl From<NfaToDfaError> for RegexDfaError {
 /// The match-append strategy is the default `append_match_subgroup`
 /// (I.17 - one atomic per subgroup leader). On backends that can't
 /// lower `subgroup_ballot` / `subgroup_shuffle` yet (currently
-/// `vyre-driver-cuda`) use [`build_regex_dfa_pipeline_ext`] with
+/// `vyre-driver-cuda`) use [`build_regex_dfa_pipeline_with_subgroup_coalesce`] with
 /// `use_subgroup_coalesce = false`.
 ///
 /// # Errors
@@ -135,7 +135,7 @@ pub fn build_regex_dfa_pipeline(
     max_matches: u32,
     max_dfa_states: usize,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
-    build_regex_dfa_pipeline_ext(patterns, max_matches, max_dfa_states, true)
+    build_regex_dfa_pipeline_with_subgroup_coalesce(patterns, max_matches, max_dfa_states, true)
 }
 /// Build a regex DFA pipeline with an explicit open-ended replay budget.
 ///
@@ -147,7 +147,7 @@ pub fn build_regex_dfa_pipeline_with_policy(
     max_dfa_states: usize,
     replay_policy: RegexReplayPolicy,
 ) -> Result<RegexDfaPipeline, RegexDfaError> {
-    build_regex_dfa_pipeline_with_policy_ext(
+    build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(
         patterns,
         max_matches,
         max_dfa_states,
@@ -160,7 +160,7 @@ pub fn build_regex_dfa_pipeline_with_policy(
 ///
 /// # Errors
 /// See [`RegexDfaError`].
-pub fn build_regex_dfa_pipeline_with_policy_ext(
+pub fn build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce(
     patterns: &[&str],
     max_matches: u32,
     max_dfa_states: usize,
@@ -187,7 +187,7 @@ pub fn build_regex_dfa_pipeline_with_policy_ext(
 ///
 /// # Errors
 /// See [`RegexDfaError`].
-pub fn build_regex_dfa_pipeline_ext(
+pub fn build_regex_dfa_pipeline_with_subgroup_coalesce(
     patterns: &[&str],
     max_matches: u32,
     max_dfa_states: usize,
@@ -489,7 +489,7 @@ fn finish_regex_dfa_pipeline(
                     dfa.output_records.len()
                 ),
             })?;
-        regex_exact_ranges_program_ext(
+        regex_exact_ranges_program(
             AcInputBindings {
                 haystack: "haystack",
                 transitions: "transitions",
@@ -508,7 +508,7 @@ fn finish_regex_dfa_pipeline(
             use_subgroup_coalesce,
         )
     } else {
-        try_build_ac_bounded_ranges_program_ext(
+        try_build_ac_bounded_ranges_program_with_subgroup_coalesce(
             &dfa,
             pattern_count,
             max_matches,

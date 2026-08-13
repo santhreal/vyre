@@ -1,14 +1,6 @@
-//! Shared compare dual-reference machinery.
-
-use crate::dual_impls::common::read_two_words;
-
-#[must_use]
-pub(crate) fn binary_direct_predicate(input: &[u8], op: impl FnOnce(u32, u32) -> bool) -> Vec<u8> {
-    let Some((left, right)) = read_two_words(input) else {
-        return zero_word();
-    };
-    bool_word(op(left, right))
-}
+//! Comparison references derived by walking the input bytes rather than
+//! decoding two words, so they stay independent of the direct `u32` arm of
+//! each dual pair.
 
 #[must_use]
 pub(crate) fn eq_bytes(input: &[u8]) -> Vec<u8> {

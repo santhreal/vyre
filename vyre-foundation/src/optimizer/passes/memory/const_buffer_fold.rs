@@ -88,7 +88,7 @@ fn fold_node(node: &Node, constant: &ConstBuffer) -> Node {
             offset,
             size,
             tag,
-        } => Node::async_load_ext(
+        } => Node::async_load_gpu_driven(
             source.clone(),
             destination.clone(),
             (**offset).clone(),

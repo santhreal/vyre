@@ -279,7 +279,7 @@ pub fn vyre_lower::emit_adversarial_corpus::rejection_cases() -> alloc::vec::Vec
 pub fn vyre_lower::emit_adversarial_corpus::required_backends() -> &'static [vyre_lower::emit_adversarial_corpus::EmitAdversarialBackend]
 pub fn vyre_lower::emit_adversarial_corpus::success_cases() -> alloc::vec::Vec<vyre_lower::emit_adversarial_corpus::EmitAdversarialCase>
 pub fn vyre_lower::full_report(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_lower::FullReport
-pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
+pub fn vyre_lower::lower_verified(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_lower::VerifiedLowering, vyre_lower::LowerVerifiedError>
 pub fn vyre_lower::operand_semantics::operand_is_result_reference(kind: &vyre_lower::descriptor::KernelOpKind, pos: usize) -> bool
 pub fn vyre_lower::pattern_audit::PatternAudit::finding_count(&self) -> usize
 pub fn vyre_lower::pattern_audit::PatternAudit::format_short(&self) -> alloc::string::String
@@ -652,7 +652,7 @@ pub vyre_lower::SubgroupCapabilities::ballot: bool
 pub vyre_lower::SubgroupCapabilities::basic: bool
 pub vyre_lower::SubgroupCapabilities::shuffle: bool
 pub vyre_lower::VerifiedLowering::descriptor: vyre_lower::descriptor::KernelDescriptor
-pub vyre_lower::VerifiedLowering::program: vyre_foundation::ir_inner::model::program::core::Program
+pub vyre_lower::VerifiedLowering::program: vyre_foundation::ir_inner::model::program::definition::Program
 pub vyre_lower::VerifyError::body_path: alloc::vec::Vec<usize>
 pub vyre_lower::VerifyError::kind: vyre_lower::verify::VerifyErrorKind
 pub vyre_lower::VerifyError::op_index: usize

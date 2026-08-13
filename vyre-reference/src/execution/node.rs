@@ -612,7 +612,7 @@ mod tests {
             ],
             [1, 1, 1],
             vec![
-                Node::async_load_ext("src", "dst", Expr::u32(2), Expr::u32(4), "copy"),
+                Node::async_load_gpu_driven("src", "dst", Expr::u32(2), Expr::u32(4), "copy"),
                 Node::AsyncWait { tag: "copy".into() },
             ],
         );

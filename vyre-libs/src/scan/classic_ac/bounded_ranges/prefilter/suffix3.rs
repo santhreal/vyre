@@ -129,7 +129,7 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program(
     max_matches: u32,
     max_pattern_len: u32,
 ) -> Program {
-    classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
+    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
         haystack,
         transitions,
         output_offsets,
@@ -154,7 +154,7 @@ pub fn classic_ac_bounded_ranges_suffix3_prefilter_program(
 /// explicit control over subgroup match-append coalescing.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
+pub fn classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -224,7 +224,7 @@ pub fn presence_bitmap_words(pattern_count: u32) -> u32 {
 /// readback is the small bitmap (removing the dense-workload output bottleneck).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_program_ext(
+pub fn classic_ac_bounded_ranges_suffix3_presence_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -285,7 +285,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_program(
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_suffix3_presence_program_ext(
+    Ok(classic_ac_bounded_ranges_suffix3_presence_program(
         "haystack",
         "transitions",
         "output_offsets",
@@ -321,9 +321,9 @@ pub fn presence_by_region_words(pattern_count: u32, max_regions: u32) -> u32 {
 }
 
 /// Bindings 0-11 of the region-presence program, shared BYTE-IDENTICALLY by the
-/// presence-only program ([`classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext`])
+/// presence-only program ([`classic_ac_bounded_ranges_suffix3_presence_by_region_program`])
 /// and the fused presence+positions program
-/// ([`classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext`],
+/// ([`classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program`],
 /// which appends its match-counter binding 12 + triple-output binding 13). One
 /// source of truth keeps the shared static-table / region-attribution ABI identical
 /// across both builders (a binding added or resized here reaches both at once).
@@ -347,7 +347,7 @@ fn presence_by_region_base_buffer_decls(
     buffers
 }
 
-/// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program_ext`]:
+/// Region-attributed variant of [`classic_ac_bounded_ranges_suffix3_presence_program`]:
 /// the presence bitmap (binding 6) is `max_regions × presence_bitmap_words(pattern_count)`
 /// words, and a `region_starts` table (binding 10, the ascending file start
 /// offsets of the coalesced buffer with `region_starts[0] == 0`) maps each hit to
@@ -358,7 +358,7 @@ fn presence_by_region_base_buffer_decls(
 /// count is read from `buf_len(region_starts)`).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
+pub fn classic_ac_bounded_ranges_suffix3_presence_by_region_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -449,7 +449,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
         )
     })?;
     Ok(
-        classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext(
+        classic_ac_bounded_ranges_suffix3_presence_by_region_program(
             "haystack",
             "transitions",
             "output_offsets",
@@ -473,9 +473,9 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 
 /// FUSED region-presence + match-positions program: one suffix3-gated bounded-ranges
 /// scan that writes BOTH the per-region presence bitmap (binding 6, `atomic_or`, like
-/// [`classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext`]) AND the
+/// [`classic_ac_bounded_ranges_suffix3_presence_by_region_program`]) AND the
 /// `(pattern_id, start, end)` match triples (bindings 12 `match_count` + 13 `matches`,
-/// like [`classic_ac_bounded_ranges_suffix3_prefilter_program_ext`]).
+/// like [`classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`]).
 ///
 /// Bindings 0-11 are byte-identical to the presence-by-region program (so an
 /// integration can share every uploaded static table and the `region_starts`/
@@ -487,7 +487,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_by_region_program(
 /// same `output_records` iteration).
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext(
+pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -509,7 +509,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
     max_regions: u32,
     max_matches: u32,
 ) -> Program {
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
         haystack,
         transitions,
         output_offsets,
@@ -539,7 +539,7 @@ pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_progra
 /// pattern; only the atomic triple append is filtered.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
+pub fn classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
     haystack: &str,
     transitions: &str,
     output_offsets: &str,
@@ -671,7 +671,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_prog
         )
     })?;
     Ok(
-        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext(
+        classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered(
             "haystack",
             "transitions",
             "output_offsets",
@@ -704,7 +704,7 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Program {
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext(dfa, pattern_count, max_matches, true)
+    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
 /// Variant of [`build_ac_bounded_ranges_suffix3_prefilter_program`] that
@@ -713,15 +713,15 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program(
 /// # Panics
 /// Panics when the suffix3 prefilter exceeds the GPU ABI limits. An empty rejecting
 /// automaton would silently drop every match, so callers that must recover use
-/// [`try_build_ac_bounded_ranges_suffix3_prefilter_program_ext`].
+/// [`try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`].
 #[must_use]
-pub fn build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+pub fn build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    match try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+    match try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
         dfa,
         pattern_count,
         max_matches,
@@ -732,12 +732,12 @@ pub fn build_ac_bounded_ranges_suffix3_prefilter_program_ext(
             // Returning an empty-rejecting program would silently drop every
             // match without the caller knowing, a total recall-loss silent
             // fallback (Law 10). Fail closed instead. Callers that need graceful
-            // overflow handling call try_build_ac_bounded_ranges_suffix3_prefilter_program_ext
+            // overflow handling call try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce
             // directly and shard oversized DFAs across multiple programs.
             panic!(
                 "AC bounded-ranges suffix3 prefilter program build failed: {error}. \
                  returning an empty rejecting automaton would silently drop every match; \
-                 use try_build_ac_bounded_ranges_suffix3_prefilter_program_ext and shard oversized DFAs."
+                 use try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce and shard oversized DFAs."
             )
         }
     }
@@ -754,16 +754,16 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program(
     pattern_count: u32,
     max_matches: u32,
 ) -> Result<Program, String> {
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(dfa, pattern_count, max_matches, true)
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(dfa, pattern_count, max_matches, true)
 }
 
-/// Fallible variant of [`build_ac_bounded_ranges_suffix3_prefilter_program_ext`].
+/// Fallible variant of [`build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce`].
 ///
 /// # Errors
 ///
 /// Returns an actionable error when DFA metadata cannot fit the GPU program's
 /// u32 buffer-count ABI.
-pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
     dfa: &CompiledDfa,
     pattern_count: u32,
     max_matches: u32,
@@ -775,7 +775,7 @@ pub fn try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
             dfa.output_records.len()
         )
     })?;
-    Ok(classic_ac_bounded_ranges_suffix3_prefilter_program_ext(
+    Ok(classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
         "haystack",
         "transitions",
         "output_offsets",
@@ -816,9 +816,9 @@ mod tests {
     fn infallible_suffix3_prefilter_uses_real_dfa_not_empty_fallback() {
         let ac = classic_ac_compile(&[b"abc", b"de", b"abcd"]);
         let via_infallible =
-            build_ac_bounded_ranges_suffix3_prefilter_program_ext(&ac.dfa, 3, 128, false);
+            build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false);
         let via_try =
-            try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(&ac.dfa, 3, 128, false)
+            try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 128, false)
                 .expect("valid DFA must build");
         // Binding 3 is output_records: the empty fallback carried 0 here.
         let records = via_infallible.buffers()[3].count;
@@ -846,7 +846,7 @@ mod tests {
         let lengths = pattern_lengths(&patterns);
         let mut expected = classic_ac_bounded_ranges_scan(&ac, &lengths, haystack);
         expected.sort_unstable();
-        let program = build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+        let program = build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
             &ac.dfa,
             patterns.len() as u32,
             128,
@@ -883,7 +883,7 @@ mod tests {
     fn bounded_ranges_suffix3_prefilter_program_has_compact_stable_shape() {
         let ac = classic_ac_compile(&[b"Authorization: Bearer ", b"token", b"tok"]);
         let program =
-            build_ac_bounded_ranges_suffix3_prefilter_program_ext(&ac.dfa, 3, 1024, false);
+            build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(&ac.dfa, 3, 1024, false);
 
         assert_eq!(program.workgroup_size(), [128, 1, 1]);
         assert_eq!(program.buffers().len(), 11);

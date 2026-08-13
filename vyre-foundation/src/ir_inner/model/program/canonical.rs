@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
-use crate::ir_inner::model::types::BinOp;
+use crate::ir_inner::model::spec_types::BinOp;
 
 use super::{meta::buffer_decl_canonical_key, BufferDecl, Program};
 

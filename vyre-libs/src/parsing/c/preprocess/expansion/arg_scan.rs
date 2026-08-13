@@ -3,7 +3,7 @@
 use crate::parsing::c::lex::tokens::*;
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::arg_bounds::*;
 
 pub(super) fn emit_function_like_argument_scan(
     in_tok_types: &str,

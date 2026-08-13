@@ -299,7 +299,7 @@ pub vyre_megakernel::target::SelectedLowering::nodes: alloc::vec::Vec<vyre_megak
 pub vyre_megakernel::target::SelectedLowering::stage: u32
 pub vyre_megakernel::target::SelectedModule::group: vyre_megakernel::FusionGroupId
 pub vyre_megakernel::target::SelectedModule::nodes: alloc::vec::Vec<vyre_megakernel::ArtifactNodeId>
-pub vyre_megakernel::target::SelectedModule::programs: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::core::Program>
+pub vyre_megakernel::target::SelectedModule::programs: alloc::vec::Vec<vyre_foundation::ir_inner::model::program::definition::Program>
 pub vyre_megakernel::target::SelectedModule::stage: u32
 pub vyre_megakernel::target::TargetCompileError::Emission(alloc::string::String)
 pub vyre_megakernel::target::TargetCompileError::InvalidArtifact(alloc::string::String)

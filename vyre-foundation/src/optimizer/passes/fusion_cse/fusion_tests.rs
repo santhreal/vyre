@@ -348,7 +348,7 @@ fn does_not_fuse_regions_with_high_pressure() {
 #[test]
 fn fusion_dependency_sets_include_async_and_indirect_nodes() {
     let nodes = vec![
-        Node::async_load_ext(
+        Node::async_load_gpu_driven(
             Ident::from("src"),
             Ident::from("dst"),
             Expr::load("offsets", Expr::u32(0)),

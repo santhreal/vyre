@@ -15,8 +15,10 @@ mod backend_structural;
 mod constants;
 #[path = "egraph_kernel_plan/error.rs"]
 mod error;
-#[path = "egraph_kernel_plan/helpers.rs"]
-mod helpers;
+#[path = "egraph_kernel_plan/launch_waves.rs"]
+mod launch_waves;
+#[path = "egraph_kernel_plan/device_image_rows.rs"]
+mod device_image_rows;
 #[path = "egraph_kernel_plan/plan_equivalence.rs"]
 mod plan_equivalence;
 #[path = "egraph_kernel_plan/plan_kernel_work.rs"]
@@ -25,6 +27,8 @@ mod plan_kernel_work;
 mod plan_signature;
 #[path = "egraph_kernel_plan/plan_union.rs"]
 mod plan_union;
+#[path = "egraph_kernel_plan/signature_pair_ordinals.rs"]
+mod signature_pair_ordinals;
 #[path = "egraph_kernel_plan/types_canonicalization.rs"]
 mod types_canonicalization;
 #[path = "egraph_kernel_plan/types_launch.rs"]
@@ -53,7 +57,7 @@ pub use constants::{
     CUDA_EGRAPH_STRUCTURAL_EQUIVALENCE_KERNEL_PARAM_COUNT,
 };
 pub use error::CudaEGraphKernelPlanError;
-pub use helpers::cuda_egraph_signature_pair_rows;
+pub use signature_pair_ordinals::cuda_egraph_signature_pair_rows;
 pub use plan_equivalence::{
     collect_cuda_egraph_structural_equivalences, pack_cuda_egraph_signature_bucket_device_image,
     plan_cuda_egraph_structural_equivalence_launch_artifact,

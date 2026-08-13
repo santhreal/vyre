@@ -1,7 +1,7 @@
 use super::*;
 use crate::ir_inner::model::expr::{Expr, ExprNode, GeneratorRef, Ident};
 use crate::ir_inner::model::generated::Node;
-use crate::ir_inner::model::types::{AtomicOp, BinOp, DataType, UnOp};
+use crate::ir_inner::model::spec_types::{AtomicOp, BinOp, DataType, UnOp};
 use crate::MemoryOrdering;
 use std::convert::Infallible;
 use std::ops::ControlFlow::{self, Break, Continue};

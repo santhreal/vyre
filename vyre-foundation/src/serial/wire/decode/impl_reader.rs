@@ -128,7 +128,7 @@ impl Reader<'_> {
                 let offset = self.expr()?;
                 let size = self.expr()?;
                 let tag: crate::ir::Ident = self.string()?.into();
-                Ok(Node::async_load_ext(source, destination, offset, size, tag))
+                Ok(Node::async_load_gpu_driven(source, destination, offset, size, tag))
             }
             10 => Ok(Node::AsyncWait {
                 tag: self.string()?.into(),

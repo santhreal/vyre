@@ -10,7 +10,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
-use super::common::validate_complex_len;
+use super::complex_length::validate_complex_len;
 use super::fft_radix2_complex;
 use crate::region::wrap_anonymous;
 

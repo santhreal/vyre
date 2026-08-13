@@ -40,7 +40,5 @@ pub mod program_graph_analysis;
 pub mod program_graph_identity;
 mod program_graph_wire;
 
-/// Core type definitions.
-///
-/// Re-exports frozen types from `vyre-spec`.
-pub mod types;
+/// The frozen IR vocabulary re-exported from `vyre-spec`.
+pub mod spec_types;

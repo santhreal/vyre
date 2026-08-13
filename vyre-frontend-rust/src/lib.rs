@@ -65,6 +65,6 @@ pub enum RustFrontendError {
 
 // Re-export AST types so consumers can inspect parsed results.
 /// Re-export token type.
-pub use crate::lex::lexer::core::Token;
+pub use crate::lex::lexer::cpu_lexer::Token;
 /// Re-export AST types.
 pub use crate::parse::{Expr, Function, Module, Stmt, Type};

@@ -7,8 +7,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 pub use block_totals::c11_lexer_regular_sparse_packed_haystack_with_block_totals;
 
-use super::core::helpers::SparseHaystackLayout;
-use super::helpers::byte_eq;
+use super::byte_exprs::byte_eq;
+use super::classify::stages::SparseHaystackLayout;
 
 mod bounds;
 mod entrypoints;

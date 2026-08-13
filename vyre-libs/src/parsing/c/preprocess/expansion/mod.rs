@@ -32,16 +32,21 @@ pub(crate) fn load_macro_byte(buffer: &str, layout: MacroByteLayout, addr: Expr)
     Expr::bitand(as_u32, Expr::u32(0xff))
 }
 
+mod arg_bounds;
 mod arg_scan;
 mod conditional;
 mod dynamic_pass;
 mod fnlike;
 mod fnlike_mat;
-mod helpers;
+mod fnlike_replacement;
+mod macro_lookup;
 mod named;
+mod named_dispatch;
 mod named_mat;
 mod objlike;
 mod objlike_mat;
+mod objlike_replacement;
+mod output_token;
 mod paste_branch;
 mod regular_branch;
 mod string_branch;

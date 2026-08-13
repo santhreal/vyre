@@ -9,7 +9,7 @@ use crate::scan::builders::{append_match, append_match_subgroup};
 /// The buffer ABI intentionally matches the classic bounded-range program. The
 /// `pattern_lengths` buffer remains present for compatibility, but regex starts
 /// come from the invocation origin rather than `end - maximum_length`.
-pub(in crate::scan) fn regex_exact_ranges_program_ext(
+pub(in crate::scan) fn regex_exact_ranges_program(
     inputs: AcInputBindings<'_>,
     match_count: &str,
     matches: &str,

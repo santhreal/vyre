@@ -69,7 +69,7 @@ pub mod ir {
         };
     }
     pub use crate::ir_inner::model::program::ProgramStats;
-    pub use crate::ir_inner::model::types::{
+    pub use crate::ir_inner::model::spec_types::{
         AtomicOp, BinOp, BufferAccess, CollectiveOp, CommGroup, Convention, DataType, OpSignature,
         SubgroupReduceOp, UnOp,
     };

@@ -376,7 +376,7 @@ fn fuse_nodes_with_counts(
                 tag,
             } => {
                 replacements.flush_all(&mut fused);
-                fused.push(Node::async_load_ext(
+                fused.push(Node::async_load_gpu_driven(
                     source.clone(),
                     destination.clone(),
                     (**offset).clone(),

@@ -98,7 +98,7 @@ impl InlineCtx {
                 offset,
                 size,
                 tag,
-            } => Ok(vec![Node::async_load_ext(
+            } => Ok(vec![Node::async_load_gpu_driven(
                 source.clone(),
                 destination.clone(),
                 (**offset).clone(),

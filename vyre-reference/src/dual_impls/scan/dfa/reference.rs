@@ -1,17 +1,17 @@
-use crate::{dual_impls::common, workgroup::Memory};
+use crate::{dual_impls::evaluator, workgroup::Memory};
 use vyre_primitives::matching::CompiledDfa;
 use vyre_primitives::PatternMatchDfa;
 
-impl common::ReferenceEvaluator for PatternMatchDfa {
-    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, common::EvalError> {
-        let haystack = common::one_input(inputs, "scan_dfa")?;
+impl evaluator::ReferenceEvaluator for PatternMatchDfa {
+    fn evaluate(&self, inputs: &[Memory]) -> Result<Memory, evaluator::EvalError> {
+        let haystack = evaluator::one_input(inputs, "scan_dfa")?;
         // Decode using the canonical V2 wire format produced by CompiledDfa::to_bytes.
         // The old hand-rolled V1 parser (magic + state_count + start + accept_count)
         // does not match the V2 envelope (magic + version + state_count + max_pattern_len
         // + length-prefixed sections). Using from_bytes here keeps the reference oracle
         // byte-identical with every other consumer of the DFA wire format.
         let compiled = CompiledDfa::from_bytes(&self.dfa).map_err(|e| {
-            common::EvalError::new(format!(
+            evaluator::EvalError::new(format!(
                 "primitive `scan_dfa` could not decode DFA wire blob: {e}. \
                  Fix: populate PatternMatchDfa.dfa via CompiledDfa::to_bytes()."
             ))
@@ -25,7 +25,7 @@ impl common::ReferenceEvaluator for PatternMatchDfa {
             let next_state_idx = state * 256 + usize::from(byte);
             let next = compiled.transitions[next_state_idx] as usize;
             if next >= compiled.state_count as usize {
-                return Err(common::EvalError::new(
+                return Err(evaluator::EvalError::new(
                     "primitive `scan_dfa` transition targets an out-of-range state. \
                      Fix: validate every transition target in the DFA.",
                 ));
@@ -34,20 +34,20 @@ impl common::ReferenceEvaluator for PatternMatchDfa {
             // accept[state] is non-zero when the state matches at least one pattern.
             if compiled.accept[state] != 0 {
                 offsets.push(u32::try_from(offset).map_err(|_| {
-                    common::EvalError::new(
+                    evaluator::EvalError::new(
                         "primitive `scan_dfa` offset exceeds u32. Fix: split haystacks before 4 GiB.",
                     )
                 })?);
             }
         }
-        Ok(common::write_u32s(offsets))
+        Ok(evaluator::write_u32s(offsets))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dual_impls::common::ReferenceEvaluator;
+    use crate::dual_impls::evaluator::ReferenceEvaluator;
     use crate::workgroup::Memory;
     use vyre_primitives::matching::dfa_compile;
 

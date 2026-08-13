@@ -7,7 +7,7 @@ pub fn vyre_debug::artifact_report::ArtifactReport::from_bytes(bytes: &[u8]) -> 
 pub fn vyre_debug::artifact_report::ArtifactReport::from_envelope(envelope: &vyre_megakernel::envelope::ArtifactEnvelope) -> Self
 pub fn vyre_debug::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
 pub fn vyre_debug::carriers::carrier_summary(desc: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::carriers::CarrierSummary
-pub fn vyre_debug::carriers::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::core::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
+pub fn vyre_debug::carriers::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
 pub fn vyre_debug::dangling::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
 pub fn vyre_debug::descriptor_diff::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
 pub fn vyre_debug::descriptor_dump::DescriptorDumpOptions::default() -> Self
@@ -15,22 +15,22 @@ pub fn vyre_debug::descriptor_dump::dump_descriptor(desc: &vyre_lower::descripto
 pub fn vyre_debug::diff_descriptors(before: &vyre_lower::descriptor::KernelDescriptor, after: &vyre_lower::descriptor::KernelDescriptor) -> vyre_debug::descriptor_diff::DescriptorDiff
 pub fn vyre_debug::dump_descriptor(desc: &vyre_lower::descriptor::KernelDescriptor, options: &vyre_debug::descriptor_dump::DescriptorDumpOptions) -> vyre_debug::descriptor_dump::DescriptorDump
 pub fn vyre_debug::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
-pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
+pub fn vyre_debug::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
+pub fn vyre_debug::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub fn vyre_debug::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::find_dangling_refs(desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::dangling::DanglingRef>
-pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::core::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
-pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::core::Program
+pub fn vyre_debug::find_uncarriered_assigns(program: &vyre_foundation::ir_inner::model::program::definition::Program, desc: &vyre_lower::descriptor::KernelDescriptor) -> alloc::vec::Vec<vyre_debug::carriers::UncarrieredAssign>
+pub fn vyre_debug::fixtures::loop_carry_smoke() -> vyre_foundation::ir_inner::model::program::definition::Program
 pub fn vyre_debug::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
 pub fn vyre_debug::naga_dump::NagaDump::find(&self, handle: u32) -> core::option::Option<&alloc::vec::Vec<alloc::string::String>>
 pub fn vyre_debug::naga_dump::dump_naga_module(module: &naga::ir::Module) -> vyre_debug::naga_dump::NagaDump
 pub fn vyre_debug::naga_trace::failure_trace(module: &naga::ir::Module, error: &naga::valid::ValidationError) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::failure_trace_wgsl(module: &naga::ir::Module, info: &naga::valid::ModuleInfo, err: &naga::back::wgsl::Error) -> vyre_debug::naga_trace::FailureTrace
 pub fn vyre_debug::naga_trace::load_bind_result_log(path: &str) -> core::result::Result<alloc::vec::Vec<vyre_emit_naga::BindResultEntry>, vyre_debug::naga_trace::BindResultLogError>
-pub fn vyre_debug::source_walker::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::core::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
-pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
-pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
+pub fn vyre_debug::source_walker::walk_source_assigns<F>(program: &vyre_foundation::ir_inner::model::program::definition::Program, callback: F) where F: core::ops::function::FnMut(&str, alloc::vec::Vec<alloc::string::String>)
+pub fn vyre_debug::wgsl::dump_wgsl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
+pub fn vyre_debug::wgsl::dump_wgsl_with_lines(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_debug::wgsl::WgslDump, alloc::string::String>
 pub mod vyre_debug
 pub mod vyre_debug::artifact_report
 pub mod vyre_debug::carriers

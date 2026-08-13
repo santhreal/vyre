@@ -46,7 +46,7 @@ impl ExprNode for TestExprExtension {
     }
 }
 
-fn deserialize_expr_ext(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
+fn deserialize_test_expr_extension(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
     Ok(Arc::new(TestExprExtension {
         payload: bytes.to_vec(),
         identity: "test-expr".into(),
@@ -56,7 +56,7 @@ fn deserialize_expr_ext(bytes: &[u8]) -> Result<Arc<dyn ExprNode>, String> {
 inventory::submit! {
     OpaqueExprResolver {
         kind: EXPR_KIND,
-        deserialize: deserialize_expr_ext,
+        deserialize: deserialize_test_expr_extension,
     }
 }
 
@@ -87,7 +87,7 @@ impl NodeExtension for TestNodeExtension {
     }
 }
 
-fn deserialize_node_ext(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> {
+fn deserialize_test_node_extension(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> {
     Ok(Arc::new(TestNodeExtension {
         payload: bytes.to_vec(),
         identity: "test-node".into(),
@@ -97,7 +97,7 @@ fn deserialize_node_ext(bytes: &[u8]) -> Result<Arc<dyn NodeExtension>, String> 
 inventory::submit! {
     OpaqueNodeResolver {
         kind: NODE_KIND,
-        deserialize: deserialize_node_ext,
+        deserialize: deserialize_test_node_extension,
     }
 }
 

@@ -36,12 +36,12 @@ pub fn vyre_emit_naga::patterns::vec_pack::plan::PackKind::throughput_factor(&se
 pub fn vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::estimated_savings_score(&self) -> f32
 pub fn vyre_emit_naga::patterns::vec_pack::plan::PackingPlan::ops_eliminated(&self) -> usize
 pub fn vyre_emit_naga::program::bind_group_for(kind: vyre_foundation::ir_inner::model::program::MemoryKind) -> u32
-pub fn vyre_emit_naga::program::emit_module(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3]) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
-pub fn vyre_emit_naga::program::emit_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
-pub fn vyre_emit_naga::program::emit_prepared_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::core::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
-pub fn vyre_emit_naga::program::prepared_program(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, vyre_foundation::lower::LoweringError>
-pub fn vyre_emit_naga::program::trap_sidecar_decl(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl, vyre_foundation::lower::LoweringError>
-pub fn vyre_emit_naga::program::trap_tags(program: &vyre_foundation::ir_inner::model::program::core::Program) -> core::result::Result<alloc::sync::Arc<[vyre_emit_naga::program::TrapTag]>, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::emit_module(program: &vyre_foundation::ir_inner::model::program::definition::Program, workgroup_size: [u32; 3]) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::emit_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::definition::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::emit_prepared_module_with_capabilities(program: &vyre_foundation::ir_inner::model::program::definition::Program, workgroup_size: [u32; 3], target: &vyre_lower::target::EmissionTargetCapabilities) -> core::result::Result<naga::ir::Module, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::prepared_program(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::definition::Program, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::trap_sidecar_decl(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<vyre_foundation::ir_inner::model::program::buffer_decl::BufferDecl, vyre_foundation::lower::LoweringError>
+pub fn vyre_emit_naga::program::trap_tags(program: &vyre_foundation::ir_inner::model::program::definition::Program) -> core::result::Result<alloc::sync::Arc<[vyre_emit_naga::program::TrapTag]>, vyre_foundation::lower::LoweringError>
 pub mod vyre_emit_naga
 pub mod vyre_emit_naga::patterns
 pub mod vyre_emit_naga::patterns::pipeline_prewarm

@@ -15,16 +15,20 @@ use super::staging_reserve::{
 use crate::PipelineError;
 
 mod errors;
+mod evidence;
+mod ring_state;
 mod sketch;
-mod types;
-pub use sketch::{CountMinSketch, SketchTelemetry, SketchTelemetryScratch};
-use types::WindowAccumulator;
-pub use types::{
-    ControlSnapshot, ResidentRuntimeCounters, ResidentRuntimeEvidence, ResidentWatchdogSnapshot,
-    RingOccupancy, RingSlotSnapshot, RingStatus, RingTelemetry, RuntimeEvidenceMetricCoverage,
-    RuntimeEvidenceMetricFamily, TelemetryDecodeCapacityEvidence, TelemetryDecodeScratch,
-    WindowTelemetry, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION, TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
+pub use evidence::{
+    ResidentRuntimeEvidence, RuntimeEvidenceMetricCoverage, RuntimeEvidenceMetricFamily,
+    TelemetryDecodeCapacityEvidence, RUNTIME_IO_EVIDENCE_SCHEMA_VERSION,
+    TELEMETRY_DECODE_CAPACITY_SCHEMA_VERSION,
 };
+use ring_state::WindowAccumulator;
+pub use ring_state::{
+    ControlSnapshot, ResidentRuntimeCounters, ResidentWatchdogSnapshot, RingOccupancy,
+    RingSlotSnapshot, RingStatus, RingTelemetry, TelemetryDecodeScratch, WindowTelemetry,
+};
+pub use sketch::{CountMinSketch, SketchTelemetry, SketchTelemetryScratch};
 
 const SLOT_WORDS_USIZE: usize = 16;
 

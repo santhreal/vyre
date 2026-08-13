@@ -5,7 +5,7 @@ macro_rules! define_compare_dual_reference {
             /// Evaluate the comparison using the direct word-oriented oracle.
             #[must_use]
             pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::binary_direct_predicate(input, $direct)
+                crate::dual_impls::evaluator::binary_direct_predicate(input, $direct)
             }
         }
 
@@ -30,7 +30,7 @@ macro_rules! define_compare_dual_reference {
     };
 }
 
-mod common;
+mod byte_walk_reference;
 /// docs
 pub mod eq;
 /// docs

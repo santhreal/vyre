@@ -187,7 +187,7 @@ mod tests {
     use super::{ArenaProgram, ExprArena};
     use crate::ir_inner::model::expr::Expr;
     use crate::ir_inner::model::program::BufferDecl;
-    use crate::ir_inner::model::types::DataType;
+    use crate::ir_inner::model::spec_types::DataType;
 
     #[test]
     fn arena_allocates_stable_expression_refs() {

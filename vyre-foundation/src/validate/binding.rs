@@ -10,7 +10,7 @@
 /// validator will accept.
 pub use super::depth::{DEFAULT_MAX_CALL_DEPTH, DEFAULT_MAX_NESTING_DEPTH, DEFAULT_MAX_NODE_COUNT};
 use crate::ir_inner::model::expr::Ident;
-use crate::ir_inner::model::types::DataType;
+use crate::ir_inner::model::spec_types::DataType;
 use crate::validate::{err, ValidationError};
 use crate::validate::{ValidationLocation, ValidationPhase};
 use rustc_hash::FxHashSet;

@@ -13,7 +13,7 @@ use crate::api::suite::SuiteKind;
 use vyre_libs::scan::classic_ac::{
     classic_ac_candidate_end_byte_mask_words, classic_ac_candidate_suffix2_mask_words,
     classic_ac_candidate_suffix3_bloom_words, classic_ac_compile,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext, ClassicAcAutomaton,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce, ClassicAcAutomaton,
     CLASSIC_AC_SUFFIX2_MASK_WORDS,
 };
 use vyre_libs::scan::pack_haystack_u32;
@@ -315,7 +315,7 @@ fn prepare_scan_ac_irregular(
         )));
     }
     let expected_match_count = expected_matches.len() as u32;
-    let program = try_build_ac_bounded_ranges_suffix3_prefilter_program_ext(
+    let program = try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce(
         &ac.dfa,
         pattern_lengths.len() as u32,
         MAX_MATCHES,

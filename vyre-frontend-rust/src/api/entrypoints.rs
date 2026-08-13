@@ -1,6 +1,6 @@
 //! Public entry points for the Rust frontend.
 
-use crate::lex::lexer::core::lex;
+use crate::lex::lexer::cpu_lexer::lex;
 use crate::parse::Module;
 
 use crate::api::parse_summary::ParseSummary;

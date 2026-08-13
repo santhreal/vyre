@@ -9,7 +9,7 @@ pub struct AddDualReference;
 define_arith_dual_reference!(
     AddDualReference,
     u32::wrapping_add,
-    super::super::common::wrapping_add_bits_reference
+    super::super::bit_walk_reference::wrapping_add_bits_reference
 );
 
 inventory::submit! {

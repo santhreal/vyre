@@ -21,7 +21,7 @@
 use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::ir::model::types::{BinOp, UnOp};
+use vyre_foundation::ir::model::spec_types::{BinOp, UnOp};
 use vyre_foundation::ir::{Expr, Ident, Node, Program};
 
 /// The post-substitution folder splits between u32-result ops and

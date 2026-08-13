@@ -1,15 +1,18 @@
 //! Poll/claim helpers. Read REQUEST slots out of the queue and (in the
-//! claim variant) atomically transition them to CLAIMED.
+//! claim variant) atomically transition them to CLAIMED, plus the GPU-side
+//! completion-poll loop the megakernel body composes.
 
 use std::sync::atomic::{fence, Ordering};
 
 use crate::PipelineError;
 
+use vyre_foundation::ir::{Expr, Node};
+
 use super::super::protocol::slot;
-use super::helpers::{
+use super::queue_words::{
     read_queue_word, try_queue_word_index, validate_io_queue_view, write_queue_word, IoQueueView,
 };
-use super::{io_word, IoRequest};
+use super::{io_status, io_word, IoRequest, IO_SLOT_COUNT, IO_SLOT_WORDS};
 
 /// contains a partial IO slot, or exceeds the compiled poll window.
 pub fn try_poll_io_requests(io_queue_bytes: &[u8]) -> Result<Vec<IoRequest>, PipelineError> {
@@ -303,4 +306,44 @@ fn reserve_target_capacity<T>(
             fix: "host IO polling could not reserve request records; reduce IO_SLOT_COUNT or drain the megakernel IO queue more frequently",
         }
     })
+}
+
+/// Build the GPU-side IO poll body as `Vec<Node>` for composition
+/// into the megakernel persistent loop.
+///
+/// Each iteration, the kernel scans IO slots for DONE status
+/// (set by the host) and reads the completion result. This is
+/// the GPU's "interrupt handler" for asynchronous DMA.
+#[must_use]
+pub fn io_completion_poll_body() -> Vec<Node> {
+    vec![Node::loop_for(
+        "io_poll_idx",
+        Expr::u32(0),
+        Expr::u32(IO_SLOT_COUNT),
+        vec![
+            Node::let_bind(
+                "io_poll_base",
+                Expr::mul(Expr::var("io_poll_idx"), Expr::u32(IO_SLOT_WORDS)),
+            ),
+            Node::let_bind(
+                "io_poll_status",
+                Expr::load(
+                    "io_queue",
+                    Expr::add(Expr::var("io_poll_base"), Expr::u32(io_word::STATUS)),
+                ),
+            ),
+            // If host marked OK or ERROR, clear the slot for reuse.
+            Node::if_then(
+                Expr::or(
+                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::OK)),
+                    Expr::eq(Expr::var("io_poll_status"), Expr::u32(io_status::ERROR)),
+                ),
+                vec![Node::store(
+                    "io_queue",
+                    Expr::add(Expr::var("io_poll_base"), Expr::u32(io_word::STATUS)),
+                    Expr::u32(slot::EMPTY),
+                )],
+            ),
+        ],
+    )]
 }

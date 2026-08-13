@@ -65,7 +65,7 @@ pub use regex_compile::{
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
 pub use regex_dfa::{
     build_regex_dfa_pipeline, build_regex_dfa_pipeline_with_policy,
-    build_regex_dfa_pipeline_with_policy_ext, build_regex_dfa_shards,
+    build_regex_dfa_pipeline_with_policy_and_subgroup_coalesce, build_regex_dfa_shards,
     build_regex_dfa_shards_unanchored, build_regex_dfa_unanchored, RegexDfaError, RegexDfaPipeline,
     RegexDfaShard,
 };

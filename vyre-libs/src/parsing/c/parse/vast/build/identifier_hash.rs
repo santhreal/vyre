@@ -127,3 +127,42 @@ pub(crate) fn emit_identifier_hash_for_row(
     let guard = row.hash_is_unset();
     row.nodes(guard)
 }
+
+pub(crate) fn emit_identifier_source_hash_for_index(
+    vast_nodes: &str,
+    haystack: &str,
+    haystack_len: &Expr,
+    idx: Expr,
+    out_name: &str,
+    prefix: &str,
+    packed_haystack: bool,
+) -> Vec<Node> {
+    let base = format!("{prefix}_hash_base");
+    let start = format!("{prefix}_hash_start");
+    let len = format!("{prefix}_hash_len");
+    let cursor = format!("{prefix}_hash_i");
+    let byte = format!("{prefix}_hash_byte");
+
+    let row = IdentifierRowHash {
+        vast_nodes,
+        haystack,
+        haystack_len,
+        row_base: Expr::var(&base),
+        packed_haystack,
+        names: IdentifierRowHashNames {
+            start: &start,
+            len: &len,
+            hash: out_name,
+            cursor: &cursor,
+            byte: &byte,
+        },
+    };
+
+    let mut nodes = vec![Node::let_bind(
+        &base,
+        Expr::mul(idx, Expr::u32(VAST_NODE_STRIDE_U32)),
+    )];
+    let guard = row.hash_is_unset();
+    nodes.extend(row.nodes(guard));
+    nodes
+}

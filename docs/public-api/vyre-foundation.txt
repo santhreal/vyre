@@ -1031,7 +1031,7 @@ pub fn vyre_foundation::ir::InterpCtx::set_region(&mut self, id: vyre_foundation
 pub fn vyre_foundation::ir::MemoryHints::default() -> Self
 pub fn vyre_foundation::ir::Node::assign(name: impl core::convert::Into<vyre_foundation::ir::Ident>, value: vyre_foundation::ir::Expr) -> Self
 pub fn vyre_foundation::ir::Node::async_load(tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
-pub fn vyre_foundation::ir::Node::async_load_ext(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
+pub fn vyre_foundation::ir::Node::async_load_gpu_driven(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::async_store(source: impl core::convert::Into<vyre_foundation::ir::Ident>, destination: impl core::convert::Into<vyre_foundation::ir::Ident>, offset: vyre_foundation::ir::Expr, size: vyre_foundation::ir::Expr, tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::async_wait(tag: impl core::convert::Into<vyre_foundation::ir::Ident>) -> Self
 pub fn vyre_foundation::ir::Node::block(nodes: alloc::vec::Vec<Self>) -> Self
@@ -2593,7 +2593,7 @@ pub mod vyre_foundation::ir::model::program::stats
 pub mod vyre_foundation::ir::model::program_graph
 pub mod vyre_foundation::ir::model::program_graph_analysis
 pub mod vyre_foundation::ir::model::program_graph_identity
-pub mod vyre_foundation::ir::model::types
+pub mod vyre_foundation::ir::model::spec_types
 pub mod vyre_foundation::ir::stats
 pub mod vyre_foundation::ir::text
 pub mod vyre_foundation::lower
@@ -3144,16 +3144,16 @@ pub use vyre_foundation::ir::DataType
 pub use vyre_foundation::ir::OpSignature
 pub use vyre_foundation::ir::SubgroupReduceOp
 pub use vyre_foundation::ir::UnOp
-pub use vyre_foundation::ir::model::types::AtomicOp
-pub use vyre_foundation::ir::model::types::BinOp
-pub use vyre_foundation::ir::model::types::BufferAccess
-pub use vyre_foundation::ir::model::types::CollectiveOp
-pub use vyre_foundation::ir::model::types::CommGroup
-pub use vyre_foundation::ir::model::types::Convention
-pub use vyre_foundation::ir::model::types::DataType
-pub use vyre_foundation::ir::model::types::OpSignature
-pub use vyre_foundation::ir::model::types::SubgroupReduceOp
-pub use vyre_foundation::ir::model::types::UnOp
+pub use vyre_foundation::ir::model::spec_types::AtomicOp
+pub use vyre_foundation::ir::model::spec_types::BinOp
+pub use vyre_foundation::ir::model::spec_types::BufferAccess
+pub use vyre_foundation::ir::model::spec_types::CollectiveOp
+pub use vyre_foundation::ir::model::spec_types::CommGroup
+pub use vyre_foundation::ir::model::spec_types::Convention
+pub use vyre_foundation::ir::model::spec_types::DataType
+pub use vyre_foundation::ir::model::spec_types::OpSignature
+pub use vyre_foundation::ir::model::spec_types::SubgroupReduceOp
+pub use vyre_foundation::ir::model::spec_types::UnOp
 pub use vyre_foundation::optimizer::vyre_pass
 pub use vyre_foundation::pass_substrate::dataflow_fixpoint::Semiring
 pub vyre_foundation::AlgebraicLawRegistration::law: vyre_spec::algebraic_law::AlgebraicLaw

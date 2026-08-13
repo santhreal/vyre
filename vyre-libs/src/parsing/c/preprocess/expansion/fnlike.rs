@@ -3,7 +3,9 @@
 use crate::parsing::c::preprocess::synthesis::*;
 use vyre_foundation::ir::{Expr, Node};
 
-use super::helpers::*;
+use super::arg_bounds::*;
+use super::fnlike_replacement::*;
+use super::output_token::*;
 use super::paste_branch::*;
 use super::*;
 

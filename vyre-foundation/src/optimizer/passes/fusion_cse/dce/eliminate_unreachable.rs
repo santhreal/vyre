@@ -66,7 +66,7 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                 offset,
                 size,
                 tag,
-            } => out.push(Node::async_load_ext(
+            } => out.push(Node::async_load_gpu_driven(
                 source,
                 destination,
                 *offset,

@@ -1,8 +1,7 @@
-//! Shared bitwise dual-reference machinery.
+//! Bit-by-bit bitwise references, computed without the corresponding `u32`
+//! operator so the two arms of each dual pair stay independent.
 
-use crate::dual_impls::common::read_two_words;
-
-pub(crate) use crate::dual_impls::common::binary_direct;
+use crate::dual_impls::evaluator::read_two_words;
 
 /// Bit-by-bit binary reference over the first two little-endian words.
 #[must_use]
@@ -17,15 +16,6 @@ pub(crate) fn binary_bits(input: &[u8], op: impl Fn(bool, bool) -> bool) -> Vec<
         }
     }
     output.to_vec()
-}
-
-/// Direct u32 unary reference over the first little-endian word.
-#[must_use]
-pub(crate) fn unary_direct(input: &[u8], op: impl FnOnce(u32) -> u32) -> Vec<u8> {
-    let Some(value) = read_one_word(input) else {
-        return zero_word();
-    };
-    op(value).to_le_bytes().to_vec()
 }
 
 /// Bit-by-bit unary reference over the first little-endian word.
@@ -104,10 +94,6 @@ pub(crate) fn clz_bits(input: &[u8]) -> Vec<u8> {
     count.to_le_bytes().to_vec()
 }
 
-fn read_one_word(input: &[u8]) -> Option<u32> {
-    (input.len() >= 4).then(|| u32::from_le_bytes([input[0], input[1], input[2], input[3]]))
-}
-
 fn bit_at(input: &[u8], bit_index: usize) -> bool {
     let byte = input[bit_index / 8];
     let mask = 1_u8 << (bit_index % 8);
@@ -118,96 +104,10 @@ fn zero_word() -> Vec<u8> {
     vec![0; 4]
 }
 
-macro_rules! define_binary_bitwise_dual {
-    ($marker:ident, $op_id:literal, $word_op:expr, $bit_op:expr) => {
-        /// Operation ID for this bitwise primitive.
-        pub const OP_ID: &str = $op_id;
-
-        /// Direct word-oriented reference.
-        pub mod reference_a {
-            /// Evaluate the direct word-oriented bitwise reference.
-            #[must_use]
-            pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::binary_direct(input, $word_op)
-            }
-        }
-
-        /// Independent bit-by-bit reference.
-        pub mod reference_b {
-            /// Evaluate the bit-by-bit bitwise reference.
-            #[must_use]
-            pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::binary_bits(input, $bit_op)
-            }
-        }
-
-        /// Dual-reference marker for this bitwise primitive.
-        pub struct $marker;
-
-        impl $crate::dual::DualReference for $marker {
-            fn reference_a(input: &[u8]) -> Vec<u8> {
-                reference_a::reference(input)
-            }
-
-            fn reference_b(input: &[u8]) -> Vec<u8> {
-                reference_b::reference(input)
-            }
-        }
-
-        inventory::submit! {
-            $crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
-        }
-    };
-}
-
-macro_rules! define_unary_bitwise_dual {
-    ($marker:ident, $op_id:literal, $word_op:expr, $bit_op:expr) => {
-        /// Operation ID for this bitwise primitive.
-        pub const OP_ID: &str = $op_id;
-
-        /// Direct word-oriented reference.
-        pub mod reference_a {
-            /// Evaluate the direct word-oriented bitwise reference.
-            #[must_use]
-            pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::unary_direct(input, $word_op)
-            }
-        }
-
-        /// Independent bit-by-bit reference.
-        pub mod reference_b {
-            /// Evaluate the bit-by-bit bitwise reference.
-            #[must_use]
-            pub fn reference(input: &[u8]) -> Vec<u8> {
-                super::super::common::unary_bits(input, $bit_op)
-            }
-        }
-
-        /// Dual-reference marker for this bitwise primitive.
-        pub struct $marker;
-
-        impl $crate::dual::DualReference for $marker {
-            fn reference_a(input: &[u8]) -> Vec<u8> {
-                reference_a::reference(input)
-            }
-
-            fn reference_b(input: &[u8]) -> Vec<u8> {
-                reference_b::reference(input)
-            }
-        }
-
-        inventory::submit! {
-            $crate::DualReferenceFacet::new(OP_ID, reference_a::reference, reference_b::reference)
-        }
-    };
-}
-
-pub(crate) use define_binary_bitwise_dual;
-pub(crate) use define_unary_bitwise_dual;
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dual_impls::evaluator::{binary_direct, unary_direct};
 
     #[test]
     fn binary_direct_and_bits_match_on_generated_cases() {

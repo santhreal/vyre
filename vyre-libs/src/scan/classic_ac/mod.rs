@@ -25,22 +25,22 @@ pub(crate) mod test_helpers;
 #[cfg(any(test, feature = "cpu-parity"))]
 pub use bounded_ranges::classic_ac_bounded_ranges_scan;
 pub use bounded_ranges::{
-    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_ext,
-    build_ac_bounded_ranges_program, build_ac_bounded_ranges_program_ext,
+    build_ac_bounded_ranges_prefilter_program, build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
+    build_ac_bounded_ranges_program, build_ac_bounded_ranges_program_with_subgroup_coalesce,
     build_ac_bounded_ranges_suffix3_prefilter_program,
-    build_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_ext,
-    classic_ac_bounded_ranges_program, classic_ac_bounded_ranges_program_ext,
+    build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_prefilter_program, classic_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_program, classic_ac_bounded_ranges_program_with_subgroup_coalesce,
     classic_ac_bounded_ranges_suffix3_prefilter_program,
-    classic_ac_bounded_ranges_suffix3_prefilter_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered_ext,
-    classic_ac_bounded_ranges_suffix3_presence_by_region_program_ext,
-    classic_ac_bounded_ranges_suffix3_presence_program_ext, presence_bitmap_words,
+    classic_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
+    classic_ac_bounded_ranges_suffix3_presence_by_region_program,
+    classic_ac_bounded_ranges_suffix3_presence_program, presence_bitmap_words,
     presence_by_region_words, try_build_ac_bounded_ranges_prefilter_program,
-    try_build_ac_bounded_ranges_prefilter_program_ext, try_build_ac_bounded_ranges_program,
-    try_build_ac_bounded_ranges_program_ext, try_build_ac_bounded_ranges_suffix3_prefilter_program,
-    try_build_ac_bounded_ranges_suffix3_prefilter_program_ext,
+    try_build_ac_bounded_ranges_prefilter_program_with_subgroup_coalesce, try_build_ac_bounded_ranges_program,
+    try_build_ac_bounded_ranges_program_with_subgroup_coalesce, try_build_ac_bounded_ranges_suffix3_prefilter_program,
+    try_build_ac_bounded_ranges_suffix3_prefilter_program_with_subgroup_coalesce,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program,
     try_build_ac_bounded_ranges_suffix3_presence_and_positions_by_region_program_filtered,
     try_build_ac_bounded_ranges_suffix3_presence_by_region_program,
@@ -48,7 +48,7 @@ pub use bounded_ranges::{
 };
 
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub(in crate::scan) use bounded_ranges::regex_exact_ranges_program_ext;
+pub(in crate::scan) use bounded_ranges::regex_exact_ranges_program;
 pub use count_program::ascii_case_variants;
 pub use count_program::{
     build_ac_bounded_count_prefilter_program, build_ac_bounded_count_program,

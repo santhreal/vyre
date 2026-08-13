@@ -1,5 +1,5 @@
 use super::super::protocol::slot;
-use super::helpers::try_queue_word_index;
+use super::queue_words::try_queue_word_index;
 use super::{
     claim_io_requests_into, complete_io_request, complete_io_requests_batch, encode_empty_io_queue,
     io_completion_poll_body, io_op, io_status, io_word, try_claim_io_requests_into,

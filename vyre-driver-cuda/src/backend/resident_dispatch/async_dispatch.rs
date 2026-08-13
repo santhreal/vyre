@@ -18,9 +18,12 @@ use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{
     resident_bindings_from_handles, CudaDispatchBinding, CudaResidentBuffer, ResidentViewCache,
 };
-use crate::backend::resident_dispatch::helpers::{
-    enqueue_optional_resident_h2d_copy, enqueue_resident_h2d_copy, next_dispatch_binding,
-    resident_required_handles, validate_dense_resident_output_indices,
+use crate::backend::resident_dispatch::dense_index_validation::validate_dense_resident_output_indices;
+use crate::backend::resident_dispatch::descriptor_cursor::{
+    next_dispatch_binding, resident_required_handles,
+};
+use crate::backend::resident_dispatch::host_uploads::{
+    enqueue_optional_resident_h2d_copy, enqueue_resident_h2d_copy,
 };
 use crate::backend::resident_dispatch_support::{
     add_resident_dispatch_bytes, add_resident_dispatch_u64_count, CudaResidentDispatch,

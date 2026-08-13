@@ -5,7 +5,7 @@ use std::sync::atomic::{fence, Ordering};
 use crate::PipelineError;
 
 use super::super::protocol::slot;
-use super::helpers::try_queue_word_index;
+use super::queue_words::try_queue_word_index;
 use super::{io_op, io_status, io_word, IoCompletion, IO_SLOT_COUNT, IO_SLOT_WORDS};
 
 /// Host-side handle to the megakernel IO queue. Wraps a `Vec<u32>` slot ring

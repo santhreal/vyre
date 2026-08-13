@@ -20,7 +20,7 @@ use std::sync::Arc;
 use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{BufferDecl, Node, Program};
 
-use super::core::{c11_lexer, c11_lexer_regular};
+use super::classify::{c11_lexer, c11_lexer_regular};
 use super::digraphs::c11_lex_digraphs;
 use crate::region::wrap;
 

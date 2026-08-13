@@ -249,19 +249,20 @@ impl Node {
         }
     }
 
-    /// Begin an asynchronous transfer stream region (GPU-driven).
+    /// Begin an asynchronous transfer stream region that names its own
+    /// operands, so the GPU drives the transfer.
     ///
     /// # Examples
     ///
     /// ```
     /// use vyre::ir::{Node, Expr};
     ///
-    /// let node = Node::async_load_ext("ssd", "vram", Expr::u32(0), Expr::u32(1024), "tag-0");
+    /// let node = Node::async_load_gpu_driven("ssd", "vram", Expr::u32(0), Expr::u32(1024), "tag-0");
     /// assert!(matches!(node, Node::AsyncLoad { .. }));
     /// ```
     #[must_use]
     #[inline]
-    pub fn async_load_ext(
+    pub fn async_load_gpu_driven(
         source: impl Into<Ident>,
         destination: impl Into<Ident>,
         offset: Expr,
@@ -277,11 +278,16 @@ impl Node {
         }
     }
 
-    /// Begin an asynchronous transfer stream region (legacy/host-driven).
+    /// Begin an asynchronous transfer stream region carrying only a tag.
+    ///
+    /// The host drives the transfer and knows the buffers out of band, so the
+    /// node records placeholder operands. Emit
+    /// [`Node::async_load_gpu_driven`] when the source, destination, offset,
+    /// and size are known in the IR.
     #[must_use]
     #[inline]
     pub fn async_load(tag: impl Into<Ident>) -> Self {
-        Self::async_load_ext(
+        Self::async_load_gpu_driven(
             "__legacy_src__",
             "__legacy_dst__",
             Expr::u32(0),

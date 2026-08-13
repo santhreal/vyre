@@ -4,7 +4,7 @@ use super::put_node;
 use crate::ir_inner::model::program::{
     BufferDecl, CacheLocality, LinearType, MemoryKind, ShapePredicate,
 };
-use crate::ir_inner::model::types::{BufferAccess, DataType};
+use crate::ir_inner::model::spec_types::{BufferAccess, DataType};
 use crate::perf::PerfScope;
 use crate::serial::wire::encode::WireEncodeErr;
 use crate::serial::wire::framing::{

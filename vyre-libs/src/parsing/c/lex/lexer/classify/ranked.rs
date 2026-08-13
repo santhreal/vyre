@@ -1,4 +1,4 @@
-use super::helpers::{token_column_buffers, LEXER_WORKGROUP_SIZE};
+use super::stages::{token_column_buffers, LEXER_WORKGROUP_SIZE};
 use super::parallel_common::{
     regular_parallel_classifier, regular_parallel_token_start_expr, RegularParallelMode,
 };

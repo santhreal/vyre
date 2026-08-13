@@ -12,13 +12,14 @@ use super::*;
 
 mod annotate;
 mod annotation_helpers;
-mod common;
 mod decl_contexts;
 mod global_fast;
+mod haystack_words;
 mod precomputed_visible_type;
 mod prehash;
 mod row_phases;
 mod scopes;
+mod symbol_bucket;
 mod symbol_links;
 
 pub use annotate::{
@@ -38,4 +39,5 @@ pub use prehash::{c11_prehash_vast_identifiers, c11_prehash_vast_identifiers_pac
 pub use scopes::{c11_precompute_vast_scopes, c11_precompute_vast_scopes_uses_global_stack};
 pub use symbol_links::c11_link_vast_typedef_symbols;
 
-use common::*;
+use haystack_words::*;
+use symbol_bucket::*;

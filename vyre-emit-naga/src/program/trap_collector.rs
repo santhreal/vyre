@@ -11,7 +11,7 @@ use vyre_foundation::ir::model::expr::GeneratorRef;
 use vyre_foundation::ir::{Expr, Ident, Node};
 use vyre_foundation::visit::NodeVisitor;
 
-use super::types::TrapTag;
+use super::trap_sidecar::TrapTag;
 
 #[derive(Default)]
 pub(super) struct TrapTagCollector {

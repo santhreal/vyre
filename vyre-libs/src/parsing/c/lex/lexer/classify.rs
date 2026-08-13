@@ -1,6 +1,6 @@
 //! Serial and per-invocation C11 lexer builders.
 //!
-//! `helpers` owns the one token-classification walk every builder in this
+//! `stages` owns the one token-classification walk every builder in this
 //! module and in `core_sparse` composes; the files beside it are thin
 //! compositions that pick stages, name their loop variables, and choose an
 //! output shell. `dense.rs` is the full C11 grammar over a contiguous haystack,
@@ -13,9 +13,9 @@ use crate::parsing::composition::child_phase;
 use crate::region::wrap_anonymous;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use super::helpers::{
+use super::byte_exprs::{
     ascii, byte_at_or_zero, byte_eq, byte_load, is_digit, is_ident_continue, is_ident_start,
-    is_valid_escape_byte, set_token,
+    is_valid_escape_byte,
 };
 
 mod dense;
@@ -25,7 +25,7 @@ mod regular;
 mod scan_bounds;
 mod sparse;
 
-pub(super) mod helpers;
+pub(super) mod stages;
 
 pub use dense::c11_lexer;
 pub use ranked::c11_lexer_regular_ranked;

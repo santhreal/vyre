@@ -3,7 +3,7 @@
 use thiserror::Error;
 use vyre_foundation::ir::{DataType, Expr, Node, Program, UnOp};
 
-use super::common::{self, GatedDeltaSpec};
+use super::gated_delta_layout::{self, GatedDeltaSpec};
 use crate::region::wrap_anonymous;
 
 const OP_ID: &str = "vyre-libs::nn::recurrent_gated_delta";
@@ -149,14 +149,14 @@ fn recurrent_gated_delta_impl(
     } = *spec;
 
     let qk_index =
-        |dim: Expr| common::qk_index(sequence, key_heads, key_dim, Expr::var("token"), dim);
+        |dim: Expr| gated_delta_layout::qk_index(sequence, key_heads, key_dim, Expr::var("token"), dim);
     let state_index = |key_index: Expr, value_index: Expr| {
-        common::state_index(key_dim, value_dim, key_index, value_index)
+        gated_delta_layout::state_index(key_dim, value_dim, key_index, value_index)
     };
     let value_index = |dim: Expr| {
-        common::value_index(sequence, value_heads, value_dim, Expr::var("token"), dim)
+        gated_delta_layout::value_index(sequence, value_heads, value_dim, Expr::var("token"), dim)
     };
-    let scalar_index = common::scalar_index(sequence, value_heads, Expr::var("token"));
+    let scalar_index = gated_delta_layout::scalar_index(sequence, value_heads, Expr::var("token"));
     let output_index = value_index(Expr::var("value_index"));
 
     let init_state = Node::loop_for(
@@ -420,7 +420,7 @@ fn recurrent_gated_delta_impl(
     ];
 
     Ok(Program::wrapped(
-        common::gated_delta_buffers(spec, &counts),
+        gated_delta_layout::gated_delta_buffers(spec, &counts),
         [64, 1, 1],
         vec![wrap_anonymous(OP_ID, body)],
     ))
