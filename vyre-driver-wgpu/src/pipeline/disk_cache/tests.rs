@@ -1,7 +1,4 @@
 //! Contract tests for the pipeline disk cache.
-//!
-//! Split into one module per concern so the production file stays focused on
-//! production code.
 #![allow(missing_docs)]
 
 use super::*;
