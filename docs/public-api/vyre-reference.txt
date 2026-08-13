@@ -145,9 +145,6 @@ pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_a(i
 pub fn vyre_reference::dual_impls::bitwise::xor::XorDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::bitwise::xor::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::bitwise::xor::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
-pub fn vyre_reference::dual_impls::evaluator::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_reference::dual_impls::evaluator::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn vyre_reference::dual_impls::evaluator::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::evaluator::EvalError>
 pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_a(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::eq::EqDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::eq::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
@@ -156,6 +153,9 @@ pub fn vyre_reference::dual_impls::compare::lt::LtDualReference::reference_a(inp
 pub fn vyre_reference::dual_impls::compare::lt::LtDualReference::reference_b(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::lt::reference_a::reference(input: &[u8]) -> alloc::vec::Vec<u8>
 pub fn vyre_reference::dual_impls::compare::lt::reference_b::reference(input: &[u8]) -> alloc::vec::Vec<u8>
+pub fn vyre_reference::dual_impls::evaluator::EvalError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn vyre_reference::dual_impls::evaluator::EvalError::new(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn vyre_reference::dual_impls::evaluator::ReferenceEvaluator::evaluate(&self, inputs: &[vyre_reference::workgroup::Memory]) -> core::result::Result<vyre_reference::workgroup::Memory, vyre_reference::dual_impls::evaluator::EvalError>
 pub fn vyre_reference::dual_op_ids() -> &'static [&'static str]
 pub fn vyre_reference::execution::expr::Buffer::into_value(self) -> vyre_reference::value::Value
 pub fn vyre_reference::execution::expr::Buffer::new(bytes: alloc::vec::Vec<u8>, element: vyre_spec::data_type::DataType) -> Self
@@ -319,7 +319,6 @@ pub mod vyre_reference::dual_impls::bitwise::shift_right::reference_b
 pub mod vyre_reference::dual_impls::bitwise::xor
 pub mod vyre_reference::dual_impls::bitwise::xor::reference_a
 pub mod vyre_reference::dual_impls::bitwise::xor::reference_b
-pub mod vyre_reference::dual_impls::evaluator
 pub mod vyre_reference::dual_impls::compare
 pub mod vyre_reference::dual_impls::compare::eq
 pub mod vyre_reference::dual_impls::compare::eq::reference
@@ -329,6 +328,7 @@ pub mod vyre_reference::dual_impls::compare::lt
 pub mod vyre_reference::dual_impls::compare::lt::reference
 pub mod vyre_reference::dual_impls::compare::lt::reference_a
 pub mod vyre_reference::dual_impls::compare::lt::reference_b
+pub mod vyre_reference::dual_impls::evaluator
 pub mod vyre_reference::dual_impls::hash
 pub mod vyre_reference::dual_impls::hash::blake3
 pub mod vyre_reference::dual_impls::hash::blake3::reference
@@ -372,9 +372,9 @@ pub struct vyre_reference::dual_impls::bitwise::and::AndDualReference
 pub struct vyre_reference::dual_impls::bitwise::not::NotDualReference
 pub struct vyre_reference::dual_impls::bitwise::or::OrDualReference
 pub struct vyre_reference::dual_impls::bitwise::xor::XorDualReference
-pub struct vyre_reference::dual_impls::evaluator::EvalError
 pub struct vyre_reference::dual_impls::compare::eq::EqDualReference
 pub struct vyre_reference::dual_impls::compare::lt::LtDualReference
+pub struct vyre_reference::dual_impls::evaluator::EvalError
 pub struct vyre_reference::execution::expr::Buffer
 pub struct vyre_reference::execution::sequential::SequentialWorkgroup
 pub struct vyre_reference::subgroup::SubgroupSimulator
