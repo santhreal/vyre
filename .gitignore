@@ -94,3 +94,6 @@ __pycache__/
 
 # Single private execution queue (STANDARD.md)
 /BACKLOG.md
+
+# Dedup campaign execution plan (review-only coordination artifact)
+/DEDUP_PLAN.md
