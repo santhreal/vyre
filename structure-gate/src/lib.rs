@@ -7,10 +7,10 @@
 //!
 //! The workspace has exactly two operation-owning crates:
 //!
-//! - `vyre-foundation` owns typed IR and **every Category A operation**: any
-//!   `fn(..) -> Program` built from existing IR variants.
-//! - `vyre-libs` owns **every Category C operation**: an operation that needs a
-//!   dedicated hardware contract, plus compositions built over those.
+//! - `vyre-libs` owns **every Category A operation**: any composition built
+//!   from existing IR variants.
+//! - `vyre-primitives` owns **every Category C operation**: an operation that
+//!   needs a dedicated hardware contract.
 //!
 //! Any third crate that registers an operation splits an operation identity in
 //! two, which is the defect this gate exists to make impossible. A tier
@@ -18,6 +18,7 @@
 
 #![forbid(unsafe_code)]
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -445,6 +446,105 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
     ("::new(", None),
 ];
 
+/// Remove every `#[cfg(test)]`-gated item before the registration scan.
+///
+/// A test module registers fixture operations - `test::reference_echo`,
+/// `test::call_u32` and friends - that exist in no production build. Counting
+/// them as registry members reported four test doubles as misplaced production
+/// operations, and pointed Phase 2 at code that was already correct.
+///
+/// The predicate is tokenized with string literals removed first, so
+/// `#[cfg(feature = "test-utils")]` is not mistaken for a test gate.
+fn strip_cfg_test_items(text: &str) -> Cow<'_, str> {
+    const ATTR: &str = "#[cfg(";
+    if !text.contains(ATTR) {
+        return Cow::Borrowed(text);
+    }
+    let mut out: Option<String> = None;
+    let mut cursor = 0usize;
+    while let Some(offset) = text[cursor..].find(ATTR) {
+        let attr_start = cursor + offset;
+        let predicate_start = attr_start + ATTR.len() - 1;
+        let Some(predicate_end) = match_delimited(text, predicate_start, b'(', b')') else {
+            break;
+        };
+        if !mentions_test(&text[predicate_start + 1..predicate_end]) {
+            cursor = predicate_end + 1;
+            continue;
+        }
+        let Some(attr_end) = text[predicate_end..].find(']').map(|at| predicate_end + at) else {
+            break;
+        };
+        let Some(item_end) = end_of_item(text, attr_end + 1) else {
+            break;
+        };
+        out.get_or_insert_with(String::new)
+            .push_str(&text[cursor..attr_start]);
+        cursor = item_end;
+    }
+    match out {
+        Some(mut kept) => {
+            kept.push_str(&text[cursor..]);
+            Cow::Owned(kept)
+        }
+        None => Cow::Borrowed(text),
+    }
+}
+
+/// Byte index of the delimiter closing the one that opens at `open`.
+fn match_delimited(text: &str, open: usize, opener: u8, closer: u8) -> Option<usize> {
+    let bytes = text.as_bytes();
+    if bytes.get(open) != Some(&opener) {
+        return None;
+    }
+    let mut depth = 0usize;
+    for (index, byte) in bytes.iter().enumerate().skip(open) {
+        if *byte == opener {
+            depth += 1;
+        } else if *byte == closer {
+            depth -= 1;
+            if depth == 0 {
+                return Some(index);
+            }
+        }
+    }
+    None
+}
+
+/// True when the cfg predicate names `test` as a bare token.
+fn mentions_test(predicate: &str) -> bool {
+    let mut outside = String::with_capacity(predicate.len());
+    let mut in_string = false;
+    for character in predicate.chars() {
+        match character {
+            '"' => in_string = !in_string,
+            _ if in_string => {}
+            _ => outside.push(character),
+        }
+    }
+    outside
+        .split(|character: char| !character.is_alphanumeric() && character != '_')
+        .any(|token| token == "test")
+}
+
+/// End of the item a gating attribute applies to, past `from`.
+///
+/// A braced item ends at its matching `}`; a declaration such as
+/// `#[cfg(test)] mod tests;` ends at its `;`. Further attributes stacked on the
+/// same item are skipped so the whole item is removed, not just the tail.
+fn end_of_item(text: &str, from: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    let mut index = from;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'{' => return match_delimited(text, index, b'{', b'}').map(|close| close + 1),
+            b';' => return Some(index + 1),
+            _ => index += 1,
+        }
+    }
+    None
+}
+
 /// Extract `(op_id, tier)` for every `OperationRegistration` in one file.
 ///
 /// Two forms exist in the tree: a struct literal with named fields, and a
@@ -455,7 +555,12 @@ const CONSTRUCTOR_TIERS: &[(&str, Option<&str>)] = &[
 /// Ids appear inline or through a file-local `const`, so the scan resolves both
 /// without compiling the crate. That keeps the gate usable while the tree is
 /// mid-migration and a crate does not build.
+///
+/// Test-gated items are removed first, so a fixture registration in a
+/// `#[cfg(test)]` module is not counted as a production operation.
 pub fn parse_registrations(text: &str) -> Vec<(String, Option<String>)> {
+    let stripped = strip_cfg_test_items(text);
+    let text = stripped.as_ref();
     let consts = string_consts(text);
     let mut found = Vec::new();
     let mut rest = text;
@@ -966,6 +1071,157 @@ inventory::submit! {
             vec![(
                 "vyre-libs::atomic::compare_exchange".to_string(),
                 Some("Intrinsic".to_string())
+            )]
+        );
+    }
+
+    #[test]
+    fn a_registration_inside_a_test_module_is_not_a_production_operation() {
+        let parsed = parse_registrations(
+            r#"
+            #[cfg(test)]
+            mod tests {
+                const ECHO_ID: &str = "test::reference_echo";
+                fn fixture() {
+                    OperationRegistration::library(ECHO_ID);
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(parsed, Vec::new());
+    }
+
+    #[test]
+    fn a_production_registration_beside_a_test_module_is_still_counted() {
+        let parsed = parse_registrations(
+            r#"
+            fn install() {
+                OperationRegistration::library("vyre-libs::hash::crc32");
+            }
+
+            #[cfg(test)]
+            mod tests {
+                fn fixture() {
+                    OperationRegistration::library("test::call_u32");
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::crc32".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
+    #[test]
+    fn a_feature_named_test_something_does_not_exempt_a_registration() {
+        let parsed = parse_registrations(
+            r#"
+            #[cfg(feature = "test-utils")]
+            mod utils {
+                fn install() {
+                    OperationRegistration::library("vyre-libs::hash::fnv1a32");
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::fnv1a32".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
+    #[test]
+    fn a_compound_test_predicate_still_strips_the_item() {
+        let parsed = parse_registrations(
+            r#"
+            #[cfg(all(test, feature = "gpu"))]
+            mod tests {
+                fn fixture() {
+                    OperationRegistration::library("test::reference_panic");
+                }
+            }
+            "#,
+        );
+
+        assert_eq!(parsed, Vec::new());
+    }
+
+    #[test]
+    fn a_test_gated_module_declaration_strips_only_the_declaration() {
+        let parsed = parse_registrations(
+            r#"
+            #[cfg(test)]
+            mod tests;
+
+            fn install() {
+                OperationRegistration::library("vyre-libs::hash::adler32");
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::adler32".to_string(),
+                Some("Library".to_string())
+            )]
+        );
+    }
+
+    /// Shape of `vyre-libs/src/hash/adler32.rs`: a braced `use` list, a const
+    /// id, two test-gated `use` lines, a test-gated helper, then the real
+    /// struct-literal registration, then the test module. The production id
+    /// must survive all of it.
+    #[test]
+    fn a_production_registration_survives_a_file_full_of_test_gated_items() {
+        let parsed = parse_registrations(
+            r#"
+            use vyre_primitives::hash::adler32::{adler32_program, ADLER32_OP_ID};
+
+            #[cfg(test)]
+            use crate::buffer_names::fixed_name;
+            #[cfg(test)]
+            use vyre_primitives::hash::adler32::adler32 as adler32_cpu_reference;
+
+            const OP_ID: &str = "vyre-libs::hash::adler32";
+
+            #[cfg(test)]
+            fn cpu_ref(input: &[u8]) -> u32 {
+                adler32_cpu_reference(input)
+            }
+
+            inventory::submit! {
+                vyre_foundation::operation::OperationRegistration {
+                    semantic_version: 1,
+                    tier: vyre_foundation::operation::OperationTier::Library,
+                    id: OP_ID,
+                    build: Some(|| adler32("input", "out", 3)),
+                    category: None,
+                }
+            }
+
+            #[cfg(test)]
+            mod tests {
+                use super::*;
+            }
+            "#,
+        );
+
+        assert_eq!(
+            parsed,
+            vec![(
+                "vyre-libs::hash::adler32".to_string(),
+                Some("Library".to_string())
             )]
         );
     }
