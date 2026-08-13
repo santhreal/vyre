@@ -349,3 +349,168 @@ required-features = ["c-parser"]
 name = "gpu_define_parse_roundtrip"
 path = "tests/gpu_define_parse_roundtrip.rs"
 required-features = ["c-parser"]
+
+# Neural-network contract tests. These 32 files referenced `vyre_libs::nn`
+# with no manifest entry, so `cargo test -p vyre-libs` could not build the
+# package at all: the module is feature-gated and nothing declared the
+# features each file needs.
+
+[[test]]
+name = "attention_head_to_token_contract"
+path = "tests/attention_head_to_token_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "causal_conv_state_transition_contract"
+path = "tests/causal_conv_state_transition_contract.rs"
+required-features = ["nn-inference"]
+
+[[test]]
+name = "causal_gqa_contract"
+path = "tests/causal_gqa_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "causal_gqa_typed_contract"
+path = "tests/causal_gqa_typed_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "chunked_gated_delta_contract"
+path = "tests/chunked_gated_delta_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "dense_gated_mlp_graph_contract"
+path = "tests/dense_gated_mlp_graph_contract.rs"
+required-features = ["nn-inference"]
+
+[[test]]
+name = "depthwise_causal_conv1d_contract"
+path = "tests/depthwise_causal_conv1d_contract.rs"
+required-features = ["nn-inference"]
+
+[[test]]
+name = "fingerprint_lock"
+path = "tests/fingerprint_lock.rs"
+required-features = ["nn-activation", "nn-attention", "nn-linear", "nn-norm"]
+
+[[test]]
+name = "gated_rms_norm_contract"
+path = "tests/gated_rms_norm_contract.rs"
+required-features = ["nn-norm"]
+
+[[test]]
+name = "gqa_attention_primitive_composition_contracts"
+path = "tests/gqa_attention_primitive_composition_contracts.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "head_to_token_typed_contract"
+path = "tests/head_to_token_typed_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "indexed_map_composition_contracts"
+path = "tests/indexed_map_composition_contracts.rs"
+required-features = ["nn-activation"]
+
+[[test]]
+name = "int4_primitive_composition"
+path = "tests/int4_primitive_composition.rs"
+required-features = ["nn-activation"]
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+required-features = ["hash", "math", "matching", "nn-activation", "nn-linear"]
+
+[[test]]
+name = "kv_cache_append_contract"
+path = "tests/kv_cache_append_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "kv_cache_typed_contract"
+path = "tests/kv_cache_typed_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "last_dim_l2_norm_contract"
+path = "tests/last_dim_l2_norm_contract.rs"
+required-features = ["nn-norm"]
+
+[[test]]
+name = "linear_rows_contract"
+path = "tests/linear_rows_contract.rs"
+required-features = ["nn-linear"]
+
+[[test]]
+name = "mlp_4x_leaky_sq_multi_workgroup_span"
+path = "tests/mlp_4x_leaky_sq_multi_workgroup_span.rs"
+required-features = ["nn-activation"]
+
+[[test]]
+name = "name_collision"
+path = "tests/name_collision.rs"
+required-features = ["math", "nn-attention"]
+
+[[test]]
+name = "op_boundaries"
+path = "tests/op_boundaries.rs"
+required-features = ["nn-activation", "nn-linear"]
+
+[[test]]
+name = "optimized_programs"
+path = "tests/optimized_programs.rs"
+required-features = ["nn-attention", "nn-linear", "nn-norm"]
+
+[[test]]
+name = "overflow_guards"
+path = "tests/overflow_guards.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "partial_rope_offset_contract"
+path = "tests/partial_rope_offset_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "partial_rope_typed_contract"
+path = "tests/partial_rope_typed_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "qk_gain_shape_overflow_contracts"
+path = "tests/qk_gain_shape_overflow_contracts.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "qk_gain_zero_shape_contracts"
+path = "tests/qk_gain_zero_shape_contracts.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "quantized_linear_affine_fma"
+path = "tests/quantized_linear_affine_fma.rs"
+required-features = ["nn-linear"]
+
+[[test]]
+name = "recurrent_gated_delta_contract"
+path = "tests/recurrent_gated_delta_contract.rs"
+required-features = ["nn-attention"]
+
+[[test]]
+name = "sigmoid_gate_typed_contract"
+path = "tests/sigmoid_gate_typed_contract.rs"
+required-features = ["nn-activation"]
+
+[[test]]
+name = "surface_contracts"
+path = "tests/surface_contracts.rs"
+required-features = ["nn-attention", "nn-norm"]
+
+[[test]]
+name = "workgroup_cooperative_tiling"
+path = "tests/workgroup_cooperative_tiling.rs"
+required-features = ["nn-attention", "nn-norm"]
