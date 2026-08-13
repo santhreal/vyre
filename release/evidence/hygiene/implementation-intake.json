@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "release_blocker_count": 4,
+  "release_blocker_count": 6,
   "intake_summary": [
     {
       "owner_lane": "bench_harness",
@@ -246,6 +246,15 @@
       "count": 1
     },
     {
+      "owner_lane": "security_dataflow",
+      "surface": "test",
+      "risk": "release_blocker",
+      "hot_path": false,
+      "pattern": "source_inspection_test",
+      "release_blocker": true,
+      "count": 2
+    },
+    {
       "owner_lane": "testing_evidence",
       "surface": "production",
       "risk": "informational",
@@ -283,6 +292,6 @@
     }
   ],
   "blockers": [
-    "4 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
+    "6 release-blocking hygiene finding(s) remain; implementation-intake.json groups them by owner lane, surface, risk, hot-path flag, and pattern"
   ]
 }
