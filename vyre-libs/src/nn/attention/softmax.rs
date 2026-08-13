@@ -26,6 +26,7 @@ use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 use crate::builder::{
     check_tensors, strided_accumulate_child, strided_writeback_child, BuildOptions,
 };
+use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
 use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
@@ -152,9 +153,8 @@ fn softmax_tiled_program(
 ) -> Program {
     let tile = workgroup[0].max(1);
     let chunks = n.div_ceil(tile);
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate_child(
+    let max_pass = ReducePhase {
+        accumulate: strided_accumulate_child(
             OP_ID,
             tile,
             chunks,
@@ -175,28 +175,22 @@ fn softmax_tiled_program(
                 )
             },
         ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::max_f32_child(
-        OP_ID,
-        tile,
-        "softmax_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(
-            Expr::is_first_workgroup(),
-            Expr::eq(Expr::var("local"), Expr::u32(0)),
-        ),
-        vec![Node::Store {
+        reductions: vec![workgroup_tree::max_f32_child(
+            OP_ID,
+            tile,
+            "softmax_scratch",
+            WorkgroupReductionScope::FirstWorkgroup,
+        )],
+        publish: vec![Node::Store {
             buffer: "softmax_max".into(),
             index: Expr::u32(0),
             value: Expr::load("softmax_scratch", Expr::u32(0)),
         }],
-    ));
-    body.push(Node::barrier());
-    body.extend(vec![
-        strided_accumulate_child(
+    };
+    // The sum pass reuses `softmax_scratch`, so it publishes nothing: the
+    // writeback reads the reduced sum straight out of scratch slot zero.
+    let sum_pass = ReducePhase {
+        accumulate: strided_accumulate_child(
             OP_ID,
             tile,
             chunks,
@@ -218,47 +212,48 @@ fn softmax_tiled_program(
                 )
             },
         ),
-        Node::barrier(),
-    ]);
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "softmax_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(strided_writeback_child(
-        OP_ID,
-        tile,
-        chunks,
-        n,
-        output,
-        vec![
-            Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
-            Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
-        ],
-        |idx| Expr::BinOp {
-            op: BinOp::Div,
-            left: Box::new(Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(Expr::BinOp {
-                    op: BinOp::Sub,
-                    left: Box::new(Expr::load(input, idx)),
-                    right: Box::new(Expr::var("max_val")),
-                }),
-            }),
-            right: Box::new(Expr::var("sum_val")),
-        },
-    ));
-    Program::wrapped(
-        vec![
+        reductions: vec![workgroup_tree::sum_f32_child(
+            OP_ID,
+            tile,
+            "softmax_scratch",
+            WorkgroupReductionScope::FirstWorkgroup,
+        )],
+        publish: Vec::new(),
+    };
+    tiled_reduce_program(TiledReduceProgram {
+        generator,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("softmax_scratch", tile, DataType::F32),
             BufferDecl::workgroup("softmax_max", 1, DataType::F32),
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        vec![wrap(generator, body, None)],
-    )
+        phases: vec![max_pass, sum_pass],
+        writeback: strided_writeback_child(
+            OP_ID,
+            tile,
+            chunks,
+            n,
+            output,
+            vec![
+                Node::let_bind("sum_val", Expr::load("softmax_scratch", Expr::u32(0))),
+                Node::let_bind("max_val", Expr::load("softmax_max", Expr::u32(0))),
+            ],
+            |idx| Expr::BinOp {
+                op: BinOp::Div,
+                left: Box::new(Expr::UnOp {
+                    op: UnOp::Exp,
+                    operand: Box::new(Expr::BinOp {
+                        op: BinOp::Sub,
+                        left: Box::new(Expr::load(input, idx)),
+                        right: Box::new(Expr::var("max_val")),
+                    }),
+                }),
+                right: Box::new(Expr::var("sum_val")),
+            },
+        ),
+    })
 }
 
 fn softmax_reference_program(

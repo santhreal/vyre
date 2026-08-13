@@ -16,6 +16,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_primitives::reduce::workgroup_tree::{self, WorkgroupReductionScope};
 
 use crate::builder::{check_tensors, strided_accumulate2_child, BuildOptions};
+use crate::nn::tiled_reduce::{tiled_reduce_program, ReducePhase, TiledReduceProgram};
+#[cfg(test)]
 use crate::region::wrap;
 use crate::tensor_ref::{TensorRef, TensorRefError};
 
@@ -104,36 +106,56 @@ impl LayerNorm {
         let output_name = self.output.name_str();
         let generator = self.options.region_generator.unwrap_or(OP_ID);
 
-        Ok(layer_norm_tiled_program(
-            input_name,
-            output_name,
+        Ok(layer_norm_tiled_program(&LayerNormTiledSpec {
+            input: input_name,
+            output: output_name,
             n,
-            self.eps,
+            eps: self.eps,
             tile,
             chunks,
             workgroup,
             generator,
-        ))
+        }))
     }
 }
 
 crate::builder::impl_cat_a_builder_options!(LayerNorm);
 
-fn layer_norm_tiled_program(
-    input: &str,
-    output: &str,
+/// Shape, numerics, and codegen knobs for one tiled layer-norm build.
+struct LayerNormTiledSpec<'a> {
+    /// Input buffer name.
+    input: &'a str,
+    /// Output buffer name.
+    output: &'a str,
+    /// Element count.
     n: u32,
+    /// Variance epsilon.
     eps: f32,
+    /// Lanes per workgroup, capped at `n`.
     tile: u32,
+    /// Strided chunks each lane walks.
     chunks: u32,
+    /// Workgroup size.
     workgroup: [u32; 3],
+    /// Region generator name.
     generator: &'static str,
-) -> Program {
+}
+
+fn layer_norm_tiled_program(spec: &LayerNormTiledSpec<'_>) -> Program {
+    let LayerNormTiledSpec {
+        input,
+        output,
+        n,
+        eps,
+        tile,
+        chunks,
+        workgroup,
+        generator,
+    } = *spec;
     let local = Expr::var("local");
     let idx = Expr::var("idx");
-    let mut body = vec![
-        Node::let_bind("local", Expr::LocalId { axis: 0 }),
-        strided_accumulate2_child(
+    let moments = ReducePhase {
+        accumulate: strided_accumulate2_child(
             OP_ID,
             tile,
             chunks,
@@ -151,26 +173,21 @@ fn layer_norm_tiled_program(
                 },
             ),
         ),
-        Node::barrier(),
-    ];
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "ln_sum_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(workgroup_tree::sum_f32_child(
-        OP_ID,
-        tile,
-        "ln_sq_scratch",
-        WorkgroupReductionScope::FirstWorkgroup,
-    ));
-    body.push(Node::if_then(
-        Expr::and(
-            Expr::is_first_workgroup(),
-            Expr::eq(local.clone(), Expr::u32(0)),
-        ),
-        vec![
+        reductions: vec![
+            workgroup_tree::sum_f32_child(
+                OP_ID,
+                tile,
+                "ln_sum_scratch",
+                WorkgroupReductionScope::FirstWorkgroup,
+            ),
+            workgroup_tree::sum_f32_child(
+                OP_ID,
+                tile,
+                "ln_sq_scratch",
+                WorkgroupReductionScope::FirstWorkgroup,
+            ),
+        ],
+        publish: vec![
             Node::let_bind(
                 "mean",
                 Expr::div(
@@ -206,45 +223,44 @@ fn layer_norm_tiled_program(
                 },
             },
         ],
-    ));
-    body.extend(vec![
-        Node::barrier(),
-        Node::if_then(
-            Expr::is_first_workgroup(),
-            vec![
-                Node::let_bind("mean", Expr::load("ln_stats", Expr::u32(0))),
-                Node::let_bind("scale", Expr::load("ln_stats", Expr::u32(1))),
-                Node::loop_for(
-                    "chunk",
-                    Expr::u32(0),
-                    Expr::u32(chunks),
-                    vec![
-                        Node::let_bind(
-                            "idx",
-                            Expr::add(
-                                Expr::mul(Expr::var("chunk"), Expr::u32(tile)),
-                                local.clone(),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::lt(idx.clone(), Expr::u32(n)),
-                            vec![Node::Store {
-                                buffer: output.into(),
-                                index: idx.clone(),
-                                value: Expr::mul(
-                                    Expr::sub(Expr::load(input, idx), Expr::var("mean")),
-                                    Expr::var("scale"),
-                                ),
-                            }],
-                        ),
-                    ],
-                ),
-            ],
-        ),
-    ]);
-
-    Program::wrapped(
+    };
+    // Layer norm keeps its own writeback loop instead of the shared
+    // `strided_writeback_child`: the reduced statistics are read once per
+    // workgroup rather than once per lane, so the guard is a single
+    // first-workgroup branch with no child region around it.
+    let writeback = Node::if_then(
+        Expr::is_first_workgroup(),
         vec![
+            Node::let_bind("mean", Expr::load("ln_stats", Expr::u32(0))),
+            Node::let_bind("scale", Expr::load("ln_stats", Expr::u32(1))),
+            Node::loop_for(
+                "chunk",
+                Expr::u32(0),
+                Expr::u32(chunks),
+                vec![
+                    Node::let_bind(
+                        "idx",
+                        Expr::add(Expr::mul(Expr::var("chunk"), Expr::u32(tile)), local),
+                    ),
+                    Node::if_then(
+                        Expr::lt(idx.clone(), Expr::u32(n)),
+                        vec![Node::Store {
+                            buffer: output.into(),
+                            index: idx.clone(),
+                            value: Expr::mul(
+                                Expr::sub(Expr::load(input, idx), Expr::var("mean")),
+                                Expr::var("scale"),
+                            ),
+                        }],
+                    ),
+                ],
+            ),
+        ],
+    );
+
+    tiled_reduce_program(TiledReduceProgram {
+        generator,
+        buffers: vec![
             BufferDecl::storage(input, 0, BufferAccess::ReadOnly, DataType::F32).with_count(n),
             BufferDecl::workgroup("ln_sum_scratch", tile, DataType::F32),
             BufferDecl::workgroup("ln_sq_scratch", tile, DataType::F32),
@@ -252,8 +268,9 @@ fn layer_norm_tiled_program(
             BufferDecl::output(output, 1, DataType::F32).with_count(n),
         ],
         workgroup,
-        vec![wrap(generator, body, None)],
-    )
+        phases: vec![moments],
+        writeback,
+    })
 }
 
 #[cfg(test)]
