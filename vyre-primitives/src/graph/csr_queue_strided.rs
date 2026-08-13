@@ -17,15 +17,17 @@
 //! one-lane-per-source kernel for low-degree graphs and select this path only
 //! when row skew is large enough to amortize the extra lanes.
 
-use std::sync::Arc;
+use vyre_foundation::ir::{DataType, Program};
 
-use vyre_foundation::ir::model::expr::Ident;
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-
+#[cfg(test)]
 use crate::bitset::bitset_words;
 #[cfg(any(test, feature = "cpu-parity"))]
 use crate::graph::csr_frontier_queue::{
     try_csr_queue_forward_traverse_cpu, try_csr_queue_forward_traverse_cpu_into,
+};
+use crate::graph::csr_frontier_step::{
+    csr_queue_step_program, CsrQueueEmit, CsrQueueInputs, CsrQueueLanes, CsrQueueRowPlan,
+    CsrQueueStepSpec,
 };
 
 /// Canonical op id for row-strided queue-driven CSR expansion.
@@ -46,6 +48,31 @@ pub const fn csr_queue_strided_forward_dispatch_grid(queue_capacity: u32) -> [u3
     [if blocks == 0 { 1 } else { blocks }, 1, 1]
 }
 
+/// Positional inputs for [`csr_queue_strided_forward_traverse`].
+#[derive(Clone, Copy, Debug)]
+pub struct CsrQueueStridedForwardParams<'a> {
+    /// Compacted queue of active source nodes.
+    pub active_queue: &'a str,
+    /// Single-element resident length of `active_queue`.
+    pub queue_len: &'a str,
+    /// CSR row pointers, `node_count + 1` entries.
+    pub edge_offsets: &'a str,
+    /// CSR edge destinations.
+    pub edge_targets: &'a str,
+    /// Per-edge kind bits tested against `allow_mask`.
+    pub edge_kind_mask: &'a str,
+    /// Packed bitset the reached destinations are ORed into.
+    pub frontier_out: &'a str,
+    /// Node count the CSR row pointers and destination bounds are sized by.
+    pub node_count: u32,
+    /// Logical edge count the edge-slot bound check uses.
+    pub edge_count: u32,
+    /// Static capacity of `active_queue`.
+    pub queue_capacity: u32,
+    /// Edge kinds this traversal is allowed to follow.
+    pub allow_mask: u32,
+}
+
 /// Build a GPU program that expands queued CSR source rows with a fixed lane
 /// team per row.
 #[must_use]
@@ -62,6 +89,38 @@ pub fn csr_queue_strided_forward_traverse(
     queue_capacity: u32,
     allow_mask: u32,
 ) -> Program {
+    csr_queue_strided_forward_traverse_with(CsrQueueStridedForwardParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    })
+}
+
+/// Build a GPU program that expands queued CSR source rows with a fixed lane
+/// team per row.
+#[must_use]
+pub fn csr_queue_strided_forward_traverse_with(
+    params: CsrQueueStridedForwardParams<'_>,
+) -> Program {
+    let CsrQueueStridedForwardParams {
+        active_queue,
+        queue_len,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_out,
+        node_count,
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    } = params;
     if node_count == 0 || queue_capacity == 0 {
         return crate::invalid_output_program(CSR_QUEUE_STRIDED_FORWARD_OP_ID,
         frontier_out,
@@ -70,214 +129,28 @@ pub fn csr_queue_strided_forward_traverse(
             "Fix: csr_queue_strided_forward_traverse requires node_count > 0 and queue_capacity > 0, got node_count={node_count} queue_capacity={queue_capacity}."
         ),);
     }
-
-    let lane = Expr::InvocationId { axis: 0 };
-    let words = bitset_words(node_count);
-    let physical_edge_count = edge_count.max(1);
-    let edge_offset_count = match crate::graph::checked_csr_offset_count(
+    csr_queue_step_program(&CsrQueueStepSpec {
+        op_id: CSR_QUEUE_STRIDED_FORWARD_OP_ID,
+        builder_name: "csr_queue_strided_forward_traverse",
+        prefix: "qs",
+        workgroup_size: CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
+        inputs: CsrQueueInputs {
+            active_queue,
+            queue_len,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+        },
+        lanes: CsrQueueLanes::Team {
+            lanes: CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
+        },
+        row_plan: CsrQueueRowPlan::ExpandAll,
+        emit: CsrQueueEmit::Frontier { frontier_out },
         node_count,
-        "csr_queue_strided_forward_traverse",
-    ) {
-        Ok(edge_offset_count) => edge_offset_count,
-        Err(error) => {
-            return crate::invalid_output_program(
-                CSR_QUEUE_STRIDED_FORWARD_OP_ID,
-                frontier_out,
-                DataType::U32,
-                error,
-            );
-        }
-    };
-    let lanes_per_source = Expr::u32(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE);
-    let body = vec![
-        Node::let_bind("qs_lane", lane),
-        Node::let_bind(
-            "qs_queue_idx",
-            Expr::div(Expr::var("qs_lane"), lanes_per_source.clone()),
-        ),
-        Node::let_bind(
-            "qs_edge_lane",
-            Expr::rem(Expr::var("qs_lane"), lanes_per_source.clone()),
-        ),
-        Node::if_then(
-            Expr::lt(Expr::var("qs_queue_idx"), Expr::u32(queue_capacity)),
-            vec![Node::if_then(
-                Expr::lt(
-                    Expr::var("qs_queue_idx"),
-                    Expr::load(queue_len, Expr::u32(0)),
-                ),
-                vec![
-                    Node::let_bind(
-                        "qs_src",
-                        Expr::load(active_queue, Expr::var("qs_queue_idx")),
-                    ),
-                    Node::if_then(
-                        Expr::lt(Expr::var("qs_src"), Expr::u32(node_count)),
-                        vec![
-                            Node::let_bind(
-                                "qs_edge_start",
-                                Expr::load(edge_offsets, Expr::var("qs_src")),
-                            ),
-                            Node::let_bind(
-                                "qs_edge_end",
-                                Expr::load(
-                                    edge_offsets,
-                                    Expr::add(Expr::var("qs_src"), Expr::u32(1)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "qs_degree",
-                                Expr::sub(Expr::var("qs_edge_end"), Expr::var("qs_edge_start")),
-                            ),
-                            Node::let_bind(
-                                "qs_full_iters",
-                                Expr::div(Expr::var("qs_degree"), lanes_per_source),
-                            ),
-                            Node::let_bind(
-                                "qs_tail_iter",
-                                Expr::select(
-                                    Expr::ne(
-                                        Expr::rem(
-                                            Expr::var("qs_degree"),
-                                            Expr::u32(CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE),
-                                        ),
-                                        Expr::u32(0),
-                                    ),
-                                    Expr::u32(1),
-                                    Expr::u32(0),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "qs_iters",
-                                Expr::add(Expr::var("qs_full_iters"), Expr::var("qs_tail_iter")),
-                            ),
-                            Node::loop_for(
-                                "qs_iter",
-                                Expr::u32(0),
-                                Expr::var("qs_iters"),
-                                vec![
-                                    Node::let_bind(
-                                        "qs_edge_offset",
-                                        Expr::add(
-                                            Expr::var("qs_edge_lane"),
-                                            Expr::mul(
-                                                Expr::var("qs_iter"),
-                                                Expr::u32(
-                                                    CSR_QUEUE_STRIDED_FORWARD_LANES_PER_SOURCE,
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::if_then(
-                                        Expr::lt(
-                                            Expr::var("qs_edge_offset"),
-                                            Expr::var("qs_degree"),
-                                        ),
-                                        vec![
-                                            Node::let_bind(
-                                                "qs_e",
-                                                Expr::add(
-                                                    Expr::var("qs_edge_start"),
-                                                    Expr::var("qs_edge_offset"),
-                                                ),
-                                            ),
-                                            Node::if_then(
-                                                Expr::lt(Expr::var("qs_e"), Expr::u32(edge_count)),
-                                                vec![
-                                                    Node::let_bind(
-                                                        "qs_kind",
-                                                        Expr::load(
-                                                            edge_kind_mask,
-                                                            Expr::var("qs_e"),
-                                                        ),
-                                                    ),
-                                                    Node::if_then(
-                                                        Expr::ne(
-                                                            Expr::bitand(
-                                                                Expr::var("qs_kind"),
-                                                                Expr::u32(allow_mask),
-                                                            ),
-                                                            Expr::u32(0),
-                                                        ),
-                                                        vec![
-                                                            Node::let_bind(
-                                                                "qs_dst",
-                                                                Expr::load(
-                                                                    edge_targets,
-                                                                    Expr::var("qs_e"),
-                                                                ),
-                                                            ),
-                                                            Node::if_then(
-                                                                Expr::lt(
-                                                                    Expr::var("qs_dst"),
-                                                                    Expr::u32(node_count),
-                                                                ),
-                                                                vec![
-                                                                    Node::let_bind(
-                                                                        "qs_dst_word",
-                                                                        Expr::shr(
-                                                                            Expr::var("qs_dst"),
-                                                                            Expr::u32(5),
-                                                                        ),
-                                                                    ),
-                                                                    Node::let_bind(
-                                                                        "qs_dst_bit",
-                                                                        Expr::shl(
-                                                                            Expr::u32(1),
-                                                                            Expr::bitand(
-                                                                                Expr::var("qs_dst"),
-                                                                                Expr::u32(31),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                    Node::let_bind(
-                                                                        "_qs_prev",
-                                                                        Expr::atomic_or(
-                                                                            frontier_out,
-                                                                            Expr::var(
-                                                                                "qs_dst_word",
-                                                                            ),
-                                                                            Expr::var("qs_dst_bit"),
-                                                                        ),
-                                                                    ),
-                                                                ],
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ],
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            )],
-        ),
-    ];
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(active_queue, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(queue_capacity),
-            BufferDecl::storage(queue_len, 1, BufferAccess::ReadOnly, DataType::U32).with_count(1),
-            BufferDecl::storage(edge_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(edge_offset_count),
-            BufferDecl::storage(edge_targets, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(edge_kind_mask, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(physical_edge_count),
-            BufferDecl::storage(frontier_out, 5, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(words),
-        ],
-        CSR_QUEUE_STRIDED_FORWARD_WORKGROUP_SIZE,
-        vec![Node::Region {
-            generator: Ident::from(CSR_QUEUE_STRIDED_FORWARD_OP_ID),
-            source_region: None,
-            body: Arc::new(body),
-        }],
-    )
+        edge_count,
+        queue_capacity,
+        allow_mask,
+    })
 }
 
 /// CPU reference for the row-strided queue traversal.

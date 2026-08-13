@@ -1,12 +1,20 @@
-//! Device-parity contracts for the persistent-BFS converged readback.
+//! Device-parity contracts for the persistent-BFS readbacks.
 //!
-//! The CPU reference [`try_cpu_ref_converged`] is the source of truth for the
-//! converged signal (a run that exhausts `max_iters` while still growing reports
-//! `converged == false`; a reached fixpoint reports `true`). These tests dispatch
-//! the real IR program on the reference interpreter and assert the device
-//! converged word matches that oracle bit-for-bit, on both program variants: the
-//! single-workgroup path (`node_count <= 256`) and the grid-sync path
-//! (`node_count > 256`).
+//! Every test here dispatches the real IR program on the reference interpreter
+//! and compares a readback against the CPU oracle bit-for-bit, on both program
+//! variants: the single-workgroup path (`node_count <= 256`) and the grid-sync
+//! path (`node_count > 256`), single-query and batch. Two readbacks are covered:
+//!
+//! * The converged word. [`try_cpu_ref_converged`] is the source of truth: a run
+//!   that exhausts `max_iters` while still growing reports `converged == false`;
+//!   a reached fixpoint reports `true`.
+//! * The per-iteration density array. [`persistent_bfs_with_density`] declares
+//!   one extra `max_iters`-length output, `density_active`, whose entry `i` holds
+//!   the popcount of the frontier after traversal step `i` (flat once the closure
+//!   converges, since growth is monotone). A host reconstructs every
+//!   [`FrontierDensityTelemetry`]-style aggregate from this array plus the seed
+//!   popcount without a per-step device round-trip. [`try_cpu_ref_density`] is
+//!   the source of truth for it.
 //!
 //! Step semantics differ by path, so the graphs here are chosen to make every
 //! path advance exactly one hop per iteration, the regime `cpu_ref` models:
@@ -34,8 +42,8 @@ use vyre_reference::{output_index, reference_eval, reference_eval_with_grid};
 
 /// Build the positional storage-buffer inputs for a persistent_bfs program: the
 /// read-only CSR/frontier buffers carry data, every ReadWrite output
-/// (frontier_out, changed, converged) starts zeroed, and interpreter-internal
-/// workgroup buffers are skipped.
+/// (frontier_out, changed, converged, density_active) starts zeroed, and
+/// interpreter-internal workgroup buffers are skipped.
 fn build_inputs(
     program: &Program,
     edge_offsets: &[u32],
@@ -73,8 +81,7 @@ fn read_named_output(program: &Program, outputs: &[Vec<u8>], name: &str) -> Vec<
         .collect()
 }
 
-/// Dispatch persistent_bfs and read back the frontier, the sticky changed flag,
-/// and the device converged word.
+/// Dispatch one persistent-BFS program and read back the named u32 outputs.
 ///
 /// The single-workgroup program (`node_count <= 256`) is one kernel launch, so
 /// the reference interpreter runs it directly. The grid-sync program
@@ -84,9 +91,123 @@ fn read_named_output(program: &Program, outputs: &[Vec<u8>], name: &str) -> Vec<
 /// [`dispatch_with_grid_sync_split`] on [`CpuRefBackend`], the same non-native
 /// grid-sync path the conform runner and production drivers use: every barrier
 /// becomes a kernel-launch boundary, so prior writes are globally visible to the
-/// next segment. Both paths return outputs in `output_buffer_indices` order,
-/// which is exactly [`output_index`]'s ordering, so the readback is uniform.
+/// next segment.
+///
+/// `grid` is `Some` only for the batch programs. A `[256, 1, 1]` workgroup fans
+/// across `grid.y` there (one query per block, `q = gid_y()`), so the
+/// interpreter must be told the real grid or it collapses to `grid.y == 1` and
+/// computes only query 0. The split core clones the grid onto every segment
+/// dispatch. Both paths return outputs in `output_buffer_indices` order, which
+/// is exactly [`output_index`]'s ordering, so the readback is uniform.
 fn run_device(
+    program: &Program,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    grid: Option<[u32; 3]>,
+    reads: &[&str],
+) -> Vec<Vec<u32>> {
+    let inputs = build_inputs(
+        program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+    );
+    let outputs: Vec<Vec<u8>> = if contains_grid_sync(program) {
+        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
+        let mut config = DispatchConfig::default();
+        config.dispatch_grid = grid;
+        dispatch_with_grid_sync_split(&CpuRefBackend, program, &borrowed, &config)
+            .expect("Fix: persistent_bfs grid-sync split dispatch must succeed on a valid graph.")
+    } else {
+        let values: Vec<vyre_reference::value::Value> = inputs
+            .iter()
+            .map(|bytes| vyre_reference::value::Value::from(bytes.as_slice()))
+            .collect();
+        match grid {
+            None => reference_eval(program, &values),
+            Some(grid) => reference_eval_with_grid(program, &values, grid),
+        }
+        .expect("Fix: persistent_bfs reference dispatch must succeed on a valid graph.")
+        .into_iter()
+        .map(|value| value.to_bytes())
+        .collect()
+    };
+    reads
+        .iter()
+        .map(|name| read_named_output(program, &outputs, name))
+        .collect()
+}
+
+/// Build a reverse-numbered chain `(n-1) -> (n-2) -> ... -> 1 -> 0`, seeded at
+/// the top node so an ascending single-workgroup sweep advances one hop per
+/// iteration (diameter `n - 1`).
+fn reverse_chain(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
+    // node i (i >= 1) owns one edge i -> i-1; node 0 owns none.
+    let mut offsets = vec![0u32];
+    for i in 0..node_count {
+        // offsets[i+1] = number of edges owned by nodes 0..=i.
+        offsets.push(i);
+    }
+    let targets: Vec<u32> = (0..node_count.saturating_sub(1)).collect();
+    let masks = vec![1u32; targets.len()];
+    let words = bitset_words(node_count) as usize;
+    let mut seed = vec![0u32; words];
+    let top = node_count - 1;
+    seed[(top / 32) as usize] = 1 << (top % 32);
+    (offsets, targets, masks, seed)
+}
+
+/// A two-level fan graph with `node_count > 256` to force the grid-sync path
+/// while keeping the diameter at 2 so the interpreter stays cheap:
+/// node 0 -> nodes 1..=fanout, node 1 -> the final leaf node.
+fn grid_sync_two_level(fanout: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
+    let node_count = fanout + 2; // node 0, the fanout targets, and one leaf off node 1.
+    let leaf = node_count - 1;
+    let mut targets: Vec<u32> = (1..=fanout).collect();
+    targets.push(leaf); // node 1 -> leaf
+                        // offsets: node 0 owns edges [0, fanout); node 1 owns edge [fanout, fanout+1);
+                        // every later node has no outgoing edge.
+    let mut offsets = vec![0u32, fanout];
+    for _ in 2..=node_count {
+        offsets.push(fanout + 1);
+    }
+    let masks = vec![1u32; targets.len()];
+    let words = bitset_words(node_count) as usize;
+    let mut seed = vec![0u32; words];
+    seed[0] = 1; // seed node 0
+    (node_count, offsets, targets, masks, seed)
+}
+
+fn shape_for(node_count: u32, edge_targets: &[u32]) -> ProgramGraphShape {
+    ProgramGraphShape::new(node_count, (edge_targets.len() as u32).max(1))
+}
+
+/// Flatten per-query seeds into the `[query][word]` layout the batch programs
+/// index with `base = q * words`.
+fn pack_seeds(node_count: u32, seeds: &[Vec<u32>]) -> Vec<u32> {
+    let words = bitset_words(node_count) as usize;
+    let mut packed = Vec::with_capacity(words * seeds.len());
+    for seed in seeds {
+        assert_eq!(
+            seed.len(),
+            words,
+            "each batch seed must be exactly one frontier bitset ({words} words)"
+        );
+        packed.extend_from_slice(seed);
+    }
+    packed
+}
+
+// ---------------------------------------------------------------------------
+// Converged word
+// ---------------------------------------------------------------------------
+
+/// Dispatch persistent_bfs and read back the frontier, the sticky changed flag,
+/// and the device converged word.
+fn run_converged(
     node_count: u32,
     edge_offsets: &[u32],
     edge_targets: &[u32],
@@ -95,45 +216,25 @@ fn run_device(
     allow_mask: u32,
     max_iters: u32,
 ) -> (Vec<u32>, u32, u32) {
-    let edge_count = edge_targets.len() as u32;
-    let shape = ProgramGraphShape::new(node_count, edge_count.max(1));
-    let program = persistent_bfs(shape, "frontier_in", "frontier_out", allow_mask, max_iters);
-    let words = bitset_words(node_count) as usize;
-    let inputs = build_inputs(
+    let program = persistent_bfs(
+        shape_for(node_count, edge_targets),
+        "frontier_in",
+        "frontier_out",
+        allow_mask,
+        max_iters,
+    );
+    let reads = run_device(
         &program,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
         frontier_in,
+        None,
+        &["frontier_out", "changed", "converged"],
     );
-
-    let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        dispatch_with_grid_sync_split(
-            &CpuRefBackend,
-            &program,
-            &borrowed,
-            &DispatchConfig::default(),
-        )
-        .expect("Fix: persistent_bfs grid-sync split dispatch must succeed on a valid graph.")
-    } else {
-        reference_eval(
-            &program,
-            &inputs
-                .iter()
-                .map(|bytes| vyre_reference::value::Value::from(bytes.as_slice()))
-                .collect::<Vec<_>>(),
-        )
-        .expect("Fix: persistent_bfs reference dispatch must succeed on a valid graph.")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect()
-    };
-    let mut frontier_out = read_named_output(&program, &outputs, "frontier_out");
-    frontier_out.truncate(words);
-    let changed = read_named_output(&program, &outputs, "changed")[0];
-    let converged = read_named_output(&program, &outputs, "converged")[0];
-    (frontier_out, changed, converged)
+    let mut frontier_out = reads[0].clone();
+    frontier_out.truncate(bitset_words(node_count) as usize);
+    (frontier_out, reads[1][0], reads[2][0])
 }
 
 /// Assert the device frontier/changed/converged triple matches the CPU oracle,
@@ -157,7 +258,7 @@ fn assert_device_matches_oracle(
         max_iters,
     )
     .expect("Fix: CPU oracle must accept a valid graph.");
-    let (device_frontier, device_changed, device_converged) = run_device(
+    let (device_frontier, device_changed, device_converged) = run_converged(
         node_count,
         edge_offsets,
         edge_targets,
@@ -183,25 +284,6 @@ fn assert_device_matches_oracle(
     (outcome.changed, outcome.converged)
 }
 
-/// Build a reverse-numbered chain `(n-1) -> (n-2) -> ... -> 1 -> 0`, seeded at
-/// the top node so an ascending single-workgroup sweep advances one hop per
-/// iteration (diameter `n - 1`).
-fn reverse_chain(node_count: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
-    // node i (i >= 1) owns one edge i -> i-1; node 0 owns none.
-    let mut offsets = vec![0u32];
-    for i in 0..node_count {
-        // offsets[i+1] = number of edges owned by nodes 0..=i.
-        offsets.push(i);
-    }
-    let targets: Vec<u32> = (0..node_count.saturating_sub(1)).collect();
-    let masks = vec![1u32; targets.len()];
-    let words = bitset_words(node_count) as usize;
-    let mut seed = vec![0u32; words];
-    let top = node_count - 1;
-    seed[(top / 32) as usize] = 1 << (top % 32);
-    (offsets, targets, masks, seed)
-}
-
 #[test]
 fn single_workgroup_converged_word_matches_oracle_below_and_above_diameter() {
     // 4-node reverse chain, diameter 3, single-workgroup path.
@@ -223,7 +305,7 @@ fn single_workgroup_converged_is_false_when_full_set_reached_on_last_allowed_ste
     // false even though the frontier is complete.
     let (offsets, targets, masks, seed) = reverse_chain(5);
     let (device_frontier, device_changed, device_converged) =
-        run_device(5, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
+        run_converged(5, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
     assert_eq!(device_frontier, vec![0b11111]);
     assert_eq!(device_changed, 1);
     assert_eq!(
@@ -242,32 +324,11 @@ fn single_workgroup_converged_is_true_when_seed_is_already_a_fixpoint() {
     let masks = [1u32];
     let seed = [0b11u32];
     let (device_frontier, device_changed, device_converged) =
-        run_device(2, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
+        run_converged(2, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
     assert_eq!(device_frontier, vec![0b11]);
     assert_eq!(device_changed, 0);
     assert_eq!(device_converged, 1);
     assert_device_matches_oracle(2, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
-}
-
-/// A two-level fan graph with `node_count > 256` to force the grid-sync path
-/// while keeping the diameter at 2 so the interpreter stays cheap:
-/// node 0 -> nodes 1..=fanout, node 1 -> the final leaf node.
-fn grid_sync_two_level(fanout: u32) -> (u32, Vec<u32>, Vec<u32>, Vec<u32>, Vec<u32>) {
-    let node_count = fanout + 2; // node 0, the fanout targets, and one leaf off node 1.
-    let leaf = node_count - 1;
-    let mut targets: Vec<u32> = (1..=fanout).collect();
-    targets.push(leaf); // node 1 -> leaf
-                        // offsets: node 0 owns edges [0, fanout); node 1 owns edge [fanout, fanout+1);
-                        // every later node has no outgoing edge.
-    let mut offsets = vec![0u32, fanout];
-    for _ in 2..=node_count {
-        offsets.push(fanout + 1);
-    }
-    let masks = vec![1u32; targets.len()];
-    let words = bitset_words(node_count) as usize;
-    let mut seed = vec![0u32; words];
-    seed[0] = 1; // seed node 0
-    (node_count, offsets, targets, masks, seed)
 }
 
 #[test]
@@ -288,7 +349,7 @@ fn grid_sync_seed_copy_preserves_every_frontier_word() {
     }
 
     let (device_frontier, device_changed, device_converged) =
-        run_device(node_count, &offsets, &targets, &masks, &seed, u32::MAX, 0);
+        run_converged(node_count, &offsets, &targets, &masks, &seed, u32::MAX, 0);
 
     assert_eq!(
         device_frontier, seed,
@@ -353,8 +414,7 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
     // does. This proves the converged signal is correct on that closure entry.
     let (node_count, offsets, targets, masks, seed) = grid_sync_two_level(256);
     assert!(node_count > 256, "must exercise the grid-sync path");
-    let edge_count = targets.len() as u32;
-    let shape = ProgramGraphShape::new(node_count, edge_count.max(1));
+    let shape = shape_for(node_count, &targets);
 
     // The opaque closure a host-loop solver supplies: one kernel launch per
     // segment, grid from the caller, per-segment fixpoint fixed at 1 (the shared
@@ -410,17 +470,8 @@ fn grid_sync_converged_word_matches_oracle_through_the_closure_split_entry() {
 }
 
 /// Dispatch the BATCH persistent_bfs program and read back the per-query
-/// frontier/changed/converged, exactly as [`run_device`] does for the single
-/// program.
-///
-/// The batch program fans a `[256, 1, 1]` workgroup across `grid.y` (one query
-/// per `grid.y` block, `q = gid_y()`), so the interpreter must be told the real
-/// grid or it collapses to `grid.y == 1` and computes only query 0. Both paths
-/// pass `persistent_bfs_batch_dispatch_grid`: the single-workgroup path
-/// (`node_count <= 256`) through [`reference_eval_with_grid`], and the grid-sync
-/// path (`node_count > 256`) through [`dispatch_with_grid_sync_split`] with the
-/// grid on the config, which the split core clones onto every segment dispatch.
-fn run_device_batch(
+/// frontier/changed/converged.
+fn run_converged_batch(
     node_count: u32,
     query_count: u32,
     edge_offsets: &[u32],
@@ -430,10 +481,8 @@ fn run_device_batch(
     allow_mask: u32,
     max_iters: u32,
 ) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
-    let edge_count = edge_targets.len() as u32;
-    let shape = ProgramGraphShape::new(node_count, edge_count.max(1));
     let program = persistent_bfs_batch(
-        shape,
+        shape_for(node_count, edge_targets),
         "frontier_in",
         "frontier_out",
         "changed",
@@ -442,43 +491,21 @@ fn run_device_batch(
         allow_mask,
         max_iters,
     );
-    let words = bitset_words(node_count) as usize;
-    let total_words = words * query_count.max(1) as usize;
-    let inputs = build_inputs(
+    let reads = run_device(
         &program,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
         frontier_in,
+        Some(persistent_bfs_batch_dispatch_grid(node_count, query_count)),
+        &["frontier_out", "changed", "converged"],
     );
-    let grid = persistent_bfs_batch_dispatch_grid(node_count, query_count);
-
-    let outputs: Vec<Vec<u8>> = if contains_grid_sync(&program) {
-        let borrowed: Vec<&[u8]> = inputs.iter().map(Vec::as_slice).collect();
-        let mut config = DispatchConfig::default();
-        config.dispatch_grid = Some(grid);
-        dispatch_with_grid_sync_split(&CpuRefBackend, &program, &borrowed, &config).expect(
-            "Fix: persistent_bfs_batch grid-sync split dispatch must succeed on a valid graph.",
-        )
-    } else {
-        reference_eval_with_grid(
-            &program,
-            &inputs
-                .iter()
-                .map(|bytes| vyre_reference::value::Value::from(bytes.as_slice()))
-                .collect::<Vec<_>>(),
-            grid,
-        )
-        .expect("Fix: persistent_bfs_batch reference dispatch must succeed on a valid graph.")
-        .into_iter()
-        .map(|value| value.to_bytes())
-        .collect()
-    };
-    let mut frontier_out = read_named_output(&program, &outputs, "frontier_out");
+    let total_words = bitset_words(node_count) as usize * query_count.max(1) as usize;
+    let mut frontier_out = reads[0].clone();
     frontier_out.truncate(total_words);
-    let mut changed = read_named_output(&program, &outputs, "changed");
+    let mut changed = reads[1].clone();
     changed.truncate(query_count as usize);
-    let mut converged = read_named_output(&program, &outputs, "converged");
+    let mut converged = reads[2].clone();
     converged.truncate(query_count as usize);
     (frontier_out, changed, converged)
 }
@@ -487,11 +514,10 @@ fn run_device_batch(
 /// each query is an independent single-frontier run of the same graph. Returns
 /// the per-query `(changed, converged)` the oracle produced.
 ///
-/// The queries are packed as a flat `[query][word]` frontier array, the exact
-/// layout the batch program indexes with `base = q * words`. Distinct seeds with
-/// distinct convergence outcomes at the same `max_iters` prove the `grid.y`
-/// coverage is real: if the interpreter under-fired the query dimension, queries
-/// past the first would read back their zeroed slot and diverge from the oracle.
+/// Distinct seeds with distinct convergence outcomes at the same `max_iters`
+/// prove the `grid.y` coverage is real: if the interpreter under-fired the query
+/// dimension, queries past the first would read back their zeroed slot and
+/// diverge from the oracle.
 fn assert_batch_device_matches_oracle(
     node_count: u32,
     edge_offsets: &[u32],
@@ -502,19 +528,10 @@ fn assert_batch_device_matches_oracle(
     max_iters: u32,
 ) -> Vec<(u32, bool)> {
     let words = bitset_words(node_count) as usize;
-    let query_count = seeds.len() as u32;
-    let mut frontier_in = Vec::with_capacity(words * seeds.len());
-    for seed in seeds {
-        assert_eq!(
-            seed.len(),
-            words,
-            "each batch seed must be exactly one frontier bitset ({words} words)"
-        );
-        frontier_in.extend_from_slice(seed);
-    }
-    let (device_frontier, device_changed, device_converged) = run_device_batch(
+    let frontier_in = pack_seeds(node_count, seeds);
+    let (device_frontier, device_changed, device_converged) = run_converged_batch(
         node_count,
-        query_count,
+        seeds.len() as u32,
         edge_offsets,
         edge_targets,
         edge_kind_mask,
@@ -587,11 +604,7 @@ fn batch_grid_sync_converged_matches_oracle_across_queries_and_budget() {
     // seeded at the leaf only (an immediate fixpoint, changed=0).
     let (node_count, offsets, targets, masks, root_seed) = grid_sync_two_level(256);
     assert!(node_count > 256, "must exercise the grid-sync batch path");
-    let words = bitset_words(node_count) as usize;
-    let leaf = node_count - 1;
-    let mut leaf_seed = vec![0u32; words];
-    leaf_seed[(leaf / 32) as usize] = 1 << (leaf % 32);
-    let seeds = vec![root_seed, leaf_seed];
+    let seeds = vec![root_seed, leaf_seed(node_count)];
 
     // Below the diameter: the root query is still growing (converged=false); the
     // leaf query is an immediate fixpoint (changed=0, converged=true).
@@ -617,4 +630,301 @@ fn batch_grid_sync_converged_matches_oracle_across_queries_and_budget() {
         3,
     );
     assert_eq!(outcomes, vec![(1, true), (0, true)]);
+}
+
+/// A seed holding only the final leaf node, which is an immediate fixpoint in
+/// the two-level fan graph.
+fn leaf_seed(node_count: u32) -> Vec<u32> {
+    let mut seed = vec![0u32; bitset_words(node_count) as usize];
+    let leaf = node_count - 1;
+    seed[(leaf / 32) as usize] = 1 << (leaf % 32);
+    seed
+}
+
+// ---------------------------------------------------------------------------
+// Per-iteration density array
+// ---------------------------------------------------------------------------
+
+/// Dispatch the density-instrumented persistent_bfs and read back the frontier
+/// and the `max_iters`-length density array.
+fn run_density(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> (Vec<u32>, Vec<u32>) {
+    let program = persistent_bfs_with_density(
+        shape_for(node_count, edge_targets),
+        "frontier_in",
+        "frontier_out",
+        DENSITY_ACTIVE_BUFFER,
+        allow_mask,
+        max_iters,
+    );
+    let reads = run_device(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        None,
+        &["frontier_out", DENSITY_ACTIVE_BUFFER],
+    );
+    let mut frontier_out = reads[0].clone();
+    frontier_out.truncate(bitset_words(node_count) as usize);
+    let mut density = reads[1].clone();
+    density.truncate(max_iters as usize);
+    (frontier_out, density)
+}
+
+/// Assert the device density array (and frontier) matches the CPU oracle, and
+/// return the oracle's density array for a self-documenting exact-value check.
+fn assert_device_density_matches_oracle(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> Vec<u32> {
+    let (frontier, _outcome, active) = try_cpu_ref_density(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+        max_iters,
+    )
+    .expect("Fix: CPU density oracle must accept a valid graph.");
+    assert_eq!(
+        active.len(),
+        max_iters as usize,
+        "oracle density array must have exactly max_iters entries"
+    );
+    let (device_frontier, device_density) = run_density(
+        node_count,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        allow_mask,
+        max_iters,
+    );
+    assert_eq!(
+        device_frontier, frontier,
+        "node_count={node_count} max_iters={max_iters}: device frontier must equal the CPU oracle."
+    );
+    assert_eq!(
+        device_density, active,
+        "node_count={node_count} max_iters={max_iters}: device density array must equal the CPU oracle."
+    );
+    active
+}
+
+#[test]
+fn single_workgroup_density_matches_oracle_growing_then_flat_after_convergence() {
+    // 4-node reverse chain, diameter 3, seeded at node 3: popcount after each step
+    // is 2, 3, 4, then flat at 4 once the closure converges on step 3.
+    let (offsets, targets, masks, seed) = reverse_chain(4);
+
+    // Below the diameter: still growing at the budget boundary (both steps
+    // unrolled), density = [2, 3].
+    let active =
+        assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 2);
+    assert_eq!(active, vec![2, 3]);
+
+    // Above the diameter: growth then the flat converged tail, exercising both the
+    // unrolled steps (0..4) and the trailing bounded loop (4..8).
+    let active =
+        assert_device_density_matches_oracle(4, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 8);
+    assert_eq!(active, vec![2, 3, 4, 4, 4, 4, 4, 4]);
+}
+
+#[test]
+fn single_workgroup_density_repeats_seed_popcount_when_seed_is_already_a_fixpoint() {
+    // 2-node chain 0 -> 1 seeded with both nodes present: the first step adds
+    // nothing, so every density entry is the seed popcount 2.
+    let offsets = [0u32, 1, 1];
+    let targets = [1u32];
+    let masks = [1u32];
+    let seed = [0b11u32];
+    let active =
+        assert_device_density_matches_oracle(2, &offsets, &targets, &masks, &seed, 0xFFFF_FFFF, 4);
+    assert_eq!(active, vec![2, 2, 2, 2]);
+}
+
+#[test]
+fn grid_sync_density_matches_oracle_across_the_budget_boundary() {
+    // 258 nodes (> 256) forces the grid-sync density program; diameter 2. Seeded
+    // at node 0: popcount after step 0 is 257 (root plus its 256 fan targets),
+    // after step 1 is 258 (the leaf off node 1), then flat at 258.
+    let (node_count, offsets, targets, masks, seed) = grid_sync_two_level(256);
+    assert!(node_count > 256, "must exercise the grid-sync density path");
+
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        1,
+    );
+    assert_eq!(active, vec![257]);
+
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        2,
+    );
+    assert_eq!(active, vec![257, 258]);
+
+    let active = assert_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seed,
+        0xFFFF_FFFF,
+        3,
+    );
+    assert_eq!(active, vec![257, 258, 258]);
+}
+
+/// Dispatch the BATCH density-instrumented program and read back the flat
+/// `[query][iter]` density array.
+fn run_density_batch(
+    node_count: u32,
+    query_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    frontier_in: &[u32],
+    allow_mask: u32,
+    max_iters: u32,
+) -> Vec<u32> {
+    let program = persistent_bfs_batch_with_density(
+        shape_for(node_count, edge_targets),
+        "frontier_in",
+        "frontier_out",
+        "changed",
+        "converged",
+        DENSITY_ACTIVE_BUFFER,
+        query_count,
+        allow_mask,
+        max_iters,
+    );
+    let reads = run_device(
+        &program,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        frontier_in,
+        Some(persistent_bfs_batch_dispatch_grid(node_count, query_count)),
+        &[DENSITY_ACTIVE_BUFFER],
+    );
+    let mut density = reads[0].clone();
+    density.truncate((query_count * max_iters) as usize);
+    density
+}
+
+/// Assert the batch device density array matches the per-query CPU oracle: each
+/// query is an independent single-frontier density run, so the flat
+/// `[query][iter]` device array must equal the concatenation of
+/// [`try_cpu_ref_density`] over the seeds. Returns that oracle concatenation.
+fn assert_batch_device_density_matches_oracle(
+    node_count: u32,
+    edge_offsets: &[u32],
+    edge_targets: &[u32],
+    edge_kind_mask: &[u32],
+    seeds: &[Vec<u32>],
+    allow_mask: u32,
+    max_iters: u32,
+) -> Vec<u32> {
+    let frontier_in = pack_seeds(node_count, seeds);
+    let device_density = run_density_batch(
+        node_count,
+        seeds.len() as u32,
+        edge_offsets,
+        edge_targets,
+        edge_kind_mask,
+        &frontier_in,
+        allow_mask,
+        max_iters,
+    );
+
+    let mut oracle = Vec::with_capacity(seeds.len() * max_iters as usize);
+    for (query, seed) in seeds.iter().enumerate() {
+        let (_frontier, _outcome, active) = try_cpu_ref_density(
+            node_count,
+            edge_offsets,
+            edge_targets,
+            edge_kind_mask,
+            seed,
+            allow_mask,
+            max_iters,
+        )
+        .expect("Fix: CPU density oracle must accept a valid graph.");
+        let start = query * max_iters as usize;
+        let end = start + max_iters as usize;
+        assert_eq!(
+            &device_density[start..end],
+            active.as_slice(),
+            "query {query}: batch device density must equal the CPU oracle."
+        );
+        oracle.extend_from_slice(&active);
+    }
+    oracle
+}
+
+#[test]
+fn batch_single_workgroup_density_matches_oracle_across_queries() {
+    // 4-node reverse chain (diameter 3), single-workgroup batch path. Three queries
+    // with distinct seeds and distinct density trajectories at the same budget:
+    // node 3 grows 2 then 3; node 1 grows to 2 then converges; a saturated seed
+    // sits flat at 4. If grid.y collapsed to 1, queries 1 and 2 would read zeros.
+    let (offsets, targets, masks, _seed) = reverse_chain(4);
+    let seeds = vec![vec![0b1000u32], vec![0b0010u32], vec![0b1111u32]];
+    let oracle = assert_batch_device_density_matches_oracle(
+        4,
+        &offsets,
+        &targets,
+        &masks,
+        &seeds,
+        0xFFFF_FFFF,
+        2,
+    );
+    assert_eq!(oracle, vec![2, 3, 2, 2, 4, 4]);
+}
+
+#[test]
+fn batch_grid_sync_density_matches_oracle_across_queries() {
+    // 258 nodes (> 256) forces the grid-sync batch density program; diameter 2.
+    // Query 0 seeded at the root grows 257 then 258; query 1 seeded at the leaf is
+    // an immediate fixpoint sitting flat at 1.
+    let (node_count, offsets, targets, masks, root_seed) = grid_sync_two_level(256);
+    assert!(
+        node_count > 256,
+        "must exercise the grid-sync batch density path"
+    );
+    let seeds = vec![root_seed, leaf_seed(node_count)];
+    let oracle = assert_batch_device_density_matches_oracle(
+        node_count,
+        &offsets,
+        &targets,
+        &masks,
+        &seeds,
+        0xFFFF_FFFF,
+        3,
+    );
+    assert_eq!(oracle, vec![257, 258, 258, 1, 1, 1]);
 }
