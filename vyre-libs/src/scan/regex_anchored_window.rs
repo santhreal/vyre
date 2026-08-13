@@ -33,7 +33,8 @@ use vyre_foundation::match_result::ByteRange;
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::{append_match, load_packed_byte};
+use crate::scan::builders::append_match;
+use crate::scan::classic_ac::{ac_output_span_nodes, ac_transition_step_nodes};
 
 /// Collapse raw accepting ends to one longest match per `(start, pattern_id)`.
 ///
@@ -296,44 +297,31 @@ pub fn anchored_window_extract_program(
     max_pattern_len: u32,
 ) -> Program {
     let max_pattern_len = max_pattern_len.max(1);
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
 
-    // Per-step of the forward walk: advance the DFA one byte, then emit every
+    // Per-step of the forward walk: advance the DFA one byte through the shared
+    // AC transition step, read the shared output-link span, then emit every
     // pattern id the (new) state accepts as a match ending at `step + 1`,
     // starting at the anchored `origin`.
-    let walk_step = vec![
-        load_step_byte,
-        Node::assign(
-            "state",
-            Expr::load(
-                transitions,
-                Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
+    let mut walk_step = ac_transition_step_nodes(haystack, transitions, Expr::var("step"));
+    walk_step.extend(ac_output_span_nodes(output_offsets));
+    walk_step.push(Node::loop_for(
+        "out_idx",
+        Expr::var("out_begin"),
+        Expr::var("out_end"),
+        vec![
+            Node::let_bind(
+                "pattern_id",
+                Expr::load(output_records, Expr::var("out_idx")),
             ),
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        Node::loop_for(
-            "out_idx",
-            Expr::var("out_begin"),
-            Expr::var("out_end"),
-            vec![
-                Node::let_bind(
-                    "pattern_id",
-                    Expr::load(output_records, Expr::var("out_idx")),
-                ),
-                append_match(
-                    matches,
-                    match_count,
-                    Expr::var("pattern_id"),
-                    Expr::var("origin"),
-                    Expr::add(Expr::var("step"), Expr::u32(1)),
-                ),
-            ],
-        ),
-    ];
+            append_match(
+                matches,
+                match_count,
+                Expr::var("pattern_id"),
+                Expr::var("origin"),
+                Expr::add(Expr::var("step"), Expr::u32(1)),
+            ),
+        ],
+    ));
 
     // For one candidate: bound the forward window at
     // min(origin + max_pattern_len, haystack_len) and replay.

@@ -1,12 +1,10 @@
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::load_packed_byte_expr;
 use vyre_primitives::matching::CompiledDfa;
 
-use super::bounded_ranges_scan_nodes;
+use super::{bounded_ranges_scan_nodes, candidate_end_gate_nodes, AcInputBindings};
 
-#[path = "prefilter/suffix3.rs"]
 mod suffix3;
 
 pub use suffix3::{
@@ -90,69 +88,44 @@ pub fn classic_ac_bounded_ranges_prefilter_program_ext(
     max_pattern_len: u32,
     use_subgroup_coalesce: bool,
 ) -> Program {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    let scan_nodes = bounded_ranges_scan_nodes(
+    let body = candidate_end_gate_nodes(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        bounded_ranges_scan_nodes(
+            haystack,
+            transitions,
+            output_offsets,
+            output_records,
+            pattern_lengths,
+            match_count,
+            matches,
+            max_pattern_len,
+            use_subgroup_coalesce,
+        ),
+    );
+
+    let mut buffers = AcInputBindings {
         haystack,
         transitions,
         output_offsets,
         output_records,
         pattern_lengths,
-        match_count,
-        matches,
-        max_pattern_len,
-        use_subgroup_coalesce,
-    );
-
-    let body = vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
-            vec![
-                Node::let_bind("candidate_byte", candidate_byte),
-                Node::let_bind(
-                    "candidate_word",
-                    Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
-                    ),
-                ),
-                Node::let_bind(
-                    "candidate_bit",
-                    Expr::shl(
-                        Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
-                    ),
-                ),
-                Node::if_then(
-                    Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
-                        Expr::u32(0),
-                    ),
-                    scan_nodes,
-                ),
-            ],
-        ),
-    ];
+        haystack_len,
+        state_count,
+        output_records_len,
+        pattern_count,
+    }
+    .decls();
+    buffers.extend([
+        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
+        BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(8),
+        BufferDecl::output(matches, 8, DataType::U32).with_count(max_matches.saturating_mul(3)),
+    ]);
 
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-            BufferDecl::storage(candidate_end_mask, 7, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(8),
-            BufferDecl::output(matches, 8, DataType::U32).with_count(max_matches.saturating_mul(3)),
-        ],
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::classic_ac_bounded_ranges_prefilter",

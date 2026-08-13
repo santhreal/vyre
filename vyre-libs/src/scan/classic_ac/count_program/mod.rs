@@ -3,13 +3,12 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use crate::region::wrap_anonymous;
 use crate::scan::builders::load_packed_byte_expr;
 
-use super::bounded_walk_prologue_nodes;
+use super::bounded_ranges::{
+    bounded_walk_prologue_nodes, candidate_end_gate_nodes, classic_ac_dfa_buffer_decls,
+};
 use vyre_primitives::matching::CompiledDfa;
 
-#[path = "count_program/suffix2.rs"]
 mod suffix2;
-
-#[path = "count_program/suffix3.rs"]
 mod suffix3;
 
 pub use suffix2::{
@@ -49,6 +48,14 @@ fn count_scan_nodes(
     ));
     nodes
 }
+
+/// The candidate-end gate followed by the suffix2 gate: at offset 0 there is no
+/// preceding byte to form a bigram from, so the walk runs unconditionally
+/// (`offset_zero_scan_nodes`); everywhere else the preceding byte and the
+/// candidate byte index the 64Ki-bit `candidate_suffix2_mask` and only a set bit
+/// reaches `suffix2_match_nodes`. The outer byte gate comes from the shared AC
+/// walk owner, so the count, ranges and presence programs cannot drift in what
+/// they admit.
 pub(in crate::scan) fn count_suffix2_prefilter_body(
     haystack: &str,
     candidate_end_mask: &str,
@@ -57,75 +64,48 @@ pub(in crate::scan) fn count_suffix2_prefilter_body(
     offset_zero_scan_nodes: Vec<Node>,
     suffix2_match_nodes: Vec<Node>,
 ) -> Vec<Node> {
-    let i = Expr::var("i");
-    let candidate_byte = load_packed_byte_expr(haystack, i.clone());
-    let previous_byte =
-        load_packed_byte_expr(haystack, Expr::saturating_sub(i.clone(), Expr::u32(1)));
+    let previous_byte = load_packed_byte_expr(
+        haystack,
+        Expr::saturating_sub(Expr::var("i"), Expr::u32(1)),
+    );
     let suffix2_index = Expr::bitor(
         Expr::shl(Expr::var("previous_byte"), Expr::u32(8)),
         Expr::var("candidate_byte"),
     );
-    vec![
-        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
+    candidate_end_gate_nodes(
+        haystack,
+        haystack_len,
+        candidate_end_mask,
+        vec![Node::if_then_else(
+            Expr::eq(Expr::var("i"), Expr::u32(0)),
+            offset_zero_scan_nodes,
             vec![
-                Node::let_bind("candidate_byte", candidate_byte),
+                Node::let_bind("previous_byte", previous_byte),
+                Node::let_bind("suffix2_index", suffix2_index),
                 Node::let_bind(
-                    "candidate_word",
+                    "suffix2_word",
                     Expr::load(
-                        candidate_end_mask,
-                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
+                        candidate_suffix2_mask,
+                        Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
                     ),
                 ),
                 Node::let_bind(
-                    "candidate_bit",
+                    "suffix2_bit",
                     Expr::shl(
                         Expr::u32(1),
-                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
+                        Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
                     ),
                 ),
                 Node::if_then(
                     Expr::ne(
-                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
+                        Expr::bitand(Expr::var("suffix2_word"), Expr::var("suffix2_bit")),
                         Expr::u32(0),
                     ),
-                    vec![Node::if_then_else(
-                        Expr::eq(i, Expr::u32(0)),
-                        offset_zero_scan_nodes,
-                        vec![
-                            Node::let_bind("previous_byte", previous_byte),
-                            Node::let_bind("suffix2_index", suffix2_index),
-                            Node::let_bind(
-                                "suffix2_word",
-                                Expr::load(
-                                    candidate_suffix2_mask,
-                                    Expr::shr(Expr::var("suffix2_index"), Expr::u32(5)),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "suffix2_bit",
-                                Expr::shl(
-                                    Expr::u32(1),
-                                    Expr::bitand(Expr::var("suffix2_index"), Expr::u32(31)),
-                                ),
-                            ),
-                            Node::if_then(
-                                Expr::ne(
-                                    Expr::bitand(
-                                        Expr::var("suffix2_word"),
-                                        Expr::var("suffix2_bit"),
-                                    ),
-                                    Expr::u32(0),
-                                ),
-                                suffix2_match_nodes,
-                            ),
-                        ],
-                    )],
+                    suffix2_match_nodes,
                 ),
             ],
-        ),
-    ]
+        )],
+    )
 }
 
 pub(in crate::scan) fn suffix3_prefilter_match_nodes(
@@ -176,21 +156,6 @@ pub(in crate::scan) fn suffix3_prefilter_match_nodes(
             ),
         ],
     )]
-}
-
-pub(crate) fn classic_ac_dfa_buffer_decls(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    state_count: u32,
-) -> Vec<BufferDecl> {
-    vec![
-        BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-        BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(state_count.saturating_mul(256)),
-        BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(state_count.saturating_add(1)),
-    ]
 }
 
 fn count_suffix2_prefilter_buffers(

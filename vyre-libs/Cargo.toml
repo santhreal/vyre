@@ -529,3 +529,8 @@ required-features = ["nn-attention", "nn-norm"]
 name = "workgroup_cooperative_tiling"
 path = "tests/workgroup_cooperative_tiling.rs"
 required-features = ["nn-attention", "nn-norm"]
+
+[[test]]
+name = "scan_ac_transition_walk_single_owner"
+path = "tests/scan_ac_transition_walk_single_owner.rs"
+required-features = ["matching-regex"]

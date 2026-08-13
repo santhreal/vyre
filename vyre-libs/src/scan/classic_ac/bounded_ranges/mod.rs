@@ -1,18 +1,26 @@
+//! The bounded-window Aho-Corasick scan builders, and the AC walk itself.
+//!
+//! This module owns the transition walk for the whole crate: the dense
+//! `state = transitions[state * 256 + byte]` step, the flat output-link span,
+//! the bounded suffix replay, the candidate-end byte gate, and the per-region
+//! binary search. Every other AC builder here and under `scan/` projects from
+//! those primitives and supplies only what genuinely differs: its admission
+//! predicate, its emission, its prefilter shape.
+
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::{append_match, append_match_subgroup};
+use crate::scan::builders::{
+    append_match, append_match_subgroup, load_packed_byte, load_packed_byte_expr,
+};
 
-use super::bounded_walk_prologue_nodes;
 use vyre_primitives::matching::CompiledDfa;
 
 #[cfg(any(test, feature = "cpu-parity"))]
 use super::ClassicAcAutomaton;
 
-#[path = "bounded_ranges/prefilter.rs"]
 mod prefilter;
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-#[path = "bounded_ranges/regex_exact.rs"]
 mod regex_exact;
 
 pub use prefilter::{
@@ -36,7 +44,185 @@ pub use prefilter::{
     try_build_ac_bounded_ranges_suffix3_presence_program,
 };
 #[cfg(all(feature = "matching-regex", feature = "matching-dfa"))]
-pub(crate) use regex_exact::regex_exact_ranges_program_ext;
+pub(in crate::scan) use regex_exact::regex_exact_ranges_program_ext;
+
+/// Advance `state` one byte through the dense `state * 256 + byte` transition
+/// row.
+///
+/// THE Aho-Corasick transition step. The bounded suffix replay, the anchored
+/// forward walk, the per-region admission walk and the unbounded classic walk
+/// are each built from this one node, so a change to the table layout reaches
+/// all of them at once. `byte` is whatever the caller's haystack encoding
+/// yields: a direct element load for an unpacked haystack, or the masked byte
+/// [`ac_transition_step_nodes`] unpacks from a u32 word.
+pub(in crate::scan) fn ac_advance_state_node(transitions: &str, byte: Expr) -> Node {
+    Node::assign(
+        "state",
+        Expr::load(
+            transitions,
+            Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), byte),
+        ),
+    )
+}
+
+/// One byte of the walk over a PACKED haystack: unpack the byte at `idx` from
+/// its u32 word, then [`ac_advance_state_node`].
+pub(in crate::scan) fn ac_transition_step_nodes(
+    haystack: &str,
+    transitions: &str,
+    idx: Expr,
+) -> Vec<Node> {
+    let (load_byte, byte) = load_packed_byte(haystack, idx);
+    vec![load_byte, ac_advance_state_node(transitions, byte)]
+}
+
+/// Bind `out_begin`/`out_end` to the flat output-link span of the current
+/// `state`. Every walk pairs this with the transition step before emitting, so
+/// an `output_offsets` layout change has one place to land.
+pub(in crate::scan) fn ac_output_span_nodes(output_offsets: &str) -> Vec<Node> {
+    vec![
+        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
+        Node::let_bind(
+            "out_end",
+            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
+        ),
+    ]
+}
+
+/// Bounded-window walk prologue for the scan, count and presence builders: bind
+/// `state`/`scan_start`/`scan_end`, replay the suffix window
+/// `haystack[max(0, i + 1 - max_pattern_len)..=i]` from state 0, and bind the
+/// output-link span. Callers append their per-record emit loop.
+pub(in crate::scan) fn bounded_walk_prologue_nodes(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    max_pattern_len: u32,
+) -> Vec<Node> {
+    let max_pattern_len = max_pattern_len.max(1);
+    let i = Expr::var("i");
+    let end = Expr::add(i.clone(), Expr::u32(1));
+    let scan_start = Expr::select(
+        Expr::lt(i, Expr::u32(max_pattern_len - 1)),
+        Expr::u32(0),
+        Expr::sub(end.clone(), Expr::u32(max_pattern_len)),
+    );
+    let mut nodes = vec![
+        Node::let_bind("state", Expr::u32(0)),
+        Node::let_bind("scan_start", scan_start),
+        Node::let_bind("scan_end", end),
+        Node::loop_for(
+            "step",
+            Expr::var("scan_start"),
+            Expr::var("scan_end"),
+            ac_transition_step_nodes(haystack, transitions, Expr::var("step")),
+        ),
+    ];
+    nodes.extend(ac_output_span_nodes(output_offsets));
+    nodes
+}
+
+/// The candidate-end byte gate every prefiltered AC program opens with: bind the
+/// invocation index `i`, bound it against the live `haystack_len`, unpack the
+/// candidate byte, and run `accepted` only when that byte's bit is set in the
+/// 8-word `candidate_end_mask`. The bound `candidate_byte` stays in scope so a
+/// deeper suffix gate can reuse it instead of unpacking the same byte twice.
+pub(in crate::scan) fn candidate_end_gate_nodes(
+    haystack: &str,
+    haystack_len: &str,
+    candidate_end_mask: &str,
+    accepted: Vec<Node>,
+) -> Vec<Node> {
+    let i = Expr::var("i");
+    vec![
+        Node::let_bind("i", Expr::InvocationId { axis: 0 }),
+        Node::if_then(
+            Expr::lt(i.clone(), Expr::load(haystack_len, Expr::u32(0))),
+            vec![
+                Node::let_bind("candidate_byte", load_packed_byte_expr(haystack, i)),
+                Node::let_bind(
+                    "candidate_word",
+                    Expr::load(
+                        candidate_end_mask,
+                        Expr::shr(Expr::var("candidate_byte"), Expr::u32(5)),
+                    ),
+                ),
+                Node::let_bind(
+                    "candidate_bit",
+                    Expr::shl(
+                        Expr::u32(1),
+                        Expr::bitand(Expr::var("candidate_byte"), Expr::u32(31)),
+                    ),
+                ),
+                Node::if_then(
+                    Expr::ne(
+                        Expr::bitand(Expr::var("candidate_word"), Expr::var("candidate_bit")),
+                        Expr::u32(0),
+                    ),
+                    accepted,
+                ),
+            ],
+        ),
+    ]
+}
+
+/// Bindings 0-2 of every AC program: the packed haystack, the dense transition
+/// table, and the flat output-link offsets. The walk's own table ABI, so it
+/// lives with the walk.
+pub(in crate::scan) fn classic_ac_dfa_buffer_decls(
+    haystack: &str,
+    transitions: &str,
+    output_offsets: &str,
+    state_count: u32,
+) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
+        BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(state_count.saturating_mul(256)),
+        BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
+            .with_count(state_count.saturating_add(1)),
+    ]
+}
+
+/// Bindings 0-5 of every bounded-RANGES AC program: the DFA tables above plus
+/// the flat output records, the pattern-length table, and the live haystack
+/// length. One value instead of the nine positional arguments each builder used
+/// to respell, so the shared input ABI cannot drift between the plain,
+/// candidate-gated, suffix3-gated and presence programs.
+#[derive(Clone, Copy)]
+pub(in crate::scan) struct AcInputBindings<'a> {
+    pub haystack: &'a str,
+    pub transitions: &'a str,
+    pub output_offsets: &'a str,
+    pub output_records: &'a str,
+    pub pattern_lengths: &'a str,
+    pub haystack_len: &'a str,
+    pub state_count: u32,
+    pub output_records_len: u32,
+    pub pattern_count: u32,
+}
+
+impl AcInputBindings<'_> {
+    /// The six declarations, in binding order.
+    pub(in crate::scan) fn decls(&self) -> Vec<BufferDecl> {
+        let mut decls = classic_ac_dfa_buffer_decls(
+            self.haystack,
+            self.transitions,
+            self.output_offsets,
+            self.state_count,
+        );
+        decls.reserve(3);
+        decls.extend([
+            BufferDecl::storage(self.output_records, 3, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(self.output_records_len),
+            BufferDecl::storage(self.pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(self.pattern_count),
+            BufferDecl::storage(self.haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
+                .with_count(1),
+        ]);
+        decls
+    }
+}
 
 /// Build a Program that scans `haystack` for any AC match and emits
 /// `(pattern_id, start, end)` triples through the canonical
@@ -147,22 +333,25 @@ pub fn classic_ac_bounded_ranges_program_ext(
         ),
     ];
 
+    let mut buffers = AcInputBindings {
+        haystack,
+        transitions,
+        output_offsets,
+        output_records,
+        pattern_lengths,
+        haystack_len,
+        state_count,
+        output_records_len,
+        pattern_count,
+    }
+    .decls();
+    buffers.extend([
+        BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
+        BufferDecl::output(matches, 7, DataType::U32).with_count(max_matches.saturating_mul(3)),
+    ]);
+
     Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32),
-            BufferDecl::storage(transitions, 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_mul(256)),
-            BufferDecl::storage(output_offsets, 2, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(state_count.saturating_add(1)),
-            BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(output_records_len),
-            BufferDecl::storage(pattern_lengths, 4, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(pattern_count),
-            BufferDecl::storage(haystack_len, 5, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(1),
-            BufferDecl::read_write(match_count, 6, DataType::U32).with_count(1),
-            BufferDecl::output(matches, 7, DataType::U32).with_count(max_matches.saturating_mul(3)),
-        ],
+        buffers,
         [128, 1, 1],
         vec![wrap_anonymous(
             "vyre-libs::matching::classic_ac_bounded_ranges",
@@ -367,19 +556,27 @@ fn bounded_ranges_presence_by_region_nodes(
     nodes
 }
 
-/// The region binary-search PROLOGUE shared verbatim by the presence-only
-/// ([`bounded_ranges_presence_by_region_nodes`]) and the fused presence+positions
-/// ([`bounded_ranges_presence_and_positions_by_region_nodes`]) builders. Computes
-/// `rs_pos = i + region_base` (the GLOBAL byte position so a sharded dispatch
-/// attributes against the whole-batch region table), binary-searches `region_starts`
-/// for the largest region whose start `<= rs_pos`, and binds `rs_base = region *
-/// presence_words` (the per-region presence-row offset). The caller appends its own
-/// per-record emit loop after these nodes. The `rs_mid - 1` arm can underflow to
-/// `u32::MAX` on the rejected `select` branch; it is discarded harmlessly
-/// (`rs_mid == 0` only when `rs_lo == rs_hi == 0`, where `region_starts[0] == 0 <=
-/// rs_pos` forces the `cond` arm). One source of truth for the lookup keeps the two
-/// builders bit-identical by construction.
-fn region_search_prologue_nodes(
+/// The region binary-search PROLOGUE shared by every region-attributed walk in
+/// `scan/`: the presence-only and fused presence+positions bounded builders here,
+/// and the anchored per-region walk in
+/// [`crate::scan::regex_region_admission`]. Computes `rs_pos = i + region_base`
+/// (the GLOBAL byte position so a sharded dispatch attributes against the
+/// whole-batch region table), binary-searches `region_starts` for the largest
+/// region whose start `<= rs_pos`, and binds `rs_base = region * presence_words`
+/// (the per-region presence-row offset). The caller appends its own per-record
+/// emit loop after these nodes.
+///
+/// The row stride is floored at one word to match every presence-word helper in
+/// the crate (`presence_bitmap_words`, `presence_by_region_words`,
+/// `regex_admission_presence_words`): a zero stride would alias every region
+/// onto row 0 and report a batch-wide bitmap as a per-region one.
+///
+/// The `rs_mid - 1` arm can underflow to `u32::MAX` on the rejected `select`
+/// branch; it is discarded harmlessly (`rs_mid == 0` only when
+/// `rs_lo == rs_hi == 0`, where `region_starts[0] == 0 <= rs_pos` forces the
+/// `cond` arm). One source of truth for the lookup keeps the builders
+/// bit-identical by construction.
+pub(in crate::scan) fn region_search_prologue_nodes(
     region_starts: &str,
     region_base: &str,
     presence_words: u32,

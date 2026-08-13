@@ -32,7 +32,10 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 use vyre_primitives::matching::CompiledDfa;
 
 use crate::region::wrap_anonymous;
-use crate::scan::builders::load_packed_byte;
+use crate::scan::classic_ac::{
+    ac_output_span_nodes, ac_transition_step_nodes, classic_ac_dfa_buffer_decls,
+    region_search_prologue_nodes,
+};
 use crate::scan::regex_anchored_window::AnchoredWindowValidator;
 
 /// Presence-bitmap word count per region for `pattern_count` patterns
@@ -87,100 +90,68 @@ pub fn regex_admission_by_region_reference(
     presence
 }
 
+/// Buffer names and window shape for the anchored per-region walk, shared by the
+/// admission program here and the fused evidence program in
+/// [`crate::scan::fused_region_evidence`]. One value instead of nine positional
+/// names threaded through both.
+#[derive(Clone, Copy)]
+pub(crate) struct AnchoredRegionWalk<'a> {
+    /// Packed u32 haystack, four bytes per word.
+    pub haystack: &'a str,
+    /// Dense `state * 256 + byte` transition table.
+    pub transitions: &'a str,
+    /// Flat output-link offsets, `state_count + 1` entries.
+    pub output_offsets: &'a str,
+    /// Ascending region start offsets, `region_starts[0] == 0`.
+    pub region_starts: &'a str,
+    /// Single-element buffer holding this shard's global base offset.
+    pub region_base: &'a str,
+    /// Single-element buffer holding the live haystack byte length.
+    pub haystack_len: &'a str,
+    /// Per-region presence-row stride in u32 words.
+    pub presence_words: u32,
+    /// Forward window cap; no pattern is longer than this.
+    pub max_pattern_len: u32,
+    /// Fixed binary-search iteration count, `ceil(log2(max_regions))`.
+    pub log2_max_regions: u32,
+}
+
+/// One invocation per haystack byte `i`: find the region owning
+/// `i + region_base`, then replay the ANCHORED DFA forward over
+/// `[i, min(i + max_pattern_len, haystack_len))`, running `emit_loop` after each
+/// step so every accepted pattern is attributed to the anchor `origin == i`.
+///
+/// The region lookup, the transition step and the output-link span all come from
+/// the AC walk owner in `scan/classic_ac/bounded_ranges`. What is local to this
+/// walk is the forward (rather than suffix) window and the `origin` bind the
+/// emission reads.
 pub(crate) fn anchored_region_walk_body(
-    haystack: &str,
-    transitions: &str,
-    output_offsets: &str,
-    region_starts: &str,
-    region_base: &str,
-    haystack_len: &str,
-    presence_words: u32,
-    max_pattern_len: u32,
-    log2_max_regions: u32,
+    walk: AnchoredRegionWalk<'_>,
     emit_loop: Node,
 ) -> Vec<Node> {
-    let max_pattern_len = max_pattern_len.max(1);
-    let (load_step_byte, step_byte) = load_packed_byte(haystack, Expr::var("step"));
-    let walk_step = vec![
-        load_step_byte,
-        Node::assign(
-            "state",
-            Expr::load(
-                transitions,
-                Expr::add(Expr::mul(Expr::var("state"), Expr::u32(256)), step_byte),
-            ),
-        ),
-        Node::let_bind("out_begin", Expr::load(output_offsets, Expr::var("state"))),
-        Node::let_bind(
-            "out_end",
-            Expr::load(output_offsets, Expr::add(Expr::var("state"), Expr::u32(1))),
-        ),
-        emit_loop,
-    ];
-    let mut per_position = vec![
-        Node::let_bind("origin", Expr::var("i")),
-        Node::let_bind(
-            "rs_pos",
-            Expr::add(Expr::var("i"), Expr::load(region_base, Expr::u32(0))),
-        ),
-        Node::let_bind("rs_lo", Expr::u32(0)),
-        Node::let_bind(
-            "rs_hi",
-            Expr::sub(Expr::buf_len(region_starts), Expr::u32(1)),
-        ),
-        Node::loop_for(
-            "rs_step",
-            Expr::u32(0),
-            Expr::u32(log2_max_regions.max(1)),
-            vec![
-                Node::let_bind(
-                    "rs_mid",
-                    Expr::div(
-                        Expr::add(
-                            Expr::add(Expr::var("rs_lo"), Expr::var("rs_hi")),
-                            Expr::u32(1),
-                        ),
-                        Expr::u32(2),
-                    ),
-                ),
-                Node::let_bind(
-                    "rs_cond",
-                    Expr::le(
-                        Expr::load(region_starts, Expr::var("rs_mid")),
-                        Expr::var("rs_pos"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_lo",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_mid"),
-                        Expr::var("rs_lo"),
-                    ),
-                ),
-                Node::assign(
-                    "rs_hi",
-                    Expr::select(
-                        Expr::var("rs_cond"),
-                        Expr::var("rs_hi"),
-                        Expr::sub(Expr::var("rs_mid"), Expr::u32(1)),
-                    ),
-                ),
-            ],
-        ),
-        Node::let_bind(
-            "rs_base",
-            Expr::mul(Expr::var("rs_lo"), Expr::u32(presence_words)),
-        ),
-        Node::let_bind("state", Expr::u32(0)),
-    ];
+    let max_pattern_len = walk.max_pattern_len.max(1);
+    let haystack_len = Expr::load(walk.haystack_len, Expr::u32(0));
+
+    let mut walk_step =
+        ac_transition_step_nodes(walk.haystack, walk.transitions, Expr::var("step"));
+    walk_step.extend(ac_output_span_nodes(walk.output_offsets));
+    walk_step.push(emit_loop);
+
+    let mut per_position = vec![Node::let_bind("origin", Expr::var("i"))];
+    per_position.extend(region_search_prologue_nodes(
+        walk.region_starts,
+        walk.region_base,
+        walk.presence_words,
+        walk.log2_max_regions,
+    ));
+    per_position.push(Node::let_bind("state", Expr::u32(0)));
     let uncapped_end = Expr::add(Expr::var("i"), Expr::u32(max_pattern_len));
     per_position.push(Node::let_bind(
         "win_end",
         Expr::select(
-            Expr::lt(uncapped_end.clone(), Expr::load(haystack_len, Expr::u32(0))),
+            Expr::lt(uncapped_end.clone(), haystack_len.clone()),
             uncapped_end,
-            Expr::load(haystack_len, Expr::u32(0)),
+            haystack_len.clone(),
         ),
     ));
     per_position.push(Node::loop_for(
@@ -189,12 +160,10 @@ pub(crate) fn anchored_region_walk_body(
         Expr::var("win_end"),
         walk_step,
     ));
+
     vec![
         Node::let_bind("i", Expr::InvocationId { axis: 0 }),
-        Node::if_then(
-            Expr::lt(Expr::var("i"), Expr::load(haystack_len, Expr::u32(0))),
-            per_position,
-        ),
+        Node::if_then(Expr::lt(Expr::var("i"), haystack_len), per_position),
     ]
 }
 
@@ -209,12 +178,8 @@ pub(crate) fn regex_region_scan_common_buffers(
     output_records_len: u32,
     region_count: u32,
 ) -> Vec<BufferDecl> {
-    let mut buffers = super::classic_ac::classic_ac_dfa_buffer_decls(
-        haystack,
-        transitions,
-        output_offsets,
-        state_count,
-    );
+    let mut buffers =
+        classic_ac_dfa_buffer_decls(haystack, transitions, output_offsets, state_count);
     buffers.extend([
         BufferDecl::storage(output_records, 3, BufferAccess::ReadOnly, DataType::U32)
             .with_count(output_records_len),
@@ -277,15 +242,17 @@ pub fn regex_admission_by_region_program(
         ],
     );
     let walk_body = anchored_region_walk_body(
-        haystack,
-        transitions,
-        output_offsets,
-        region_starts,
-        region_base,
-        haystack_len,
-        presence_words,
-        max_pattern_len,
-        log2_max_regions,
+        AnchoredRegionWalk {
+            haystack,
+            transitions,
+            output_offsets,
+            region_starts,
+            region_base,
+            haystack_len,
+            presence_words,
+            max_pattern_len,
+            log2_max_regions,
+        },
         emit_loop,
     );
     let mut buffers = regex_region_scan_common_buffers(
