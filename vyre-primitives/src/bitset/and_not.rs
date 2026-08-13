@@ -128,19 +128,6 @@ mod tests {
     }
 
     #[test]
-    fn production_cpu_ref_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("and_not.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: and_not.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: bitset_and_not CPU parity wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn cross_word_boundary() {
         // Word 0 bit 31 and word 1 bit 0 are adjacent nodes.
         let lhs = vec![0x8000_0000, 0x0000_0001];

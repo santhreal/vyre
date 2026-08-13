@@ -81,17 +81,6 @@ boundary = "private"
 seam = "foundation-ir"
 
 [[crate.dependency]]
-package = "vyre-libs"
-purpose = "product operation builders"
-features = ["c-parser", "full", "matching-regex"]
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = true
-boundary = "private"
-seam = "product-libraries"
-
-[[crate.dependency]]
 package = "vyre-megakernel"
 purpose = "whole-graph compilation and immutable artifact contracts"
 features = []
@@ -101,17 +90,6 @@ optional = false
 default_features = true
 boundary = "private"
 seam = "megakernel-compiler"
-
-[[crate.dependency]]
-package = "vyre-primitives"
-purpose = "reusable semantic Program builders"
-features = []
-conditions = ["always"]
-kinds = ["normal"]
-optional = false
-default_features = false
-boundary = "private"
-seam = "primitive-library"
 
 [[crate.dependency]]
 package = "vyre-runtime"
@@ -1135,6 +1113,13 @@ boundary = "private"
 seam = "self-substrate"
 
 [[crate]]
+package = "vyre-safetensors"
+path = "vyre-safetensors"
+owner = "safetensors-adapter"
+layer = "runtime"
+responsibility = "Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency."
+
+[[crate]]
 package = "vyre-scan"
 path = "vyre-scan"
 owner = "scan-product"
@@ -1516,7 +1501,7 @@ seam = "hardware-intrinsics"
 [[crate.dependency]]
 package = "vyre-libs"
 purpose = "product operation builders"
-features = ["nn-linear-4bit"]
+features = ["c-parser", "nn-linear-4bit"]
 conditions = ["always"]
 kinds = ["normal"]
 optional = false

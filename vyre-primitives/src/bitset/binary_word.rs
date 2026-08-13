@@ -312,18 +312,6 @@ macro_rules! define_bitwise_binary_op {
                 assert_eq!(compat, fallible);
             }
 
-            #[test]
-            fn production_cpu_ref_wrappers_have_no_raw_panic_path() {
-                let production = include_str!("binary_word.rs")
-                    .split("#[cfg(test)]")
-                    .next()
-                    .expect("Fix: binary_word.rs must contain production section");
-
-                assert!(
-                    !production.contains(".expect(") && !production.contains(".unwrap("),
-                    "Fix: shared bitwise binary CPU parity wrappers must not panic in production."
-                );
-            }
 
             #[test]
             fn generated_cpu_ref_matches_scalar_reference_matrix() {

@@ -22,19 +22,20 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `public-facade` | [`../vyre/src/lib.rs`](../vyre/src/lib.rs) |
 | `release-tooling` | [`../scripts/release_docs.py`](../scripts/release_docs.py) |
 | `runtime` | [`../vyre-runtime/src/lib.rs`](../vyre-runtime/src/lib.rs) |
+| `safetensors-adapter` | [`../vyre-safetensors/src/lib.rs`](../vyre-safetensors/src/lib.rs) |
 | `testing` | [`testing/TESTING.toml`](testing/TESTING.toml) |
 
 ## Cargo-derived workspace facts
 
-- Workspace packages: 34.
-- Shipped library, binary, and example targets: 72.
+- Workspace packages: 35.
+- Shipped library, binary, and example targets: 73.
 - Source: `cargo metadata --no-deps --format-version 1`.
 
 ## Lifecycle counts
 
-- current: 42.
-- generated: 71.
-- superseded: 34.
+- current: 43.
+- generated: 72.
+- superseded: 3.
 - archived: 18.
 
 ## Pages
@@ -43,37 +44,22 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | --- | --- | --- | --- | --- | --- | --- |
 | `current` | `extension` | `architecture` | `ownership` | `ARCHITECTURE.md` | self | manual |
 | `generated` | `user` | `public-facade` | `guide` | `CLI.md` | [CLI.toml](CLI.toml) | generated: [../scripts/cli_docs.py](../scripts/cli_docs.py) |
-| `superseded` | `contributor` | `historical` | `history` | `CONVENTIONS.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `CPU_GPU_CONVERGENCE.md` | self | manual |
 | `generated` | `extension` | `architecture` | `ownership` | `CRATE_GRAPH.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
 | `current` | `contributor` | `docs-governance` | `governance` | `DOCUMENTATION_COVERAGE.md` | self | manual |
 | `current` | `contributor` | `docs-governance` | `governance` | `DOCUMENTATION_GOVERNANCE.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `ERROR_SURFACE.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `GATE_CLOSURE.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `HOT_PATH_PROOFS.md` | self | manual |
 | `generated` | `contributor` | `docs-governance` | `governance` | `INDEX.md` | [DOCS.toml](DOCS.toml) | generated: [../scripts/docs_manifest.py](../scripts/docs_manifest.py) |
 | `archived` | `contributor` | `historical` | `history` | `LAW7_ORGANIZATION.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `MATH_FRONTIER.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `MATH_PRIMITIVES_PLACEMENT.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `MIGRATION.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `OPS.md` | self | manual |
 | `current` | `extension` | `optimization` | `optimization` | `OPTIMIZATION_ARCHITECTURE.md` | self | manual |
 | `generated` | `extension` | `architecture` | `ownership` | `OWNERSHIP.md` | [CRATE_OWNERSHIP.toml](CRATE_OWNERSHIP.toml) | generated: [../scripts/crate_ownership.py](../scripts/crate_ownership.py) |
 | `current` | `release` | `benchmark` | `release` | `PERF.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `PER_OP_SURFACE.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `PREDICATE_EXPR_DUALITY.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `PRIMITIVES.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `PUBLISH_GATE.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `RECURSION_THESIS.md` | self | manual |
 | `current` | `release` | `release-tooling` | `release` | `RELEASE.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `RELEASE_1_0_GATE.md` | self | manual |
 | `generated` | `release` | `release-tooling` | `release` | `RELEASE_CHECKLIST.md` | [../release/release-train.toml](../release/release-train.toml) | generated: [../scripts/release_docs.py](../scripts/release_docs.py) |
-| `superseded` | `contributor` | `historical` | `history` | `RELEASE_ENGINEERING.md` | self | manual |
 | `current` | `extension` | `runtime` | `lifecycle` | `RUNTIME_PIPELINE.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `SUBSTRATE_RFCS.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `TESTING_PROGRAM.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `THESIS.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `VISION.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/HEURISTIC_TO_MATH_TRACKER.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/INNOVATION_SWEEP.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `archive/JULES_PRIMITIVE_MANIFEST.md` | self | manual |
@@ -115,29 +101,20 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `code-style.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `consumer-integration.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `consumer-showcase.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `dialect-cookbook.md` | self | manual |
 | `current` | `extension` | `foundation` | `reference` | `error-codes.md` | [../vyre-foundation/src/validate/validation_error.rs](../vyre-foundation/src/validate/validation_error.rs) | manual |
 | `current` | `user` | `public-facade` | `guide` | `faq.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/AlgebraicLaw.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/EnforceGate.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/ExprVisitor.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/Lowerable.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/MutationClass.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `frozen-traits/README.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `frozen-traits/VyreBackend.md` | self | manual |
 | `generated` | `extension` | `operation-registry` | `reference` | `generated/OP_INVENTORY.md` | [generated/OP_SCHEMA.json](generated/OP_SCHEMA.json) | generated: [../xtask/src/list_ops.rs](../xtask/src/list_ops.rs) |
 | `current` | `extension` | `operation-registry` | `reference` | `generated/README.md` | self | manual |
-| `current` | `user` | `public-facade` | `guide` | `inventory-contract.md` | self | manual |
+| `current` | `extension` | `operation-registry` | `reference` | `inventory-contract.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `ir-semantics.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `legacy/README.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `lego-block-rule.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `library-tiers.md` | self | manual |
+| `current` | `contributor` | `architecture` | `architecture` | `lego-block-rule.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `lower-vs-emit.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `megakernel-wiring.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `memory-model.md` | self | manual |
 | `archived` | `contributor` | `historical` | `history` | `migration-vyre-ops-to-intrinsics.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `observability.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `occ.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `op-naming.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `ops-catalog.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `optimization/LEGACY_DOCS.md` | self | manual |
@@ -145,9 +122,6 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/README.md` | self | manual |
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/START_HERE.md` | self | manual |
 | `current` | `contributor` | `optimization` | `optimization` | `optimization/TAXONOMY.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `parity/three_substrate.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `parsing-and-frontends.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `primitives-tier.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `reference-interpreter-witness-limits.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `region-chain.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `release/v0.4.1.md` | self | manual |
@@ -160,12 +134,10 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `rfcs/0003-datatype-quantized.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `rfcs/0004-collective-ops.md` | self | manual |
 | `superseded` | `contributor` | `historical` | `history` | `rfcs/0005-persistent-megakernel.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `santh-standard.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `scanning-a-corpus-the-right-way.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `semver-policy.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `stability.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `support.md` | self | manual |
-| `current` | `user` | `public-facade` | `guide` | `targets.md` | self | manual |
+| `current` | `extension` | `architecture` | `reference` | `targets.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `test-layout.md` | self | manual |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-aot.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-bench.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
@@ -195,6 +167,7 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-primitives.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-reference.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-runtime.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
+| `generated` | `contributor` | `testing` | `testing` | `testing/vyre-safetensors.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-scan.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-self-substrate.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
 | `generated` | `contributor` | `testing` | `testing` | `testing/vyre-spec.md` | [testing/TESTING.toml](testing/TESTING.toml) | generated: [../scripts/testing_guides.py](../scripts/testing_guides.py) |
@@ -204,5 +177,4 @@ archived pages remain lifecycle evidence and are excluded from navigation.
 | `current` | `user` | `public-facade` | `guide` | `threat-model.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `trust-model.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `vyre-libs-features.md` | self | manual |
-| `superseded` | `contributor` | `historical` | `history` | `wire-format-0.6-reservations.md` | self | manual |
 | `current` | `user` | `public-facade` | `guide` | `wire-format.md` | self | manual |

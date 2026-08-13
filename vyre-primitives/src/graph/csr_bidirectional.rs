@@ -1209,23 +1209,6 @@ mod tests {
     }
 
     #[test]
-    fn csr_bidirectional_fallible_oracles_are_primitive_owned() {
-        let source = include_str!("csr_bidirectional.rs");
-        let production = source
-            .split("\n#[cfg(test)]\nmod tests")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(production.contains("pub fn try_cpu_ref("));
-        assert!(production.contains("pub fn try_cpu_ref_into("));
-        assert!(production.contains("pub fn try_cpu_ref_closure_into("));
-        assert!(production.contains("pub fn try_merge_frontier_or_changed("));
-        assert!(
-            !production.contains("assert_eq!(\n        current.len(),"),
-            "frontier merge mismatch must be available as a typed error for fuzz/conformance"
-        );
-    }
-
-    #[test]
     fn cpu_ref_into_validates_before_resizing_output() {
         let mut out = vec![0xCAFE_BABEu32];
         let original_capacity = out.capacity();

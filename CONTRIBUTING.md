@@ -6,7 +6,7 @@ Vyre is a GPU-first execution substrate. Contributions are reviewed as changes t
 
 Read these files before changing architecture, public APIs, op definitions, or backend behavior:
 
-- `docs/VISION.md`
+- `docs/ARCHITECTURE.md`
 - `docs/ARCHITECTURE.md`
 - `docs/THESIS.md`
 - `.github/CI_REQUIRED.md`

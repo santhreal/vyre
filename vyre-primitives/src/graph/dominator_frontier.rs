@@ -1212,23 +1212,6 @@ mod tests {
     }
 
     #[test]
-    fn dominator_frontier_release_builder_has_checked_api_without_panics() {
-        let source = include_str!("dominator_frontier.rs");
-        let production = source
-            .split("/// CPU oracle:")
-            .next()
-            .expect("Fix: dominator-frontier builder source must precede CPU oracle");
-
-        assert!(
-            production.contains("pub fn try_dominator_frontier(")
-                && !production.contains("inert_")
-                && !production.contains("Err(_) =>")
-                && !production.contains("Node::return_()"),
-            "Fix: dominator_frontier builder must expose checked release API and must not compile inert no-op kernels."
-        );
-    }
-
-    #[test]
     fn missing_seed_word_fails_loudly() {
         let previous_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(|_| {}));

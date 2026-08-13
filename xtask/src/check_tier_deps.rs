@@ -204,18 +204,10 @@ fn scan_manifest(member: &str, tier: u32, table: &Value, failures: &mut Vec<Stri
 
 fn validate_cross_crate_promotion_contract(root: &Path, failures: &mut Vec<String>) {
     let crate_graph = read_contract_doc(root, "docs/CRATE_GRAPH.md", failures);
-    let primitives_tier = read_contract_doc(root, "docs/primitives-tier.md", failures);
-    let library_tiers = read_contract_doc(root, "docs/library-tiers.md", failures);
-    let import_test = read_contract_doc(
-        root,
-        "vyre/tests/cross_crate_import_path_migration_contract.rs",
-        failures,
-    );
+    let lego_rule = read_contract_doc(root, "docs/lego-block-rule.md", failures);
     failures.extend(cross_crate_promotion_contract_text_failures(
         crate_graph.as_deref().unwrap_or(""),
-        primitives_tier.as_deref().unwrap_or(""),
-        library_tiers.as_deref().unwrap_or(""),
-        import_test.as_deref().unwrap_or(""),
+        lego_rule.as_deref().unwrap_or(""),
     ));
 }
 
@@ -234,40 +226,24 @@ fn read_contract_doc(root: &Path, rel: &str, failures: &mut Vec<String>) -> Opti
 
 fn cross_crate_promotion_contract_text_failures(
     crate_graph: &str,
-    primitives_tier: &str,
-    library_tiers: &str,
-    import_test: &str,
+    lego_rule: &str,
 ) -> Vec<String> {
     let mut failures = Vec::new();
-    for (name, text) in [
-        ("docs/CRATE_GRAPH.md", crate_graph),
-        ("docs/primitives-tier.md", primitives_tier),
-        ("docs/library-tiers.md", library_tiers),
-    ] {
-        for marker in [
-            "Cross-crate promotion patch contract",
-            "import-path migration test",
-            "check-tier-deps",
-            "lego-audit",
-        ] {
-            if !text.contains(marker) {
-                failures.push(format!(
-                    "{name} is missing `{marker}` for cross-crate promotion ownership"
-                ));
-            }
-        }
+    // The generated crate graph proves the dependency surface exists and is
+    // fresh (crate_ownership.py --check); the LEGO rule owns the promotion
+    // contract text, so the marker requirement applies to the rule doc.
+    if crate_graph.is_empty() {
+        failures.push("docs/CRATE_GRAPH.md is empty or unreadable".to_string());
     }
     for marker in [
+        "Cross-crate promotion patch contract",
         "import-path migration test",
-        "docs/CRATE_GRAPH.md",
-        "docs/primitives-tier.md",
-        "docs/library-tiers.md",
         "check-tier-deps",
         "lego-audit",
     ] {
-        if !import_test.contains(marker) {
+        if !lego_rule.contains(marker) {
             failures.push(format!(
-                "cross-crate import-path migration test is missing `{marker}`"
+                "docs/lego-block-rule.md is missing `{marker}` for cross-crate promotion ownership"
             ));
         }
     }
@@ -298,31 +274,32 @@ mod tests {
     use super::*;
 
     const VALID_DOC: &str = "Cross-crate promotion patch contract\nimport-path migration test\ncheck-tier-deps\nlego-audit\n";
-    const VALID_TEST: &str = "import-path migration test\ndocs/CRATE_GRAPH.md\ndocs/primitives-tier.md\ndocs/library-tiers.md\ncheck-tier-deps\nlego-audit\n";
 
     #[test]
-    fn cross_crate_promotion_contract_accepts_complete_docs_and_test() {
-        assert!(cross_crate_promotion_contract_text_failures(
-            VALID_DOC, VALID_DOC, VALID_DOC, VALID_TEST,
-        )
-        .is_empty());
+    fn cross_crate_promotion_contract_accepts_complete_docs() {
+        assert!(cross_crate_promotion_contract_text_failures("graph", VALID_DOC).is_empty());
     }
 
     #[test]
-    fn cross_crate_promotion_contract_rejects_missing_import_test_marker() {
-        let failures = cross_crate_promotion_contract_text_failures(
-            VALID_DOC,
-            VALID_DOC,
-            VALID_DOC,
-            "docs/CRATE_GRAPH.md\ncheck-tier-deps\nlego-audit\n",
-        );
+    fn cross_crate_promotion_contract_rejects_missing_markers() {
+        let failures =
+            cross_crate_promotion_contract_text_failures("graph", "check-tier-deps\nlego-audit\n");
 
         assert!(failures
             .iter()
             .any(|failure| failure.contains("import-path migration test")));
         assert!(failures
             .iter()
-            .any(|failure| failure.contains("docs/primitives-tier.md")));
+            .any(|failure| failure.contains("Cross-crate promotion patch contract")));
+    }
+
+    #[test]
+    fn cross_crate_promotion_contract_rejects_missing_graph() {
+        let failures = cross_crate_promotion_contract_text_failures("", VALID_DOC);
+
+        assert!(failures
+            .iter()
+            .any(|failure| failure.contains("docs/CRATE_GRAPH.md")));
     }
 }
 

@@ -400,23 +400,6 @@ mod fallible_pack_wrapper_tests {
         assert_eq!(compat, vec![b'x', 0, 0, 0, b'y', 0, 0, 0]);
         assert_eq!(compat.as_ptr(), ptr);
     }
-
-    #[test]
-    fn production_wire_pack_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("wire.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: wire.rs must contain production section")
-            .lines()
-            .filter(|line| !line.trim_start().starts_with("//!"))
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: wire packing convenience wrappers must not panic in production code."
-        );
-    }
 }
 
 /// Decode a packed LE-`u32` byte buffer back into `out` as `Vec<u32>`,

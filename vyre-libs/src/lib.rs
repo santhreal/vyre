@@ -211,7 +211,7 @@ pub(crate) use math::linalg::{
 // Canonical Cat-C intrinsics live exclusively in the `vyre-intrinsics`
 // crate; library compositions of atomic / clamp / lzcnt / tzcnt ops
 // live in `vyre-libs::math::*` (which uses `Expr::Atomic`, `Expr::min`,
-// `Expr::max`, `Expr::popcount` directly per library-tiers.md).
+// `Expr::max`, `Expr::popcount` directly per docs/ARCHITECTURE.md).
 //
 // vyre-libs::crypto removed (audit 2026-04-21 BLOCKER-3). Deprecated
 // shim deleted in favor of the canonical path at `vyre-libs::hash`.

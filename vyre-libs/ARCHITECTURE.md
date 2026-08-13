@@ -37,7 +37,7 @@ dataflow engines run IFDS over.
 ### `parsing/`
 Source-language parsers (C/C++/Rust/Go/Python/JS/TS) wrapped as
 `PackedAst` emitters. Stays on CPU per the parsing-stays-on-CPU
-decision in `docs/parsing-and-frontends.md`.
+decision in `docs/ARCHITECTURE.md`.
 
 ### `compiler/`
 Compiler-style passes that lower one Program shape into another

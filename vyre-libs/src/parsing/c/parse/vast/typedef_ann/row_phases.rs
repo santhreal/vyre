@@ -95,7 +95,6 @@ fn row() -> Expr {
     Expr::load(ROW, Expr::u32(0))
 }
 
-
 /// Assemble a phase program: `body` computes `out_name`, which becomes the
 /// op's single output.
 ///

@@ -402,6 +402,7 @@ pub fn vyre_libs::nn::quant::q4_k_linear(x: &str, w_packed: &str, w_scales: &str
 pub fn vyre_libs::nn::quant::q4_k_unpack(packed: &str, scales: &str, mins: &str, output: &str, n: u32) -> core::result::Result<vyre_foundation::ir_inner::model::program::core::Program, alloc::string::String>
 pub fn vyre_libs::operation_catalog::all_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::operation_catalog::convergence_contract(op_id: &str) -> core::option::Option<&'static vyre_libs::operation_catalog::ConvergenceContract>
+pub fn vyre_libs::operation_catalog::fixture_entries() -> impl core::iter::traits::iterator::Iterator<Item = vyre_foundation::operation::SemanticOperation>
 pub fn vyre_libs::parsing::core::delimiter::bracket_match(kinds: &str, stack: &str, match_pairs: &str, n: u32, max_depth: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::parsing::core::delimiter::core_delimiter_match(tok_types: &str, tok_depths: &str, tok_count: u32, open_tok_id: u32, close_tok_id: u32) -> vyre_foundation::ir_inner::model::program::core::Program
 pub fn vyre_libs::parsing::lr_tables::LrTables::action_at(&self, state: u32, token: u32) -> vyre_libs::parsing::lr_tables::Action

@@ -74,7 +74,7 @@ owner = 'public-facade'
 layer = 'facade'
 owned = 'Expose canonical frontend IR, compiler artifact, runtime submission, and scan product entry points.'
 non_owned = 'Backend implementation traits and configuration, concrete target lowering, optimizer internals, and conformance machinery.'
-allowed_dependencies = ['vyre-driver', 'vyre-driver-cuda', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-libs', 'vyre-megakernel', 'vyre-primitives', 'vyre-runtime', 'vyre-scan', 'vyre-spec']
+allowed_dependencies = ['vyre-driver', 'vyre-driver-cuda', 'vyre-driver-wgpu', 'vyre-foundation', 'vyre-megakernel', 'vyre-runtime', 'vyre-scan', 'vyre-spec']
 profile = 'facade'
 
 [package.vyre-foundation]

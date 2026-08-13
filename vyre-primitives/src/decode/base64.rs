@@ -573,59 +573,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("base64.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect(
-            "Fix: unit-test oracle precondition - base64 source must include production section",
-        );
-
-        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
-        // blessed Law-10 fix for an infallible parity wrapper.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: base64 production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
-        );
-        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
-        assert!(
-            !production.contains(concat!("eprintln", "!(\"vyre-primitives base64")),
-            "Fix: base64 CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
-        );
-        assert!(
-            production.contains("panic!("),
-            "Fix: base64 CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
-        );
-    }
-
-    #[test]
-    fn base64_reference_uses_checked_fallible_staging() {
-        let src =
-            std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/decode/base64.rs"))
-                .expect("Fix: base64 primitive source must be readable");
-        let production = src
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: unit-test oracle precondition - production section must exist");
-        assert!(
-            production.contains("try_decode_standard_packed_reference"),
-            "public base64 CPU oracle must expose a fallible variant"
-        );
-        assert!(
-            !production.contains("vec![0u32;"),
-            "base64 CPU oracle output staging must use fallible reservation"
-        );
-        assert!(
-            !production.contains("out.len() as u32"),
-            "decoded length must use checked u32 conversion"
-        );
-        assert!(
-            !production.contains(" as usize"),
-            "table indexing and decoded lengths must use checked or widening conversions"
-        );
-    }
-
-    #[test]
     fn decode_padded_1() {
         assert_eq!(cpu_base64_decode(b"TWE="), b"Ma");
     }

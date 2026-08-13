@@ -115,14 +115,8 @@ fn weight_write_body(
     k: u32,
 ) -> Vec<Node> {
     vec![
-        Node::let_bind(
-            "weight_max_score",
-            Expr::load(STATS_SCRATCH, Expr::u32(0)),
-        ),
-        Node::let_bind(
-            "weight_sum_exp",
-            Expr::load(STATS_SCRATCH, Expr::u32(1)),
-        ),
+        Node::let_bind("weight_max_score", Expr::load(STATS_SCRATCH, Expr::u32(0))),
+        Node::let_bind("weight_sum_exp", Expr::load(STATS_SCRATCH, Expr::u32(1))),
         Node::loop_for(
             "j",
             Expr::u32(0),

@@ -32,7 +32,7 @@ Choose the operation tier first:
 | Runtime dialect | `vyre-driver` registry | Driver-owned runtime ops only |
 
 Follow [`docs/ops-catalog.md`](ops-catalog.md) and
-[`docs/library-tiers.md`](library-tiers.md). Regenerate
+[`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Regenerate
 `docs/generated/OP_SCHEMA.json` before you submit the change. Prefer
 `cargo_full run --bin xtask -- list-ops --check` and related gates after edits.
 
@@ -76,8 +76,7 @@ executable hits must still admit envelope bytes before dispatch.
 
 Vyre 0.7.2 is pre-1.0. Stability depends on the surface. Frozen traits and wire
 tags have stronger compatibility rules than experimental compiler and runtime
-features. Read [`docs/stability.md`](stability.md) and
-[`docs/semver-policy.md`](semver-policy.md).
+features. Read [`docs/semver-policy.md`](semver-policy.md).
 
 ## What does conformance prove?
 

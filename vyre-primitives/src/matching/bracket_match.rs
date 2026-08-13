@@ -7,7 +7,7 @@
 //! ignored, so that stateful behavior is not replaced by an approximation.
 //!
 //! Migrated from `vyre-libs/src/parsing/bracket_match.rs` per
-//! `docs/primitives-tier.md` Step 2 + `docs/lego-block-rule.md`.
+//! `docs/lego-block-rule.md` Step 2 + `docs/lego-block-rule.md`.
 //! Reused by every parser dialect that needs matched-brace detection
 //! (C, Rust, Go, Python f-string interpolation).
 

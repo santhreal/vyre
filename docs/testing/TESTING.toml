@@ -64,6 +64,9 @@ test_classes = ["Megakernel artifact compilation contracts", "Static and persist
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre --all-features"]
 hardware = "The default suite is host-only. Tests that execute concrete GPU features require the corresponding device and driver, and a requested acquisition failure is an error."
 
+[package.vyre-safetensors]
+failure_behavior = "Malformed framing, oversized metadata, invalid tensor ranges, unsafe shard paths, incomplete mappings, requirement drift, or digest mismatch returns a typed SafetensorError before runtime admission."
+
 [package.vyre-driver-cuda]
 commands = ["CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda", "CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-driver-cuda -- --ignored --nocapture"]
 hardware = "You need an NVIDIA GPU and a working CUDA driver for device, dispatch, graph, and ignored physical-adapter tests. Probe failure is a configuration failure, not a skip."

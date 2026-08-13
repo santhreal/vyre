@@ -390,7 +390,7 @@ fn release_note_version_issues(line: &str, vyre_version: &str) -> Vec<String> {
 fn release_doc_paths(vyre_root: &Path) -> Vec<PathBuf> {
     vec![
         vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE_ENGINEERING.md"),
+        vyre_root.join("docs/RELEASE.md"),
         vyre_root.join("docs/RELEASE_CHECKLIST.md"),
         current_release_notes_path(vyre_root),
         vyre_root.join("README.md"),

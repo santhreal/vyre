@@ -9,7 +9,8 @@ parent. This doc locks the invariant, the optimizer contract around
 it, and the debug chain it enables.
 
 Companion to:
-- `docs/library-tiers.md`  -  where ops live.
+- `docs/ARCHITECTURE.md`  -  workspace boundaries and operation placement.
+- `docs/lego-block-rule.md`  -  composition policy and promotion criteria.
 - `docs/lego-block-rule.md`  -  when a composition must be decomposed
   into reusable Tier 2.5 blocks.
 

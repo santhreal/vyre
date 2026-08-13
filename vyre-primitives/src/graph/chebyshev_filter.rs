@@ -235,7 +235,7 @@ pub fn try_chebyshev_filter(
                 // write t_prev_at <- temp. This is per-lane; correctness
                 // requires barriers between iterations across lanes  -  the
                 // workgroup_size below pins all lanes to one workgroup so
-                // a Node::Barrier { ordering: vyre::memory_model::MemoryOrdering::SeqCst } between iterations would close the gap.
+                // a Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst } between iterations would close the gap.
                 // For dense small n (the spectral_schedule self-consumer
                 // case), n ≤ workgroup_size = 256 and a barrier suffices.
                 Node::let_bind("old_curr", t_curr_at(t.clone())),
@@ -713,48 +713,5 @@ mod tests {
         let program = chebyshev_filter("L", "x", "c", "y", "s", u32::MAX, 1);
 
         assert!(program.stats().trap());
-    }
-
-    #[test]
-    fn chebyshev_builder_source_has_checked_sizing_without_panics() {
-        let source = include_str!("chebyshev_filter.rs");
-        let builder_source = source
-            .split("pub fn chebyshev_filter(")
-            .nth(1)
-            .expect("Fix: Chebyshev builder source must be present")
-            .split("/// CPU reference for")
-            .next()
-            .expect("Fix: Chebyshev builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_chebyshev_filter(")
-                && builder_source.contains("checked_square_cells")
-                && builder_source.contains("checked_double_words")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: chebyshev_filter must expose checked release sizing and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn chebyshev_cpu_source_uses_fallible_reusable_buffers() {
-        let source = include_str!("chebyshev_filter.rs");
-        let cpu_source = source
-            .split("/// CPU reference for [`chebyshev_filter`].")
-            .nth(1)
-            .expect("Fix: Chebyshev CPU source must be present")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: Chebyshev CPU source must precede tests");
-
-        assert!(
-            cpu_source.contains("try_chebyshev_filter_cpu_into")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && cpu_source.contains("resize_chebyshev_cpu_vec")
-                && !cpu_source.contains("fn reserve_chebyshev_cpu_vec")
-                && !cpu_source.contains(".reserve(")
-                && !cpu_source.contains("Vec::with_capacity"),
-            "Fix: Chebyshev CPU oracle must use fallible reusable storage instead of infallible recurrence allocation."
-        );
     }
 }

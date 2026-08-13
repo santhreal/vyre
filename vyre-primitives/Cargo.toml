@@ -34,7 +34,7 @@ cpu-parity = []
 # `cfg(feature = "vyre-foundation")` which matched nothing.
 vyre-foundation = ["dep:vyre-foundation"]
 
-# Per-domain Tier 2.5 feature flags. See docs/primitives-tier.md.
+# Per-domain Tier 2.5 feature flags. See docs/lego-block-rule.md.
 # Every domain pulls vyre-foundation  -  every primitive ships CPU
 # reference + GPU `fn(...) -> Program` builder together.
 text = ["vyre-foundation", "reduce"]

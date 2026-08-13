@@ -22,7 +22,7 @@ pub enum EffectKind {
     HostIo,
     /// A nested GPU dispatch (Node::IndirectDispatch).
     GpuDispatch,
-    /// A barrier or synchronization primitive (Node::Barrier { ordering: vyre::memory_model::MemoryOrdering::SeqCst }).
+    /// A barrier or synchronization primitive (Node::Barrier { ordering: vyre_foundation::memory_model::MemoryOrdering::SeqCst }).
     Barrier,
     /// An async-load fetching from persistent / streaming storage
     /// (Node::AsyncLoad).

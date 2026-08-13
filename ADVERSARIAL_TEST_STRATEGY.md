@@ -274,5 +274,5 @@ This adversarial test expansion directly supports RELEASE_GATE.md requirements:
 - RELEASE_GATE.md: Section A.7 (SQLite/NASA-grade testing)
 - SKILL.md files: Per-crate testing contracts
 - docs/ARCHITECTURE.md: Memory model and invariants
-- docs/library-tiers.md: Op organization and dependencies
+- docs/ARCHITECTURE.md + docs/lego-block-rule.md: op organization, placement, composition policy
 - docs/region-chain.md: Composition chain invariants

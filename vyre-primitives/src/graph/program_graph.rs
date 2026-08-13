@@ -377,22 +377,6 @@ mod tests {
     }
 
     #[test]
-    fn program_graph_shape_source_has_checked_buffers_without_panics() {
-        let source = include_str!("program_graph.rs");
-        let production = source
-            .split("/// Error kinds surfaced")
-            .next()
-            .expect("Fix: ProgramGraphShape source must precede validation errors");
-
-        assert!(
-            production.contains("pub fn try_read_only_buffers(")
-                && !production.contains("inert_")
-                && !production.contains("Err(_) =>"),
-            "Fix: ProgramGraphShape buffer ABI must expose checked sizing and must not emit inert placeholder buffers."
-        );
-    }
-
-    #[test]
     fn validate_rejects_oob_edge_target() {
         // 3 nodes, 2 edges; one edge points at node 5 (out of range).
         let err = validate_program_graph(

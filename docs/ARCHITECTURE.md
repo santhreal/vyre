@@ -1,6 +1,6 @@
 # Vyre architecture
 
-Last verified: 2026-08-04
+Last verified: 2026-08-10
 
 This guide describes Vyre 0.7.2. Use it with the generated
 [crate graph](CRATE_GRAPH.md), the [crate ownership registry](CRATE_OWNERSHIP.toml),
@@ -68,11 +68,11 @@ dialect details stay in the concrete driver or emitter that owns them.
 
 ## Operation placement and registration
 
-`vyre-foundation::operation_registry` is the semantic operation authority. One
-registration owns the operation ID, version, tier, signature, neutral builder,
-fixtures, laws, tolerance, derived effects, and capability keys. Libraries,
-primitives, and intrinsics contribute registrations. Target support and
-intrinsic geometry are keyed facets of those registrations.
+`vyre-foundation::operation::OperationRegistry` is the semantic operation
+authority. One registration owns the operation ID, version, tier, signature,
+neutral builder, fixtures, laws, tolerance, derived effects, and capability
+keys. Libraries, primitives, and intrinsics contribute registrations. Target
+support and intrinsic geometry are keyed facets of those registrations.
 
 [`generated/OP_SCHEMA.json`](generated/OP_SCHEMA.json) and the generated catalog
 are projections. Harness catalogs, conformance inventories, and backend
@@ -148,6 +148,24 @@ flowchart TD
 Raw `Program` execution remains only in explicitly named reference, parity, and
 conformance oracle seams. Production routes compile through artifacts.
 
+### Identity and cache layers
+
+Each layer derives one versioned identity from its immutable inputs:
+
+| Layer | Owner | Identity inputs | Invalidated by |
+|---|---|---|---|
+| Semantic program graph | `vyre-foundation` | Canonical topology, typed value contracts, Programs, constants, and external identity facts | Any semantic graph or immutable-input change |
+| Compiler request and neutral artifact | `vyre-megakernel` | Graph identity, external facts, search budget, compiler schema, and selected schedule | Compiler facts, budget, schema, or selected-plan change |
+| Target payload | Concrete target compiler through `attach_target` | Neutral artifact digest, target profile and generation, selected module bytes, entry, ABI, geometry, and binding projection | Any authenticated target field change |
+| Materialized instance | Concrete driver | Target payload identity, device/profile identity, and materializer generation | Device, profile, payload, or generation change |
+| Runtime policy | `vyre-runtime` | Submission bindings, invocation geometry, lease state, queue, and recovery policy | Per-submission or mutable lifecycle change |
+
+`PipelineFingerprint` is exactly the neutral artifact digest. Device generations,
+runtime policy, and invocation data cannot enter that cache key. Persisted cache
+blobs add a versioned digest-bound frame; stale versions miss before payload
+admission. Recovery authenticates the envelope and target payload again rather
+than trusting a cache hit as executable state.
+
 ## Cross-program composition
 
 `ProgramGraph` is the composition unit. It preserves typed IDs rather than
@@ -175,10 +193,11 @@ orchestration and decoded-envelope admission.
 
 ### Persistent runtime
 
-`vyre-runtime` owns artifact sessions, queue protocol, descriptors, resident
-execution, readback, recovery, policy, telemetry, IO helpers, checkpoints, and
-model residency. Concrete drivers execute admitted artifact instances. They do
-not fork the runtime protocol or compile raw programs during submission.
+`vyre-runtime` owns artifact sessions, queue protocol, descriptors, neutral
+resource-set residency, resident execution, readback, recovery, policy,
+telemetry, and IO helpers. Format-specific checkpoint and tensor metadata belong
+to downstream adapters. Concrete drivers execute admitted artifact instances.
+They do not fork the runtime protocol or compile raw programs during submission.
 
 ### Driver wave policy and IR fusion
 

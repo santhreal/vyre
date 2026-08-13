@@ -16,7 +16,9 @@
 
 # Lifecycle and extension contracts
 
+- [Linked Registration Contract](inventory-contract.md)
 - [Runtime pipeline](RUNTIME_PIPELINE.md)
+- [Vyre Targets](targets.md)
 
 # Optimization
 
@@ -33,7 +35,6 @@
 - [Error Surface Contract](ERROR_SURFACE.md)
 - [Frozen trait snapshots](frozen-traits/README.md)
 - [Getting Support](support.md)
-- [Linked Registration Contract](inventory-contract.md)
 - [Lowering vs emission ownership](lower-vs-emit.md)
 - [Megakernel wiring](megakernel-wiring.md)
 - [Named external integration](consumer-showcase.md)
@@ -48,7 +49,6 @@
 - [Trust Model](trust-model.md)
 - [Vyre Code Style](code-style.md)
 - [Vyre FAQ](faq.md)
-- [Vyre Targets](targets.md)
 - [Vyre Thesis](THESIS.md)
 - [What the reference interpreter can and cannot witness](reference-interpreter-witness-limits.md)
 - [vyre IR statement semantics](ir-semantics.md)
@@ -124,6 +124,7 @@
 - [Testing `vyre-primitives`](testing/vyre-primitives.md)
 - [Testing `vyre-reference`](testing/vyre-reference.md)
 - [Testing `vyre-runtime`](testing/vyre-runtime.md)
+- [Testing `vyre-safetensors`](testing/vyre-safetensors.md)
 - [Testing `vyre-scan`](testing/vyre-scan.md)
 - [Testing `vyre-self-substrate`](testing/vyre-self-substrate.md)
 - [Testing `vyre-spec`](testing/vyre-spec.md)
@@ -137,6 +138,10 @@
 - [Vyre 0.7.2 release notes](release/v0.7.2.md)
 - [Vyre release checklist](RELEASE_CHECKLIST.md)
 - [Vyre release process](RELEASE.md)
+
+# Architecture
+
+- [LEGO-block rule: composition is the architecture](lego-block-rule.md)
 
 # Extension contracts
 

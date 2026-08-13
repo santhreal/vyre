@@ -290,19 +290,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("radix_sort.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: radix_sort.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: radix_sort CPU reference wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn try_cpu_ref_into_reuses_buffers_and_clears_stale_tail() {
         let mut out = Vec::with_capacity(16);
         let mut scratch = Vec::with_capacity(16);

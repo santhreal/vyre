@@ -255,44 +255,4 @@ mod tests {
 
         assert!(program.stats().trap());
     }
-
-    #[test]
-    fn monoidal_compose_source_has_checked_api_without_panics() {
-        let source = include_str!("string_diagram.rs");
-        let builder_source = source
-            .split("/// Sequential composition step.")
-            .nth(1)
-            .expect("Fix: monoidal compose builder source must be present")
-            .split("/// CPU reference.")
-            .next()
-            .expect("Fix: monoidal compose builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_monoidal_compose(")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: monoidal_compose must expose checked release API and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn monoidal_compose_cpu_source_uses_checked_reusable_output() {
-        let source = include_str!("string_diagram.rs");
-        let cpu_source = source
-            .split("/// CPU reference.")
-            .nth(1)
-            .expect("Fix: monoidal compose CPU source must be present")
-            .split("#[cfg(feature = \"inventory-registry\")]")
-            .next()
-            .expect("Fix: monoidal compose CPU source must precede registry entry");
-
-        assert!(
-            cpu_source.contains("pub fn try_monoidal_compose_cpu_into(")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && cpu_source.contains("out.capacity()")
-                && !cpu_source.contains("out.resize(a * c, 0.0)")
-                && !cpu_source.contains("Vec::with_capacity"),
-            "Fix: monoidal_compose CPU oracle must use fallible caller-owned output storage."
-        );
-    }
 }

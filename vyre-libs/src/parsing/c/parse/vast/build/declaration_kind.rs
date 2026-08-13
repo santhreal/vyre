@@ -70,11 +70,7 @@ fn decl_kind_phase_program(op_id: &str, packed_haystack: bool) -> Program {
         BufferDecl::storage(NUM_NODES, 4, BufferAccess::ReadOnly, DataType::U32).with_count(1),
         BufferDecl::output(RESULT, 5, DataType::U32).with_count(1),
     ];
-    let implementation = child_phase(
-        op_id,
-        &format!("{op_id}::declaration_scan"),
-        body,
-    );
+    let implementation = child_phase(op_id, &format!("{op_id}::declaration_scan"), body);
     Program::wrapped(
         buffers,
         [256, 1, 1],
@@ -87,6 +83,7 @@ pub(in crate::parsing::c::parse::vast) fn c11_typedef_decl_kind_for_row() -> Pro
     decl_kind_phase_program(DECL_KIND_FOR_ROW_OP_ID, false)
 }
 
-pub(in crate::parsing::c::parse::vast) fn c11_typedef_decl_kind_for_row_packed_haystack() -> Program {
+pub(in crate::parsing::c::parse::vast) fn c11_typedef_decl_kind_for_row_packed_haystack() -> Program
+{
     decl_kind_phase_program(DECL_KIND_FOR_ROW_PACKED_OP_ID, true)
 }

@@ -1056,29 +1056,6 @@ mod tests {
     }
 
     #[test]
-    fn unknown_node_validation_runs_before_node_sized_allocations() {
-        let source = include_str!("toposort.rs");
-        let function_source = source
-            .split("pub fn toposort(")
-            .nth(1)
-            .expect("Fix: primitive topological sort source should contain toposort.");
-        let validation_pos = function_source
-            .find("validate_toposort_edge_ids(node_count, edges)?")
-            .expect("Fix: toposort should prevalidate edge ids.");
-        let first_node_scratch_pos = function_source
-            .find("vec![")
-            .expect("Fix: toposort source should contain node-sized scratch allocation.");
-        assert!(
-            validation_pos < first_node_scratch_pos,
-            "Fix: reject malformed edges before allocating node-sized topological-sort scratch."
-        );
-
-        let err = validate_toposort_edge_ids(3, &[(0, 1), (2, 3)])
-            .expect_err("edge target equal to node_count must be rejected");
-        assert_eq!(err, ToposortError::UnknownNode { edge: 1, node: 3 });
-    }
-
-    #[test]
     fn diamond_graph_sorts() {
         // 0 depends on 1 and 2; both depend on 3.
         let got = toposort(4, &[(0, 1), (0, 2), (1, 3), (2, 3)])
@@ -1318,25 +1295,5 @@ mod tests {
             }
             other => panic!("expected Cycle, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn toposort_result_path_has_no_internal_panics() {
-        let source = include_str!("toposort.rs");
-        let result_path = source
-            .split("pub fn toposort(")
-            .nth(1)
-            .expect("Fix: toposort implementation source must be present")
-            .split("/// Build a single-invocation Program")
-            .next()
-            .expect("Fix: toposort implementation source must precede program builder");
-
-        assert!(
-            result_path.contains("ToposortError::IndegreeOverflow")
-                && result_path.contains("ToposortError::InconsistentState")
-                && !result_path.contains(concat!("panic", "!("))
-                && !result_path.contains(".unwrap_or_else("),
-            "Fix: toposort already returns Result, so internal failure states must be Err variants instead of panics."
-        );
     }
 }

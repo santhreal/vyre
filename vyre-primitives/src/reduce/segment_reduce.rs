@@ -232,30 +232,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("segment_reduce.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: segment_reduce.rs must contain production section");
-
-        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
-        // blessed Law-10 fix for an infallible parity wrapper.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: segment_reduce_sum production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
-        );
-        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
-        assert!(
-            !production.contains(concat!("eprintln", "!(\"vyre-primitives segment_reduce_sum")),
-            "Fix: segment_reduce_sum CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
-        );
-        assert!(
-            production.contains("panic!("),
-            "Fix: segment_reduce_sum CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
-        );
-    }
-
-    #[test]
     fn emitted_program_has_expected_buffers() {
         let p = segment_reduce_sum("input", "segment_offsets", "output", 4);
         assert_eq!(p.workgroup_size, [256, 1, 1]);

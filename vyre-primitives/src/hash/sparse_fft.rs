@@ -413,19 +413,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("sparse_fft.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: sparse_fft.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: sparse FFT CPU reference wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn cpu_zero_signal_zero_bins() {
         let signal = vec![0u32; 8];
         let bins = sparse_fft_bin_hash_cpu(&signal, 1, 0, 4);

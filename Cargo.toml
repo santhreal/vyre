@@ -17,7 +17,7 @@ members = [
     "vyre-spec",
     "vyre-macros",
     # Tier 2.5 LEGO substrate lives under vyre-primitives/src/<domain>/
-    # feature-gated per domain. See docs/primitives-tier.md.
+    # feature-gated per domain. See docs/lego-block-rule.md.
     "vyre-primitives",
     "vyre-test-support",
     # Recursion-thesis layer: vyre using its own primitives on its own

@@ -2,7 +2,7 @@
 //! 500-LOC source cap because the lexer body is one logical block whose
 //! sub-sections share closure state (next_byte, byte references, etc).
 //! Extracting those into helpers would change parser semantics, so this
-//! file is allowed to exceed the cap (CONVENTIONS.md `KNOWN_OVER_CAP`).
+//! file is allowed to exceed the cap (docs/code-style.md `KNOWN_OVER_CAP`).
 
 #![allow(missing_docs)] // Internal lexer-builder helpers are documented at the owning module boundary.
 use crate::parsing::c::lex::tokens::*;

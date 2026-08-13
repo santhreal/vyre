@@ -81,6 +81,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --all-features
 | `test` | `sweep_dual_compare_eq_volume_oracle_matrix` | `vyre-reference/tests/sweep_dual_compare_eq_volume_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test sweep_dual_compare_eq_volume_oracle_matrix` |
 | `test` | `sweep_dual_compare_lt_volume_oracle_matrix` | `vyre-reference/tests/sweep_dual_compare_lt_volume_oracle_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test sweep_dual_compare_lt_volume_oracle_matrix` |
 | `test` | `test_fnv1a32_zero` | `vyre-reference/tests/fnv1a32_zero.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test test_fnv1a32_zero` |
+| `test` | `typed_validation_source` | `vyre-reference/tests/typed_validation_source.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test typed_validation_source` |
 | `test` | `value_array_property_contracts` | `vyre-reference/tests/value_array_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test value_array_property_contracts` |
 | `test` | `value_byte_property_contracts` | `vyre-reference/tests/value_byte_property_contracts.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test value_byte_property_contracts` |
 | `test` | `value_datatype_generated_matrix` | `vyre-reference/tests/value_datatype_generated_matrix.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-reference --test value_datatype_generated_matrix` |

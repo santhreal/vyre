@@ -21,8 +21,8 @@ mod typedef_visibility;
 
 pub(super) use declaration_kind::{
     c11_typedef_decl_kind_for_row, c11_typedef_decl_kind_for_row_packed_haystack,
-    emit_builtin_declaration_kind_for_index,
-    DECL_KIND_FOR_ROW_OP_ID, DECL_KIND_FOR_ROW_PACKED_OP_ID,
+    emit_builtin_declaration_kind_for_index, DECL_KIND_FOR_ROW_OP_ID,
+    DECL_KIND_FOR_ROW_PACKED_OP_ID,
 };
 pub(super) use enclosing_function::emit_enclosing_function_lparen_for_index;
 pub(super) use helpers::{

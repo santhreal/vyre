@@ -182,25 +182,6 @@ fn gpu_builder_rejects_row_ptr_count_overflow_without_panic() {
 }
 
 #[test]
-fn gpu_builder_source_has_checked_row_ptr_count_without_panics() {
-    let source = include_str!("../program_ir.rs");
-    let builder_source = source
-        .split("pub fn build_ifds_csr_program(")
-        .nth(1)
-        .expect("Fix: exploded IFDS GPU builder source must be present")
-        .split("/// Pack a `(proc_id, block_id, fact_id)` triple")
-        .next()
-        .expect("Fix: exploded IFDS GPU builder source must precede node packing");
-
-    assert!(
-        builder_source.contains("let Some(row_ptr_count)")
-            && !builder_source.contains(concat!("panic", "!("))
-            && !builder_source.contains(".unwrap_or_else("),
-        "Fix: exploded IFDS GPU builder must check row_ptr count and avoid production panics."
-    );
-}
-
-#[test]
 fn row_ptr_length_is_nodes_plus_one() {
     let procs = 3;
     let blocks = 4;

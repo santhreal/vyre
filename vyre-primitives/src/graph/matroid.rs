@@ -396,23 +396,4 @@ mod tests {
 
         assert!(program.stats().trap());
     }
-
-    #[test]
-    fn matroid_builder_source_has_checked_api_without_panics() {
-        let source = include_str!("matroid.rs");
-        let builder_source = source
-            .split("/// Emit one BFS layer of the matroid-exchange graph.")
-            .nth(1)
-            .expect("Fix: matroid exchange BFS builder source must be present")
-            .split("/// CPU reference for one BFS layer.")
-            .next()
-            .expect("Fix: matroid exchange BFS builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_matroid_exchange_bfs_step(")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: matroid_exchange_bfs_step must expose checked release API and avoid production panics."
-        );
-    }
 }

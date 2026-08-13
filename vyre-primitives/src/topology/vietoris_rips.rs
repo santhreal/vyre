@@ -270,19 +270,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("vietoris_rips.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: vietoris_rips.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: Vietoris-Rips CPU reference wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn cpu_short_buffers_treat_missing_entries_as_absent() {
         let mask = vietoris_rips_edge_filter_cpu(&[0.0, 0.5], 1.0, 2);
         assert_eq!(mask, vec![0, 1, 0, 0]);

@@ -176,8 +176,8 @@ this registry before emitting a new diagnostic.
 | Code | Variant | Description | Fix template |
 |------|---------|-------------|--------------|
 | `P-URING-001` | `IoUringSyscall { syscall, errno, fix }` | A raw `io_uring_setup` / `mmap` / `io_uring_enter` / `io_uring_register` syscall returned an errno. | Per-variant `fix:` string names the remediation; typical causes are kernel too old, missing CAP_SYS_ADMIN for SQPOLL on <5.13, or exhausted `max_map_count`. |
-| `P-URING-002` | `QueueFull { queue, fix }` | The submission or completion queue rejected a request because it is full, out of bounds, or a slot is still in flight. | Drain completions with `AsyncUringStream::poll` or `GpuStream::poll`, then retry. For backpressure-triggered rejections on `publish_slot`, wait for the kernel to advance `control[DONE_COUNT]`. |
-| `P-URING-003` | `NotLinux` | `io_uring` or `futex_waitv` was requested on a non-Linux host. | Run on Linux 5.16+ or use `Megakernel::dispatch` without a `GpuStream`. |
+| `P-URING-002` | `QueueFull { queue, fix }` | The submission or completion queue rejected a request because it is full, out of bounds, or a slot is still in flight. | Drain completions with `AsyncUringStream::poll` or `UringCompletionPump::poll`, then retry. For backpressure-triggered rejections on `publish_slot`, wait for the kernel to advance `control[DONE_COUNT]`. |
+| `P-URING-003` | `NotLinux` | `io_uring` or `futex_waitv` was requested on a non-Linux host. | Run on Linux 5.16+ or use artifact submission without an io_uring completion pump. |
 | `P-URING-004` | `NvmePassthroughDisabled` | `submit_nvme_passthrough` was called without the `uring-cmd-nvme` feature. | Add `features = ["uring-cmd-nvme"]` to `vyre-runtime` in your `Cargo.toml`; requires Linux 6.0+. |
 | `P-BACKEND-001` | `Backend(msg)` | A backend error bubbled up from `Megakernel::bootstrap` or `Megakernel::dispatch`. | Inspect the wrapped message; usually a validation error on the IR or an OOM during pipeline creation. |
 

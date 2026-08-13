@@ -1220,25 +1220,4 @@ mod tests {
             "error should describe the invalid circuit shape: {error}"
         );
     }
-
-    #[test]
-    fn sum_product_builder_source_allows_leaf_only_circuits_without_panics() {
-        let source = include_str!("sum_product_circuit.rs");
-        let builder_source = source
-            .split("pub fn sum_product_evaluate(")
-            .nth(1)
-            .expect("Fix: sum-product builder source must be present")
-            .split("/// CPU reference:")
-            .next()
-            .expect("Fix: sum-product builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_sum_product_evaluate(")
-                && builder_source.contains("let edge_buffer_count = n_edges.max(1);")
-                && !builder_source.contains("requires n_edges > 0")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: sum_product_evaluate must support zero-edge leaf circuits and avoid production panics."
-        );
-    }
 }

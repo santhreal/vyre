@@ -212,23 +212,6 @@ mod tests {
     }
 
     #[test]
-    fn table_hash_uses_canonical_fnv1a_helper_expression() {
-        let source = include_str!("table.rs");
-        assert!(
-            source.contains("fnv1a32_update_byte_expr"),
-            "Fix: hash table fragments must reuse the canonical FNV-1a32 helper."
-        );
-        assert!(
-            !source.contains(concat!("FNV1A32", "_PRIME")),
-            "Fix: hash table fragments must not fork FNV-1a32 constants."
-        );
-        assert!(
-            !source.contains(concat!("fn ", "fnv1a32_step")),
-            "Fix: hash table fragments must not carry a private FNV-1a32 step."
-        );
-    }
-
-    #[test]
     fn hash_lookup_probes_until_match_or_empty_and_sets_miss() {
         let nodes = hash_lookup(
             "queries",

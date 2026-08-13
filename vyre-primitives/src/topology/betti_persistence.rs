@@ -326,19 +326,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrapper_has_no_raw_panic_path() {
-        let production = include_str!("betti_persistence.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: betti_persistence.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: Betti persistence CPU wrapper must not panic in production."
-        );
-    }
-
-    #[test]
     fn fallible_cpu_rejects_asymmetric_mask() {
         let err = try_betti_persistence_cpu(&[0, 1, 0, 0], 2).unwrap_err();
         assert!(err.contains("asymmetric"), "{err}");

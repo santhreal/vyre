@@ -26,6 +26,6 @@ superseded_rows = []
 vx_id = "VX-699"
 touched_path = "docs/optimization/REPO_BOUNDARY_PUBLICATION_CHECKS.toml"
 owner_lane = "coordination"
-proof_gate = "conform/vyre-conform-enforce/tests/plan_boundary_governance.rs"
+proof_gate = "xtask/src/repo_boundary.rs"
 benchmark_target = "not-applicable"
 superseded_rows = []

@@ -1,5 +1,5 @@
 //! Packed AST (VAST)  -  see `vyre-foundation::vast` and workspace
-//! `docs/parsing-and-frontends.md`.
+//! `docs/ARCHITECTURE.md`.
 
 pub use vyre_foundation::vast::{
     pack_spine_vast, validate_vast, walk_postorder_indices, walk_preorder_indices, VastError,

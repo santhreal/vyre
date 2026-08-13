@@ -1,6 +1,6 @@
 //! `cargo xtask gate1`  -  Gate 1 complexity-budget enforcement.
 //!
-//! Spec: `docs/primitives-tier.md` (the LEGO substrate enforcement loop).
+//! Spec: `docs/lego-block-rule.md` (the LEGO substrate enforcement loop).
 //!
 //! For every registered op (vyre-libs + vyre-intrinsics inventories):
 //!
@@ -122,7 +122,7 @@ pub(crate) fn run(_args: &[String]) {
                 println!(
                     "  Fix: extract each hot spot into a `vyre-primitives::{{math,nn,hash,matching,parsing,text,graph}}::<op>` primitive (one crate, feature-gated per domain), \
                      then call it from this op via `region::wrap_child(<primitive_op_id>, ...)`. \
-                     See docs/primitives-tier.md."
+                     See docs/lego-block-rule.md."
                 );
             }
         }

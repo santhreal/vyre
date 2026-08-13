@@ -1276,10 +1276,10 @@ fn scan_release_docs(
     for doc in [
         vyre_root.join("README.md"),
         vyre_root.join("docs/RELEASE.md"),
-        vyre_root.join("docs/RELEASE_ENGINEERING.md"),
+        vyre_root.join("docs/RELEASE.md"),
         vyre_root.join("docs/RELEASE_CHECKLIST.md"),
-        vyre_root.join("docs/PUBLISH_GATE.md"),
-        vyre_root.join("docs/TESTING_PROGRAM.md"),
+        vyre_root.join("docs/RELEASE.md"),
+        vyre_root.join("docs/testing/TESTING.toml"),
         vyre_root.join("conform/README.md"),
         vyre_root.join("vyre-bench/README.md"),
         vyre_root.join("vyre-frontend-c/README.md"),

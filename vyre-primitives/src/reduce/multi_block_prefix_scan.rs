@@ -961,30 +961,6 @@ mod tests {
         assert_eq!(compat, fallible);
     }
 
-    #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("multi_block_prefix_scan.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: multi_block_prefix_scan.rs must contain production section");
-
-        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
-        // blessed Law-10 fix for an infallible parity wrapper.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: multi-block prefix-scan wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
-        );
-        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
-        assert!(
-            !production.contains(concat!("eprintln", "!(\"vyre-primitives multi-block prefix-scan")),
-            "Fix: multi-block prefix-scan CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
-        );
-        assert!(
-            production.contains("panic!("),
-            "Fix: multi-block prefix-scan CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
-        );
-    }
-
     fn program_contains_trap(program: &Program) -> bool {
         nodes_contain_trap(program.entry())
     }

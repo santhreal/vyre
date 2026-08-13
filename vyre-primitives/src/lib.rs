@@ -53,7 +53,7 @@
 //! `vyre_primitives::text::char_class::char_class(...)` so the LEGO
 //! chain is visible at every call site.
 //!
-//! See `docs/primitives-tier.md` and `docs/lego-block-rule.md` for
+//! See `docs/lego-block-rule.md` and `docs/lego-block-rule.md` for
 //! the tier rule, admission criteria, and Gate 1 enforcement.
 
 mod hostbuf;

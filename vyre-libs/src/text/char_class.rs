@@ -1,7 +1,7 @@
 //! `vyre-libs::text::char_class`  -  Tier 3 wrapper over the
 //! Tier 2.5 [`vyre_primitives::text::char_class::char_class`] primitive.
 //!
-//! First Tier 2.5 migration per `docs/primitives-tier.md` Step 2
+//! First Tier 2.5 migration per `docs/lego-block-rule.md` Step 2
 //! and `docs/lego-block-rule.md`. The op id stays
 //! `vyre-libs::text::char_class` so existing consumers don't break;
 //! the IR-builder + reference oracle + lookup table all live in

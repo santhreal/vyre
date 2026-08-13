@@ -18,7 +18,7 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 - Path: `vyre`
 - Owner: `public-facade`
 - Layer: `facade`
-- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-libs`, `vyre-megakernel`, `vyre-primitives`, `vyre-runtime`, `vyre-scan`, `vyre-spec`
+- Internal production dependencies: `vyre-driver`, `vyre-driver-cuda`, `vyre-driver-wgpu`, `vyre-foundation`, `vyre-megakernel`, `vyre-runtime`, `vyre-scan`, `vyre-spec`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
@@ -26,9 +26,7 @@ Expose canonical frontend IR, compiler artifact, runtime submission, and scan pr
 | `vyre-driver-cuda` | native accelerator backend execution | `private` | `cuda-driver` |
 | `vyre-driver-wgpu` | portable backend execution | `private` | `portable-driver` |
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `private` | `foundation-ir` |
-| `vyre-libs` | product operation builders | `private` | `product-libraries` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `private` | `megakernel-compiler` |
-| `vyre-primitives` | reusable semantic Program builders | `private` | `primitive-library` |
 | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | `private` | `runtime` |
 | `vyre-scan` | scan product compilation and execution | `private` | `scan-product` |
 | `vyre-spec` | stable cross-engine schemas and operation definitions | `private` | `specification` |
@@ -468,6 +466,15 @@ Own compile-to-materialize orchestration, artifact sessions, recovery, persisten
 | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | `public` | `foundation-ir` |
 | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | `public` | `megakernel-compiler` |
 | `vyre-self-substrate` | optional scheduler and analysis substrate | `private` | `self-substrate` |
+
+### `vyre-safetensors`
+
+Validate safetensors metadata, shard indexes, compiler requirements, trusted shard digests, and immutable checkpoint identities without owning runtime residency.
+
+- Path: `vyre-safetensors`
+- Owner: `safetensors-adapter`
+- Layer: `runtime`
+- Internal production dependencies: None
 
 ### `vyre-scan`
 

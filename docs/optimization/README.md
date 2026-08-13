@@ -229,9 +229,4 @@ Required structural checks:
 - No duplicated optimizer logic inside drivers.
 - No op support claim without matrix coverage and tests.
 - No benchmark target without a baseline row.
-- No new optimization plan, roadmap, backlog, worklist, or execution-status
-  document outside the root `BACKLOG.md`.
-
-When these checks are not yet automated, the patch must include the grep/script
-used as proof and a follow-up enforcement issue in this directory.
 

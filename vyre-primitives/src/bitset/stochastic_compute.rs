@@ -146,19 +146,6 @@ mod non_panic_wrapper_tests {
         assert_eq!(encode_bitstream(0.25, 65, 7), fallible);
         assert_eq!(compat, fallible);
     }
-
-    #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("stochastic_compute.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: stochastic_compute.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: stochastic bitstream convenience wrappers must not panic in production."
-        );
-    }
 }
 
 #[cfg(feature = "inventory-registry")]

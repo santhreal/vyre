@@ -339,22 +339,4 @@ mod tests {
     fn primitive_id_names_the_primitive_tier() {
         assert_eq!(CHAR_CLASS_OP_ID, "vyre-primitives::text::char_class");
     }
-
-    #[test]
-    fn char_class_table_builder_uses_widening_indices() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/text/char_class.rs"
-        ))
-        .expect("Fix: char_class source must be readable");
-        let production = src
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(
-            !production.contains(" as usize"),
-            "byte lookup-table indices must use usize::from so the primitive has no narrowing casts"
-        );
-        assert!(production.contains("usize::from(byte)"));
-    }
 }

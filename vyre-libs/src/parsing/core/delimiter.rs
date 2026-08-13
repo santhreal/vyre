@@ -1,7 +1,7 @@
 //! Bracket matching  -  Tier 3 wrapper over the
 //! Tier 2.5 [`vyre_primitives::matching::bracket_match::bracket_match`] primitive.
 //!
-//! Migrated per `docs/primitives-tier.md` Step 2 +
+//! Migrated per `docs/lego-block-rule.md` Step 2 +
 //! `docs/lego-block-rule.md`. The IR-builder + CPU reference live in
 //! `vyre-primitives-matching`.
 //! Parser dialects (`parse-c`, `parse-rust`, `parse-go`,

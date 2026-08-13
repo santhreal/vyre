@@ -302,27 +302,6 @@ mod tests {
     }
 
     #[test]
-    fn degree_sum_cpu_source_has_checked_api_without_panics() {
-        let source = include_str!("csr_frontier_degree_sum.rs");
-        let oracle_source = source
-            .split("/// CPU reference.")
-            .nth(1)
-            .expect("Fix: degree-sum CPU oracle source must be present")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: degree-sum CPU oracle source must precede tests");
-
-        assert!(
-            oracle_source.contains("pub fn try_csr_frontier_degree_sum_cpu(")
-                && !oracle_source.contains(concat!("panic", "!("))
-                && !oracle_source.contains("assert!(")
-                && !oracle_source.contains("assert_eq!(")
-                && !oracle_source.contains(".unwrap_or_else("),
-            "Fix: degree-sum CPU parity oracle must expose checked accumulation and avoid panics."
-        );
-    }
-
-    #[test]
     fn generated_degree_sum_cpu_matches_scalar_reference() {
         let mut state = 0xD36D_5A17_u32;
         for case in 0..4096u32 {

@@ -50,6 +50,10 @@ id = "runtime"
 authority = "../vyre-runtime/src/lib.rs"
 
 [[owner]]
+id = "safetensors-adapter"
+authority = "../vyre-safetensors/src/lib.rs"
+
+[[owner]]
 id = "testing"
 authority = "testing/TESTING.toml"
 
@@ -77,30 +81,6 @@ authority = "CLI.toml"
 generation = "generated"
 generator = "../scripts/cli_docs.py"
 nav = true
-
-[[page]]
-path = "CONVENTIONS.md"
-title = "vyre code organization conventions"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "CPU_GPU_CONVERGENCE.md"
-title = "CPU/GPU Convergence Lens  -  Security Ops"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "CRATE_GRAPH.md"
@@ -152,30 +132,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "GATE_CLOSURE.md"
-title = "Gate Closure Mechanics"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "HOT_PATH_PROOFS.md"
-title = "Hot-Path O(1) Proofs"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "INDEX.md"
 title = "Documentation Authority and Lifecycle"
 status = "generated"
@@ -204,42 +160,6 @@ nav = false
 path = "MATH_FRONTIER.md"
 title = "Math frontier  -  what we could revolutionize via primitives"
 status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "MATH_PRIMITIVES_PLACEMENT.md"
-title = "Math primitives  -  placement map"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "MIGRATION.md"
-title = "vyre  -  Migration Path"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "OPS.md"
-title = "Operation List"
-status = "superseded"
 audience = "contributor"
 owner = "historical"
 kind = "history"
@@ -286,57 +206,9 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "PER_OP_SURFACE.md"
-title = "Per-op Surface Contract"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "PREDICATE_EXPR_DUALITY.md"
 title = "Predicate vs Expr Duality"
 status = "archived"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "PRIMITIVES.md"
-title = "Primitive Operation Inventory"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "PUBLISH_GATE.md"
-title = "vyre-libs publish gate"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "RECURSION_THESIS.md"
-title = "Recursive Composition Thesis"
-status = "superseded"
 audience = "contributor"
 owner = "historical"
 kind = "history"
@@ -358,18 +230,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "RELEASE_1_0_GATE.md"
-title = "Release 1.0 Gate Checklist"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "RELEASE_CHECKLIST.md"
 title = "Vyre release checklist"
 status = "generated"
@@ -381,18 +241,6 @@ authority = "../release/release-train.toml"
 generation = "generated"
 generator = "../scripts/release_docs.py"
 nav = true
-
-[[page]]
-path = "RELEASE_ENGINEERING.md"
-title = "Release engineering"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "RUNTIME_PIPELINE.md"
@@ -419,18 +267,6 @@ generation = "manual"
 nav = false
 
 [[page]]
-path = "TESTING_PROGRAM.md"
-title = "Testing Program  -  SQLite / NASA JPL / Linux / Chromium Standard"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "THESIS.md"
 title = "Vyre Thesis"
 status = "current"
@@ -441,18 +277,6 @@ section = "User workflows"
 authority = "self"
 generation = "manual"
 nav = true
-
-[[page]]
-path = "VISION.md"
-title = "vyre  -  vision"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "archive/HEURISTIC_TO_MATH_TRACKER.md"
@@ -976,18 +800,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "dialect-cookbook.md"
-title = "dialect cookbook"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "error-codes.md"
 title = "vyre Error Codes"
 status = "current"
@@ -1012,66 +824,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "frozen-traits/AlgebraicLaw.md"
-title = "AlgebraicLaw historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "frozen-traits/EnforceGate.md"
-title = "EnforceGate historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "frozen-traits/ExprVisitor.md"
-title = "ExprVisitor historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "frozen-traits/Lowerable.md"
-title = "Lowerable historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "frozen-traits/MutationClass.md"
-title = "MutationClass historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "frozen-traits/README.md"
 title = "Frozen trait snapshots"
 status = "current"
@@ -1082,18 +834,6 @@ section = "User workflows"
 authority = "self"
 generation = "manual"
 nav = true
-
-[[page]]
-path = "frozen-traits/VyreBackend.md"
-title = "VyreBackend historical reference"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "generated/OP_INVENTORY.md"
@@ -1124,10 +864,10 @@ nav = true
 path = "inventory-contract.md"
 title = "Linked Registration Contract"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+audience = "extension"
+owner = "operation-registry"
+kind = "reference"
+section = "Lifecycle and extension contracts"
 authority = "self"
 generation = "manual"
 nav = true
@@ -1158,27 +898,15 @@ nav = false
 
 [[page]]
 path = "lego-block-rule.md"
-title = "LEGO-BLOCK rule  -  composition is the architecture"
-status = "superseded"
+title = "LEGO-block rule: composition is the architecture"
+status = "current"
 audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
+owner = "architecture"
+kind = "architecture"
+section = "Architecture"
 authority = "self"
 generation = "manual"
-nav = false
-
-[[page]]
-path = "library-tiers.md"
-title = "Library tiers  -  the long-term organization"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
+nav = true
 
 [[page]]
 path = "lower-vs-emit.md"
@@ -1239,18 +967,6 @@ section = "User workflows"
 authority = "self"
 generation = "manual"
 nav = true
-
-[[page]]
-path = "occ.md"
-title = "Open Conformance Certificates (OCC)"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "op-naming.md"
@@ -1336,42 +1052,6 @@ section = "Optimization"
 authority = "self"
 generation = "manual"
 nav = true
-
-[[page]]
-path = "parity/three_substrate.md"
-title = "Three Substrate Parity"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "parsing-and-frontends.md"
-title = "Parsing & frontends  -  where source-language parsers live"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
-path = "primitives-tier.md"
-title = "Tier 2.5  -  `vyre-primitives` (the LEGO block layer)"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "reference-interpreter-witness-limits.md"
@@ -1519,18 +1199,6 @@ generation = "manual"
 nav = false
 
 [[page]]
-path = "santh-standard.md"
-title = "Santh Rust Engineering Standard"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "scanning-a-corpus-the-right-way.md"
 title = "Scanning a corpus the right way"
 status = "current"
@@ -1555,18 +1223,6 @@ generation = "manual"
 nav = true
 
 [[page]]
-path = "stability.md"
-title = "vyre  -  Stability Policy"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
-
-[[page]]
 path = "support.md"
 title = "Getting Support"
 status = "current"
@@ -1582,10 +1238,10 @@ nav = true
 path = "targets.md"
 title = "Vyre Targets"
 status = "current"
-audience = "user"
-owner = "public-facade"
-kind = "guide"
-section = "User workflows"
+audience = "extension"
+owner = "architecture"
+kind = "reference"
+section = "Lifecycle and extension contracts"
 authority = "self"
 generation = "manual"
 nav = true
@@ -1967,6 +1623,19 @@ generator = "../scripts/testing_guides.py"
 nav = true
 
 [[page]]
+path = "testing/vyre-safetensors.md"
+title = "Testing `vyre-safetensors`"
+status = "generated"
+audience = "contributor"
+owner = "testing"
+kind = "testing"
+section = "Testing and conformance"
+authority = "testing/TESTING.toml"
+generation = "generated"
+generator = "../scripts/testing_guides.py"
+nav = true
+
+[[page]]
 path = "testing/vyre-scan.md"
 title = "Testing `vyre-scan`"
 status = "generated"
@@ -2079,18 +1748,6 @@ section = "User workflows"
 authority = "self"
 generation = "manual"
 nav = true
-
-[[page]]
-path = "wire-format-0.6-reservations.md"
-title = "Wire-format tag reservations  -  vyre 0.6 terminal allocation"
-status = "superseded"
-audience = "contributor"
-owner = "historical"
-kind = "history"
-section = "History"
-authority = "self"
-generation = "manual"
-nav = false
 
 [[page]]
 path = "wire-format.md"

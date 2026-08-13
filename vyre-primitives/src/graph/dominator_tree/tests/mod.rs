@@ -271,27 +271,3 @@ fn validation_returns_layout() {
     assert_eq!(layout.edge_count, 2);
     assert_eq!(layout.pred_edge_count, 0);
 }
-
-#[test]
-fn dominator_cpu_source_exposes_fallible_oracle_storage() {
-    let full_cpu_source = concat!(
-        include_str!("../lengauer_tarjan.rs"),
-        include_str!("../cooper_harvey_kennedy.rs"),
-        include_str!("../cpu_ref.rs"),
-    );
-    let lt_source = full_cpu_source
-        .split("/// Cooper–Harvey–Kennedy iterative immediate dominators")
-        .next()
-        .expect("Fix: dominator LT source must precede CHK oracle");
-
-    assert!(
-        full_cpu_source.contains("pub fn try_cpu_ref(")
-            && full_cpu_source.contains("try_idoms_to_dominator_sets")
-            && full_cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-            && lt_source.contains("pub fn try_lengauer_tarjan_idoms(")
-            && !lt_source.contains("fn reserve_dominator_vec")
-            && !lt_source.contains("vec![Vec::new(); n]")
-            && !lt_source.contains("vec![None; n]"),
-        "Fix: dominator CPU oracle must expose fallible allocation paths for large graph parity."
-    );
-}

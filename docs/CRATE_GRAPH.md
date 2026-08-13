@@ -6,7 +6,7 @@ together, then regenerate this file.
 
 ## Workspace dependency graph
 
-The workspace contains 34 crates. An arrow points from a crate to
+The workspace contains 35 crates. An arrow points from a crate to
 an internal normal or build dependency. Development dependencies are excluded.
 
 ```mermaid
@@ -40,26 +40,25 @@ graph TD
   C26["vyre-primitives"]
   C27["vyre-reference"]
   C28["vyre-runtime"]
-  C29["vyre-scan"]
-  C30["vyre-self-substrate"]
-  C31["vyre-spec"]
-  C32["vyre-test-support"]
-  C33["xtask"]
+  C29["vyre-safetensors"]
+  C30["vyre-scan"]
+  C31["vyre-self-substrate"]
+  C32["vyre-spec"]
+  C33["vyre-test-support"]
+  C34["xtask"]
   C0 --> C6
   C0 --> C7
   C0 --> C11
   C0 --> C16
-  C0 --> C21
   C0 --> C25
-  C0 --> C26
   C0 --> C28
-  C0 --> C29
-  C0 --> C31
+  C0 --> C30
+  C0 --> C32
   C1 --> C6
   C1 --> C16
   C1 --> C25
   C1 --> C26
-  C1 --> C31
+  C1 --> C32
   C2 --> C0
   C2 --> C6
   C2 --> C7
@@ -77,7 +76,7 @@ graph TD
   C2 --> C26
   C2 --> C27
   C2 --> C28
-  C2 --> C31
+  C2 --> C32
   C3 --> C0
   C3 --> C4
   C3 --> C6
@@ -92,27 +91,27 @@ graph TD
   C3 --> C26
   C3 --> C27
   C3 --> C28
-  C3 --> C31
-  C4 --> C31
+  C3 --> C32
+  C4 --> C32
   C5 --> C0
   C5 --> C13
   C5 --> C16
   C5 --> C21
   C5 --> C23
   C5 --> C26
-  C5 --> C29
+  C5 --> C30
   C6 --> C16
   C6 --> C24
   C6 --> C25
-  C6 --> C30
   C6 --> C31
+  C6 --> C32
   C7 --> C6
   C7 --> C14
   C7 --> C16
   C7 --> C23
   C7 --> C25
-  C7 --> C30
   C7 --> C31
+  C7 --> C32
   C8 --> C6
   C8 --> C12
   C8 --> C16
@@ -126,14 +125,14 @@ graph TD
   C10 --> C16
   C10 --> C23
   C10 --> C25
-  C10 --> C31
+  C10 --> C32
   C11 --> C6
   C11 --> C13
   C11 --> C16
   C11 --> C23
   C11 --> C25
-  C11 --> C30
   C11 --> C31
+  C11 --> C32
   C12 --> C13
   C12 --> C16
   C12 --> C23
@@ -144,51 +143,51 @@ graph TD
   C15 --> C13
   C15 --> C23
   C16 --> C24
-  C16 --> C31
+  C16 --> C32
   C17 --> C16
   C18 --> C16
   C20 --> C16
   C20 --> C26
   C21 --> C16
   C21 --> C26
-  C21 --> C31
+  C21 --> C32
   C23 --> C16
   C25 --> C16
   C25 --> C23
   C26 --> C16
-  C26 --> C31
+  C26 --> C32
   C27 --> C16
   C27 --> C26
-  C27 --> C31
+  C27 --> C32
   C28 --> C6
   C28 --> C16
   C28 --> C25
-  C28 --> C30
-  C29 --> C6
-  C29 --> C16
-  C29 --> C21
-  C29 --> C25
-  C29 --> C26
-  C29 --> C28
+  C28 --> C31
+  C30 --> C6
   C30 --> C16
+  C30 --> C21
+  C30 --> C25
   C30 --> C26
-  C33 --> C0
-  C33 --> C2
-  C33 --> C6
-  C33 --> C7
-  C33 --> C9
-  C33 --> C10
-  C33 --> C11
-  C33 --> C12
-  C33 --> C16
-  C33 --> C20
-  C33 --> C21
-  C33 --> C22
-  C33 --> C23
-  C33 --> C25
-  C33 --> C26
-  C33 --> C27
-  C33 --> C31
+  C30 --> C28
+  C31 --> C16
+  C31 --> C26
+  C34 --> C0
+  C34 --> C2
+  C34 --> C6
+  C34 --> C7
+  C34 --> C9
+  C34 --> C10
+  C34 --> C11
+  C34 --> C12
+  C34 --> C16
+  C34 --> C20
+  C34 --> C21
+  C34 --> C22
+  C34 --> C23
+  C34 --> C25
+  C34 --> C26
+  C34 --> C27
+  C34 --> C32
 ```
 
 ## Dependency contracts
@@ -199,9 +198,7 @@ graph TD
 | `vyre` | `vyre-driver-cuda` | native accelerator backend execution | None | `always` | `normal` | `true` | `true` | `private` | `cuda-driver` |
 | `vyre` | `vyre-driver-wgpu` | portable backend execution | None | `always` | `normal` | `true` | `true` | `private` | `portable-driver` |
 | `vyre` | `vyre-foundation` | typed IR, graph, diagnostics, validation, and semantic optimization contracts | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
-| `vyre` | `vyre-libs` | product operation builders | `c-parser`, `full`, `matching-regex` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre` | `vyre-megakernel` | whole-graph compilation and immutable artifact contracts | None | `always` | `normal` | `false` | `true` | `private` | `megakernel-compiler` |
-| `vyre` | `vyre-primitives` | reusable semantic Program builders | None | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre` | `vyre-runtime` | artifact admission, residency, submission, recovery, and readback lifecycle | None | `always` | `normal` | `false` | `true` | `private` | `runtime` |
 | `vyre` | `vyre-scan` | scan product compilation and execution | None | `always` | `normal` | `false` | `true` | `private` | `scan-product` |
 | `vyre` | `vyre-spec` | stable cross-engine schemas and operation definitions | None | `always` | `normal` | `false` | `true` | `private` | `specification` |
@@ -222,7 +219,7 @@ graph TD
 | `vyre-bench` | `vyre-frontend-c` | C source lowering | None | `always` | `normal` | `false` | `true` | `private` | `c-frontend` |
 | `vyre-bench` | `vyre-frontend-rust` | Rust source lowering | None | `always` | `normal` | `false` | `true` | `private` | `rust-frontend` |
 | `vyre-bench` | `vyre-intrinsics` | hardware-mapped intrinsic builders | None | `always` | `normal` | `false` | `true` | `private` | `hardware-intrinsics` |
-| `vyre-bench` | `vyre-libs` | product operation builders | `nn-linear-4bit` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
+| `vyre-bench` | `vyre-libs` | product operation builders | `c-parser`, `nn-linear-4bit` | `always` | `normal` | `false` | `true` | `private` | `product-libraries` |
 | `vyre-bench` | `vyre-lower` | verified backend-neutral representation lowering | None | `always` | `normal` | `false` | `true` | `private` | `lowering` |
 | `vyre-bench` | `vyre-primitives` | reusable semantic Program builders | `bitset`, `cpu-parity`, `graph` | `always` | `normal` | `false` | `false` | `private` | `primitive-library` |
 | `vyre-bench` | `vyre-reference` | independent semantic oracle execution | None | `always` | `normal` | `false` | `true` | `private` | `reference-semantics` |

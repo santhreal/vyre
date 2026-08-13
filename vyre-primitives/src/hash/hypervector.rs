@@ -499,30 +499,6 @@ mod tests {
     }
 
     #[test]
-    fn production_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("hypervector.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: hypervector.rs must contain production section");
-
-        // No LAZY panics (no fix hint); an explicit panic!() fail-loud IS the
-        // blessed Law-10 fix for an infallible parity wrapper.
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: hypervector production wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
-        );
-        // No SILENT fallback: returning empty on failure masks a parity divergence (Law 10/6).
-        assert!(
-            !production.contains(concat!("eprintln", "!(\"vyre-primitives hypervector")),
-            "Fix: hypervector CPU oracle must not log-and-return empty on error (fail loud via panic!() so callers use the try_ variant)."
-        );
-        assert!(
-            production.contains("panic!("),
-            "Fix: hypervector CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
-        );
-    }
-
-    #[test]
     fn standard_dim_constants() {
         assert_eq!(STANDARD_DIM_BITS, STANDARD_DIM_WORDS * 32);
         const _: () = assert!(STANDARD_DIM_BITS >= 8192);

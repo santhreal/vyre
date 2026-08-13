@@ -51,7 +51,6 @@ CARGO_BUILD_JOBS=1 ./cargo_full run --bin xtask -- release-benchmarks --backend 
 | `test` | `dfa_full_coverage` | `vyre-bench/tests/dfa_full_coverage.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test dfa_full_coverage` |
 | `test` | `feature_cfg_contract` | `vyre-bench/tests/feature_cfg_contract.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test feature_cfg_contract` |
 | `test` | `finite_queue_artifact` | `vyre-bench/tests/finite_queue_artifact.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test finite_queue_artifact` |
-| `test` | `full_pipeline_snapshot` | `vyre-bench/tests/full_pipeline_snapshot.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test full_pipeline_snapshot` |
 | `test` | `g10_cross_backend` | `vyre-bench/tests/g10_cross_backend.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test g10_cross_backend` |
 | `test` | `g12_cli` | `vyre-bench/tests/g12_cli.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test g12_cli` |
 | `test` | `g1_cuda_events` | `vyre-bench/tests/g1_cuda_events.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-bench --test g1_cuda_events` |

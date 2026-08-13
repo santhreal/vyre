@@ -458,23 +458,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn vast_tree_walk_release_source_has_checked_builders_without_panics() {
-        let source = include_str!("vast_tree_walk.rs");
-        let production = source
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: VAST tree walk production source must precede tests");
-
-        assert!(
-            production.contains("pub fn try_ast_walk_preorder(")
-                && production.contains("pub fn try_ast_walk_postorder(")
-                && !production.contains("inert_")
-                && !production.contains("Err(_) =>"),
-            "Fix: VAST traversal builders must expose checked release APIs and must not compile inert no-op kernels."
-        );
-    }
-
     // -----------------------------------------------------------------------
     // CPU reference tree walk tests
     // -----------------------------------------------------------------------

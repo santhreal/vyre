@@ -818,6 +818,7 @@ pub fn vyre_foundation::extension::try_resolve_atomic_op(id: vyre_spec::extensio
 pub fn vyre_foundation::extension::try_resolve_bin_op(id: vyre_spec::extension::ExtensionBinOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionBinOp>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_data_type(id: vyre_spec::extension::ExtensionDataTypeId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionDataType>, alloc::string::String>
 pub fn vyre_foundation::extension::try_resolve_un_op(id: vyre_spec::extension::ExtensionUnOpId) -> core::result::Result<core::option::Option<&'static dyn vyre_spec::extension::ExtensionUnOp>, alloc::string::String>
+pub fn vyre_foundation::fp_parity::compare_operation_outputs(op_id: &str, program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::compare_output_buffers(program: &vyre_foundation::ir::Program, outputs_a: &[alloc::vec::Vec<u8>], outputs_b: &[alloc::vec::Vec<u8>]) -> vyre_foundation::fp_parity::BufferParity
 pub fn vyre_foundation::fp_parity::effective_tolerance(op_id: &str, program: &vyre_foundation::ir::Program) -> u32
 pub fn vyre_foundation::fp_parity::f32_buffer_matches(bytes_a: &[u8], bytes_b: &[u8], tolerance: u32) -> bool

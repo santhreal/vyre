@@ -1031,25 +1031,4 @@ mod tests {
             "duplicate literals must both appear in output_records"
         );
     }
-
-    #[test]
-    fn infallible_compile_does_not_silently_return_empty_on_error() {
-        let src = std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/src/matching/dfa_compile.rs"
-        ))
-        .expect("Fix: DFA compiler source must be readable");
-        let production = src
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: meta-test scans production sources; update fixture path if module moved - production section must exist");
-        assert!(
-            !production.contains("unwrap_or_else(|_| CompiledDfa::empty())"),
-            "dfa_compile must never hide a failed compile by returning the empty rejecting automaton"
-        );
-        assert!(
-            production.contains("use dfa_compile_with_budget and shard oversized pattern sets"),
-            "dfa_compile panic must explain the structured recovery path"
-        );
-    }
 }

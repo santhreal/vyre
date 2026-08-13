@@ -17,7 +17,7 @@ pub fn c11_extract_functions(
     // `matching_rbrace` unconditionally at every index is cheaper
     // than the original 5-level nested if_then and keeps the
     // composition under the depth-6 budget enforced by
-    // vyre-conform-enforce. Non-identifier positions read values
+    // vyre-conform composition_discipline. Non-identifier positions read values
     // that never reach the `is_match` write path because the
     // guard expression gates the whole decision.
     let mut loop_body = emit_token_context(

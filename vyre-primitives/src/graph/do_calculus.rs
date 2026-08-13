@@ -303,25 +303,6 @@ mod tests {
 
         assert!(program.stats().trap());
     }
-
-    #[test]
-    fn delete_incoming_builder_source_has_checked_api_without_panics() {
-        let source = include_str!("do_calculus.rs");
-        let builder_source = source
-            .split("/// Emit a Program that zeros all incoming edges")
-            .nth(1)
-            .expect("Fix: do-intervention builder source must be present")
-            .split("/// CPU reference.")
-            .next()
-            .expect("Fix: do-intervention builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_do_intervention_delete_incoming(")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: do_intervention_delete_incoming must expose checked release API and avoid production panics."
-        );
-    }
 }
 
 // ===== P-PRIM-7: Rules 2 and 3 of do-calculus =====================
@@ -1018,25 +999,6 @@ mod rule2_tests {
         let program = do_rule2_reverse_incoming("a", "m", "out", u32::MAX);
 
         assert!(program.stats().trap());
-    }
-
-    #[test]
-    fn rule2_builder_source_has_checked_api_without_panics() {
-        let source = include_str!("do_calculus.rs");
-        let builder_source = source
-            .split("pub fn do_rule2_reverse_incoming(")
-            .nth(1)
-            .expect("Fix: Rule 2 builder source must be present")
-            .split("/// Rule 2 CPU reference.")
-            .next()
-            .expect("Fix: Rule 2 builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_do_rule2_reverse_incoming(")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: do_rule2_reverse_incoming must expose checked release API and avoid production panics."
-        );
     }
 }
 

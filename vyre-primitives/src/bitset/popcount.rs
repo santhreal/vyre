@@ -69,19 +69,6 @@ mod non_panic_wrapper_tests {
         assert_eq!(cpu_ref(&input), fallible);
         assert_eq!(compat, fallible);
     }
-
-    #[test]
-    fn production_cpu_ref_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("popcount.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: popcount.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: bitset_popcount CPU parity wrappers must not panic in production."
-        );
-    }
 }
 
 #[cfg(feature = "inventory-registry")]

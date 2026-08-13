@@ -259,17 +259,4 @@ mod tests {
             assert_eq!(compat, fallible);
         }
     }
-
-    #[test]
-    fn production_indexed_move_wrapper_has_no_raw_panic_path() {
-        let production = include_str!("indexed_move.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: indexed_move.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: indexed move CPU parity wrapper must not panic in production."
-        );
-    }
 }

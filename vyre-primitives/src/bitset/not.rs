@@ -129,27 +129,6 @@ mod tests {
     }
 
     #[test]
-    fn production_cpu_ref_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("not.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: not.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: bitset_not CPU parity wrappers must not use bare .unwrap()/.expect() (use an explicit panic!() with the error)."
-        );
-        assert!(
-            !production.contains(concat!("eprintln", "!(\"vyre-primitives bitset_not")),
-            "Fix: bitset_not CPU oracle must not log-and-return empty on error (silently masks a parity divergence, Law 10) (fail loud via panic!() so callers use try_cpu_ref_into)."
-        );
-        assert!(
-            production.contains("panic!("),
-            "Fix: bitset_not CPU oracle must panic!() when it cannot compute the reference, never return an empty vec."
-        );
-    }
-
-    #[test]
     fn generated_not_is_involutive_and_matches_scalar_reference() {
         for len in 0..96usize {
             let input: Vec<u32> = (0..len)

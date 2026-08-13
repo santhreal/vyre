@@ -26,3 +26,11 @@ lookup or dispatch. Invalid linked semantic-operation or reference-facet
 inventories abort their owner's first lookup with the conflicting identity.
 Each registry freezes one sorted owned view and never selects a provider by
 link order.
+
+## External proofs
+
+`examples/external_ir_extension` registers an external semantic operation and
+reference facet through published APIs. `examples/external_backend_extension`
+compile-checks the published frontend and wire boundary. The backend extension
+contract gate verifies owner-local registration and rejects concrete target IDs
+in the shared registry.

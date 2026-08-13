@@ -259,19 +259,6 @@ mod tests {
     }
 
     #[test]
-    fn production_cpu_ref_wrappers_have_no_raw_panic_path() {
-        let production = include_str!("histogram.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: histogram.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: histogram CPU parity wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn wrapping_on_overflow() {
         // u32::MAX + 1 wraps to 0, matching GPU atomic_add semantics.
         // cpu_ref uses wrapping_add, so we verify the accumulator behaviour

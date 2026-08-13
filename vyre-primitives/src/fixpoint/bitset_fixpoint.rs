@@ -25,9 +25,8 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// Canonical op id.
 pub const OP_ID: &str = "vyre-primitives::fixpoint::bitset_fixpoint";
 
-/// Canonical flag-buffer name. Conform harnesses locate the
-/// convergence flag by this name; `FixpointRegistration`s point here
-/// so the lens drives dispatch until the flag clears.
+/// Canonical changed-flag buffer for callers that drive this primitive to a
+/// fixpoint through an owner-defined typed loop.
 pub const NAME_CHANGED_FLAG: &str = "fp_changed";
 
 /// Build a Program: for every word `w`, set `changed[0] = 1`

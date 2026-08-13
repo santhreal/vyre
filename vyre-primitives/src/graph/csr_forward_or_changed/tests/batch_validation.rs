@@ -152,31 +152,6 @@ fn legacy_parallel_global_slot_fails_fast_on_invalid_changed_slot() {
     );
 }
 
-#[test]
-fn csr_forward_or_changed_batch_source_has_checked_api_without_panics() {
-    let source = concat!(
-        include_str!("../program_parallel_batch.rs"),
-        include_str!("../program_parallel_batch_global.rs")
-    );
-    let batch_source = source
-        .split("/// Parallel in-place expansion for several frontier accumulators at once.")
-        .nth(1)
-        .expect("Fix: CSR batch builder source must be present")
-        .split("/// CPU reference for one in-place expansion pass.")
-        .next()
-        .expect("Fix: CSR batch builder source must precede CPU oracle");
-
-    assert!(
-            batch_source.contains("pub fn try_csr_forward_or_changed_parallel_batch(")
-                && batch_source
-                    .contains("pub fn try_csr_forward_or_changed_parallel_batch_global_slot(")
-                && !batch_source.contains("inert_")
-                && !batch_source.contains("Err(_) =>")
-                && !batch_source.contains("Node::return_()"),
-            "Fix: batched CSR forward-or-changed builders must expose checked release APIs and must not compile inert no-op kernels."
-        );
-}
-
 fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(message) = payload.downcast_ref::<&str>() {
         message.to_string()

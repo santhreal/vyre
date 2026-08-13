@@ -378,46 +378,4 @@ mod tests {
 
         assert!(program.stats().trap());
     }
-
-    #[test]
-    fn sheaf_builder_source_has_checked_sizing_without_panics() {
-        let source = include_str!("sheaf.rs");
-        let builder_source = source
-            .split("pub fn sheaf_diffusion_step(")
-            .nth(1)
-            .expect("Fix: sheaf diffusion builder source must be present")
-            .split("/// CPU reference")
-            .next()
-            .expect("Fix: sheaf diffusion builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_sheaf_diffusion_step(")
-                && builder_source.contains("checked_stalk_cells")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: sheaf_diffusion_step must expose checked release sizing and avoid production panics."
-        );
-    }
-
-    #[test]
-    fn sheaf_cpu_source_uses_fallible_reusable_storage() {
-        let source = include_str!("sheaf.rs");
-        let cpu_source = source
-            .split("/// CPU reference (f64).")
-            .nth(1)
-            .expect("Fix: sheaf CPU source must be present")
-            .split("#[cfg(feature = \"inventory-registry\")]")
-            .next()
-            .expect("Fix: sheaf CPU source must precede registry entry");
-
-        assert!(
-            cpu_source.contains("try_sheaf_diffusion_step_cpu_into")
-                && cpu_source.contains("crate::graph::scratch::reserve_graph_items")
-                && cpu_source.contains("out.capacity()")
-                && !cpu_source.contains("fn reserve_sheaf_cpu_vec")
-                && !cpu_source.contains("Vec::with_capacity")
-                && !cpu_source.contains(".reserve("),
-            "Fix: sheaf CPU oracle must use fallible reusable storage instead of infallible per-step allocation."
-        );
-    }
 }

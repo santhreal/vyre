@@ -61,10 +61,11 @@ identity and payload format are owner-local constants:
 
 ```rust,ignore
 inventory::submit! {
-    vyre_driver::BackendRegistration {
+    vyre_driver::backend::BackendRegistration {
         id: BACKEND_ID,
         target_id: TARGET_ID,
         payload_format: Some(TARGET_PAYLOAD_FORMAT),
+        reference_oracle: false,
         factory: backend_factory,
         supported_ops,
         semantic_operations,
@@ -116,3 +117,8 @@ There is no hand-maintained target-operation matrix in this document.
 
 No shared compiler, runtime, facade, or existing concrete driver needs a target
 specific match arm.
+
+The isolated `examples/external_backend_extension` crate compile-checks the
+published facade and wire boundary. `scripts/check_backend_extension_contract.sh`
+proves that linked concrete drivers register through owner-local inventory
+submissions and that the shared registry contains no concrete target IDs.

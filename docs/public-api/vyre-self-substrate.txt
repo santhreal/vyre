@@ -103,9 +103,7 @@ pub fn vyre_self_substrate::hardware::device_resident_token_fact_graph::plan_dev
 pub fn vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::hardware::gpu_probe_contract::validate_gpu_probe_contract(records: &[vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractProof, vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractError>
 pub fn vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn vyre_self_substrate::hardware::memory_ownership_contract::validate_memory_ownership_artifacts(backend_contract_source: &str, dispatch_result_source: &str, cuda_resident_source: &str, cuda_resident_io_source: &str, cuda_allocations_source: &str, backend_matrix: &str, cuda_release_suite: &str) -> core::result::Result<vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof, vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError>
 pub fn vyre_self_substrate::hardware::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipProof, vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError>
-pub fn vyre_self_substrate::memory_ownership_contract::validate_memory_ownership_artifacts(backend_contract_source: &str, dispatch_result_source: &str, cuda_resident_source: &str, cuda_resident_io_source: &str, cuda_allocations_source: &str, backend_matrix: &str, cuda_release_suite: &str) -> core::result::Result<vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof, vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError>
 pub fn vyre_self_substrate::memory_ownership_contract::validate_memory_ownership_contract(records: &[vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipRecord<'_>]) -> core::result::Result<vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipProof, vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError>
 pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::CanonicalizeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_self_substrate::optimizer::canonicalize_via_encoded::build_canonicalize_program(expr_count: u32) -> vyre_foundation::ir_inner::model::program::core::Program
@@ -247,10 +245,8 @@ pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::Toke
 pub struct vyre_self_substrate::hardware::device_resident_token_fact_graph::TokenFactNode
 pub struct vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeContractProof
 pub struct vyre_self_substrate::hardware::gpu_probe_contract::GpuProbeRecord<'a>
-pub struct vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof
 pub struct vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipProof
 pub struct vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipRecord<'a>
-pub struct vyre_self_substrate::memory_ownership_contract::MemoryOwnershipArtifactProof
 pub struct vyre_self_substrate::memory_ownership_contract::MemoryOwnershipProof
 pub struct vyre_self_substrate::memory_ownership_contract::MemoryOwnershipRecord<'a>
 pub struct vyre_self_substrate::optimizer::cse_via_encoded::SparseCanonicalMap
@@ -376,15 +372,6 @@ pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner::Devic
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner::HostCaller
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner::ParityOnly
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwner::PinnedStaging
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof::output_reuse_token_count: usize
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof::resident_token_count: usize
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipArtifactProof::surface_count: usize
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactMissingEvidence
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactMissingEvidence::evidence: &'static str
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::field: &'static str
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::observed: usize
-pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::required: usize
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::DuplicateResource
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::DuplicateResource::resource: alloc::string::String
 pub vyre_self_substrate::hardware::memory_ownership_contract::MemoryOwnershipError::EmptyMetadata
@@ -407,15 +394,6 @@ pub vyre_self_substrate::memory_ownership_contract::MemoryOwner::DeviceResident
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwner::HostCaller
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwner::ParityOnly
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwner::PinnedStaging
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipArtifactProof::output_reuse_token_count: usize
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipArtifactProof::resident_token_count: usize
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipArtifactProof::surface_count: usize
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactMissingEvidence
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactMissingEvidence::evidence: &'static str
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::field: &'static str
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::observed: usize
-pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::ArtifactThresholdMiss::required: usize
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::DuplicateResource
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::DuplicateResource::resource: alloc::string::String
 pub vyre_self_substrate::memory_ownership_contract::MemoryOwnershipError::EmptyMetadata

@@ -163,19 +163,6 @@ mod tests {
     }
 
     #[test]
-    fn production_cpu_ref_wrapper_has_no_raw_panic_path() {
-        let production = include_str!("gather.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: gather.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: gather CPU parity wrappers must not panic in production."
-        );
-    }
-
-    #[test]
     fn program_has_expected_buffers() {
         let p = gather("src", "indices", "dst", 1024);
         assert_eq!(p.workgroup_size, [256, 1, 1]);

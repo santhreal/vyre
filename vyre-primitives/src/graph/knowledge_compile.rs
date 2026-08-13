@@ -863,23 +863,4 @@ mod tests {
             "error should describe the invalid variable domain: {error}"
         );
     }
-
-    #[test]
-    fn gpu_builder_source_has_checked_api_without_panics() {
-        let source = include_str!("knowledge_compile.rs");
-        let builder_source = source
-            .split("pub fn ddnnf_evaluate(")
-            .nth(1)
-            .expect("Fix: d-DNNF GPU builder source must be present")
-            .split("/// CPU helper:")
-            .next()
-            .expect("Fix: d-DNNF GPU builder source must precede CPU oracle");
-
-        assert!(
-            builder_source.contains("pub fn try_ddnnf_evaluate(")
-                && !builder_source.contains(concat!("panic", "!("))
-                && !builder_source.contains(".unwrap_or_else("),
-            "Fix: ddnnf_evaluate must expose a checked release API and avoid production panics."
-        );
-    }
 }

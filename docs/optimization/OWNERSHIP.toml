@@ -233,7 +233,7 @@ write = [
   "vyre-libs/tests/*parser*",
   "vyre-libs/tests/*frontend*",
   "examples/c_source_to_ir/**",
-  "docs/parsing-and-frontends.md",
+  "docs/ARCHITECTURE.md",
 ]
 avoid = [
   "vyre-driver-cuda/src/**",
@@ -351,7 +351,7 @@ write = [
   "vyre-libs/tests/*matmul*",
   "vyre-libs/tests/*attention*",
   "vyre-bench/src/**",
-  "docs/MATH_PRIMITIVES_PLACEMENT.md",
+  "docs/OWNERSHIP.md",
 ]
 avoid = [
   "vyre-libs/src/security/**",

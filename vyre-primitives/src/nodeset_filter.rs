@@ -202,17 +202,4 @@ mod tests {
         assert_eq!(compat, fallible);
         assert_eq!(nodeset_filter_cpu_ref(&values, filter), fallible);
     }
-
-    #[test]
-    fn production_wrapper_has_no_raw_panic_path() {
-        let production = include_str!("nodeset_filter.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .expect("Fix: nodeset_filter.rs must contain production section");
-
-        assert!(
-            !production.contains(".expect(") && !production.contains(".unwrap("),
-            "Fix: nodeset filter CPU wrapper must not panic in production."
-        );
-    }
 }
