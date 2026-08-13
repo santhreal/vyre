@@ -1,184 +1,74 @@
 use super::*;
+use crate::parsing::c::lex::lexer::core::helpers::{
+    block_comment_scan, block_comment_start, char_start, classify_prologue, float_start,
+    identifier_scan, identifier_start, integer_start, line_comment_scan, line_comment_start,
+    number_scan, preproc_start, quoted_literal_scan, string_start, token_start_expr, ClassifyCtx,
+    ScanNames, TokenStartOpts,
+};
 use crate::parsing::c::lex::lexer::sections;
 
-pub(super) fn c11_lexer_regular_sparse_impl(
-    haystack: &str,
-    out_tok_types: &str,
-    out_tok_starts: &str,
-    out_tok_lens: &str,
-    out_counts: &str,
-    haystack_len: u32,
-    suppress_span_readback: bool,
-    emit_flags: bool,
-    haystack_layout: SparseHaystackLayout,
-    track_preproc_lines: bool,
-    track_literals: bool,
-    block_totals: Option<&str>,
-) -> Program {
+/// One per-invocation sparse lexer. Every entry point in this module is a
+/// preset of these knobs; the classification stages themselves live in
+/// `core::helpers` and are shared with the serial lexers.
+pub(super) struct SparseLexerSpec<'a> {
+    pub(super) haystack: &'a str,
+    pub(super) out_tok_types: &'a str,
+    pub(super) out_tok_starts: &'a str,
+    pub(super) out_tok_lens: &'a str,
+    pub(super) out_counts: &'a str,
+    pub(super) haystack_len: u32,
+    /// Drop the start and length columns from the output contract; the caller
+    /// only needs token types.
+    pub(super) suppress_span_readback: bool,
+    /// Write a per-position emit flag into `out_counts` instead of a count.
+    pub(super) emit_flags: bool,
+    pub(super) layout: SparseHaystackLayout,
+    /// Replay the line state before `t` so a mid-line `#` is not a directive.
+    pub(super) track_preproc_lines: bool,
+    /// Replay string, character, and comment state before `t` so a token start
+    /// inside a literal is suppressed.
+    pub(super) track_literals: bool,
+    /// Emit per-workgroup emit-count totals into this buffer.
+    pub(super) block_totals: Option<&'a str>,
+}
+
+/// Token-start rule for the sparse scanners: NUL-padded packed haystacks, an
+/// ellipsis whose second dot continues the token, and the declared length as
+/// the authoritative bound.
+const SPARSE_TOKEN_START: TokenStartOpts = TokenStartOpts {
+    dot_pair_is_tail: true,
+    nul_is_space: true,
+    bound_by_declared_len: true,
+};
+
+pub(super) fn c11_lexer_regular_sparse_impl(spec: &SparseLexerSpec<'_>) -> Program {
+    let SparseLexerSpec {
+        haystack,
+        out_tok_types,
+        out_tok_starts,
+        out_tok_lens,
+        out_counts,
+        haystack_len,
+        suppress_span_readback,
+        emit_flags,
+        layout,
+        track_preproc_lines,
+        track_literals,
+        block_totals,
+    } = *spec;
+
     let workgroup_lanes = if block_totals.is_some() {
         vyre_primitives::reduce::multi_block_prefix_scan::BLOCK_LANES
     } else {
         256
     };
     let t = Expr::InvocationId { axis: 0 };
-    let byte_at = |index: Expr| match haystack_layout {
-        SparseHaystackLayout::PackedU32 => {
-            let word = Expr::load(haystack, Expr::shr(index.clone(), Expr::u32(2)));
-            let shift = Expr::shl(Expr::bitand(index.clone(), Expr::u32(3)), Expr::u32(3));
-            Expr::select(
-                Expr::lt(index, Expr::u32(haystack_len)),
-                Expr::bitand(Expr::shr(word, shift), Expr::u32(0xFF)),
-                Expr::u32(0),
-            )
-        }
-        SparseHaystackLayout::ExpandedU32 => byte_at_or_zero(haystack, index, haystack_len),
-        SparseHaystackLayout::RawU8 => {
-            let runtime_len = Expr::min(Expr::buf_len(haystack), Expr::u32(haystack_len));
-            let in_bounds = Expr::lt(index.clone(), runtime_len.clone());
-            let safe_index = Expr::select(
-                in_bounds.clone(),
-                index,
-                Expr::saturating_sub(runtime_len, Expr::u32(1)),
-            );
-            let byte = Expr::bitand(
-                Expr::cast(DataType::U32, Expr::load(haystack, safe_index)),
-                Expr::u32(0xFF),
-            );
-            Expr::select(in_bounds, byte, Expr::u32(0))
-        }
-    };
-    let is_space = |value: Expr| {
-        Expr::or(
-            byte_eq(value.clone(), 0),
-            Expr::or(
-                byte_eq(value.clone(), b' '),
-                Expr::or(
-                    byte_eq(value.clone(), b'\n'),
-                    Expr::or(byte_eq(value.clone(), b'\r'), byte_eq(value, b'\t')),
-                ),
-            ),
-        )
-    };
-    let is_operator_tail = |index: Expr| {
-        let b = byte_at(index.clone());
-        let prev = Expr::select(
-            Expr::gt(index.clone(), Expr::u32(0)),
-            byte_at(Expr::saturating_sub(index.clone(), Expr::u32(1))),
-            Expr::u32(0),
-        );
-        let prev2 = Expr::select(
-            Expr::gt(index.clone(), Expr::u32(1)),
-            byte_at(Expr::saturating_sub(index.clone(), Expr::u32(2))),
-            Expr::u32(0),
-        );
-        Expr::or(
-            Expr::and(byte_eq(b.clone(), b'>'), byte_eq(prev.clone(), b'-')),
-            Expr::or(
-                Expr::and(
-                    byte_eq(b.clone(), b'='),
-                    Expr::or(
-                        byte_eq(prev.clone(), b'+'),
-                        Expr::or(
-                            byte_eq(prev.clone(), b'-'),
-                            Expr::or(
-                                byte_eq(prev.clone(), b'*'),
-                                Expr::or(
-                                    byte_eq(prev.clone(), b'/'),
-                                    Expr::or(
-                                        byte_eq(prev.clone(), b'%'),
-                                        Expr::or(
-                                            byte_eq(prev.clone(), b'&'),
-                                            Expr::or(
-                                                byte_eq(prev.clone(), b'|'),
-                                                Expr::or(
-                                                    byte_eq(prev.clone(), b'^'),
-                                                    Expr::or(
-                                                        byte_eq(prev.clone(), b'='),
-                                                        Expr::or(
-                                                            byte_eq(prev.clone(), b'!'),
-                                                            Expr::or(
-                                                                byte_eq(prev.clone(), b'<'),
-                                                                byte_eq(prev.clone(), b'>'),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-                Expr::or(
-                    Expr::and(byte_eq(b.clone(), b'.'), byte_eq(prev.clone(), b'.')),
-                    Expr::or(
-                        Expr::and(byte_eq(b.clone(), b'+'), byte_eq(prev.clone(), b'+')),
-                        Expr::or(
-                            Expr::and(byte_eq(b.clone(), b'-'), byte_eq(prev.clone(), b'-')),
-                            Expr::or(
-                                Expr::and(byte_eq(b.clone(), b'&'), byte_eq(prev.clone(), b'&')),
-                                Expr::or(
-                                    Expr::and(
-                                        byte_eq(b.clone(), b'|'),
-                                        byte_eq(prev.clone(), b'|'),
-                                    ),
-                                    Expr::or(
-                                        Expr::and(
-                                            byte_eq(b.clone(), b'<'),
-                                            byte_eq(prev.clone(), b'<'),
-                                        ),
-                                        Expr::or(
-                                            Expr::and(
-                                                byte_eq(b.clone(), b'>'),
-                                                byte_eq(prev.clone(), b'>'),
-                                            ),
-                                            Expr::and(
-                                                byte_eq(b, b'='),
-                                                Expr::or(
-                                                    Expr::and(
-                                                        byte_eq(prev.clone(), b'<'),
-                                                        byte_eq(prev2.clone(), b'<'),
-                                                    ),
-                                                    Expr::and(
-                                                        byte_eq(prev, b'>'),
-                                                        byte_eq(prev2, b'>'),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        )
-    };
-    let is_token_start_at = |index: Expr| {
-        let b = byte_at(index.clone());
-        let prev = Expr::select(
-            Expr::gt(index.clone(), Expr::u32(0)),
-            byte_at(Expr::saturating_sub(index.clone(), Expr::u32(1))),
-            Expr::u32(0),
-        );
-        Expr::and(
-            Expr::lt(index.clone(), Expr::u32(haystack_len)),
-            Expr::and(
-                Expr::not(is_space(b.clone())),
-                Expr::and(
-                    Expr::not(Expr::and(is_ident_continue(b), is_ident_continue(prev))),
-                    Expr::not(is_operator_tail(index)),
-                ),
-            ),
-        )
-    };
+    let ctx = ClassifyCtx::sparse(haystack, haystack_len, layout, MAX_SPARSE_TOKEN_SCAN);
+    let byte_at = |index: Expr| ctx.byte_at(index);
 
     let preliminary_start = Expr::and(
         Expr::lt(t.clone(), Expr::u32(haystack_len)),
-        is_token_start_at(t.clone()),
+        token_start_expr(&ctx, t.clone(), &SPARSE_TOKEN_START),
     );
     let mut string_state_prefix = vec![
         Node::let_bind("sparse_preliminary_start", preliminary_start),
@@ -420,464 +310,82 @@ pub(super) fn c11_lexer_regular_sparse_impl(
         ]);
     }
 
-    let mut classify_at_pos = vec![
-        Node::let_bind("pos", t.clone()),
-        Node::let_bind("byte", byte_at(t.clone())),
-        Node::let_bind(
-            "prev_byte",
-            Expr::select(
-                Expr::gt(t.clone(), Expr::u32(0)),
-                byte_at(Expr::saturating_sub(t.clone(), Expr::u32(1))),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind("next_byte", byte_at(Expr::add(t.clone(), Expr::u32(1)))),
-        Node::let_bind("next2_byte", byte_at(Expr::add(t.clone(), Expr::u32(2)))),
-        Node::let_bind("emit", Expr::u32(0)),
-        Node::let_bind("tok_type", Expr::u32(TOK_WHITESPACE)),
-        Node::let_bind("tok_len", Expr::u32(1)),
-    ];
-    classify_at_pos.push(set_token(
-        Expr::and(
-            is_ident_start(Expr::var("byte")),
-            Expr::not(is_ident_continue(Expr::var("prev_byte"))),
-        ),
-        TOK_IDENTIFIER,
-        Expr::u32(1),
-    ));
+    let mut classify_at_pos = classify_prologue(&ctx, &t, true);
+    classify_at_pos.push(identifier_start());
     if track_literals {
-        classify_at_pos.push(set_token(
-            byte_eq(Expr::var("byte"), b'"'),
-            TOK_STRING,
-            Expr::u32(1),
-        ));
-        classify_at_pos.push(set_token(
-            Expr::and(
-                byte_eq(Expr::var("byte"), b'\''),
-                Expr::not(is_ident_continue(Expr::var("prev_byte"))),
-            ),
-            TOK_CHAR,
-            Expr::u32(1),
-        ));
-        classify_at_pos.push(set_token(
-            Expr::and(
-                byte_eq(Expr::var("byte"), b'/'),
-                byte_eq(Expr::var("next_byte"), b'/'),
-            ),
-            TOK_COMMENT,
-            Expr::u32(2),
-        ));
+        classify_at_pos.push(string_start());
+        classify_at_pos.push(char_start(true));
+        classify_at_pos.push(line_comment_start());
         if !suppress_span_readback {
-            classify_at_pos.push(Node::if_then(
-                Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_COMMENT)),
-                vec![
-                    Node::let_bind("sparse_comment_done", Expr::u32(0)),
-                    Node::loop_for(
-                        "sparse_scan_line_comment",
-                        Expr::add(Expr::var("pos"), Expr::u32(2)),
-                        Expr::min(
-                            Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                            Expr::u32(haystack_len),
-                        ),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("sparse_comment_done"), Expr::u32(0)),
-                            vec![
-                                Node::let_bind(
-                                    "scan_byte",
-                                    byte_at(Expr::var("sparse_scan_line_comment")),
-                                ),
-                                Node::if_then_else(
-                                    byte_eq(Expr::var("scan_byte"), b'\n'),
-                                    vec![Node::assign("sparse_comment_done", Expr::u32(1))],
-                                    vec![Node::assign(
-                                        "tok_len",
-                                        Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                    )],
-                                ),
-                            ],
-                        )],
-                    ),
-                ],
+            classify_at_pos.push(line_comment_scan(
+                &ctx,
+                &ScanNames {
+                    done: "sparse_comment_done",
+                    scan: "sparse_scan_line_comment",
+                },
             ));
         }
-        classify_at_pos.push(set_token(
-            Expr::and(
-                byte_eq(Expr::var("byte"), b'/'),
-                byte_eq(Expr::var("next_byte"), b'*'),
-            ),
-            TOK_COMMENT,
-            Expr::u32(2),
-        ));
+        classify_at_pos.push(block_comment_start());
         if !suppress_span_readback {
-            classify_at_pos.push(Node::if_then(
-                Expr::and(
-                    Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_COMMENT)),
-                    byte_eq(Expr::var("next_byte"), b'*'),
-                ),
-                vec![
-                    Node::let_bind("sparse_block_comment_done", Expr::u32(0)),
-                    Node::loop_for(
-                        "sparse_scan_block_comment",
-                        Expr::add(Expr::var("pos"), Expr::u32(2)),
-                        Expr::min(
-                            Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                            Expr::u32(haystack_len),
-                        ),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("sparse_block_comment_done"), Expr::u32(0)),
-                            vec![
-                                Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                ),
-                                Node::let_bind(
-                                    "scan_byte",
-                                    byte_at(Expr::var("sparse_scan_block_comment")),
-                                ),
-                                Node::let_bind(
-                                    "scan_next",
-                                    byte_at(Expr::add(
-                                        Expr::var("sparse_scan_block_comment"),
-                                        Expr::u32(1),
-                                    )),
-                                ),
-                                Node::if_then(
-                                    Expr::and(
-                                        byte_eq(Expr::var("scan_byte"), b'*'),
-                                        byte_eq(Expr::var("scan_next"), b'/'),
-                                    ),
-                                    vec![
-                                        Node::assign(
-                                            "tok_len",
-                                            Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                        ),
-                                        Node::assign("sparse_block_comment_done", Expr::u32(1)),
-                                    ],
-                                ),
-                            ],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var("sparse_block_comment_done"), Expr::u32(0)),
-                        vec![Node::assign(
-                            "tok_type",
-                            Expr::u32(TOK_ERR_UNTERMINATED_COMMENT),
-                        )],
-                    ),
-                ],
+            classify_at_pos.push(block_comment_scan(
+                &ctx,
+                &ScanNames {
+                    done: "sparse_block_comment_done",
+                    scan: "sparse_scan_block_comment",
+                },
             ));
-            classify_at_pos.push(Node::if_then(
-                Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_STRING)),
-                vec![
-                    Node::let_bind("sparse_string_done", Expr::u32(0)),
-                    Node::let_bind("sparse_string_literal_escape", Expr::u32(0)),
-                    Node::loop_for(
-                        "sparse_scan_string",
-                        Expr::add(Expr::var("pos"), Expr::u32(1)),
-                        Expr::min(
-                            Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                            Expr::u32(haystack_len),
-                        ),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("sparse_string_done"), Expr::u32(0)),
-                            vec![
-                                Node::let_bind(
-                                    "scan_byte",
-                                    byte_at(Expr::var("sparse_scan_string")),
-                                ),
-                                Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                ),
-                                Node::if_then_else(
-                                    Expr::eq(
-                                        Expr::var("sparse_string_literal_escape"),
-                                        Expr::u32(1),
-                                    ),
-                                    vec![Node::assign(
-                                        "sparse_string_literal_escape",
-                                        Expr::u32(0),
-                                    )],
-                                    vec![Node::if_then_else(
-                                        byte_eq(Expr::var("scan_byte"), b'\\'),
-                                        vec![Node::assign(
-                                            "sparse_string_literal_escape",
-                                            Expr::u32(1),
-                                        )],
-                                        vec![Node::if_then(
-                                            byte_eq(Expr::var("scan_byte"), b'"'),
-                                            vec![Node::assign("sparse_string_done", Expr::u32(1))],
-                                        )],
-                                    )],
-                                ),
-                            ],
-                        )],
-                    ),
-                ],
+            classify_at_pos.push(quoted_literal_scan(
+                &ctx,
+                TOK_STRING,
+                &ScanNames {
+                    done: "sparse_string_done",
+                    scan: "sparse_scan_string",
+                },
+                "sparse_string_literal_escape",
+                b'"',
+                None,
             ));
-            classify_at_pos.push(Node::if_then(
-                Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_CHAR)),
-                vec![
-                    Node::let_bind("sparse_char_done", Expr::u32(0)),
-                    Node::let_bind("sparse_char_literal_escape", Expr::u32(0)),
-                    Node::loop_for(
-                        "sparse_scan_char",
-                        Expr::add(Expr::var("pos"), Expr::u32(1)),
-                        Expr::min(
-                            Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                            Expr::u32(haystack_len),
-                        ),
-                        vec![Node::if_then(
-                            Expr::eq(Expr::var("sparse_char_done"), Expr::u32(0)),
-                            vec![
-                                Node::let_bind("scan_byte", byte_at(Expr::var("sparse_scan_char"))),
-                                Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                ),
-                                Node::if_then_else(
-                                    Expr::eq(Expr::var("sparse_char_literal_escape"), Expr::u32(1)),
-                                    vec![Node::assign("sparse_char_literal_escape", Expr::u32(0))],
-                                    vec![Node::if_then_else(
-                                        byte_eq(Expr::var("scan_byte"), b'\\'),
-                                        vec![Node::assign(
-                                            "sparse_char_literal_escape",
-                                            Expr::u32(1),
-                                        )],
-                                        vec![Node::if_then(
-                                            byte_eq(Expr::var("scan_byte"), b'\''),
-                                            vec![Node::assign("sparse_char_done", Expr::u32(1))],
-                                        )],
-                                    )],
-                                ),
-                            ],
-                        )],
-                    ),
-                    Node::if_then(
-                        Expr::eq(Expr::var("sparse_char_done"), Expr::u32(0)),
-                        vec![Node::assign(
-                            "tok_type",
-                            Expr::u32(TOK_ERR_UNTERMINATED_CHAR),
-                        )],
-                    ),
-                ],
+            classify_at_pos.push(quoted_literal_scan(
+                &ctx,
+                TOK_CHAR,
+                &ScanNames {
+                    done: "sparse_char_done",
+                    scan: "sparse_scan_char",
+                },
+                "sparse_char_literal_escape",
+                b'\'',
+                Some(TOK_ERR_UNTERMINATED_CHAR),
             ));
         }
     }
     if !suppress_span_readback {
-        classify_at_pos.push(Node::if_then(
-            Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_IDENTIFIER)),
-            vec![
-                Node::let_bind("sparse_ident_done", Expr::u32(0)),
-                Node::loop_for(
-                    "sparse_scan_ident",
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    Expr::min(
-                        Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                        Expr::u32(haystack_len),
-                    ),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var("sparse_ident_done"), Expr::u32(0)),
-                        vec![
-                            Node::let_bind("scan_byte", byte_at(Expr::var("sparse_scan_ident"))),
-                            Node::if_then_else(
-                                Expr::or(
-                                    is_ident_continue(Expr::var("scan_byte")),
-                                    byte_eq(Expr::var("scan_byte"), b'\''),
-                                ),
-                                vec![Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                )],
-                                vec![Node::assign("sparse_ident_done", Expr::u32(1))],
-                            ),
-                        ],
-                    )],
-                ),
-            ],
+        classify_at_pos.push(identifier_scan(
+            &ctx,
+            &ScanNames {
+                done: "sparse_ident_done",
+                scan: "sparse_scan_ident",
+            },
+            true,
         ));
     }
-    classify_at_pos.push(set_token(
-        Expr::and(
-            is_digit(Expr::var("byte")),
-            Expr::not(is_ident_continue(Expr::var("prev_byte"))),
-        ),
-        TOK_INTEGER,
-        Expr::u32(1),
-    ));
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'.'),
-            is_digit(Expr::var("next_byte")),
-        ),
-        TOK_FLOAT,
-        Expr::u32(1),
-    ));
+    classify_at_pos.push(integer_start());
+    classify_at_pos.push(float_start());
     if !suppress_span_readback {
-        classify_at_pos.push(Node::if_then(
-            Expr::or(
-                Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_INTEGER)),
-                Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_FLOAT)),
-            ),
-            vec![
-                Node::let_bind("sparse_number_done", Expr::u32(0)),
-                Node::let_bind(
-                    "sparse_number_is_float",
-                    Expr::select(
-                        Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_FLOAT)),
-                        Expr::u32(1),
-                        Expr::u32(0),
-                    ),
-                ),
-                Node::loop_for(
-                    "sparse_scan_number",
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    Expr::min(
-                        Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                        Expr::u32(haystack_len),
-                    ),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var("sparse_number_done"), Expr::u32(0)),
-                        vec![
-                            Node::let_bind("scan_byte", byte_at(Expr::var("sparse_scan_number"))),
-                            Node::let_bind(
-                                "scan_prev",
-                                byte_at(Expr::saturating_sub(
-                                    Expr::var("sparse_scan_number"),
-                                    Expr::u32(1),
-                                )),
-                            ),
-                            Node::let_bind(
-                                "scan_next",
-                                byte_at(Expr::add(Expr::var("sparse_scan_number"), Expr::u32(1))),
-                            ),
-                            Node::let_bind(
-                                "scan_can_start_exponent",
-                                Expr::and(
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_byte"), b'e'),
-                                        Expr::or(
-                                            byte_eq(Expr::var("scan_byte"), b'E'),
-                                            Expr::or(
-                                                byte_eq(Expr::var("scan_byte"), b'p'),
-                                                byte_eq(Expr::var("scan_byte"), b'P'),
-                                            ),
-                                        ),
-                                    ),
-                                    Expr::or(
-                                        is_digit(Expr::var("scan_next")),
-                                        Expr::or(
-                                            byte_eq(Expr::var("scan_next"), b'+'),
-                                            byte_eq(Expr::var("scan_next"), b'-'),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "scan_is_exponent_sign",
-                                Expr::and(
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_byte"), b'+'),
-                                        byte_eq(Expr::var("scan_byte"), b'-'),
-                                    ),
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_prev"), b'e'),
-                                        Expr::or(
-                                            byte_eq(Expr::var("scan_prev"), b'E'),
-                                            Expr::or(
-                                                byte_eq(Expr::var("scan_prev"), b'p'),
-                                                byte_eq(Expr::var("scan_prev"), b'P'),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "scan_is_float_dot",
-                                byte_eq(Expr::var("scan_byte"), b'.'),
-                            ),
-                            Node::let_bind(
-                                "scan_is_number_tail",
-                                Expr::or(
-                                    is_ident_continue(Expr::var("scan_byte")),
-                                    Expr::or(
-                                        Expr::var("scan_is_float_dot"),
-                                        Expr::var("scan_is_exponent_sign"),
-                                    ),
-                                ),
-                            ),
-                            Node::if_then_else(
-                                Expr::var("scan_is_number_tail"),
-                                vec![
-                                    Node::assign(
-                                        "tok_len",
-                                        Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                    ),
-                                    Node::if_then(
-                                        Expr::or(
-                                            Expr::var("scan_is_float_dot"),
-                                            Expr::var("scan_can_start_exponent"),
-                                        ),
-                                        vec![Node::assign("sparse_number_is_float", Expr::u32(1))],
-                                    ),
-                                ],
-                                vec![Node::assign("sparse_number_done", Expr::u32(1))],
-                            ),
-                        ],
-                    )],
-                ),
-                Node::if_then(
-                    Expr::eq(Expr::var("sparse_number_is_float"), Expr::u32(1)),
-                    vec![Node::assign("tok_type", Expr::u32(TOK_FLOAT))],
-                ),
-            ],
+        classify_at_pos.push(number_scan(
+            &ctx,
+            &ScanNames {
+                done: "sparse_number_done",
+                scan: "sparse_scan_number",
+            },
+            "sparse_number_is_float",
         ));
     }
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'#'),
-            Expr::eq(Expr::var("sparse_line_allows_directive"), Expr::u32(1)),
-        ),
-        TOK_PREPROC,
-        Expr::u32(1),
-    ));
+    classify_at_pos.push(preproc_start("sparse_line_allows_directive"));
     if !suppress_span_readback {
-        classify_at_pos.push(Node::if_then(
-            Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_PREPROC)),
-            vec![
-                Node::let_bind("sparse_preproc_done", Expr::u32(0)),
-                Node::loop_for(
-                    "sparse_scan_preproc",
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    Expr::min(
-                        Expr::add(Expr::var("pos"), Expr::u32(MAX_SPARSE_TOKEN_SCAN)),
-                        Expr::u32(haystack_len),
-                    ),
-                    vec![Node::if_then(
-                        Expr::eq(Expr::var("sparse_preproc_done"), Expr::u32(0)),
-                        vec![
-                            Node::let_bind(
-                                "sparse_preproc_scan_byte",
-                                byte_at(Expr::var("sparse_scan_preproc")),
-                            ),
-                            Node::if_then_else(
-                                Expr::or(
-                                    byte_eq(Expr::var("sparse_preproc_scan_byte"), b'\n'),
-                                    byte_eq(Expr::var("sparse_preproc_scan_byte"), b'\r'),
-                                ),
-                                vec![Node::assign("sparse_preproc_done", Expr::u32(1))],
-                                vec![Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                )],
-                            ),
-                        ],
-                    )],
-                ),
-            ],
-        ));
+        classify_at_pos.push(preproc_row_scan(&ctx));
     }
     classify_at_pos.extend(sections::operator_punct_pushes());
+
     let mut emit_stores = vec![Node::store(out_tok_types, t.clone(), Expr::var("tok_type"))];
     if !suppress_span_readback {
         emit_stores.push(Node::store(out_tok_starts, t.clone(), Expr::var("pos")));
@@ -1050,13 +558,15 @@ pub(super) fn c11_lexer_regular_sparse_impl(
             },
         );
     }
-    let haystack_element = match haystack_layout {
+    let haystack_element = match layout {
         SparseHaystackLayout::RawU8 => DataType::U8,
-        SparseHaystackLayout::PackedU32 | SparseHaystackLayout::ExpandedU32 => DataType::U32,
+        SparseHaystackLayout::Contiguous
+        | SparseHaystackLayout::PackedU32
+        | SparseHaystackLayout::ExpandedU32 => DataType::U32,
     };
-    let haystack_count = match haystack_layout {
+    let haystack_count = match layout {
         SparseHaystackLayout::PackedU32 => haystack_len.max(1).div_ceil(4).max(1),
-        SparseHaystackLayout::ExpandedU32 => haystack_len.max(1),
+        SparseHaystackLayout::Contiguous | SparseHaystackLayout::ExpandedU32 => haystack_len.max(1),
         SparseHaystackLayout::RawU8 => 0,
     };
     let mut buffers = vec![
@@ -1095,4 +605,42 @@ pub(super) fn c11_lexer_regular_sparse_impl(
     )
     .with_entry_op_id("vyre-libs::parsing::c_lexer_regular_sparse")
     .with_non_composable_with_self(true)
+}
+
+/// Extend a directive row to the next physical line end. The sparse scanners
+/// run after preprocessing, where line splices are already resolved, so this
+/// stops at the first newline rather than following a backslash continuation.
+fn preproc_row_scan(ctx: &ClassifyCtx<'_>) -> Node {
+    let start = Expr::add(Expr::var("pos"), Expr::u32(1));
+    Node::if_then(
+        Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_PREPROC)),
+        vec![
+            Node::let_bind("sparse_preproc_done", Expr::u32(0)),
+            Node::loop_for(
+                "sparse_scan_preproc",
+                start.clone(),
+                ctx.scan_bound(start, MAX_SPARSE_TOKEN_SCAN),
+                vec![Node::if_then(
+                    Expr::eq(Expr::var("sparse_preproc_done"), Expr::u32(0)),
+                    vec![
+                        Node::let_bind(
+                            "sparse_preproc_scan_byte",
+                            ctx.byte_at(Expr::var("sparse_scan_preproc")),
+                        ),
+                        Node::if_then_else(
+                            Expr::or(
+                                byte_eq(Expr::var("sparse_preproc_scan_byte"), b'\n'),
+                                byte_eq(Expr::var("sparse_preproc_scan_byte"), b'\r'),
+                            ),
+                            vec![Node::assign("sparse_preproc_done", Expr::u32(1))],
+                            vec![Node::assign(
+                                "tok_len",
+                                Expr::add(Expr::var("tok_len"), Expr::u32(1)),
+                            )],
+                        ),
+                    ],
+                )],
+            ),
+        ],
+    )
 }

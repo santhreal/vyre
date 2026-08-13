@@ -1,5 +1,33 @@
 use super::*;
 
+/// Shared field set for the entry points below: every one lexes into the same
+/// three token columns and differs only in haystack layout and which state
+/// replays it performs.
+fn spec<'a>(
+    haystack: &'a str,
+    out_tok_types: &'a str,
+    out_tok_starts: &'a str,
+    out_tok_lens: &'a str,
+    out_counts: &'a str,
+    haystack_len: u32,
+    layout: SparseHaystackLayout,
+) -> SparseLexerSpec<'a> {
+    SparseLexerSpec {
+        haystack,
+        out_tok_types,
+        out_tok_starts,
+        out_tok_lens,
+        out_counts,
+        haystack_len,
+        suppress_span_readback: false,
+        emit_flags: true,
+        layout,
+        track_preproc_lines: true,
+        track_literals: true,
+        block_totals: None,
+    }
+}
+
 pub fn c11_lexer_regular_sparse_packed_haystack_with_flags(
     haystack: &str,
     out_tok_types: &str,
@@ -8,20 +36,15 @@ pub fn c11_lexer_regular_sparse_packed_haystack_with_flags(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    c11_lexer_regular_sparse_impl(
+    c11_lexer_regular_sparse_impl(&spec(
         haystack,
         out_tok_types,
         out_tok_starts,
         out_tok_lens,
         out_counts,
         haystack_len,
-        false,
-        true,
         SparseHaystackLayout::PackedU32,
-        true,
-        true,
-        None,
-    )
+    ))
 }
 
 pub fn c11_lexer_regular_sparse_u8_haystack_with_flags(
@@ -32,20 +55,15 @@ pub fn c11_lexer_regular_sparse_u8_haystack_with_flags(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    c11_lexer_regular_sparse_impl(
+    c11_lexer_regular_sparse_impl(&spec(
         haystack,
         out_tok_types,
         out_tok_starts,
         out_tok_lens,
         out_counts,
         haystack_len,
-        false,
-        true,
         SparseHaystackLayout::RawU8,
-        true,
-        true,
-        None,
-    )
+    ))
 }
 
 pub fn c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives(
@@ -56,20 +74,18 @@ pub fn c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    c11_lexer_regular_sparse_impl(
-        haystack,
-        out_tok_types,
-        out_tok_starts,
-        out_tok_lens,
-        out_counts,
-        haystack_len,
-        false,
-        true,
-        SparseHaystackLayout::PackedU32,
-        false,
-        true,
-        None,
-    )
+    c11_lexer_regular_sparse_impl(&SparseLexerSpec {
+        track_preproc_lines: false,
+        ..spec(
+            haystack,
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_counts,
+            haystack_len,
+            SparseHaystackLayout::PackedU32,
+        )
+    })
 }
 
 pub fn c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives_no_backscan(
@@ -80,20 +96,19 @@ pub fn c11_lexer_regular_sparse_packed_haystack_with_flags_no_directives_no_back
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    c11_lexer_regular_sparse_impl(
-        haystack,
-        out_tok_types,
-        out_tok_starts,
-        out_tok_lens,
-        out_counts,
-        haystack_len,
-        false,
-        true,
-        SparseHaystackLayout::PackedU32,
-        false,
-        false,
-        None,
-    )
+    c11_lexer_regular_sparse_impl(&SparseLexerSpec {
+        track_preproc_lines: false,
+        track_literals: false,
+        ..spec(
+            haystack,
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_counts,
+            haystack_len,
+            SparseHaystackLayout::PackedU32,
+        )
+    })
 }
 
 pub fn c11_lexer_regular_sparse_no_directives_no_backscan(
@@ -104,20 +119,21 @@ pub fn c11_lexer_regular_sparse_no_directives_no_backscan(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    c11_lexer_regular_sparse_impl(
-        haystack,
-        out_tok_types,
-        out_tok_starts,
-        out_tok_lens,
-        out_counts,
-        haystack_len,
-        true,
-        false,
-        SparseHaystackLayout::ExpandedU32,
-        false,
-        false,
-        None,
-    )
+    c11_lexer_regular_sparse_impl(&SparseLexerSpec {
+        suppress_span_readback: true,
+        emit_flags: false,
+        track_preproc_lines: false,
+        track_literals: false,
+        ..spec(
+            haystack,
+            out_tok_types,
+            out_tok_starts,
+            out_tok_lens,
+            out_counts,
+            haystack_len,
+            SparseHaystackLayout::ExpandedU32,
+        )
+    })
 }
 
 #[cfg(test)]

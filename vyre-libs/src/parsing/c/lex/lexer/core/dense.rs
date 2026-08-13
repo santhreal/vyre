@@ -1,6 +1,16 @@
+use super::helpers::{
+    block_comment_scan, block_comment_start, char_start, classify_prologue, float_start,
+    identifier_scan, identifier_start, integer_start, line_comment_scan, line_comment_start,
+    number_scan, preproc_start, string_start, ClassifyCtx, ScanNames, SerialLexer,
+};
 use super::*;
 use crate::parsing::c::lex::lexer::sections;
 
+/// Full C11 serial lexer. This is the contiguous-haystack composition of the
+/// shared classification walk: it selects every stage in `helpers`, adds the
+/// three classifiers that only the full grammar has (directive-line splicing,
+/// encoding-prefixed literals, and escape-validating literal bodies), and runs
+/// them under the shared serial shell.
 pub fn c11_lexer(
     haystack: &str,
     out_tok_types: &str,
@@ -9,72 +19,105 @@ pub fn c11_lexer(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::InvocationId { axis: 0 };
+    let ctx = ClassifyCtx::contiguous(haystack, haystack_len);
+    let mut classify_at_pos = classify_prologue(&ctx, &Expr::var("pos"), false);
 
-    let next_byte = |offset: u32| {
-        Expr::select(
-            Expr::lt(
-                Expr::add(Expr::var("pos"), Expr::u32(offset)),
-                Expr::buf_len(haystack),
-            ),
-            byte_load(haystack, Expr::add(Expr::var("pos"), Expr::u32(offset))),
-            Expr::u32(0),
-        )
-    };
+    classify_at_pos.push(preproc_start("line_allows_directive"));
+    classify_at_pos.push(preproc_row_scan(&ctx));
 
-    let mut classify_at_pos = vec![
-        Node::let_bind("byte", byte_load(haystack, Expr::var("pos"))),
-        Node::let_bind(
-            "prev_byte",
-            Expr::select(
-                Expr::gt(Expr::var("pos"), Expr::u32(0)),
-                byte_load(
-                    haystack,
-                    Expr::saturating_sub(Expr::var("pos"), Expr::u32(1)),
-                ),
-                Expr::u32(0),
-            ),
-        ),
-        Node::let_bind("next_byte", next_byte(1)),
-        Node::let_bind("next2_byte", next_byte(2)),
-        Node::let_bind("emit", Expr::u32(0)),
-        Node::let_bind("tok_type", Expr::u32(TOK_WHITESPACE)),
-        Node::let_bind("tok_len", Expr::u32(1)),
-    ];
-
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'#'),
-            Expr::eq(Expr::var("line_allows_directive"), Expr::u32(1)),
-        ),
-        TOK_PREPROC,
-        Expr::u32(1),
+    classify_at_pos.push(line_comment_start());
+    classify_at_pos.push(line_comment_scan(
+        &ctx,
+        &ScanNames {
+            done: "comment_done",
+            scan: "scan_comment",
+        },
     ));
-    classify_at_pos.push(Node::if_then(
+
+    classify_at_pos.push(block_comment_start());
+    classify_at_pos.push(block_comment_scan(
+        &ctx,
+        &ScanNames {
+            done: "block_done",
+            scan: "scan_block_comment",
+        },
+    ));
+
+    classify_at_pos.push(prefixed_literal_start(b'"', TOK_STRING));
+    classify_at_pos.push(prefixed_literal_start(b'\'', TOK_CHAR));
+
+    classify_at_pos.push(identifier_start());
+    classify_at_pos.push(identifier_scan(
+        &ctx,
+        &ScanNames {
+            done: "ident_done",
+            scan: "scan_ident",
+        },
+        false,
+    ));
+
+    classify_at_pos.push(integer_start());
+    classify_at_pos.push(float_start());
+    classify_at_pos.push(number_scan(
+        &ctx,
+        &ScanNames {
+            done: "number_done",
+            scan: "scan_number",
+        },
+        "number_is_float",
+    ));
+
+    classify_at_pos.push(string_start());
+    classify_at_pos.push(char_start(false));
+    classify_at_pos.push(escaped_literal_scan(&ctx, haystack_len));
+
+    classify_at_pos.extend(sections::operator_punct_pushes());
+    classify_at_pos.extend(sections::store_token_and_advance_pushes(
+        haystack,
+        haystack_len,
+        out_tok_types,
+        out_tok_starts,
+        out_tok_lens,
+    ));
+
+    SerialLexer {
+        op_id: "vyre-libs::parsing::c_lexer",
+        haystack,
+        out_tok_types,
+        out_tok_starts,
+        out_tok_lens,
+        out_counts,
+        haystack_len,
+    }
+    .build(classify_at_pos)
+}
+
+/// Extend a directive row to its unspliced line end. Unlike the sparse preproc
+/// scan this honours backslash-newline splices, including the `\r\n` pair, so a
+/// multi-line directive stays one token.
+fn preproc_row_scan(ctx: &ClassifyCtx<'_>) -> Node {
+    let start = Expr::add(Expr::var("pos"), Expr::u32(1));
+    Node::if_then(
         Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_PREPROC)),
         vec![
             Node::let_bind("preproc_done", Expr::u32(0)),
             Node::let_bind("preproc_spliced_cr", Expr::u32(0)),
             Node::loop_for(
                 "scan_preproc",
-                Expr::add(Expr::var("pos"), Expr::u32(1)),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    MAX_PREPROC_SCAN,
-                ),
+                start.clone(),
+                ctx.scan_bound(start, MAX_PREPROC_SCAN),
                 vec![Node::if_then(
                     Expr::eq(Expr::var("preproc_done"), Expr::u32(0)),
                     vec![
-                        Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan_preproc"))),
+                        Node::let_bind("scan_byte", ctx.byte_at(Expr::var("scan_preproc"))),
                         Node::let_bind(
                             "scan_prev",
                             Expr::select(
                                 Expr::gt(Expr::var("scan_preproc"), Expr::var("pos")),
-                                byte_load(
-                                    haystack,
-                                    Expr::saturating_sub(Expr::var("scan_preproc"), Expr::u32(1)),
-                                ),
+                                ctx.byte_at(Expr::saturating_sub(
+                                    Expr::var("scan_preproc"),
+                                    Expr::u32(1),
+                                )),
                                 Expr::u32(0),
                             ),
                         ),
@@ -116,118 +159,13 @@ pub fn c11_lexer(
                 )],
             ),
         ],
-    ));
+    )
+}
 
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'/'),
-            byte_eq(Expr::var("next_byte"), b'/'),
-        ),
-        TOK_COMMENT,
-        Expr::u32(2),
-    ));
-    classify_at_pos.push(Node::if_then(
-        Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_COMMENT)),
-        vec![
-            Node::let_bind("comment_done", Expr::u32(0)),
-            Node::loop_for(
-                "scan_comment",
-                Expr::add(Expr::var("pos"), Expr::u32(2)),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::u32(2)),
-                    MAX_COMMENT_SCAN,
-                ),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("comment_done"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan_comment"))),
-                        Node::if_then_else(
-                            byte_eq(Expr::var("scan_byte"), b'\n'),
-                            vec![Node::assign("comment_done", Expr::u32(1))],
-                            vec![Node::assign(
-                                "tok_len",
-                                Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                            )],
-                        ),
-                    ],
-                )],
-            ),
-        ],
-    ));
-
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'/'),
-            byte_eq(Expr::var("next_byte"), b'*'),
-        ),
-        TOK_COMMENT,
-        Expr::u32(2),
-    ));
-    classify_at_pos.push(Node::if_then(
-        Expr::and(
-            Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_COMMENT)),
-            byte_eq(Expr::var("next_byte"), b'*'),
-        ),
-        vec![
-            Node::let_bind("block_done", Expr::u32(0)),
-            Node::loop_for(
-                "scan_block_comment",
-                Expr::add(Expr::var("pos"), Expr::u32(2)),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::u32(2)),
-                    MAX_BLOCK_COMMENT_SCAN,
-                ),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("block_done"), Expr::u32(0)),
-                    vec![
-                        Node::assign("tok_len", Expr::add(Expr::var("tok_len"), Expr::u32(1))),
-                        Node::let_bind(
-                            "scan_byte",
-                            byte_load(haystack, Expr::var("scan_block_comment")),
-                        ),
-                        Node::let_bind(
-                            "scan_next",
-                            Expr::select(
-                                Expr::lt(
-                                    Expr::add(Expr::var("scan_block_comment"), Expr::u32(1)),
-                                    Expr::buf_len(haystack),
-                                ),
-                                byte_load(
-                                    haystack,
-                                    Expr::add(Expr::var("scan_block_comment"), Expr::u32(1)),
-                                ),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::if_then(
-                            Expr::and(
-                                byte_eq(Expr::var("scan_byte"), b'*'),
-                                byte_eq(Expr::var("scan_next"), b'/'),
-                            ),
-                            vec![
-                                Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                ),
-                                Node::assign("block_done", Expr::u32(1)),
-                            ],
-                        ),
-                    ],
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("block_done"), Expr::u32(0)),
-                vec![Node::assign(
-                    "tok_type",
-                    Expr::u32(TOK_ERR_UNTERMINATED_COMMENT),
-                )],
-            ),
-        ],
-    ));
-
-    classify_at_pos.push(set_token(
+/// Open an encoding-prefixed literal: `L`, `u`, or `U` before `quote`, or the
+/// three-byte `u8` prefix.
+fn prefixed_literal_start(quote: u8, token: u32) -> Node {
+    set_token(
         Expr::or(
             Expr::and(
                 Expr::or(
@@ -237,17 +175,17 @@ pub fn c11_lexer(
                         byte_eq(Expr::var("byte"), b'U'),
                     ),
                 ),
-                byte_eq(Expr::var("next_byte"), b'"'),
+                byte_eq(Expr::var("next_byte"), quote),
             ),
             Expr::and(
                 Expr::and(
                     byte_eq(Expr::var("byte"), b'u'),
                     byte_eq(Expr::var("next_byte"), b'8'),
                 ),
-                byte_eq(Expr::var("next2_byte"), b'"'),
+                byte_eq(Expr::var("next2_byte"), quote),
             ),
         ),
-        TOK_STRING,
+        token,
         Expr::select(
             Expr::and(
                 byte_eq(Expr::var("byte"), b'u'),
@@ -256,229 +194,18 @@ pub fn c11_lexer(
             Expr::u32(3),
             Expr::u32(2),
         ),
-    ));
-    classify_at_pos.push(set_token(
-        Expr::or(
-            Expr::and(
-                Expr::or(
-                    byte_eq(Expr::var("byte"), b'L'),
-                    Expr::or(
-                        byte_eq(Expr::var("byte"), b'u'),
-                        byte_eq(Expr::var("byte"), b'U'),
-                    ),
-                ),
-                byte_eq(Expr::var("next_byte"), b'\''),
-            ),
-            Expr::and(
-                Expr::and(
-                    byte_eq(Expr::var("byte"), b'u'),
-                    byte_eq(Expr::var("next_byte"), b'8'),
-                ),
-                byte_eq(Expr::var("next2_byte"), b'\''),
-            ),
-        ),
-        TOK_CHAR,
-        Expr::select(
-            Expr::and(
-                byte_eq(Expr::var("byte"), b'u'),
-                byte_eq(Expr::var("next_byte"), b'8'),
-            ),
-            Expr::u32(3),
-            Expr::u32(2),
-        ),
-    ));
+    )
+}
 
-    classify_at_pos.push(set_token(
-        Expr::and(
-            is_ident_start(Expr::var("byte")),
-            Expr::not(is_ident_continue(Expr::var("prev_byte"))),
-        ),
-        TOK_IDENTIFIER,
+/// Extend a string or character literal past its encoding prefix to the
+/// matching quote, validating every escape sequence and reporting an
+/// unterminated or invalid-escape literal as a diagnostic token.
+fn escaped_literal_scan(ctx: &ClassifyCtx<'_>, haystack_len: u32) -> Node {
+    let literal_start = Expr::add(
+        Expr::add(Expr::var("pos"), Expr::var("literal_quote_offset")),
         Expr::u32(1),
-    ));
-    classify_at_pos.push(Node::if_then(
-        Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_IDENTIFIER)),
-        vec![
-            Node::let_bind("ident_done", Expr::u32(0)),
-            Node::loop_for(
-                "scan_ident",
-                Expr::add(Expr::var("pos"), Expr::u32(1)),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    MAX_IDENT_SCAN,
-                ),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("ident_done"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan_ident"))),
-                        Node::if_then_else(
-                            is_ident_continue(Expr::var("scan_byte")),
-                            vec![Node::assign(
-                                "tok_len",
-                                Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                            )],
-                            vec![Node::assign("ident_done", Expr::u32(1))],
-                        ),
-                    ],
-                )],
-            ),
-        ],
-    ));
-    classify_at_pos.push(set_token(
-        Expr::and(
-            is_digit(Expr::var("byte")),
-            Expr::not(is_ident_continue(Expr::var("prev_byte"))),
-        ),
-        TOK_INTEGER,
-        Expr::u32(1),
-    ));
-    classify_at_pos.push(set_token(
-        Expr::and(
-            byte_eq(Expr::var("byte"), b'.'),
-            is_digit(Expr::var("next_byte")),
-        ),
-        TOK_FLOAT,
-        Expr::u32(1),
-    ));
-    classify_at_pos.push(Node::if_then(
-        Expr::or(
-            Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_INTEGER)),
-            Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_FLOAT)),
-        ),
-        vec![
-            Node::let_bind("number_done", Expr::u32(0)),
-            Node::let_bind(
-                "number_is_float",
-                Expr::select(
-                    Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_FLOAT)),
-                    Expr::u32(1),
-                    Expr::u32(0),
-                ),
-            ),
-            Node::loop_for(
-                "scan_number",
-                Expr::add(Expr::var("pos"), Expr::u32(1)),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::u32(1)),
-                    MAX_NUMBER_SCAN,
-                ),
-                vec![Node::if_then(
-                    Expr::eq(Expr::var("number_done"), Expr::u32(0)),
-                    vec![
-                        Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan_number"))),
-                        Node::let_bind(
-                            "scan_prev",
-                            byte_load(
-                                haystack,
-                                Expr::saturating_sub(Expr::var("scan_number"), Expr::u32(1)),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "scan_next",
-                            Expr::select(
-                                Expr::lt(
-                                    Expr::add(Expr::var("scan_number"), Expr::u32(1)),
-                                    Expr::buf_len(haystack),
-                                ),
-                                byte_load(
-                                    haystack,
-                                    Expr::add(Expr::var("scan_number"), Expr::u32(1)),
-                                ),
-                                Expr::u32(0),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "scan_can_start_exponent",
-                            Expr::and(
-                                Expr::or(
-                                    byte_eq(Expr::var("scan_byte"), b'e'),
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_byte"), b'E'),
-                                        Expr::or(
-                                            byte_eq(Expr::var("scan_byte"), b'p'),
-                                            byte_eq(Expr::var("scan_byte"), b'P'),
-                                        ),
-                                    ),
-                                ),
-                                Expr::or(
-                                    is_digit(Expr::var("scan_next")),
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_next"), b'+'),
-                                        byte_eq(Expr::var("scan_next"), b'-'),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind(
-                            "scan_is_exponent_sign",
-                            Expr::and(
-                                Expr::or(
-                                    byte_eq(Expr::var("scan_byte"), b'+'),
-                                    byte_eq(Expr::var("scan_byte"), b'-'),
-                                ),
-                                Expr::or(
-                                    byte_eq(Expr::var("scan_prev"), b'e'),
-                                    Expr::or(
-                                        byte_eq(Expr::var("scan_prev"), b'E'),
-                                        Expr::or(
-                                            byte_eq(Expr::var("scan_prev"), b'p'),
-                                            byte_eq(Expr::var("scan_prev"), b'P'),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                        Node::let_bind("scan_is_float_dot", byte_eq(Expr::var("scan_byte"), b'.')),
-                        Node::let_bind(
-                            "scan_is_number_tail",
-                            Expr::or(
-                                is_ident_continue(Expr::var("scan_byte")),
-                                Expr::or(
-                                    Expr::var("scan_is_float_dot"),
-                                    Expr::var("scan_is_exponent_sign"),
-                                ),
-                            ),
-                        ),
-                        Node::if_then_else(
-                            Expr::var("scan_is_number_tail"),
-                            vec![
-                                Node::assign(
-                                    "tok_len",
-                                    Expr::add(Expr::var("tok_len"), Expr::u32(1)),
-                                ),
-                                Node::if_then(
-                                    Expr::or(
-                                        Expr::var("scan_is_float_dot"),
-                                        Expr::var("scan_can_start_exponent"),
-                                    ),
-                                    vec![Node::assign("number_is_float", Expr::u32(1))],
-                                ),
-                            ],
-                            vec![Node::assign("number_done", Expr::u32(1))],
-                        ),
-                    ],
-                )],
-            ),
-            Node::if_then(
-                Expr::eq(Expr::var("number_is_float"), Expr::u32(1)),
-                vec![Node::assign("tok_type", Expr::u32(TOK_FLOAT))],
-            ),
-        ],
-    ));
-
-    classify_at_pos.push(set_token(
-        byte_eq(Expr::var("byte"), b'"'),
-        TOK_STRING,
-        Expr::u32(1),
-    ));
-    classify_at_pos.push(set_token(
-        byte_eq(Expr::var("byte"), b'\''),
-        TOK_CHAR,
-        Expr::u32(1),
-    ));
-    classify_at_pos.push(Node::if_then(
+    );
+    Node::if_then(
         Expr::or(
             Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_STRING)),
             Expr::eq(Expr::var("tok_type"), Expr::u32(TOK_CHAR)),
@@ -504,10 +231,10 @@ pub fn c11_lexer(
             ),
             Node::let_bind(
                 "quote",
-                byte_load(
-                    haystack,
-                    Expr::add(Expr::var("pos"), Expr::var("literal_quote_offset")),
-                ),
+                ctx.byte_at(Expr::add(
+                    Expr::var("pos"),
+                    Expr::var("literal_quote_offset"),
+                )),
             ),
             Node::let_bind("literal_done", Expr::u32(0)),
             Node::let_bind("escaped", Expr::u32(0)),
@@ -515,29 +242,19 @@ pub fn c11_lexer(
             Node::let_bind("invalid_escape", Expr::u32(0)),
             Node::loop_for(
                 "scan_literal",
-                Expr::add(
-                    Expr::add(Expr::var("pos"), Expr::var("literal_quote_offset")),
-                    Expr::u32(1),
-                ),
-                scan_upper_bound_with_cap(
-                    haystack,
-                    Expr::add(
-                        Expr::add(Expr::var("pos"), Expr::var("literal_quote_offset")),
-                        Expr::u32(1),
-                    ),
-                    MAX_LITERAL_SCAN,
-                ),
+                literal_start.clone(),
+                ctx.scan_bound(literal_start, MAX_LITERAL_SCAN),
                 vec![Node::if_then(
                     Expr::eq(Expr::var("literal_done"), Expr::u32(0)),
                     vec![
                         Node::assign("tok_len", Expr::add(Expr::var("tok_len"), Expr::u32(1))),
-                        Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan_literal"))),
+                        Node::let_bind("scan_byte", ctx.byte_at(Expr::var("scan_literal"))),
                         Node::if_then_else(
                             Expr::eq(Expr::var("escaped"), Expr::u32(1)),
                             vec![
                                 Node::if_then(
                                     Expr::not(is_valid_escape_byte(
-                                        haystack,
+                                        ctx.haystack(),
                                         Expr::var("scan_literal"),
                                         Expr::var("scan_byte"),
                                         haystack_len,
@@ -591,61 +308,5 @@ pub fn c11_lexer(
                 vec![Node::assign("tok_type", Expr::u32(TOK_ERR_INVALID_ESCAPE))],
             ),
         ],
-    ));
-
-    classify_at_pos.extend(sections::operator_punct_pushes());
-    classify_at_pos.extend(sections::store_token_and_advance_pushes(
-        haystack,
-        haystack_len,
-        out_tok_types,
-        out_tok_starts,
-        out_tok_lens,
-    ));
-
-    Program::wrapped(
-        vec![
-            BufferDecl::storage(haystack, 0, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(haystack_len.max(1)),
-            BufferDecl::storage(out_tok_types, 1, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.max(1)),
-            BufferDecl::storage(out_tok_starts, 2, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.max(1)),
-            BufferDecl::storage(out_tok_lens, 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(haystack_len.max(1)),
-            BufferDecl::storage(out_counts, 4, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(1),
-        ],
-        [256, 1, 1],
-        {
-            let entry_body = vec![Node::if_then(
-                Expr::eq(t.clone(), Expr::u32(0)),
-                vec![
-                    Node::let_bind("cursor", Expr::u32(0)),
-                    Node::let_bind("line_allows_directive", Expr::u32(1)),
-                    Node::let_bind("tok_idx", Expr::u32(0)),
-                    Node::loop_for(
-                        "token_iter",
-                        Expr::u32(0),
-                        Expr::buf_len(haystack),
-                        vec![Node::if_then(
-                            Expr::lt(Expr::var("cursor"), Expr::buf_len(haystack)),
-                            {
-                                let mut body = vec![Node::let_bind("pos", Expr::var("cursor"))];
-                                body.push(child_phase(
-                                    "vyre-libs::parsing::c_lexer",
-                                    "vyre-libs::parsing::c_lexer::classify_at_pos",
-                                    classify_at_pos,
-                                ));
-                                body
-                            },
-                        )],
-                    ),
-                    Node::store(out_counts, Expr::u32(0), Expr::var("tok_idx")),
-                ],
-            )];
-            vec![wrap_anonymous("vyre-libs::parsing::c_lexer", entry_body)]
-        },
     )
-    .with_entry_op_id("vyre-libs::parsing::c_lexer")
-    .with_non_composable_with_self(true)
 }
