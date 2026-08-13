@@ -47,40 +47,6 @@ fn is_sorted_unique_u32(values: &[u32]) -> bool {
 }
 
 impl ControlSnapshot {
-    /// Decode a structured control-buffer view.
-    ///
-    /// # Panics
-    ///
-    /// If the control buffer is missing any fixed control word.
-    ///
-    /// This used to answer `Self::default()` on a decode failure, which hands
-    /// the caller a snapshot reading zero done-count, zero epoch and no
-    /// metrics and is indistinguishable from a healthy idle kernel. That is
-    /// the silent fallback [`Self::decode_into`] already refuses to make, and
-    /// the two shims must not disagree about what a bad buffer means. Callers
-    /// that can handle the error use [`Self::try_decode`].
-    #[must_use]
-    #[cfg(test)]
-    pub fn decode(control_bytes: &[u8]) -> Self {
-        match Self::try_decode(control_bytes) {
-            Ok(snapshot) => snapshot,
-            Err(error) => {
-                panic!("vyre-runtime telemetry control-buffer decode failed: {error}")
-            }
-        }
-    }
-
-    /// Decode a structured control-buffer view into caller-owned storage.
-    #[cfg(test)]
-    pub fn decode_into(control_bytes: &[u8], out: &mut Self) {
-        // Resetting to default on decode failure silently reports zeroed
-        // telemetry as if it were a real reading (Law 10). Fail loud; callers
-        // use try_decode_into.
-        if let Err(error) = Self::try_decode_into(control_bytes, out) {
-            panic!("vyre-runtime telemetry control-buffer decode failed: {error}");
-        }
-    }
-
     /// Strictly decode a structured control-buffer view into owned storage.
     ///
     /// # Errors
@@ -444,21 +410,6 @@ impl RingTelemetry {
     }
 
     /// Active slots matching a given opcode into caller-owned storage.
-    #[cfg(test)]
-    pub fn active_slots_for_opcode_into<'a>(
-        &'a self,
-        opcode: u32,
-        out: &mut Vec<&'a RingSlotSnapshot>,
-    ) {
-        // Clearing to empty on failure silently reports "no active slots" when
-        // the readback actually failed (Law 10). Fail loud; callers use
-        // try_active_slots_for_opcode_into.
-        if let Err(error) = self.try_active_slots_for_opcode_into(opcode, out) {
-            panic!("vyre-runtime telemetry active-slots readback failed: {error}");
-        }
-    }
-
-    /// Active slots matching a given opcode into caller-owned storage.
     ///
     /// # Errors
     ///
@@ -493,17 +444,6 @@ impl RingTelemetry {
         let mut out = Vec::default();
         self.try_active_windows_into(&mut out)?;
         Ok(out)
-    }
-
-    /// Unfinished ticketed windows into caller-owned storage.
-    #[cfg(test)]
-    pub fn active_windows_into<'a>(&'a self, out: &mut Vec<&'a WindowTelemetry>) {
-        // Clearing to empty on failure silently reports "no active windows"
-        // when the readback actually failed (Law 10). Fail loud; callers use
-        // try_active_windows_into.
-        if let Err(error) = self.try_active_windows_into(out) {
-            panic!("vyre-runtime telemetry active-windows readback failed: {error}");
-        }
     }
 
     /// Unfinished ticketed windows into caller-owned storage.

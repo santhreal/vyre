@@ -31,13 +31,46 @@ fn strict_decode_rejects_misaligned_control_snapshot() {
     assert!(matches!(err, PipelineError::Backend(_)));
 }
 
+/// The control decode error path is the only thing standing between a truncated
+/// device readback and a snapshot that reads as a healthy idle kernel, so the
+/// error must both name the malformed buffer and carry the corrective action.
 #[test]
 fn control_try_decode_rejects_short_snapshot_without_panic() {
     let err = ControlSnapshot::try_decode(&[])
         .expect_err("Fix: strict control telemetry decode must reject missing control words");
+    let message = err.to_string();
     assert!(
-        err.to_string().contains("control snapshot"),
+        message.contains("control snapshot"),
         "Fix: strict control decode errors must explain the malformed control buffer: {err}"
+    );
+    assert!(
+        message.contains("Fix: capture the full control buffer"),
+        "Fix: strict control decode errors must carry the corrective action: {err}"
+    );
+}
+
+/// `try_decode_into` is the caller-owned-storage twin, and it must reject the
+/// same truncated buffer with the same corrective action instead of leaving a
+/// half-written snapshot behind.
+#[test]
+fn control_try_decode_into_rejects_short_snapshot_and_leaves_output_untouched() {
+    let mut control = ResidentWorkQueue::try_encode_control(false, 3, 5).unwrap();
+    let done_count_offset = (control::DONE_COUNT as usize) * 4;
+    control[done_count_offset..done_count_offset + 4].copy_from_slice(&41u32.to_le_bytes());
+    let mut out = ControlSnapshot::try_decode(&control)
+        .expect("Fix: a well-formed control buffer must decode");
+    assert_eq!(out.done_count, 41);
+
+    let err = ControlSnapshot::try_decode_into(&[], &mut out)
+        .expect_err("Fix: strict control telemetry decode_into must reject missing control words");
+    assert!(
+        err.to_string()
+            .contains("Fix: capture the full control buffer"),
+        "Fix: strict control decode_into errors must carry the corrective action: {err}"
+    );
+    assert_eq!(
+        out.done_count, 41,
+        "Fix: a rejected control buffer must not overwrite the caller's previous snapshot"
     );
 }
 
