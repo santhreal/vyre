@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre::ir::Program;
 use vyre_driver::TimedDispatchResult;
 use vyre_primitives::reduce::{sum, workgroup_tree};
@@ -79,8 +79,7 @@ impl BenchCase for ReduceSumBench {
         let baseline_started = std::time::Instant::now();
         let small = prepare_size(SMALL_COUNT);
         let large = prepare_size(LARGE_COUNT);
-        let baseline_wall_ns =
-            u64::try_from(baseline_started.elapsed().as_nanos()).unwrap_or(u64::MAX);
+        let baseline_wall_ns = elapsed_ns(baseline_started);
 
         Ok(Box::new(ReduceSumPrepared {
             small,

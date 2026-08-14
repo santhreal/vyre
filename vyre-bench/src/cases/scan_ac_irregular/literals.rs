@@ -7,6 +7,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
+use crate::api::metric::elapsed_ns;
 use crate::api::resident::{input_bytes_total, u32_counter_reset_program, ResidentInputSet};
 use crate::api::suite::SuiteKind;
 use vyre_foundation::ir::Program;
@@ -245,10 +246,7 @@ pub(super) fn prepare_scan_ac_irregular(
 
     let baseline_start = std::time::Instant::now();
     let expected_matches = cpu_aho_overlapping_matches(PATTERNS, &haystack)?;
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
     if expected_matches.len() > MAX_MATCHES as usize {
         return Err(BenchError::EnvironmentInvalid(format!(
             "irregular AC scan fixture produced {} matches, above MAX_MATCHES={MAX_MATCHES}. Fix: lower fixture density or raise output capacity.",

@@ -5,6 +5,7 @@
 //! [`crate::cases::queue_traverse_plan`]. What is this case's own: the fixture,
 //! the CPU oracle, the split threshold it holds rows to, and its metric points.
 
+use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{
@@ -154,10 +155,7 @@ pub(super) fn prepare_skewed_csr_queue_materialize_step(
 
     let baseline_start = Instant::now();
     let oracle = skewed_csr_cpu_oracle(&fixture);
-    let baseline_wall_ns = baseline_start
-        .elapsed()
-        .as_nanos()
-        .min(u128::from(u64::MAX)) as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.output_words_set = oracle.output_words_set;

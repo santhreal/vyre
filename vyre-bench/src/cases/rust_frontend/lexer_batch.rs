@@ -6,7 +6,7 @@ use super::rust_source_words;
 use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchLayer, BenchRun, DeterminismClass, WorkloadClass,
 };
-use crate::api::metric::MetricPoint;
+use crate::api::metric::{elapsed_ns, MetricPoint};
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use vyre_foundation::ir::Program;
 use vyre_frontend_rust::lex::lexer::cpu_lexer::lex as lex_cpu;
@@ -110,7 +110,7 @@ fn build_case(_ctx: &mut BenchContext) -> Result<RustLexerBatchPrepared, BenchEr
     let baseline_start = std::time::Instant::now();
     let (baseline_outputs, token_count) =
         rust_lexer_batch_baseline_outputs(&sources, layout.token_stride)?;
-    let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+    let baseline_wall_ns = elapsed_ns(baseline_start);
 
     Ok(RustLexerBatchPrepared {
         lex: LexColumns {

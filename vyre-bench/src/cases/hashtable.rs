@@ -9,15 +9,15 @@
 //! random-access memory latency via massive parallelism.
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
-use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
-use crate::cases::reference_sample::timed_reference;
+use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
+use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use hashbrown::HashMap;
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
@@ -25,13 +25,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 const KEY_COUNT: u32 = 10_000_000;
 const PROBE_COUNT: u32 = 1_000_000;
 const TABLE_SIZE: u32 = 16_777_216; // 2^24, load factor ~0.6
-
-const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
 
 pub struct HashtableProbe;
 
@@ -50,21 +43,12 @@ impl BenchCase for HashtableProbe {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Hashtable Probe 10M".to_string(),
-            description: "Open-addressing hash table: probe 1M random lookups against a prebuilt 10M-key table"
-                .to_string(),
-            tags: vec![
-                "honest".to_string(),
-                "latency-bound".to_string(),
-                "random-access".to_string(),
-            ],
-            layer: BenchLayer::Honest,
-            workload: WorkloadClass::Honest,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
+        honest_metadata(
+            self.id(),
+            "Hashtable Probe 10M",
+            "Open-addressing hash table: probe 1M random lookups against a prebuilt 10M-key table",
+            &["honest", "latency-bound", "random-access"],
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {
@@ -72,13 +56,7 @@ impl BenchCase for HashtableProbe {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some((TABLE_SIZE as u64) * 8 + (PROBE_COUNT as u64) * 4),
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
+        honest_gpu_requirements((TABLE_SIZE as u64) * 8 + (PROBE_COUNT as u64) * 4)
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -229,11 +207,7 @@ impl BenchCase for HashtableProbe {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<HashtableProbePrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed("hashtable prepared payload type mismatch".to_string())
-            })?;
+        let prepared = prepared_as::<HashtableProbePrepared>(prepared, "hashtable")?;
 
         let dispatch = dispatch_program_timed(
             ctx,
@@ -244,7 +218,6 @@ impl BenchCase for HashtableProbe {
         )?;
         let resident_used = dispatch.resident_used;
         let timed = dispatch.timed;
-        let outputs = timed.outputs;
 
         let (cpu_results, elapsed_ref) = timed_reference(|| {
             prepared
@@ -260,30 +233,19 @@ impl BenchCase for HashtableProbe {
                 })
                 .collect::<Vec<u8>>()
         });
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting =
-            transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
+        let input_bytes = prepared.input_bytes_total;
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                ..Default::default()
+        Ok(run_against_reference(
+            timed,
+            input_bytes,
+            transfer_accounting(input_bytes, output_bytes, resident_used),
+            ReferenceSample {
+                outputs: vec![cpu_results],
+                wall_ns: elapsed_ref,
+                input_bytes,
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(elapsed_ref),
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(cpu_results.len() as u64),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![cpu_results]),
-        })
+        ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {

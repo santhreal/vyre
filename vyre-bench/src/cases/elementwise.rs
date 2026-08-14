@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness,
     DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{input_bytes_total, transfer_accounting, ResidentInputSet};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -83,8 +83,7 @@ impl BenchCase for ElementwiseBench {
                 &mut baseline_output,
             );
         }
-        let baseline_wall_ns =
-            (baseline_start.elapsed().as_nanos() / u128::from(CPU_BASELINE_REPEATS)) as u64;
+        let baseline_wall_ns = elapsed_ns(baseline_start) / u64::from(CPU_BASELINE_REPEATS);
 
         Ok(Box::new(ElementwisePrepared {
             program: prog,

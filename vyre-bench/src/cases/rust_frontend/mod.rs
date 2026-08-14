@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::cases::mix32;
 use vyre_frontend_rust::pipeline::{RustPipeline, RustPipelineConfig};
 
@@ -93,7 +93,7 @@ impl BenchCase for RustRangeLoopPipeline {
         let input = i32s_to_bytes(&input_values);
         let baseline_start = std::time::Instant::now();
         let baseline = cpu_range_loop_batch(&input_values);
-        let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+        let baseline_wall_ns = elapsed_ns(baseline_start);
         Ok(Box::new(RustRangePrepared {
             source: RUST_RANGE_SOURCE,
             program,
@@ -136,7 +136,7 @@ impl BenchCase for RustRangeLoopPipeline {
 
         let lower_start = std::time::Instant::now();
         let lowered = lower_rust_source(prepared.source)?;
-        let lower_ns = lower_start.elapsed().as_nanos() as u64;
+        let lower_ns = elapsed_ns(lower_start);
 
         if lowered.fingerprint() != prepared.program.fingerprint() {
             return Err(BenchError::ExecutionFailed(

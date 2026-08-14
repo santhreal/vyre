@@ -11,7 +11,7 @@ use crate::api::case::{
     BenchLayer, BenchMetadata, BenchRun, Correctness, DeterminismClass, PerformanceContract,
     PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::cases::harness::ContractDescription;
 use vyre_foundation::ir::Program;
 
@@ -169,7 +169,7 @@ impl BenchCase for MicroCase {
 
         let started = std::time::Instant::now();
         let reference_outputs = (self.reference)(&inputs);
-        let reference_wall_ns = started.elapsed().as_nanos() as u64;
+        let reference_wall_ns = elapsed_ns(started);
         let reference_output_bytes = reference_outputs.iter().map(Vec::len).sum::<usize>() as u64;
 
         Ok(BenchRun {

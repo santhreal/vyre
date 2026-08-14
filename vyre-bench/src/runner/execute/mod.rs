@@ -11,6 +11,7 @@ mod stats;
 
 pub use report::print_report;
 
+use crate::api::metric::elapsed_ns;
 use run_case::run_case;
 
 use crate::api::case::{BenchContext, BenchError, Correctness, PerformanceContract};
@@ -277,7 +278,7 @@ pub fn execute_suite(
             total_cases: selected_cases.len(),
             passed,
             failed,
-            total_time_ns: started.elapsed().as_nanos() as u64,
+            total_time_ns: elapsed_ns(started),
             cache_hit_rate,
         },
         blockers,

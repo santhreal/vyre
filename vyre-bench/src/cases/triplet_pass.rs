@@ -8,7 +8,7 @@
 //! per-lane function and the reported metric points differ.
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
@@ -96,7 +96,7 @@ pub(crate) fn prepare_triplet(
         .zip(third.par_iter())
         .map(|((&a, &b), &c)| lane(a, b, c))
         .collect();
-    let baseline_wall_ns = u64::try_from(baseline_start.elapsed().as_nanos()).unwrap_or(u64::MAX);
+    let baseline_wall_ns = elapsed_ns(baseline_start);
 
     let static_metrics = metrics(&baseline_words);
     let baseline_output = u32_bytes(&baseline_words);

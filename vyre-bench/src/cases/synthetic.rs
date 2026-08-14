@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::BenchMetrics;
+use crate::api::metric::{elapsed_ns, BenchMetrics};
 use crate::api::suite::SuiteKind;
 use std::hint::black_box;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -59,7 +59,7 @@ impl BenchCase for FlakyCase {
             baseline_acc = baseline_acc.wrapping_add(black_box(i.rotate_left((i % 31) as u32)));
         }
         black_box(baseline_acc);
-        let baseline_wall_ns = baseline_start.elapsed().as_nanos() as u64;
+        let baseline_wall_ns = elapsed_ns(baseline_start);
 
         let started = Instant::now();
         let mut acc = 0u64;
@@ -74,7 +74,7 @@ impl BenchCase for FlakyCase {
             acc = acc.wrapping_add(black_box(i.rotate_left((i % 31) as u32)));
         }
         black_box(acc);
-        let wall_ns = started.elapsed().as_nanos() as u64;
+        let wall_ns = elapsed_ns(started);
 
         Ok(BenchRun {
             metrics: BenchMetrics {

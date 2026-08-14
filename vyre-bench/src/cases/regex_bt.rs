@@ -5,14 +5,15 @@
 //! by evaluating all NFA states simultaneously.
 
 use crate::api::case::{
-    BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
-    BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
+    prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchMetadata, BenchRequirements,
+    BenchRun, Correctness, PerformanceContract, PreparedCase,
 };
-use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
 use crate::api::suite::SuiteKind;
+use crate::cases::honest_case::{honest_gpu_requirements, honest_metadata, HONEST_SUITES};
+use crate::cases::reference_sample::{run_against_reference, timed_reference, ReferenceSample};
 use pcre2::bytes::{Regex, RegexBuilder};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -21,13 +22,6 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 const INPUT_LEN: u32 = 256; // words (1024 bytes)
 const INSTANCE_COUNT: u32 = 4096;
 const TOTAL_WORDS: u32 = INPUT_LEN * INSTANCE_COUNT;
-
-const HONEST_SUITES: &[SuiteKind] = &[
-    SuiteKind::Honest,
-    SuiteKind::Deep,
-    SuiteKind::Release,
-    SuiteKind::Smoke,
-];
 
 pub struct RegexBacktracking;
 
@@ -46,21 +40,12 @@ impl BenchCase for RegexBacktracking {
     }
 
     fn metadata(&self) -> BenchMetadata {
-        BenchMetadata {
-            id: self.id(),
-            name: "Regex Backtracking Adversarial".to_string(),
-            description: "Catastrophic backtracking: (a+)+b pattern on hostile 'aaaa...' input"
-                .to_string(),
-            tags: vec![
-                "honest".to_string(),
-                "regex".to_string(),
-                "adversarial".to_string(),
-            ],
-            layer: BenchLayer::Honest,
-            workload: WorkloadClass::Honest,
-            determinism: DeterminismClass::Deterministic,
-            owner_crate: "vyre-bench".to_string(),
-        }
+        honest_metadata(
+            self.id(),
+            "Regex Backtracking Adversarial",
+            "Catastrophic backtracking: (a+)+b pattern on hostile 'aaaa...' input",
+            &["honest", "regex", "adversarial"],
+        )
     }
 
     fn suites(&self) -> &'static [SuiteKind] {
@@ -68,13 +53,7 @@ impl BenchCase for RegexBacktracking {
     }
 
     fn requirements(&self) -> BenchRequirements {
-        BenchRequirements {
-            needs_gpu: true,
-            needs_network: false,
-            min_vram_bytes: Some((TOTAL_WORDS as u64 + INSTANCE_COUNT as u64) * 4),
-            min_input_bytes: None,
-            feature_set: vec![],
-        }
+        honest_gpu_requirements((TOTAL_WORDS as u64 + INSTANCE_COUNT as u64) * 4)
     }
 
     fn performance_contract(&self) -> Option<PerformanceContract> {
@@ -266,13 +245,7 @@ impl BenchCase for RegexBacktracking {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let prepared = prepared
-            .downcast_ref::<RegexBacktrackingPrepared>()
-            .ok_or_else(|| {
-                BenchError::ExecutionFailed(
-                    "regex backtracking prepared payload type mismatch".to_string(),
-                )
-            })?;
+        let prepared = prepared_as::<RegexBacktrackingPrepared>(prepared, "regex backtracking")?;
 
         let dispatch = dispatch_program_timed(
             ctx,
@@ -283,41 +256,30 @@ impl BenchCase for RegexBacktracking {
         )?;
         let resident_used = dispatch.resident_used;
         let timed = dispatch.timed;
-        let outputs = timed.outputs;
 
         // CPU baseline: PCRE2 backtracking engine on the exact same hostile corpus.
-        let start_ref = std::time::Instant::now();
-        let cpu_results = cpu_pcre2_scan(
-            &prepared.regex,
-            &prepared.input_bytes,
-            INSTANCE_COUNT as usize,
-            INPUT_LEN as usize * 4,
-        )?;
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
-        let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-        let accounting =
-            transfer_accounting(prepared.input_bytes_total, output_bytes, resident_used);
+        let (cpu_results, elapsed_ref) = timed_reference(|| {
+            cpu_pcre2_scan(
+                &prepared.regex,
+                &prepared.input_bytes,
+                INSTANCE_COUNT as usize,
+                INPUT_LEN as usize * 4,
+            )
+        });
+        let cpu_results = cpu_results?;
+        let input_bytes = prepared.input_bytes_total;
+        let output_bytes = timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
 
-        Ok(BenchRun {
-            metrics: BenchMetrics {
-                wall_ns: Some(timed.wall_ns),
-                dispatch_ns: timed.device_ns,
-                input_bytes: Some(prepared.input_bytes_total),
-                output_bytes: Some(output_bytes),
-                bytes_read: Some(accounting.bytes_read),
-                bytes_written: Some(accounting.bytes_written),
-                bytes_touched: Some(accounting.bytes_touched),
-                ..Default::default()
+        Ok(run_against_reference(
+            timed,
+            input_bytes,
+            transfer_accounting(input_bytes, output_bytes, resident_used),
+            ReferenceSample {
+                outputs: vec![cpu_results],
+                wall_ns: elapsed_ref,
+                input_bytes: prepared.input_bytes.len() as u64,
             },
-            baseline_metrics: Some(BenchMetrics {
-                wall_ns: Some(elapsed_ref),
-                input_bytes: Some(prepared.input_bytes.len() as u64),
-                output_bytes: Some(cpu_results.len() as u64),
-                ..Default::default()
-            }),
-            outputs,
-            baseline_outputs: Some(vec![cpu_results]),
-        })
+        ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {

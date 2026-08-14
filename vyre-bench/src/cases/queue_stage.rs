@@ -1,5 +1,6 @@
 //! Shared host-dispatch bookkeeping for queue-based benchmark stages.
 
+use crate::api::metric::elapsed_ns;
 use std::time::Instant;
 
 use crate::api::case::{BenchContext, BenchError};
@@ -221,7 +222,7 @@ pub(crate) fn dispatch_resident_queue_sequence(
         )
         .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
     }
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
     let bytes_written = frontier_output.len() as u64;
     Ok(QueueSequenceRun {
         outputs: vec![frontier_output],
@@ -656,7 +657,7 @@ pub(crate) fn dispatch_host_queue_sequence(
                 None,
             )
         };
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let wall_ns = elapsed_ns(started);
     let bytes_read = queue_stage_input_bytes(&reset.inputs)
         .saturating_add(queue_stage_input_bytes(&queue.inputs))
         .saturating_add(
@@ -864,7 +865,7 @@ pub(crate) fn dispatch_resident_queue_closure_sequence(
 
     Ok(QueueClosureSequenceRun {
         outputs: vec![accumulator_output],
-        wall_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
+        wall_ns: elapsed_ns(started),
     })
 }
 

@@ -19,7 +19,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PerformanceContract, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::MetricPoint;
+use crate::api::metric::{elapsed_ns, MetricPoint};
 use crate::api::resident::{dispatch_program_timed, input_bytes_total, ResidentInputSet};
 use vyre::ir::Program;
 
@@ -301,7 +301,7 @@ impl BenchCase for SyntheticCountWorkload {
                 vec![baseline_row.repeat(STRING_BITMAP_RESIDENT_BATCH_SIZE)]
             }
         };
-        let baseline_wall = baseline_start.elapsed().as_nanos() as u64;
+        let baseline_wall = elapsed_ns(baseline_start);
         let output_bytes = timed
             .outputs
             .iter()

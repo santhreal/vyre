@@ -2,7 +2,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, transfer_accounting, ResidentInputSet,
 };
@@ -167,7 +167,7 @@ fn prepare_graph_frontier_case(
     let active_vertices = active_frontier_count(&inputs[0]);
     let start_ref = std::time::Instant::now();
     let baseline_output = graph_frontier_cpu_oracle(&inputs[0], &inputs[1]);
-    let baseline_wall_ns = start_ref.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
+    let baseline_wall_ns = elapsed_ns(start_ref);
     let resident = ctx
         .map(|ctx| {
             ResidentInputSet::upload_with_zeroed_outputs_optional(

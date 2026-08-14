@@ -4,7 +4,7 @@ use crate::api::case::{
     BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata, BenchRequirements,
     BenchRun, Correctness, DeterminismClass, PreparedCase, WorkloadClass,
 };
-use crate::api::metric::{BenchMetrics, MetricPoint};
+use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use vyre_runtime::uring::{NativeReadPath, NvmeGpuIngestTelemetry};
 
 /// Release-scale zero-copy ingest accounting benchmark.
@@ -289,7 +289,7 @@ fn run_ingest_accounting(prepared: &PreparedCase) -> Result<BenchRun, BenchError
     validate_zero_copy_ingest_telemetry(spec, telemetry)
         .map_err(BenchError::CorrectnessViolation)?;
     let custom = ingest_telemetry_metric_points(spec, telemetry);
-    let wall_ns = start.elapsed().as_nanos() as u64;
+    let wall_ns = elapsed_ns(start);
     let encoded = encode_ingest_telemetry(telemetry);
 
     Ok(BenchRun {
