@@ -363,25 +363,14 @@ pub fn build_validate_limits_program(expr_count: u32) -> Program {
 mod tests {
     use super::*;
 
-    struct ValidateDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
+    use super::super::arena_kernel::{FixedOutputDispatcher, GridExpectation};
 
-    impl ProgramDispatcher for ValidateDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 3 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: validate test dispatcher expected 3 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
+    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
+        FixedOutputDispatcher {
+            pass: "validate",
+            expected_inputs: 3,
+            grid: GridExpectation::SingleWorkgroup,
+            outputs,
         }
     }
 
@@ -396,9 +385,7 @@ mod tests {
 
     #[test]
     fn validate_limits_decodes_exact_violations() {
-        let dispatcher = ValidateDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1, 0])],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1, 0])]);
         let program = Program::wrapped(
             Vec::new(),
             [1, 1, 1],
@@ -410,12 +397,10 @@ mod tests {
 
     #[test]
     fn validate_limits_rejects_extra_outputs() {
-        let dispatcher = ValidateDispatcher {
-            outputs: vec![
-                u32_slice_to_le_bytes(&[0, 0]),
-                u32_slice_to_le_bytes(&[0, 0]),
-            ],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[0, 0]),
+            u32_slice_to_le_bytes(&[0, 0]),
+        ]);
         let program = Program::wrapped(
             Vec::new(),
             [1, 1, 1],
@@ -431,9 +416,7 @@ mod tests {
 
     #[test]
     fn validate_limits_rejects_trailing_violation_bytes() {
-        let dispatcher = ValidateDispatcher {
-            outputs: vec![vec![0, 0, 0, 0, 0, 0, 0, 0, 1]],
-        };
+        let dispatcher = dispatcher(vec![vec![0, 0, 0, 0, 0, 0, 0, 0, 1]]);
         let program = Program::wrapped(
             Vec::new(),
             [1, 1, 1],

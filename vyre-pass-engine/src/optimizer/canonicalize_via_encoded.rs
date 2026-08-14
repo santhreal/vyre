@@ -244,35 +244,22 @@ mod tests {
     use super::*;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
-    struct CanonicalizeDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
+    use super::super::arena_kernel::{
+        single_lit_u32_arena as one_expr_arena, FixedOutputDispatcher, GridExpectation,
+    };
 
-    impl ProgramDispatcher for CanonicalizeDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            assert_eq!(grid_override, Some([1, 1, 1]));
-            if inputs.len() != 5 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: canonicalize test dispatcher expected 5 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
+    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
+        FixedOutputDispatcher {
+            pass: "canonicalize",
+            expected_inputs: 5,
+            grid: GridExpectation::SingleWorkgroup,
+            outputs,
         }
     }
 
-    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
-
     #[test]
     fn kernel_into_decodes_exact_swap_mask_into_reused_buffer() {
-        let dispatcher = CanonicalizeDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1])],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1])]);
         let arena = one_expr_arena();
         let mut swap_mask = Vec::with_capacity(4);
         let ptr = swap_mask.as_ptr();
@@ -284,9 +271,7 @@ mod tests {
 
     #[test]
     fn kernel_with_scratch_reuses_dispatch_and_output_storage() {
-        let dispatcher = CanonicalizeDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1])],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1])]);
         let arena = one_expr_arena();
         let mut scratch = CanonicalizeKernelScratch::default();
         let mut swap_mask = Vec::with_capacity(1);
@@ -320,9 +305,10 @@ mod tests {
 
     #[test]
     fn kernel_rejects_extra_outputs() {
-        let dispatcher = CanonicalizeDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1]), u32_slice_to_le_bytes(&[0])],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[0]),
+        ]);
         let mut swap_mask = Vec::new();
         let err = run_canonicalize_kernel_into(&one_expr_arena(), &dispatcher, &mut swap_mask)
             .expect_err("extra outputs must be rejected");
@@ -334,9 +320,7 @@ mod tests {
 
     #[test]
     fn kernel_rejects_trailing_swap_mask_bytes() {
-        let dispatcher = CanonicalizeDispatcher {
-            outputs: vec![vec![1, 0, 0, 0, 2]],
-        };
+        let dispatcher = dispatcher(vec![vec![1, 0, 0, 0, 2]]);
         let mut swap_mask = Vec::new();
         let err = run_canonicalize_kernel_into(&one_expr_arena(), &dispatcher, &mut swap_mask)
             .expect_err("trailing bytes must be rejected");

@@ -729,59 +729,25 @@ mod tests {
     use super::*;
     use vyre_libs::dispatch_buffers::u32_slice_to_le_bytes;
 
-    struct ConstFoldDispatcher {
-        outputs: Vec<Vec<u8>>,
-    }
+    use super::super::arena_kernel::{
+        single_lit_u32_arena as one_expr_arena, FixedOutputDispatcher, GridExpectation,
+    };
 
-    impl ProgramDispatcher for ConstFoldDispatcher {
-        fn dispatch(
-            &self,
-            _program: &Program,
-            inputs: &[Vec<u8>],
-            grid_override: Option<[u32; 3]>,
-        ) -> Result<Vec<Vec<u8>>, DispatchError> {
-            // The orchestrator always passes Some([grid_x, 1, 1]) where
-            // grid_x = ceil(expr_count / WORKGROUP_X). For a 1-expr arena
-            // grid_x = 1; for 257-expr arena grid_x = 2. Asserting
-            // Some([1, 1, 1]) is only accidentally correct for the trivial
-            // one-expr case. Assert the invariant that y and z are always 1.
-            if let Some(grid) = grid_override {
-                assert_eq!(
-                    grid[1], 1,
-                    "const-fold grid y-dimension must always be 1; got {grid:?}"
-                );
-                assert_eq!(
-                    grid[2], 1,
-                    "const-fold grid z-dimension must always be 1; got {grid:?}"
-                );
-                // Derive the expected expr_count from the arena_kinds buffer
-                // (input slot 0, one u32 per expr).
-                let expected_expr_count = (inputs[0].len() / 4) as u32;
-                let expected_grid_x =
-                    (expected_expr_count + super::WORKGROUP_X - 1) / super::WORKGROUP_X;
-                assert_eq!(
-                    grid[0],
-                    expected_grid_x,
-                    "const-fold grid x must equal ceil(expr_count / WORKGROUP_X) = {expected_grid_x}; got {grid:?}"
-                );
-            }
-            if inputs.len() != 8 {
-                return Err(DispatchError::BadInputs(format!(
-                    "Fix: const-fold test dispatcher expected 8 inputs, got {}.",
-                    inputs.len()
-                )));
-            }
-            Ok(self.outputs.clone())
+    fn dispatcher(outputs: Vec<Vec<u8>>) -> FixedOutputDispatcher {
+        FixedOutputDispatcher {
+            pass: "const-fold",
+            expected_inputs: 8,
+            grid: GridExpectation::StridedOverArena,
+            outputs,
         }
     }
 
-    use super::super::arena_kernel::single_lit_u32_arena as one_expr_arena;
-
     #[test]
     fn kernel_into_decodes_exact_outputs_into_reused_buffers() {
-        let dispatcher = ConstFoldDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1]), u32_slice_to_le_bytes(&[7])],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[7]),
+        ]);
         let mut foldable = Vec::with_capacity(4);
         let mut value = Vec::with_capacity(4);
         let foldable_ptr = foldable.as_ptr();
@@ -796,9 +762,10 @@ mod tests {
 
     #[test]
     fn kernel_with_scratch_reuses_dispatch_state_and_outputs() {
-        let dispatcher = ConstFoldDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1]), u32_slice_to_le_bytes(&[7])],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[7]),
+        ]);
         let arena = one_expr_arena();
         let mut scratch = ConstFoldKernelScratch::default();
         let mut foldable = Vec::with_capacity(1);
@@ -838,13 +805,11 @@ mod tests {
 
     #[test]
     fn kernel_rejects_extra_outputs() {
-        let dispatcher = ConstFoldDispatcher {
-            outputs: vec![
-                u32_slice_to_le_bytes(&[1]),
-                u32_slice_to_le_bytes(&[7]),
-                u32_slice_to_le_bytes(&[0]),
-            ],
-        };
+        let dispatcher = dispatcher(vec![
+            u32_slice_to_le_bytes(&[1]),
+            u32_slice_to_le_bytes(&[7]),
+            u32_slice_to_le_bytes(&[0]),
+        ]);
         let mut foldable = Vec::new();
         let mut value = Vec::new();
         let err =
@@ -858,9 +823,7 @@ mod tests {
 
     #[test]
     fn kernel_rejects_trailing_value_bytes() {
-        let dispatcher = ConstFoldDispatcher {
-            outputs: vec![u32_slice_to_le_bytes(&[1]), vec![7, 0, 0, 0, 1]],
-        };
+        let dispatcher = dispatcher(vec![u32_slice_to_le_bytes(&[1]), vec![7, 0, 0, 0, 1]]);
         let mut foldable = Vec::new();
         let mut value = Vec::new();
         let err =
@@ -874,10 +837,10 @@ mod tests {
 
     /// P2 regression: the const-fold dispatcher receives `Some([grid_x, 1, 1])`
     /// where `grid_x = ceil(expr_count / WORKGROUP_X)`. For a 257-expr arena
-    /// `grid_x` must be 2. The previous `ConstFoldDispatcher` asserted
-    /// `Some([1, 1, 1])` which accidentally passed only for the trivial 1-expr
-    /// case and would panic (or silently accept) for any real multi-workgroup
-    /// arena, hiding the fact that multi-workgroup dispatch was never exercised.
+    /// `grid_x` must be 2. The sibling arena passes each dispatch exactly one
+    /// workgroup, and this pass's own test fake once copied their
+    /// `Some([1, 1, 1])` assertion, which passed only for the trivial 1-expr
+    /// case and left multi-workgroup dispatch unexercised.
     #[test]
     fn const_fold_kernel_sends_correct_multi_workgroup_grid_for_257_exprs() {
         struct GridCapture {
@@ -933,8 +896,8 @@ mod tests {
             assert_eq!(
                 gx, expected_grid_x,
                 "dispatch {dispatch_idx}: grid_x must be {expected_grid_x} for expr_count={n}; \
-                 the prior ConstFoldDispatcher asserted Some([1,1,1]) and only worked by \
-                 accident for 1-expr arenas"
+                 asserting a literal Some([1,1,1]) here only works by accident for 1-expr \
+                 arenas"
             );
         }
     }
