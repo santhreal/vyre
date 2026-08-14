@@ -1,7 +1,11 @@
-use super::word_at::*;
+use super::semantic_gap_constructs::*;
 use crate::c_ast_gpu_parity_support::{
     run_gpu_classifier_with_count as run_gpu_classifier,
     run_gpu_pg_lower_with_count as run_gpu_pg_lower,
+};
+use crate::c_frontend::rows::{
+    assert_pg_preserves_row, flags_at, kind_at, node_count_from_vast, row_indices,
+    TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
 };
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{

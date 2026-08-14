@@ -635,3 +635,18 @@ required-features = ["c-parser"]
 name = "c_ast_pg_lowering_deep_contracts"
 path = "tests/c_ast_pg_lowering_deep_contracts.rs"
 required-features = ["c-parser"]
+
+[[test]]
+name = "c11_parser_typedef_contracts"
+path = "tests/c11_parser_typedef_contracts.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "c_ast_semantic_gaps_linux_grade"
+path = "tests/c_ast_semantic_gaps_linux_grade.rs"
+required-features = ["c-parser"]
+
+[[test]]
+name = "gemini_c_ast_contracts"
+path = "tests/gemini_c_ast_contracts.rs"
+required-features = ["c-parser"]

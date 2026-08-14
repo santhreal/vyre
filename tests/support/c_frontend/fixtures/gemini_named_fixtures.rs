@@ -1,20 +1,17 @@
-// Gemini-mandated aggressive AST contract tests for VYRE C parser.
-//
-// Scope: Typedef shadowing, Cast/Pointer ambiguity, Nested FnPtrs,
-// Compound Literals, GNU Attributes, Tag Separation, PG Parity.
+//! Named token fixtures for the Gemini C AST contracts: typedef shadowing, cast versus multiply,
+//! nested function pointers, tag separation, GNU attributes, and compound literals.
+//!
+//! The CPU contracts in `vyre-libs/tests` and the backend parity arm in the
+//! driver crate build the same token streams, so the fixtures have one owner
+//! here rather than a copy per crate.
 
+use crate::c_frontend::rows::starts_for_lens;
 use vyre_libs::parsing::c::lex::tokens::*;
 use vyre_libs::parsing::c::parse::vast::*;
-use vyre_primitives::predicate::node_kind;
-
-use crate::c_ast_gpu_parity_support::{
-    row_indices as typed_indices, starts_for_lens, word_at, VAST_STRIDE_U32,
-};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
 pub(crate) enum Atom {
     Tok(u32),
     Ident(&'static str),
@@ -259,103 +256,4 @@ pub(crate) fn fixture_compound_literal() -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     let tok_lens = vec![1; tok_types.len()];
     let tok_starts = starts_for_lens(&tok_lens);
     (tok_types, tok_starts, tok_lens)
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-#[test]
-pub(crate) fn cpu_reference_typedef_shadowing() {
-    let (tok_types, tok_starts, tok_lens) = fixture_typedef_shadowing();
-    let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-
-    assert_eq!(
-        word_at(&typed, 11 * VAST_STRIDE_U32),
-        node_kind::VARIABLE,
-        "x must be a variable"
-    );
-    assert_eq!(
-        word_at(&typed, 15 * VAST_STRIDE_U32),
-        node_kind::VARIABLE,
-        "shadowing T must be a variable"
-    );
-    assert_eq!(
-        word_at(&typed, 17 * VAST_STRIDE_U32),
-        node_kind::VARIABLE,
-        "use of shadowed T must be a variable"
-    );
-    assert_eq!(
-        word_at(&typed, 23 * VAST_STRIDE_U32),
-        node_kind::VARIABLE,
-        "y must be a variable after shadow block"
-    );
-}
-
-#[test]
-pub(crate) fn cpu_reference_cast_vs_multiply() {
-    let fix = named_fixture(&[
-        tok(TOK_TYPEDEF),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_VOID),
-        ident("f"),
-        tok(TOK_LPAREN),
-        tok(TOK_VOID),
-        tok(TOK_RPAREN),
-        tok(TOK_LBRACE),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_STAR),
-        ident("x"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_INT),
-        ident("T"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_LPAREN),
-        ident("T"),
-        tok(TOK_RPAREN),
-        tok(TOK_STAR),
-        ident("x"),
-        tok(TOK_SEMICOLON),
-        tok(TOK_RBRACE),
-    ]);
-    let typed = reference_c11_classify_vast_node_kinds(&annotated_named_vast(&fix));
-
-    assert_eq!(
-        word_at(&typed, 10 * VAST_STRIDE_U32),
-        C_AST_KIND_CAST_EXPR,
-        "(T)*x must be cast when T is typedef"
-    );
-    assert_ne!(
-        word_at(&typed, 19 * VAST_STRIDE_U32),
-        C_AST_KIND_CAST_EXPR,
-        "(T)*x must NOT be cast when T is shadowed by variable"
-    );
-}
-
-#[test]
-pub(crate) fn cpu_reference_nested_fnptr() {
-    let (tok_types, tok_starts, tok_lens) = fixture_nested_fnptr();
-    let raw = reference_c11_build_vast_nodes(&tok_types, &tok_starts, &tok_lens);
-    let typed = reference_c11_classify_vast_node_kinds(&raw);
-
-    let ptr_decls = typed_indices(&typed, C_AST_KIND_POINTER_DECL);
-    assert_eq!(
-        ptr_decls.len(),
-        2,
-        "must find two pointer declarators in nested fnptr"
-    );
-    assert!(ptr_decls.contains(&2));
-    assert!(ptr_decls.contains(&4));
-
-    let fn_decls = typed_indices(&typed, C_AST_KIND_FUNCTION_DECLARATOR);
-    assert_eq!(
-        fn_decls.len(),
-        2,
-        "must find two function declarators in nested fnptr"
-    );
 }

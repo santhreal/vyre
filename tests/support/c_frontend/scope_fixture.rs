@@ -14,16 +14,16 @@ use vyre_libs::parsing::c::parse::vast::{
 };
 use vyre_libs::parsing::c::sema::reference_scope_tree;
 
-use super::rows::{bytes, word_at, VAST_STRIDE_U32};
+use super::rows::{bytes, word_at};
 
-/// Flags field index within a VAST row.
-pub(crate) const FLAGS_FIELD: usize = 7;
-/// The name is a typedef visible at this point.
-pub(crate) const TYPEDEF_FLAG_VISIBLE: u32 = 1;
-/// The row declares a typedef name.
-pub(crate) const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
-/// The row declares an ordinary (non-typedef) identifier.
-pub(crate) const ORDINARY_FLAG_DECL: u32 = 1 << 2;
+/// The VAST row fields a scope test reads, owned by [`super::rows`]. Re-exported
+/// so a scope test's `use scope_fixture::*` still names them; a given test only
+/// reads some of them.
+#[allow(unused_imports)]
+pub(crate) use super::rows::{
+    flags_at, kind_at, FLAGS_FIELD, ORDINARY_FLAG_DECL, TYPEDEF_FLAG_DECL, TYPEDEF_FLAG_VISIBLE,
+};
+
 /// `u32` fields per scope-tree row.
 pub(crate) const SCOPE_TREE_STRIDE_U32: usize = 4;
 
@@ -83,14 +83,6 @@ pub(crate) fn fixture(_name: &'static str, atoms: &[Atom]) -> ScopeFixture {
 
 pub(crate) fn emit_u32_bytes(words: &[u32]) -> Vec<u8> {
     bytes(words)
-}
-
-pub(crate) fn kind_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32)
-}
-
-pub(crate) fn flags_at(rows: &[u8], idx: usize) -> u32 {
-    word_at(rows, idx * VAST_STRIDE_U32 + FLAGS_FIELD)
 }
 
 pub(crate) fn scope_tree_word_at(buf: &[u8], token_idx: usize, field: usize) -> u32 {

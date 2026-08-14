@@ -1,4 +1,4 @@
-use super::tok::*;
+use super::gemini_named_fixtures::*;
 use crate::c_ast_gpu_parity_support::{
     run_gpu_classifier_with_count as run_gpu_classifier,
     run_gpu_pg_lower_with_count as run_gpu_pg_lower, word_at, VAST_STRIDE_U32,

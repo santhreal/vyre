@@ -2,12 +2,13 @@
 // PG lowering contract tests
 // ---------------------------------------------------------------------------
 
-use super::assert_kind::*;
+use super::typedef_disambiguation::*;
 use crate::c_ast_gpu_parity_support::{
     row_indices as typed_indices, run_gpu_classifier_with_count as run_gpu_classifier,
     run_gpu_pg_lower_with_count as run_gpu_pg_lower,
     run_gpu_vast_builder_from_parts as run_gpu_vast_builder, word_at, VAST_STRIDE_U32,
 };
+use crate::c_frontend::rows::{assert_kind, pg_word_at};
 use vyre_libs::parsing::c::lower::reference_ast_to_pg_nodes;
 use vyre_libs::parsing::c::parse::vast::{
     reference_c11_build_vast_nodes, reference_c11_classify_vast_node_kinds, C_AST_KIND_ARRAY_DECL,

@@ -13,6 +13,14 @@ pub(crate) const VAST_STRIDE_U32: usize = 10;
 pub(crate) const PG_STRIDE_U32: usize = 6;
 /// Bytes per VAST row.
 pub(crate) const VAST_STRIDE_BYTES: usize = VAST_STRIDE_U32 * core::mem::size_of::<u32>();
+/// Flags field index within a VAST row.
+pub(crate) const FLAGS_FIELD: usize = 7;
+/// The name is a typedef visible at this point.
+pub(crate) const TYPEDEF_FLAG_VISIBLE: u32 = 1;
+/// The row declares a typedef name.
+pub(crate) const TYPEDEF_FLAG_DECL: u32 = 1 << 1;
+/// The row declares an ordinary (non-typedef) identifier.
+pub(crate) const ORDINARY_FLAG_DECL: u32 = 1 << 2;
 /// "No such row" marker used by every C frontend row buffer.
 pub(crate) const SENTINEL: u32 = u32::MAX;
 
@@ -31,6 +39,18 @@ pub(crate) fn word_at(buf: &[u8], word: usize) -> u32 {
 
 pub(crate) fn kind_at(rows: &[u8], idx: usize) -> u32 {
     word_at(rows, idx * VAST_STRIDE_U32)
+}
+
+pub(crate) fn flags_at(rows: &[u8], idx: usize) -> u32 {
+    word_at(rows, idx * VAST_STRIDE_U32 + FLAGS_FIELD)
+}
+
+/// Assert the VAST row at `idx` classified as `kind`.
+///
+/// [`super::expression_pipeline::assert_kind`] is the same check against a
+/// caller-supplied stride, for the expression-shape and property-graph rows.
+pub(crate) fn assert_kind(rows: &[u8], idx: usize, kind: u32) {
+    assert_eq!(word_at(rows, idx * VAST_STRIDE_U32), kind, "kind[{idx}]");
 }
 
 pub(crate) fn pg_word_at(buf: &[u8], idx: usize, field: usize) -> u32 {
