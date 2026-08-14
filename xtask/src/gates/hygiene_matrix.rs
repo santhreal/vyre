@@ -1035,6 +1035,42 @@ fn relative_to_vyre(vyre_root: &Path, path: &Path) -> String {
         .replace('\\', "/")
 }
 
+/// Hidden-fallback pattern names the hygiene scan emits.
+///
+/// This list and the two below are the scan's output vocabulary, which the
+/// release gate then requires the recorded scan to have covered. Both sides
+/// used to spell the names out, so adding a pattern here left the gate
+/// accepting evidence that never looked for it.
+pub const HIDDEN_FALLBACK_PATTERNS: &[&str] = &[
+    "silent_gpu_skip",
+    "silent_gpu_skipped",
+    "gpu_unavailable_skip",
+    "cfg_not_gpu",
+    "cpu_fallback",
+    "software_fallback",
+    "fallback_dispatch",
+    "falling_back_to_cpu",
+    "fallback_to_cpu",
+    "synthetic_gpu_timing",
+    "fake_gpu_timing_formula",
+];
+
+/// Resource-bound pattern names the hygiene scan emits.
+pub const RESOURCE_BOUND_PATTERNS: &[&str] = &[
+    "std_thread_sleep",
+    "thread_sleep",
+    "tokio_sleep",
+    "unbounded_read",
+];
+
+/// Cargo-wrapper pattern names the hygiene scan emits.
+pub const CARGO_WRAPPER_PATTERNS: &[&str] = &[
+    "raw_workspace_cargo",
+    "invalid_cargo_full_xtask",
+    "heredoc",
+    "missing_cargo_wrapper",
+];
+
 const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "no-stubs-scan.json",
@@ -1052,29 +1088,12 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "no-hidden-fallback-scan.json",
         "no-hidden-fallback",
-        &[
-            "silent_gpu_skip",
-            "silent_gpu_skipped",
-            "gpu_unavailable_skip",
-            "cfg_not_gpu",
-            "cpu_fallback",
-            "software_fallback",
-            "fallback_dispatch",
-            "falling_back_to_cpu",
-            "fallback_to_cpu",
-            "synthetic_gpu_timing",
-            "fake_gpu_timing_formula",
-        ],
+        HIDDEN_FALLBACK_PATTERNS,
     ),
     (
         "resource-bound-scan.json",
         "resource-bound",
-        &[
-            "std_thread_sleep",
-            "thread_sleep",
-            "tokio_sleep",
-            "unbounded_read",
-        ],
+        RESOURCE_BOUND_PATTERNS,
     ),
     (
         "error-surface-scan.json",
@@ -1089,12 +1108,7 @@ const HYGIENE_SCANS: &[(&str, &str, &[&str])] = &[
     (
         "cargo-wrapper-scan.json",
         "cargo-wrapper",
-        &[
-            "raw_workspace_cargo",
-            "invalid_cargo_full_xtask",
-            "heredoc",
-            "missing_cargo_wrapper",
-        ],
+        CARGO_WRAPPER_PATTERNS,
     ),
 ];
 

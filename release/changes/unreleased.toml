@@ -564,3 +564,13 @@ text = "Every evidence-producing xtask subcommand parses `--output`, reports the
 id = "delegated-binaries-share-one-main"
 category = "Changed"
 text = "`xtask::delegate::run_delegated_main` owns what a delegated binary's `main` does: answer `--help` from the callee's own dispatch table, reject a missing subcommand, then resolve the name. `xtask-registry` and `xtask-evidence` each wrote that out, including the exit code for an unimplemented subcommand, so the two entry points could disagree about a contract that `xtask` and CI read as one. Each `main` is now a single call naming the package and why `xtask` routes there, and the `dispatch` wrapper each crate exported for its own `main` alone is gone. Help text, error text and exit codes are unchanged."
+
+[[fragments]]
+id = "benchmark-report-summary-has-one-owner"
+category = "Changed"
+text = "The release gate reads a benchmark report's blocker array and failed-case summary in one place. `check_benchmark_report_summary` owns the summary-versus-case-evidence mismatch and the failed-case message; the three gates that open a benchmark report each carried that arithmetic and its four messages, differing only in whether the report is named by evidence suffix or by path, so a correction reached one report and not the next. The four `require_case_metric_*` requirements now share one walk over the cases array, which also makes explicit that only the present-metric requirement treats a missing cases array as its own failure and that the positive-metric requirement reads the recorded percentile rather than accepting a bare scalar. An unreachable second copy of the markdown-evidence check is deleted: it had no callers and had drifted to demand an evidence-sources list from every markdown file, while the live check demands it only under `evidence/docs/`."
+
+[[fragments]]
+id = "hygiene-pattern-names-have-one-owner"
+category = "Changed"
+text = "The hygiene scan's pattern names are declared where the scan emits them. `xtask::gates::hygiene_matrix` exports the hidden-fallback, resource-bound and cargo-wrapper pattern lists, and the release-evidence check that requires each family to have been covered now references them instead of restating nineteen names. Adding a pattern to the scan previously left the gate accepting evidence that never looked for it."
