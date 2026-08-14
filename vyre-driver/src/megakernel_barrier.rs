@@ -40,6 +40,23 @@ pub struct MegakernelBarrierPlan {
     pub global_barriers: usize,
 }
 
+impl MegakernelBarrierPlan {
+    /// Build a plan from ordered barrier-free groups.
+    ///
+    /// The barrier count is not independent data: one global synchronization
+    /// point separates each adjacent pair of groups, so `n` groups need `n - 1`
+    /// barriers and an empty plan needs none. Deriving it here is what keeps a
+    /// caller that re-groups waves, such as the frontier memory-budget splitter,
+    /// from carrying a barrier count that no longer matches its own groups.
+    #[must_use]
+    pub fn from_groups(groups: Vec<MegakernelBarrierGroup>) -> Self {
+        Self {
+            global_barriers: groups.len().saturating_sub(1),
+            groups,
+        }
+    }
+}
+
 /// Caller-owned scratch for repeated megakernel barrier planning.
 ///
 /// This keeps CSR adjacency, indegree, and ready-layer buffers reusable across
@@ -363,14 +380,7 @@ pub fn plan_megakernel_barriers_with_scratch(
         });
     }
 
-    Ok(MegakernelBarrierPlan {
-        global_barriers: if groups.is_empty() {
-            0
-        } else {
-            groups.len() - 1
-        },
-        groups,
-    })
+    Ok(MegakernelBarrierPlan::from_groups(groups))
 }
 
 fn group_capacity_hint(
@@ -432,6 +442,7 @@ mod tests {
         plan_megakernel_barriers, plan_megakernel_barriers_with_scratch,
         MegakernelBarrierPlanError, MegakernelBarrierScratch, MegakernelWaveDependency,
     };
+    use crate::megakernel_fixtures::{DIAMOND_DEPENDENCIES, LONG_CHAIN_DEPENDENCIES};
 
     #[test]
     fn independent_waves_share_one_barrier_free_group() {
@@ -447,20 +458,7 @@ mod tests {
     fn dependency_chain_requires_one_barrier_between_each_wave() {
         let plan = plan_megakernel_barriers(
             4,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
+            LONG_CHAIN_DEPENDENCIES,
         )
         .expect("Fix: acyclic megakernel wave chain should be schedulable.");
 
@@ -475,24 +473,7 @@ mod tests {
     fn diamond_dependencies_fuse_middle_waves() {
         let plan = plan_megakernel_barriers(
             4,
-            &[
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 1,
-                },
-                MegakernelWaveDependency {
-                    before: 0,
-                    after: 2,
-                },
-                MegakernelWaveDependency {
-                    before: 1,
-                    after: 3,
-                },
-                MegakernelWaveDependency {
-                    before: 2,
-                    after: 3,
-                },
-            ],
+            DIAMOND_DEPENDENCIES,
         )
         .expect("Fix: diamond megakernel dependencies should preserve middle-wave fusion.");
 

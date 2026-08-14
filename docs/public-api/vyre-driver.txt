@@ -131,6 +131,7 @@ impl vyre_driver::graph_capture::ScanGraphCaptureEditClassification
 impl vyre_driver::graph_capture::ScanGraphCaptureEditKind
 impl vyre_driver::launch::LaunchPlan
 impl vyre_driver::launch_fusion::LaunchFusionScratch
+impl vyre_driver::megakernel_barrier::MegakernelBarrierPlan
 impl vyre_driver::megakernel_barrier::MegakernelBarrierScratch
 impl vyre_driver::megakernel_execution::MegakernelDeviceCapabilities
 impl vyre_driver::megakernel_execution::MegakernelExecutionPlanner for vyre_driver::megakernel_execution::NeutralMegakernelExecutionPlanner
@@ -844,6 +845,7 @@ pub fn vyre_driver::materialize::admit(artifact: &vyre_megakernel::Artifact, pay
 pub fn vyre_driver::materialize::compile_error(backend: &str, error: impl core::fmt::Display) -> vyre_driver::BackendError
 pub fn vyre_driver::materialize::invalid_module(reason: &str) -> vyre_driver::BackendError
 pub fn vyre_driver::materialize::project_resources(artifact: &vyre_megakernel::Artifact) -> vyre_driver::materialize::ResourceProjection
+pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlan::from_groups(groups: alloc::vec::Vec<vyre_driver::megakernel_barrier::MegakernelBarrierGroup>) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::arithmetic_overflow(field: &'static str) -> Self
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierPlanError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn vyre_driver::megakernel_barrier::MegakernelBarrierScratch::dependency_capacity(&self) -> usize

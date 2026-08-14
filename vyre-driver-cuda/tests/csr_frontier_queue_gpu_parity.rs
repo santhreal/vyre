@@ -9,10 +9,18 @@ mod common;
 mod delta_contracts;
 #[path = "csr_frontier_queue_gpu_parity/manual_sequence_contracts.rs"]
 mod manual_sequence_contracts;
+#[path = "csr_frontier_queue_gpu_parity/queue_sequence.rs"]
+mod queue_sequence;
 #[path = "csr_frontier_queue_gpu_parity/resident_graph_contracts.rs"]
 mod resident_graph_contracts;
 
 use common::{bytes_u32, live_backend, pack_nodes, u32_bytes};
+use queue_sequence::{
+    run_manual_queue_sequence, GraphUpload, ManualQueueHandles, QueueBuild, QueueGraph,
+    QueueReadback, ResidentQueueSession,
+};
+use vyre_driver_cuda::{CudaBackend, CudaTelemetrySnapshot};
+use vyre_libs::graph::dispatch::csr_frontier_queue_resident::ResidentCsrQueueGraph;
 use vyre_driver_cuda::CudaProgramDispatcher;
 use vyre_primitives::bitset::bitset_words;
 use vyre_primitives::graph::csr_frontier_queue::{

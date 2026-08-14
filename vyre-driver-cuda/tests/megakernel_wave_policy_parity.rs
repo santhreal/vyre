@@ -14,6 +14,14 @@ use vyre_driver::megakernel_execution::{
     MegakernelGraphShape, MegakernelMemoryBudget, MegakernelMemoryError,
     NeutralMegakernelExecutionPlanner,
 };
+// The wave and dependency corpora are the neutral policy's own definitions,
+// imported rather than restated: a table copied into this suite would let the
+// two entry points be driven with different inputs and still agree, which is
+// exactly the divergence this gate exists to catch.
+use vyre_driver::megakernel_fixtures::{
+    CHAIN_DEPENDENCIES as CHAIN, CYCLE_DEPENDENCIES as CYCLE, DIAMOND_DEPENDENCIES as DIAMOND,
+    DIAMOND_WAVES, ONE_WAVE, OVERFLOW_WAVES, THREE_EQUAL_WAVES,
+};
 use vyre_driver::megakernel_frontier::{
     plan_megakernel_frontier_execution, MegakernelFrontierExecutionPlan,
     MegakernelFrontierExecutionPlanError, MegakernelFrontierWave,
@@ -283,108 +291,6 @@ fn cuda_frontier_outcome(scenario: &Scenario) -> FrontierOutcome {
     .map(|plan| decision(&plan))
     .map_err(FrontierRejection::from)
 }
-
-const CHAIN: &[MegakernelWaveDependency] = &[
-    MegakernelWaveDependency {
-        before: 0,
-        after: 1,
-    },
-    MegakernelWaveDependency {
-        before: 1,
-        after: 2,
-    },
-];
-
-const DIAMOND: &[MegakernelWaveDependency] = &[
-    MegakernelWaveDependency {
-        before: 0,
-        after: 1,
-    },
-    MegakernelWaveDependency {
-        before: 0,
-        after: 2,
-    },
-    MegakernelWaveDependency {
-        before: 1,
-        after: 3,
-    },
-    MegakernelWaveDependency {
-        before: 2,
-        after: 3,
-    },
-];
-
-const CYCLE: &[MegakernelWaveDependency] = &[
-    MegakernelWaveDependency {
-        before: 0,
-        after: 1,
-    },
-    MegakernelWaveDependency {
-        before: 1,
-        after: 0,
-    },
-];
-
-const ONE_WAVE: &[MegakernelFrontierWave] = &[MegakernelFrontierWave {
-    frontier_bytes: 40,
-    scratch_bytes: 15,
-    output_bytes: 0,
-}];
-
-/// Three waves whose fused budgets sum to exactly one group budget.
-const THREE_EQUAL_WAVES: &[MegakernelFrontierWave] = &[
-    MegakernelFrontierWave {
-        frontier_bytes: 40,
-        scratch_bytes: 15,
-        output_bytes: 0,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 40,
-        scratch_bytes: 15,
-        output_bytes: 0,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 40,
-        scratch_bytes: 15,
-        output_bytes: 0,
-    },
-];
-
-const DIAMOND_WAVES: &[MegakernelFrontierWave] = &[
-    MegakernelFrontierWave {
-        frontier_bytes: 1_024,
-        scratch_bytes: 512,
-        output_bytes: 256,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 2_048,
-        scratch_bytes: 1_024,
-        output_bytes: 512,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 4_096,
-        scratch_bytes: 2_048,
-        output_bytes: 1_024,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 8_192,
-        scratch_bytes: 4_096,
-        output_bytes: 2_048,
-    },
-];
-
-const OVERFLOW_WAVES: &[MegakernelFrontierWave] = &[
-    MegakernelFrontierWave {
-        frontier_bytes: u64::MAX,
-        scratch_bytes: 1,
-        output_bytes: 1,
-    },
-    MegakernelFrontierWave {
-        frontier_bytes: 1,
-        scratch_bytes: 1,
-        output_bytes: 1,
-    },
-];
 
 fn scenarios() -> Vec<Scenario> {
     let base = Scenario {
