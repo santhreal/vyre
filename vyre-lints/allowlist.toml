@@ -14,6 +14,18 @@
 #
 # A new dialect file must NEVER be added here. Adding an entry is an
 # admission that the file violates the lego-block contract.
+#
+# `measured_roots` names the source trees the rule applies to. It is data,
+# not a hardcoded crate name, because the finding count is pinned as a
+# ratchet in `xtask/gate-baselines.toml`: relocating a composition domain
+# between crates would otherwise move thousands of construction sites into
+# or out of the measured set in one commit, for no semantic change, and the
+# pin would stop meaning anything. A domain move edits this list in the same
+# commit as the move, so the number stays comparable across it.
+
+measured_roots = [
+  "vyre-libs/src",
+]
 
 exempt_files = [
   "vyre-libs/src/builder.rs",

@@ -202,19 +202,23 @@ fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
 
     // The files this run is responsible for, spelled the way the lint
     // reports them. In staged mode that is the staged diff; under `--all`
-    // it is every source file in the crate.
-    let considered = considered_libs_sources(files, &allow);
+    // it is every source file under a measured root.
+    let considered = considered_sources(files, &allow);
     if considered.is_empty() {
         return Vec::new();
     }
 
-    // One walk. `scan_tree` recurses, so calling it per candidate file
-    // reparsed the whole crate once per file, and for a file directly in
-    // `vyre-libs/src` that meant reparsing every descendant.
-    let libs_src = root.join("vyre-libs").join("src");
-    let Ok(violations) = vyre_lints::raw_ir_in_libs::scan_tree(&libs_src, &allow) else {
-        return Vec::new();
-    };
+    // One walk per measured root. `scan_tree` recurses, so calling it per
+    // candidate file reparsed the whole tree once per file, and for a file
+    // directly in a root that meant reparsing every descendant.
+    let mut violations = Vec::new();
+    for measured_root in allow.measured_roots() {
+        let Ok(found) = vyre_lints::raw_ir_in_libs::scan_tree(&root.join(measured_root), &allow)
+        else {
+            continue;
+        };
+        violations.extend(found);
+    }
 
     violations
         .into_iter()
@@ -224,22 +228,38 @@ fn check_raw_ir(root: &Path, files: &[PathBuf]) -> Vec<Finding> {
             line: violation.line,
             category: "raw-ir".to_string(),
             message: violation.message,
-            fix: "use vyre-primitives builders or region::wrap_anonymous instead of constructing Node/Expr directly".to_string(),
+            fix: "compose registered operations instead of constructing Node/Expr directly"
+                .to_string(),
         })
         .collect()
 }
 
-fn considered_libs_sources(
+/// Source files under a measured root that this run is responsible for.
+///
+/// The roots come from `vyre-lints/allowlist.toml` rather than a hardcoded
+/// crate name, so relocating a composition domain between crates does not
+/// silently move thousands of sites into or out of the pinned count.
+fn considered_sources(
     files: &[PathBuf],
     allow: &vyre_lints::allowlist::Allowlist,
 ) -> BTreeSet<String> {
     files
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
-        .filter(|path| path.contains("vyre-libs/src/"))
-        .map(|path| workspace_relative(&path, "vyre-libs/"))
+        .filter_map(|path| {
+            allow
+                .measured_roots()
+                .iter()
+                .find_map(|measured_root| workspace_relative_under(&path, measured_root))
+        })
         .filter(|workspace_rel| !allow.contains(workspace_rel))
         .collect()
+}
+
+/// The workspace-relative form of `path` when it lies under `measured_root`.
+fn workspace_relative_under(path: &str, measured_root: &str) -> Option<String> {
+    let marker = format!("{measured_root}/");
+    path.find(&marker).map(|idx| path[idx..].to_string())
 }
 
 fn workspace_relative(path: &str, marker: &str) -> String {

@@ -8,7 +8,7 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use vyre_lints::{
     run_consumer_coupling, run_gpu_skip_guards, run_module_forks, run_production_cpu_fallbacks,
     run_raw_ir_in_libs, Violation,
@@ -121,19 +121,37 @@ fn main() -> Result<()> {
         return run_gpu_skip_guards_cli(&cli);
     }
 
-    let lib_root = cli
-        .lib_root
-        .unwrap_or_else(|| cli.workspace_root.join("vyre-libs/src"));
-    if !lib_root.exists() {
-        anyhow::bail!("lib root not found: {}", lib_root.display());
-    }
     let allowlist_arg = if allowlist.exists() {
         Some(allowlist.as_path())
     } else {
         None
     };
 
-    let violations = run_raw_ir_in_libs(&[lib_root.as_path()], allowlist_arg)
+    // A `--lib-root` override names one tree explicitly. Otherwise the trees
+    // come from the lint's own configuration, so relocating a composition
+    // domain between crates does not need a code change here.
+    let roots: Vec<PathBuf> = match cli.lib_root {
+        Some(lib_root) => vec![lib_root],
+        None => {
+            let configured = match allowlist_arg {
+                Some(path) => vyre_lints::allowlist::load(path)?,
+                None => vyre_lints::allowlist::Allowlist::empty(),
+            };
+            configured
+                .measured_roots()
+                .iter()
+                .map(|measured_root| cli.workspace_root.join(measured_root))
+                .collect()
+        }
+    };
+    for root in &roots {
+        if !root.exists() {
+            anyhow::bail!("measured root not found: {}", root.display());
+        }
+    }
+
+    let root_refs: Vec<&Path> = roots.iter().map(PathBuf::as_path).collect();
+    let violations = run_raw_ir_in_libs(&root_refs, allowlist_arg)
         .context("running raw_ir_in_libs lint")?;
 
     match cli.format {
