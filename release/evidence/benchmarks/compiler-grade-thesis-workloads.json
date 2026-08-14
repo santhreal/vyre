@@ -12,7 +12,7 @@
     {
       "id": "parsing-throughput",
       "title": "C parser / AST traversal throughput",
-      "terms": ["frontend.c.parser", "release.c_ast_traversal", "parser", "ast"],
+      "terms": ["release.c_ast_traversal", "parser", "ast"],
       "minimum_matching_cases": 1,
       "minimum_input_bytes": 1048576,
       "evidence_artifact": "release/evidence/benchmarks/workload-09-c-ast-traversal.json"

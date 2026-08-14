@@ -28,7 +28,7 @@
   "missing_required_cpu_sota_100x_families": [],
   "matched_required_families": 13,
   "release_suite_case_count": 23,
-  "cpu_sota_contract_count": 32,
+  "cpu_sota_contract_count": 30,
   "cpu_sota_100x_contract_count": 14,
   "cpu_sota_100x_contract_cases": [
     "conditions.yara_like.eval.1m",

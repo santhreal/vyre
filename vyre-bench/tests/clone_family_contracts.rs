@@ -20,6 +20,11 @@
 use vyre_bench::api::case::BenchCase;
 
 /// Every benchmark id the registry publishes, in registry order.
+///
+/// Three `frontend.c.parser*` cases were removed when the C frontend crate left
+/// the workspace. They measured that crate's whole-pipeline parse, and no
+/// surviving crate publishes an equivalent; `release.c_ast_traversal.1m` covers
+/// the traversal throughput the release plan requires.
 const EXPECTED_CASE_IDS: &[&str] = &[
     "adversarial.register_exhaustion.u32_1024",
     "bigint.modexp.4096",
@@ -44,9 +49,6 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "foundation.reduce.sum.crossover",
     "foundation.stencil3.u32.1m",
     "foundation.transpose.512",
-    "frontend.c.parser.linux_driver_pipeline",
-    "frontend.c.parser_only.linux_driver_pipeline",
-    "frontend.c.parser_sema.linux_driver_corpus100",
     "frontend.rust.lexer.batch_ir_execute",
     "frontend.rust.lexer.ir_execute",
     "frontend.rust.range_loop.ir_execute",

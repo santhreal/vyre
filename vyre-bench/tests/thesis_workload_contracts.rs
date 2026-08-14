@@ -2,6 +2,15 @@
 
 use std::collections::BTreeSet;
 
+/// WHY: the release thesis is that vyre proves whole-program compiler and
+/// security workloads, not element-wise throughput. Each id below is one such
+/// workload, so losing one silently would let the suite regress to primitives
+/// while still reporting a pass.
+///
+/// `scan.literal_set.irregular_hotloop.4m` is deliberately absent. The
+/// literal-set engine it measured left the workspace with the scan product, so
+/// nothing here can execute it; `scan.ac.irregular_literals.4m` keeps irregular
+/// literal scanning covered through the matching kernels that stayed.
 #[test]
 fn benchmark_registry_contains_program_level_thesis_workloads() {
     let registry = vyre_bench::registry::collect_all();
@@ -17,7 +26,6 @@ fn benchmark_registry_contains_program_level_thesis_workloads() {
         "dataflow.ifds.skewed.closure.1m",
         "dataflow.ifds.skewed.step.1m",
         "scan.ac.irregular_literals.4m",
-        "scan.literal_set.irregular_hotloop.4m",
         "foundation.dfa_match.256k",
         "primitives.graph.csr_skewed_frontier.1m",
         "primitives.graph.frontier_step.1m",
