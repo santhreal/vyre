@@ -44,7 +44,7 @@ fn cse_subgroup_op_with_atomic_write_invalidates_load_cache() {
     );
 
     let optimized = cse(program);
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
 
     // entry[2] is `let post = ...`. Pre-fix it was rewritten to `let post = pre`
     // because the atomic write (hidden inside the subgroup op) never invalidated

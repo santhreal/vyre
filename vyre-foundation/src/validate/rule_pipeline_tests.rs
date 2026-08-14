@@ -24,7 +24,7 @@ fn validate_with_options_legacy(
 
     let mut scope = FxHashMap::default();
     let mut limits = depth::LimitState::default();
-    nodes::validate_nodes(
+    crate::validate::legacy_walk::validate_nodes(
         program.entry(),
         &buffer_map,
         &mut scope,

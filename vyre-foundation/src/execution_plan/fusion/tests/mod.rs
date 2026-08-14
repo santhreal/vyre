@@ -357,13 +357,13 @@ fn shared_merge_keeps_cross_arm_value_linked_and_valid() {
 
 /// Stores anywhere under `node`, counted through every nesting construct.
 ///
-/// Descent comes from `test_util::count_nodes` over
+/// Descent comes from `test_ir_inspect::count_nodes` over
 /// `transform::visit::for_each_node`. The hand-written match this replaces
 /// ended in `_ => 0`, so a store inside a fifth body-bearing variant would not
 /// have been counted and the assertion below would have passed on a fusion that
 /// dropped it.
 fn count_stores(node: &Node) -> usize {
-    crate::test_util::count_nodes(std::slice::from_ref(node), |n| {
+    crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |n| {
         matches!(n, Node::Store { .. })
     })
 }

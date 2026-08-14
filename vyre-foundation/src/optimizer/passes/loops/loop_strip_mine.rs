@@ -253,7 +253,7 @@ mod tests {
             )],
         )]));
         assert!(result.changed);
-        let entry = crate::test_region_body::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop {
             var: outer,
             from,
@@ -293,7 +293,7 @@ mod tests {
             vec![Node::store("out", Expr::var("i"), Expr::var("i"))],
         )]));
         assert!(result.changed);
-        let entry = crate::test_region_body::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };
@@ -322,7 +322,7 @@ mod tests {
             vec![Node::store("out", Expr::var("i"), Expr::var("i"))],
         )]));
         assert!(result.changed);
-        let entry = crate::test_region_body::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };
@@ -392,7 +392,7 @@ mod tests {
             ],
         )]));
         assert!(result.changed);
-        let entry = crate::test_region_body::region_body(&result.program);
+        let entry = crate::test_ir_inspect::region_body(&result.program);
         let Node::Loop { var, body, .. } = &entry[0] else {
             panic!("expected outer loop");
         };

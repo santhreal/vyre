@@ -119,7 +119,6 @@ const VALIDATION_RULES: &[(&str, ValidationPhase)] = &[
     ("V114", ValidationPhase::Node),
     ("V115", ValidationPhase::Composition),
     ("V116", ValidationPhase::Composition),
-    ("V117", ValidationPhase::Node),
     ("V118", ValidationPhase::Node),
     ("V119", ValidationPhase::Node),
     ("V120", ValidationPhase::Node),

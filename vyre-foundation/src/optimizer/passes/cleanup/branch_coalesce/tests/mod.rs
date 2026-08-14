@@ -1,6 +1,6 @@
 use super::*;
 use crate::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node};
-use crate::test_util::count_nodes;
+use crate::test_ir_inspect::count_nodes;
 use crate::transform::visit::for_each_node;
 
 fn buf() -> BufferDecl {
@@ -13,7 +13,7 @@ fn program_with_entry(entry: Vec<Node>) -> Program {
 
 /// Every `If` in `nodes`, at any nesting depth.
 ///
-/// Counting comes from `test_util::count_nodes`, which descends through
+/// Counting comes from `test_ir_inspect::count_nodes`, which descends through
 /// `transform::visit::for_each_node`, the one owner of which node variants
 /// nest. The hand-written match this replaces re-listed the four body-bearing
 /// variants and ended in `_ => 0`, so an `If` inside a fifth nesting variant

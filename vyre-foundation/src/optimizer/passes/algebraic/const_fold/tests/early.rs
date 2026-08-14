@@ -21,7 +21,7 @@ fn optimizer_const_fold_adds_literals() {
         .run(program)
         .expect("Fix: const fold should converge");
 
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     assert!(matches!(
         &body[0],
         Node::Store {
@@ -67,7 +67,7 @@ fn const_fold_folds_float_addition() {
         .run(program)
         .expect("Fix: float const fold should converge");
 
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     assert!(
         matches!(&body[0], Node::Let { value: Expr::LitF32(v), .. } if *v == 5.0),
         "2.0 + 3.0 should fold to 5.0"
@@ -93,7 +93,7 @@ fn const_fold_folds_fma_literals() {
         .run(program)
         .expect("Fix: fma const fold should converge");
 
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
     assert!(
         matches!(&body[0], Node::Let { value: Expr::LitF32(v), .. } if *v == 7.0),
         "fma(2.0, 3.0, 1.0) should fold to 7.0"

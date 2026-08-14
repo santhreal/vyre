@@ -202,7 +202,7 @@ mod tests {
     /// Lets tests assert post-coalesce barrier count even though
     /// `Program::wrapped` puts everything inside an outer Region.
     fn count_barriers(node: &Node) -> usize {
-        crate::test_util::count_nodes(std::slice::from_ref(node), |candidate| {
+        crate::test_ir_inspect::count_nodes(std::slice::from_ref(node), |candidate| {
             matches!(candidate, Node::Barrier { .. })
         })
     }

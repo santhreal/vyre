@@ -19,7 +19,7 @@ fn cse_does_not_alias_var_snapshot_through_mutable_source() {
     ));
 
     let optimized = cse(program);
-    let body = crate::test_region_body::region_body(&optimized);
+    let body = crate::test_ir_inspect::region_body(&optimized);
 
     assert!(
         body.iter().any(|node| matches!(

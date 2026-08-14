@@ -349,7 +349,7 @@ mod tests {
     }
 
     fn count_loads_in_lets(nodes: &[Node]) -> usize {
-        crate::test_util::count_nodes(nodes, |node| {
+        crate::test_ir_inspect::count_nodes(nodes, |node| {
             matches!(
                 node,
                 Node::Let {

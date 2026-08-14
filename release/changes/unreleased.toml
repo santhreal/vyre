@@ -994,3 +994,18 @@ text = "`vyre-conform` depends on `vyre-libs` with `features = [\"full\"]` rathe
 id = "conform-spec-duplication-pins-lowered-to-measured"
 category = "Changed"
 text = "Four duplication pins record what the tree measures: `conform` 765 to 367 duplicated lines, `vyre-spec` 244 to 84, `vyre-foundation` 4342 to 4127, and `vyre-libs` 11446 to 11425, each with `total_lines` measured. A pin with room under it hides the next copy."
+
+[[fragments]]
+id = "per-node-validation-rules-have-one-owner"
+category = "Fixed"
+text = "Every per-node validation rule lives in `vyre-foundation/src/validate/node_rules.rs`, which both the production single-pass validator and the legacy multi-walk arm call. The two walks each carried their own copy of the rule bodies, so a correction to one was not a correction to the other: the empty async stream tag reported as `V117` from an `AsyncLoad` or `AsyncStore` and as `V128` from an `AsyncWait`, giving one condition two stable rule identities, and the `V121` store-type message was missing a closing backtick on one side. The rule is now `V128` for all three async node kinds, `V117` is retired from the registry and the code catalog, and the walks differ only in how they traverse the node tree. An `AsyncLoad`, `AsyncStore` or `Trap` also validates its own operand expressions, which went unchecked in both walks, so a load from an undeclared buffer inside a transfer size or a trap address was accepted while the same load in a store index was rejected."
+
+[[fragments]]
+id = "capability-contracts-have-one-owner"
+category = "Changed"
+text = "Program capability scanning and backend capability enforcement are proved in one place, `vyre-foundation/tests/capability_contracts.rs`. An inline test module in `src/program_caps.rs` exercised the same public surface and the two had drifted in opposite directions. The suite derives its expectations from the public API snapshot at run time: every boolean `RequiredCapabilities` field must have a scan case that a program needing the feature sets and a scalar program does not, and every `supports_*` parameter of `check_backend_capabilities` must have a case where withholding it rejects a program that needs it, so a capability added later fails the suite until somebody records what proves it."
+
+[[fragments]]
+id = "foundation-duplication-pin-lowered-to-measured"
+category = "Changed"
+text = "The `vyre-foundation` duplication pin records what the tree measures, 4127 to 3679 duplicated lines, with `total_lines` measured. A pin with room under it hides the next copy."

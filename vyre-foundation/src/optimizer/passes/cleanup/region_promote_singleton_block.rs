@@ -132,13 +132,13 @@ mod tests {
 
     /// Regions whose whole body is one `Block`, counted at any nesting depth.
     ///
-    /// Descent comes from `test_util::count_nodes` over
+    /// Descent comes from `test_ir_inspect::count_nodes` over
     /// `transform::visit::for_each_node`. The hand-written pair of matches this
     /// replaces ended in `_ => {}`, so a promotable region inside a fifth
     /// body-bearing variant read as absent and the assertion would have passed
     /// on a program the pass had not finished promoting.
     fn count_singleton_block_regions(node: &Node) -> usize {
-        crate::test_util::count_nodes(
+        crate::test_ir_inspect::count_nodes(
             std::slice::from_ref(node),
             |n| matches!(n, Node::Region { body, .. } if matches!(body.as_slice(), [Node::Block(_)])),
         )

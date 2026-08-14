@@ -118,7 +118,6 @@ All validation codes below use diagnostic stage `validate` and retry class
 | `V114` | malformed validation frame stream: loop variable `…` inserted outside any scope | Rebuild the program through the structured IR builder before validation. |
 | `V115` | region `…` is marked non-composable with itself but appears multiple times in one fused program | Split the parser into separate dispatches, or give each instance distinct scratch storage before fusion. |
 | `V116` | Fused nodes mix non-atomic reads and atomic access without an ordering barrier | Insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion. |
-| `V117` | async stream tag is empty | Use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes. |
 | `V118` | malformed validation frame stream: let binding `…` appeared outside any scope | Rebuild the program through the structured IR builder before validation. |
 | `V119` | assignment to buffer `…` requires read-write storage but declared access is `…` | Use a read-write/output buffer or store into a mutable local binding. |
 | `V120` | Assignment targets an undeclared variable | Add a declaration before this assignment. |
