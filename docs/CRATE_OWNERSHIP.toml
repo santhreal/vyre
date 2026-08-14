@@ -1188,6 +1188,17 @@ boundary = "private"
 seam = "benchmarks"
 
 [[crate.dependency]]
+package = "vyre-foundation"
+purpose = "the release optimization family list the pass-family manifest is checked against"
+features = []
+conditions = ["always"]
+kinds = ["normal"]
+optional = false
+default_features = true
+boundary = "private"
+seam = "foundation-ir"
+
+[[crate.dependency]]
 package = "vyre-driver"
 purpose = "backend-neutral target, materialization, submission, and completion contracts"
 features = []

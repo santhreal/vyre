@@ -539,12 +539,13 @@ Own the xtask subcommands that decide whether a recorded benchmark or release me
 - Path: `xtask-evidence`
 - Owner: `release-tooling`
 - Layer: `tooling`
-- Internal production dependencies: `vyre-bench`, `vyre-driver`, `vyre-registry-link`, `xtask`
+- Internal production dependencies: `vyre-bench`, `vyre-driver`, `vyre-foundation`, `vyre-registry-link`, `xtask`
 
 | Dependency | Purpose | Boundary | Owning seam |
 | --- | --- | --- | --- |
 | `vyre-bench` | benchmark workloads and evidence | `private` | `benchmarks` |
 | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | `private` | `backend-contract` |
+| `vyre-foundation` | the release optimization family list the pass-family manifest is checked against | `private` | `foundation-ir` |
 | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `private` | `registry-link` |
 | `xtask` | subcommand registry, bounded readers, and release manifests | `private` | `release-tooling` |
 

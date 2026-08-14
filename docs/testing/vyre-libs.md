@@ -195,6 +195,7 @@ CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --all-features
 | `test` | `do_calculus_surgery_via_reference_parity` | `vyre-libs/tests/do_calculus_surgery_via_reference_parity.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test do_calculus_surgery_via_reference_parity` |
 | `test` | `do_calculus_surgery_via_reference_parity` | `vyre-libs/tests/do_calculus_surgery_via_reference_parity.rs` | `cpu-parity`, `reasoning`, `test-fixtures` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test do_calculus_surgery_via_reference_parity` |
 | `test` | `f32_adversarial` | `vyre-libs/tests/f32_adversarial.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test f32_adversarial` |
+| `test` | `family_duplication_budget` | `vyre-libs/tests/family_duplication_budget.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test family_duplication_budget` |
 | `test` | `filesystem_path_archive_policies` | `vyre-libs/tests/filesystem_path_archive_policies.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test filesystem_path_archive_policies` |
 | `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | None | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test fingerprint_lock` |
 | `test` | `fingerprint_lock` | `vyre-libs/tests/fingerprint_lock.rs` | `nn-activation`, `nn-attention`, `nn-linear`, `nn-norm` | `CARGO_BUILD_JOBS=1 ./cargo_full test -p vyre-libs --test fingerprint_lock` |

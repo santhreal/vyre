@@ -177,6 +177,7 @@ graph TD
   C33 --> C0
   C34 --> C3
   C34 --> C7
+  C34 --> C17
   C34 --> C28
   C34 --> C33
   C35 --> C1
@@ -326,6 +327,7 @@ graph TD
 | `xtask` | `structure-gate` | resolve the checkout a gate reports on from the working directory at run time | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-evidence` | `vyre-bench` | benchmark workloads and evidence | None | `always` | `normal` | `false` | `true` | `private` | `benchmarks` |
 | `xtask-evidence` | `vyre-driver` | backend-neutral target, materialization, submission, and completion contracts | None | `always` | `normal` | `false` | `true` | `private` | `backend-contract` |
+| `xtask-evidence` | `vyre-foundation` | the release optimization family list the pass-family manifest is checked against | None | `always` | `normal` | `false` | `true` | `private` | `foundation-ir` |
 | `xtask-evidence` | `vyre-registry-link` | linked inventory registry sources and the per-source floor | `cuda`, `metal`, `reference`, `spirv`, `wgpu` | `always` | `normal` | `false` | `false` | `private` | `registry-link` |
 | `xtask-evidence` | `xtask` | subcommand registry, bounded readers, and release manifests | None | `always` | `normal` | `false` | `true` | `private` | `release-tooling` |
 | `xtask-registry` | `vyre` | public lifecycle facade | None | `always` | `normal` | `false` | `false` | `private` | `public-facade` |

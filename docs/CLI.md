@@ -665,6 +665,8 @@ Options:
           Run the GPU skip guard over CUDA/WGPU/runtime validation paths
       --gpu-skip-root <GPU_SKIP_ROOT>
           Override roots scanned by `--check-gpu-skip-guards`
+      --print-default-roots
+          Print the selected lint's default roots, one per line, and exit without scanning. Lets a caller check the declared scan scope without restating it
   -h, --help
           Print help
   -V, --version
