@@ -12,9 +12,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use crate::c_ast_gpu_parity_support::dispatch_gpu_program;
 use vyre::ir::Expr;
 use vyre_libs::parsing::c::lex::tokens::*;
-use vyre_libs::parsing::c::preprocess::expansion::{
-    opt_conditional_mask, opt_dynamic_macro_expansion,
-};
+use vyre_libs::parsing::c::preprocess::expansion::opt_conditional_mask;
 use vyre_reference::value::Value;
 
 // ---------------------------------------------------------------------------
@@ -22,7 +20,7 @@ use vyre_reference::value::Value;
 // ---------------------------------------------------------------------------
 
 pub(crate) use crate::c_frontend::macro_expansion::{
-    hash_token, run_dynamic_macro_expansion, MacroFixture,
+    dynamic_macro_expansion_program, hash_token, run_dynamic_macro_expansion, MacroFixture,
 };
 
 pub(crate) fn run_conditional_mask(
@@ -41,16 +39,7 @@ pub(crate) fn run_gpu_macro_expansion(
     fixture: &MacroFixture,
     max_out_tokens: u32,
 ) -> Vec<Vec<u8>> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out_tokens,
-    );
+    let program = dynamic_macro_expansion_program(input.len(), max_out_tokens);
     let input_bytes = u32_bytes(input);
     let keys_bytes = u32_bytes(&fixture.keys);
     let vals_bytes = u32_bytes(&fixture.vals);

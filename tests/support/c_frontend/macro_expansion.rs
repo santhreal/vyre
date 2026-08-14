@@ -56,6 +56,25 @@ impl MacroFixture {
     }
 }
 
+/// The dynamic-expansion program the macro suites drive, on the reference
+/// interpreter or on a backend.
+#[must_use]
+pub(crate) fn dynamic_macro_expansion_program(
+    input_len: usize,
+    max_out_tokens: u32,
+) -> vyre_foundation::ir::Program {
+    opt_dynamic_macro_expansion(
+        "in_tok_types",
+        "macro_keys",
+        "macro_vals",
+        "macro_sizes",
+        "out_tok_types",
+        "out_tok_counts",
+        Expr::u32(input_len as u32),
+        max_out_tokens,
+    )
+}
+
 /// Run the dynamic macro expansion over `input` against `fixture`.
 ///
 /// An empty input and a zero output capacity still get one word of buffer,
@@ -66,16 +85,7 @@ pub(crate) fn run_dynamic_macro_expansion(
     fixture: &MacroFixture,
     max_out_tokens: u32,
 ) -> Result<Vec<Value>, vyre_reference::ReferenceError> {
-    let program = opt_dynamic_macro_expansion(
-        "in_tok_types",
-        "macro_keys",
-        "macro_vals",
-        "macro_sizes",
-        "out_tok_types",
-        "out_tok_counts",
-        Expr::u32(input.len() as u32),
-        max_out_tokens,
-    );
+    let program = dynamic_macro_expansion_program(input.len(), max_out_tokens);
     let input_bytes = if input.is_empty() {
         vec![0u8; 4]
     } else {
