@@ -11,7 +11,7 @@ use clap::Parser;
 use std::path::{Path, PathBuf};
 use vyre_lints::{
     run_consumer_coupling, run_gpu_skip_guards, run_module_forks, run_production_cpu_fallbacks,
-    run_raw_ir_in_libs, Violation,
+    run_raw_ir_in_libs, Violation, ViolationKind,
 };
 
 #[derive(Parser, Debug)]
@@ -86,12 +86,170 @@ struct Cli {
     /// Override roots scanned by `--check-gpu-skip-guards`.
     #[arg(long)]
     gpu_skip_root: Vec<PathBuf>,
+
+    /// Print the selected lint's default roots, one per line, and exit
+    /// without scanning. Lets a caller check the declared scan scope without
+    /// restating it.
+    #[arg(long)]
+    print_default_roots: bool,
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]
 enum Format {
     Text,
     Json,
+}
+
+/// One lint the CLI can select, with everything that differs between lints.
+///
+/// Four `run_*_cli` functions used to hold this data inline, each repeating
+/// the same five steps: pick overridden or default roots, fail closed on a
+/// missing root, scan, emit, exit. Only the four fields below ever differed,
+/// so they are the data and the driver below is the one copy of the steps.
+struct Lint {
+    /// `--check-...` flag that selects this lint, for diagnostics.
+    flag: &'static str,
+    /// Kinds this lint reports. The gate below requires every
+    /// [`ViolationKind`] to be claimed by exactly one entry.
+    kinds: &'static [ViolationKind],
+    /// Workspace-relative roots scanned when the caller overrides none.
+    default_roots: &'static [&'static str],
+    /// What a missing root means, appended to the fail-closed diagnostic.
+    missing_root_fix: &'static str,
+    /// How the fail-closed diagnostic names a missing root.
+    root_noun: &'static str,
+    /// Context added to a scan failure.
+    context: &'static str,
+    /// Scan entry point.
+    scan: fn(&[&Path]) -> Result<Vec<Violation>>,
+}
+
+/// Flag-selected lints, in the order `main` tests them.
+///
+/// `raw_ir_in_libs` is absent on purpose: it is the default action rather than
+/// a flag, and its roots come from the allowlist file rather than from a
+/// declared list. The gate below records that, so its kinds still have to be
+/// accounted for.
+const LINTS: &[Lint] = &[
+    Lint {
+        flag: "check-production-cpu-fallbacks",
+        kinds: &[ViolationKind::ProductionCpuFallback],
+        default_roots: &[
+            "vyre-aot/src",
+            "vyre/src",
+            "vyre-driver/src",
+            "vyre-driver-cuda/src",
+            "vyre-driver-wgpu/src",
+            "vyre-libs/src",
+            "vyre-lower/src",
+            "vyre-runtime/src",
+            "vyre-pass-engine/src",
+        ],
+        missing_root_fix:
+            "Fix: update the release CPU fallback guard roots instead of silently skipping this source tree.",
+        root_noun: "production root",
+        context: "running production CPU fallback guard",
+        scan: run_production_cpu_fallbacks,
+    },
+    Lint {
+        flag: "check-consumer-coupling",
+        kinds: &[ViolationKind::ConsumerCoupling],
+        default_roots: &[
+            "docs",
+            "vyre/src",
+            "vyre-driver/src",
+            "vyre-driver-cuda/src",
+            "vyre-driver-wgpu/src",
+            "vyre-foundation/src",
+            "vyre-libs/src",
+            "vyre-lower/src",
+            "vyre-primitives/src",
+            "vyre-runtime/src",
+            "vyre-pass-engine/src",
+        ],
+        missing_root_fix:
+            "Fix: update the platform doc/comment guard roots instead of silently shrinking scan coverage.",
+        root_noun: "consumer coupling root",
+        context: "running consumer-name coupling guard",
+        scan: run_consumer_coupling,
+    },
+    Lint {
+        flag: "check-module-forks",
+        kinds: &[ViolationKind::ModuleFork],
+        default_roots: &["vyre-primitives/src/graph", "vyre-libs/src/graph"],
+        missing_root_fix:
+            "Fix: update the duplicate-module scan roots instead of silently shrinking scan coverage.",
+        root_noun: "module fork root",
+        context: "running same-name module fork scanner",
+        scan: run_module_forks,
+    },
+    Lint {
+        flag: "check-gpu-skip-guards",
+        kinds: &[ViolationKind::GpuSkipGuard],
+        default_roots: &[
+            "vyre-driver-cuda/src",
+            "vyre-driver-cuda/tests",
+            "vyre-driver-wgpu/src",
+            "vyre-driver-wgpu/tests",
+            "vyre-runtime/src",
+        ],
+        missing_root_fix:
+            "Fix: update CUDA/WGPU validation roots instead of silently shrinking scan coverage.",
+        root_noun: "GPU skip guard root",
+        context: "running GPU skip guard",
+        scan: run_gpu_skip_guards,
+    },
+];
+
+/// Kinds reported by the default `raw_ir_in_libs` run rather than by a
+/// flag-selected lint.
+const DEFAULT_RUN_KINDS: &[ViolationKind] = &[
+    ViolationKind::RawNodeConstruction,
+    ViolationKind::RawExprConstruction,
+];
+
+/// Run one lint: resolve its roots, fail closed on a missing one, emit, exit.
+fn run_lint(cli: &Cli, lint: &Lint, overrides: &[PathBuf]) -> Result<()> {
+    if cli.print_default_roots {
+        for root in lint.default_roots {
+            println!("{root}");
+        }
+        return Ok(());
+    }
+    let roots: Vec<PathBuf> = if overrides.is_empty() {
+        lint.default_roots
+            .iter()
+            .map(|root| cli.workspace_root.join(root))
+            .collect()
+    } else {
+        overrides.to_vec()
+    };
+    for root in &roots {
+        if !root.exists() {
+            anyhow::bail!(
+                "{} not found: {}. {}",
+                lint.root_noun,
+                root.display(),
+                lint.missing_root_fix
+            );
+        }
+    }
+    let root_refs: Vec<&Path> = roots.iter().map(PathBuf::as_path).collect();
+    let violations = (lint.scan)(&root_refs).context(lint.context)?;
+    report(cli, &violations)
+}
+
+/// Emit violations in the requested format and set the process exit status.
+fn report(cli: &Cli, violations: &[Violation]) -> Result<()> {
+    match cli.format {
+        Format::Text => emit_text(violations),
+        Format::Json => emit_json(violations)?,
+    }
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        std::process::exit(1);
+    }
 }
 
 fn main() -> Result<()> {
@@ -105,20 +263,22 @@ fn main() -> Result<()> {
         return run_drift(&allowlist, cli.drift_budget_days, cli.today.as_deref());
     }
 
-    if cli.check_production_cpu_fallbacks {
-        return run_production_cpu_fallbacks_cli(&cli);
-    }
-
-    if cli.check_consumer_coupling {
-        return run_consumer_coupling_cli(&cli);
-    }
-
-    if cli.check_module_forks {
-        return run_module_forks_cli(&cli);
-    }
-
-    if cli.check_gpu_skip_guards {
-        return run_gpu_skip_guards_cli(&cli);
+    // Selected flags, paired with the override list that belongs to each. The
+    // pairing is here rather than in `LINTS` because the overrides live on
+    // `Cli`, which clap owns.
+    let selected: [(bool, &[PathBuf]); LINTS.len()] = [
+        (
+            cli.check_production_cpu_fallbacks,
+            cli.production_root.as_slice(),
+        ),
+        (cli.check_consumer_coupling, cli.consumer_root.as_slice()),
+        (cli.check_module_forks, cli.module_fork_root.as_slice()),
+        (cli.check_gpu_skip_guards, cli.gpu_skip_root.as_slice()),
+    ];
+    for (lint, (requested, overrides)) in LINTS.iter().zip(selected) {
+        if requested {
+            return run_lint(&cli, lint, overrides);
+        }
     }
 
     let allowlist_arg = if allowlist.exists() {
@@ -130,7 +290,7 @@ fn main() -> Result<()> {
     // A `--lib-root` override names one tree explicitly. Otherwise the trees
     // come from the lint's own configuration, so relocating a composition
     // domain between crates does not need a code change here.
-    let roots: Vec<PathBuf> = match cli.lib_root {
+    let roots: Vec<PathBuf> = match cli.lib_root.clone() {
         Some(lib_root) => vec![lib_root],
         None => {
             let configured = match allowlist_arg {
@@ -151,102 +311,10 @@ fn main() -> Result<()> {
     }
 
     let root_refs: Vec<&Path> = roots.iter().map(PathBuf::as_path).collect();
-    let violations = run_raw_ir_in_libs(&root_refs, allowlist_arg)
-        .context("running raw_ir_in_libs lint")?;
-
-    match cli.format {
-        Format::Text => emit_text(&violations),
-        Format::Json => emit_json(&violations)?,
-    }
-
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
-}
-
-fn run_consumer_coupling_cli(cli: &Cli) -> Result<()> {
-    let roots = if cli.consumer_root.is_empty() {
-        default_consumer_coupling_roots(&cli.workspace_root)
-    } else {
-        cli.consumer_root.clone()
-    };
-    for root in &roots {
-        if !root.exists() {
-            anyhow::bail!(
-                "consumer coupling root not found: {}. Fix: update the platform doc/comment guard roots instead of silently shrinking scan coverage.",
-                root.display()
-            );
-        }
-    }
-    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
     let violations =
-        run_consumer_coupling(&root_refs).context("running consumer-name coupling guard")?;
-    match cli.format {
-        Format::Text => emit_text(&violations),
-        Format::Json => emit_json(&violations)?,
-    }
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
-}
+        run_raw_ir_in_libs(&root_refs, allowlist_arg).context("running raw_ir_in_libs lint")?;
 
-fn run_module_forks_cli(cli: &Cli) -> Result<()> {
-    let roots = if cli.module_fork_root.is_empty() {
-        default_module_fork_roots(&cli.workspace_root)
-    } else {
-        cli.module_fork_root.clone()
-    };
-    for root in &roots {
-        if !root.exists() {
-            anyhow::bail!(
-                "module fork root not found: {}. Fix: update the duplicate-module scan roots instead of silently shrinking scan coverage.",
-                root.display()
-            );
-        }
-    }
-    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
-    let violations =
-        run_module_forks(&root_refs).context("running same-name module fork scanner")?;
-    match cli.format {
-        Format::Text => emit_text(&violations),
-        Format::Json => emit_json(&violations)?,
-    }
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
-}
-
-fn run_gpu_skip_guards_cli(cli: &Cli) -> Result<()> {
-    let roots = if cli.gpu_skip_root.is_empty() {
-        default_gpu_skip_roots(&cli.workspace_root)
-    } else {
-        cli.gpu_skip_root.clone()
-    };
-    for root in &roots {
-        if !root.exists() {
-            anyhow::bail!(
-                "GPU skip guard root not found: {}. Fix: update CUDA/WGPU validation roots instead of silently shrinking scan coverage.",
-                root.display()
-            );
-        }
-    }
-    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
-    let violations = run_gpu_skip_guards(&root_refs).context("running GPU skip guard")?;
-    match cli.format {
-        Format::Text => emit_text(&violations),
-        Format::Json => emit_json(&violations)?,
-    }
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
+    report(&cli, &violations)
 }
 
 fn run_drift(
@@ -278,124 +346,13 @@ fn run_drift(
     std::process::exit(1);
 }
 
-fn run_production_cpu_fallbacks_cli(cli: &Cli) -> Result<()> {
-    let roots = if cli.production_root.is_empty() {
-        default_production_roots(&cli.workspace_root)
-    } else {
-        cli.production_root.clone()
-    };
-    for root in &roots {
-        if !root.exists() {
-            anyhow::bail!(
-                "production root not found: {}. Fix: update the release CPU fallback guard roots instead of silently skipping this source tree.",
-                root.display()
-            );
-        }
-    }
-    let root_refs: Vec<&std::path::Path> = roots.iter().map(|root| root.as_path()).collect();
-    let violations = run_production_cpu_fallbacks(&root_refs)
-        .context("running production CPU fallback guard")?;
-    match cli.format {
-        Format::Text => emit_text(&violations),
-        Format::Json => emit_json(&violations)?,
-    }
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
-}
-
-fn default_production_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
-    [
-        "vyre-aot/src",
-        "vyre/src",
-        "vyre-driver/src",
-        "vyre-driver-cuda/src",
-        "vyre-driver-wgpu/src",
-        "vyre-libs/src",
-        "vyre-lower/src",
-        "vyre-runtime/src",
-        "vyre-pass-engine/src",
-    ]
-    .into_iter()
-    .map(|root| workspace_root.join(root))
-    .collect()
-}
-
-fn default_consumer_coupling_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
-    [
-        "docs",
-        "vyre/src",
-        "vyre-driver/src",
-        "vyre-driver-cuda/src",
-        "vyre-driver-wgpu/src",
-        "vyre-foundation/src",
-        "vyre-libs/src",
-        "vyre-lower/src",
-        "vyre-primitives/src",
-        "vyre-runtime/src",
-        "vyre-pass-engine/src",
-    ]
-    .into_iter()
-    .map(|root| workspace_root.join(root))
-    .collect()
-}
-
-fn default_module_fork_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
-    [
-        "vyre-primitives/src/graph",
-        "vyre-libs/src/graph",
-    ]
-    .into_iter()
-    .map(|root| workspace_root.join(root))
-    .collect()
-}
-
-fn default_gpu_skip_roots(workspace_root: &std::path::Path) -> Vec<PathBuf> {
-    [
-        "vyre-driver-cuda/src",
-        "vyre-driver-cuda/tests",
-        "vyre-driver-wgpu/src",
-        "vyre-driver-wgpu/tests",
-        "vyre-runtime/src",
-    ]
-    .into_iter()
-    .map(|root| workspace_root.join(root))
-    .collect()
-}
-
 fn current_iso_date() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
     let days = now.div_euclid(86_400);
-    iso_from_days(days)
-}
-
-fn iso_from_days(mut days: i64) -> String {
-    let mut y = 1970i64;
-    let is_leap = |y: i64| (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
-    loop {
-        let len = if is_leap(y) { 366 } else { 365 };
-        if days < len {
-            break;
-        }
-        days -= len;
-        y += 1;
-    }
-    let months: [i64; 12] = if is_leap(y) {
-        [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    } else {
-        [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    };
-    let mut m = 0usize;
-    while days >= months[m] {
-        days -= months[m];
-        m += 1;
-    }
-    format!("{y:04}-{:02}-{:02}", m + 1, days + 1)
+    vyre_lints::drift::iso_from_days(days)
 }
 
 fn emit_text(violations: &[Violation]) {
@@ -413,14 +370,7 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
     use std::fmt::Write;
     let mut out = String::from("[\n");
     for (i, v) in violations.iter().enumerate() {
-        let kind = match v.kind {
-            vyre_lints::ViolationKind::RawNodeConstruction => "raw_node_construction",
-            vyre_lints::ViolationKind::RawExprConstruction => "raw_expr_construction",
-            vyre_lints::ViolationKind::ProductionCpuFallback => "production_cpu_fallback",
-            vyre_lints::ViolationKind::ConsumerCoupling => "consumer_coupling",
-            vyre_lints::ViolationKind::ModuleFork => "module_fork",
-            vyre_lints::ViolationKind::GpuSkipGuard => "gpu_skip_guard",
-        };
+        let kind = v.kind.as_str();
         if i > 0 {
             out.push_str(",\n");
         }
@@ -433,4 +383,83 @@ fn emit_json(violations: &[Violation]) -> Result<()> {
     out.push_str("\n]\n");
     print!("{out}");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Lint, DEFAULT_RUN_KINDS, LINTS};
+    use std::collections::BTreeMap;
+    use vyre_lints::ViolationKind;
+
+    /// Lint recorded as reporting `kind`.
+    ///
+    /// Exhaustive on purpose: a `ViolationKind` added to the library does not
+    /// compile here until someone records which lint reports it, and the tests
+    /// below then require that decision to match the registry.
+    fn recorded_reporter(kind: &ViolationKind) -> &'static str {
+        match kind {
+            ViolationKind::RawNodeConstruction | ViolationKind::RawExprConstruction => {
+                "raw-ir-in-libs (default run)"
+            }
+            ViolationKind::ProductionCpuFallback => "check-production-cpu-fallbacks",
+            ViolationKind::ConsumerCoupling => "check-consumer-coupling",
+            ViolationKind::ModuleFork => "check-module-forks",
+            ViolationKind::GpuSkipGuard => "check-gpu-skip-guards",
+        }
+    }
+
+    #[test]
+    fn every_violation_kind_reaches_a_registered_lint_or_the_default_run() {
+        let mut reporter: BTreeMap<usize, &str> = BTreeMap::new();
+        for lint in LINTS {
+            for kind in lint.kinds {
+                let previous = reporter.insert(kind.position(), lint.flag);
+                assert_eq!(previous, None, "{kind:?} is claimed by two lints");
+            }
+        }
+        for kind in DEFAULT_RUN_KINDS {
+            let previous = reporter.insert(kind.position(), "raw-ir-in-libs (default run)");
+            assert_eq!(previous, None, "{kind:?} is claimed by two lints");
+        }
+
+        for kind in ViolationKind::ALL {
+            let found = reporter.get(&kind.position()).copied();
+            assert_eq!(
+                found,
+                Some(recorded_reporter(kind)),
+                "{kind:?} has no lint the CLI can run. Fix: register a lint in LINTS, \
+                 or record it in DEFAULT_RUN_KINDS, and record the same decision in \
+                 recorded_reporter."
+            );
+        }
+    }
+
+    #[test]
+    fn every_registered_lint_declares_a_distinct_flag_and_at_least_one_root() {
+        let flags: std::collections::BTreeSet<_> = LINTS.iter().map(|lint| lint.flag).collect();
+        assert_eq!(flags.len(), LINTS.len());
+
+        for Lint {
+            flag,
+            kinds,
+            default_roots,
+            missing_root_fix,
+            root_noun,
+            context,
+            ..
+        } in LINTS
+        {
+            assert!(!kinds.is_empty(), "{flag} reports no violation kind");
+            assert!(!default_roots.is_empty(), "{flag} scans nothing by default");
+            assert!(
+                missing_root_fix.starts_with("Fix: "),
+                "{flag} missing-root diagnostic gives no corrective action"
+            );
+            assert!(
+                root_noun.ends_with("root"),
+                "{flag} names a missing root as `{root_noun}`, which does not read as a root"
+            );
+            assert!(!context.is_empty(), "{flag} adds no context to a failure");
+        }
+    }
 }
