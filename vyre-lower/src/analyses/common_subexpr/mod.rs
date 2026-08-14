@@ -179,8 +179,8 @@ fn is_bit_exact_commutative_binop(bin_op: BinOp) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::LiteralValue;
     use crate::descriptor_builder::{binop, body, descriptor, global_wo, lit, op, store_global};
+    use crate::LiteralValue;
     use vyre_foundation::ir::{BinOp, DataType};
 
     #[test]
@@ -327,11 +327,11 @@ mod tests {
         // thread, same in any order).
         let desc = descriptor("tid_dup")
             .dispatch(64, 1, 1)
-            .body(
-                body()
-                    .op(op(KernelOpKind::LocalInvocationId, [], 0))
-                    .op(op(KernelOpKind::LocalInvocationId, [], 1)),
-            )
+            .body(body().op(op(KernelOpKind::LocalInvocationId, [], 0)).op(op(
+                KernelOpKind::LocalInvocationId,
+                [],
+                1,
+            )))
             .build();
         let r = analyze(&desc);
         assert_eq!(r.groups.len(), 1);

@@ -39,7 +39,10 @@ impl<'a> StructuredVisitor<'a> for BranchCollector<'a> {
         let Some(branch) = branch_at(body, op) else {
             return;
         };
-        if !self.mapped_body.is_some_and(|held| std::ptr::eq(held, body)) {
+        if !self
+            .mapped_body
+            .is_some_and(|held| std::ptr::eq(held, body))
+        {
             self.mapped_body = Some(body);
             self.producers = producer_map(body);
         }

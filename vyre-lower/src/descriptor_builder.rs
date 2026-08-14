@@ -37,9 +37,9 @@
 use vyre_foundation::ir::{BinOp, DataType};
 
 use crate::{
-    BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities, KernelBody,
-    KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass, SubgroupCapabilities,
-    WorkgroupLimits,
+    BindingLayout, BindingSlot, BindingVisibility, Dispatch, EmissionTargetCapabilities,
+    KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue, MemoryClass,
+    SubgroupCapabilities, WorkgroupLimits,
 };
 
 /// An op that produces `result`.

@@ -51,7 +51,9 @@ pub fn analyze(desc: &KernelDescriptor) -> TexturePromotionPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::descriptor_builder::{body, descriptor, global_ro, global_rw, lit, load_global, slot, SlotCount};
+    use crate::descriptor_builder::{
+        body, descriptor, global_ro, global_rw, lit, load_global, slot, SlotCount,
+    };
     use crate::{BindingSlot, KernelBody, KernelDescriptor, LiteralValue};
     use vyre_foundation::ir::DataType;
 

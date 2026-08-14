@@ -261,7 +261,11 @@ mod tests {
 
     /// A 32-thread kernel over one shared binding.
     fn k(slots: Vec<BindingSlot>, body: impl Into<KernelBody>) -> KernelDescriptor {
-        descriptor("k").slots(slots).dispatch(32, 1, 1).body(body).build()
+        descriptor("k")
+            .slots(slots)
+            .dispatch(32, 1, 1)
+            .body(body)
+            .build()
     }
 
     /// The canonical strided access `shared[tid * stride]`, which is the
@@ -448,10 +452,11 @@ mod tests {
     fn adversarial_unrecognized_index_pattern_is_unknown() {
         let kk = k(
             vec![shared_binding(0)],
-            body()
-                .op(tid([], 0))
-                .op(binop(BinOp::Sub, 0, 0, 1))
-                .op(op(KernelOpKind::LoadShared, [0, 1], 2)),
+            body().op(tid([], 0)).op(binop(BinOp::Sub, 0, 0, 1)).op(op(
+                KernelOpKind::LoadShared,
+                [0, 1],
+                2,
+            )),
         );
         let r = analyze(&kk);
         assert_eq!(r.sites[0].conflict, BankConflictKind::Unknown);
@@ -461,10 +466,7 @@ mod tests {
     fn adversarial_malformed_load_shared_skipped_safely() {
         let kk = k(
             vec![shared_binding(0)],
-            body().op(effect(
-                KernelOpKind::LoadShared,
-                [],
-            )),
+            body().op(effect(KernelOpKind::LoadShared, [])),
         );
         let r = analyze(&kk);
         assert!(r.sites.is_empty());

@@ -19,7 +19,10 @@ use crate::{KernelBody, KernelOpKind};
 /// ancestor/descendant reuse slipped through, which is exactly what
 /// `loop_unroll` used to emit when it reseeded its free-id counter at
 /// every recursion level.
-pub(super) fn verify_result_ids_unique_descriptor_wide(body: &KernelBody, errors: &mut Vec<VerifyError>) {
+pub(super) fn verify_result_ids_unique_descriptor_wide(
+    body: &KernelBody,
+    errors: &mut Vec<VerifyError>,
+) {
     use rustc_hash::FxHashMap;
 
     let mut owners: FxHashMap<u32, Vec<usize>> = FxHashMap::default();

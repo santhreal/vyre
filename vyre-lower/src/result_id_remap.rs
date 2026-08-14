@@ -60,4 +60,3 @@ pub(crate) fn remap_body_result_ids(body: &KernelBody, id_map: &BTreeMap<u32, u3
         literals: body.literals.clone(),
     }
 }
-

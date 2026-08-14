@@ -44,8 +44,7 @@ mod test_descriptors;
 
 pub use binding_layout::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 pub use intent::{
-    scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION,
-    SCAN_CONSTRUCT_INTENT_MAPPINGS,
+    scan_construct_intent_mapping, DESCRIPTOR_INTENT_SCHEMA_VERSION, SCAN_CONSTRUCT_INTENT_MAPPINGS,
 };
 
 /// Where a binding's storage lives.
