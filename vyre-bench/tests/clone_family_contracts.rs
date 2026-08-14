@@ -85,8 +85,13 @@ const EXPECTED_CASE_IDS: &[&str] = &[
     "synthetic.flaky",
 ];
 
-/// The cases owned by the five clone families this campaign collapsed, plus the
+/// The cases owned by the clone families this campaign collapsed, plus the
 /// neighbours that share the merged queue-stage owner.
+///
+/// The seven `foundation.*` micro cases joined when they were collapsed onto
+/// `crate::cases::micro`, which took over their identity, metadata, dispatch,
+/// reference timing and run assembly. Their surface must survive that move
+/// unchanged, which is exactly what the digest below asserts.
 const FAMILY_CASE_IDS: &[&str] = &[
     "compound.pipeline.fused_filter.1m",
     "conditions.yara_like.batch.16x64k",
@@ -96,6 +101,13 @@ const FAMILY_CASE_IDS: &[&str] = &[
     "dataflow.ifds.skewed.queue_materialize_step.1m",
     "dataflow.ifds.skewed.queue_step.1m",
     "dataflow.ifds.skewed.step.1m",
+    "foundation.attention.64",
+    "foundation.dfa_match.256k",
+    "foundation.gather.u32.1m",
+    "foundation.histogram.u32_256.1m",
+    "foundation.matmul.256",
+    "foundation.stencil3.u32.1m",
+    "foundation.transpose.512",
     "primitives.graph.csr_skewed_frontier.1m",
     "primitives.graph.csr_skewed_queue_closure.1m",
     "primitives.graph.csr_skewed_queue_materialize.1m",
@@ -107,8 +119,14 @@ const FAMILY_CASE_IDS: &[&str] = &[
 
 /// blake3 over the compact JSON surface of every `FAMILY_CASE_IDS` member.
 /// Regenerate only with a recorded decision about what changed and why.
+///
+/// Last changed when the seven `foundation.*` micro cases were added to the
+/// family list. Their own surfaces are byte-identical across that collapse,
+/// which `registry_publishes_exactly_the_pinned_case_enumeration` and the
+/// pre-collapse program fingerprints in `crate::cases::micro` both hold; the
+/// digest moved only because the list it covers grew.
 const FAMILY_SURFACE_DIGEST: &str =
-    "490516e63870d7cb2b1864c93fc790dfb9d09c6eabb5add961df77184449b616";
+    "62966bdad8dfdc5e5e738f67ad4bb25dbcd7e98ecc266aa5696080f1e74d9955";
 
 fn registry_ids() -> Vec<String> {
     vyre_bench::registry::collect_all()

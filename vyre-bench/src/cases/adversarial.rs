@@ -4,6 +4,7 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::*;
 
@@ -104,9 +105,7 @@ impl BenchCase for RegisterExhaustionCase {
             )
             .map_err(|e| crate::api::case::BenchError::ExecutionFailed(e.to_string()))?;
 
-        let start_ref = std::time::Instant::now();
-        let baseline = cpu_register_exhaustion_outputs(1024);
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (baseline, elapsed_ref) = timed_reference(|| cpu_register_exhaustion_outputs(1024));
 
         Ok(crate::api::case::BenchRun {
             metrics: BenchMetrics {

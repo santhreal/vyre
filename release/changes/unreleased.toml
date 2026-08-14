@@ -859,3 +859,23 @@ text = "Duplication pins for three crates now record the measured tree: vyre-mac
 id = "wire-and-lr-fixtures-have-one-owner"
 category = "Changed"
 text = "The `vyre` facade wire suites share one program fixture in `vyre/tests/support/mod.rs`. The round-trip suite proves a valid program survives an encode and a decode byte for byte and the malformed-wire suite proves hostile bytes never decode into one, so two copies of that program let the two halves of the claim drift. In `vyre-grammar-gen` the LR table the wire round trip exercises is the sample grammar `vyre-grammar-gen/src/lr.rs` already owned, not a second copy of it. Pins lowered to the measured tree: vyre 22 to 0, vyre-grammar-gen 137 to 119."
+
+[[fragments]]
+id = "bench-megakernel-resident-queue-has-one-owner"
+category = "Changed"
+text = "The resident work-queue buffer set the megakernel benchmark cases dispatch over has one owner, `vyre-bench/src/cases/resident_queue.rs`. Each of the three cases carried its own copy of the four-buffer control/ring/debug/io encoding, its own post-dispatch transfer accounting and its own resident-pool metric point. Each case keeps what it measures: its own ring builder, its own CPU reference, and its own grid override, because the latency case drains a single workgroup while the condition case drives the full grid and that difference is the measurement."
+
+[[fragments]]
+id = "bench-timed-cpu-reference-has-one-owner"
+category = "Fixed"
+text = "The timed CPU reference in `vyre-bench` has one owner, `vyre-bench/src/cases/reference_sample.rs`, and it saturates. Eleven cases hand-rolled the same timer and seven of them cast `Duration::as_nanos()` straight to `u64`, so a reference slower than roughly 18 seconds was reported as a small number instead of a large one, inverting the speedup it was compared against."
+
+[[fragments]]
+id = "bench-foundation-micro-cases-have-one-owner"
+category = "Changed"
+text = "The seven `foundation.*` micro benchmark cases are rows on one owner, `vyre-bench/src/cases/micro.rs`, which states the program, fixture, reference and work accounting each case differs in and nothing else. `gpu_case.rs` is absorbed into it, and its metric sweep now covers both work-accounting arms across every lane rather than one."
+
+[[fragments]]
+id = "bench-dup-pin-lowered"
+category = "Changed"
+text = "The vyre-bench duplication pin records the measured tree: 2485 to 2179 duplicated lines, with total_lines corrected from 37430 to the measured 37504."

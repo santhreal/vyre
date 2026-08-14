@@ -7,8 +7,8 @@ use crate::api::metric::BenchMetrics;
 use crate::api::resident::{
     dispatch_program_timed, input_bytes_total, ResidentInputSet, TransferAccounting,
 };
-use crate::cases::frontier_step::timed_baseline;
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
+use crate::cases::reference_sample::timed_reference;
 use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_primitives::graph::csr_forward_or_changed::csr_forward_or_changed_parallel;
@@ -246,7 +246,7 @@ pub(super) fn prepare_ifds_skewed_closure(
     let reset_program = ifds_closure_reset_program(fixture.stats.frontier_words);
 
     let (oracle, baseline_wall_ns) =
-        timed_baseline(|| ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS));
+        timed_reference(|| ifds_skewed_closure_oracle(&fixture, CLOSURE_MAX_ITERS));
     let mut stats = fixture.stats;
     stats.output_words_set = oracle.output_words_set;
     let dispatch_iterations = ifds_skewed_launch_wave_iterations(&fixture, CLOSURE_MAX_ITERS);

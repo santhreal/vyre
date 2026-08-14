@@ -61,8 +61,8 @@ total_lines = 1511
 
 [[crate]]
 name = "vyre-bench"
-duplicate_lines = 2485
-total_lines = 37430
+duplicate_lines = 2179
+total_lines = 37504
 
 [[crate]]
 name = "vyre-debug"

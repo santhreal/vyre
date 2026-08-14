@@ -3,11 +3,9 @@
 //! Three cases measure one propagation step over a skewed CSR graph: the packed
 //! bitset expansion, the IFDS step over the exploded supergraph, and the same
 //! step driven from a pre-materialized active queue. Their fixtures, programs and
-//! metric points are their own. The payload, the CPU baseline timing, the
-//! dispatch and its transfer accounting, and the assembled run are one fact each,
-//! stated here.
-
-use std::time::Instant;
+//! metric points are their own. The payload, the dispatch and its transfer
+//! accounting, and the assembled run are one fact each, stated here. The CPU
+//! baseline timing belongs to `reference_sample`, which every family shares.
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{BenchMetrics, MetricPoint};
@@ -28,17 +26,6 @@ pub(crate) struct FrontierStep<S> {
     pub(crate) baseline_wall_ns: u64,
     pub(crate) stats: S,
     pub(crate) resident: Option<ResidentInputSet>,
-}
-
-/// Run a CPU baseline and report how long it took.
-///
-/// The baseline oracle produces both the expected output and the host time the
-/// GPU sample is reported against, so one call covers both.
-pub(crate) fn timed_baseline<T>(baseline: impl FnOnce() -> T) -> (T, u64) {
-    let started = Instant::now();
-    let value = baseline();
-    let wall_ns = started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-    (value, wall_ns)
 }
 
 /// Account the inputs, upload them when the backend keeps buffers resident, and

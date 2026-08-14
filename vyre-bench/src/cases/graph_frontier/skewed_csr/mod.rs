@@ -10,9 +10,10 @@ use crate::api::case::{
 };
 use crate::cases::frontier_step::{
     dispatch_frontier_step, frontier_step, frontier_step_bytes_touched, frontier_step_run,
-    timed_baseline, FrontierStep, StepGrid,
+    FrontierStep, StepGrid,
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
+use crate::cases::reference_sample::timed_reference;
 use vyre_foundation::ir::Program;
 use vyre_primitives::graph::program_graph::ProgramGraphShape;
 
@@ -116,7 +117,7 @@ fn prepare_skewed_csr_case(
         CSR_ALLOW_MASK,
     );
 
-    let (oracle, baseline_wall_ns) = timed_baseline(|| skewed_csr_cpu_oracle(&fixture));
+    let (oracle, baseline_wall_ns) = timed_reference(|| skewed_csr_cpu_oracle(&fixture));
     let mut stats = fixture.stats;
     stats.allowed_edges_from_active = oracle.allowed_edges_from_active;
     stats.output_words_set = oracle.output_words_set;

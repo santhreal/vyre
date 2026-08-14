@@ -14,6 +14,7 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -119,14 +120,13 @@ impl BenchCase for BytecodeDispatch {
             .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
         let outputs = timed.outputs;
 
-        // CPU baseline: interpret the same bytecode on CPU
-        let start_ref = std::time::Instant::now();
-        let cpu_results = cpu_interpret(
-            &instrs,
-            INSTANCE_COUNT as usize,
-            INSTRS_PER_INSTANCE as usize,
-        );
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (cpu_results, elapsed_ref) = timed_reference(|| {
+            cpu_interpret(
+                &instrs,
+                INSTANCE_COUNT as usize,
+                INSTRS_PER_INSTANCE as usize,
+            )
+        });
 
         Ok(BenchRun {
             metrics: BenchMetrics {

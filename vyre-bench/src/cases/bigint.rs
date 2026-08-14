@@ -13,6 +13,7 @@ use crate::api::case::{
 };
 use crate::api::metric::BenchMetrics;
 use crate::api::suite::SuiteKind;
+use crate::cases::reference_sample::timed_reference;
 use rand::{RngExt, SeedableRng};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -216,16 +217,15 @@ impl BenchCase for BigintModexp {
             .map_err(|e| BenchError::BackendFailed(e.to_string()))?;
         let outputs = timed.outputs;
 
-        // CPU baseline: modexp for each instance
-        let start_ref = std::time::Instant::now();
-        let cpu_results = cpu_modexp(
-            &bases,
-            &exps,
-            &mods,
-            INSTANCE_COUNT as usize,
-            LIMB_COUNT as usize,
-        );
-        let elapsed_ref = start_ref.elapsed().as_nanos() as u64;
+        let (cpu_results, elapsed_ref) = timed_reference(|| {
+            cpu_modexp(
+                &bases,
+                &exps,
+                &mods,
+                INSTANCE_COUNT as usize,
+                LIMB_COUNT as usize,
+            )
+        });
 
         Ok(BenchRun {
             metrics: BenchMetrics {
