@@ -9,9 +9,9 @@ use crate::{
     QuantizationScale, QuantizationZeroPoint, Semiring, TernaryOp, TypeId, UnOp,
 };
 
-mod support;
+mod wire_case_assertions;
 
-use support::{
+use wire_case_assertions::{
     assert_json_roundtrip, assert_pairwise_unique_tags, assert_payload_independent_tag,
     data_type_wire_cases,
 };
